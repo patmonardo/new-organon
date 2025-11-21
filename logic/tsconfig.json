@@ -1,0 +1,56 @@
+{
+  "extends": "../tsconfig.src.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@organon/gdsl": [
+        "../gdsl/dist/index"
+      ],
+      "@organon/gdsl/*": [
+        "../gdsl/dist/*"
+      ],
+      "@organon/reality": [
+        "../reality/dist/index"
+      ],
+      "@organon/reality/*": [
+        "../reality/dist/*"
+      ],
+      "@repository": [
+        "src/repository/index"
+      ],
+      "@repository/*": [
+        "src/repository/*"
+      ],
+      "@schema": [
+        "src/schema/index"
+      ],
+      "@schema/*": [
+        "src/schema/*"
+      ],
+      "@absolute": [
+        "src/absolute/index"
+      ],
+      "@absolute/*": [
+        "src/absolute/*"
+      ],
+      "@relative": [
+        "src/relative/index"
+      ],
+      "@relative/*": [
+        "src/relative/*"
+      ]
+    }
+  },
+  "include": [
+    "tsconfig.json",
+    "src/index.ts",
+    "src/logic.ts"
+  ],
+  "exclude": [
+    "src/repository/**/*.ts",
+    "src/schema/**/*.ts",
+    "src/absolute/**/*.ts"
+  ]
+}

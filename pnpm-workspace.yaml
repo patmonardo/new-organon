@@ -1,0 +1,17 @@
+packages:
+  - "gds"
+  - "gdsl"
+  - "logic"
+  - "model"
+  - "task"
+  - "reality"
+
+ignoredBuiltDependencies:
+  - '@firebase/util'
+  - '@scarf/scarf'
+  - esbuild
+  - protobufjs
+
+onlyBuiltDependencies:
+  - '@nestjs/core'
+  - '@swc/core'

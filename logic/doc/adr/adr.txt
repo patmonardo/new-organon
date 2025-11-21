@@ -1,0 +1,674 @@
+# ADR 0001: Absolute Form (core)
+
+Status: Accepted
+Date: 2025-08-17
+
+## Context
+- We need a clear “Absolute Form” that anchors the system. In our codebase this lives in two places:
+  - `logic/src/absolute/core` — core root artifacts: Contracts, Kriya, Action, Engine (non-transactional Root).
+  - `logic/src/absolute/essence` — driver artifacts (Container/Contained drivers). It supplies drivers for two complementary triads used across the system:
+    - Container (form/shape) triad: Shape, Context, Morph (how forms are structured semantically)
+    - Contained (carrier) triad: Entity, Property, Relation (how content is carried and grounded)
+- The Absolute Root must be non-transactional. It validates inputs and dispatches canonical objects; all hard transactional work is performed by engines under `logic/src/essence` (the Essence engines).
+- Hegelian alignment: Essence → Reflection → Ground corresponds to Thing, World, Relation and is expressed through Container/Contained drivers that map into the transactional engines under `logic/src/essence`.
+
+## Decision
+- Define `absolute/core` and `absolute/essence` as the Absolute Form surface:
+  - `absolute/core`: Contracts (canonical schemas such as `ProcessorInputs`), Kriya orchestration contracts, Action signatures, and the non-transactional root `FormProcessor` API surface.
+  - `absolute/essence`: Drivers (Container/Contained drivers) that name and supply semantics for both the Container and Contained triads; these drivers feed the transactional engines located under `logic/src/essence`.
+  - The Absolute surface exposes six Active objects that act as the bridge vocabulary and drivers: ActiveShape, ActiveContext, ActiveMorph, ActiveEntity, ActiveProperty, ActiveRelation. Container-side Active objects are non-transactional unities; Contained-side Active objects are the transactional carriers consumed by engines.
+  - Action: externalized effects and decisions are emitted by the root but executed transactionally by engines below.
+- The Root remains non-transactional. It validates and dispatches; transactional engines (the only true transaction committers) live in `logic/src/essence` and perform property derivations, relation truthing and world assembly.
+- The Absolute surface dispatches a precise set of objects: Container drivers (Shape, Context, Morph) and Contained carriers (Entity, Property, Relation), plus content, concepts, judgments, syllogisms.
+
+## Consequences
+- Clear separation of concerns: the Absolute (root) orchestrates; Essence engines perform transactional work.
+- Stable top-level API via Contracts enables tooling, tests, and cross-package composition.
+
+## Decision (merged from ADR 0002)
+- Both Driver names (Shape, Context, Morph) and Carrier names (Entity, Property, Relation) are descriptors within the Absolute/Essence vocabulary: they name aspects of structure and meaning rather than implying a strict left/right ontological split.
+- `logic/src/absolute/essence` holds Drivers for both sides of the bridge:
+  - Container side: Shape, Context, Morph — corresponding to Essence, Reflection, Ground.
+  - Contained side: Entity, Property, Relation — corresponding to Thing, World, Relation.
+- `logic/src/essence` contains the transactional Engines. These engines execute processes and perform commits; they realize the semantics declared by Drivers while the vocabulary remains descriptive of meaning (not execution mode).
+- Active objects are the explicit bridges between the Container side (non-transactional drivers) and the Contained side (transactional carriers):
+
+  - Container (non-transactional, unity/drivers): ActiveShape, ActiveContext, ActiveMorph — noumenal unities naming the trinitarian moments (begin/middle/end) of form and semantics.
+  - Contained (transactional carriers/committers): ActiveEntity, ActiveProperty, ActiveRelation — objects engines under `logic/src/essence` operate on and commit.
+
+  Mapping (driver → active → engine):
+
+  - Absolute(Essence)  -> ActiveShape   -> ShapeEngine
+  - Absolute(Reflection) -> ActiveContext -> ContextEngine
+  - Absolute(Ground)    -> ActiveMorph   -> MorphEngine
+  - Absolute(Thing)     -> ActiveEntity  -> EntityEngine
+  - Absolute(World)     -> ActiveProperty-> PropertyEngine
+  - Absolute(Relation)  -> ActiveRelation-> RelationEngine
+
+  (we prefer `ActiveRelation` as the canonical carrier name)
+
+## References
+- `logic/src/absolute/core/contracts.ts` (ProcessorInputs et al.)
+- `logic/src/absolute/core/kriya.ts`
+- `logic/src/absolute/core/engine.ts`
+- ADR 0002 (Bridge), ADR 0003 (World/Property Law)
+
+### Code pointers (quick jump)
+- Absolute core:
+  - `logic/src/absolute/core/engine.ts` — FormProcessor / root API surface.
+  - `logic/src/absolute/core/contracts.ts` — canonical boundary types (ProcessorInputs, ProcessorSnapshot).
+  - `logic/src/absolute/core/kriya.ts` — Kriya pipeline types and options.
+- Absolute essence (drivers & helpers):
+  - `logic/src/absolute/essence/index.ts` — exports for driver modules.
+  - `logic/src/absolute/essence/essence.ts` — Shape/Essence definitions.
+  - `logic/src/absolute/essence/reflect.ts` — Reflection drivers.
+  - `logic/src/absolute/essence/ground.ts` — Ground/morph drivers.
+  - `logic/src/absolute/essence/world.ts` — World/Property helpers.
+  - `logic/src/absolute/essence/thing.ts` — Thing/Entity helpers.
+  - `logic/src/absolute/essence/relation.ts` — relation helpers: `truthScore`, `isActiveTruth`/`isActiveRelation`, `groundScore`, `chooseCanonicalTruth`.
+
+#### ADR-preferred symbols (code)
+- `ActiveRelation` (type alias) — `logic/src/absolute/essence/relation.ts` exports `ActiveRelation` as an ADR-aligned alias.
+- `isActiveRelation` — alias for `isActiveTruth` in `relation.ts` to decide truthiness per ADR thresholds.
+- `truthScoreForRelation` — alias for `truthScore` returning normalized [0,1] score.
+- `assertActiveRelationInvariants` — alias for `assertActiveTruthInvariants` used in dev/test assertions.
+- `findActiveRelationsFor` — alias for `findActiveParticularsFor` to enumerate active particulars for an Absolute id.
+- Form engines (transactional):
+  - `logic/src/essence/` — intended location for ShapeEngine/ContextEngine/MorphEngine and Entity/Property/Relation engines.
+  - Example existing modules to inspect and extend: `logic/src/essence/world/law.ts`, `logic/src/essence/reflection/*`, `logic/src/essence/ground/*`, `logic/src/essence/relation/*`.
+
+# ADR 0002: Essence -> ActiveShape -> ShapeEngine (technical contract)
+
+Status: Proposed
+Date: 2025-08-17
+
+## Purpose
+Provide a concise, machine-actionable contract for the Essence → ActiveShape → ShapeEngine triad. This ADR specifies data shapes, the ShapeEngine interface, invariants, error semantics, required tests, and exact file/symbol pointers that implementers must follow.
+
+## Context
+- ActiveShape is the container-side driver artifact describing a form's canonical shape and minimal semantics; it is produced by the Absolute/essence drivers and consumed by transactional ShapeEngine(s) under `logic/src/essence/shape`.
+- ShapeEngine deterministically synthesizes derived properties and actions from ActiveShape plus particulars (Entities/Properties/Relations). ShapeEngine is the authoritative committer for shape-derived transactions.
+
+## Decision (contract-level)
+- Define the `ActiveShape` data shape and the `ShapeEngine` interface. Implementations MUST adhere to these signatures and invariants.
+
+### Data shapes (TypeScript-like)
+
+  interface ActiveShape {
+    id: string;                    // stable id
+    kind?: string;                 // e.g. 'shape'
+    name?: string;                 // human label
+    schema?: any;                  // optional structural definition (ref or embedded schema)
+    particularityOf?: string;      // optional absolute id this shape particularizes
+    active?: boolean;
+    revoked?: boolean;
+    confidence?: number;           // 0..1
+    provenance?: any;
+    weight?: number;
+  }
+
+### ShapeEngine interface
+
+  interface ShapeEngine<I = any, O = any> {
+    process(
+      shapes: ActiveShape[],
+      particulars: any[],    // Entities/Properties/Relations
+      context?: any
+    ): Promise<{ actions: O[]; snapshot: I }>;
+
+    commit(actions: O[], snapshot: I): Promise<{ success: boolean; errors?: any[] }>;
+  }
+
+### Example action
+  interface ShapeAction {
+    type: string;           // 'derive-property' | 'validate-entity' | ...
+    targetId?: string;
+    payload?: any;
+    sourceShapeId?: string;
+  }
+
+## Invariants
+- Ignore shapes with `revoked===true`.
+- Treat `active===true` as highest-priority and definitive for conflicts.
+- Clamp `confidence` to [0,1] when used as fallback.
+- Do not mutate input arrays in-place; return new snapshot objects.
+
+## Error semantics
+- Input validation failures are fatal to `process` (Promise reject with validation error).
+- `process` may reject for transient failures; no commit should occur if `process` rejects.
+- `commit` must be atomic per-call or document partial behavior and provide structured errors on failure.
+
+## Determinism and ordering
+- When multiple shapes influence the same particulars: process order is active=true first, then descending weight, then confidence, then deterministic id-based tie-break.
+- Engines must document any deviation from the ordering above.
+
+## Tests required
+- Schema validation tests for `ActiveShape` (missing id/name/schema => failure).
+- Happy path: single ActiveShape (active=true) produces deterministic actions.
+- Conflict resolution: multiple shapes with mixed active/weight produce ordered actions.
+- Idempotent commit test.
+
+## Code pointers (precise)
+- Driver sources:
+  - `logic/src/absolute/essence/essence.ts` — shape/essence exports.
+  - `logic/src/absolute/essence/types.ts` — `ActiveShape` may be imported and tightened.
+  - `logic/src/absolute/essence/relation.ts` — use ground/truth helpers when shapes rely on relation-derived evidence.
+- Engine placement:
+  - Implement `logic/src/essence/shape/engine.ts` exporting a class that implements `ShapeEngine`.
+  - Tests: `logic/src/essence/shape/__tests__/engine.spec.ts`.
+
+## Adoption checklist
+1. Add a strict `ActiveShape` validator (Zod or equivalent).
+2. Implement `logic/src/essence/shape/engine.ts` per `ShapeEngine` interface.
+3. Add unit and integration tests listed above.
+4. Document ordering/tie-break rules in engine README.
+
+## Consequences
+- Provides a narrow, implementable contract so ShapeEngine can be test-driven and integrated with other engines via Actions/Transactions.
+
+## Next steps
+- Implement the validator and the initial ShapeEngine with the minimal Kriya steps (seed/contextualize/reflect/ground/action).
+
+## References
+- ADR 0001, ADR 0004, `logic/src/absolute/essence/relation.ts`
+
+# ADR 0003: Reflection -> ActiveContext -> ContextEngine (technical contract)
+
+Status: Proposed
+Date: 2025-08-17
+
+## Purpose
+Set a precise, technical contract for the Reflection → ActiveContext → ContextEngine triad. This ADR prescribes data shapes, the `ContextEngine` interface, strict invariants, error modes, determinism requirements, and the minimal test matrix required before implementation.
+
+## Context
+- ActiveContext encodes contextual rules, scoping, and activation metadata that engines use to view particulars under a named context.
+- ContextEngine consumes ActiveContext and particulars (Entities/Properties/Relations), produces deterministic intermediate reflections and emits Actions/Transactions for commit.
+
+## Decision (contract-level)
+- Define `ActiveContext` shape and `ContextEngine` interface; require engines to conform to these signatures and constraints.
+
+### Data shapes (TypeScript-like)
+
+  interface ActiveContext {
+    id: string;
+    name?: string;
+    particularityOf?: string;
+    active?: boolean;
+    revoked?: boolean;
+    confidence?: number; // 0..1
+    weight?: number;
+    scope?: { world?: string[]; ids?: string[] } | string; // optional scoping
+    rules?: any; // optional rule-set reference or DSL
+    provenance?: any;
+  }
+
+### ContextEngine interface
+
+  interface ContextEngine<I = any, O = any> {
+    process(
+      contexts: ActiveContext[],
+      particulars: any[],
+      snapshot?: any
+    ): Promise<{ actions: O[]; snapshot: I }>;
+
+    commit(actions: O[], snapshot: I): Promise<{ success: boolean; errors?: any[] }>;
+  }
+
+## Invariants and runtime rules
+- Ignore contexts with `revoked===true`.
+- Respect `scope` when selecting relevant particulars; if absent, the engine should operate globally over provided particulars.
+- Active contexts (`active===true`) take precedence over non-active contexts when conflicts arise.
+- Engines MUST be deterministic given the same inputs (including ordering rules and rule evaluation results).
+
+## Error semantics
+- Malformed `ActiveContext` objects cause `process` to reject with a validation error.
+- Engine `process` may reject for transient failures; no commit should be attempted if `process` rejects.
+- `commit` must communicate atomic success/failure with structured errors on failure.
+
+## Tests required
+- Schema validation: missing id or invalid `scope` => validation error.
+- Scope enforcement: contexts with restricted `scope` must only affect expected particulars.
+- Conflict resolution: multiple contexts with active/weight should produce predictable ordering and actions.
+- Idempotent commit test.
+
+## Code pointers (precise)
+- Driver sources:
+  - `logic/src/absolute/essence/reflect.ts` — ActiveContext exports and driver helpers.
+  - `logic/src/absolute/essence/types.ts` — tighten `ActiveContext` type here.
+  - `logic/src/absolute/essence/relation.ts` — use relation grounding helpers when contexts intersect with relations.
+- Engine placement:
+  - Implement `logic/src/essence/context/engine.ts` exporting a class that implements `ContextEngine`.
+  - Tests: `logic/src/essence/context/__tests__/engine.spec.ts`.
+
+## Adoption checklist
+1. Add a strict `ActiveContext` validator (Zod or equivalent).
+2. Implement `logic/src/essence/context/engine.ts` per `ContextEngine` interface.
+3. Add unit & integration tests listed above.
+4. Document scope semantics and any non-default ordering in engine README.
+
+## Consequences
+- A compact, testable contract for ContextEngine makes it straightforward to implement and integrate with Shape/Morph engines through Actions/Transactions.
+
+## Next steps
+- Implement the `ActiveContext` Zod schema and scaffold the initial `ContextEngine` with minimal Kriya steps.
+
+## References
+- ADR 0001, ADR 0002, ADR 0004, and `logic/src/absolute/essence/relation.ts`
+# ADR 0004: Ground -> ActiveMorph -> MorphEngine (precise contract)
+
+Status: Proposed
+Date: 2025-08-17
+
+## Purpose
+Provide a focused, technical specification for the Ground → ActiveMorph → MorphEngine triad. This ADR defines the minimal, precise contracts (data shapes and function signatures), runtime invariants, error modes, and verification tests required before any implementation. It does not re-state project process or high-level motivations.
+
+## Context
+- Ground is the terminal/aggregative moment: it produces grounded carrier judgments that tie particulars to absolutes and supplies weighting/trace for downstream action.
+- An `ActiveMorph` is the canonical carrier that encodes morphic transforms, grounding metadata, and actionable intent that MorphEngine consumes.
+- `MorphEngine` is the transactional engine that deterministically applies morphic transforms to particulars (entities, properties, relations) and emits Actions/Transactions for commit.
+
+## Decision (contract-level)
+- Define the `ActiveMorph` shape and the `MorphEngine` interface below. Engines MUST implement the interface exactly (inputs/outputs) and uphold the invariants.
+
+### Data shapes (TypeScript-like signatures)
+- ActiveMorph (canonical fields required by engines):
+
+  interface ActiveMorph {
+    id: string;                       // stable identifier
+    kind?: string;                    // optional kind metadata (e.g. 'morph')
+    particularityOf?: string;         // absolute id this morph applies to (optional)
+    transform: string;                // canonical transform identifier (fn name or DSL)
+    params?: Record<string, any>;     // transform parameters
+    active?: boolean;                 // explicit activation
+    revoked?: boolean;                // explicit negation
+    confidence?: number;              // 0..1 fallback
+    weight?: number;                  // weight used in ground scoring
+    provenance?: any;                 // source metadata
+  }
+
+- MorphEngine contract (interface):
+
+  interface MorphEngine<I = any, O = any> {
+    // Deterministic processor: pure transformation step (no side-effects).
+    process(
+      morphs: ActiveMorph[],
+      particulars: any[],          // Entities/Properties/Relations consumed
+      context?: any                // Optional ActiveContext or snapshot
+    ): Promise<{ actions: O[]; snapshot: I }>;
+
+    // Idempotent commit application: apply actions to a transactional store.
+    commit(actions: O[], snapshot: I): Promise<{ success: boolean; errors?: any[] }>;
+  }
+
+### Example action shape
+  interface MorphAction {
+    type: string;          // e.g. 'update-property' | 'create-relation'
+    targetId?: string;     // entity/property/relation id
+    payload?: any;         // action payload
+    sourceMorphId?: string;// backpointer to ActiveMorph.id
+  }
+
+## Invariants and runtime checks
+- Morphs with `revoked===true` MUST be ignored by `process`.
+- If `active===true` on a morph, `process` MUST treat it as definitive (highest priority) regardless of `confidence`.
+- `confidence` MUST be honored when `active` is absent; `confidence` values outside [0,1] MUST be clamped to the range.
+- `weight` is optional; when present it MAY be used by engines to bias aggregation in ground computations.
+- Engines MUST NOT mutate the provided `morphs` or `particulars` arrays in-place; they must return new snapshot/objects.
+
+## Error modes and failure semantics
+- Validation errors (missing required fields, invalid transform id) are fatal at `process` input and SHOULD result in a rejected Promise with a validation error.
+- Transient runtime failures during `process` (e.g., dependency lookup) should return a rejected Promise; the engine may include partial actions if appropriate, but must not commit them.
+- `commit` returns success/failure; failed commits MUST include structured errors. Commits must be atomic per-call or explicitly document partial-commit behavior (atomic preferred).
+
+## Edge cases and design choices
+- Multiple morphs targeting the same `particularityOf` or same particulars must be ordered by: explicit `active===true` first, then descending `weight` (or `confidence`), then deterministic tiebreak (morph id). Engines MUST document the ordering used.
+- Time-based provenance: engines MAY optionally use timestamps in `provenance` for ordering; if used it MUST be part of the deterministic tie-break.
+- Non-deterministic transforms are forbidden; `process` must be deterministic given same inputs.
+
+## Tests (minimal suite required before implementation)
+- Unit: validate `ActiveMorph` schema
+  - missing `id` or `transform` => validation error
+  - `confidence` out of range => clamped
+
+- Unit: `process` correctness (happy path)
+  - Input: one ActiveMorph (active=true) + particulars fixture
+  - Expect: deterministic actions list referencing `sourceMorphId`
+
+- Unit: ordering/priority
+  - Input: multiple morphs with mixed `active`, `weight`, `confidence`
+  - Expect: morphs processed in the specified priority order; actions reflect priority
+
+- Integration: idempotent commit
+  - Run `process` then `commit` twice with same actions and snapshot; second commit should be a no-op or explicitly idempotent.
+
+## Code pointers (precise)
+- Drivers / helpers (Ground side):
+  - `logic/src/absolute/essence/ground.ts` — ground driver helpers and expected driver exports.
+  - `logic/src/absolute/essence/relation.ts` — `groundScore`, `chooseCanonicalTruth` and ActiveRelation helpers used by grounding logic.
+  - `logic/src/absolute/essence/types.ts` — `ActiveMorph` and other Active* types (import and tighten as needed).
+
+- Engine placement and suggested files:
+  - Create engine: `logic/src/essence/morph/engine.ts` implementing `MorphEngine` interface above.
+  - Engine tests: `logic/src/essence/morph/__tests__/engine.spec.ts` (unit + integration tests listed above).
+
+## Adoption checklist (concrete)
+1. Implement strict runtime validation for `ActiveMorph` (Zod or equivalent). Failure to validate must block `process`.
+2. Implement `logic/src/essence/morph/engine.ts` with `process` and `commit` per interface.
+3. Use `relation.ts` `groundScore` where engine aggregates relation-derived weights.
+4. Add unit tests and integration idempotence tests; run via package test runner.
+5. After implementation, produce a short ADR follow-up describing any non-default ordering or partial-commit behavior.
+
+## Consequences
+- A precise contract reduces ambiguity for implementers and allows test-driven implementation of the MorphEngine before deploying side-effecting commits.
+- Engines built to this contract are composable with other Form Engines (Shape/Context/Relation) via Actions/Transactions.
+
+## Next steps
+- Author the `ActiveMorph` Zod schema and implement the minimal `engine.ts` and tests listed in the adoption checklist.
+
+## References
+- ADR 0001 — Absolute Form (drivers and Active* definitions)
+- ADR 0002 — ShapeEngine exemplar
+- `logic/src/absolute/essence/relation.ts` — ground/truth helpers
+# ADR 0005: Thing -> ActiveEntity -> EntityEngine (technical contract)
+
+Status: Proposed
+Date: 2025-08-17
+
+## Purpose
+Define a precise, implementable contract for the Contained triad: Thing → ActiveEntity → EntityEngine. Specify data shapes, engine interface, invariants, error semantics, determinism/ordering, required tests, and exact code pointers.
+
+## Context
+- ActiveEntity is the canonical carrier for entity state used by engines; it is consumed transactionally by EntityEngine to create/update/remove entities and to attach/detach properties and relations.
+- EntityEngine is responsible for deterministic synthesis of entity actions from ActiveEntity plus relevant particulars (properties, relations) and for idempotent commits.
+
+## Decision (contract-level)
+- Engines MUST implement the shapes and interfaces below and honor the invariants and error semantics.
+
+### Data shapes (TypeScript-like)
+
+  interface ActiveEntity {
+    id: string;                    // required stable id
+    entityType: string;            // required type/classifier
+    particularityOf?: string;      // optional absolute container id (Thing)
+    labels?: string[];             // optional tags/labels
+    active?: boolean;              // explicit activation
+    revoked?: boolean;             // explicit negation
+    confidence?: number;           // 0..1 fallback
+    weight?: number;               // optional priority bias
+    provenance?: any;              // source metadata
+  }
+
+  interface EntityParticulars {
+    properties?: ActiveProperty[];
+    relations?: ActiveRelation[];
+  }
+
+### EntityEngine interface
+
+  interface EntityEngine<I = any, O = any> {
+    process(
+      entities: ActiveEntity[],
+      particulars: EntityParticulars,
+      context?: any
+    ): Promise<{ actions: O[]; snapshot: I }>;
+
+    commit(actions: O[], snapshot: I): Promise<{ success: boolean; errors?: any[] }>;
+  }
+
+### Example actions
+  type EntityActionType =
+    | 'upsert-entity'
+    | 'remove-entity'
+    | 'attach-property'
+    | 'detach-property'
+    | 'link-relation'
+    | 'unlink-relation';
+
+  interface EntityAction {
+    type: EntityActionType;
+    targetId?: string;           // entity id for upsert/remove
+    subjectId?: string;          // entity id for attach/detach/link/unlink
+    relatedId?: string;          // property id or relation id
+    payload?: any;               // serialized changes
+    sourceEntityId?: string;     // backpointer to ActiveEntity.id
+  }
+
+## Invariants
+- `id` and `entityType` are required; missing either is a validation error.
+- Ignore entities with `revoked===true` except to emit removal/unlink actions.
+- `active===true` takes precedence over `confidence` for conflicts.
+- Clamp `confidence` to [0,1] when present.
+- Input arrays MUST NOT be mutated in-place.
+- If `particularityOf` is present, and an absolute Thing container is referenced, it MUST exist in the provided absolute set (if supplied) or be resolvable by the engine; otherwise validation should fail.
+
+## Determinism & ordering
+- When multiple ActiveEntity objects target the same `id`, process in this order: active=true, then descending weight, then descending confidence, then deterministic id-based tiebreak (string compare of provenance timestamp if provided, else entity id).
+
+## Error semantics
+- Validation errors (missing required fields, id collisions with contradictory states) cause `process` to reject.
+- Transient runtime failures during `process` should reject; no commit should occur.
+- `commit` must be atomic per-call or explicitly document partial behavior; failures must include structured errors.
+
+## Tests required
+- Schema validation: missing `id` or `entityType` => error; `confidence` clamped.
+- Happy path: single ActiveEntity (active=true) → upsert-entity action emitted deterministically.
+- Attach/detach: with property/relation particulars, engine emits attach/detach actions deterministically.
+- Conflict resolution: two ActiveEntity entries for same `id` with different priorities → ordered, predictable result.
+- Idempotent commit: committing same actions twice should be no-op on second call (or documented idempotence behavior).
+
+## Code pointers (precise)
+- Drivers / helpers:
+  - `logic/src/absolute/essence/thing.ts` — Thing/Entity helper exports.
+  - `logic/src/absolute/essence/world.ts` — property/world helpers (for property attachments).
+  - `logic/src/absolute/essence/relation.ts` — relation helpers for linking/unlinking decisions.
+  - `logic/src/absolute/essence/types.ts` — `ActiveEntity`, `ActiveProperty`, `ActiveRelation` types (tighten as needed).
+
+- Engine placement and tests:
+  - Implement `logic/src/essence/entity/engine.ts` exposing a class implementing `EntityEngine`.
+  - Tests in `logic/src/essence/entity/__tests__/engine.spec.ts` covering the cases listed above.
+
+## Adoption checklist
+1. Add strict runtime validation for `ActiveEntity` (Zod or equivalent).
+2. Implement `engine.ts` per `EntityEngine` interface.
+3. Add unit tests for validation, happy path, conflict resolution, and idempotent commit.
+4. Document ordering/tie-break rules in engine README.
+
+## Consequences
+- A clear contract enables test-first implementation and predictable integration with Property/Relation engines via Actions/Transactions.
+
+## References
+- ADR 0001, ADR 0002, ADR 0003, ADR 0004
+- `logic/src/absolute/essence/thing.ts`, `logic/src/absolute/essence/world.ts`, `logic/src/absolute/essence/relation.ts`
+# ADR 0006: World -> ActiveProperty -> PropertyEngine (technical contract)
+
+Status: Proposed
+Date: 2025-08-17
+
+## Purpose
+Define a precise contract for the World → ActiveProperty → PropertyEngine triad. Specify data shapes, engine interface, invariants, ordering, errors, tests, and code pointers necessary for an implementable engine.
+
+## Context
+- ActiveProperty carries property key/value assertions on entities (and optionally on relations if the domain allows) with activation metadata.
+- PropertyEngine deterministically upserts/removes properties and can derive secondary properties from drivers and particulars.
+
+## Decision (contract-level)
+- Implementers MUST use the following shapes and interface and honor the invariants.
+
+### Data shapes (TypeScript-like)
+
+  interface ActiveProperty {
+    id: string;                  // unique property id
+    subjectId: string;           // entity id this property belongs to
+    key: string;                 // property key/name
+    value: unknown;              // property value (domain-specific)
+    dtype?: string;              // optional data type descriptor
+    particularityOf?: string;    // optional absolute id
+    active?: boolean;
+    revoked?: boolean;
+    confidence?: number;         // 0..1
+    weight?: number;
+    provenance?: any;
+  }
+
+### PropertyEngine interface
+
+  interface PropertyEngine<I = any, O = any> {
+    process(
+      properties: ActiveProperty[],
+      context?: any
+    ): Promise<{ actions: O[]; snapshot: I }>;
+
+    commit(actions: O[], snapshot: I): Promise<{ success: boolean; errors?: any[] }>;
+  }
+
+### Example actions
+  type PropertyActionType = 'upsert-property' | 'remove-property';
+
+  interface PropertyAction {
+    type: PropertyActionType;
+    subjectId: string;           // entity id
+    key: string;
+    value?: unknown;             // required on upsert
+    sourcePropertyId?: string;   // backpointer to ActiveProperty.id
+  }
+
+## Invariants
+- `id`, `subjectId`, and `key` are required.
+- Ignore properties with `revoked===true` except to emit removal actions.
+- `active===true` overrides `confidence` for conflict resolution.
+- Clamp `confidence` to [0,1].
+- Engines MUST NOT mutate input arrays in-place.
+- If `subjectId` entity is not present in engine-visible state, property actions SHOULD be deferred or fail validation based on engine policy (documented in engine README).
+
+## Determinism & ordering
+- For same `subjectId` and `key`, prioritize active=true, then weight, then confidence, then deterministic tie-break (timestamp/provenance then id).
+
+## Error semantics
+- Validation errors (missing fields, invalid value types per domain) cause `process` to reject.
+- Transient failures during `process` cause rejection; no commit should occur.
+- `commit` should be atomic with structured errors; retries are allowed at the orchestration layer.
+
+## Tests required
+- Validation: missing required fields → error; confidence clamped.
+- Happy path: single upsert; removal with `revoked===true`.
+- Conflict resolution: multiple competing properties for same key → deterministic action set.
+- Idempotent commit test.
+
+## Code pointers (precise)
+- Drivers / helpers:
+  - `logic/src/absolute/essence/world.ts` — property/world helpers.
+  - `logic/src/absolute/essence/types.ts` — `ActiveProperty` type (tighten as needed).
+  - `logic/src/absolute/essence/relation.ts` — truth helpers when property derivations rely on relations.
+- Engine placement and tests:
+  - Implement `logic/src/essence/property/engine.ts` implementing `PropertyEngine`.
+  - Tests in `logic/src/essence/property/__tests__/engine.spec.ts`.
+
+## Adoption checklist
+1. Implement strict `ActiveProperty` validator (Zod or equivalent).
+2. Implement `engine.ts` per `PropertyEngine` interface.
+3. Add tests: validation, happy path, conflict resolution, idempotent commit.
+4. Document deferred/validation policy for missing `subjectId` entities.
+
+## Consequences
+- Establishes a tight property contract enabling reliable integration with Entity and Relation engines via actions.
+
+## References
+- ADR 0001, ADR 0002, ADR 0003, ADR 0004, ADR 0005
+- `logic/src/absolute/essence/world.ts`, `logic/src/absolute/essence/relation.ts`
+# ADR 0007: Relation -> ActiveRelation -> RelationEngine (technical contract)
+
+Status: Proposed
+Date: 2025-08-17
+
+## Purpose
+Define the precise contract for Relation → ActiveRelation → RelationEngine. This ADR specifies data shapes, required helpers, engine interface, invariants, canonical truth/ground semantics, ordering rules, tests, and code pointers.
+
+## Context
+- ActiveRelation is the canonical carrier for essential relations with activation metadata and confidence. It is already supported by helpers in `relation.ts` (truth score, ground score, canonical selection) and is consumed by a transactional RelationEngine.
+
+## Decision (contract-level)
+- Engines MUST implement the interface and semantics below and rely on the canonical helpers for truth and ground evaluation.
+
+### Data shapes (TypeScript-like)
+
+  interface ActiveRelation {
+    id: string;                     // relation id (particular)
+    kind?: 'relation' | 'essential';// expected by helpers
+    particularityOf: string;        // absolute id (container relation)
+    source?: { id: string; type?: string };
+    target?: { id: string; type?: string };
+    type?: string;                  // relation type label
+    active?: boolean;               // explicit activation
+    revoked?: boolean;              // explicit negation
+    confidence?: number;            // 0..1 fallback
+    weight?: number;                // aggregation weight
+    provenance?: any;               // source metadata
+  }
+
+### RelationEngine interface
+
+  interface RelationEngine<I = any, O = any> {
+    process(
+      relations: ActiveRelation[],
+      snapshot?: any
+    ): Promise<{ actions: O[]; snapshot: I }>;
+
+    commit(actions: O[], snapshot: I): Promise<{ success: boolean; errors?: any[] }>;
+  }
+
+### Example actions
+  type RelationActionType = 'upsert-relation' | 'remove-relation';
+
+  interface RelationAction {
+    type: RelationActionType;
+    relationId: string;
+    payload?: any;
+    sourceRelationId?: string;  // backpointer to ActiveRelation.id
+  }
+
+## Canonical semantics (MUST)
+- Truth normalization: use `truthScoreForRelation(r)` (alias of `truthScore`).
+- Truth predicate: use `isActiveRelation(r, threshold)`; default threshold is the module default.
+- Ground aggregation: when selecting canonical particulars for an absolute container, use `chooseCanonicalTruth(absId, relations)` and `groundScore` as appropriate.
+
+## Invariants
+- `particularityOf` MUST reference an existing absolute relation container in the provided set or in the engine’s accessible state; otherwise validation fails.
+- `revoked===true` relations MUST be ignored except to emit removal actions.
+- `active===true` takes precedence over `confidence`.
+- `confidence` must be clamped to [0,1].
+- Engines MUST NOT mutate input arrays in-place.
+
+## Determinism & ordering
+- For relations under the same `particularityOf`, prefer: explicit `active===true`, then highest `truthScoreForRelation`, then deterministic tie-break by provenance timestamp (if present) then relation id.
+
+## Error semantics
+- Validation failures cause `process` to reject.
+- Transient failures during `process` cause rejection; do not commit.
+- `commit` must be atomic per-call with structured errors; retries allowed at orchestration layer.
+
+## Tests required
+- Validation: missing `particularityOf` or invalid kind => error; clamped confidence.
+- Truth predicate: boundary tests around threshold and revoked/active flags.
+- Ground selection: multiple particulars → verify canonical selection matches helpers.
+- Idempotent commit test.
+
+## Code pointers (precise)
+- Helpers and drivers:
+  - `logic/src/absolute/essence/relation.ts` — `isActiveRelation`, `truthScoreForRelation`, `assertActiveRelationInvariants`, `findActiveRelationsFor`, `groundScore`, `chooseCanonicalTruth`.
+  - `logic/src/absolute/essence/types.ts` — `ActiveRelation` type (or import from relation.ts alias if preferred).
+- Engine placement and tests:
+  - Implement `logic/src/essence/relation/engine.ts` implementing `RelationEngine`.
+  - Tests: `logic/src/essence/relation/__tests__/engine.spec.ts`.
+
+## Adoption checklist
+1. Enforce runtime validation for ActiveRelation and referenced absolute containers.
+2. Implement `engine.ts` with helper-driven truth/ground semantics as above.
+3. Add tests for validation, truth predicate, ground selection, idempotent commit.
+4. Document any deviations from canonical ordering.
+
+## Consequences
+- Using the canonical helper set ensures consistent epistemic semantics across engines and simplifies auditing and testing.
+
+## References
+- ADR 0001, ADR 0002, ADR 0003, ADR 0004, ADR 0005
+- `logic/src/absolute/essence/relation.ts`

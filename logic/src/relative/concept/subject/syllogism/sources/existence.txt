@@ -1,0 +1,895 @@
+
+A. THE SYLLOGISM OF EXISTENCE
+
+1. The syllogism in its immediate form
+has for its moments the determinations
+of the concept as immediate.
+Accordingly, these are the abstract determinacies of form,
+such as have not yet been developed by mediation into concretion
+but are only singular determinacies.
+The first syllogism is thus the one which is strictly formal.
+The formalism of syllogistic inference consists in
+stopping short at the form of this first syllogism.
+The concept, when partitioned into its abstract moments,
+has singularity and universality for its extremes,
+and itself appears as the particularity
+that stands between them.
+Because of their immediacy,
+these determinacies only refer to themselves,
+one and all a single content.
+Particularity constitutes at first the middle term
+by uniting within itself, immediately,
+the two moments of singularity and universality.
+Because of its determinateness,
+on the one hand it is subsumed under the universal;
+on the other hand, the singular
+with respect to which it possesses universality
+is subsumed under it.
+This concretion is at first, however,
+only a double-sidedness;
+the middle term, because of the immediacy
+that affects it in the immediate syllogism,
+is a simple determinateness,
+and the mediation which it constitutes is not as yet posited.
+Now the dialectical movement of the syllogism of existence
+consists in positing the moments of the mediation
+that alone constitutes the syllogism.
+
+a. First figure of the syllogism
+
+S-P-U is the general schema of the determinate syllogism.
+Singularity connects with universality through particularity;
+the singular is not universal immediately
+but by means of particularity;
+and conversely, universality is likewise not singular immediately
+but lowers itself to it through particularity.
+These determinations stand over against each other as extremes
+and are one in a third term which is diverse from them.
+The two are both determinateness;
+in this they are identical;
+this, their universal determinateness, is particularity.
+But they are no less extremes with respect to
+this particularity than they are to each other,
+for each is in its immediate determinateness.
+
+The general meaning of this syllogism is that the singular,
+which as such is infinite self-reference
+and consequently would be only an inwardness,
+emerges through the medium of particularity into existence,
+into a universality wherein it no longer belongs just to itself
+but stands in external conjunction;
+conversely, since in its determinateness
+the singular sets itself apart as particularity,
+in this separation it is a concreted term
+and, because of the self-reference of the determinateness,
+it is a self-referring universal,
+and consequently also a true singular;
+in the extreme of universality the
+singular has gone from externality into itself.
+The objective significance of the syllogism is
+in this first figure only superficially present at first,
+for the determinations are not as yet posited in it
+as the unity which constitutes the essence
+of the syllogistic inference.
+The syllogism is still something subjective
+inasmuch as the abstract meaning which its terms have
+has no being in and for itself
+but is rather only in a subjective consciousness,
+and is thus isolated.
+Moreover, as we have seen, the relation of
+singularity, particularity, and universality
+is the necessary and essential form-relation of
+the determinations of the syllogism;
+the deficiency does not rest in the
+determinateness of the form
+but in that each single determination is not
+at the same time richer under it.
+Aristotle confined himself rather to the mere relation of
+inherence by defining the nature of the syllogism as follows:
+When three terms are so related to each other
+that the one extreme is in the entire middle term,
+and this middle term is in the entire other extreme,
+then these two extremes are necessarily united in the conclusion.
+What is here expressed is the repetition of
+the equal relation of inherence
+of the one extreme to the middle term,
+and then again of this last to the other extreme,
+rather than the determinateness of the three terms
+to each other.
+Now since the syllogistic inference rests
+on this determinateness of the terms to each other,
+it is immediately apparent that the other relations of terms
+as are given by the other figures can have validity
+as inferences of the understanding
+only to the extent that they let themselves
+be reduced to that original relation;
+these other are not diverse species of figures
+that stand alongside the first
+but, on the one hand, to the extent that they are assumed
+to be correct inferences,
+they rest on the form of syllogistic inference in general;
+and, on the other hand, to the extent that they deviate from it,
+they are variant forms into which
+the first abstract form necessarily passes over
+and thereby further determines itself and becomes totality.
+How this occurs, we must now see in greater detail.
+
+S-P-U is thus the general schema of
+the syllogism in its determinateness.
+The singular is subsumed under the particular
+and the particular under the universal;
+therefore, the singular is also subsumed under the universal.
+Or the particular inheres in the singular
+and the universal in the particular;
+therefore, the universal also inheres in the singular.
+With respect to the side of the universal,
+the particular is the subject;
+with respect to that of the singular, it is predicate;
+or as against the one it is singular,
+as against the other it is universal.
+Since both these determinations are united in it,
+by virtue of this unity of determinations
+the extremes are joined together.
+The “therefore” appears as an inference
+that has taken place in the subject
+and derives from the subjective insight
+into the relation of the two immediate premises.
+Since subjective reflection expresses
+the two connections of the middle
+to the extremes as particular
+and indeed immediate judgments or propositions,
+the conclusion as the mediated connection is
+of course also a particular proposition,
+and the “hence” or the “therefore,” is
+the expression that it is the one which is mediated.
+But this “therefore” is not to be regarded
+as a determination which is external to this proposition,
+one that would have its ground and seat in subjective reflection,
+but as grounded rather in the nature of the extremes themselves
+whose connection is again enunciated as
+a mere judgment or proposition only for the sake of,
+and by virtue of, abstractive reflection,
+but whose true connection is posited as the middle term.
+“Therefore S is A”:
+that this is a judgment is a merely subjective circumstance;
+that it is not a merely subjective judgment,
+that is, not a connection drawn through
+the mere copula or the empty “is”
+but one drawn rather through a determinate middle
+which is replete with content,
+that is precisely the meaning of the syllogistic inference.
+For this reason, to regard the syllogism as
+merely consisting of three judgments is
+a formalistic view that ignores
+the relation of the determinations
+which alone is at issue in the inference.
+It is altogether a merely subjective reflection
+that splits the connection of
+the terms into isolated premises
+and a conclusion distinct from them:
+
+All humans are mortal,
+Gaius is a human
+Therefore Gaius is mortal.
+
+One is immediately seized by boredom the moment
+one hears this inference being trotted out,
+a boredom brought on by the futility of a form
+that by means of separate propositions
+gives the illusion of a diversity
+which is immediately dissolved in the fact itself.
+It is mostly because of this subjective attire
+that the inference appears as a subjective expedient
+in which reason or understanding take refuge
+when they are incapable of immediate cognition.
+The nature of things, the rational,
+certainly does not operate in this way,
+first by drawing up a major premise for itself,
+the connection of some particularity to a subsistent universal;
+then by discovering in a second moment the separate connection
+of a singularity to the particularity,
+out of which in a third and final moment
+a new proportion comes to light.
+This syllogistic inference from
+one separate proposition to another is
+nothing but a subjective form;
+the nature of the fact is that
+its various determinations are
+united in a unity of essence.
+This rationality is not an expedient;
+on the contrary, in contrast to the
+immediacy of the connection
+that still obtains in judgment,
+it is the objective element;
+it is the prior immediacy of cognition
+that rather is mere subjectivity,
+in contrast to the syllogistic inference
+which is the truth of the judgment.
+All things are a syllogism,
+a universal united through particularity with singularity;
+surely not a whole made up of three propositions.
+
+2. In the immediate syllogism of the understanding,
+the terms have the form of immediate determinations;
+we must now consider that syllogism from this side,
+according to which the terms are content.
+We may then regard it as qualitative,
+just as we did the judgment of existence
+which has the same side of qualitative determination.
+The terms of this syllogism,
+just like the terms of that judgment,
+are accordingly singular determinacies,
+for the determinateness is posited
+because of its self-reference as indifferent to form
+and hence as content.
+The singular is some immediate concrete subject matter or other;
+particularity, one of its determinacies, properties or relations;
+universality, a yet more abstract, more singularized
+determinateness in the particular.
+Since the subject, as something immediately determined,
+is as yet not posited in its concept,
+its concretion is not reduced to its essential determinacies;
+its self-referring determinateness is therefore
+indeterminate, an infinite manifoldness.
+In this immediacy, the singular
+has an infinite multitude of determinacies
+that belong to its particularity
+and any may serve in a syllogism as the middle term for it.
+Through each middle term, however,
+the singular attaches to another universal;
+through each of its properties it enters into
+a different arrangement and context of existence.
+Moreover, in comparison with the universal,
+the middle term is also a concreted term;
+it itself contains several predicates,
+and through the same middle term
+the singular can again attach to several universals.
+In general, therefore, it is entirely accidental and arbitrary
+which of the many properties of a thing is taken
+for the purpose of connecting it with a predicate;
+other middle terms are transitions to other predicates,
+and even the same middle term may by itself be
+the transition to different predicates,
+for as a particular against the universal
+it contains several determinations.
+But not only is an indeterminate number of
+syllogisms equally possible for a subject
+and not only is any single syllogism
+contingent as regards content,
+but these syllogisms that concern the same subject
+must also run into contradiction.
+For difference as such,
+which is at first an indifferent diversity,
+is in essence equally opposition.
+The concrete is no longer merely phenomenal
+but is concrete through the unity in the concept of opposites
+that have determined themselves as moments of the latter.
+Now inasmuch as in the formal syllogism,
+in keeping with the qualitative nature of the terms,
+the concrete is taken according to
+one of the single determinations that pertain to it,
+the syllogistic inference assigns to it the predicate
+corresponding to this middle term;
+but inasmuch as from another side the
+opposite determinateness is inferred,
+the previous conclusion turns out to be false,
+even though its premises and equally so its consequences
+are by themselves quite correct.
+If from the middle term that a wall was painted blue
+it is concluded that it is blue,
+this is a correct inference.
+But, this conclusion notwithstanding,
+the wall can be green if it was
+also covered over with a yellow color,
+a circumstance from which alone it would follow that the wall is yellow.
+If from the senses as middle term it is concluded that
+the human being is neither good nor bad,
+for neither the one nor the other can be predicated of the senses,
+the inference is correct;
+yet the conclusion is wrong,
+because to the human being, taken concretely,
+spirituality also applies as the middle term.
+From the middle term of the gravitation of the planets,
+the satellites and comets towards the sun,
+it follows correctly that these bodies fall into the sun;
+but they do not fall into it,
+because they are equally their own center of gravity
+or, as it is said, are driven by the centrifugal force.
+Likewise, from sociability as the middle term,
+the community of goods among citizens can be inferred;
+however, from individuality as the middle term,
+if the term is pressed with equal abstractness,
+there follows the dissolution of the state,
+as for example it did follow for the German Empire
+from adhering to that middle term.
+It is only fair to hold that nothing is
+as unsatisfactory as such a formal syllogism,
+since which middle term is employed is
+a matter of chance or arbitrariness.
+No matter how elegantly a deduction is
+run through inferences of this kind,
+however fully its correctness is to be conceded,
+all this still amounts to nothing,
+for the possibility is still there
+that other middle terms may be found
+from which the opposite can be deduced with equal correctness.
+Kant's antinomies of reason amount to nothing more than that
+from a concept one of its determinations is
+laid down as ground at one time,
+and another determination at another time,
+both with equal necessity.
+The insufficiency and contingency of an inference
+must not be blamed in these cases on the content,
+as if they were independent of the form
+and the latter alone were the concern of logic.
+On the contrary, it lies in the form of the formal syllogism
+that the content is such a one-sided quality;
+the content is destined to this one-sidedness
+because of the form's abstractness.
+It is, namely, one single quality of the many qualities
+or determinations of a concrete subject matter,
+or of a concept, because according to the form it
+is not supposed to be anything more than just
+such an immediate, single determinateness.
+The extreme of singularity is, as abstract singularity,
+the immediate concrete, consequently
+an infinite or indeterminate manifold;
+the middle term is the equally abstract particularity,
+consequently a single one of these manifold qualities,
+and likewise the other extreme is the abstract universal.
+It is therefore because of its form that the formal syllogism is
+totally contingent as regards its content,
+not indeed because to the syllogism it is accidental
+whether this or that subject matter is subject to it
+(logic abstracts from content),
+but because, in so far as a subject is laid at its basis,
+it is contingent which content determinations it will infer from it.
+
+3. The determinations of the syllogism are
+determinations of content inasmuch as
+they are immediate and abstract determinations
+reflected into themselves.
+But their essence is to be, not immanently reflected and
+mutually indifferent determinations,
+but determinations of form,
+and to this extent they are essentially connections.
+These connections are,
+first, those of the extremes to the middle term.
+These are immediate connections,
+the propositiones premise namely,
+the connection of the particular to the universal,
+the propositio major,
+and that of the singular to the particular,
+the propositio minor.
+Second, there is the connection of the extremes to one
+another, and this is the mediated connection, the conclusion.
+The immediate connections, the premises, are
+propositions or judgments in general,
+and they contradict the nature of the syllogism,
+for according to the latter the
+different concept determinations should not be immediately connected
+but also their unity should be posited;
+the truth of the judgment is the syllogistic conclusion.
+And there is all the more reason why the premises
+cannot remain immediate connections as their content is made up of
+immediately differentiated determinations
+which, as such, are not in and for themselves identical,
+unless the premises are identical propositions,
+that is, empty tautologies that lead to nothing.
+
+Accordingly, the normal expectation is
+that the premises will be proved,
+that is, that they ought likewise
+to be exhibited as conclusions.
+The two premises, therefore, yield two further syllogisms.
+But these two new syllogisms together yield
+four premises that require four new syllogisms;
+these have eight premises whose eight conclusions yield
+in turn sixteen conclusions for their sixteen premises,
+and so on in a geometrical progression to infinity.
+
+Thus we have again the progress to infinity
+that occurred in the lower sphere of being
+but we would not expect now
+in the domain of the concept,
+the domain of the absolute reflection
+from the finite to the self,
+the region of free infinity and truth.
+It was shown in the sphere of being that
+whenever the bad infinity that runs away
+into a progression raises its head,
+what we have is the contradiction of a qualitative being
+and of an impotent ought that would transcend it;
+the progression itself is the repeated demand that
+there be unity that intervenes to confront the qualitative,
+and the constant fall back into the limitation
+which is inadequate to the demand.
+Now in the formal syllogism the immediate connection
+or the qualitative judgment is the basis,
+and the mediation of the syllogism is
+the higher truth posited over against it.
+The infinite progression of the proof of the premises does
+not resolve this contradiction
+but only perpetually renews it
+and is the repetition of one and the same original deficiency.
+The truth of the infinite progression is
+rather the sublation of it and of the form
+which the progression itself has already determined as deficient.
+This form is that of the mediation S-P-U.
+The two connections, S-P and P-U are supposed to be mediated;
+if this is done in the same manner,
+only the deficient form S-P-U is replicated,
+and so on to infinity.
+With respect to S, P also has the
+form determination of a universal;
+and with respect to U that of a singular,
+for these connections are as such judgments.
+As such, they are in need of mediation;
+but in that form of mediation,
+only the relation that was supposed
+to be sublated comes up again.
+
+The mediation must therefore occur in some other way.
+For the mediation of P-U, there is S available;
+hence the mediation must be given the shape of P-S-U.
+To mediate S-P, there is U available;
+accordingly, this mediation becomes S-U-P.
+
+If this transition is examined more closely in light of its concept,
+then, as was shown earlier, the mediation of the formal syllogism is
+in the first instance contingent according to content.
+The immediate singular has in its determinacies
+an indeterminate number of middle terms,
+and these have in general equally as many determinacies in turn;
+it is, therefore, entirely a matter of external arbitrary choice,
+or in general of an external circumstance and accidental determination,
+as to which universal the subject of the syllogism should be annexed.
+As regards its content, therefore, the mediation is
+not anything necessary, nor universal;
+it is not grounded in the concept of the fact
+but the basis of the inference is something external to it,
+that is, the immediate;
+but of the determinations of the concept,
+it is the singular which is the immediate.
+
+With respect to form, the mediation likewise
+presupposes the immediacy of connection;
+the mediation itself is thus mediated,
+mediated indeed by means of the immediate,
+that is, the singular.
+More precisely, the singular has become a mediating term
+through the conclusion of the first syllogism.
+That conclusion is S-U;
+the singular is thereby posited as a universal.
+In one premise, that is, the minor S-P,
+it is already as a particular;
+consequently, the singular is that
+in which these two determinations are united.
+Or the conclusion expresses in and for itself
+the singular as a universal,
+and it does it, not in any immediate manner, but mediatedly,
+hence as a necessary connection.
+The simple particularity was the middle term;
+in the conclusion, this particularity is posited
+as developed as the connection of singular and universality.
+But the universal is still a qualitative determinateness,
+the predicate of the singular;
+in being determined as universal,
+the singular is posited as the universality of the extremes
+or as the middle;
+it is for itself the extreme of singularity,
+but since it is now determined as a universal,
+it is at the same time the unity of the two extremes.
+
+b. The second figure: P-S-U
+
+1. The truth of the first qualitative syllogism is
+that something is not in and for itself united
+to a qualitative determinateness which is a universal,
+but is united to it by means of a contingency
+or in a singularity.
+The subject of the syllogism has not returned
+in such a quality to its concept
+but is conceived only in its externality;
+the immediacy constitutes the basis of
+the connection and hence the mediation;
+to this extent, the singular is in truth the middle.
+
+But further, the syllogistic connection is
+the sublation of the immediacy;
+the conclusion is a connection drawn not immediately
+but through a third term;
+therefore, it contains a negative unity;
+therefore, the mediation is now determined
+as containing a negative moment within it.
+In this second syllogism, the premises are: P-S and S-U;
+only the firstof these premises is still an immediate one;
+the second, S-U, is already mediated,
+namely through the first syllogism;
+the second syllogism thus presupposes the first just as, conversely,
+the first presupposes the second.
+The two extremes are here determined,
+the one as against the other, as particular and universal.
+The latter thus retains its place; it is predicate.
+But the particular has exchanged places;
+it is subject or is posited in the
+determination of the extreme of singularity,
+just as the singular is posited with
+the determination of the middle term or of particularity.
+The two no longer are, therefore, the abstract immediacies
+which they were in the first syllogism.
+However, they are not yet posited as concrete somethings;
+in standing in the place of the other, each is thereby posited;
+in its own determination and at the same time,
+although only externally, into that of the other.
+
+The determinate and objective meaning of this syllogism is
+that the universal is not in and for itself a determinate particular
+(it is rather the totality of its particulars)
+but that it is one of its species
+through the mediation of singularity;
+the rest of its species are excluded from
+it by the immediacy of externality.
+Likewise the particular is not for its part immediately,
+and in and for itself, the universal;
+the negative unity is rather what removes
+the determinateness from it
+and thereby raises it to universality.
+The singularity thus relates to the particular negatively
+in so far as it is supposed to be its predicate;
+it is not the predicate of the particular.
+
+2. But the terms are at first
+still immediate determinacies;
+they have not advanced of their own
+to any objective signification;
+the positions which two of them
+have exchanged and now occupy is the form,
+and this is as yet only external to them.
+Therefore they are still, as in the first syllogism,
+each a content indifferent as such to the other,
+two qualities linked together, not in and for themselves,
+but through the mediation of an accidental singularity.
+
+The syllogism of the first figure was the immediate syllogism,
+or again, the syllogism in so far as its concept is
+an abstract form that has not yet realized itself
+in all its determinations.
+The transition of this pure form into another figure is
+on the one hand the beginning of the realization of the concept,
+in that the negative moment of the mediation,
+and thereby one further determinateness of the form,
+is posited in the originally immediate,
+qualitative determinateness of the terms.
+But, on the other hand, this is at the same time
+an alteration of the pure form of the syllogism;
+the latter no longer conforms to it fully,
+and the determinateness posited in its terms is
+at variance with that original form determination.
+In so far as it is regarded as only a subjective syllogism
+that runs its course in external reflection,
+we can then take it as a species of syllogistic inference
+that should conform to the genus,
+namely the general schema S-P-U.
+But it does not at the moment conform to it;
+its two premises are P-S or S-P and S-U;
+the middle term is in both cases the one which is subsumed
+or is the subject in which the two other terms thus inhere,
+is not therefore a middle term
+that in one case would subsume or be predicate,
+and in the other would be subsumed or be subject,
+or a middle in which one of the terms
+would inhere but would itself inhere in the other.
+The true meaning of this syllogism's lack of conformity to
+the general form of the syllogism is that
+the latter has passed over into it,
+for its truth consists in being
+a subjective, contingent conjoining of terms.
+If the conclusion in this second figure is correct
+(that is, without recurring to the restriction,
+to which we shall presently turn,
+that makes of it something indeterminate),
+then it is correct because it is so on its own,
+not because it is the conclusion of this syllogism.
+But the same is the case for the conclusion of the first figure;
+it is this, the truth of that first figure,
+which is posited by the second.
+On the view that the second figure is only one species,
+we overlook the necessary transition of
+the first figure into this second
+and stop short at the first as the true form.
+Hence, if in the second figure
+(which from ancient custom is referred to,
+without further ground, as the third)
+we are equally supposed to find
+a correct syllogism in this subjective sense,
+this syllogism would have to be commensurate with the first;
+consequently, since the one premise S-U has the relation of
+the subsumption of the middle term under one extreme,
+then it would have to be possible for the other premise S-P
+to receive the opposite relation to that which it has,
+and for P to be subsumed under S.
+But such a relation would be the sublation of
+the determinate judgment S is P,
+and could only occur in an indeterminate judgment, a particular judgment;
+consequently, the conclusion in this figure can only be particular.
+But the particular judgment, as we remarked above,
+is positive as well as negative,
+a conclusion, therefore, to which no great value can be ascribed.
+Since the particular and universal are also the extremes,
+and are immediate determinacies indifferent to each other,
+their relation itself is indifferent;
+each can be the major or the minor term,
+indifferently the one or the other,
+and consequently either premise can also
+be taken as major or minor.
+
+3. Since the conclusion is positive as well as negative,
+it is a connection which for that reason is
+indifferent to these determinacies,
+hence a universal connection.
+More precisely, the mediation of the first syllogism
+was implicitly a contingent one;
+in the second syllogism, this contingency is posited.
+Consequently, the mediation is self-sublating;
+it has the determination of singularity and immediacy;
+what this syllogism joins together must,
+on the contrary, be in itself and immediately identical,
+for that mediating middle, the immediate singularity,
+is an infinitely manifold and external determining.
+Posited in it, therefore, is rather the self-external mediation.
+The externality of singularity, however, is universality;
+that mediation by means of the immediate singular
+points beyond itself to the mediation which is the other than it,
+one which therefore occurs by means of the universal.
+In other words, what is supposed to be united by means of
+the second syllogism, must be immediately conjoined;
+the immediacy on which it is based
+does not allow any definite conclusion.
+The immediacy to which this syllogism points is
+the opposite of its own:
+it is the sublated first immediacy of being,
+therefore the immediacy reflected into itself
+or the abstract universal existing in itself.
+
+From the standpoint of the present consideration,
+the transition of this syllogism was like
+the transition of being an alteration,
+for its base is qualitative;
+it is the immediacy of singularity.
+But according to the concept,
+singularity conjoins the particular and the universal
+by sublating the determinateness of the particular
+and this is what presents itself as the contingency
+of this syllogistic inference.
+The extremes are not conjoined by the specific connective
+which they have in the middle term;
+this term is not, therefore, their determinate unity,
+and the positive unity that yet pertains to it is abstract universality.
+But inasmuch as the middle term is posited in this determination
+which is its truth, we have another form of the syllogism.
+
+c. The third figure: S-U-P
+
+1. This third syllogism no longer has any single immediate premise;
+the connection S-U has been mediated by the first syllogism;
+the connection P-U by the second.
+It thus presupposes both these syllogisms;
+but conversely it is presupposed by them,
+just as in general each presupposes the other two.
+In this third figure, therefore, it is the determination of the syllogism
+as such that is brought to completion.
+This reciprocal mediation means just this,
+that each syllogism, although for itself a mediation,
+does not possess the totality of mediation
+but is affected by an immediacy
+whose mediation lies outside it.
+
+Considered in itself, the syllogism S-U-P is
+the truth of the formal syllogism;
+it expresses the fact that
+its mediating middle is the abstract universal
+and that the extremes are not contained in it
+according to their essential determinateness
+but only according to their universality,
+that precisely that is not conjoined in it,
+which was supposed to be mediated.
+Posited here, therefore, is that
+wherein the formalism of the syllogism consists;
+that its terms have an immediate content
+which is indifferent towards the form,
+or, what amounts to the same,
+that they are such form determinations
+as have not yet reflected themselves
+into determinations of content.
+
+2. The middle of this syllogism is indeed the unity of the extremes,
+but a unity in which abstraction is made from their determinateness,
+the indeterminate universal.
+But in so far as this universal is at the same time distinguished
+from the extremes as the abstract from the determinate,
+it is itself also a determinate as against them,
+and the whole is a syllogism
+whose relation to its concept needs examining.
+As the universal, the middle term is
+with respect to both its extremes
+the term that subsumes or the predicate,
+not a term for once also subsumed or the subject.
+Now as a species of syllogism, it ought to conform to the latter,
+and this can only happen on condition that,
+inasmuch as the one connection S-U
+already possesses the appropriate relation,
+the other connection P-U contains it too.
+This occurs in a judgment in which
+the relation of subject and predicate is
+an indifferent one, in a negative judgment.
+Thus does the syllogism become legitimate,
+but the conclusion is necessarily negative.
+
+Consequently, also indifferent is now
+which of the two determinations
+of this proposition is taken as predicate or subject,
+and whether the determination is taken in the syllogism as
+the extreme of singularity or the extreme of particularity,
+hence as the minor or major term.
+Since on the usual assumption
+which of the premises is supposed to be
+the major or the minor depends on this distinction,
+this too has now become a matter of indifference.
+This is the ground of the customary
+fourth figure of the syllogism
+which was unknown to Aristotle
+and has to do with an entirely void
+and uninteresting distinction.
+In it the immediate position of the terms is
+the reverse of their position in the first figure;
+since from the point of view of the formal treatment of judgment
+the subject and predicate of the negative conclusion
+do not have the determinate relation of subject and predicate,
+but each can take the place of the other,
+it is a matter of indifference which term is taken
+as subject and which as predicate;
+and just as indifferent is therefore
+which premise is taken as the major
+and which as the minor.
+This indifference, to which the determination of particularity
+also contributes
+(especially if it is noted that this particularity
+can be taken in a comprehensive sense),
+makes of this fourth figure something totally idle.
+
+3. The objective significance of the syllogism
+in which the universal is the middle is that the mediating term,
+as the unity of the extremes, is essentially a universal.
+But since the universality is at first only qualitative or abstract,
+the determinateness of the extremes is not contained in it;
+their being conjoined in the conclusion,
+if the conjunction is to take place,
+must likewise have its ground in a mediation
+that lies outside this syllogism
+and is, with respect to the latter,
+just as contingent as it is in
+the preceding forms of the syllogism.
+But now, since the universal is determined as the middle term,
+and since the determinateness of the extremes
+is not contained in this middle,
+the latter is posited as one
+which is wholly indifferent and external.
+It is here, by virtue indeed of a bare abstraction,
+that a fourth figure of the syllogism arose in the first place,
+namely the figure of the relationless syllogism, U-U-U,
+which abstracts from the qualitative differentiation of the terms
+and therefore has their merely external unity,
+their equality, for its determination.
+
+d. The fourth figure: U-U-U, or the mathematical syllogism
+
+1. The mathematical syllogism goes like this:
+if two things or two determinations are equal to a third,
+then they are equal to each other.
+The relation of inherence or subsumption of terms is done away with.
+A “third” is in general the mediating term;
+but this third has absolutely no determination as against the extremes.
+Each of the three terms can therefore be the mediating term
+just as well as any other.
+Which is needed for the job,
+which of the three connections are
+therefore to be taken as immediate,
+and which as mediated,
+depends on external circumstances and other conditions,
+namely which two of the three are immediately given.
+But this determination does not concern the syllogism
+and is wholly external.
+
+2. The mathematical syllogism ranks in mathematics as an axiom,
+as a first self-explanatory proposition
+which is neither capable nor in need of proof,
+i.e of any mediation which neither presupposes anything else
+nor can be derived from anything else.
+If we take a closer look at this prerogative
+that the proposition claims, of being immediately self-evident,
+we find that it lies in its formalism,
+in the fact that it abstracts from
+every qualitative diversity of determinations
+and only admits their quantitative equality or inequality.
+But for this very reason it is not without presupposition or mediation;
+the quantitative determination,
+which alone comes into consideration in it,
+is only by virtue of the abstraction from qualitative differentiation
+and from the concept determinations.
+Lines, figures, posited as equal to each other,
+are understood only according to their magnitude.
+A triangle is posited as equal to a square,
+not however as triangle to square
+but only according to magnitude, etc.
+Nor does the concept and its determinations enter into this syllogism;
+there is in it, therefore, no conceptual comprehension at all;
+the understanding is also not faced here by even
+the formal, abstract determinations of the concept.
+The self-evidence of this syllogism rests,
+therefore, solely on the indigence and abstractness
+of its mode of thought.
+
+3. But the result of the syllogism of existence is not
+just this abstraction from all determinateness of the concept;
+the negativity of the immediate and abstract determinations
+that emerged from it has yet another positive side,
+namely that in the abstract determinateness
+its other has been posited
+and the determinateness has thereby become concrete.
+
+In the first place, the syllogisms of existence
+all have one another for presupposition,
+and the extremes conjoined in the conclusion are truly conjoined,
+in and for themselves, only inasmuch as they are otherwise
+united by an identity grounded elsewhere;
+the middle term, as constituted in the syllogisms we have examined,
+ought to be the conceptual unity of these syllogisms
+but is in fact only a formal determinateness
+that is not posited as their concrete unity.
+But what is thus presupposed by each and
+every of these mediations is not merely
+a given immediacy in general,
+as is the case for the mathematical syllogism,
+but is itself a mediation,
+namely of each of the other two syllogisms.
+Therefore, what is truly present here is not
+a mediation based on a given immediacy,
+but a mediation based on mediation.
+And this mediation is not quantitative,
+not one that abstracts from the form of mediation,
+but is rather a self-referring mediation,
+or the mediation of reflection.
+The circle of reciprocal presupposing
+which these syllogisms bring to closure is
+the turning back of this presupposing into itself;
+a presupposing that in this turning back forms a totality,
+and has the other to which every single syllogism refers,
+not outside by virtue of abstraction,
+but included within the circle.
+
+Further, from the side of the single determinations of form
+it has been shown that in this whole of formal syllogisms
+each single determination has in turn occupied
+the place of the middle term.
+As immediate, this term was determined as particularity;
+thereupon, through dialectical movement
+it determined itself as singularity and universality.
+Likewise did each of these determinations occupy the
+places of both of the two extremes.
+The merely negative result is the dissolution of
+the qualitative determinations of form
+into the merely quantitative, mathematical syllogism.
+But what we truly have here is the positive result,
+namely that mediation occurs,
+not through any single qualitative determinateness of form,
+but through the concrete identity of the determinacies.
+The deficiency and formalism of the three figures of the syllogism
+just considered consists precisely in this,
+that one such single determinateness was
+supposed to constitute the middle term in it.
+Mediation has thus determined itself as
+the indifference of the immediate or abstract determinations of form
+and the positive reflection of one into the other.
+The immediate syllogism of existence has thereby
+passed over into the syllogism of reflection.

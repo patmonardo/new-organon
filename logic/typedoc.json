@@ -1,0 +1,19 @@
+{
+  "entryPoints": ["src/index.ts"],
+  "tsconfig": "tsconfig.json",
+  "out": "doc/api",
+  "theme": "default",
+  "readme": "README.md",
+  "exclude": [
+    "**/__tests__/**",
+    "**/test/**",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "disableSources": true,
+  "includeVersion": true,
+  "hideGenerator": true
+}

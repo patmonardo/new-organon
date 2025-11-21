@@ -1,0 +1,44 @@
+{
+  "extends": "../../tsconfig.test.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@organon/gdsl": [
+        "../../gdsl/dist/index"
+      ],
+      "@organon/gdsl/*": [
+        "../../gdsl/dist/*"
+      ],
+      "@organon/reality": [
+        "../../reality/dist/index"
+      ],
+      "@organon/reality/*": [
+        "../../reality/dist/*"
+      ],
+      "@repository": [
+        "../src/repository/index"
+      ],
+      "@repository/*": [
+        "../src/repository/*"
+      ],
+      "@schema": [
+        "../src/schema/index"
+      ],
+      "@schema/*": [
+        "../src/schema/*"
+      ],
+      "@absolute": [
+        "../src/absolute/index"
+      ],
+      "@absolute/*": [
+        "../src/absolute/*"
+      ],
+      "@relative": [
+        "../src/relative/index"
+      ],
+      "@relative/*": [
+        "../src/relative/*"
+      ]
+    }
+  },
+}

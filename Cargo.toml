@@ -1,0 +1,23 @@
+[workspace]
+members = ["gds", "gdsl", "reality"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Pat <pat@example.com>"]
+license = "MIT"
+repository = "https://github.com/pat/new-organon"
+
+[workspace.dependencies]
+# Common dependencies for all crates
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+thiserror = "1.0"
+rayon = "1.8"
+tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+log = "0.4"
+env_logger = "0.10"
