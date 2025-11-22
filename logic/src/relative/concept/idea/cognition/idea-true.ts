@@ -2,8 +2,18 @@ import type { Chunk, LogicalOperation } from '../../../types';
 
 /**
  * SPECIES A: THE IDEA OF THE TRUE
- * 
+ *
  * The theoretical idea: impulse, truth, analytic and synthetic cognition.
+ *
+ * Structure:
+ * 1. Impulse of truth — theoretical idea
+ * 2. Finite cognition — contradiction
+ * 3. Analytic and synthetic cognition
+ *    - Analytic cognition (immediate communication, no mediation)
+ *    - Synthetic cognition:
+ *      a. Definition (universality)
+ *      b. Division (particularity)
+ *      c. The theorem (singularity — transition to idea)
  */
 
 export const CANONICAL_CHUNKS: Chunk[] = [
@@ -225,6 +235,74 @@ appear as the product of a merely subjective activity.
 But the two moments are not to be separated.`,
     summary: 'Analytic cognition = first premise, no mediation, immediate communication of concept, no otherness, activity divests negativity. Immediacy = mediation = negative reference annulling itself = simple/identical. Immanent reflection = subjective, difference as presupposition. Result = simple identity/abstract universality. Principle = identity, transition/linking excluded. Analysis = based on concept, products = conceptual determinations. Object = totality of concept. One-sided: subjective idealism (one-sided positing, thing-in-itself hidden) vs realism (empty identity, imports from outside). Analytical cognition = positing = presupposing, both in one. Logical element = in subject matter (presupposing) = product of activity (positing). Two moments not separated.'
   },
+  {
+    id: 'cognition-a-4-theorem',
+    title: 'The theorem — third stage of synthetic cognition',
+    text: `The third stage in this advance of cognition
+based on concept determinations is
+the transition of particularity to singularity;
+this stage constitutes the content of the theorem.
+To be considered here, therefore,
+is the self-referring determinateness,
+the internal differentiation of the subject matter
+and the connection of the differentiated determinacies to one another.
+Definition contains only one determinateness,
+division contains determinateness as against the other;
+in singularization the subject matter has parted internally.
+Whereas definition stops at the universal concept,
+in theorems the subject matter is known in its reality,
+in the conditions and the forms of its real existence.
+Together with the definition, therefore,
+the subject matter exhibits the idea,
+which is the unity of the concept and reality.
+But the cognition being considered here,
+a cognition that is still a seeking,
+does not attain this presentation,
+for in it reality does not proceed from the concept,
+and therefore the dependency of reality on the concept
+and consequently the unity itself is not cognized.
+
+Now according to the definition just given,
+the theorem is the properly
+synthetic element of a subject matter,
+because the relations of its determinacies are necessary,
+that is, are grounded in the inner identity of the concept.
+In definition and division the synthetic element is
+a connectedness held together externally;
+what is found given is brought into the form of the concept,
+but, as given, the entire content is only displayed;
+in the theorem, on the contrary,
+it ought to be demonstratively displayed.
+Since this cognition does not deduce
+the content of its definitions
+and of the principles of division,
+it seems that it might also spare itself
+the proof of the relations expressed by the theorem
+and be satisfied here too just with perception.
+But what distinguishes cognition
+from mere perception and representation is
+the form of the concept in general
+that it imparts to the content;
+this is done in definition and division;
+but since the content of the theorem proceeds
+from the concept's moment of singularity,
+it consists in determinations of reality
+that no longer have as their relation
+just the simple and immediate
+determinations of the concept;
+in singularity the concept has gone over
+to otherness, to reality,
+thereby becoming idea.
+The synthesis contained in the
+theorem no longer has, therefore,
+the form of the concept to justify it;
+it is a joining together of such as are diverse;
+consequently, the unity not yet thereby
+posited still remains to be demonstrated;
+here proof thus becomes necessary
+to this cognition itself.`,
+    summary: 'Theorem = third stage of synthetic cognition = transition of particularity to singularity. Content = self-referring determinateness, internal differentiation, connection of differentiated determinacies. Definition = one determinateness, division = determinateness against other, singularization = subject matter parted internally. Definition stops at universal concept, theorems = subject matter known in reality/conditions/forms of real existence. With definition, subject matter exhibits idea = unity of concept and reality. Cognition still seeking, reality does not proceed from concept, dependency/unity not cognized. Theorem = properly synthetic element, relations necessary, grounded in inner identity of concept. Definition/division = external connectedness, content displayed; theorem = demonstratively displayed. Theorem content proceeds from concept\'s moment of singularity = determinations of reality, no longer simple/immediate concept determinations. In singularity, concept gone over to otherness/reality = becoming idea. Theorem synthesis = joining diverse, unity not posited, proof necessary.'
+  },
 ];
 
 export const LOGICAL_OPERATIONS: LogicalOperation[] = [
@@ -328,6 +406,55 @@ export const LOGICAL_OPERATIONS: LogicalOperation[] = [
     relations: [
       { predicate: 'is', from: 'analyticalCognition', to: 'positing' },
       { predicate: 'is', from: 'analyticalCognition', to: 'presupposing' },
+    ],
+  },
+  {
+    id: 'cognition-op-a-4-theorem',
+    chunkId: 'cognition-a-4-theorem',
+    label: 'The theorem as synthetic element',
+    clauses: [
+      'theorem = thirdStageOfSyntheticCognition',
+      'theorem = transitionOfParticularityToSingularity',
+      'theorem.content = selfReferringDeterminateness',
+      'theorem.content = internalDifferentiation',
+      'theorem.content = connectionOfDifferentiatedDeterminacies',
+      'definition = oneDeterminateness',
+      'division = determinatenessAgainstOther',
+      'singularization = subjectMatterPartedInternally',
+      'definition.stopsAt = universalConcept',
+      'theorems = subjectMatterKnownInReality',
+      'theorems = conditionsAndFormsOfRealExistence',
+      'withDefinition.subjectMatterExhibits = idea',
+      'idea = unityOfConceptAndReality',
+      'cognition.stillSeeking = true',
+      'reality.doesNotProceedFromConcept = true',
+      'dependency.notCognized = true',
+      'unity.notCognized = true',
+      'theorem = properlySyntheticElement',
+      'theorem.relations = necessary',
+      'theorem.relations.groundedIn = innerIdentityOfConcept',
+      'definition.division.syntheticElement = externalConnectedness',
+      'theorem.oughtToBe = demonstrativelyDisplayed',
+      'theorem.content.proceedsFrom = conceptMomentOfSingularity',
+      'theorem.content = determinationsOfReality',
+      'theorem.content.noLonger = simpleImmediateConceptDeterminations',
+      'inSingularity.conceptGoneOverTo = otherness',
+      'inSingularity.conceptGoneOverTo = reality',
+      'conceptGoneOverToReality = becomingIdea',
+      'theorem.synthesis = joiningDiverse',
+      'theorem.unity.notPosited = true',
+      'theorem.proof.necessary = true',
+    ],
+    predicates: [
+      { name: 'IsTheorem', args: ['thirdStageOfSyntheticCognition'] },
+      { name: 'IsSyntheticElement', args: ['theorem'] },
+      { name: 'RequiresProof', args: ['theorem'] },
+    ],
+    relations: [
+      { predicate: 'is', from: 'theorem', to: 'thirdStageOfSyntheticCognition' },
+      { predicate: 'is', from: 'theorem', to: 'properlySyntheticElement' },
+      { predicate: 'requires', from: 'theorem', to: 'proof' },
+      { predicate: 'exhibits', from: 'subjectMatterWithDefinition', to: 'idea' },
     ],
   },
 ];

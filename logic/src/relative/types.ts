@@ -1,7 +1,17 @@
 /*
-  Shared Types for Logic Modules
-  
-  Single source of truth for Chunk, LogicalOperation, and related types.
+  KG SCHEMA: Knowledge Graph Structure Definitions
+
+  This file defines the core schema/structure of the Knowledge Graph:
+  - Chunk: Text segments with metadata
+  - LogicalOperation: Structured logical operations (HLOs)
+  - Predicate, Relation: Components of Logical Operations
+  - TopicMap types: Source Analysis planning structure
+
+  NOTE: This is the KG schema, not just "types" in the TypeScript sense.
+  The actual KG data structures are defined here.
+
+  For Source Analysis tools and utilities, see: tools/source-analysis/
+
   All modules should import from here: `import type { Chunk, LogicalOperation } from '../types'`
 */
 
@@ -43,4 +53,21 @@ export type LogicalOperation = {
   evidence?: unknown[]
   [k: string]: unknown
 }
+
+// Re-export TopicMap types for convenience
+export type {
+  TopicMap,
+  TopicMapEntry,
+  TopicMapStatus,
+} from './types/topic-map';
+
+export {
+  createTopicMap,
+  createTopicMapEntry,
+  validateTopicMap,
+  getTopicMapEntry,
+  getTopicMapEntriesByStatus,
+  getTopicMapEntriesSorted,
+  updateTopicMapEntryStatus,
+} from './types/topic-map';
 

@@ -1,7 +1,7 @@
 import type { Chunk, LogicalOperation } from '../../../types';
 
 // Import introduction
-import { CANONICAL_CHUNKS as INTRO_CHUNKS, LOGICAL_OPERATIONS as INTRO_OPS } from './cognition';
+import { CANONICAL_CHUNKS as INTRO_CHUNKS, LOGICAL_OPERATIONS as INTRO_OPS } from './idea-cognition';
 
 // Import species modules
 import { CANONICAL_CHUNKS as IDEA_TRUE_CHUNKS, LOGICAL_OPERATIONS as IDEA_TRUE_OPS } from './idea-true';
