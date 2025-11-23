@@ -1,0 +1,436 @@
+/**
+ * TopicMap for Necessity.txt - The Syllogism of Necessity
+ *
+ * SOURCE ANALYSIS PHASE 1: Topics
+ *
+ * COGNITIVE SCIENCE: This is where the real cognitive work happens.
+ * The skill in producing good chunks and topics is what makes everything else meaningful.
+ * The TopicMap helps check and improve understanding of Hegel through step-by-step analysis.
+ *
+ * Architecture:
+ *    Source Text → [Source Analysis: Cognitive Science] → Chunks + Topics
+ *                                                              ↓
+ *                    [Logical Op Generation: IR Translation] → Logical Operations (IR)
+ *                                                              ↓
+ *                    [Codegen: Backend] → Executable Code
+ *
+ * This TopicMap provides the structured plan for chunking the source text
+ * into meaningful chunks. Good chunking/topic analysis makes Logical Operations meaningful
+ * (not just jargon) and enables executable codegen (the backend).
+ *
+ * Each entry maps to:
+ * - TopicMapEntry.id → Chunk.id
+ * - TopicMapEntry.title → Chunk.title AND LogicalOperation.label (the "Title")
+ * - TopicMapEntry.lineRange → Extract text → Chunk.text
+ *
+ * Reference:
+ * - necessity-chunks.md for detailed planning notes
+ * - tools/source-analysis/SOURCE-ANALYSIS.md for workflow documentation
+ * - tools/source-analysis/ARCHITECTURE.md for architectural overview
+ *
+ * Note: All mainline text included, including examples, even though examples won't become Logical Operations.
+ * Key Insight: The Idea is the Concept, but the Concept self-encloses Judgments while the Idea self-encloses the Differentiated Object.
+ */
+
+import type { TopicMap } from '../../../types/topic-map';
+import { createTopicMap, createTopicMapEntry } from '../../../types/topic-map';
+
+export const NECESSITY_SYLLOGISM_TOPIC_MAP: TopicMap = createTopicMap(
+  'logic/src/relative/concept/subject/syllogism/sources/necessity.txt',
+  'Hegel\'s Science of Logic - The Syllogism',
+  'The Syllogism of Necessity',
+  [
+    createTopicMapEntry(
+      'syl-nec-1-introduction-objective',
+      'Introduction: Middle Term as Objective Universality; Genus',
+      [5, 39],
+      'Middle determined: simple determinate universality (like particularity in existence) and objective universality (like allness, contains whole determinateness). Completed simple universality = genus. Full of content (difference reflected into simple identity). Middle = immanent reflection of determinateness. Extremes have inner identity (content determinations = form determinations). Terms = moments of necessary existence. Realization: extremes as totality, necessity = connection of posited form.',
+      [
+        'simple determinate universality',
+        'objective universality',
+        'whole determinateness',
+        'completed simple universality',
+        'genus',
+        'full of content',
+        'reflected into simple identity',
+        'immanent reflection',
+        'inner identity',
+        'content determinations',
+        'form determinations',
+        'moments of necessary existence',
+        'realization',
+        'totality',
+        'posited form',
+      ],
+      { section: 'The Syllogism of Necessity', order: 1 }
+    ),
+
+    createTopicMapEntry(
+      'syl-nec-2-categorical-first',
+      'Categorical: First Syllogism of Necessity; Through Substance',
+      [43, 90],
+      'Has categorical judgment for premises. Middle = objective universality. Superficially = syllogism of inherence. Full import: first syllogism of necessity (subject conjoined through substance). Substance elevated = universal (determination of concept, not accidentality). Differences = extremes (universality and singularity). Universality = abstract/universal determinateness (essential difference, specific difference). Singularity = actual (concrete unity, but immediate = immediate singularity). Both premises categorical.',
+      [
+        'categorical judgment',
+        'objective universality',
+        'syllogism of inherence',
+        'first syllogism of necessity',
+        'through substance',
+        'elevated to sphere of concept',
+        'determination of concept',
+        'accidentality',
+        'extremes',
+        'abstract',
+        'universal determinateness',
+        'essential difference',
+        'specific difference',
+        'immediate singularity',
+        'subsistence',
+        'categorical',
+      ],
+      { section: 'The Categorical Syllogism', order: 2 }
+    ),
+
+    createTopicMapEntry(
+      'syl-nec-3-categorical-objectivity',
+      'Categorical: No Contingency; Objectivity Begins',
+      [92, 139],
+      'Schema S-P-U. Middle = essential nature (not determinacies). Extreme = universal determinateness of genus (specific difference). No contingency. No external immediacy → no demand for proof. Does not presuppose conclusion. Terms in connection of identity in and for itself (one essence, determinations = formal moments). No longer subjective (objectivity begins). Middle = identity full of content (self-subsistence = genus). Subjective element = indifferent subsistence.',
+      [
+        'schema S-P-U',
+        'essential nature',
+        'universal determinateness',
+        'specific difference',
+        'no contingency',
+        'external immediacy',
+        'no demand for proof',
+        'does not presuppose',
+        'connection of identity',
+        'in and for itself',
+        'one essence',
+        'formal moments',
+        'no longer subjective',
+        'objectivity begins',
+        'identity full of content',
+        'self-subsistence',
+        'genus',
+        'subjective element',
+        'indifferent subsistence',
+      ],
+      { section: 'The Categorical Syllogism', order: 3 }
+    ),
+
+    createTopicMapEntry(
+      'syl-nec-4-categorical-hypothetical',
+      'Categorical: Still Subjective; Passes to Hypothetical',
+      [141, 200],
+      'Still subjective (identity = substantial/content, not form). Identity = inner bond (necessity). Universality = solid positive (not negativity). Immediacy not posited. Truly immediate = singular (contingent that only this). Contingency because connected as objective universality (subjective actuality). Subject contains determinations not in middle (concrete existence indifferent, own content). Other term also indifferent. Same relation middle/other extreme. Posited: objective universality/immediate actualities/indifferent and contingent (immediacy sublated). But identity = only formal inner → determined to hypothetical.',
+      [
+        'still subjective element',
+        'substantial identity',
+        'not yet identity of form',
+        'inner bond',
+        'necessity',
+        'solid positive identity',
+        'not equally negativity',
+        'not yet posited',
+        'truly immediate',
+        'contingent',
+        'external reflection',
+        'objective universality',
+        'subjective actuality',
+        'concrete existence',
+        'indifferent',
+        'own content',
+        'indifferent immediacy',
+        'contingent with respect',
+        'formal inner identity',
+        'determined to hypothetical',
+      ],
+      { section: 'The Categorical Syllogism', order: 4 }
+    ),
+
+    createTopicMapEntry(
+      'syl-nec-5-hypothetical-immediacy',
+      'Hypothetical: Adds Immediacy; A as Middle Term',
+      [204, 226],
+      'Hypothetical judgment = necessary connection without immediacy. "If A is, so is B" (being of A = being of other, not said A is or B is). Syllogism adds immediacy: If A is, so is B, But A is, Therefore B is. Minor expresses immediate being. Conclusion = accomplished mediating unity. Being of A = essentially as middle term.',
+      [
+        'necessary connection',
+        'without immediacy',
+        'being of A',
+        'being of other',
+        'adds immediacy',
+        'immediate being',
+        'accomplished mediating unity',
+        'essentially as middle term',
+      ],
+      { section: 'The Hypothetical Syllogism', order: 5 }
+    ),
+
+    createTopicMapEntry(
+      'syl-nec-6-hypothetical-condition',
+      'Hypothetical: Condition and Conditioned; A as Mediating Being',
+      [228, 306],
+      'Connection = necessity/inner substantial identity (external diversity, identical content). Sides = held in necessity (sublated, appearance). Universality/singularity (indifferent which). Conditions = inner abstract (universal, held together step into actuality) or dismembered dispersed (gains unity in actuality). Condition/conditioned (or cause/effect, more universal, comprehends both). A = mediating being (immediate/indifferent and contingent/self-sublating). Translates: not abstract immediacy but according to concept (singularity as self-referring negative unity). Conditions = dispersed material. Negativity = mediating means (free unity). Activity (contradiction of objective universality and immediacy). Existent necessity (self-reference as being). In categorical: contingency returned into concept as unity.',
+      [
+        'necessity',
+        'inner substantial identity',
+        'external diversity',
+        'identical content',
+        'held in necessity',
+        'sublated',
+        'appearance',
+        'universality and singularity',
+        'indifferent',
+        'conditions',
+        'inner abstract',
+        'held together',
+        'dismembered dispersed',
+        'gains unity',
+        'condition and conditioned',
+        'cause and effect',
+        'more universal',
+        'comprehends both',
+        'mediating being',
+        'immediate being',
+        'indifferent actuality',
+        'contingent',
+        'self-sublating',
+        'translates',
+        'according to concept',
+        'self-referring negative unity',
+        'dispersed material',
+        'mediating means',
+        'free unity',
+        'activity',
+        'contradiction',
+        'existent necessity',
+        'self-reference',
+        'contingency',
+        'returned into concept',
+      ],
+      { section: 'The Hypothetical Syllogism', order: 6 }
+    ),
+
+    createTopicMapEntry(
+      'syl-nec-7-hypothetical-identity',
+      'Hypothetical: Identity of Mediator and Mediated',
+      [308, 329],
+      'Conclusion expresses contradiction (immediately but through other/mediated). Same concept as middle (distinguished only as necessary, superficial form). Absolute content same (two names for same thing, representation distinguishes necessary from necessity). To extent separated, would not be necessary. Identity of mediating term and mediated.',
+      [
+        'same contradiction',
+        'immediately',
+        'through other',
+        'mediated',
+        'same concept',
+        'distinguished',
+        'necessary',
+        'superficial form',
+        'absolute content same',
+        'two different names',
+        'same basic thing',
+        'representation',
+        'distinguishes',
+        'separated',
+        'identity',
+        'mediating term',
+        'mediated',
+      ],
+      { section: 'The Hypothetical Syllogism', order: 7 }
+    ),
+
+    createTopicMapEntry(
+      'syl-nec-8-hypothetical-disjunctive',
+      'Hypothetical: Negative Unity; Passes to Disjunctive',
+      [331, 364],
+      'First to display necessary connection through form/negative unity (categorical = positive unity, solid content). Necessity merges with necessary (form-activity = unity, determinacies sublated, difference = empty name). Unity reflected into itself (identical content, posited). Being of A = that of B and vice versa (being of one = being of other). Immediate being = mediated (externality sublated, unity withdrawn). Mediation = singularity/immediacy/self-referring negativity (differentiating identity, absolute form, objective universality). = disjunctive syllogism.',
+      [
+        'first to display',
+        'connectedness through form',
+        'negative unity',
+        'positive unity',
+        'solid content',
+        'objective universality',
+        'merges',
+        'form-activity',
+        'unity',
+        'determinacies sublated',
+        'empty name',
+        'reflected into itself',
+        'identical content',
+        'posited',
+        'not its own',
+        'vice versa',
+        'mediated',
+        'externality sublated',
+        'withdrawn into itself',
+        'singularity',
+        'immediacy',
+        'self-referring negativity',
+        'differentiating identity',
+        'absolute form',
+        'self-identical existent content',
+        'disjunctive syllogism',
+      ],
+      { section: 'The Hypothetical Syllogism', order: 8 }
+    ),
+
+    createTopicMapEntry(
+      'syl-nec-9-disjunctive-totality',
+      'Disjunctive: S-U-P; Middle as Totality',
+      [368, 417],
+      'Hypothetical = U-S-P. Disjunctive = S-U-P. Middle = universality replete with form (totality, developed objective universality). Middle = universality/particularity/singularity. As universality: substantial identity of genus (particularity included, universal sphere, genus sorted in species, A is B as well as C and D). Particularization = differentiation (either-or = negative unity, reciprocal exclusion, self-referring, particular as singularity excluding). Examples: A is either B or C or D, But A is B, Therefore neither C nor D. Or: Therefore A is B. A = subject in premises and conclusion (universal/particularized/determinate/excluding).',
+      [
+        'schema U-S-P',
+        'schema S-U-P',
+        'universality replete with form',
+        'totality',
+        'developed objective universality',
+        'universality',
+        'particularity',
+        'singularity',
+        'substantial identity',
+        'genus',
+        'particularity included',
+        'universal sphere',
+        'total particularity',
+        'sorted in species',
+        'particularization',
+        'differentiation',
+        'either-or',
+        'negative unity',
+        'reciprocal exclusion',
+        'self-referring determination',
+        'excluding',
+        'examples',
+        'subject',
+        'universal sphere',
+        'particularized',
+        'totality of species',
+        'determinate',
+        'species',
+        'excluding singular determinateness',
+        'exclusive singularity',
+        'positively posited',
+      ],
+      { section: 'The Disjunctive Syllogism', order: 9 }
+    ),
+
+    createTopicMapEntry(
+      'syl-nec-10-disjunctive-sublated',
+      'Disjunctive: No Longer Syllogism; Formalism Sublated',
+      [419, 473],
+      'What mediated = universality with singularity. Mediating means = A (universal sphere, determined as singular). Truth of hypothetical (unity of mediator and mediated). No longer syllogism. Middle as totality contains extremes in complete determinateness. Extremes = only positedness (no proper determinateness). With reference: substantial identity/negative unity (activity/form translating). Disjunctive: middle = genus perfectly determined. Posited: inner content, form = identical with solid content. Whole form determination posited in difference and identity. Formalism sublated (subjectivity sublated). In completion: distinction fallen away. Mediated = essential moment (each moment = totality).',
+      [
+        'appears to be mediated',
+        'universality with singularity',
+        'mediating means',
+        'universal sphere',
+        'particularizations',
+        'truth of hypothetical',
+        'unity of mediator and mediated',
+        'no longer syllogism',
+        'totality of concept',
+        'complete determinateness',
+        'only positedness',
+        'no longer accrues',
+        'substantial identity',
+        'inner bond',
+        'negative unity',
+        'activity',
+        'form',
+        'translating',
+        'genus',
+        'perfectly determined',
+        'earlier inner content',
+        'identical with solid content',
+        'whole form determination',
+        'determinate difference',
+        'simple identity',
+        'formalism sublated',
+        'subjectivity sublated',
+        'abstract determination',
+        'distinct',
+        'completion',
+        'totality',
+        'distinction fallen away',
+        'essential moment',
+        'totality',
+      ],
+      { section: 'The Disjunctive Syllogism', order: 10 }
+    ),
+
+    createTopicMapEntry(
+      'syl-nec-11-review-objectivity',
+      'Review: Concept Realized as Objectivity',
+      [475, 538],
+      'Figures: each determinateness singly as middle (concept as ought, requirement of totality). Genera: stages in repletion/concretion. Formal: through all determinacies each singly. Reflection: gathering externally. Necessity: developed/total/simple, form sublated. Concept realized (reality = objectivity). First reality: partitions itself, judgment posits determinations, syllogism sets over against. Inwardness of externality: equated with inner unity (return through mediation, exhibits concept, no longer distinct). Conversely: reality = positedness. Identity exhibited as truth (already in judgment). Syllogism = mediation (complete concept). Movement = sublation (nothing in and for itself, each through other). Result = immediacy emerged (concept restored). = objectivity.',
+      [
+        'figures',
+        'each determinateness singly',
+        'middle term',
+        'concept as ought',
+        'requirement',
+        'concept\'s totality',
+        'different genera',
+        'stages',
+        'repletion',
+        'concretion',
+        'formal syllogism',
+        'each singly',
+        'discharging',
+        'reflection',
+        'gathering externally',
+        'necessity',
+        'developed total simple',
+        'form sublated',
+        'concept realized',
+        'reality',
+        'objectivity',
+        'first reality',
+        'partitions itself',
+        'judgment',
+        'posits determinations',
+        'determinate indifferent difference',
+        'sets itself over against',
+        'inwardness',
+        'acquired externality',
+        'equated',
+        'inner unity',
+        'return',
+        'mediation',
+        'third term',
+        'exhibits',
+        'no longer distinct',
+        'conversely',
+        'positedness',
+        'identity',
+        'inwardness externality',
+        'truth',
+        'already in judgment',
+        'significant only in connection',
+        'mediation',
+        'complete concept',
+        'positedness',
+        'movement',
+        'sublation',
+        'nothing in and for itself',
+        'mediation of other',
+        'immediacy emerged',
+        'sublation',
+        'equally identical',
+        'restored',
+        'otherness',
+        'fact',
+        'in and for itself',
+        'objectivity',
+      ],
+      { section: 'The Disjunctive Syllogism', order: 11 }
+    ),
+  ],
+  {
+    sectionDescription: 'The Syllogism of Necessity - Middle as objective universality (genus). Categorical (first, through substance, objectivity begins, still subjective, passes to hypothetical). Hypothetical (adds immediacy, A as middle, negative unity, identity of mediator and mediated, passes to disjunctive). Disjunctive (S-U-P, middle as totality, no longer syllogism, formalism sublated, concept realized as objectivity). Key Insight: The Idea is the Concept, but the Concept self-encloses Judgments while the Idea self-encloses the Differentiated Object.',
+  }
+);
+

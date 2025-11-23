@@ -70,16 +70,27 @@ LO Map → TS (Technical)
 
 ### Artifacts Location
 
-All Source Analysis artifacts live in the `sources/` folder:
+All Source Analysis artifacts live in the `sources/` folder.
+
+**One-to-One Pattern**: Each source text (one species) generates its own artifacts:
+- One source text → One chunks file → One topic map file
+
+**⚠️ Compulsory Methodology**: This pattern is mandatory. See `SOURCE-FILE-STANDARDIZATION.md` for the complete standardization guide and checklist.
 
 ```
 sources/
-├── cognition.txt                    # Raw source
-├── cognition-chunks.md              # Planning document
-├── cognition-topic-map.ts           # Topics (TopicMap)
-├── idea-cognition.ts                # Chunks (implementation)
-└── ...
+├── universal.txt                    # Raw source (one species)
+├── universal-chunks.md             # Planning document
+├── universal-topic-map.ts          # Topics (TopicMap)
+├── particular.txt                  # Raw source (one species)
+├── particular-chunks.md            # Planning document
+├── particular-topic-map.ts         # Topics (TopicMap)
+├── singular.txt                    # Raw source (one species)
+├── singular-chunks.md              # Planning document
+└── singular-topic-map.ts           # Topics (TopicMap)
 ```
+
+**Rationale**: Source analysis results are species-by-species. One source text per species generates single artifacts, making the "machine translation" process clearer and more systematic.
 
 ## Phase 2: Logical Operation Generation (IR)
 
@@ -92,6 +103,13 @@ sources/
 2. Use Topic titles as LogicalOperation labels
 3. Generate Logical Operations (IR artifacts)
 
+**Key Principle**: Extract **what is Logical**—the logical structure, relationships, transitions, and operations. Logical Operations are the **only entities we are interested in here**. Other entity extraction from Hegel would be mere academics.
+
+**Extraction Guides**:
+- `LOGICAL-OPERATION-EXTRACTION.md` - Comprehensive extraction methodology
+- `EXTRACTION-TEMPLATE.md` - Quick reference template and checklist
+- `LOGICAL-EXTRACTION-GUIDE.md` - Guide on what is "Logical" vs what is not
+
 ### Output
 - `LogicalOperation[]` (IR artifacts - IN IR KG) with:
   - `id`: Generated from chunk
@@ -100,6 +118,8 @@ sources/
   - `clauses`, `predicates`, `relations`: Extracted from chunk text
 
 **Note**: Chunks and Topics remain Source Analysis artifacts. Only Logical Operations go into the IR KG.
+
+**Goal**: Extract what is Logical from the Science of Logic—crystallize it, and expand on that initial nugget.
 
 ## Key Mapping
 
@@ -151,10 +171,14 @@ TopicMapEntry
 
 ## File Naming Conventions
 
-- **Source texts**: `{name}.txt`
-- **Planning docs**: `{name}-chunks.md`
-- **Topics**: `{name}-topic-map.ts`
-- **Chunks**: `idea-{name}.ts` (in `cognition/` folder)
+**One-to-One Pattern**: Each species has its own source text and artifacts.
+
+- **Source texts**: `{species}.txt` (e.g., `universal.txt`, `particular.txt`, `singular.txt`)
+- **Planning docs**: `{species}-chunks.md` (e.g., `universal-chunks.md`)
+- **Topics**: `{species}-topic-map.ts` (e.g., `universal-topic-map.ts`)
+- **Chunks**: Implementation files in their respective folders (e.g., `concept_universal.ts`)
+
+**Note**: The `-topic-map.ts` suffix matches the `TopicMap` type name for clarity and consistency.
 
 ## Status Tracking
 
