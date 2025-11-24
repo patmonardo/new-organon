@@ -51,31 +51,39 @@ being
 │   ├── being
 │   │   ├── index.ts
 │   │   └── sources
+│   │       ├── becoming-analysis-summary.md
 │   │       ├── becoming-chunks.md
 │   │       ├── becoming-topic-map.ts
 │   │       ├── becoming.txt
+│   │       ├── being-analysis-summary.md
 │   │       ├── being-chunks.md
 │   │       ├── being-topic-map.ts
 │   │       ├── being.txt
+│   │       ├── nothing-analysis-summary.md
 │   │       ├── nothing-chunks.md
 │   │       ├── nothing-topic-map.ts
 │   │       └── nothing.txt
 │   ├── being-for-self
 │   │   ├── index.ts
 │   │   └── sources
+│   │       ├── attraction-analysis-summary.md
 │   │       ├── attraction-chunks.md
 │   │       ├── attraction-topic-map.ts
 │   │       ├── attraction.txt
+│   │       ├── being-for-self-analysis-summary.md
 │   │       ├── being-for-self-chunks.md
 │   │       ├── being-for-self-topic-map.ts
 │   │       ├── being-for-self.txt
+│   │       ├── one-many-analysis-summary.md
 │   │       ├── one-many-chunks.md
 │   │       ├── one-many-topic-map.ts
 │   │       └── one-many.txt
 │   └── existence
 │       ├── index.ts
 │       └── sources
+│           ├── affirmative-infinity-analysis-summary.md
 │           ├── affirmative-infinity-chunks.md
+│           ├── affirmative-infinity-topic-map.ts
 │           ├── affirmative-infinity.txt
 │           ├── alternating-infinity-analysis-summary.md
 │           ├── alternating-infinity-chunks.md
@@ -295,6 +303,7 @@ essence
 concept
 ├── idea
 │   ├── cognition
+│   │   ├── index.ts
 │   │   └── sources
 │   │       ├── cognition-chunks.md
 │   │       ├── cognition-intro.txt
@@ -307,58 +316,81 @@ concept
 │   │       ├── idea-of-the-true-topic-map.ts
 │   │       └── idea-of-the-true.txt
 │   ├── life
+│   │   ├── index.ts
 │   │   └── sources
+│   │       ├── genus-analysis-summary.md
 │   │       ├── genus-chunks.md
 │   │       ├── genus-topic-map.ts
 │   │       ├── genus.txt
+│   │       ├── life-process-analysis-summary.md
 │   │       ├── life-process-chunks.md
 │   │       ├── life-process-topic-map.ts
 │   │       ├── life-process.txt
+│   │       ├── living-individual-analysis-summary.md
+│   │       ├── living-individual-chunks.md
 │   │       ├── living-individual-topic-map.ts
 │   │       └── living-individual.txt
 │   └── speculation
+│       ├── index.ts
 │       └── sources
+│           ├── absolute-idea-analysis-summary.md
+│           ├── absolute-idea-chunks.md
+│           ├── absolute-idea-topic-map.ts
+│           ├── absolute-idea.txt
+│           ├── method-advance-analysis-summary.md
 │           ├── method-advance-chunks.md
 │           ├── method-advance-topic-map.ts
 │           ├── method-advance.txt
+│           ├── method-beginning-analysis-summary.md
 │           ├── method-beginning-chunks.md
 │           ├── method-beginning-topic-map.ts
 │           ├── method-beginning.txt
-│           ├── speculation-intro-chunks.md
-│           ├── speculation-intro-topic-map.ts
-│           ├── speculation-intro.txt
 │           └── speculation.txt
 ├── object
 │   ├── chemism
 │   │   ├── index.ts
 │   │   └── sources
+│   │       ├── chemism-analysis-summary.md
 │   │       ├── chemism-chunks.md
+│   │       ├── chemism-topic-map.ts
 │   │       ├── chemism.txt
+│   │       ├── object-analysis-summary.md
 │   │       ├── object-chunks.md
 │   │       ├── object-topic-map.ts
 │   │       ├── object.txt
+│   │       ├── process-analysis-summary.md
 │   │       ├── process-chunks.md
+│   │       ├── process-topic-map.ts
 │   │       └── process.txt
 │   ├── mechanism
 │   │   ├── index.ts
 │   │   └── sources
+│   │       ├── mechanism-analysis-summary.md
 │   │       ├── mechanism-chunks.md
 │   │       ├── mechanism-topic-map.ts
 │   │       ├── mechanism.txt
+│   │       ├── object-analysis-summary.md
 │   │       ├── object-chunks.md
 │   │       ├── object-topic-map.ts
 │   │       ├── object.txt
+│   │       ├── process-analysis-summary.md
 │   │       ├── process-chunks.md
 │   │       ├── process-topic-map.ts
 │   │       └── process.txt
 │   └── teleology
 │       ├── index.ts
-│       └── souces
+│       └── sources
+│           ├── means-analysis-summary.md
 │           ├── means-chunks.md
+│           ├── means-topic-map.ts
 │           ├── means.txt
+│           ├── realized-analysis-summary.md
 │           ├── realized-chunks.md
+│           ├── realized-topic-map.ts
 │           ├── realized.txt
+│           ├── subjective-analysis-summary.md
 │           ├── subjective-chunks.md
+│           ├── subjective-topic-map.ts
 │           └── subjective.txt
 └── subject
     ├── concept
@@ -401,4 +433,4 @@ concept
             ├── reflection-topic-map.ts
             └── reflection.txt
 
-66 directories, 336 files
+66 directories, 368 files

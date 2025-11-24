@@ -1,4 +1,4 @@
-# Chunking Plan for speculation-intro.txt - The Absolute Idea (Introduction/Transition)
+# Chunking Plan for absolute-idea.txt - The Absolute Idea
 
 **SOURCE ANALYSIS PHASE 1: Planning Document**
 
@@ -13,7 +13,7 @@ The TopicMap helps check and improve understanding of Hegel through step-by-step
 - As you study each chunk, edit and upgrade the seed chunks
 - This document evolves from planning → studied/refined chunks
 
-**Structure**: The Absolute Idea - Introduction/Transition (296 lines)
+**Structure**: The Absolute Idea (296 lines)
 - Absolute idea as identity of theoretical and practical idea
 - Method as universal character of form
 - Logic's completion and transition to nature
@@ -26,9 +26,9 @@ Source Text → [Source Analysis] → Chunks + Topics → [Logical Op Generation
 **References**: 
 - `tools/source-analysis/SOURCE-ANALYSIS.md` - Source Analysis workflow documentation
 - `tools/source-analysis/ARCHITECTURE.md` - Architecture overview
-- `speculation-intro-topic-map.ts` - Formal TopicMap structure (Topics)
+- `absolute-idea-topic-map.ts` - Formal TopicMap structure (Topics)
 
-**TopicMap**: See `speculation-intro-topic-map.ts` for the formal TopicMap structure that maps to:
+**TopicMap**: See `absolute-idea-topic-map.ts` for the formal TopicMap structure that maps to:
 - `TopicMapEntry.id` → `Chunk.id`
 - `TopicMapEntry.title` → `Chunk.title` AND `LogicalOperation.label` (the "Title")
 - `TopicMapEntry.lineRange` → Extract text → `Chunk.text`
