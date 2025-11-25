@@ -1,54 +1,44 @@
 /**
  * Logical Operations: The Dissolution of Appearance
  *
- * The world can disappear because it is essentially imaginary/illusory.
- * The two worlds (appearance and in-itself) collapse into essential relation.
- * This is the FormProcessor's final filtering - what truly is Scientific.
+ * Disappearance (Dissolution) is the culmination of Appearance's development, where
+ * the two worlds collapse into each other, revealing appearance as essential relation.
  *
  * Dialectical Movement:
- * - Two worlds: opposition and inversion
- * - Difference disappears: each becomes other
- * - World foundered: essential relation
+ * - Opposition and inversion: two worlds
+ * - Difference disappeared: each becomes other
+ * - Essential relation: consummation of unity
  */
 
-import type { LogicalOperation } from '../../../../types';
+import type { LogicalOperation } from '../../../types';
 
 // ============================================================================
 // THE DISSOLUTION OF APPEARANCE
 // ============================================================================
 
-export const disaOp1TwoWorldsOpposition: LogicalOperation = {
-  id: 'disa-op-1-two-worlds-opposition',
+export const disaOp1OppositionAndInversion: LogicalOperation = {
+  id: 'disa-op-1-opposition-and-inversion',
   chunkId: 'disa-1',
   label: 'Two worlds — opposition and inversion',
   clauses: [
-    'worldInAndForItself = determinateGround',
-    'worldInAndForItself = ofWorldOfAppearance',
-    'onlyInSoFarAs = withinItIsNegativeMoment',
-    'onlyInSoFarAs = totalityOfContentDeterminations',
-    'constitutes = completelyOpposedSide',
-    'twoWorlds = relate',
-    'whatInWorldOfAppearance = isPositive',
-    'whatInWorldOfAppearance = inWorldInItselfIsNegative',
-    'whatInWorldOfAppearance = andConversely',
-    'northPole = inAppearance',
-    'northPole = isSouthPoleInAndForItself',
-    'viceVersa',
-    'positiveElectricity = inItselfNegative',
-    'whatIsEvil = inAppearance',
-    'whatIsEvil = isInAndForItselfGoodness',
-    'whatIsEvil = andGoodLuck',
+    'worldInItself = determinateGround',
+    'worldInItself = negativeMoment',
+    'twoWorlds = completelyOpposed',
+    'positive = negativeInWorldInItself',
   ],
   predicates: [
-    { name: 'opposition', args: ['twoWorlds'] },
+    { name: 'determinateGround', args: ['worldInItself'] },
+    { name: 'negativeMoment', args: ['worldInItself'] },
+    { name: 'completelyOpposed', args: ['twoWorlds'] },
+    { name: 'negativeInWorldInItself', args: ['positive'] },
   ],
   relations: [
-    { predicate: 'relate', from: 'twoWorlds', to: 'opposition' },
+    { predicate: 'is', from: 'worldInItself', to: 'determinateGround' },
   ],
   candidateSummary: 'World in-and-for-itself is determinate ground of world of appearance, only in so far as within it is negative moment, totality of content determinations. Constitutes completely opposed side. Two worlds relate: what in world of appearance is positive, in world-in-itself is negative, and conversely. North pole in appearance is south pole in-and-for-itself, vice-versa. Positive electricity in itself negative. What is evil in appearance is in-and-for-itself goodness and good luck.',
   provenance: {
     sourceChunk: 'disa-1',
-    sourceOp: 'disa-op-1-two-worlds-opposition',
+    sourceOp: 'disa-op-1-opposition-and-inversion',
   },
 };
 
@@ -57,18 +47,19 @@ export const disaOp2DifferenceDisappeared: LogicalOperation = {
   chunkId: 'disa-2',
   label: 'Difference disappeared — each becomes other',
   clauses: [
-    'precisely = inOppositionOfTwoWorlds',
-    'theirDifference = hasDisappeared',
-    'whatWasSupposed = toBeWorldInItself',
-    'whatWasSupposed = isItselfWorldOfAppearance',
-    'thisLast = conversely',
-    'thisLast = worldEssentialWithin',
+    'difference = disappeared',
+    'worldInItself = worldOfAppearance',
+    'worldOfAppearance = worldEssential',
+    'each = becomesOther',
   ],
   predicates: [
-    { name: 'differenceDisappeared', args: ['twoWorlds'] },
+    { name: 'disappeared', args: ['difference'] },
+    { name: 'worldOfAppearance', args: ['worldInItself'] },
+    { name: 'worldEssential', args: ['worldOfAppearance'] },
+    { name: 'becomesOther', args: ['each'] },
   ],
   relations: [
-    { predicate: 'is', from: 'whatWasSupposed', to: 'worldOfAppearance' },
+    { predicate: 'is', from: 'worldInItself', to: 'worldOfAppearance' },
   ],
   candidateSummary: 'Precisely in opposition of two worlds their difference has disappeared. What was supposed to be world-in-itself is itself world of appearance. This last, conversely, world essential within.',
   provenance: {
@@ -77,24 +68,18 @@ export const disaOp2DifferenceDisappeared: LogicalOperation = {
   },
 };
 
-export const disaOp3WorldOfAppearanceLaw: LogicalOperation = {
-  id: 'disa-op-3-world-of-appearance-law',
+export const disaOp3LawEqualToItself: LogicalOperation = {
+  id: 'disa-op-3-law-equal-to-itself',
   chunkId: 'disa-3',
   label: 'World of appearance — law equal to itself',
   clauses: [
-    'worldOfAppearance = determinedAsReflectionIntoOtherness',
-    'determinations = haveGroundAndSubsistence',
-    'determinations = inOther',
-    'butBecause = otherAsOther',
-    'butBecause = likewiseReflectedIntoOther',
-    'other = toWhichBothRefer',
+    'worldOfAppearance = reflectionIntoOtherness',
     'other = sublatesItselfAsOther',
-    'two = consequentlyReferToThemselves',
-    'worldOfAppearance = withinIt',
-    'worldOfAppearance = therefore',
     'worldOfAppearance = lawEqualToItself',
   ],
   predicates: [
+    { name: 'reflectionIntoOtherness', args: ['worldOfAppearance'] },
+    { name: 'sublatesItselfAsOther', args: ['other'] },
     { name: 'lawEqualToItself', args: ['worldOfAppearance'] },
   ],
   relations: [
@@ -103,37 +88,25 @@ export const disaOp3WorldOfAppearanceLaw: LogicalOperation = {
   candidateSummary: 'World of appearance determined as reflection into otherness. Determinations have ground and subsistence in other. But because other, as other, likewise reflected into other, other to which both refer sublates itself as other. Two consequently refer to themselves. World of appearance is within it, therefore, law equal to itself.',
   provenance: {
     sourceChunk: 'disa-3',
-    sourceOp: 'disa-op-3-world-of-appearance-law',
+    sourceOp: 'disa-op-3-law-equal-to-itself',
   },
 };
 
-export const disaOp4WorldInItselfSelfOpposed: LogicalOperation = {
-  id: 'disa-op-4-world-in-itself-self-opposed',
+export const disaOp4SelfOpposed: LogicalOperation = {
+  id: 'disa-op-4-self-opposed',
   chunkId: 'disa-4',
   label: 'World-in-itself — self-opposed',
   clauses: [
-    'worldInItself = inFirstInstance',
-    'worldInItself = selfIdenticalContent',
-    'worldInItself = exemptFromOthernessAndChange',
-    'but = content',
-    'but = asCompleteReflectionOfWorldOfAppearance',
-    'but = intoItself',
-    'but = orBecauseDiversity',
-    'but = isDifferenceReflectedIntoItself',
-    'but = andAbsolute',
-    'consequently = containsNegativityAsMoment',
-    'selfReference = asReferenceToOtherness',
-    'thereby = becomesSelfOpposed',
-    'thereby = selfInverting',
-    'thereby = essencelessContent',
-    'content = hasRetainedFormOfImmediateConcreteExistence',
-    'atFirst = groundOfWorldOfAppearance',
-    'butSince = hasOppositionInIt',
-    'equally = sublatedGround',
-    'equally = immediateConcreteExistence',
+    'worldInItself = selfIdentical',
+    'worldInItself = becomesSelOpposed',
+    'worldInItself = selfInverting',
+    'worldInItself = sublatedGroundAndImmediacy',
   ],
   predicates: [
-    { name: 'selfOpposed', args: ['worldInItself'] },
+    { name: 'selfIdentical', args: ['worldInItself'] },
+    { name: 'becomesSelOpposed', args: ['worldInItself'] },
+    { name: 'selfInverting', args: ['worldInItself'] },
+    { name: 'sublatedGroundAndImmediacy', args: ['worldInItself'] },
   ],
   relations: [
     { predicate: 'becomes', from: 'worldInItself', to: 'selfOpposed' },
@@ -141,82 +114,50 @@ export const disaOp4WorldInItselfSelfOpposed: LogicalOperation = {
   candidateSummary: 'World-in-itself in first instance self-identical content, exempt from otherness and change. But content, as complete reflection of world of appearance into itself, or because diversity is difference reflected into itself and absolute, consequently contains negativity as moment. Self-reference as reference to otherness. Thereby becomes self-opposed, self-inverting, essenceless content. Content has retained form of immediate concrete existence. At first ground of world of appearance. But since has opposition in it, equally sublated ground and immediate concrete existence.',
   provenance: {
     sourceChunk: 'disa-4',
-    sourceOp: 'disa-op-4-world-in-itself-self-opposed',
+    sourceOp: 'disa-op-4-self-opposed',
   },
 };
 
-export const disaOp5TwoTotalitiesIdentity: LogicalOperation = {
-  id: 'disa-op-5-two-totalities-identity',
+export const disaOp5TwoTotalities: LogicalOperation = {
+  id: 'disa-op-5-two-totalities',
   chunkId: 'disa-5',
   label: 'Two totalities — identity of moments',
   clauses: [
-    'worldOfAppearance = andEssentialWorld',
-    'each = each',
-    'each = withinIt',
-    'each = totalityOfSelfIdenticalReflection',
-    'each = andReflectionIntoOther',
-    'each = beingInAndForItself',
-    'both = selfSubsistingWholesOfConcreteExistence',
-    'one = supposedToBeOnlyReflectedConcreteExistence',
-    'other = immediateConcreteExistence',
-    'but = eachContinuesIntoOther',
-    'but = within',
-    'but = identityOfTheseTwoMoments',
-    'totality = thatSplitsIntoTwoTotalities',
-    'totality = reflectedTotality',
-    'totality = andImmediateTotality',
-    'both = selfSubsistent',
-    'both = butOnlyAsTotalities',
-    'inasmuchAs = eachEssentiallyContains',
-    'inasmuchAs = momentOfOtherInIt',
-    'distinctSelfSubsistence = nowPosited',
-    'distinctSelfSubsistence = asEssentiallyReferenceToOther',
-    'distinctSelfSubsistence = hasSelfSubsistence',
-    'distinctSelfSubsistence = inUnityOfTwo',
+    'worldOfAppearance = totality',
+    'essentialWorld = totality',
+    'each = continuesIntoOther',
+    'selfSubsistence = inUnityOfTwo',
   ],
   predicates: [
-    { name: 'identityOfMoments', args: ['twoTotalities'] },
+    { name: 'totality', args: ['worldOfAppearance'] },
+    { name: 'totality', args: ['essentialWorld'] },
+    { name: 'continuesIntoOther', args: ['each'] },
+    { name: 'inUnityOfTwo', args: ['selfSubsistence'] },
   ],
   relations: [
-    { predicate: 'is', from: 'each', to: 'totality' },
+    { predicate: 'has', from: 'selfSubsistence', to: 'unityOfTwo' },
   ],
   candidateSummary: 'World of appearance and essential world each, each within it, totality of self-identical reflection and reflection-into-other, being-in-and-for-itself. Both self-subsisting wholes of concrete existence. One supposed to be only reflected concrete existence, other immediate concrete existence. But each continues into other and, within, identity of these two moments. Totality that splits into two totalities: reflected totality and immediate totality. Both self-subsistent but only as totalities, inasmuch as each essentially contains moment of other in it. Distinct self-subsistence now posited as essentially reference to other, has self-subsistence in unity of two.',
   provenance: {
     sourceChunk: 'disa-5',
-    sourceOp: 'disa-op-5-two-totalities-identity',
+    sourceOp: 'disa-op-5-two-totalities',
   },
 };
 
-export const disaOp6LawRealizedEssentialRelation: LogicalOperation = {
-  id: 'disa-op-6-law-realized-essential-relation',
+export const disaOp6LawRealized: LogicalOperation = {
+  id: 'disa-op-6-law-realized',
   chunkId: 'disa-6',
   label: 'Law realized — essential relation',
   clauses: [
-    'started = fromLawOfAppearance',
-    'law = identityOfContent',
-    'law = andAnotherContent',
-    'law = differentFromIt',
-    'positednessOfOne = positednessOfOther',
-    'stillPresent = inLaw',
-    'stillPresent = identityOfSides',
-    'stillPresent = atFirstOnlyInternalIdentity',
-    'stillPresent = twoSidesDoNotYetHaveInThem',
-    'identity = notRealized',
-    'content = indifferent',
-    'content = diversified',
-    'content = onlyInItselfSoDetermined',
-    'determination = notYetPresent',
-    'butNow = lawIsRealized',
-    'innerIdentity = existentAtSameTime',
-    'contentOfLaw = raisedToIdeality',
-    'contentOfLaw = sublatedWithin',
-    'contentOfLaw = reflectedIntoItself',
-    'eachSide = hasOtherInIt',
-    'eachSide = trulyIdenticalWithIt',
-    'eachSide = andWithItself',
+    'law = realized',
+    'innerIdentity = existent',
+    'content = raisedToIdeality',
     'law = essentialRelation',
   ],
   predicates: [
+    { name: 'realized', args: ['law'] },
+    { name: 'existent', args: ['innerIdentity'] },
+    { name: 'raisedToIdeality', args: ['content'] },
     { name: 'essentialRelation', args: ['law'] },
   ],
   relations: [
@@ -225,62 +166,42 @@ export const disaOp6LawRealizedEssentialRelation: LogicalOperation = {
   candidateSummary: 'Started from law of appearance. Law is identity of content and another content different from it. Positedness of one is positedness of other. Still present in law: identity of sides at first only internal identity, two sides do not yet have in them. Identity not realized, content indifferent, diversified. Content only in itself so determined, determination not yet present. But now law is realized. Inner identity existent at same time. Content of law raised to ideality. Sublated within, reflected into itself. Each side has other in it. Truly identical with it and with itself. Law is essential relation.',
   provenance: {
     sourceChunk: 'disa-6',
-    sourceOp: 'disa-op-6-law-realized-essential-relation',
+    sourceOp: 'disa-op-6-law-realized',
   },
 };
 
-export const disaOp7WorldFounderedEssentialRelation: LogicalOperation = {
-  id: 'disa-op-7-world-foundered-essential-relation',
+export const disaOp7WorldFoundered: LogicalOperation = {
+  id: 'disa-op-7-world-foundered',
   chunkId: 'disa-7',
   label: 'World foundered — essential relation',
   clauses: [
-    'truthOfUnessentialWorld = atFirst',
-    'truthOfUnessentialWorld = worldInItself',
-    'truthOfUnessentialWorld = andOtherToIt',
-    'but = thisWorld',
-    'but = isTotality',
-    'but = forItIsItself',
-    'but = andFirstWorld',
-    'both = immediateConcreteExistences',
-    'both = consequently',
-    'both = reflectionsInTheirOtherness',
-    'both = equallyTrulyReflectedIntoThemselves',
-    'world = signifiesFormlessTotalityOfManifoldness',
-    'thisWorld = hasFoundered',
-    'thisWorld = bothAsEssentialWorld',
-    'thisWorld = andAsWorldOfAppearance',
-    'still = totalityOrUniverse',
-    'still = butAsEssentialRelation',
-    'twoTotalities = ofContent',
-    'twoTotalities = arisenInAppearance',
-    'atFirst = determinedAsIndifferentlySelfSubsisting',
-    'atFirst = visAVisEachOther',
-    'each = havingFormWithinIt',
-    'each = butNotWithRespectToOther',
-    'form = hasDemonstratedItself',
-    'form = toBeTheirConnectingReference',
-    'essentialRelation = consummationOfTheirUnityOfForm',
+    'world = foundered',
+    'world = stillTotalityAsRelation',
+    'form = connectingReference',
+    'essentialRelation = consummationOfUnity',
   ],
   predicates: [
-    { name: 'essentialRelation', args: ['world'] },
+    { name: 'foundered', args: ['world'] },
+    { name: 'stillTotalityAsRelation', args: ['world'] },
+    { name: 'connectingReference', args: ['form'] },
+    { name: 'consummationOfUnity', args: ['essentialRelation'] },
   ],
   relations: [
-    { predicate: 'is', from: 'world', to: 'essentialRelation' },
+    { predicate: 'is', from: 'essentialRelation', to: 'consummationOfUnity' },
   ],
-  candidateSummary: 'Truth of unessential world is at first world-in-itself and other to it. But this world is totality, for it is itself and first world. Both immediate concrete existences, consequently reflections in their otherness, equally truly reflected into themselves. "World" signifies formless totality of manifoldness. This world has foundered both as essential world and as world of appearance. Still totality or universe but as essential relation. Two totalities of content arisen in appearance. At first determined as indifferently self-subsisting vis-à-vis each other. Each having form within it but not with respect to other. Form has demonstrated itself to be their connecting reference. Essential relation is consummation of their unity of form.',
+  candidateSummary: 'Truth of unessential world is at first world-in-itself and other to it. But this world is totality, for it is itself and first world. Both immediate concrete existences, consequently reflections in their otherness, equally truly reflected into themselves. \'World\' signifies formless totality of manifoldness. This world has foundered both as essential world and as world of appearance. Still totality or universe but as essential relation. Two totalities of content arisen in appearance. At first determined as indifferently self-subsisting vis-à-vis each other. Each having form within it but not with respect to other. Form has demonstrated itself to be their connecting reference. Essential relation is consummation of their unity of form.',
   provenance: {
     sourceChunk: 'disa-7',
-    sourceOp: 'disa-op-7-world-foundered-essential-relation',
+    sourceOp: 'disa-op-7-world-foundered',
   },
 };
 
 export const disappearanceOperations: LogicalOperation[] = [
-  disaOp1TwoWorldsOpposition,
+  disaOp1OppositionAndInversion,
   disaOp2DifferenceDisappeared,
-  disaOp3WorldOfAppearanceLaw,
-  disaOp4WorldInItselfSelfOpposed,
-  disaOp5TwoTotalitiesIdentity,
-  disaOp6LawRealizedEssentialRelation,
-  disaOp7WorldFounderedEssentialRelation,
+  disaOp3LawEqualToItself,
+  disaOp4SelfOpposed,
+  disaOp5TwoTotalities,
+  disaOp6LawRealized,
+  disaOp7WorldFoundered,
 ];
-
