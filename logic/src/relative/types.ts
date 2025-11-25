@@ -31,6 +31,13 @@ export type Predicate = { name: string; args?: string[] }
 // Relation for logical operations
 export type Relation = { predicate: string; from: string; to: string }
 
+// Action trait for executable logical operations (microps)
+export interface Action {
+  type: string; // e.g., 'morph.create', 'empowerment.grant'
+  payload: Record<string, unknown>;
+  conditions?: string[]; // optional preconditions
+}
+
 // Canonical text chunk
 export type Chunk = {
   id: string
@@ -51,6 +58,7 @@ export type LogicalOperation = {
   candidateSummary?: string
   provenance?: Provenance
   evidence?: unknown[]
+  action?: Action
   [k: string]: unknown
 }
 
