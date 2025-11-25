@@ -1,4 +1,4 @@
-import type { TopicMapEntry } from "../../../../schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic-map-schema";
 
 /**
  * TopicMap for force-expression.txt - The Relation of Force and Its Expression

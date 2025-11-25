@@ -1,12 +1,12 @@
-import type { TopicMapEntry } from "../../../../schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic-map-schema";
 
 /**
  * TopicMap for constitution.txt - B. FINITUDE (b) Determination, constitution, and limit
- * 
+ *
  * This TopicMap structures the logical development of determination and constitution
  * as moments that pass over into each other, leading to the emergence of limit
  * as the immanent determination that makes something finite.
- * 
+ *
  * Structure:
  * - Introduction: In-itself mediated through being-for-other; determinateness existent-in-itself
  * - 1. Determination: Affirmative determinateness; example (human being); still only in itself as ought

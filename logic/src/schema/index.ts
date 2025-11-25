@@ -31,3 +31,6 @@ export * from "./empowerment";
 export * from "./signature";
 export * from "./facet";
 
+// Dialectic IR (pseudo-code schema)
+export * from "./dialectic";
+

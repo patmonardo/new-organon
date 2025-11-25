@@ -24,10 +24,8 @@
   "dependencies": {
     "@nestjs/common": "^9.0.0",
     "@nestjs/core": "^9.0.0",
-    "@organon/gdsl": "workspace:*",
     "@organon/logic": "workspace:*",
     "@organon/model": "workspace:*",
-    "@organon/reality": "workspace:*",
     "reflect-metadata": "^0.2.2",
     "zod": "^3.25.76"
   },

@@ -22,8 +22,6 @@
     "doc:api": "typedoc --options typedoc.json"
   },
   "dependencies": {
-    "@organon/gdsl": "workspace:*",
-    "@organon/reality": "workspace:*",
     "zod": "^3.25.76"
   },
   "devDependencies": {

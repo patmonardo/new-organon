@@ -52,7 +52,7 @@ export type LogicalOperation = {
   id: string
   chunkId?: string
   label?: string
-  clauses: string[]
+  clauses?: string[]
   predicates?: Predicate[]
   relations?: Relation[]
   candidateSummary?: string

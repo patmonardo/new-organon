@@ -1,4 +1,4 @@
-import type { TopicMapEntry } from "../../../../schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic-map-schema";
 
 /**
  * TopicMap for alternating-infinity.txt - C. INFINITY (b) Alternating determination of finite and infinite

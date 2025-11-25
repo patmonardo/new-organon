@@ -1,4 +1,4 @@
-import type { TopicMapEntry } from "../../../../schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic-map-schema";
 
 /**
  * TopicMap for infinity.txt - C. INFINITY (a) The infinite in general

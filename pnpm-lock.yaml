@@ -18,64 +18,8 @@ importers:
         specifier: ^4.15.7
         version: 4.20.4
 
-  gds:
-    dependencies:
-      '@organon/gdsl':
-        specifier: workspace:*
-        version: link:../gdsl
-      zod:
-        specifier: ^3.25.76
-        version: 3.25.76
-    devDependencies:
-      '@types/node':
-        specifier: ^20.19.8
-        version: 20.19.8
-      tsc-alias:
-        specifier: ^1.8.16
-        version: 1.8.16
-      tsx:
-        specifier: ^4.20.4
-        version: 4.20.4
-      typescript:
-        specifier: ^5.9.0
-        version: 5.9.2
-      vitest:
-        specifier: ^3.1.3
-        version: 3.2.4(@types/node@20.19.8)(terser@5.43.1)(tsx@4.20.4)(yaml@2.8.0)
-
-  gdsl:
-    dependencies:
-      fast-glob:
-        specifier: ^3.3.3
-        version: 3.3.3
-      zod:
-        specifier: ^3.25.76
-        version: 3.25.76
-    devDependencies:
-      '@types/node':
-        specifier: ^20.19.0
-        version: 20.19.8
-      tsc-alias:
-        specifier: ^1.8.16
-        version: 1.8.16
-      tsx:
-        specifier: ^4.17.0
-        version: 4.20.4
-      typescript:
-        specifier: ^5.9.2
-        version: 5.9.2
-      vitest:
-        specifier: ^3.2.4
-        version: 3.2.4(@types/node@20.19.8)(terser@5.43.1)(tsx@4.20.4)(yaml@2.8.0)
-
   logic:
     dependencies:
-      '@organon/gdsl':
-        specifier: workspace:*
-        version: link:../gdsl
-      '@organon/reality':
-        specifier: workspace:*
-        version: link:../reality
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -98,15 +42,6 @@ importers:
 
   model:
     dependencies:
-      '@organon/gdsl':
-        specifier: workspace:*
-        version: link:../gdsl
-      '@organon/logic':
-        specifier: workspace:*
-        version: link:../logic
-      '@organon/reality':
-        specifier: workspace:*
-        version: link:../reality
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -127,31 +62,6 @@ importers:
         specifier: ^3.1.3
         version: 3.2.4(@types/node@20.19.8)(terser@5.43.1)(tsx@4.20.4)(yaml@2.8.0)
 
-  reality:
-    dependencies:
-      '@organon/gdsl':
-        specifier: workspace:*
-        version: link:../gdsl
-      zod:
-        specifier: ^3.25.76
-        version: 3.25.76
-    devDependencies:
-      '@types/node':
-        specifier: ^20.19.0
-        version: 20.19.8
-      tsc-alias:
-        specifier: ^1.8.16
-        version: 1.8.16
-      tsx:
-        specifier: ^4.20.4
-        version: 4.20.4
-      typescript:
-        specifier: ^5.9.0
-        version: 5.9.2
-      vitest:
-        specifier: ^3.1.3
-        version: 3.2.4(@types/node@20.19.8)(terser@5.43.1)(tsx@4.20.4)(yaml@2.8.0)
-
   task:
     dependencies:
       '@nestjs/common':
@@ -160,18 +70,12 @@ importers:
       '@nestjs/core':
         specifier: ^9.0.0
         version: 9.4.3(@nestjs/common@9.4.3(reflect-metadata@0.2.2)(rxjs@7.8.2))(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@organon/gdsl':
-        specifier: workspace:*
-        version: link:../gdsl
       '@organon/logic':
         specifier: workspace:*
         version: link:../logic
       '@organon/model':
         specifier: workspace:*
         version: link:../model
-      '@organon/reality':
-        specifier: workspace:*
-        version: link:../reality
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2

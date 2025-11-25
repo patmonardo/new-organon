@@ -1,10 +1,7 @@
 packages:
-  - "gds"
-  - "gdsl"
   - "logic"
   - "model"
   - "task"
-  - "reality"
 
 ignoredBuiltDependencies:
   - '@firebase/util'

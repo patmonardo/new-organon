@@ -1,4 +1,4 @@
-import type { TopicMapEntry } from "../../../../../schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic-map-schema";
 
 /**
  * TopicMap for realized.txt - C. THE REALIZED PURPOSE

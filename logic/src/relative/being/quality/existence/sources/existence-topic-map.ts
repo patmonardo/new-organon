@@ -1,17 +1,17 @@
-import type { TopicMapEntry } from "../../../../schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic-map-schema";
 
 /**
  * TopicMap for existence.txt - A. EXISTENCE AS SUCH
- * 
+ *
  * This TopicMap structures the logical development of Existence as the first moment
  * of Qualitative Logic—the determinate being that emerges from Becoming.
- * 
- * Structure: 
+ *
+ * Structure:
  * - Outline: determinateness → quality (reality|negation) → something
  * - a. Existence in general: From becoming, da-sein, reflection vs posited
  * - b. Quality: Immediate unity, reality and negation, limit/restriction
  * - c. Something: Negation of negation, beginning of subject, mediation-with-itself, alteration
- * 
+ *
  * Existence completes the foundational structure: Being → Nothing → Becoming → Existence
  */
 export const existenceTopicMap: TopicMapEntry[] = [

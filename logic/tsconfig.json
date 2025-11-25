@@ -44,13 +44,10 @@
     }
   },
   "include": [
-    "tsconfig.json",
-    "src/index.ts",
-    "src/logic.ts"
+    "src/**/*.ts"
   ],
   "exclude": [
     "src/repository/**/*.ts",
-    "src/schema/**/*.ts",
     "src/absolute/**/*.ts"
   ]
 }
