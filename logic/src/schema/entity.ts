@@ -1,3 +1,26 @@
+/**
+ * Entity Schema - "Fact → Existence"
+ *
+ * Entity represents Fact coming into Existence - the dialectical state of actualization.
+ * It is the concrete instantiation of abstract logical structures.
+ *
+ * Dialectical Role:
+ * - Embodies the passage from essence to existence
+ * - Stores dialectical state in facets (the "in-itself")
+ * - Exposes operational interface via signature (the "for-another")
+ * - Represents "what is" as opposed to "what could be"
+ *
+ * Relationship to Form Engines:
+ * - Used by EntityEngine to manage existential instances
+ * - Entity.facets.dialecticState contains the embedded DialecticState
+ * - Entity.signature contains moments as operational interface
+ *
+ * Form Engine Pattern:
+ * - Facets: Internal dialectical structure (moments, invariants, phase)
+ * - Signature: External operational interface (what this entity does)
+ * - State: Runtime status and metadata
+ */
+
 import { z } from 'zod';
 import { BaseCore, BaseSchema, BaseState, Type, Label } from './base';
 
@@ -27,6 +50,28 @@ export type EntityState = z.infer<typeof EntityState>;
 // Signature / facets
 export const EntitySignature = z.object({}).catchall(z.any());
 export type EntitySignature = z.infer<typeof EntitySignature>;
+
+// Facets structure for dialectical data
+// Entity stores the complete dialectical state as it exists
+export const EntityFacets = z.object({
+  // Core dialectical state (from Dialectic IR)
+  dialecticState: z.any().optional(), // DialecticState - avoiding circular dependency
+
+  // Current phase in dialectical progression
+  phase: z.string().optional(), // CpuGpuPhase
+
+  // Moments active in this entity
+  moments: z.array(z.any()).optional(),
+
+  // Invariants that must hold
+  invariants: z.array(z.any()).optional(),
+
+  // Evaluation context
+  context: z.any().optional(),
+
+  // Additional entity-specific facets via catchall
+}).catchall(z.any());
+export type EntityFacets = z.infer<typeof EntityFacets>;
 
 // Shape doc
 const EntityDoc = z.object({
@@ -136,3 +181,19 @@ export function updateEntity(doc: Entity, patch: UpdateEntityPatch): Entity {
   };
   return EntitySchema.parse(next);
 }
+
+/**
+ * Helper: Get dialectic state from Entity facets
+ * Used by EntityEngine to access embedded dialectical structure
+ */
+export function getEntityDialecticState(entity: Entity): any | undefined {
+  return (entity.shape.facets as any)?.dialecticState;
+}
+
+/**
+ * Helper: Get moments from Entity facets
+ */
+export function getEntityMoments(entity: Entity): any[] {
+  return ((entity.shape.facets as any)?.moments ?? []) as any[];
+}
+
