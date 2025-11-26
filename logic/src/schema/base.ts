@@ -63,7 +63,7 @@ export const BaseSchema = z.object({
   shape: BaseShape,
   revision: z.number().int().nonnegative().default(0),
   version: z.string().optional(),
-  ext: z.record(z.unknown()).default({}),
+  ext: z.record(z.string(), z.unknown()).default({}),
 });
 export type Base = z.infer<typeof BaseSchema>;
 

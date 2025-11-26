@@ -8,7 +8,7 @@ export const SignatureSchema = z.object({
   signature: z.string().min(1),
   targetId: z.string().optional(), // id of the signed object (empowerment/facet/etc)
   validUntil: z.string().optional(),
-  meta: z.record(z.any()).optional(),
+  meta: z.record(z.string(), z.any()).optional(),
 });
 
 export type Signature = z.infer<typeof SignatureSchema>;

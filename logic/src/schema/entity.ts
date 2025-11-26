@@ -20,7 +20,7 @@ export type EntityCore = z.infer<typeof EntityCore>;
 export const EntityState = BaseState.extend({
   status: z.string().optional(),
   tags: z.array(z.string()).optional(),
-  meta: z.record(z.unknown()).optional(),
+  meta: z.record(z.string(), z.unknown()).optional(),
 });
 export type EntityState = z.infer<typeof EntityState>;
 

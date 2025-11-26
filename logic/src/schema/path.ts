@@ -5,8 +5,8 @@ export const PathCriteriaSchema = z.object({
   targetId: z.string(),
   type: z.string().optional(),
   subtype: z.string().optional(),
-  properties: z.record(z.any()).optional(),
-  metadata: z.record(z.any()).optional(),
+  properties: z.record(z.string(), z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   maxDepth: z.number().optional(),
   minDepth: z.number().optional(),
   maxWidth: z.number().optional(),
@@ -25,8 +25,8 @@ export const PathStepSchema = z.object({
   targetId: z.string(),
   targetType: z.string(),
   action: z.string().optional(),
-  conditions: z.record(z.any()).optional(),
-  metadata: z.record(z.any()).optional(),
+  conditions: z.record(z.string(), z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export type PathStep = z.infer<typeof PathStepSchema>;
@@ -40,7 +40,7 @@ export const PathSchema = z.object({
   description: z.string().optional(),
   steps: z.array(PathStepSchema),
   circular: z.boolean().optional().default(false),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   created: z.date().default(() => new Date()),
   updated: z.date().default(() => new Date()),
 });

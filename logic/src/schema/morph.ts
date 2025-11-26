@@ -30,8 +30,8 @@ export const MorphShape = z.object({
   signature: z.object({}).catchall(z.any()).optional(),
   facets: z.record(z.string(), z.any()).default({}),
   composition: MorphComposition,
-  config: z.record(z.unknown()).default({}),
-  meta: z.record(z.unknown()).default({}),
+  config: z.record(z.string(), z.unknown()).default({}),
+  meta: z.record(z.string(), z.unknown()).default({}),
 });
 export type MorphShape = z.infer<typeof MorphShape>;
 

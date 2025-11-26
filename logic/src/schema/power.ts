@@ -15,7 +15,7 @@ export const EmpowermentSchema = z.object({
   signatures: z.array(SignatureSchema).optional(),
   facets: z.array(FacetSchema).optional(),
   validUntil: z.string().optional(), // ISO timestamp
-  meta: z.record(z.any()).optional(),
+  meta: z.record(z.string(), z.any()).optional(),
 });
 
 export type Empowerment = z.infer<typeof EmpowermentSchema>;

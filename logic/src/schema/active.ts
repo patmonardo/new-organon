@@ -43,11 +43,11 @@ export const ActiveContextSchema = z.object({
   name: z.string().optional(),
   kind: z.string().optional(),
   revoked: z.boolean().optional(),
-  state: z.record(z.unknown()).optional(),
-  signature: z.record(z.unknown()).optional(),
-  facets: z.record(z.unknown()).optional(),
+  state: z.record(z.string(), z.unknown()).optional(),
+  signature: z.record(z.string(), z.unknown()).optional(),
+  facets: z.record(z.string(), z.unknown()).optional(),
   version: z.string().optional(),
-  ext: z.record(z.unknown()).optional(),
+  ext: z.record(z.string(), z.unknown()).optional(),
   shape: z.any().optional(),
 });
 
@@ -58,7 +58,7 @@ export const ActiveMorphSchema = ActiveBaseSchema.merge(
   z.object({
     particularityOf: z.string().optional(),
     transform: z.string().min(1),
-    params: z.record(z.any()).optional(),
+    params: z.record(z.string(), z.any()).optional(),
   }),
 );
 export type ActiveMorph = z.infer<typeof ActiveMorphSchema>;

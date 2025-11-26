@@ -22,7 +22,7 @@
     "doc:api": "typedoc --options typedoc.json"
   },
   "dependencies": {
-    "zod": "^3.25.76"
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
