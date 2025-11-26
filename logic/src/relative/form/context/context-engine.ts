@@ -10,6 +10,11 @@ import {
   updateContext,
 } from '@schema';
 import * as active from '@schema';
+import type {
+  DialecticEvaluateCmd,
+  DialecticCommand,
+} from '@schema';
+import { FormContext } from './context-form';
 
 type BaseState = Context['shape']['state'];
 
@@ -50,7 +55,8 @@ export type ContextCommand =
   | ContextSetCoreCmd
   | ContextSetStateCmd
   | ContextPatchStateCmd
-  | ContextDescribeCmd;
+  | ContextDescribeCmd
+  | DialecticCommand;
 
 class MemContext {
   constructor(public doc: Context) {}
@@ -197,6 +203,82 @@ export class ContextEngine {
               (doc.shape as any).signature ?? ({} as Record<string, unknown>),
             ),
             facetsKeys: Object.keys((doc.shape as any).facets ?? {}),
+          }),
+        ];
+      }
+
+      // --- Dialectic EVAL: Context as Foundation ---
+      // Context is the SCOPE of validity - what makes evaluation situated.
+      // Foundation (Hegel) = the grounding that conditions all marks.
+      // Context extracts: presuppositions, scope boundaries, conditioning relations.
+      case 'dialectic.evaluate': {
+        const { dialecticState, context: evalContext } = (cmd as DialecticEvaluateCmd).payload;
+
+        // Create a Context to represent this dialectic scope
+        const ctx = FormContext.create({
+          id: dialecticState.id,
+          type: dialecticState.concept,
+          name: dialecticState.title,
+          description: dialecticState.description,
+        });
+
+        // Extract PRESUPPOSITIONS from moments
+        // Moments that are 'determination' or 'quality' become presupposed conditions
+        const presuppositions = dialecticState.moments
+          .filter(m => m.type === 'determination' || m.type === 'quality')
+          .map(m => ({
+            name: m.name,
+            definition: m.definition,
+            posited: true,
+          }));
+
+        // Extract SCOPE from phase and invariants
+        // The phase determines the modal scope (quality=actual, quantity=possible, etc.)
+        const scopeModal = dialecticState.phase === 'quality' ? 'actual'
+          : dialecticState.phase === 'quantity' ? 'possible'
+          : dialecticState.phase === 'reflection' ? 'necessary'
+          : 'actual';
+
+        // Domain = all concepts referenced in moments
+        const domain = [...new Set(dialecticState.moments.map(m => m.relatedTo).filter(Boolean))] as string[];
+
+        // Extract CONDITIONS from invariants
+        // Invariants become the conditioning constraints for this context
+        const conditions = dialecticState.invariants.map(inv => ({
+          id: inv.id,
+          constraint: inv.constraint,
+          predicate: inv.predicate,
+        }));
+
+        // Store in state: the Foundation structure
+        ctx.setState({
+          status: 'active',
+          meta: {
+            presuppositions,
+            scope: {
+              modal: scopeModal,
+              domain,
+              phase: dialecticState.phase,
+            },
+            conditions,
+            parentContext: evalContext?.parentContextId,
+          },
+        } as any);
+
+        // Wrap and persist
+        const memCtx = new MemContext(ctx.toSchema());
+        this.contexts.set(memCtx.id, memCtx);
+        await this.persist(memCtx);
+
+        return [
+          this.emit(base, 'dialectic.evaluated', {
+            stateId: dialecticState.id,
+            concept: dialecticState.concept,
+            phase: dialecticState.phase,
+            kind: 'context',
+            presuppositionCount: presuppositions.length,
+            conditionCount: conditions.length,
+            scopeModal,
           }),
         ];
       }

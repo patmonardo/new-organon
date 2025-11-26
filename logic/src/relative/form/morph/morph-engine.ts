@@ -11,6 +11,10 @@ import {
 } from '@schema';
 import { FormMorph } from './morph-form';
 import * as active from '@schema';
+import type {
+  DialecticEvaluateCmd,
+  DialecticCommand,
+} from '@schema';
 
 type BaseState = Morph['shape']['state'];
 
@@ -51,7 +55,8 @@ export type MorphCommand =
   | MorphDescribeCmd
   | MorphSetCoreCmd
   | MorphSetStateCmd
-  | MorphPatchStateCmd;
+  | MorphPatchStateCmd
+  | DialecticCommand;
 
 export class MorphEngine {
   constructor(
@@ -172,6 +177,121 @@ export class MorphEngine {
               (doc.shape.signature ?? {}) as Record<string, unknown>,
             ),
             facetsKeys: Object.keys(doc.shape.facets ?? {}),
+          }),
+        ];
+      }
+
+      // --- Dialectic EVAL: Morph as Ground / Active Container ---
+      // Morph is the SYNTHESIS of Shape + Context = Ground.
+      // Ground (Hegel) = the unity of Essence and Foundation, the REASON for existence.
+      // Morph is the PRINCIPLE that enables transformation - the Active Container.
+      // It holds the conditions under which Aspects can appear.
+      case 'dialectic.evaluate': {
+        const { dialecticState, context: evalContext } = (cmd as DialecticEvaluateCmd).payload;
+
+        // Create a Morph to represent this dialectic ground
+        const morph = FormMorph.create({
+          id: dialecticState.id,
+          type: dialecticState.concept,
+          name: dialecticState.title,
+        });
+
+        // Extract TRANSFORMATION PRINCIPLE from transitions
+        // Transitions show the "reason" - why one state becomes another
+        const transformations = (dialecticState.transitions ?? []).map(t => ({
+          id: t.id,
+          from: t.from,
+          to: t.to,
+          mechanism: t.mechanism,
+          middleTerm: t.middleTerm,
+          reason: t.description,
+        }));
+
+        // Extract CONTAINER STRUCTURE from moments
+        // The Ground "contains" moments - it's the active unity that holds them
+        // 'sublation' and 'mediation' moments show the containing structure
+        const containingMoments = dialecticState.moments
+          .filter(m => m.type === 'sublation' || m.type === 'mediation' || m.relation === 'contains');
+
+        const container = {
+          holds: dialecticState.moments.map(m => m.name),
+          activeUnity: containingMoments.map(m => ({
+            name: m.name,
+            definition: m.definition,
+            contains: m.relatedTo,
+          })),
+        };
+
+        // Extract GROUNDING CONDITIONS from forces
+        // Forces show what "grounds" the dialectic movement
+        const groundingForces = (dialecticState.forces ?? []).map(f => ({
+          id: f.id,
+          type: f.type,
+          trigger: f.trigger,
+          effect: f.effect,
+          grounds: f.targetState,
+        }));
+
+        // The Ground as the synthesis of Shape (form) + Context (scope)
+        const ground = {
+          form: dialecticState.concept,           // from Shape
+          scope: dialecticState.phase,            // from Context
+          principle: transformations.length > 0   // the reason
+            ? transformations[0].mechanism
+            : 'immanent',
+        };
+
+        // Store in signature: the moments as the ground's structure
+        const signature = dialecticState.moments.reduce((acc, m) => {
+          acc[m.name] = {
+            definition: m.definition,
+            type: m.type,
+            relation: m.relation,
+            relatedTo: m.relatedTo,
+          };
+          return acc;
+        }, {} as Record<string, any>);
+
+        morph.setSignature(signature);
+
+        // Store in facets: the Ground structure
+        morph.setFacets({
+          dialecticState: dialecticState,
+          phase: dialecticState.phase,
+          // The Ground - active unity of form and scope
+          ground,
+          // Container structure - what this ground holds
+          container,
+          // Transformation principle - why change occurs
+          transformations,
+          // Grounding forces - what drives from this ground
+          groundingForces,
+          // Evaluation context
+          context: evalContext,
+        });
+
+        // Set state to reflect the active ground
+        morph.setState({
+          status: 'active',
+          meta: {
+            isGround: true,
+            principle: ground.principle,
+            containsCount: container.holds.length,
+            transformationCount: transformations.length,
+          },
+        } as any);
+
+        await this.persist(morph);
+
+        return [
+          this.emit(base, 'dialectic.evaluated', {
+            stateId: dialecticState.id,
+            concept: dialecticState.concept,
+            phase: dialecticState.phase,
+            kind: 'morph',
+            principle: ground.principle,
+            containsCount: container.holds.length,
+            transformationCount: transformations.length,
           }),
         ];
       }

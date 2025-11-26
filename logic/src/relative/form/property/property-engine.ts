@@ -11,6 +11,10 @@ import {
   createProperty,
 } from '@schema';
 import * as active from '@schema';
+import type {
+  DialecticEvaluateCmd,
+  DialecticCommand,
+} from '@schema';
 
 type BaseState = Property['shape']['state'];
 
@@ -51,7 +55,8 @@ export type PropertyCommand =
   | PropertyDescribeCmd
   | PropertySetCoreCmd
   | PropertySetStateCmd
-  | PropertyPatchStateCmd;
+  | PropertyPatchStateCmd
+  | DialecticCommand;
 
 export class PropertyEngine {
   constructor(
@@ -172,6 +177,102 @@ export class PropertyEngine {
               (doc.shape.signature ?? {}) as Record<string, unknown>,
             ),
             facetsKeys: Object.keys(doc.shape.facets ?? {}),
+          }),
+        ];
+      }
+
+      // --- Dialectic EVAL: Property as Law / Facticity ---
+      // Property is the INVARIANT structure of the World - what persists through flux.
+      // Law (Hegel) = the tranquil image of Appearance.
+      // Property extracts: invariants, facticity grounds, mediating relations.
+      // This is the living FactStore - marks of impure Dharmas.
+      case 'dialectic.evaluate': {
+        const { dialecticState, context: evalContext } = (cmd as DialecticEvaluateCmd).payload;
+
+        // Create a Property to represent this dialectic invariant
+        const prop = FormProperty.create({
+          id: dialecticState.id,
+          type: dialecticState.concept,
+          name: dialecticState.title,
+        });
+
+        // Extract INVARIANTS from the dialectic state
+        // Each invariant becomes a scientific law - what must hold
+        const invariants = dialecticState.invariants.map(inv => ({
+          id: inv.id,
+          constraint: inv.constraint,
+          predicate: inv.predicate,
+          universality: inv.conditions && inv.conditions.length > 0 ? 'conditional' : 'necessary',
+        }));
+
+        // Extract FACTICITY from moments
+        // Moments that ground the property - the evidence/witnesses
+        // 'polarity' and 'negation' moments are the dialectical grounds
+        const groundingMoments = dialecticState.moments
+          .filter(m => m.type === 'polarity' || m.type === 'negation' || m.type === 'mediation');
+
+        const facticity = {
+          grounds: groundingMoments.map(m => m.name),
+          conditions: dialecticState.invariants.flatMap(inv => inv.conditions ?? []),
+          evidence: groundingMoments.map(m => ({
+            name: m.name,
+            definition: m.definition,
+            type: m.type,
+          })),
+        };
+
+        // Extract MEDIATION structure
+        // Property mediates Entity↔Aspect (Thing↔Relation)
+        // 'mediates' and 'transforms' relations show this structure
+        const mediatingMoments = dialecticState.moments
+          .filter(m => m.relation === 'mediates' || m.relation === 'transforms');
+
+        const mediates = {
+          fromEntities: mediatingMoments.map(m => m.name),
+          toAspects: mediatingMoments.map(m => m.relatedTo).filter(Boolean) as string[],
+        };
+
+        // Store in signature: the moments as the invariant's structure
+        const signature = dialecticState.moments.reduce((acc, m) => {
+          acc[m.name] = {
+            definition: m.definition,
+            type: m.type,
+            relation: m.relation,
+            relatedTo: m.relatedTo,
+          };
+          return acc;
+        }, {} as Record<string, any>);
+
+        prop.setSignature(signature);
+
+        // Store in facets: the Law structure (facticity, invariants, mediation)
+        prop.setFacets({
+          dialecticState: dialecticState,
+          phase: dialecticState.phase,
+          // The Law as scientific invariant
+          law: {
+            invariants,
+            universality: invariants.every(i => i.universality === 'necessary') ? 'necessary' : 'conditional',
+          },
+          // Facticity - the living FactStore
+          facticity,
+          // Mediation structure
+          mediates,
+          // Evaluation context
+          context: evalContext,
+        });
+
+        await this.persist(prop);
+
+        return [
+          this.emit(base, 'dialectic.evaluated', {
+            stateId: dialecticState.id,
+            concept: dialecticState.concept,
+            phase: dialecticState.phase,
+            kind: 'property',
+            invariantCount: invariants.length,
+            groundCount: facticity.grounds.length,
+            universality: invariants.every(i => i.universality === 'necessary') ? 'necessary' : 'conditional',
           }),
         ];
       }

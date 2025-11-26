@@ -9,6 +9,8 @@ import {
   type Entity,
   type EntityRef,
   type EntityState,
+  type DialecticState,
+  type Moment,
 } from '@schema';
 
 export type FormEntityId = string;
@@ -85,6 +87,25 @@ export class FormEntity {
   }
   get version(): string | undefined {
     return this.doc.version;
+  }
+
+  // Dialectic Helpers
+  getDialecticState(): DialecticState | undefined {
+    const facets = this.doc.shape.facets as any;
+    return facets?.dialecticState as DialecticState | undefined;
+  }
+
+  getMoments(): Moment[] {
+    const sig = this.doc.shape.signature;
+    if (!sig) return [];
+
+    return Object.entries(sig).map(([name, def]: [string, any]) => ({
+      name,
+      definition: def.definition,
+      type: def.type,
+      relation: def.relation,
+      relatedTo: def.relatedTo,
+    }));
   }
 
   // Reference/key helpers

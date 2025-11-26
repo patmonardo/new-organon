@@ -14,7 +14,7 @@ import type {
   DialecticInvariantCheckCmd,
   DialecticEvaluateCmd,
   DialecticCommand
-} from '../dialectic-commands';
+} from '@schema';
 
 type BaseState = Shape['shape']['state'];
 type Signature = NonNullable<Shape['shape']['signature']>;

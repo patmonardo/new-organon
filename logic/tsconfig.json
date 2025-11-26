@@ -5,18 +5,6 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
-      "@organon/gdsl": [
-        "../gdsl/dist/index"
-      ],
-      "@organon/gdsl/*": [
-        "../gdsl/dist/*"
-      ],
-      "@organon/reality": [
-        "../reality/dist/index"
-      ],
-      "@organon/reality/*": [
-        "../reality/dist/*"
-      ],
       "@repository": [
         "src/repository/index"
       ],
@@ -47,6 +35,9 @@
     "src/**/*.ts"
   ],
   "exclude": [
+    "src/relative/form/morph/form/**/*.ts",
+    "src/relative/form/morph/cypher/**/*.ts",
+    "src/relative/form/morph/graph/**/*.ts",
     "src/repository/**/*.ts",
     "src/absolute/**/*.ts"
   ]

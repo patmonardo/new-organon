@@ -10,6 +10,10 @@ import {
 } from '@schema';
 import * as active from '@schema';
 import { FormEntity } from './entity-form';
+import type {
+  DialecticEvaluateCmd,
+  DialecticCommand
+} from '@schema';
 
 type BaseState = Entity['shape']['state'];
 type Signature = NonNullable<Entity['shape']['signature']>;
@@ -76,7 +80,8 @@ export type EntityCommand =
   | EntitySetFacetsCmd
   | EntityMergeFacetsCmd
   | EntitySetSignatureCmd
-  | EntityMergeSignatureCmd;
+  | EntityMergeSignatureCmd
+  | DialecticCommand;
 
 export class EntityEngine {
   constructor(
@@ -231,6 +236,56 @@ export class EntityEngine {
               (doc.shape.signature ?? {}) as Record<string, unknown>,
             ),
             facetsKeys: Object.keys(doc.shape.facets ?? {}),
+          }),
+        ];
+      }
+
+      case 'dialectic.evaluate': {
+        const { dialecticState, context } = (cmd as DialecticEvaluateCmd).payload;
+
+        // Create entity from dialectic state
+        // We use the dialectic state ID as the entity ID, or generate a new one?
+        // The plan says "id: dialecticState.id", which implies 1:1 mapping.
+        // But Entities are instances. Maybe we should allow ID override or gen new one.
+        // For now, let's follow the plan but maybe suffix it if it's an instance?
+        // Actually, if we are "evaluating" a state to produce an entity, it's like "instantiating" it.
+        // Let's use the state ID for now as the "Concept Entity".
+
+        const entity = FormEntity.create({
+          id: dialecticState.id,
+          type: dialecticState.concept,
+          name: dialecticState.title,
+          description: dialecticState.description,
+        });
+
+        // Store dialectic state in facets
+        entity.setFacets({
+          dialecticState: dialecticState,
+          phase: dialecticState.phase,
+          moments: dialecticState.moments,
+          invariants: dialecticState.invariants,
+          context: context,
+        });
+
+        // Store moments as signature
+        const momentsSignature = dialecticState.moments.reduce((acc, m) => {
+          acc[m.name] = {
+            definition: m.definition,
+            type: m.type,
+            value: null, // Runtime value to be set
+          };
+          return acc;
+        }, {} as Record<string, any>);
+
+        entity.setSignature(momentsSignature);
+
+        await this.persist(entity);
+
+        return [
+          this.emit(base, 'dialectic.evaluated', {
+            stateId: entity.id, // Using entity ID as state ID here
+            concept: dialecticState.concept,
+            phase: dialecticState.phase,
           }),
         ];
       }

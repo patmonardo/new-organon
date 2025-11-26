@@ -1,10 +1,5 @@
 export const logic = "logic";
 
-import { gdsl } from "@organon/gdsl"
-console.log("logic:", gdsl);
-
-// import { reality } from '@organon/reality';
-// console.log("logic:", reality);
-
-// import * as core from '@organon/gds';
-// console.log(core.core);
+// GDSL is now a target IR, not an active dependency
+// The dialectic schemas live here in @organon/logic
+// GDSL will be informed by Logic/Model packages when needed

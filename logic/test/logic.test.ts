@@ -1,15 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { gdsl } from '@organon/gdsl';
-import { reality } from '@organon/reality';
+import { logic } from "../src/logic";
 
-describe("@organon/gdsl resolution", () => {
-  it('imports from "@organon/gdsl and exports "logic"', () => {
-    expect(gdsl).toBe("gdsl");
+describe("@organon/logic", () => {
+  it('exports "logic"', () => {
+    expect(logic).toBe("logic");
   });
 });
 
-describe('@organon/reality resolution', () => {
-  it('imports from "@organon/reality and exports "logic"', () => {
-    expect(reality).toBe('reality');
-  });
-});
+// GDSL and Reality are now target IRs, not active dependencies
+// The dialectic schemas live here in @organon/logic
+// Tests for Form Engines with dialectic.evaluate are in separate test files

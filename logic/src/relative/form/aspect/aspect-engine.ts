@@ -10,6 +10,10 @@ import {
 } from '@schema';
 import { FormAspect } from './aspect-form';
 import * as active from '@schema';
+import type {
+  DialecticEvaluateCmd,
+  DialecticCommand,
+} from '@schema';
 
 type BaseState = Aspect['shape']['state'];
 
@@ -50,7 +54,8 @@ export type AspectCommand =
   | AspectDescribeCmd
   | AspectSetCoreCmd
   | AspectSetStateCmd
-  | AspectPatchStateCmd;
+  | AspectPatchStateCmd
+  | DialecticCommand;
 
 export class AspectEngine {
   constructor(
@@ -171,6 +176,138 @@ export class AspectEngine {
               (doc.shape.signature ?? {}) as Record<string, unknown>,
             ),
             facetsKeys: Object.keys(doc.shape.facets ?? {}),
+          }),
+        ];
+      }
+
+      // --- Dialectic EVAL: Aspect as Essential Relation / Spectral ---
+      // Aspect is Hegel's RELATION in Appearance - the essential connection.
+      // "Spect" = to look, to appear (spectacle, spectrum, aspect).
+      // Aspect is the SPECTRAL moment - how grounded facts step into existence.
+      // It connects Entity <-> Property through the lens of Ground (Morph).
+      // This is the appearing of relations - Fichtean Science's essential structure.
+      case 'dialectic.evaluate': {
+        const { dialecticState, context: evalContext } = (cmd as DialecticEvaluateCmd).payload;
+
+        // Create an Aspect to represent this dialectic relation
+        const aspect = FormAspect.create({
+          id: dialecticState.id,
+          type: dialecticState.concept,
+          name: dialecticState.title,
+        });
+
+        // Extract RELATIONAL STRUCTURE from moments
+        // 'opposite', 'mediates', 'transforms', 'negates' show the essential relations
+        const relationalMoments = dialecticState.moments
+          .filter(m => m.relation !== undefined);
+
+        const relations = relationalMoments.map(m => ({
+          from: m.name,
+          to: m.relatedTo,
+          relation: m.relation,
+          type: m.type,
+        }));
+
+        // Extract SPECTRAL POLES from polarities
+        // Polarities are the "spectrum" - the range of appearing
+        const polarities = dialecticState.moments
+          .filter(m => m.type === 'polarity' || m.type === 'negation');
+
+        const spectrum = {
+          poles: polarities.map(p => ({
+            name: p.name,
+            definition: p.definition,
+            oppositeTo: p.relatedTo,
+          })),
+          range: polarities.length,
+          dialectical: polarities.some(p => p.relation === 'opposite'),
+        };
+
+        // Extract APPEARING STRUCTURE from forces
+        // Forces show how the relation "appears" - steps into existence
+        const appearingForces = (dialecticState.forces ?? [])
+          .filter(f => f.type === 'externality' || f.type === 'reflection' || f.type === 'passover');
+
+        const appearing = {
+          mode: appearingForces.length > 0
+            ? appearingForces[0].type
+            : 'immanent',
+          triggers: appearingForces.map(f => f.trigger),
+          effects: appearingForces.map(f => f.effect),
+        };
+
+        // The Essential Relation connects Entity (Thing) <-> Property (Law)
+        // Through the Spectral lens of Ground (Morph)
+        const essentialRelation = {
+          // The spectrum of appearing
+          spectrum,
+          // The relational connections
+          connections: relations,
+          // How it appears
+          appearing,
+          // Grounded in (reference to Morph/Ground)
+          groundedIn: evalContext?.groundId ?? dialecticState.previousStates?.[0],
+        };
+
+        // Store in signature: the relational moments
+        const signature = dialecticState.moments.reduce((acc, m) => {
+          acc[m.name] = {
+            definition: m.definition,
+            type: m.type,
+            relation: m.relation,
+            relatedTo: m.relatedTo,
+            spectral: m.type === 'polarity' || m.type === 'negation',
+          };
+          return acc;
+        }, {} as Record<string, any>);
+
+        aspect.setSignature(signature);
+
+        // Store in facets: the Spectral/Relational structure
+        aspect.setFacets({
+          dialecticState: dialecticState,
+          phase: dialecticState.phase,
+          // The Essential Relation structure
+          essentialRelation,
+          // Spectrum of poles
+          spectrum,
+          // Relational connections
+          relations,
+          // Appearing mode
+          appearing,
+          // Invariants as constraints on the relation
+          constraints: dialecticState.invariants.map(inv => ({
+            id: inv.id,
+            constraint: inv.constraint,
+            predicate: inv.predicate,
+          })),
+          // Evaluation context
+          context: evalContext,
+        });
+
+        // Set state to reflect the spectral aspect
+        aspect.setState({
+          status: 'active',
+          meta: {
+            isSpectral: true,
+            poleCount: spectrum.poles.length,
+            relationCount: relations.length,
+            appearingMode: appearing.mode,
+          },
+        } as any);
+
+        await this.persist(aspect);
+
+        return [
+          this.emit(base, 'dialectic.evaluated', {
+            stateId: dialecticState.id,
+            concept: dialecticState.concept,
+            phase: dialecticState.phase,
+            kind: 'aspect',
+            poleCount: spectrum.poles.length,
+            relationCount: relations.length,
+            appearingMode: appearing.mode,
+            isDialectical: spectrum.dialectical,
           }),
         ];
       }
