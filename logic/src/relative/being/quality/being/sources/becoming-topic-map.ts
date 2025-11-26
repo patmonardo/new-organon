@@ -1,16 +1,16 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for becoming.txt - C. BECOMING
- * 
+ *
  * This TopicMap structures the logical development of Becoming as the unity
  * of Being and Nothing, the third moment of the Logic. Focuses on the Species
  * (C. BECOMING) only, ignoring top-level Genus introduction.
- * 
+ *
  * This is the most intense moment - the synthesis where Being and Nothing
  * unite in their vanishing movement, ultimately collapsing into existence.
- * 
- * Structure: 
+ *
+ * Structure:
  * - 1. Unity of being and nothing (same yet distinct)
  * - 2. The moments of becoming (unseparatedness, two unities, interpenetration)
  * - 3. Sublation of becoming (equilibrium, contradiction, transition to existence)

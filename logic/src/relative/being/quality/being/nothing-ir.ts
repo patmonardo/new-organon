@@ -9,7 +9,7 @@ import type {
   Invariant,
   Force,
   Transition,
-} from '../../../../schema/dialectic';
+} from '@schema/dialectic';
 import { nothingTopicMap } from './sources/nothing-topic-map';
 
 const nothingState1: DialecticState = {

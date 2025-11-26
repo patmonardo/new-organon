@@ -32,8 +32,8 @@
  * Key Insight: Reason and Understanding are inseparable like Immediacy and Mediacy. The immediacy of Reason is internal.
  */
 
-import type { TopicMap } from '../../../types/topic-map';
-import { createTopicMap, createTopicMapEntry } from '../../../types/topic-map';
+import type { TopicMap } from '@schema/topic';
+import { createTopicMap, createTopicMapEntry } from '@schema/topic';
 
 export const EXISTENCE_SYLLOGISM_TOPIC_MAP: TopicMap = createTopicMap(
   'logic/src/relative/concept/subject/syllogism/sources/existence.txt',

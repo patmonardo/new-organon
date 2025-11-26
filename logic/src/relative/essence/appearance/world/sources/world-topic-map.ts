@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for world.txt - The World of Appearance and the World-In-Itself
- * 
+ *
  * This TopicMap structures the logical development of the world-in-itself as
  * the suprasensible world (Leibnizian resonances), the kingdom of laws, and
  * its relation to the world of appearance.

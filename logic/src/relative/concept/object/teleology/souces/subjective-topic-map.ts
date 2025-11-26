@@ -1,14 +1,14 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for subjective.txt - A. THE SUBJECTIVE PURPOSE
- * 
+ *
  * This TopicMap structures the logical development of the subjective purpose.
  * Purpose is the objective free concept, self-determining. In centrality and chemism,
  * purpose is rediscovered. Purpose is rational in concrete existence, syllogism within.
  * Purpose is finite, having objective world as presupposition. Movement of purpose:
  * Sublating presupposition, realizing purpose.
- * 
+ *
  * Structure:
  * - Purpose rediscovered, exempt from transition
  * - Purpose as syllogism within, self-equal universal

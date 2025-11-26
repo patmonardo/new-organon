@@ -1,5 +1,5 @@
 import { ShapeSchema } from '@schema';
-import type { Shape } from '@schema';
+import type { Shape, DialecticState, Moment } from '@schema';
 import { createShape } from '@schema';
 import { updateShape } from '@schema';
 
@@ -56,6 +56,24 @@ export class FormShape {
   // Data is stored under facets.data
   get data(): unknown {
     return (this._doc.shape.facets as any)?.data;
+  }
+
+  // Dialectic Helpers
+  getDialecticState(): DialecticState | undefined {
+    return this.facets.dialecticState as DialecticState | undefined;
+  }
+
+  getMoments(): Moment[] {
+    const sig = this.signature;
+    if (!sig) return [];
+
+    return Object.entries(sig).map(([name, def]: [string, any]) => ({
+      name,
+      definition: def.definition,
+      type: def.type,
+      relation: def.relation,
+      relatedTo: def.relatedTo,
+    }));
   }
 
   toSchema(): Shape {

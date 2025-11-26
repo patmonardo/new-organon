@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for whole-parts.txt - The Relation of Whole and Parts
- * 
+ *
  * This TopicMap structures the logical development of the relation of whole and parts,
  * covering the essential relation, contradiction, reciprocal conditioning, and
  * transition to force and its expressions.

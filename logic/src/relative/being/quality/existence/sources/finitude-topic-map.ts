@@ -1,12 +1,12 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for finitude.txt - B. FINITUDE (c) Finitude
- * 
+ *
  * This TopicMap structures the logical development of finitude itself,
  * showing how the finite contains the contradiction that propels it beyond itself
  * into the infinite.
- * 
+ *
  * Structure:
  * - Introduction: Definition of finitude; non-being as nature; perishing; hour of birth = hour of death
  * - (a) The immediacy of finitude:

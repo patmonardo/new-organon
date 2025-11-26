@@ -1,12 +1,12 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for something-and-other.txt - B. FINITUDE (a) Something and other
- * 
+ *
  * This TopicMap structures the logical development of the relationship between
  * something and other, establishing the structure of being-in-itself and being-for-other
  * that is essential for understanding finitude.
- * 
+ *
  * Structure:
  * - Outline: (a) Something and other → (b) Determination/constitution/limit → (c) Finitude
  * - Introduction: Negative determination (vs affirmative in first division)

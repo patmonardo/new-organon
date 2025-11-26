@@ -27,7 +27,7 @@ export * from "./judgment";
 export * from "./syllogism";
 
 // Empowerment (will, action, doing)
-export * from "./empowerment";
+export * from "./power";
 export * from "./signature";
 export * from "./facet";
 

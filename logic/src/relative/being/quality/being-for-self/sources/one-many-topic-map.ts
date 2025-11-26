@@ -1,14 +1,14 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for one-many.txt - B. THE ONE AND THE MANY
- * 
+ *
  * This TopicMap structures the logical development of The One and The Many,
  * focusing on the Species (B. THE ONE AND THE MANY and sub-sections) only.
- * 
+ *
  * No top-level Genus introduction present in this file - it starts directly
  * with the Species content.
- * 
+ *
  * Structure:
  * - B. THE ONE AND THE MANY (simple reference and determining)
  * - a. The one within (unalterable and void)

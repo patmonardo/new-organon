@@ -1,14 +1,14 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for attraction.txt - C. REPULSION AND ATTRACTION
- * 
+ *
  * This TopicMap structures the logical development of Repulsion and Attraction.
- * 
+ *
  * Note: The a., b., c. sub-sections here may be leaf concepts rather than full Species
  * that could themselves become Genera. The main C. section contains the Species-level
  * content, with a., b., c. as its moments/leaf concepts.
- * 
+ *
  * Structure:
  * - C. a. Exclusion of the one (mutual repulsion, self-preservation, dissolution)
  * - b. The one one of attraction (ideality realized, mediated one)

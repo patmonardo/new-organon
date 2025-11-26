@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for difference.txt - Difference
- * 
+ *
  * This TopicMap structures the logical development of Difference as the second determination
  * of reflection, covering absolute difference, diversity, and opposition (positive and negative).
  */

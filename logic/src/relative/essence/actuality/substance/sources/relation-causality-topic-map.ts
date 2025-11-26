@@ -32,8 +32,8 @@
  * that is not currently chunked. This should be addressed in future upgrades.
  */
 
-import type { TopicMap } from '../../../types/topic-map';
-import { createTopicMap, createTopicMapEntry } from '../../../types/topic-map';
+import type { TopicMap } from '@schema/topic';
+import { createTopicMap, createTopicMapEntry } from '@schema/topic';
 
 export const RELATION_CAUSALITY_TOPIC_MAP: TopicMap = createTopicMap(
   'logic/src/relative/essence/actuality/substance/sources/relation-causality.txt',

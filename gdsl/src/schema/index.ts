@@ -1,14 +1,14 @@
 /**
  * GDSL Schema: Dialectical Schema Language
- * 
+ *
  * Extends schema/dialectic.ts with OpenCypher AST integration
  * and Reflective System of Marks support.
- * 
+ *
  * This is the "syntax-free" dialectical schema that AI codegens
  * directly in IR—no parsing needed.
  */
 
-export * from '../../schema/dialectic';
+export * from '../../../logic/src/schema/dialectic';
 
 // Re-export dialectic types for GDSL
 export type {
@@ -19,7 +19,7 @@ export type {
   Force,
   Transition,
   CpuGpuPhase,
-} from '../../schema/dialectic';
+} from '../../../logic/src/schema/dialectic';
 
 /**
  * GDSL extends dialectic schema with:

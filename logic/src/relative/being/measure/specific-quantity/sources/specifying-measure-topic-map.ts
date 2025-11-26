@@ -29,8 +29,8 @@
  * - tools/source-analysis/ARCHITECTURE.md for architectural overview
  */
 
-import type { TopicMap } from '../../../../types/topic-map';
-import { createTopicMap, createTopicMapEntry } from '../../../../types/topic-map';
+import type { TopicMap } from '@schema/topic';
+import { createTopicMap, createTopicMapEntry } from '@schema/topic';
 
 export const SPECIFYING_MEASURE_TOPIC_MAP: TopicMap = createTopicMap(
   'logic/src/relative/being/measure/specific-quantity/sources/specifying-measure.txt',

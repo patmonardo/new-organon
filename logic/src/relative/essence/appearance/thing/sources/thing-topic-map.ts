@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for thing.txt - The Thing and Its Properties
- * 
+ *
  * This TopicMap structures the logical development from concrete existence to
  * the thing and its properties, covering the thing-in-itself, property, and
  * reciprocal action of things.

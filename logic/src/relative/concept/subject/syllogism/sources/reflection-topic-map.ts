@@ -31,8 +31,8 @@
  * Note: All mainline text included, including examples, even though examples won't become Logical Operations.
  */
 
-import type { TopicMap } from '../../../types/topic-map';
-import { createTopicMap, createTopicMapEntry } from '../../../types/topic-map';
+import type { TopicMap } from '@schema/topic';
+import { createTopicMap, createTopicMapEntry } from '@schema/topic';
 
 export const REFLECTION_SYLLOGISM_TOPIC_MAP: TopicMap = createTopicMap(
   'logic/src/relative/concept/subject/syllogism/sources/reflection.txt',

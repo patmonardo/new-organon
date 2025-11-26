@@ -16,7 +16,7 @@ import type {
   Invariant,
   Force,
   Transition,
-} from '../../../../schema/dialectic';
+} from '@schema/dialectic';
 import { beingTopicMap } from './sources/being-topic-map';
 
 const state1: DialecticState = {

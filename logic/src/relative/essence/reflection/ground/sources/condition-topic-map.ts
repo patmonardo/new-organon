@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for condition.txt - Condition
- * 
+ *
  * This TopicMap structures the logical development of Condition, covering
  * the relatively unconditioned, the absolutely unconditioned, and the procession
  * of the fact into concrete existence.

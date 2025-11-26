@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for disappearance.txt - The Dissolution of Appearance
- * 
+ *
  * This TopicMap structures the logical development of the dissolution/disappearance
  * of appearance. Note: In Idealism, worlds/laws "disappear" (as opposed to Realism
  * where things "dissolve"). The world can disappear because it is essentially

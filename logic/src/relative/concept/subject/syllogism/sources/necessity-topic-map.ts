@@ -32,8 +32,8 @@
  * Key Insight: The Idea is the Concept, but the Concept self-encloses Judgments while the Idea self-encloses the Differentiated Object.
  */
 
-import type { TopicMap } from '../../../types/topic-map';
-import { createTopicMap, createTopicMapEntry } from '../../../types/topic-map';
+import type { TopicMap } from '@schema/topic';
+import { createTopicMap, createTopicMapEntry } from '@schema/topic';
 
 export const NECESSITY_SYLLOGISM_TOPIC_MAP: TopicMap = createTopicMap(
   'logic/src/relative/concept/subject/syllogism/sources/necessity.txt',

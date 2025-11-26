@@ -1,11 +1,11 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for infinity.txt - C. INFINITY (a) The infinite in general
- * 
+ *
  * This TopicMap structures the logical development of the infinite as negation of negation,
  * the affirmative, showing how the finite transcends itself to become infinite.
- * 
+ *
  * Structure:
  * - Introduction: Infinite as definition of absolute; true vs bad infinity; outline
  * - a. The infinite in general:

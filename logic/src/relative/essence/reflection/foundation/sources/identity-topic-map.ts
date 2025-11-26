@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for identity.txt - Identity
- * 
+ *
  * This TopicMap structures the logical development of Identity as the first determination
  * of reflection, covering essence as simple self-identity, essential identity as immediacy
  * of reflection, and how being's negativity is identity itself.

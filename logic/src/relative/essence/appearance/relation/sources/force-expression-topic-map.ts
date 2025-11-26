@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for force-expression.txt - The Relation of Force and Its Expression
- * 
+ *
  * This TopicMap structures the logical development of force and its expression,
  * covering conditionedness, solicitation, and infinity. This analysis filters
  * what is truly Scientific for the LO Store/KnowledgeStore in the Graph->Fact->Knowledge pipeline.

@@ -13,6 +13,7 @@
 ### 1. Source Text Files (`{species}.txt`)
 
 **Requirements**:
+
 - One file per species (e.g., `universal.txt`, `particular.txt`, `singular.txt`)
 - Contains ONLY the text for that specific species
 - No top-level genera text mixed with species text
@@ -20,12 +21,14 @@
 - Line numbers preserved for accurate `lineRange` references
 
 **Naming Convention**:
+
 - Use lowercase species name: `universal.txt`, `particular.txt`, `singular.txt`
 - Match the species identifier exactly
 
 ### 2. Chunks Files (`{species}-chunks.md`)
 
 **Requirements**:
+
 - One file per species: `{species}-chunks.md`
 - Contains chunking plan for that species only
 - References the corresponding `{species}.txt` file
@@ -33,6 +36,7 @@
 - Follows the standard chunking plan format
 
 **Standard Header**:
+
 ```markdown
 # Chunking Plan for {Species}.txt - The {Species} Concept
 
@@ -44,20 +48,24 @@ The TopicMap helps check and improve understanding of Hegel through step-by-step
 **Status**: Work in progress - refining methodology as we practice.
 
 **Workflow Stage**: **SEED** → **UPGRADES**
+
 - **SEED**: Initial chunking plan (current state) - good enough to form initial seed
 - **UPGRADES**: Refined chunks through actual study and editing
 - As you study each chunk, edit and upgrade the seed chunks
 - This document evolves from planning → studied/refined chunks
 
 **Structure**: The {Species} Concept ({line_count} lines)
+
 - [Brief structure overview]
 
-**Workflow**: 
-```
-Source Text → [Source Analysis] → Chunks + Topics → [Logical Op Generation] → Logical Operations
+**Workflow**:
 ```
 
-**References**: 
+Source Text → [Source Analysis] → Chunks + Topics → [Logical Op Generation] → Logical Operations
+
+```
+
+**References**:
 - `tools/source-analysis/SOURCE-ANALYSIS.md` - Source Analysis workflow documentation
 - `tools/source-analysis/ARCHITECTURE.md` - Architecture overview
 - `{species}-topic-map.ts` - Formal TopicMap structure (Topics)
@@ -73,6 +81,7 @@ The TopicMap ensures systematic, trackable chunking that yields meaningful Logic
 ### 3. Topic Map Files (`{species}-topic-map.ts`)
 
 **Requirements**:
+
 - One file per species: `{species}-topic-map.ts`
 - Exports a single `TopicMap` constant: `{SPECIES}_TOPIC_MAP`
 - Uses consistent naming: `{SPECIES}_TOPIC_MAP` (uppercase with underscores)
@@ -80,6 +89,7 @@ The TopicMap ensures systematic, trackable chunking that yields meaningful Logic
 - References the corresponding `{species}-chunks.md` file
 
 **Standard Header**:
+
 ```typescript
 /**
  * TopicMap for {Species}.txt - The {Species} Concept
@@ -112,8 +122,8 @@ The TopicMap ensures systematic, trackable chunking that yields meaningful Logic
  * - tools/source-analysis/ARCHITECTURE.md for architectural overview
  */
 
-import type { TopicMap } from '../../../types/topic-map';
-import { createTopicMap, createTopicMapEntry } from '../../../types/topic-map';
+import type { TopicMap } from '../../.@schema/topic';
+import { createTopicMap, createTopicMapEntry } from '../../.@schema/topic';
 
 export const {SPECIES}_TOPIC_MAP: TopicMap = createTopicMap(
   'logic/src/relative/concept/subject/concept/sources/{species}.txt',
@@ -143,27 +153,34 @@ When standardizing source files, ensure:
 ## Common Issues to Fix
 
 ### Issue 1: Mixed Source Files
+
 **Problem**: One source file contains multiple species or genera mixed together.
 
 **Solution**: Split into separate files:
+
 - `concept.txt` (genera) → Split into `universal.txt`, `particular.txt`, `singular.txt`
 
 ### Issue 2: Inconsistent Naming
+
 **Problem**: Files use different naming conventions.
 
 **Solution**: Standardize to:
+
 - `{species}.txt` (lowercase, hyphenated if needed)
 - `{species}-chunks.md`
 - `{species}-topic-map.ts`
 
 ### Issue 3: Missing References
+
 **Problem**: Files don't reference each other correctly.
 
 **Solution**: Ensure all three files reference each other:
+
 - `{species}-chunks.md` references `{species}.txt` and `{species}-topic-map.ts`
 - `{species}-topic-map.ts` references `{species}.txt` and `{species}-chunks.md`
 
 ### Issue 4: Inconsistent Headers
+
 **Problem**: Headers don't follow the standard format.
 
 **Solution**: Use the standard headers provided above.
@@ -171,10 +188,10 @@ When standardizing source files, ensure:
 ## Enforcement
 
 **This methodology is compulsory**. All source files must follow this pattern:
+
 - No exceptions
 - No mixing of species in one file
 - No inconsistent naming
 - No contradictory methodology
 
 **When in doubt**: Follow the pattern established by `universal.txt`, `universal-chunks.md`, `universal-topic-map.ts`.
-

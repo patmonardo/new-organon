@@ -11,7 +11,7 @@
  * - Finite vanishes into infinite
  */
 
-import type { LogicalOperation } from '../../../../types';
+import type { LogicalOperation } from '@schema/dialectic';
 
 // ============================================================================
 // INFINITY

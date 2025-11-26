@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for contradiction.txt - Contradiction
- * 
+ *
  * This TopicMap structures the logical development of Contradiction as the third determination
  * of reflection, covering contradiction as self-excluding determination, its resolution, and
  * transition to ground.

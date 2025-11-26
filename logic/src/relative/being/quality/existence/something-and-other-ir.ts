@@ -18,7 +18,7 @@ import type {
   Invariant,
   Force,
   Transition,
-} from '../../../../schema/dialectic';
+} from '@schema/dialectic';
 import { somethingAndOtherTopicMap } from './sources/something-and-other-topic-map';
 
 /**

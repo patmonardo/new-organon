@@ -1,9 +1,9 @@
 /**
  * OpenCypher AST: Intermediate Representation
- * 
+ *
  * This module defines the parsed Cypher AST structures that serve as
  * the intermediate language between dialectical schema and Neo4j execution.
- * 
+ *
  * GDSL uses these ASTs directly—no syntax parsing needed.
  * AI codegens dialectic states → Cypher AST patterns.
  */
@@ -249,7 +249,7 @@ export interface OrderByItem {
  * This is where the magic happens—dialectic → Cypher AST
  */
 export function dialecticStateToCypherPattern(
-  state: import('../../schema/dialectic').DialecticState
+  state: import('../../../logic/src/schema/dialectic').DialecticState
 ): CypherPattern {
   // Map dialectic moments to Cypher nodes
   const nodes: NodePattern[] = state.moments.map((moment, idx) => ({

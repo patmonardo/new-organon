@@ -1,4 +1,4 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for constitution.txt - B. FINITUDE (b) Determination, constitution, and limit

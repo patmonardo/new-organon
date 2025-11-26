@@ -9,7 +9,7 @@ import type {
   Invariant,
   Force,
   Transition,
-} from '../../../../schema/dialectic';
+} from '@schema/dialectic';
 import { becomingTopicMap } from './sources/becoming-topic-map';
 
 const becomingStates: DialecticState[] = [
@@ -275,7 +275,7 @@ const becomingStates: DialecticState[] = [
     concept: 'Vanishedness',
     phase: 'quality',
     moments: [
-      { name: 'contradiction', definition: 'Union of distinct being & nothing destroys itself', type: 'contradiction' },
+      { name: 'contradiction', definition: 'Union of distinct being & nothing destroys itself', type: 'negation' },
       { name: 'vanishedness', definition: 'Result of becoming, but not nothing', type: 'determination' },
       { name: 'distinction', definition: 'Becoming rests on being distinct', type: 'determination' },
     ],

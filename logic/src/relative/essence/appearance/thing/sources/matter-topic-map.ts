@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for matter.txt - The Constitution of the Thing Out of Matters
- * 
+ *
  * This TopicMap structures the logical development from property to matter,
  * covering the transition, the necessity, and the resulting constitution of
  * the thing out of self-subsistent matters.

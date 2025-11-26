@@ -1,12 +1,12 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for alternating-infinity.txt - C. INFINITY (b) Alternating determination of finite and infinite
- * 
+ *
  * This TopicMap structures the logical development of the "bad infinite" - the infinite
  * of the understanding that alternates with the finite in an endless progression.
  * The unity of finite and infinite is present but hidden, driving the alternation.
- * 
+ *
  * Structure:
  * - Introduction: Infinite falls back into category of something; finite resurrected
  * - Further determination: finite and infinite as others; bad infinite

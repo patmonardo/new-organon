@@ -20,7 +20,7 @@ import type {
   Invariant,
   Force,
   Transition,
-} from '../../../../schema/dialectic';
+} from '@schema/dialectic';
 import { essenceTopicMap } from './sources/essence-topic-map';
 
 const state1: DialecticState = {

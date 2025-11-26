@@ -15,7 +15,7 @@
 import type {
   DialecticState,
   DialecticIR,
-} from '../../../../schema/dialectic';
+} from '@schema/dialectic';
 
 const state1: DialecticState = {
   id: 'quantum-extensive-magnitude',

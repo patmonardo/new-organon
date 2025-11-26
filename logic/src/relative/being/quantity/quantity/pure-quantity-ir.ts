@@ -18,7 +18,7 @@ import type {
   Invariant,
   Force,
   Transition,
-} from '../../../../schema/dialectic';
+} from '@schema/dialectic';
 
 const state1: DialecticState = {
   id: 'quantity-pure-intro',

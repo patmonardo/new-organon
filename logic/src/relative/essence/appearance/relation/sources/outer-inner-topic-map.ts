@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for outer-inner.txt - Relation of Outer and Inner
- * 
+ *
  * This TopicMap structures the logical development of the relation of outer and inner,
  * culminating in actuality. This analysis filters what is truly Scientific for the
  * LO Store/KnowledgeStore in the Graph->Fact->Knowledge pipeline.

@@ -1,16 +1,16 @@
 /**
  * Utilities for working with TopicMaps
- * 
+ *
  * These utilities help convert TopicMap entries into Chunks and LogicalOperations,
  * ensuring the systematic mapping from planning to implementation.
  */
 
-import type { TopicMap, TopicMapEntry } from '../../types/topic-map';
+import type { TopicMap, TopicMapEntry } from '@schema/topic';
 import type { Chunk, LogicalOperation } from '../../types';
 
 /**
  * Convert a TopicMapEntry to a Chunk structure
- * 
+ *
  * This extracts the text from the source file based on lineRange
  * and creates a Chunk with the appropriate id and title.
  */
@@ -19,18 +19,18 @@ export function topicMapEntryToChunk(
   sourceText: string
 ): Chunk {
   const lines = sourceText.split('\n');
-  const [startLine, endLine] = entry.lineRange;
-  
+  const { start: startLine, end: endLine } = entry.lineRange;
+
   // Extract text (lineRange is 1-indexed, array is 0-indexed)
   const textLines = lines.slice(startLine - 1, endLine);
   const text = textLines.join('\n').trim();
-  
+
   // Create summary from description and keyPoints
   const summary = [
     entry.description,
     ...entry.keyPoints.map(point => `- ${point}`),
   ].join('\n');
-  
+
   return {
     id: entry.id,
     title: entry.title,
@@ -55,7 +55,7 @@ export function topicMapToChunks(
 
 /**
  * Create a LogicalOperation label from TopicMapEntry title
- * 
+ *
  * The title becomes the label (the "Title" in Logical Operations)
  */
 export function topicMapEntryToLogicalOperationLabel(
@@ -66,7 +66,7 @@ export function topicMapEntryToLogicalOperationLabel(
 
 /**
  * Create a LogicalOperation structure from a TopicMapEntry
- * 
+ *
  * This creates the basic structure - clauses, predicates, and relations
  * would be extracted separately through the Logical Operation extraction process.
  */
@@ -115,7 +115,7 @@ export function generateTopicMapReport(topicMap: TopicMap): {
   bySection: Record<string, { total: number; completed: number }>;
 } {
   const bySection: Record<string, { total: number; completed: number }> = {};
-  
+
   topicMap.entries.forEach(entry => {
     const section = entry.section || 'unknown';
     if (!bySection[section]) {
@@ -126,7 +126,7 @@ export function generateTopicMapReport(topicMap: TopicMap): {
       bySection[section].completed++;
     }
   });
-  
+
   return {
     total: topicMap.entries.length,
     pending: topicMap.entries.filter(e => e.status === 'pending').length,
@@ -145,22 +145,22 @@ export function validateTopicMapLineRanges(topicMap: TopicMap): {
   overlaps: Array<{ entry1: string; entry2: string; lines: [number, number] }>;
 } {
   const overlaps: Array<{ entry1: string; entry2: string; lines: [number, number] }> = [];
-  const sorted = [...topicMap.entries].sort((a, b) => a.lineRange[0] - b.lineRange[0]);
-  
+  const sorted = [...topicMap.entries].sort((a, b) => a.lineRange.start - b.lineRange.start);
+
   for (let i = 0; i < sorted.length - 1; i++) {
     const current = sorted[i];
     const next = sorted[i + 1];
-    
+
     // Check if current's end overlaps with next's start
-    if (current.lineRange[1] >= next.lineRange[0]) {
+    if (current.lineRange.end >= next.lineRange.start) {
       overlaps.push({
         entry1: current.id,
         entry2: next.id,
-        lines: [current.lineRange[1], next.lineRange[0]],
+        lines: [current.lineRange.end, next.lineRange.start],
       });
     }
   }
-  
+
   return {
     valid: overlaps.length === 0,
     overlaps,

@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for shine.txt - Shine
- * 
+ *
  * This TopicMap structures the logical development of Shine as the remainder of being,
  * covering shine as negative posited as negative, its relation to skepticism and idealism,
  * and how shine's determinations are essence's own determinations.

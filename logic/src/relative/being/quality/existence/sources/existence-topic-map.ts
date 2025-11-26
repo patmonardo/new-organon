@@ -1,4 +1,4 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for existence.txt - A. EXISTENCE AS SUCH

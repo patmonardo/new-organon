@@ -1,13 +1,13 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for process.txt - B. THE PROCESS
- * 
+ *
  * This TopicMap structures the logical development of the chemical process.
  * The process shows how non-indifferent objects relate through affinity.
  * Three syllogisms emerge: formal neutrality, real neutrality, disjunctive syllogism.
  * The process shows transition from externality to self-determination, preparing transition to Teleology (purpose).
- * 
+ *
  * Structure:
  * - 1. Presupposition: Objects in tension, affinity, middle term (implicit nature, element of communication)
  * - 2. Product: Neutral object, tension dissolved, but negativity outside object

@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for essence.txt - Essence
- * 
+ *
  * This TopicMap structures the logical development of Essence as the truth of Being,
  * covering the transition from Being to Essence, the nature of essence as sublated being,
  * the distinction between essential and unessential, and the concept of shine.

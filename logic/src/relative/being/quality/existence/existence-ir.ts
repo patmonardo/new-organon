@@ -15,7 +15,7 @@ import type {
   Invariant,
   Force,
   Transition,
-} from '../../../../schema/dialectic';
+} from '@schema/dialectic';
 
 /**
  * State 1: Outline — determinateness → quality → something

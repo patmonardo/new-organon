@@ -29,8 +29,8 @@
  * - tools/source-analysis/ARCHITECTURE.md for architectural overview
  */
 
-import type { TopicMap } from '../../../types/topic-map';
-import { createTopicMap, createTopicMapEntry } from '../../../types/topic-map';
+import type { TopicMap } from '@schema/topic';
+import { createTopicMap, createTopicMapEntry } from '@schema/topic';
 
 export const MODE_TOPIC_MAP: TopicMap = createTopicMap(
   'logic/src/relative/essence/actuality/absolute/sources/mode.txt',

@@ -1,12 +1,12 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for being.txt - A. BEING
- * 
+ *
  * This TopicMap structures the logical development of Being as pure being,
  * the first moment of the Logic. Focuses on the Species (A. BEING) only,
  * ignoring top-level Genus introduction.
- * 
+ *
  * Structure: Pure being as indeterminate immediacy → Pure being as emptiness/nothing
  */
 export const beingTopicMap: TopicMapEntry[] = [

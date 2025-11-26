@@ -1,13 +1,13 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for chemism.txt - C. TRANSITION OF CHEMISM
- * 
+ *
  * This TopicMap structures the logical development of the transition from Chemism to Teleology.
  * Chemism is the first negation of indifferent objectivity. Through three syllogisms, externality
  * and conditionality are sublated, and the concept emerges as determined in and for itself,
  * unconditioned by externality. The objective free concept is purpose.
- * 
+ *
  * Structure:
  * - Example: Object posits presupposition
  * - Chemism as first negation, three syllogisms

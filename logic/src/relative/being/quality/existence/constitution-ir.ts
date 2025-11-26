@@ -18,7 +18,7 @@ import type {
   Invariant,
   Force,
   Transition,
-} from '../../../../schema/dialectic';
+} from '@schema/dialectic';
 
 /**
  * State 1: Introduction - In-itself mediated through being-for-other

@@ -67,15 +67,10 @@ export type {
   TopicMap,
   TopicMapEntry,
   TopicMapStatus,
-} from './types/topic-map';
+} from '@schema/topic';
 
 export {
   createTopicMap,
   createTopicMapEntry,
-  validateTopicMap,
-  getTopicMapEntry,
-  getTopicMapEntriesByStatus,
-  getTopicMapEntriesSorted,
-  updateTopicMapEntryStatus,
-} from './types/topic-map';
+} from '@schema/topic';
 

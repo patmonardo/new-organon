@@ -1,13 +1,13 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for realized.txt - C. THE REALIZED PURPOSE
- * 
+ *
  * This TopicMap structures the logical development of the realized purpose.
  * Realized Purpose completes Teleology and Objectivity. Shows how purpose attains objectivity through means.
  * External purposiveness transitions to inner purposive connection. Concept becomes identical with immediate objectivity.
  * Prepares transition to Idea.
- * 
+ *
  * Structure:
  * - 1. Purpose in connection to means, activity through means, mechanism under dominance of purpose
  * - 2. Product of teleological activity, external purposiveness, infinite progress

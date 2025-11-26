@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for determinate.txt - Determinate Ground
- * 
+ *
  * This TopicMap structures the logical development of Determinate Ground, covering
  * formal ground, real ground, and complete ground.
  */

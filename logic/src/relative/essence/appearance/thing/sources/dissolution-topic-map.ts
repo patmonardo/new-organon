@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for dissolution.txt - Dissolution of the Thing
- * 
+ *
  * This TopicMap structures the logical development of the dissolution of the thing,
  * covering the absolutely alterable thing, porosity, interpenetration, and the
  * transition to appearance. Note: In Realism, things "dissolve" (as opposed to

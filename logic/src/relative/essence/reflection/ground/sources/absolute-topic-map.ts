@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for absolute.txt - Absolute Ground
- * 
+ *
  * This TopicMap structures the logical development of Absolute Ground, covering
  * form and essence, form and matter, and form and content.
  */

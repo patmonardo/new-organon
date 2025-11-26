@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for reflection.txt - Reflection
- * 
+ *
  * This TopicMap structures the logical development of Reflection as the movement of essence,
  * covering positing reflection, external reflection, and determining reflection.
  * Reflection is the movement from nothing to nothing, the pure negativity of essence.

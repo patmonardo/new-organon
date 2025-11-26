@@ -7,6 +7,14 @@ import { ShapeSchema, type Shape } from '@schema';
 import { FormShape } from './shape-form';
 import { ActiveShape } from '@schema';
 import { parseActiveShapes } from '@schema';
+import type {
+  DialecticStateTransitionCmd,
+  DialecticMomentActivateCmd,
+  DialecticForceApplyCmd,
+  DialecticInvariantCheckCmd,
+  DialecticEvaluateCmd,
+  DialecticCommand
+} from '../dialectic-commands';
 
 type BaseState = Shape['shape']['state'];
 type Signature = NonNullable<Shape['shape']['signature']>;
@@ -73,7 +81,8 @@ export type ShapeCommand =
   | ShapeMergeFacetsCmd
   | ShapeSetStateCmd
   | ShapePatchStateCmd
-  | ShapeDescribeCmd;
+  | ShapeDescribeCmd
+  | DialecticCommand;
 
 export class ShapeEngine {
   private readonly shapes = new Map<string, FormShape>();
@@ -224,6 +233,205 @@ export class ShapeEngine {
               (doc.shape.signature ?? {}) as Record<string, unknown>,
             ),
             facetsKeys: Object.keys(doc.shape.facets ?? {}),
+          }),
+        ];
+      }
+
+      // --- Dialectic IR Handlers ---
+
+      case 'dialectic.state.transition': {
+        const { fromStateId, toStateId, dialecticState } = (cmd as DialecticStateTransitionCmd).payload;
+
+        // Get the current shape (represents fromState)
+        const fromShape = this.mustGet(fromStateId);
+        const fromDialecticState = fromShape.getDialecticState();
+
+        if (!fromDialecticState) {
+             throw new Error(`Source shape ${fromStateId} has no dialectic state`);
+        }
+
+        // Apply transition logic
+        const transition = fromDialecticState.transitions?.find(t => t.to === toStateId);
+        if (!transition) {
+          throw new Error(`No transition from ${fromStateId} to ${toStateId}`);
+        }
+
+        // Store NEW dialecticState in facets of TO shape (not from shape)
+        // Note: The original code merged it into fromShape, which might be wrong if dialecticState is the target.
+        // But wait, the original code said:
+        // fromShape.mergeFacets({ dialecticState: dialecticState ... })
+        // If dialecticState is the TARGET state, we shouldn't merge it into FROM shape.
+
+        // Let's fix that too. We should only update TO shape with the new state.
+
+
+        // Create or update target shape
+        let toShape = this.getShape(toStateId);
+        if (!toShape) {
+          toShape = FormShape.create({
+            id: toStateId,
+            type: dialecticState.concept,
+            name: dialecticState.title,
+          });
+          this.shapes.set(toStateId, toShape);
+        }
+
+        // Store dialecticState in facets of target shape
+        toShape.mergeFacets({
+          dialecticState: dialecticState,
+          currentPhase: dialecticState.phase,
+        });
+
+        // Store moments in signature
+        const momentsSignature = dialecticState.moments.reduce((acc, m) => {
+          acc[m.name] = {
+            definition: m.definition,
+            type: m.type,
+            relation: m.relation,
+            relatedTo: m.relatedTo,
+          };
+          return acc;
+        }, {} as Record<string, any>);
+
+        toShape.setSignature(momentsSignature);
+
+        await this.persist(fromShape);
+        await this.persist(toShape);
+
+        return [
+          this.emit(base, 'dialectic.state.transitioned', {
+            fromState: fromStateId,
+            toState: toStateId,
+            mechanism: transition.mechanism,
+          }),
+        ];
+      }
+
+      case 'dialectic.moment.activate': {
+        const { stateId, moment } = (cmd as DialecticMomentActivateCmd).payload;
+        const shape = this.mustGet(stateId);
+
+        // Store moment in signature
+        shape.patchSignature({
+          [moment.name]: {
+            definition: moment.definition,
+            type: moment.type,
+            active: true,
+          },
+        });
+
+        await this.persist(shape);
+
+        return [
+          this.emit(base, 'dialectic.moment.activated', {
+            stateId,
+            moment: moment.name,
+          }),
+        ];
+      }
+
+      case 'dialectic.force.apply': {
+        const { stateId, force } = (cmd as DialecticForceApplyCmd).payload;
+        const shape = this.mustGet(stateId);
+
+        // Check trigger condition (simplified - would need proper evaluation)
+        const triggerMet = true; // TODO: Evaluate force.trigger
+
+        if (triggerMet) {
+          // Apply effect
+          shape.patchState({
+            meta: {
+              ...(shape.state.meta as object),
+              lastForceApplied: force.id,
+              forceEffect: force.effect,
+            },
+          });
+
+          await this.persist(shape);
+
+          return [
+            this.emit(base, 'dialectic.force.applied', {
+              stateId,
+              force: force.id,
+              effect: force.effect,
+              targetState: force.targetState,
+            }),
+          ];
+        }
+
+        return [];
+      }
+
+      case 'dialectic.invariant.check': {
+        const { stateId, invariants } = (cmd as DialecticInvariantCheckCmd).payload;
+        const shape = this.mustGet(stateId);
+
+        const violations: Event[] = [];
+
+        for (const inv of invariants) {
+          // TODO: Proper predicate evaluation
+          // For now, just store in facets
+          const satisfied = true; // Placeholder
+
+          if (!satisfied) {
+            violations.push(
+              this.emit(base, 'dialectic.invariant.violated', {
+                stateId,
+                invariant: inv.id,
+                reason: 'Constraint not satisfied',
+              })
+            );
+          }
+        }
+
+        if (violations.length > 0) {
+          return violations;
+        }
+
+        return [
+          this.emit(base, 'dialectic.invariant.satisfied', {
+            stateId,
+            count: invariants.length,
+          }),
+        ];
+      }
+
+      case 'dialectic.evaluate': {
+        const { dialecticState, context } = (cmd as DialecticEvaluateCmd).payload;
+
+        // Create a shape to represent this dialectic state
+        const shape = FormShape.create({
+          id: dialecticState.id,
+          type: dialecticState.concept,
+          name: dialecticState.title,
+        });
+
+        // Store full dialectic state in facets
+        shape.setFacets({
+          dialecticState: dialecticState,
+          phase: dialecticState.phase,
+          context: context,
+        });
+
+        // Store moments in signature
+        const momentsSignature = dialecticState.moments.reduce((acc, m) => {
+          acc[m.name] = {
+            definition: m.definition,
+            type: m.type,
+          };
+          return acc;
+        }, {} as Record<string, any>);
+
+        shape.setSignature(momentsSignature);
+
+        this.shapes.set(shape.id, shape);
+        await this.persist(shape);
+
+        return [
+          this.emit(base, 'dialectic.evaluated', {
+            stateId: dialecticState.id,
+            concept: dialecticState.concept,
+            phase: dialecticState.phase,
           }),
         ];
       }

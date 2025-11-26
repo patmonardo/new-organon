@@ -1,12 +1,12 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for nothing.txt - B. NOTHING
- * 
+ *
  * This TopicMap structures the logical development of Nothing as pure nothingness,
  * the second moment of the Logic. Focuses on the Species (B. NOTHING) only,
  * ignoring top-level Genus introduction.
- * 
+ *
  * Structure: Pure nothingness as emptiness → Nothing in intuiting/thinking → Same as pure being
  */
 export const nothingTopicMap: TopicMapEntry[] = [

@@ -1,12 +1,12 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for affirmative-infinity.txt - C. INFINITY (c) Affirmative infinity
- * 
+ *
  * This TopicMap structures the logical development of the true infinite - the self-sublation
  * of the bad infinite and finite in one process. The true infinite is the affirmative being
  * that emerges from the negation of negation, the unity that embraces both itself and the finite.
- * 
+ *
  * Structure:
  * - Introduction: Truth already present; need to take it up; unity uneven expression
  * - First immediate determination: Each contains the other; two finites

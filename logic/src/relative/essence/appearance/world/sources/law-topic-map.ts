@@ -1,8 +1,8 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for law.txt - The Law of Appearance
- * 
+ *
  * This TopicMap structures the logical development of the Law of Appearance.
  * Note: In Idealism, the "Being" of World Appearance is the Law of Appearance
  * (not concrete existence as in Realism). Laws determine appearances/disappearances

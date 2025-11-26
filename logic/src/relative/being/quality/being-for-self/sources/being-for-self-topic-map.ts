@@ -1,15 +1,15 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for being-for-self.txt - A. BEING-FOR-ITSELF AS SUCH
- * 
+ *
  * This TopicMap structures the logical development of Being-for-itself,
  * focusing on the Species (A. BEING-FOR-ITSELF AS SUCH and sub-sections) only,
  * ignoring top-level Genus introduction (lines 6-47).
- * 
+ *
  * The introduction contains seeds but is not part of our Conceptual Analysis
  * at this stage - we leave it textually as-is for future perfection.
- * 
+ *
  * Structure:
  * - A. BEING-FOR-ITSELF AS SUCH (general concept and representation)
  * - a. Existence and being-for-itself (infinity sunk into simple being)

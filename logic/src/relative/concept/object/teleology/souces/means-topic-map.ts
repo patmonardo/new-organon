@@ -1,14 +1,14 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for means.txt - B. THE MEANS
- * 
+ *
  * This TopicMap structures the logical development of the means.
  * The means is the middle term connecting subjective purpose with objective purpose.
  * Shows how purpose realizes itself through external objects.
  * Means is both external and internal to purpose.
  * Prepares transition to realized purpose.
- * 
+ *
  * Structure:
  * - First positing and presupposing, second determining as sublation
  * - Means as formal middle term, external to extremes

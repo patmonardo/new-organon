@@ -1,15 +1,15 @@
-import type { TopicMapEntry } from "@schema/topic-map-schema";
+import type { TopicMapEntry } from "@schema/topic";
 
 /**
  * TopicMap for absolute-idea.txt - The Absolute Idea
- * 
+ *
  * This TopicMap structures the logical development of the absolute idea.
  * The absolute idea is the identity of the theoretical and the practical idea.
  * It is the sole subject matter and content of philosophy. The logicality of the idea
  * is the universal mode in which all particular modes are sublated and enveloped.
  * Method is the absolutely self-knowing concept, the pure correspondence of the concept and its reality.
  * Logic's completion and transition to nature is an absolute liberation.
- * 
+ *
  * Structure:
  * - Absolute idea as identity, all truth
  * - Logical idea and method as universal form

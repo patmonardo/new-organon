@@ -16,7 +16,7 @@
 import type {
   DialecticState,
   DialecticIR,
-} from '../../../../schema/dialectic';
+} from '@schema/dialectic';
 
 const state1: DialecticState = {
   id: 'tele-1',
@@ -61,7 +61,7 @@ const state1: DialecticState = {
     {
       id: 'tele-1-force-1',
       description: 'Purpose drives toward realization',
-      type: 'process',
+      type: 'mediation',
       trigger: 'purpose.striving = true',
       effect: 'realization.emerges = true',
       targetState: 'tele-2',
@@ -73,7 +73,7 @@ const state1: DialecticState = {
       id: 'tele-1-trans-1',
       from: 'tele-1',
       to: 'tele-2',
-      mechanism: 'process',
+      mechanism: 'mediation',
       description: 'From subjective purpose to realization',
     },
   ],
