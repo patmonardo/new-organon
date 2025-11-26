@@ -1,22 +1,57 @@
+/**
+ * Shape Schema - "Logic in Itself"
+ *
+ * Shape represents the pure dialectical form/structure independent of application.
+ * It is the foundational schema for storing dialectical states and their transformations.
+ *
+ * Dialectical Role:
+ * - Holds the complete DialecticState (moments, invariants, forces, transitions)
+ * - Supports all dialectic commands (state.transition, moment.activate, force.apply, invariant.check)
+ * - Represents "what the logic is" without "where it applies" (that's Context)
+ *
+ * Relationship to Other Schemas:
+ * - Shape + Context = Morph (Ground)
+ * - Shape is used by all Form Engines to store dialectical structure
+ * - Shape.facets.dialecticState contains the full IR representation
+ */
+
 import { z } from 'zod';
 import { BaseCore, BaseSchema, BaseState, Type, Label } from './base';
+import type { DialecticState, CpuGpuPhase } from './dialectic';
 
 // Principle-level Shape (no UI concerns)
 export const ShapeCore = BaseCore.extend({
-  type: Type, // e.g., "system.Shape"
+  type: Type, // e.g., "system.Shape", "form.Entity", "concept.Being"
   name: Label.optional(), // optional display name
 });
 export type ShapeCore = z.infer<typeof ShapeCore>;
 
-// Open signature for extensibility (principle facets)
+// Open signature for extensibility (operational interface)
+// Typically stores moments as the signature structure
 export const ShapeSignature = z.object({}).catchall(z.any());
 export type ShapeSignature = z.infer<typeof ShapeSignature>;
+
+// Facets structure for dialectical data
+// This is where the "in-itself" dialectical structure lives
+export const ShapeFacets = z.object({
+  // Core dialectical state (from Dialectic IR)
+  dialecticState: z.any().optional(), // DialecticState - avoiding circular dependency
+
+  // Current phase in dialectical progression
+  phase: z.string().optional(), // CpuGpuPhase
+
+  // Evaluation context reference
+  context: z.any().optional(),
+
+  // Additional form-specific facets via catchall
+}).catchall(z.any());
+export type ShapeFacets = z.infer<typeof ShapeFacets>;
 
 const ShapeDoc = z.object({
   core: ShapeCore,
   state: BaseState.default({}),
   signature: ShapeSignature.optional(),
-  facets: z.record(z.string(), z.any()).default({}),
+  facets: z.record(z.string(), z.any()).default({}), // Using record for flexibility
 });
 
 export const ShapeSchema = BaseSchema.extend({
@@ -90,3 +125,19 @@ export function updateShape(doc: Shape, patch: UpdateShapePatch): Shape {
   };
   return ShapeSchema.parse(next);
 }
+
+/**
+ * Helper: Extract dialectic state from Shape facets
+ * Used by Form Engines to access the embedded dialectical structure
+ */
+export function getDialecticState(shape: Shape): any | undefined {
+  return (shape.shape.facets as any)?.dialecticState;
+}
+
+/**
+ * Helper: Get current dialectical phase
+ */
+export function getDialecticPhase(shape: Shape): string | undefined {
+  return (shape.shape.facets as any)?.phase;
+}
+

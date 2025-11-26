@@ -1,6 +1,57 @@
+/**
+ * Context Schema - "Scope of Validity"
+ *
+ * Context represents the scope and conditions under which dialectical logic operates.
+ * It is the foundational schema for situating evaluation and establishing validity boundaries.
+ *
+ * Dialectical Role:
+ * - Defines presuppositions (what is taken as given)
+ * - Establishes modal scope (actual/possible/necessary)
+ * - Specifies conditioning constraints (what must hold)
+ * - Tracks domain of discourse (what concepts are in play)
+ *
+ * Relationship to Other Schemas:
+ * - Shape + Context = Morph (Ground)
+ * - Context provides the "where" to Shape's "what"
+ * - Used by ContextEngine to manage evaluation scope
+ *
+ * Foundation Pattern:
+ * - Context.facets.presuppositions: What is posited as given
+ * - Context.facets.scope: Modal and domain boundaries
+ * - Context.facets.conditions: Constraints that must hold
+ */
+
 import { z } from "zod";
 import { BaseSchema, BaseState, BaseCore, Type, Id } from "./base";
 import { EntityRef } from "./entity";
+
+// Modal scope types for dialectical evaluation
+export const ModalScope = z.enum(["actual", "possible", "necessary", "contingent"]);
+export type ModalScope = z.infer<typeof ModalScope>;
+
+// Presupposition: what is posited as given in this context
+export const Presupposition = z.object({
+  name: z.string(),
+  definition: z.string(),
+  posited: z.boolean().default(true),
+});
+export type Presupposition = z.infer<typeof Presupposition>;
+
+// Scope specification: modal and domain boundaries
+export const ScopeSpec = z.object({
+  modal: ModalScope,
+  domain: z.array(z.string()), // Concept IDs in scope
+  phase: z.string().optional(), // CpuGpuPhase
+});
+export type ScopeSpec = z.infer<typeof ScopeSpec>;
+
+// Conditioning constraint: what must hold for validity
+export const Condition = z.object({
+  id: z.string(),
+  constraint: z.string(),
+  predicate: z.string().optional(),
+});
+export type Condition = z.infer<typeof Condition>;
 
 // Core/state (uniform)
 export const ContextCore = BaseCore.extend({
@@ -10,6 +61,24 @@ export type ContextCore = z.infer<typeof ContextCore>;
 
 export const ContextState = BaseState;
 export type ContextState = z.infer<typeof ContextState>;
+
+// Facets structure for foundational data
+export const ContextFacets = z.object({
+  // Presuppositions: what is taken as given
+  presuppositions: z.array(Presupposition).optional(),
+
+  // Scope: modal and domain boundaries
+  scope: ScopeSpec.optional(),
+
+  // Conditions: constraints for validity
+  conditions: z.array(Condition).optional(),
+
+  // Parent context reference (for nested scopes)
+  parentContext: z.string().optional(),
+
+  // Additional context-specific facets via catchall
+}).catchall(z.any());
+export type ContextFacets = z.infer<typeof ContextFacets>;
 
 // Shape: core/state + memberships + signature/facets (uniform base)
 export const ContextShape = z.object({
@@ -133,3 +202,25 @@ export function addRelationsToContext(
   if (toAdd.length === 0) return ctx;
   return updateContext(ctx, { relations: [...ctx.shape.relations, ...toAdd] });
 }
+
+/**
+ * Helper: Get presuppositions from Context facets
+ */
+export function getPresuppositions(ctx: Context): Presupposition[] {
+  return ((ctx.shape.facets as any)?.presuppositions ?? []) as Presupposition[];
+}
+
+/**
+ * Helper: Get scope specification from Context facets
+ */
+export function getScope(ctx: Context): ScopeSpec | undefined {
+  return (ctx.shape.facets as any)?.scope as ScopeSpec | undefined;
+}
+
+/**
+ * Helper: Get conditioning constraints from Context facets
+ */
+export function getConditions(ctx: Context): Condition[] {
+  return ((ctx.shape.facets as any)?.conditions ?? []) as Condition[];
+}
+
