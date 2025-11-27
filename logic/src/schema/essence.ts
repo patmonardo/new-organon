@@ -1,289 +1,132 @@
 /**
- * Essence Schema: Context–Property (Mediation with Kriya Dynamics)
- * ----------------------------------------------------------------
- * Essence represents mediation - the field of determination and possibility
- * Enhanced with Kriya dynamics for transformation into experiential manifestation
+ * Essence Schema - "Logic of Essence" (Reflection, Appearance, Actuality)
  *
- * Philosophical Foundation:
- * - Essence = The sphere of mediation, reflection, and essential determination
- * - Context: The environment or situation in which an entity is embedded
- * - Property: The attributes or qualities that characterize an entity within context
+ * Essence represents the second phase of the dialectic: Mediation.
+ * It is the logic of "what is true" behind the immediate being.
  *
- * Kriya Integration:
- * - Essence serves as the dynamic field for dharmic manifestation
- * - Context becomes experiential environment through Kriya
- * - Property becomes agential perspective through Kriya
+ * Dialectical Role:
+ * - Reflection: Positing, Presupposing, and Determining reflection
+ * - Appearance: Existence emerging from Ground (Phenomenon)
+ * - Actuality: Unity of Essence and Existence (Substance/Cause)
  *
- * Dialectical Structure:
- * - Context (thesis): Environmental embedding
- * - Property (antithesis): Qualitative determination
- * - Essence (synthesis): Their mediated unity as field of possibility
+ * Relationship to Form Engines:
+ * - Essence is the logical domain for **Property** and **Aspect** Form Engines
+ * - Property manifests Essential Laws (Reflection)
+ * - Aspect manifests Spectral Relations (Appearance)
+ * - Essence -> Concept (Transition via Reciprocity/Freedom)
+ *
+ * Schema Structure:
+ * - Extends Shape (Logic in itself)
+ * - Facets: Reflection, Appearance, Actuality structures
+ * - Signature: Mediated transitions
  */
 
-import { z } from "zod";
+import { z } from 'zod';
+import { BaseState, Type, Label } from './base';
+import { ShapeCore, ShapeSchema, ShapeSignature } from './shape';
 
-// Context: The environment or situation in which an entity is embedded
-export const ContextSchema = z.object({
-  id: z.string(),
-  environmental_field: z.string(), // The field of embedding
-  situational_parameters: z.record(z.string(), z.any()), // Environmental parameters
-  kriya_dynamics: z.object({
-    experiential_potentials: z.array(z.string()), // How context can become experiential
-    manifestation_readiness: z
-      .enum(["latent", "activating", "manifest"])
-      .default("latent"),
-    dharmic_resonance: z.array(z.string()), // What dharmic qualities this context supports
-  }),
+// Core
+export const EssenceCore = ShapeCore.extend({
+  type: Type.default("concept.Essence"),
+});
+export type EssenceCore = z.infer<typeof EssenceCore>;
 
-  // Environmental characteristics
-  spatial_dimensions: z.record(z.string(), z.any()).optional(),
-  temporal_horizons: z
-    .object({
-      past_influences: z.array(z.string()).optional(),
-      present_conditions: z.array(z.string()).optional(),
-      future_potentials: z.array(z.string()).optional(),
-    })
-    .optional(),
-  relational_matrix: z.array(z.string()).optional(), // Network of relations
+// Facets for Essence logic
+export const EssenceFacets = z.object({
+  // Core dialectical state
+  dialecticState: z.any().optional(),
 
-  // Context metadata
-  scope_level: z
-    .enum(["local", "regional", "global", "universal"])
-    .default("local"),
-  influence_strength: z.number().min(0).max(10).default(5),
+  // Reflection: Internal mediation
+  reflection: z.object({
+    positing: z.array(z.string()),      // What is posited (Illusion)
+    presupposing: z.array(z.string()),  // What is presupposed
+    determining: z.array(z.string()),   // Essential determinations
+  }).optional(),
+
+  // Appearance: External manifestation
+  appearance: z.object({
+    world: z.string().optional(),       // World of appearance
+    content: z.array(z.string()),       // Phenomenal content
+    relation: z.string().optional(),    // Correlation (Whole/Part, Force/Expression)
+  }).optional(),
+
+  // Actuality: Concrete unity
+  actuality: z.object({
+    substance: z.string().optional(),   // Substantiality
+    cause: z.string().optional(),       // Causality
+    reciprocity: z.string().optional(), // Reciprocal action
+  }).optional(),
+
+  // Integration with Form Engines
+  propertyRef: z.string().optional(),   // Reference to Property (Law)
+  aspectRef: z.string().optional(),     // Reference to Aspect (Relation)
+
+}).catchall(z.any());
+export type EssenceFacets = z.infer<typeof EssenceFacets>;
+
+// Signature: Mediated operations
+export const EssenceSignature = ShapeSignature.extend({
+  // Essence-specific operations
+});
+export type EssenceSignature = z.infer<typeof EssenceSignature>;
+
+// Document structure
+const EssenceDoc = z.object({
+  core: EssenceCore,
+  state: BaseState.default({}),
+  signature: EssenceSignature.optional(),
+  facets: z.record(z.string(), z.any()).default({}),
 });
 
-// Property: The attributes or qualities that characterize an entity within context
-export const PropertySchema = z.object({
-  id: z.string(),
-  context_reference: z.string(), // Reference to the Context this property exists within
-  qualitative_character: z.string(), // The essential character of this property
-  kriya_manifestation: z.object({
-    agential_perspective: z.record(z.string(), z.any()), // How property manifests as perspective
-    filtering_mechanisms: z.array(z.string()), // How property filters experience
-    practical_expressions: z.array(z.string()), // How property expresses practically
-  }),
-
-  // Property characteristics
-  attribute_values: z.record(z.string(), z.any()),
-  determination_relations: z.array(z.string()).optional(), // How this property is determined
-  quality_gradations: z
-    .object({
-      intensity_levels: z.array(z.string()).optional(),
-      variation_ranges: z.record(z.string(), z.any()).optional(),
-      modal_expressions: z.array(z.string()).optional(),
-    })
-    .optional(),
-
-  // Property metadata
-  determinacy_level: z
-    .enum(["vague", "specific", "precise"])
-    .default("specific"),
-  contextual_dependency: z.number().min(0).max(10).default(7), // How context-dependent
+export const EssenceSchema = ShapeSchema.extend({
+  shape: EssenceDoc,
 });
+export type Essence = z.infer<typeof EssenceSchema>;
 
-// Essence: The dialectical unity of Context and Property as mediation field
-export const EssenceSchema = z.object({
-  context: ContextSchema,
-  property: PropertySchema,
-
-  // Dialectical unity metadata
-  dialectical_mediation: z.object({
-    context_property_synthesis: z.string(), // How Context and Property mediate each other
-    reflection_dynamics: z.string(), // The reflective character of essence
-    possibility_field: z.string(), // How essence opens field of possibilities
-  }),
-
-  // Kriya transformation dynamics
-  kriya_field: z.object({
-    manifestation_readiness: z
-      .enum(["potential", "dynamic", "actualized"])
-      .default("potential"),
-    experiential_transformation: z.string().optional(), // How Essence becomes experiential
-    agential_evolution: z.string().optional(), // How Essence develops agential capacities
-  }),
-
-  // Essential characteristics
-  mediation_quality: z
-    .enum(["immediate", "reflected", "absolute"])
-    .default("reflected"),
-  determination_mode: z
-    .enum(["external", "internal", "self-determining"])
-    .default("internal"),
-
-  // Metadata
-  logical_priority: z.number().min(2).max(10).default(5), // Essence mediates Being and Concept
-  complexity_level: z.enum(["simple", "complex", "organic"]).default("complex"),
-  version: z.string().optional(),
-  //context: z.record(z.string(), z.any()).optional(),
-});
-
-// Factory for creating Essence instances with dialectical mediation
-export class EssenceFactory {
-  /**
-   * Create a reflective Essence with basic mediation
-   */
-  public static createReflectiveEssence(
-    environmentalField: string,
-    qualitativeCharacter: string,
-    mediationContext: Record<string, any>
-  ): z.infer<typeof EssenceSchema> {
-    return {
-      context: {
-        id: `context-${Date.now()}`,
-        environmental_field: environmentalField,
-        situational_parameters: mediationContext,
-        kriya_dynamics: {
-          experiential_potentials: [
-            "environmental-awareness",
-            "contextual-sensitivity",
-          ],
-          manifestation_readiness: "latent",
-          dharmic_resonance: [
-            "contextual-dharma",
-            "environmental-responsiveness",
-          ],
-        },
-        scope_level: "local",
-        influence_strength: 5,
-      },
-
-      property: {
-        id: `property-${Date.now()}`,
-        context_reference: `context-${Date.now()}`,
-        qualitative_character: qualitativeCharacter,
-        kriya_manifestation: {
-          agential_perspective: {
-            perspective_type: "reflective",
-            clarity_level: "moderate",
-          },
-          filtering_mechanisms: [
-            "contextual-filtering",
-            "qualitative-selection",
-          ],
-          practical_expressions: [
-            "property-manifestation",
-            "contextual-adaptation",
-          ],
-        },
-        attribute_values: {
-          quality: qualitativeCharacter,
-          context_binding: environmentalField,
-        },
-        determinacy_level: "specific",
-        contextual_dependency: 7,
-      },
-
-      dialectical_mediation: {
-        context_property_synthesis:
-          "Context and Property mutually determine through reflective mediation",
-        reflection_dynamics:
-          "Essential reflection where context determines property and property modifies context",
-        possibility_field:
-          "Opens field of essential possibilities through contextual-qualitative mediation",
-      },
-
-      kriya_field: {
-        manifestation_readiness: "potential",
-      },
-
-      mediation_quality: "reflected",
-      determination_mode: "internal",
-      logical_priority: 5,
-      complexity_level: "complex",
-    };
-  }
-
-  /**
-   * Create an absolute Essence with self-determining mediation
-   */
-  public static createAbsoluteEssence(
-    universalField: string,
-    selfDeterminingQuality: string,
-    absoluteContext: Record<string, any>
-  ): z.infer<typeof EssenceSchema> {
-    return {
-      context: {
-        id: `context-${Date.now()}`,
-        environmental_field: universalField,
-        situational_parameters: absoluteContext,
-        kriya_dynamics: {
-          experiential_potentials: [
-            "universal-awareness",
-            "absolute-contextuality",
-            "total-environmental-integration",
-          ],
-          manifestation_readiness: "manifest",
-          dharmic_resonance: [
-            "universal-dharma",
-            "absolute-responsiveness",
-            "cosmic-harmonization",
-          ],
-        },
-        spatial_dimensions: { scope: "universal", penetration: "absolute" },
-        temporal_horizons: {
-          past_influences: ["eternal-principles"],
-          present_conditions: ["absolute-presence"],
-          future_potentials: ["infinite-possibilities"],
-        },
-        scope_level: "universal",
-        influence_strength: 10,
-      },
-
-      property: {
-        id: `property-${Date.now()}`,
-        context_reference: `context-${Date.now()}`,
-        qualitative_character: selfDeterminingQuality,
-        kriya_manifestation: {
-          agential_perspective: {
-            perspective_type: "absolute",
-            clarity_level: "perfect",
-            universal_scope: true,
-          },
-          filtering_mechanisms: [
-            "universal-discrimination",
-            "absolute-selection",
-            "perfect-judgment",
-          ],
-          practical_expressions: [
-            "absolute-manifestation",
-            "universal-adaptation",
-            "perfect-expression",
-          ],
-        },
-        attribute_values: {
-          quality: selfDeterminingQuality,
-          context_binding: universalField,
-          self_determination: true,
-        },
-        quality_gradations: {
-          intensity_levels: ["absolute"],
-          modal_expressions: ["necessary", "universal", "eternal"],
-        },
-        determinacy_level: "precise",
-        contextual_dependency: 0, // Self-determining
-      },
-
-      dialectical_mediation: {
-        context_property_synthesis:
-          "Absolute synthesis where Context and Property are identical in their self-determination",
-        reflection_dynamics:
-          "Absolute reflection - essence reflects itself as the totality of its determinations",
-        possibility_field:
-          "Opens the absolute field of all essential possibilities through self-determining mediation",
-      },
-
-      kriya_field: {
-        manifestation_readiness: "actualized",
-        experiential_transformation:
-          "Complete integration of essence and experience",
-        agential_evolution: "Perfect agential capacities - universal agent",
-      },
-
-      mediation_quality: "absolute",
-      determination_mode: "self-determining",
-      logical_priority: 8,
-      complexity_level: "organic",
-    };
-  }
+// Helpers
+function genId() {
+  return `essence:${Date.now().toString(36)}:${Math.floor(Math.random() * 1e6)
+    .toString(36)
+    .padStart(4, '0')}`;
 }
+
+type CreateEssenceInput = {
+  id?: string;
+  name?: string;
+  facets?: Record<string, unknown>;
+  state?: z.input<typeof BaseState>;
+};
+
+export function createEssence(input: CreateEssenceInput): Essence {
+  const id = input.id ?? genId();
+  const draft = {
+    shape: {
+      core: { id, type: "concept.Essence", name: input.name },
+      state: input.state ?? {},
+      facets: input.facets ?? {},
+    },
+  };
+  return EssenceSchema.parse(draft);
+}
+
+/**
+ * Helper: Extract Reflection structure
+ */
+export function getReflection(essence: Essence): any | undefined {
+  return (essence.shape.facets as any)?.reflection;
+}
+
+/**
+ * Helper: Extract Appearance structure
+ */
+export function getAppearance(essence: Essence): any | undefined {
+  return (essence.shape.facets as any)?.appearance;
+}
+
+/**
+ * Helper: Extract Actuality structure
+ */
+export function getActuality(essence: Essence): any | undefined {
+  return (essence.shape.facets as any)?.actuality;
+}
+

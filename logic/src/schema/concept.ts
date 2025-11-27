@@ -1,110 +1,152 @@
-import { z } from "zod";
-import { BaseCore, BaseSchema, BaseState, Type, Label } from "./base";
-import { EntityRef } from "./entity";
-
 /**
- * Concept (UPS) — Truth of Reflection (Being → Essence → Concept)
- * - universal: intension/law (what the concept is in itself)
- * - particular: determinations/constraints (its articulated content)
- * - singular: exemplars/witnesses (its appearance in concrete instances)
- * - wheel: deterministic stage machine over U → P → S → return
+ * Concept Schema - "Logic of the Concept" (Subject, Object, Idea)
+ *
+ * Concept represents the third phase of the dialectic: Freedom/Truth.
+ * It is the unity of Being and Essence - the self-determining universal.
+ *
+ * Dialectical Role:
+ * - Subject: Universal, Particular, Singular (UPS)
+ * - Object: Mechanism, Chemism, Teleology
+ * - Idea: Life, Cognition, Absolute Idea
+ *
+ * Relationship to Form Engines:
+ * - Concept is the logical domain for the **Morph** Form Engine
+ * - Morph manifests the active self-determination of the Concept
+ * - Concept -> Absolute (The end of logic)
+ *
+ * Schema Structure:
+ * - Extends Shape (Logic in itself)
+ * - Facets: Subject (UPS), Object, Idea structures
+ * - Signature: Free transitions
  */
 
-export const ConceptCore = BaseCore.extend({
-  type: Type,             // e.g., "system.Concept"
-  name: Label.optional(), // optional display name
+import { z } from "zod";
+import { BaseState, Type } from "./base";
+import { ShapeCore, ShapeSchema, ShapeSignature } from "./shape";
+import { EntityRef } from "./entity";
+
+// Core
+export const ConceptCore = ShapeCore.extend({
+  type: Type.default("concept.Concept"),
 });
 export type ConceptCore = z.infer<typeof ConceptCore>;
 
-// Universal (intension/law)
+// --- Subject Logic (UPS) ---
+
 export const ConceptUniversal = z.object({
   title: z.string().optional(),
-  law: z.string().optional(),                 // optional law statement
-  intent: z.record(z.string(), z.any()).default({}), // intension as open record
+  law: z.string().optional(),
+  intent: z.record(z.string(), z.any()).default({}),
 });
-export type ConceptUniversal = z.infer<typeof ConceptUniversal>;
-
-// Particular (determinations/constraints)
-export const Determination = z.object({
-  key: z.string(),
-  value: z.any(),
-  note: z.string().optional(),
-});
-export type Determination = z.infer<typeof Determination>;
 
 export const ConceptParticular = z.object({
-  determinations: z.array(Determination).default([]),
+  determinations: z.array(z.object({
+    key: z.string(),
+    value: z.any(),
+    note: z.string().optional(),
+  })).default([]),
   constraints: z.record(z.string(), z.any()).default({}),
 });
-export type ConceptParticular = z.infer<typeof ConceptParticular>;
 
-// Singular (exemplars/witnesses)
 export const ConceptSingular = z.object({
-  exemplars: z.array(EntityRef).default([]), // concrete carriers
-  witness: z.array(z.string()).default([]),  // evidence ids/notes
+  exemplars: z.array(EntityRef).default([]),
+  witness: z.array(z.string()).default([]),
 });
-export type ConceptSingular = z.infer<typeof ConceptSingular>;
 
-// UPS triad
 export const ConceptTriad = z.object({
   universal: ConceptUniversal.default({ intent: {} }),
   particular: ConceptParticular.default({ determinations: [], constraints: {} }),
   singular: ConceptSingular.default({ exemplars: [], witness: [] }),
 });
-export type ConceptTriad = z.infer<typeof ConceptTriad>;
 
-// Wheel (stage machine)
-export const ConceptStage = z.enum(["universal", "particular", "singular", "return"]);
-export type ConceptStage = z.infer<typeof ConceptStage>;
+// --- Object Logic ---
 
-export const ConceptWheel = z.object({
-  stage: ConceptStage.default("universal"),
-  cycle: z.number().int().nonnegative().default(0),
+export const ConceptObject = z.object({
+  mechanism: z.object({
+    objects: z.array(z.string()),
+    forces: z.array(z.string()),
+  }).optional(),
+  chemism: z.object({
+    affinity: z.string().optional(),
+    neutrality: z.string().optional(),
+  }).optional(),
+  teleology: z.object({
+    purpose: z.string().optional(),
+    means: z.array(z.string()),
+    realization: z.string().optional(),
+  }).optional(),
+}).optional();
+
+// --- Idea Logic ---
+
+export const ConceptIdea = z.object({
+  life: z.object({
+    organism: z.string().optional(),
+    process: z.string().optional(),
+  }).optional(),
+  cognition: z.object({
+    truth: z.string().optional(),
+    good: z.string().optional(),
+  }).optional(),
+  absolute: z.string().optional(),
+}).optional();
+
+// --- Facets ---
+
+export const ConceptFacets = z.object({
+  // Core dialectical state
+  dialecticState: z.any().optional(),
+
+  // Subject Logic (UPS Triad)
+  subject: ConceptTriad.optional(),
+
+  // Object Logic
+  object: ConceptObject,
+
+  // Idea Logic
+  idea: ConceptIdea,
+
+  // Wheel (Process)
+  wheel: z.object({
+    stage: z.enum(["universal", "particular", "singular", "return"]).default("universal"),
+    cycle: z.number().int().nonnegative().default(0),
+  }).optional(),
+
+  // Integration with Morph Engine
+  morphRef: z.string().optional(),
+
+}).catchall(z.any());
+export type ConceptFacets = z.infer<typeof ConceptFacets>;
+
+// Signature
+export const ConceptSignature = ShapeSignature.extend({
+  // Concept-specific operations
 });
-export type ConceptWheel = z.infer<typeof ConceptWheel>;
+export type ConceptSignature = z.infer<typeof ConceptSignature>;
 
-// Reflection provenance
-export const ConceptReflection = z.object({
-  fromBeing: z.array(z.string()).default([]),   // source ids/notes
-  fromEssence: z.array(z.string()).default([]), // source ids/notes
-  notes: z.string().optional(),
-});
-export type ConceptReflection = z.infer<typeof ConceptReflection>;
-
-// Canonical Concept document
+// Document
 const ConceptDoc = z.object({
   core: ConceptCore,
   state: BaseState.default({}),
-  triad: ConceptTriad.default({
-    universal: { intent: {} },
-    particular: { determinations: [], constraints: {} },
-    singular: { exemplars: [], witness: [] },
-  }),
-  wheel: ConceptWheel.default({ stage: "universal", cycle: 0 }),
-  reflection: ConceptReflection.default({ fromBeing: [], fromEssence: [] }),
+  signature: ConceptSignature.optional(),
   facets: z.record(z.string(), z.any()).default({}),
 });
 
-export const ConceptSchema = BaseSchema.extend({
+export const ConceptSchema = ShapeSchema.extend({
   shape: ConceptDoc,
 });
 export type Concept = z.infer<typeof ConceptSchema>;
 
 // Helpers
-
 function genId() {
   return `concept:${Date.now().toString(36)}:${Math.floor(Math.random() * 1e6)
     .toString(36)
     .padStart(4, "0")}`;
 }
 
-export type CreateConceptInput = {
+type CreateConceptInput = {
   id?: string;
-  type: string;
   name?: string;
-  triad?: z.input<typeof ConceptTriad>;
-  wheel?: z.input<typeof ConceptWheel>;
-  reflection?: z.input<typeof ConceptReflection>;
   facets?: Record<string, unknown>;
   state?: z.input<typeof BaseState>;
 };
@@ -113,110 +155,32 @@ export function createConcept(input: CreateConceptInput): Concept {
   const id = input.id ?? genId();
   const draft = {
     shape: {
-      core: { id, type: input.type, name: input.name },
+      core: { id, type: "concept.Concept", name: input.name },
       state: input.state ?? {},
-      triad: input.triad ?? { universal: { intent: {} }, particular: { determinations: [], constraints: {} }, singular: { exemplars: [], witness: [] } },
-      wheel: input.wheel ?? { stage: "universal", cycle: 0 },
-      reflection: input.reflection ?? { fromBeing: [], fromEssence: [] },
       facets: input.facets ?? {},
     },
   };
   return ConceptSchema.parse(draft);
 }
 
-type ConceptCoreOut = z.output<typeof ConceptCore>;
-type BaseStateOut = z.output<typeof BaseState>;
-type ConceptTriadOut = z.output<typeof ConceptTriad>;
-type ConceptWheelOut = z.output<typeof ConceptWheel>;
-type ConceptReflectionOut = z.output<typeof ConceptReflection>;
-
-export type UpdateConceptPatch = Partial<{
-  core: Partial<ConceptCoreOut>;
-  state: Partial<BaseStateOut>;
-  triad: Partial<ConceptTriadOut>;
-  wheel: Partial<ConceptWheelOut>;
-  reflection: Partial<ConceptReflectionOut>;
-  facets: Record<string, unknown>;
-}>;
-
-export function updateConcept(doc: Concept, patch: UpdateConceptPatch): Concept {
-  const next = {
-    ...doc,
-    shape: {
-      ...doc.shape,
-      core: { ...(doc.shape.core as ConceptCoreOut), ...(patch.core ?? {}) },
-      state: { ...(doc.shape.state as BaseStateOut), ...(patch.state ?? {}) },
-      triad: deepMergeTriad(doc.shape.triad, patch.triad),
-      wheel: { ...(doc.shape.wheel as ConceptWheelOut), ...(patch.wheel ?? {}) },
-      reflection: { ...(doc.shape.reflection as ConceptReflectionOut), ...(patch.reflection ?? {}) },
-      facets: patch.facets ?? doc.shape.facets,
-    },
-    revision: (doc.revision ?? 0) + 1,
-  };
-
-  // Normalize deterministically
-  next.shape.triad.particular.determinations.sort((a, b) => a.key.localeCompare(b.key));
-  next.shape.triad.singular.exemplars.sort((a, b) => a.id.localeCompare(b.id));
-  next.shape.triad.singular.witness.sort();
-
-  return ConceptSchema.parse(next);
+/**
+ * Helper: Extract Subject (Triad) structure
+ */
+export function getSubject(concept: Concept): any | undefined {
+  return (concept.shape.facets as any)?.subject;
 }
 
-// Convenience mutators (pure)
-
-export function addDetermination(doc: Concept, det: Determination): Concept {
-  const list = [...doc.shape.triad.particular.determinations, det];
-  return updateConcept(doc, {
-    triad: { particular: { determinations: list } as any },
-  });
+/**
+ * Helper: Extract Object structure
+ */
+export function getObject(concept: Concept): any | undefined {
+  return (concept.shape.facets as any)?.object;
 }
 
-export function addExemplar(doc: Concept, ref: z.input<typeof EntityRef>): Concept {
-  const ex = [...doc.shape.triad.singular.exemplars, EntityRef.parse(ref)];
-  // Deduplicate by id
-  const seen = new Set<string>();
-  const uniq = ex.filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true)));
-  return updateConcept(doc, {
-    triad: { singular: { exemplars: uniq } as any },
-  });
+/**
+ * Helper: Extract Idea structure
+ */
+export function getIdea(concept: Concept): any | undefined {
+  return (concept.shape.facets as any)?.idea;
 }
 
-export function advanceWheel(doc: Concept): Concept {
-  const order: ConceptStage[] = ["universal", "particular", "singular", "return"];
-  const idx = order.indexOf(doc.shape.wheel.stage);
-  const nextIdx = (idx + 1) % order.length;
-  const nextStage = order[nextIdx];
-  const nextCycle = nextStage === "universal" ? (doc.shape.wheel.cycle ?? 0) + 1 : doc.shape.wheel.cycle ?? 0;
-  return updateConcept(doc, { wheel: { stage: nextStage, cycle: nextCycle } });
-}
-
-// internal
-function deepMergeTriad(current: ConceptTriadOut, patch?: Partial<ConceptTriadOut>): ConceptTriadOut {
-  if (!patch) return current;
-  return {
-    universal: {
-      ...(current.universal ?? { intent: {} }),
-      ...(patch.universal ?? {}),
-      intent: {
-        ...((current.universal?.intent as Record<string, unknown>) ?? {}),
-        ...((patch.universal?.intent as Record<string, unknown>) ?? {}),
-      },
-    },
-    particular: {
-      ...(current.particular ?? { determinations: [], constraints: {} }),
-      ...(patch.particular ?? {}),
-      constraints: {
-        ...((current.particular?.constraints as Record<string, unknown>) ?? {}),
-        ...((patch.particular?.constraints as Record<string, unknown>) ?? {}),
-      },
-      determinations:
-        patch.particular?.determinations ?? current.particular?.determinations ?? [],
-    },
-    singular: {
-      ...(current.singular ?? { exemplars: [], witness: [] }),
-      ...(patch.singular ?? {}),
-      exemplars: patch.singular?.exemplars ?? current.singular?.exemplars ?? [],
-      witness: patch.singular?.witness ?? current.singular?.witness ?? [],
-    },
-  };
-}
