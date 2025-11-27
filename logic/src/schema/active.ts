@@ -1,3 +1,19 @@
+/**
+ * Active Schema - "Kriya Integration / Runtime"
+ *
+ * Active represents the runtime instantiation of the logical forms.
+ * It is where Logic (Idea) meets Energy (Kriya) to become actual.
+ *
+ * Dialectical Role:
+ * - ActiveShape: Runtime instance of a Shape (Logic in action)
+ * - ActiveContext: Runtime instance of a Context (Scope in action)
+ * - ActiveMorph: Runtime instance of a Morph (Transformation in action)
+ *
+ * Kriya Integration:
+ * - Adds "Activation" properties (active, revoked, confidence, weight)
+ * - Connects static schemas to dynamic execution engines
+ */
+
 import { z } from 'zod';
 
 // Shared helpers
@@ -15,6 +31,10 @@ const ActivationSchema = z.object({
     .transform((v) => (typeof v === 'number' ? clamp01(v) : v)),
   weight: z.number().finite().optional(),
   provenance: ProvenanceSchema,
+
+  // Dialectical runtime state
+  dialecticState: z.any().optional(), // Runtime dialectic state
+  currentPhase: z.string().optional(), // Current phase of execution
 });
 
 // Base
@@ -33,6 +53,9 @@ export const ActiveShapeSchema = z
     name: z.string().optional(),
     schema: z.any().optional(),
     particularityOf: z.string().optional(),
+
+    // Runtime facets
+    facets: z.record(z.string(), z.unknown()).optional(),
   })
   .merge(ActivationSchema);
 export type ActiveShape = z.infer<typeof ActiveShapeSchema>;
@@ -49,6 +72,10 @@ export const ActiveContextSchema = z.object({
   version: z.string().optional(),
   ext: z.record(z.string(), z.unknown()).optional(),
   shape: z.any().optional(),
+
+  // Runtime extensions
+  active: z.boolean().optional(),
+  confidence: z.number().optional(),
 });
 
 export type ActiveContext = z.infer<typeof ActiveContextSchema>;
@@ -59,6 +86,9 @@ export const ActiveMorphSchema = ActiveBaseSchema.merge(
     particularityOf: z.string().optional(),
     transform: z.string().min(1),
     params: z.record(z.string(), z.any()).optional(),
+
+    // Runtime composition
+    pipeline: z.array(z.string()).optional(),
   }),
 );
 export type ActiveMorph = z.infer<typeof ActiveMorphSchema>;
@@ -70,6 +100,9 @@ export const ActiveEntitySchema = z
     entityType: z.string().min(1),
     particularityOf: z.string().optional(),
     labels: z.array(z.string()).optional(),
+
+    // Runtime properties
+    properties: z.record(z.string(), z.any()).optional(),
   })
   .merge(ActivationSchema);
 export type ActiveEntity = z.infer<typeof ActiveEntitySchema>;
@@ -172,3 +205,4 @@ export const ActiveFactory = {
 };
 
 export default ActiveFactory;
+

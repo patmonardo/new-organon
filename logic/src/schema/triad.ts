@@ -1,3 +1,19 @@
+/**
+ * Triad Schema - "Syllogism of Existence" (Universal-Particular-Singular)
+ *
+ * The Triad represents the fundamental logical structure of the Concept.
+ * It is the "Syllogism of Existence" that structures all determination.
+ *
+ * Dialectical Role:
+ * - Universal (U): The general principle, law, or intension (In-itself)
+ * - Particular (P): The specific determination, distinction, or content (For-itself)
+ * - Singular (S): The concrete individual, instance, or realization (In-and-for-itself)
+ *
+ * Usage:
+ * - Used by ConceptSchema to structure the Subject Logic
+ * - Used as a reusable pattern for any U-P-S structure
+ */
+
 import { z } from "zod";
 import { Id, Label, Type, Timestamps, stamp, touch } from "./base";
 
@@ -14,7 +30,7 @@ export const TriadRef = z.object({
 export type TriadRef = z.infer<typeof TriadRef>;
 
 // Canonical Triad (recursive triple, not a pair)
-export const Triad = z
+export const TriadSchema = z
   .object({
     id: Id,
     name: Label,
@@ -37,15 +53,15 @@ export const Triad = z
     }
   });
 
-export type Triad = z.infer<typeof Triad>;
+export type Triad = z.infer<typeof TriadSchema>;
 
 // Helpers (schema-as-canon: preserve timestamps/invariants)
-export function createTriad(input: z.input<typeof Triad>): Triad {
-  return Triad.parse(stamp({ tags: [], ...(input as any) }));
+export function createTriad(input: z.input<typeof TriadSchema>): Triad {
+  return TriadSchema.parse(stamp({ tags: [], ...(input as any) }));
 }
 
-export function updateTriad(current: Triad, patch: Partial<z.input<typeof Triad>>): Triad {
-  return Triad.parse(touch({ ...current, ...(patch as any) }));
+export function updateTriad(current: Triad, patch: Partial<z.input<typeof TriadSchema>>): Triad {
+  return TriadSchema.parse(touch({ ...current, ...(patch as any) }));
 }
 
 // Small ergonomic helpers
@@ -60,3 +76,4 @@ export function toUPS<T extends Triad>(t: T) {
     singular: t.singular
   };
 }
+
