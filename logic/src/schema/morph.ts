@@ -1,3 +1,27 @@
+/**
+ * Morph Schema - "Ground = Shape + Context"
+ *
+ * Morph represents the Ground (Grund) - the unity of Shape and Context.
+ * It is the active container that holds moments and enables transformation.
+ *
+ * Dialectical Role:
+ * - Unifies Shape (Logic) and Context (Scope) into a concrete Ground
+ * - Acts as the "active unity" that holds moments together
+ * - Defines the transformation principle (Reason/Ratio)
+ * - Mediates the transition from Essence to Concept
+ *
+ * Relationship to Form Engines:
+ * - Used by MorphEngine to manage grounds and transformations
+ * - Morph.facets.container shows what it holds (active unity)
+ * - Morph.facets.transformation describes the mechanism of change
+ * - Morph.composition defines pipeline/composite structures
+ *
+ * Form Engine Pattern:
+ * - Facets: Ground structure (container, transformation)
+ * - Signature: Operational interface (transform/pipeline ops)
+ * - State: Runtime status and composition state
+ */
+
 import { z } from "zod";
 import { BaseSchema, BaseState, BaseCore, Type, Id, Label } from "./base";
 
@@ -22,6 +46,43 @@ export const MorphComposition = z
   })
   .default({ kind: "single", steps: [] });
 export type MorphComposition = z.infer<typeof MorphComposition>;
+
+// Facets structure for ground/transformation data
+export const MorphFacets = z.object({
+  // Core dialectical state
+  dialecticState: z.any().optional(),
+
+  // Current phase
+  phase: z.string().optional(),
+
+  // Container: the active unity that holds moments
+  container: z.object({
+    holds: z.array(z.string()), // IDs of held forms
+    activeUnity: z.array(z.object({
+      name: z.string(),
+      definition: z.string(),
+      contains: z.string().optional(),
+    })),
+  }).optional(),
+
+  // Transformation: the principle of change
+  transformation: z.object({
+    principle: z.string().optional(),
+    mechanism: z.string().optional(),
+    transitions: z.array(z.object({
+      from: z.string(),
+      to: z.string(),
+      mechanism: z.string().optional(),
+      reason: z.string().optional(),
+    })),
+  }).optional(),
+
+  // Evaluation context
+  context: z.any().optional(),
+
+  // Additional morph-specific facets via catchall
+}).catchall(z.any());
+export type MorphFacets = z.infer<typeof MorphFacets>;
 
 // Shape: uniform core/state/signature/facets + morph extras
 export const MorphShape = z.object({
@@ -185,3 +246,18 @@ export function defineMorphPipeline(
     ext: options?.ext,
   });
 }
+
+/**
+ * Helper: Get container structure from Morph facets
+ */
+export function getMorphContainer(morph: Morph): any | undefined {
+  return (morph.shape.facets as any)?.container;
+}
+
+/**
+ * Helper: Get transformation structure from Morph facets
+ */
+export function getMorphTransformation(morph: Morph): any | undefined {
+  return (morph.shape.facets as any)?.transformation;
+}
+
