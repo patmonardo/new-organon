@@ -8,7 +8,6 @@
  * - sdsl/*: MVC SDSL core (FormModel, FormView, FormController, Adapters)
  * - schema/*: Data Model schemas (Dashboard, Table, etc.)
  * - data/*: Data services (Entity, Dashboard)
- * - repository: Database access layer (Prisma)
  */
 
 export * from './model';
@@ -22,9 +21,6 @@ export * as schema from './schema';
 
 // Data services
 export * from './data';
-
-// Repository (database layer)
-export * from './repository';
 
 // Examples - MVC SDSL Design Templates
 export * as examples from './examples';

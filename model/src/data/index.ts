@@ -3,11 +3,11 @@
  *
  * The Data layer provides service interfaces for CRUD operations
  * on Model entities. These services abstract the underlying
- * persistence (Prisma/Postgres) from the MVC components.
+ * persistence layer (semantic models, FactStore, etc.) from the MVC components.
  *
  * Architecture:
  * - Services are stateless, pure functions
- * - Each service corresponds to a Prisma model
+ * - Each service can be backed by semantic queries, form stores, or mocks
  * - Services can be mocked for testing
  */
 
@@ -45,9 +45,14 @@ export {
   resetFactStore,
 } from './fact-store';
 
-// Prisma - Database client
+// Data SDSL execution stubs
 export {
-  prisma,
-  disconnect,
-  isConnected,
-} from './prisma';
+  PolarsExecutionEngine,
+  type ExecutionOptions,
+  type ExecutionResult,
+} from './polars-engine';
+
+export {
+  SqlEngine,
+  type SqlQuery,
+} from './sql-engine';

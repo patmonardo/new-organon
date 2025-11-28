@@ -1,35 +1,35 @@
 /**
  * Customer MVC Example - Entry Point
- * 
+ *
  * This is the MVC SDSL Design Template for building business forms.
- * 
+ *
  * Architecture:
- * 
+ *
  * 1. Schema (schema.ts)
  *    - Define FormShape with fields, layout, actions
  *    - Define data validation schemas (Create, Update)
- * 
+ *
  * 2. Model (model.ts)
  *    - Static CRUD methods (data access layer)
  *    - Uses FactStore for persistence
- * 
+ *
  * 3. FormModel (form-model.ts)
  *    - Extends FormModel for form state
  *    - Handles validation and persistence
- * 
+ *
  * 4. FormView (form-view.ts)
  *    - Extends FormView for rendering
  *    - Produces DisplayDocument
- * 
+ *
  * 5. Controller (controller.ts)
  *    - Extends FormController
  *    - Transport-agnostic business logic
  *    - Uses CustomerFormModel and CustomerFormView
- * 
+ *
  * 6. View (view.tsx) [Optional]
  *    - React-specific rendering
  *    - For direct JSX output
- * 
+ *
  * Property as Center:
  * - Schema = Property.schema() (Codegen)
  * - Model values = Property.values() (Eval)
@@ -52,9 +52,6 @@ export {
   CustomerModel,
   type CustomerModelState,
 } from "./model";
-
-// Prisma-backed data access (for production)
-export { CustomerPrismaModel } from "./prisma-model";
 
 // Form model (extends FormModel)
 export { CustomerFormModel } from "./form-model";

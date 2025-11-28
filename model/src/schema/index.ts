@@ -7,7 +7,7 @@
  * These schemas are:
  * - Projectable from @logic/FactStore forms
  * - Renderable via React/Next components
- * - Persistable via Prisma/Postgres
+ * - Persistable via FactStore or any backend adapter
  */
 
 // Core MVC schemas

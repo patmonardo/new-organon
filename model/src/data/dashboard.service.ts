@@ -43,7 +43,7 @@ export interface StoredDashboard {
 
 /**
  * DashboardService interface
- * Can be implemented with Prisma or mocked for testing
+ * Can be implemented with any persistence layer or mocked for testing
  */
 export interface DashboardService {
   create(input: DashboardInput): Promise<StoredDashboard>;

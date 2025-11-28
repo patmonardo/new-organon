@@ -4,7 +4,7 @@
  * Architecture:
  * - SDSL: Data Model schemas as special object
  * - MVC: Model (State:Structure), View (Representation:Perspective), Controller (Action:Rule)
- * - Persistence: Prisma/Postgres as low-cost Neo4j projection
+ * - Persistence: Semantic FactStore / columnar data (Arrow/Polars) projections
  *
  * Integration:
  * - @logic/FactStore forms can be projected into @model Data Models

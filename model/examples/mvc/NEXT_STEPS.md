@@ -14,7 +14,7 @@
 **File**: `model/examples/mvc/customer-model.ts`
 
 ```typescript
-import { defineModel, sum, avg, count } from './data-sdsl';
+import { defineModel, sum, avg, count } from '../../src/data/sdsl';
 
 export const CustomerModel = defineModel({
   name: 'Customer',
@@ -108,18 +108,18 @@ measures: {
 }
 ```
 
-## Phase 4: Remove Prisma
+## Phase 4: Remove Prisma ✅
 
 ### 4.1 Migrate Existing Models
 
-- Convert Prisma schema to `DataModel` definitions
-- Update controllers to use Data SDSL instead of Prisma Client
+- ✅ Converted Prisma schema references to `DataModel` definitions
+- ✅ Updated controllers to use the Data SDSL + FactStore bridge instead of Prisma Client
 
 ### 4.2 Simplify Build
 
-- Remove `prisma generate` from build scripts
-- Remove Prisma dependency
-- Update documentation
+- ✅ Removed `prisma generate` (and related) scripts from package builds
+- ✅ Removed Prisma dependencies
+- ✅ Updated documentation to reflect the semantic-only stack
 
 ## Phase 5: Production Readiness
 

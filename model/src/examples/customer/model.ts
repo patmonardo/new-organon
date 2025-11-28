@@ -1,18 +1,18 @@
 /**
  * Customer Model - MVC SDSL Design Template
- * 
+ *
  * The Model handles:
  * - Data access (CRUD operations)
  * - Validation
  * - State management
- * 
+ *
  * Property.values() → Eval (this file)
- * Uses FactStore for persistence (mocked or Prisma-backed)
+ * Uses FactStore for persistence (mocked or backed by semantic services)
  */
 
-import { 
-  type CustomerData, 
-  type CreateCustomer, 
+import {
+  type CustomerData,
+  type CreateCustomer,
   type UpdateCustomer,
   type OperationResult,
   CustomerDataSchema,
@@ -38,14 +38,14 @@ export interface CustomerModelState {
 
 /**
  * CustomerModel - Handles Customer data operations
- * 
+ *
  * Pattern: Static methods for CRUD operations
  *          Uses FactStore for persistence tracking
  */
 export class CustomerModel {
   private static factStore: FactStoreInterface = getFactStore();
-  
-  // In-memory store for mock (replace with Prisma in production)
+
+  // In-memory store for mock (replace with real data service in production)
   private static customers: Map<string, CustomerData> = new Map();
   private static nextId: number = 1;
 
@@ -71,7 +71,7 @@ export class CustomerModel {
       // Generate ID and timestamps
       const id = `customer-${this.nextId++}`;
       const now = new Date();
-      
+
       const customer: CustomerData = {
         id,
         name: validated.data.name,
@@ -159,7 +159,7 @@ export class CustomerModel {
   static async findById(id: string): Promise<OperationResult<CustomerData>> {
     try {
       const customer = this.customers.get(id);
-      
+
       if (!customer) {
         return {
           data: null,
@@ -192,13 +192,13 @@ export class CustomerModel {
   } = {}): Promise<OperationResult<CustomerData[]>> {
     try {
       const { query = "", page = 1, pageSize = 10 } = options;
-      
+
       let customers = Array.from(this.customers.values());
 
       // Filter by query
       if (query) {
         const lowerQuery = query.toLowerCase();
-        customers = customers.filter(c => 
+        customers = customers.filter(c =>
           c.name.toLowerCase().includes(lowerQuery) ||
           c.email.toLowerCase().includes(lowerQuery)
         );
@@ -231,7 +231,7 @@ export class CustomerModel {
   static async delete(id: string): Promise<OperationResult<CustomerData>> {
     try {
       const customer = this.customers.get(id);
-      
+
       if (!customer) {
         return {
           data: null,
@@ -266,7 +266,7 @@ export class CustomerModel {
     if (!query) {
       return this.customers.size;
     }
-    
+
     const lowerQuery = query.toLowerCase();
     return Array.from(this.customers.values()).filter(c =>
       c.name.toLowerCase().includes(lowerQuery) ||
