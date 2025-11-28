@@ -2,6 +2,8 @@
   "extends": "../../tsconfig.test.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "paths": {
       "@organon/gdsl": [
         "../../gdsl/dist/index"
@@ -20,7 +22,11 @@
       ],
       "@organon/reality/*": [
         "../../reality/dist/*"
-      ],
+      ]
     }
-  }
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ]
 }

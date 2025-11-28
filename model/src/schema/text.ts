@@ -7,8 +7,8 @@ import { z } from 'zod';
 
 // Concept node schema
 export const ConceptNodeSchema = z.object({
-  id: z.string().nonempty('Concept ID is required'),
-  name: z.string().nonempty('Concept name is required'),
+  id: z.string().min(1, { error: 'Concept ID is required' }),
+  name: z.string().min(1, { error: 'Concept name is required' }),
   category: z.enum([
     'metaphysical',
     'epistemological',
@@ -16,18 +16,18 @@ export const ConceptNodeSchema = z.object({
     'theological',
     'methodological'
   ]).optional().default('metaphysical'),
-  count: z.number().int().nonnegative('Count must be a positive number'),
+  count: z.number().int().nonnegative({ error: 'Count must be a positive number' }),
 });
 
 // Concept link/relation schema
 export const ConceptLinkSchema = z.object({
-  source: z.string().nonempty('Source concept ID is required'),
-  target: z.string().nonempty('Target concept ID is required'),
-  type: z.string().nonempty('Relation type is required'),
+  source: z.string().min(1, { error: 'Source concept ID is required' }),
+  target: z.string().min(1, { error: 'Target concept ID is required' }),
+  type: z.string().min(1, { error: 'Relation type is required' }),
   strength: z.number()
-    .positive('Strength must be positive')
-    .min(0.1, 'Minimum strength is 0.1')
-    .max(10, 'Maximum strength is 10')
+    .positive({ error: 'Strength must be positive' })
+    .min(0.1, { error: 'Minimum strength is 0.1' })
+    .max(10, { error: 'Maximum strength is 10' })
     .default(1),
 });
 
@@ -45,10 +45,10 @@ export const NetworkConfigSchema = z.object({
 // Complete concept network schema
 export const ConceptNetworkSchema = z.object({
   nodes: z.array(ConceptNodeSchema)
-    .nonempty('At least one concept node is required'),
+    .min(1, { error: 'At least one concept node is required' }),
   links: z.array(ConceptLinkSchema)
     .default([]),
-  config: NetworkConfigSchema.optional().default({}),
+  config: NetworkConfigSchema.optional(),
 });
 
 // Input schema for concept network data fetching

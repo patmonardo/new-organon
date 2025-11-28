@@ -1,10 +1,15 @@
+/**
+ * @organon/model - The First SDSL (Special Data Science Language)
+ *
+ * Architecture:
+ * - SDSL: Data Model schemas as special object
+ * - MVC: Model (State:Structure), View (Representation:Perspective), Controller (Action:Rule)
+ * - Persistence: Prisma/Postgres as low-cost Neo4j projection
+ *
+ * Integration:
+ * - @logic/FactStore forms can be projected into @model Data Models
+ * - GDS Rust Kernel results can be visualized via @model Dashboard
+ * - @task/Agent orchestrates @model execution
+ */
+
 export const model = "model";
-
-import { gdsl } from '@organon/gdsl';
-console.log("model:", gdsl);
-
-import { logic } from '@organon/logic';
-console.log("model:", logic);
-
-// import { reality } from '@organon/reality';
-// console.log('model:', reality);

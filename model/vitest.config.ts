@@ -19,7 +19,7 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['test/**/*.test.ts', 'test/**/*.spec.ts'],
+    include: ['test/**/*.test.ts', 'test/**/*.spec.ts', 'test/**/*.test.tsx', 'test/**/*.spec.tsx'],
     exclude: ['node_modules', 'dist'],
     globals: true,
   },

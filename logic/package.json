@@ -22,6 +22,7 @@
     "doc:api": "typedoc --options typedoc.json"
   },
   "dependencies": {
+    "neo4j-driver": "^5.25.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {

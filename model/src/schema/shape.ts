@@ -44,8 +44,8 @@ export const FormDataSchema = z
           .object({
             endpoint: z.string(),
             method: z.enum(["GET", "POST", "PUT", "DELETE", "PATCH"]),
-            headers: z.record(z.string()).optional(),
-            params: z.record(z.any()).optional(),
+            headers: z.record(z.string(), z.string()).optional(),
+            params: z.record(z.string(), z.any()).optional(),
           })
           .optional(),
 
@@ -294,7 +294,7 @@ export const FormLayoutSchema = z.object({
   responsive: z
     .object({
       sectionBreakpoints: z
-        .record(z.enum(["stack", "grid", "tabs"]))
+        .record(z.string(), z.enum(["stack", "grid", "tabs"]))
         .optional(),
       fieldArrangement: z
         .enum(["natural", "importance", "groupRelated"])
@@ -318,7 +318,7 @@ export const FormLayoutSchema = z.object({
  */
 export const FormStateSchema = z.object({
   status: z.enum(["idle", "submitting", "success", "error"]),
-  errors: z.record(z.array(z.string())).optional(),
+  errors: z.record(z.string(), z.array(z.string())).optional(),
   message: z.string().optional(),
 });
 

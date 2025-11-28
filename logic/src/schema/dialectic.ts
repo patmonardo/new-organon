@@ -409,3 +409,119 @@ export type DialecticEvent =
   | DialecticInvariantViolatedEvent
   | DialecticInvariantSatisfiedEvent
   | DialecticEvaluatedEvent;
+
+// --- Form Engine Integration Helpers ---
+
+/**
+ * Extract invariants from dialectic state for Property Engine
+ * Property uses invariants as Laws/Constraints
+ */
+export function extractInvariants(state: DialecticState) {
+  return state.invariants.map(inv => ({
+    id: inv.id,
+    constraint: inv.constraint,
+    predicate: inv.predicate,
+    universality: inv.conditions && inv.conditions.length > 0 ? 'conditional' : 'necessary',
+  }));
+}
+
+/**
+ * Extract facticity grounds from dialectic state for Property Engine
+ * Facticity = moments that ground the property (evidence/witnesses)
+ */
+export function extractFacticity(state: DialecticState) {
+  const groundingMoments = state.moments
+    .filter(m => m.type === 'polarity' || m.type === 'negation' || m.type === 'mediation');
+
+  return {
+    grounds: groundingMoments.map(m => m.name),
+    conditions: state.invariants.flatMap(inv => inv.conditions ?? []),
+    evidence: groundingMoments.map(m => ({
+      name: m.name,
+      definition: m.definition,
+      type: m.type,
+    })),
+  };
+}
+
+/**
+ * Extract mediation structure from dialectic state for Property Engine
+ * Property mediates Entity ↔ Aspect (Thing ↔ Relation)
+ */
+export function extractMediation(state: DialecticState) {
+  const mediatingMoments = state.moments
+    .filter(m => m.relation === 'mediates' || m.relation === 'transforms');
+
+  return {
+    fromEntities: mediatingMoments.map(m => m.name),
+    toAspects: mediatingMoments.map(m => m.relatedTo).filter(Boolean) as string[],
+  };
+}
+
+/**
+ * Extract spectral structure from dialectic state for Aspect Engine
+ * Spectrum = range of appearing through polarities
+ */
+export function extractSpectrum(state: DialecticState) {
+  const polarities = state.moments
+    .filter(m => m.type === 'polarity' || m.type === 'negation');
+
+  return {
+    poles: polarities.map(p => ({
+      name: p.name,
+      definition: p.definition,
+      oppositeTo: p.relatedTo,
+    })),
+    range: polarities.length,
+    dialectical: polarities.some(p => p.relation === 'opposite'),
+  };
+}
+
+/**
+ * Extract relational structure from dialectic state for Aspect Engine
+ * Relations show essential connections between moments
+ */
+export function extractRelations(state: DialecticState) {
+  const relationalMoments = state.moments.filter(m => m.relation !== undefined);
+
+  return relationalMoments.map(m => ({
+    from: m.name,
+    to: m.relatedTo,
+    relation: m.relation,
+    type: m.type,
+  }));
+}
+
+/**
+ * Extract transformation principle from dialectic state for Morph Engine
+ * Transformations show the "reason" - why one state becomes another
+ */
+export function extractTransformations(state: DialecticState) {
+  return (state.transitions ?? []).map(t => ({
+    id: t.id,
+    from: t.from,
+    to: t.to,
+    mechanism: t.mechanism,
+    middleTerm: t.middleTerm,
+    reason: t.description,
+  }));
+}
+
+/**
+ * Extract container structure from dialectic state for Morph Engine
+ * The Ground "contains" moments - it's the active unity that holds them
+ */
+export function extractContainer(state: DialecticState) {
+  const containingMoments = state.moments
+    .filter(m => m.type === 'sublation' || m.type === 'mediation' || m.relation === 'contains');
+
+  return {
+    holds: state.moments.map(m => m.name),
+    activeUnity: containingMoments.map(m => ({
+      name: m.name,
+      definition: m.definition,
+      contains: m.relatedTo,
+    })),
+  };
+}
+

@@ -46,12 +46,12 @@ export const ScopeSpec = z.object({
 export type ScopeSpec = z.infer<typeof ScopeSpec>;
 
 // Conditioning constraint: what must hold for validity
-export const Condition = z.object({
+export const ContextCondition = z.object({
   id: z.string(),
   constraint: z.string(),
   predicate: z.string().optional(),
 });
-export type Condition = z.infer<typeof Condition>;
+export type ContextCondition = z.infer<typeof ContextCondition>;
 
 // Core/state (uniform)
 export const ContextCore = BaseCore.extend({
@@ -71,7 +71,7 @@ export const ContextFacets = z.object({
   scope: ScopeSpec.optional(),
 
   // Conditions: constraints for validity
-  conditions: z.array(Condition).optional(),
+  conditions: z.array(ContextCondition).optional(),
 
   // Parent context reference (for nested scopes)
   parentContext: z.string().optional(),
@@ -220,7 +220,7 @@ export function getScope(ctx: Context): ScopeSpec | undefined {
 /**
  * Helper: Get conditioning constraints from Context facets
  */
-export function getConditions(ctx: Context): Condition[] {
-  return ((ctx.shape.facets as any)?.conditions ?? []) as Condition[];
+export function getConditions(ctx: Context): ContextCondition[] {
+  return ((ctx.shape.facets as any)?.conditions ?? []) as ContextCondition[];
 }
 

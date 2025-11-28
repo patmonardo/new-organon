@@ -4,30 +4,14 @@
     "rootDir": "src",
     "outDir": "dist",
     "baseUrl": ".",
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "paths": {
-      "@organon/gdsl": [
-        "../gdsl/dist/index"
-      ],
-      "@organon/gdsl/*": [
-        "../gdsl/dist/*"
-      ],
-      "@organon/logic": [
-        "../logic/dist/index"
-      ],
-      "@organon/logic/*": [
-        "../logic/dist/*"
-      ],
-      "@organon/reality": [
-        "../reality/dist/index"
-      ],
-      "@organon/reality/*": [
-        "../reality/dist/*"
-      ]
+      "@model/*": ["src/*"]
     }
   },
   "include": [
-    "tsconfig.json",
-    "src/index.ts",
-    "src/model.ts"
+    "src/**/*.ts",
+    "src/**/*.tsx"
   ]
 }

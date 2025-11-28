@@ -15,8 +15,8 @@ export const PositionSchema = z.object({
 
 // Base dashboard component schema - no form inheritance
 export const DashboardComponentBaseSchema = z.object({
-  id: z.string().nonempty('Component ID is required'),
-  type: z.string().nonempty('Component type is required'),
+  id: z.string().min(1, { error: 'Component ID is required' }),
+  type: z.string().min(1, { error: 'Component type is required' }),
   title: z.string().optional(),
   position: PositionSchema.default({ x: 0, y: 0, w: 1, h: 1 }),
   className: z.string().optional()
@@ -110,6 +110,8 @@ export type DashboardShape = z.infer<typeof DashboardShapeSchema>;
  * Default dashboard configuration
  */
 export const DEFAULT_DASHBOARD: DashboardShape = {
+  id: 'default-dashboard',
+  name: 'Sankara Knowledge Explorer',
   type: 'dashboard',
   fields: [], // Empty fields array since dashboards don't have input fields
   state: {
