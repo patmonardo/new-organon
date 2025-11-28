@@ -19,14 +19,21 @@
     "t": "vitest run",
     "lint": "eslint . --cache",
     "format": "prettier --write \"**/*.{ts,js,md,json,yml,yaml}\" --ignore-path .gitignore",
-    "doc:api": "typedoc --options typedoc.json"
+    "doc:api": "typedoc --options typedoc.json",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@prisma/client": "^5.22.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
     "@types/react": "^19.2.7",
+    "prisma": "^5.22.0",
     "react": "^19.2.0",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.20.4",

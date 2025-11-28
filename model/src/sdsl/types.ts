@@ -97,6 +97,46 @@ export interface OperationResult<T> {
 }
 
 // ============================================================
+// CONTROLLER RESULT - Transport-agnostic response
+// ============================================================
+
+/**
+ * ControllerResult: What controllers return (transport-agnostic)
+ * 
+ * - tRPC returns this directly
+ * - HTTP wraps in JSON response
+ * - Next.js can redirect based on this
+ */
+export interface ControllerResult<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  redirect?: string;
+  meta?: Record<string, unknown>;
+}
+
+/**
+ * FormDefinition: What the form looks like (for rendering)
+ */
+export interface FormDefinition {
+  shape: FormShape;
+  values: Record<string, unknown>;
+  mode: FormMode;
+  actions: string[];
+}
+
+/**
+ * ListResult: Paginated list response
+ */
+export interface ListResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+// ============================================================
 // DISPLAY PRIMITIVES - Generic Display Language Elements
 // ============================================================
 

@@ -25,3 +25,6 @@ export * from './data';
 
 // Repository (database layer)
 export * from './repository';
+
+// Examples - MVC SDSL Design Templates
+export * as examples from './examples';

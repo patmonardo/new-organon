@@ -5,6 +5,8 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// PostgreSQL - supports Json columns needed for FormStore
+// Quick start: docker run -d --name organon-db -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=organon -p 5432:5432 postgres:16
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -164,4 +166,154 @@ model Concept {
   @@index([category])
   @@index([frequency])
   @@map("concepts")
+}
+
+// ============================================================
+// FACTSTORE: Appearance → Fact → Assertion pipeline
+// Essential Being - Ground-Condition-Facticity
+// ============================================================
+
+model Appearance {
+  id          String   @id @default(cuid())
+  groundHint  String?
+  rawBlob     Json
+  recordedBy  String?
+  recordedAt  DateTime @default(now())
+
+  // Relations
+  facts       Fact[]
+
+  @@index([groundHint])
+  @@map("appearances")
+}
+
+model Fact {
+  id              String      @id @default(cuid())
+  ground          String
+  predicate       String
+  value           Json
+  appearanceId    String?
+  createdAt       DateTime    @default(now())
+
+  // Relations
+  appearance      Appearance? @relation(fields: [appearanceId], references: [id], onDelete: SetNull)
+  assertions      Assertion[]
+
+  @@index([ground])
+  @@index([predicate])
+  @@index([appearanceId])
+  @@map("facts")
+}
+
+model Assertion {
+  id            String    @id @default(cuid())
+  factId        String
+  issuer        String
+  context       String?
+  confidence    Float?
+  tags          String[]  @default([])  // Postgres native array
+  provenance    Json?
+  validFrom     DateTime?
+  validTo       DateTime?
+  createdAt     DateTime  @default(now())
+
+  // Relations
+  fact          Fact      @relation(fields: [factId], references: [id], onDelete: Cascade)
+
+  @@index([factId])
+  @@index([issuer])
+  @@map("assertions")
+}
+
+// ============================================================
+// FORMSTORE: Business Forms - User Defined Types for Forms
+// Data Model Standard Library
+// ============================================================
+
+model Form {
+  id          String   @id @default(cuid())
+  name        String
+  title       String?
+  description String?
+  type        String   @default("form")
+  version     Int      @default(1)
+  status      String   @default("draft")  // draft, active, archived
+  config      Json?    @default("{}")     // Full FormShape as JSON
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  fields      FormField[]
+  sections    FormSection[]
+  submissions FormSubmission[]
+
+  @@index([type])
+  @@index([status])
+  @@map("forms")
+}
+
+model FormField {
+  id           String   @id @default(cuid())
+  formId       String
+  name         String
+  label        String?
+  type         String   @default("text")  // text, number, email, select, etc.
+  required     Boolean  @default(false)
+  placeholder  String?
+  defaultValue Json?
+  validation   Json?    // Validation rules
+  options      Json?    // For select/radio/checkbox
+  order        Int      @default(0)
+  sectionId    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  form         Form        @relation(fields: [formId], references: [id], onDelete: Cascade)
+  section      FormSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+
+  @@index([formId])
+  @@index([sectionId])
+  @@index([order])
+  @@map("form_fields")
+}
+
+model FormSection {
+  id          String   @id @default(cuid())
+  formId      String
+  name        String
+  title       String?
+  description String?
+  order       Int      @default(0)
+  collapsible Boolean  @default(false)
+  collapsed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  form        Form       @relation(fields: [formId], references: [id], onDelete: Cascade)
+  fields      FormField[]
+
+  @@index([formId])
+  @@index([order])
+  @@map("form_sections")
+}
+
+model FormSubmission {
+  id        String   @id @default(cuid())
+  formId    String
+  data      Json     // The submitted values
+  status    String   @default("pending")  // pending, approved, rejected
+  submittedBy String?
+  submittedAt DateTime @default(now())
+  processedAt DateTime?
+  notes     String?
+
+  // Relations
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
+  @@index([status])
+  @@index([submittedAt])
+  @@map("form_submissions")
 }
