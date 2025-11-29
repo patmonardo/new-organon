@@ -48,6 +48,7 @@ export {
 // Data SDSL execution stubs
 export {
   PolarsExecutionEngine,
+  type PolarsDataset,
   type ExecutionOptions,
   type ExecutionResult,
 } from './polars-engine';
@@ -56,3 +57,16 @@ export {
   SqlEngine,
   type SqlQuery,
 } from './sql-engine';
+
+export {
+  SemanticHydrator,
+  type SemanticDataService,
+  type SemanticResult,
+  type HydratorContext,
+  type HydratorSpec,
+  type HydratorSnapshot,
+  type RowLike,
+  type FormBinding,
+  type CollectionBinding,
+  type MetricBinding,
+} from './semantic-hydrator';

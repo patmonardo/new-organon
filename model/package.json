@@ -22,12 +22,16 @@
     "doc:api": "typedoc --options typedoc.json"
   },
   "dependencies": {
+    "apache-arrow": "^16.1.0",
+    "duckdb": "^1.4.2",
+    "nodejs-polars": "^0.15.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.0",
     "@types/react": "^19.2.7",
     "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "tsc-alias": "^1.8.16",
     "typescript": "^5.9.2",
     "vitest": "^3.1.3"

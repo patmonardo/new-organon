@@ -1,11 +1,12 @@
 packages:
-  - "logic"
-  - "model"
-  - "task"
+  - logic
+  - model
+  - task
 
 ignoredBuiltDependencies:
   - '@firebase/util'
   - '@scarf/scarf'
+  - duckdb
   - esbuild
   - protobufjs
 

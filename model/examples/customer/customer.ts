@@ -27,6 +27,8 @@ export const CustomerSchema = z.object({
   name: z.string(),
   email: z.string().email(),
   imageUrl: z.string().optional(),
+  region: z.string().optional(),
+  createdAt: z.string().optional(),
   invoices: z.array(InvoiceSchema).optional(),
 });
 export type Customer = z.infer<typeof CustomerSchema>;

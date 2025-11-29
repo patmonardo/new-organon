@@ -23,4 +23,4 @@ export * as schema from './schema';
 export * from './data';
 
 // Examples - MVC SDSL Design Templates
-export * as examples from './examples';
+// export * as examples from './examples';

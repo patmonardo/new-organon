@@ -43,6 +43,10 @@ export * from './adapter';
 // React adapter (Tailwind components)
 export * from './react-adapter';
 
+// Radix/Shadcn-inspired adapter
+export * from './radix-adapter';
+export * from './radix-primitives';
+
 // React MVC dyad (View + Controller for React/Next.js)
 export * from './react-view';
 export * from './react-controller';

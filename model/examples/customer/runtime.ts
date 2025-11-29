@@ -1,6 +1,8 @@
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { CustomerController } from './customer-controller';
-import { CustomerView } from './customer-view';
 import { CustomerModel } from './customer-model';
+import { CustomerDataService } from './customer-data.service';
 import { PolarsExecutionEngine } from '../../src/data/polars-engine';
 import { SqlEngine } from '../../src/data/sql-engine';
 
@@ -13,23 +15,27 @@ async function main() {
 
   // 2. Hydrate from Semantic Layer
   console.log('2. Loading customer from semantic model...');
-  const profile = await controller.loadCustomerProfile('cust_100');
-  if (profile) {
-    console.log(`   Loaded ${profile.name} (${profile.email})`);
-    console.log('   Metrics:', profile.metrics);
-    console.log('   Plan:', profile.plan);
+  const snapshot = await controller.loadCustomerProfile('cust_100');
+  if (snapshot) {
+    const row = snapshot.rows[0];
+    console.log(`   Loaded ${row?.name} (${row?.email})`);
+    console.log('   Metrics:', snapshot.metrics);
+    console.log('   Plan:', snapshot.plan);
   } else {
     console.log('   Customer not found in semantic layer, continuing with empty model.');
   }
 
-  // 3. Render View with hydrated data
-  console.log('\n3. Rendering hydrated view...');
-  const view = new CustomerView(controller.model, 'view');
-  const doc = view.render();
+  // 3. Render View with hydrated data via Radix adapter
+  console.log('\n3. Rendering hydrated view via Radix adapter...');
+  const { document: doc, element: radixTree } = controller.renderRadixDashboard();
 
   console.log('\n--- Display Document ---');
   console.log(`Title: ${doc.title}`);
   console.log('Layout:', JSON.stringify(doc.layout, null, 2));
+
+  const staticMarkup = renderToStaticMarkup(React.createElement(React.Fragment, null, radixTree));
+  console.log('\n--- Radix Adapter Markup (static snapshot) ---');
+  console.log(staticMarkup);
 
   // 4. Business Logic (Get Invoices)
   console.log('\n4. Fetching Invoices...');
@@ -49,7 +55,7 @@ async function main() {
     name: 'Acme Industries (Updated)',
     email: 'ops@acme.com',
     imageUrl: 'https://images.ctfassets.net/example/acme-avatar.png',
-    invoices: profile?.invoices || [],
+    invoices: (snapshot?.collections?.invoices as Record<string, unknown>[] | undefined) || [],
   };
 
   try {
@@ -82,9 +88,12 @@ async function runDataSdslDemo() {
   console.log(sqlQuery.text);
   console.log('Params:', sqlQuery.params);
 
-  const polarsEngine = new PolarsExecutionEngine();
+  const dataService = new CustomerDataService();
+  const dataset = dataService.getDatasetSnapshot();
+  const polarsEngine = new PolarsExecutionEngine(dataset);
   const result = await polarsEngine.execute(regionalRevenueView);
 
   console.log('\nPolars execution plan (stub):');
   console.log(result.plan);
+  console.log('Meta:', result.meta);
 }
