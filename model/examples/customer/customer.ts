@@ -194,7 +194,6 @@ export const CustomerShape: FormShape = {
   ],
   layout: {
     id: 'customer-layout',
-    type: 'stack', // Default to stack
     sections: [
       {
         id: 'basic-info',

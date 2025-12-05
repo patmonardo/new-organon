@@ -6,7 +6,7 @@ import { CustomerDataService } from './customer-data.service';
 import { PolarsExecutionEngine } from '../../src/data/polars-engine';
 import { SqlEngine } from '../../src/data/sql-engine';
 
-async function main() {
+export async function runDemo() {
   console.log('=== MVC RUNTIME DEMO ===\n');
 
   // 1. Initialize Controller (starts in 'create' mode)
@@ -70,7 +70,9 @@ async function main() {
   await runDataSdslDemo();
 }
 
-main().catch(console.error);
+export default runDemo;
+
+runDemo().catch(console.error);
 
 async function runDataSdslDemo() {
   console.log('\n=== DATA SDSL DEMO ===');

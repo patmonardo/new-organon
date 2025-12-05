@@ -8,17 +8,18 @@ We have **three distinct layers** with different purposes:
 2. **SDSL (Malloy-inspired)** - Data modeling, TypeScript, MVC, Polars/Arrow
 3. **Task Agents** - Workflow orchestration
 
-## Layer 1: GDSL (OpenCypher) - Graph/ML Foundation
+## Layer 1: GDSL (OpenCypher) - ML and Logical Forms
 
 ### Purpose
-- **Graph algorithms** and ML operations
+- **ML operations** - Machine learning, model training/inference
+- **Logical Forms** - Advanced logical processing
 - **RootAgent orchestration** via GDS Kernel
 - **Special GDS Init/Task Daemon** that operates various pieces
 
 ### Technology
 - **Language**: Rust
 - **Query Language**: OpenCypher (as GDSL itself)
-- **Domain**: Graph data science, ML algorithms, kernel operations
+- **Domain**: ML, Logical Forms, kernel operations
 
 ### Architecture
 
@@ -66,10 +67,12 @@ ORDER BY score DESC
 
 This is **GDSL** - OpenCypher queries that operate on the GDS kernel.
 
-## Layer 2: SDSL (Malloy-inspired) - Data Modeling Platform
+## Layer 2: SDSL (Malloy-inspired) - General Data Models + Middleware
 
 ### Purpose
-- **Data modeling** with semantic layer (measures, dimensions, joins)
+- **General Data Models** - Any data modeling domain
+- **Middleware** - Business logic, transformations, orchestration
+- **Special Domain Calculators** - Domain-specific calculation engines
 - **MVC applications** (FormApp)
 - **Data analysis** and aggregation
 
@@ -77,7 +80,7 @@ This is **GDSL** - OpenCypher queries that operate on the GDS kernel.
 - **Language**: TypeScript
 - **Inspiration**: Malloy (semantic modeling)
 - **Execution**: Polars/Apache Arrow
-- **Domain**: Business data, forms, analytics
+- **Domain**: General data modeling, middleware, domain calculators, business data, forms, analytics
 
 ### Architecture
 
@@ -196,8 +199,8 @@ Workflow Execution
 
 | Layer | Language | Domain | Purpose |
 |-------|----------|--------|---------|
-| **GDSL** | Rust (OpenCypher) | Graph/ML | Kernel operations, RootAgent |
-| **SDSL** | TypeScript (Malloy) | Data Modeling | MVC apps, business data |
+| **GDSL** | Rust (OpenCypher) | ML, Logical Forms | Kernel operations, RootAgent |
+| **SDSL** | TypeScript (Malloy) | General Data Models, Middleware | MVC apps, domain calculators, business data |
 | **Task Agents** | TypeScript (NestJS) | Workflows | Orchestration, coordination |
 
 ## Integration Points

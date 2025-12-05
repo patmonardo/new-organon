@@ -70,3 +70,23 @@ export {
   type CollectionBinding,
   type MetricBinding,
 } from './semantic-hydrator';
+
+// Data SDSL with Malloy IR generation
+export {
+  defineModel,
+  defineModelWithMalloyIR,
+  DataModel,
+  DataModelWithMalloyIR,
+  DataView,
+  type DataModelConfig,
+  type MeasureDefinition,
+  type DimensionDefinition,
+  type JoinDefinition,
+  type ViewQuery,
+  sum,
+  count,
+  avg,
+  dimension,
+  generateMalloyIRFromConfig,
+  hasMalloyIR,
+} from './sdsl';

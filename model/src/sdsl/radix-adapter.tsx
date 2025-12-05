@@ -330,17 +330,50 @@ function renderActions(element: DisplayElement, context: RadixRenderContext): Re
 
 // --- New Radix Primitives Renderers ---
 
+// --- New Radix Primitives Renderers ---
+
 registerRadixComponent('dialog', (element, key, context) => {
   const props = element.props as unknown as DialogShape;
-  // Placeholder for actual Dialog implementation
-  // In a real app, this would use Radix UI Dialog primitives
+  const controller = (context as any).controller;
+
+  // Determine open state:
+  // 1. Controlled by parent (props.open)
+  // 2. Controlled by controller state (using element ID or auto-generated ID)
+  // 3. Default (false)
+  const id = props.id || `dialog-${key}`;
+  const isOpen = props.open ?? controller?.state?.openStates?.[id] ?? props.defaultOpen ?? false;
+
+  const handleOpenChange = (open: boolean) => {
+    controller?.setOpen?.(id, open);
+  };
+
   return (
-    <div key={key} className="p-4 border border-blue-200 rounded bg-blue-50">
-      <div className="font-bold">Dialog: {props.title}</div>
-      <div>{renderRadixElement(props.trigger, `${key}:trigger`, context)}</div>
-      {props.open && (
-        <div className="mt-2 p-2 bg-white border border-gray-200 rounded">
-          {renderRadixElement(props.content, `${key}:content`, context)}
+    <div key={key} className="p-4 border border-blue-200 rounded bg-blue-50 relative">
+      <div className="font-bold mb-2">Dialog: {props.title}</div>
+
+      {/* Trigger */}
+      <div onClick={() => handleOpenChange(true)}>
+        {renderRadixElement(props.trigger, `${key}:trigger`, context)}
+      </div>
+
+      {/* Content (Overlay) */}
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">{props.title}</h3>
+              <button
+                onClick={() => handleOpenChange(false)}
+                className="rounded-full p-1 hover:bg-slate-100"
+              >
+                ✕
+              </button>
+            </div>
+            {props.description && (
+              <p className="mb-4 text-sm text-slate-500">{props.description}</p>
+            )}
+            {renderRadixElement(props.content, `${key}:content`, context)}
+          </div>
         </div>
       )}
     </div>
@@ -349,11 +382,21 @@ registerRadixComponent('dialog', (element, key, context) => {
 
 registerRadixComponent('popover', (element, key, context) => {
   const props = element.props as unknown as PopoverShape;
+  const controller = (context as any).controller;
+  const id = props.id || `popover-${key}`;
+  const isOpen = props.open ?? controller?.state?.openStates?.[id] ?? props.defaultOpen ?? false;
+
+  const handleToggle = () => {
+    controller?.setOpen?.(id, !isOpen);
+  };
+
   return (
     <div key={key} className="inline-block relative">
-      {renderRadixElement(props.trigger, `${key}:trigger`, context)}
-      {props.open && (
-        <div className="absolute z-10 p-2 bg-white border border-gray-200 rounded shadow-lg">
+      <div onClick={handleToggle}>
+        {renderRadixElement(props.trigger, `${key}:trigger`, context)}
+      </div>
+      {isOpen && (
+        <div className="absolute z-10 mt-2 w-64 p-4 bg-white border border-slate-200 rounded-xl shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
           {renderRadixElement(props.content, `${key}:content`, context)}
         </div>
       )}
@@ -363,14 +406,39 @@ registerRadixComponent('popover', (element, key, context) => {
 
 registerRadixComponent('dropdown-menu', (element, key, context) => {
   const props = element.props as unknown as DropdownMenuShape;
+  const controller = (context as any).controller;
+  const id = props.id || `dropdown-${key}`;
+  const isOpen = props.open ?? controller?.state?.openStates?.[id] ?? props.defaultOpen ?? false;
+
+  const handleToggle = () => {
+    controller?.setOpen?.(id, !isOpen);
+  };
+
   return (
     <div key={key} className="inline-block relative">
-      {renderRadixElement(props.trigger, `${key}:trigger`, context)}
-      {props.open && (
-        <ul className="absolute z-10 bg-white border border-gray-200 rounded shadow-lg min-w-[150px]">
+      <div onClick={handleToggle}>
+        {renderRadixElement(props.trigger, `${key}:trigger`, context)}
+      </div>
+      {isOpen && (
+        <ul className="absolute right-0 z-10 mt-2 min-w-[180px] overflow-hidden rounded-lg border border-slate-200 bg-white p-1 shadow-lg animate-in fade-in zoom-in-95 duration-100">
           {props.items.map((item, idx) => (
-            <li key={idx} className="px-4 py-2 hover:bg-gray-100 cursor-pointer">
-              {item.label}
+            <li
+              key={idx}
+              className={`
+                flex items-center justify-between px-2 py-1.5 text-sm rounded-md cursor-pointer
+                ${item.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-100'}
+              `}
+              onClick={() => {
+                if (item.disabled) return;
+                if (item.onSelect) context.handler?.onAction?.(item.onSelect);
+                handleToggle(); // Close on select
+              }}
+            >
+              <span className="flex items-center gap-2">
+                {item.icon && <span>{item.icon}</span>}
+                {item.label}
+              </span>
+              {item.shortcut && <span className="text-xs text-slate-400">{item.shortcut}</span>}
             </li>
           ))}
         </ul>
@@ -381,21 +449,43 @@ registerRadixComponent('dropdown-menu', (element, key, context) => {
 
 registerRadixComponent('tabs', (element, key, context) => {
   const props = element.props as unknown as TabsShape;
+  const controller = (context as any).controller;
+  const id = props.id || `tabs-${key}`;
+  const value = props.value ?? controller?.state?.valueStates?.[id] ?? props.defaultValue;
+
+  const handleValueChange = (val: string) => {
+    controller?.setValue?.(id, val);
+  };
+
   return (
-    <div key={key} className="flex flex-col">
-      <div className="flex border-b border-gray-200">
-        {props.triggers.map((trigger, idx) => (
-          <button key={idx} className="px-4 py-2 hover:bg-gray-50">
-            {trigger.label}
-          </button>
-        ))}
+    <div key={key} className="flex flex-col gap-4">
+      <div className="flex border-b border-slate-200">
+        {props.triggers.map((trigger, idx) => {
+          const isActive = trigger.value === value;
+          return (
+            <button
+              key={idx}
+              onClick={() => handleValueChange(trigger.value)}
+              className={`
+                px-4 py-2 text-sm font-medium border-b-2 transition-colors
+                ${isActive ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}
+              `}
+            >
+              {trigger.icon && <span className="mr-2">{trigger.icon}</span>}
+              {trigger.label}
+            </button>
+          );
+        })}
       </div>
-      <div className="p-4">
-        {props.contents.map((content, idx) => (
-          <div key={idx} className={content.value === props.defaultValue ? 'block' : 'hidden'}>
-            {renderRadixElement(content.content, `${key}:content:${idx}`, context)}
-          </div>
-        ))}
+      <div className="mt-2">
+        {props.contents.map((content, idx) => {
+          if (content.value !== value) return null;
+          return (
+            <div key={idx} className="animate-in fade-in duration-200">
+              {renderRadixElement(content.content, `${key}:content:${idx}`, context)}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -403,18 +493,50 @@ registerRadixComponent('tabs', (element, key, context) => {
 
 registerRadixComponent('accordion', (element, key, context) => {
   const props = element.props as unknown as AccordionShape;
+  const controller = (context as any).controller;
+  const id = props.id || `accordion-${key}`;
+
+  // Handle single vs multiple
+  const rawValue = props.value ?? controller?.state?.valueStates?.[id] ?? props.defaultValue;
+  const value = Array.isArray(rawValue) ? rawValue : [rawValue].filter(Boolean) as string[];
+
+  const handleToggle = (itemValue: string) => {
+    let newValue: string | string[];
+    if (props.typeProp === 'multiple') {
+      newValue = value.includes(itemValue)
+        ? value.filter(v => v !== itemValue)
+        : [...value, itemValue];
+    } else {
+      // Single mode
+      // If collapsible and already open, close it. Otherwise open it.
+      newValue = (props.collapsible && value.includes(itemValue)) ? [] : [itemValue];
+    }
+    controller?.setValue?.(id, newValue);
+  };
+
   return (
-    <div key={key} className="border border-gray-200 rounded">
-      {props.items.map((item, idx) => (
-        <div key={idx} className="border-b border-gray-200 last:border-0">
-          <button className="w-full px-4 py-2 text-left hover:bg-gray-50 font-medium">
-            {item.trigger}
-          </button>
-          <div className="p-4">
-            {renderRadixElement(item.content, `${key}:content:${idx}`, context)}
+    <div key={key} className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+      {props.items.map((item, idx) => {
+        const isOpen = value.includes(item.value);
+        return (
+          <div key={idx}>
+            <button
+              onClick={() => handleToggle(item.value)}
+              className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium hover:bg-slate-50 transition-colors"
+            >
+              {item.trigger}
+              <span className={`transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+                ↓
+              </span>
+            </button>
+            {isOpen && (
+              <div className="px-4 pb-4 pt-0 text-sm text-slate-600 animate-in slide-in-from-top-1 duration-200">
+                {renderRadixElement(item.content, `${key}:content:${idx}`, context)}
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 });
@@ -424,8 +546,15 @@ registerRadixComponent('tooltip', (element, key, context) => {
   return (
     <div key={key} className="inline-block relative group">
       {renderRadixElement(props.trigger, `${key}:trigger`, context)}
-      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+      <div className="
+        absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1
+        bg-slate-900 text-white text-xs rounded shadow-lg
+        opacity-0 group-hover:opacity-100 transition-opacity duration-200
+        pointer-events-none whitespace-nowrap z-50
+      ">
         {props.content}
+        {/* Arrow */}
+        <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-900"></div>
       </div>
     </div>
   );
@@ -434,7 +563,7 @@ registerRadixComponent('tooltip', (element, key, context) => {
 registerRadixComponent('scroll-area', (element, key, context) => {
   const props = element.props as unknown as ScrollAreaShape;
   return (
-    <div key={key} className="overflow-auto max-h-[300px] border border-gray-200 rounded">
+    <div key={key} className="overflow-auto max-h-[300px] rounded-lg border border-slate-200 pr-2">
       {renderRadixElement(props.content, `${key}:content`, context)}
     </div>
   );

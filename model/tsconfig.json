@@ -1,17 +1,28 @@
 {
   "extends": "../tsconfig.src.json",
   "compilerOptions": {
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist",
     "baseUrl": ".",
     "jsx": "react-jsx",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "paths": {
-      "@model/*": ["src/*"]
+      "@model/*": [
+        "src/*"
+      ],
+      "@examples/*": [
+        "examples/*"
+      ]
     }
   },
   "include": [
     "src/**/*.ts",
-    "src/**/*.tsx"
+    "src/**/*.tsx",
+    "examples/**/*.ts",
+    "examples/**/*.tsx"
   ]
 }
