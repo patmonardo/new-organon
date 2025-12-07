@@ -22,7 +22,7 @@
     "doc:api": "typedoc --options typedoc.json"
   },
   "dependencies": {
-    "apache-arrow": "^16.1.0",
+    "apache-arrow": "^17.0.0",
     "duckdb": "^1.4.2",
     "nodejs-polars": "^0.15.0",
     "zod": "^4.0.0"

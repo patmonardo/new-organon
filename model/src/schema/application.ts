@@ -3,14 +3,13 @@ import { FormShapeSchema } from './shape';
 import { ListShapeSchema } from './list';
 import { LinkShapeSchema } from './link';
 import { DashboardShapeSchema, DashboardComponentSchema } from './dashboard';
-import { DisplayShapeSchema } from './display';
 
 /**
  * Application Schema - "Desktop Neo4j"
- * 
+ *
  * The Application schema represents a complete FormApp definition,
  * including dashboard, navigation, views, models, and forms.
- * 
+ *
  * This is the "Desktop Neo4j" concept - a complete application
  * that combines:
  * - Malloy-inspired semantic data models
@@ -69,7 +68,6 @@ export const ViewSchema = z.object({
   // Malloy View technology - TS module ready to execute MVC IR
   module: z.string().optional(), // Path to TS module
   // DisplayShape for rendering
-  display: DisplayShapeSchema.optional(),
   // Dashboard component (if type is 'dashboard')
   dashboardComponent: DashboardComponentSchema.optional(),
 });
@@ -87,25 +85,25 @@ export const ApplicationSchema = z.object({
   name: z.string(),
   title: z.string().optional(),
   description: z.string().optional(),
-  
+
   // Dashboard - main interface (extends FormShape)
   dashboard: DashboardShapeSchema,
-  
+
   // Navigation - Lists/Links
   navigation: z.array(NavigationSchema).optional(),
-  
+
   // Views - Malloy views, charts, tables, forms
   views: z.array(ViewSchema).optional(),
-  
+
   // Data Models - Malloy-inspired semantic models
   models: z.array(DataModelRefSchema).optional(),
-  
+
   // Forms - FormShape definitions
   forms: z.array(FormShapeSchema).optional(),
-  
+
   // Lists - For breadcrumbs, navbars, etc.
   lists: z.array(ListShapeSchema).optional(),
-  
+
   // Metadata
   metadata: z.object({
     version: z.string().optional(),
@@ -138,7 +136,7 @@ export function createApplication(input: {
   lists?: z.infer<typeof ListShapeSchema>[];
 }): Application {
   const id = input.id ?? `app:${Date.now().toString(36)}:${Math.floor(Math.random() * 1e6).toString(36).padStart(4, '0')}`;
-  
+
   return ApplicationSchema.parse({
     id,
     name: input.name,

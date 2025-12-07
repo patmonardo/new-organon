@@ -75,14 +75,6 @@ export function defineModel<T extends Record<string, any>>(config: DataModelConf
   return new DataModel(config);
 }
 
-// Re-export Malloy IR generator for convenience
-export {
-  defineModelWithMalloyIR,
-  DataModelWithMalloyIR,
-  generateMalloyIRFromConfig,
-  hasMalloyIR,
-} from './malloy-ir-generator';
-
 export function sum(field: string): MeasureDefinition {
   return { type: 'sum', field };
 }

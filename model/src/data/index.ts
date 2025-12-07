@@ -74,9 +74,7 @@ export {
 // Data SDSL with Malloy IR generation
 export {
   defineModel,
-  defineModelWithMalloyIR,
   DataModel,
-  DataModelWithMalloyIR,
   DataView,
   type DataModelConfig,
   type MeasureDefinition,
@@ -87,6 +85,4 @@ export {
   count,
   avg,
   dimension,
-  generateMalloyIRFromConfig,
-  hasMalloyIR,
 } from './sdsl';
