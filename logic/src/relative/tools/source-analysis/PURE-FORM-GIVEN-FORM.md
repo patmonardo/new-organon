@@ -56,13 +56,33 @@ This must be:
 
 The reduction from manifold of sensation to manifold of intuition = reduction to simplest moments.
 
+## Compression Pattern
+
+**Purity as a Compression trick:**
+- What comes **First** is **Pure** (the Basis, presupposed)
+- What comes **Second** is **Impure** and **presupposes the First**
+
+**All compression works this way:**
+- **Prioritized Basis** (First, Pure) - Presupposed, compressed
+- **Presupposing Layer** (Second, Impure) - Uses Basis to decompress
+
+**Examples:**
+- **File System:** SuperBlock (Basis) → File System (Presupposes SuperBlock)
+- **Form System:** Pure FormShape (Basis) → Given Form (Presupposes Pure Form)
+- **Image Compression:** Header/Metadata (Basis) → Image Data (Presupposes Header)
+
+**FormShape is Pure or Impure:**
+- **Pure FormShape** = First, Basis, Compressed, Presupposed (no values, just structure)
+- **Impure FormShape** = Second, Presupposes Pure, Contains Values
+
 ## Notes
 
-- Pure Form = FormShape without Values = Abstracted Pure Schema = Container
-- Given Form = Contained = Appearance/Idea = Has Values
+- Pure Form = FormShape without Values = Abstracted Pure Schema = Container = **First, Basis, Compressed**
+- Given Form = Contained = Appearance/Idea = Has Values = **Second, Presupposes Pure**
 - Abstract/Concrete dialectic = Compression
 - Concept = reduction to simplest moment
 - Manifold of Sensation → Manifold of Intuition = reduction to simplest moments
+- **Compression = Pure Form (First, Basis) → Given Form (Second, Presupposes)**
 
 ## Connection to Form Processor Architecture
 

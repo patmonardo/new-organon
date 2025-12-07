@@ -44,6 +44,7 @@ next-env.d.ts
 #*.java
 
 target
+model/archive
 archive
 yoga
 logic/docs/api
