@@ -7,6 +7,7 @@
  * - ReactController and ReactView
  * - Radix adapter for UI rendering
  * - Polars execution engine
+ * - CustomerDashboard Radix component
  */
 
 // Domain types and schemas
@@ -22,6 +23,9 @@ export * from './customer-data.service';
 // MVC components
 export * from './customer-controller';
 export * from './customer-view';
+
+// Radix Dashboard Component
+export * from './customer-dashboard';
 
 // Runtime demo
 export { default as runDemo } from './runtime';

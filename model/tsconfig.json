@@ -10,12 +10,48 @@
       "DOM",
       "DOM.Iterable"
     ],
-    "paths": {
-      "@model/*": [
-        "src/*"
+     "paths": {
+      "@organon/gdsl": [
+        "../gdsl/dist/index"
       ],
-      "@examples/*": [
-        "examples/*"
+      "@organon/gdsl/*": [
+        "../gdsl/dist/*"
+      ],
+      "@organon/logic": [
+        "../logic/dist/index"
+      ],
+      "@organon/logic/*": [
+        "../logic/dist/*"
+      ],
+      "@organon/model": [
+        "../model/dist/index"
+      ],
+      "@organon/model/*": [
+        "../model/dist/*"
+      ],
+      "@organon/reality": [
+        "../reality/dist/index"
+      ],
+      "@organon/reality/*": [
+        "../reality/dist/*"
+      ],
+      "@model": [
+        "src/model/index"
+      ],
+      "@model/*": [
+        "src/model/*"
+      ],
+      "@relative": [
+        "../logic/src/relative/index"
+      ],
+      "@relative/*": [
+        "../logic/src/relative/*"
+      ],
+      "@logic": [
+        "../logic/src/index"
+      ],
+      "@logic/*": [
+        "../logic/src/*"
       ]
     }
   },
@@ -25,7 +61,6 @@
     "examples/**/*.ts",
     "examples/**/*.tsx",
     "test/link.test.ts",
-    "test/list.test.ts",
-    "test/chart.test.ts"
+    "test/list.test.ts"
   ]
 }
