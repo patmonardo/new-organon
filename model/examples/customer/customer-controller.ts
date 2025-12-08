@@ -1,8 +1,10 @@
+import React from 'react';
 import type { ReactNode } from 'react';
 import { ReactController } from '../../src/sdsl/react-controller';
 import type { DisplayDocument, FormHandler, FormShape, FormMode } from '../../src/sdsl/types';
 import type { FormModel } from '../../src/sdsl/form-model';
 import { radixAdapter, type RadixAdapter, type RadixRenderContext } from '../../src/sdsl/radix-adapter';
+import { RadixController } from '../../src/sdsl/radix-controller';
 import { Customer, CustomerShape, Invoice } from './customer';
 import {
   CustomerDataService,
@@ -166,19 +168,23 @@ export class CustomerController extends ReactController<FormShape> {
 
   renderRadixDashboard(options: RadixDashboardOptions = {}): RadixDashboardRender {
     const adapter = options.adapter ?? radixAdapter;
-    const handler = options.handler ?? this.createReactHandler();
     const view = new CustomerView(this.formModel, this._mode);
     const document = view.render();
-    const context: RadixRenderContext = {
-      handler,
-      snapshot: this.semanticSnapshot,
-      mode: this._mode,
+
+    // Use the new RadixController
+    // We pass our executeAction as the onAction handler
+    const element = React.createElement(RadixController, {
+      document,
       data: this.extractModelValues(),
-      ...options.context,
-    };
+      adapter,
+      onAction: (id, data) => {
+        // Bridge the controller action to our class method
+        this.executeAction(id, data).catch(err => console.error(err));
+      }
+    });
 
     return {
-      element: adapter.render(document, context),
+      element,
       document,
       snapshot: this.semanticSnapshot,
     };
