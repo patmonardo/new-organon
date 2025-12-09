@@ -19,8 +19,7 @@
     "t": "vitest run",
     "lint": "eslint . --cache",
     "format": "prettier --write \"**/*.{ts,js,md,json,yml,yaml}\" --ignore-path .gitignore",
-    "doc:api": "typedoc --options typedoc.json",
-    "example:customer": "tsx examples/customer/run-customer-demo.tsx"
+    "doc:api": "typedoc --options typedoc.json"
   },
   "dependencies": {
     "apache-arrow": "^17.0.0",

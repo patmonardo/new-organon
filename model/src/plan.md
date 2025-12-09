@@ -168,10 +168,8 @@ UI Rendering (React/Radix/Tailwind)
 - Test: verify hydrator → snapshot → Radix render works end-to-end.
 
 ### Pass 6: Examples + Integration Tests
-- Rebuild `examples/customer/` with new naming.
-- Add `examples/dashboard/` (optional, if clear pattern emerges).
-- Write integration tests: Application → Controller → Hydrate → Render.
-- Verify customer.integration.test.tsx passes.
+- Maintain `examples/dashboard/` as the primary demo.
+- Write integration tests: Application → Controller → Hydrate → Render (aligned to dashboard demo).
 
 ### Pass 7: Final Polish
 - TSLint, format, doc comments.

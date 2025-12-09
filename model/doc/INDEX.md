@@ -133,30 +133,6 @@ See: `src/schema/table.ts`, `src/schema/list.ts`, `src/schema/link.ts`
 
 ---
 
-## Examples
-
-### Customer Example
-
-Complete MVC example with semantic data:
-
-```
-examples/customer/
-├── customer-model.ts       # Semantic data model (defineModel)
-├── customer-view.tsx       # Custom ReactView
-├── customer-controller.ts  # ReactController with hydration
-├── customer-data.service.ts # Mock data service
-├── runtime.ts              # Demo execution
-└── README.md               # Example documentation
-```
-
-Key patterns demonstrated:
-- Semantic model definition with measures/dimensions
-- SemanticHydrator integration
-- Custom view rendering
-- Controller action handling
-
----
-
 ## Testing
 
 ```bash

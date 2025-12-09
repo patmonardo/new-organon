@@ -200,7 +200,7 @@ const CustomerDashboard = ({ shape, snapshot }) => {
 
 ## Next Steps
 
-1. **Explore examples** — See `examples/customer/` for a complete MVC example
+1. **Explore examples** — See `examples/dashboard/` for the current MVC demo
 2. **Read architecture docs** — See `doc/INDEX.md` for full documentation
 3. **Run tests** — `pnpm test` to see the test suite
 4. **Build** — `pnpm build` to compile TypeScript
