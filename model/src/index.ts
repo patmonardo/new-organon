@@ -1,26 +1,35 @@
 /**
- * @organon/model - The First SDSL (Special Data Science Language)
+ * @organon/model - Standalone Malloy BI Package
  *
- * The MVC SDSL is a Client of the @logic Form Processor.
- * The FactStore is the First Speaker - this SDSL receives and transforms.
+ * A standalone Malloy-inspired BI package with zero dependencies on
+ * GDS/GDSL/Logic/Task. Focuses on Model-View-Dashboard for BI.
  *
- * Exports:
- * - sdsl/*: MVC SDSL core (FormModel, FormView, FormController, Adapters)
- * - schema/*: Data Model schemas (Dashboard, Table, etc.)
- * - data/*: Data services (Entity, Dashboard)
+ * Structure:
+ * - sdsl/ - SDSL Core (Species DSL) - isolated core
+ * - execution/ - Execution engines (Polars, SQL, Hydrator)
+ * - data/ - Data services (Entity, Dashboard, FactStore)
+ * - schema/ - Zod schemas
+ * - ui/react/sdsl/ - React adapters/controllers
+ * - ui/radix/sdsl/ - Radix adapters/controllers
+ * - ui/malloy/ - Malloy UI (speculative bubble)
+ *
+ * This is a standalone package - use it independently.
  */
 
 export * from './model';
 
-// MVC SDSL - Core language (the new foundation)
+// SDSL Core - Malloy-inspired semantic modeling (isolated)
 export * from './sdsl';
 
-// Legacy schema layer (to be migrated)
-// These have naming conflicts with SDSL, so import them namespaced
-export * as schema from './schema';
+// Execution engines
+export * from './execution';
 
 // Data services
 export * from './data';
 
-// Examples - MVC SDSL Design Templates
-// export * as examples from './examples';
+// Schema layer
+export * as schema from './schema';
+
+// UI adapters (optional - import from ui/react/sdsl or ui/radix/sdsl directly)
+export * from './ui/react/sdsl';
+export * from './ui/radix/sdsl';

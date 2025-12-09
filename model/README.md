@@ -1,13 +1,19 @@
-# @organon/model — Form Processor Client SDSL
+# @organon/model — Standalone Malloy BI Package
 
-## The Logic:Model Dyad
+## Standalone BI Package
 
-The **Logic:Model Dyad** is the claim to fame. It's not a standard API contract; it's a semantic dyad where:
+This is a **standalone Malloy BI package** with:
+- ✅ **Zero dependencies** on GDS/GDSL/Logic/Task
+- ✅ **BI-only** focus (Model-View-Dashboard)
+- ✅ **Runs standalone** - can be used independently
+- ✅ **Malloy-inspired** semantic modeling
 
-- **Logic (@logic)**: The "perfect server"—reflection, EssentialRelations, execution engine (Polars/Arrow/DuckDB), nondual semantics.
-- **Model (@model)**: The first activation of Logic's power—the declarative DSL that *uses* what Logic provides.
+## SDSL (Species DSL)
 
-The dyad is sublated into the **Task/Agent Workflow layer**, where agents engage the dyad: declare an Application, execute it, hydrate it, persist it.
+**SDSL = Species DSL** - inherits principles from GDSL (Genera DSL) conceptually, but:
+- **All based on Specs** - spec-based architecture
+- **Rust GDS patterns** - configuration-driven, not ORM-driven
+- **Standalone** - zero code dependencies on AI platform
 
 ## Architecture
 
@@ -141,7 +147,30 @@ The @model package embodies the dialectical movement from Pure Forms (@logic) to
 - **View = Representation : Perspective** — Transforms to display, filters, formats
 - **Controller = Action : Rule** — Orchestrates, handles actions, applies rules
 
-The Agent MVC extends this for agent reasoning:
+### Agent as Root Synthesis
+
+The **Agent-MVC** (`src/sdsl/agent-*.ts`) is not just another adapter—it is the **Root Synthesis** of the entire system. The entire stack is **Sublated** (Aufhebung) into the Agent as the Final Synthesis.
+
+**The Agent is the Universal Speaker (Sarvadharma):**
+- Speaks **GDSL** (Genera DSL) - The universal language of the AI Platform
+- Speaks **Every SDSL** (Species DSL) - All particular languages (React, Radix, Malloy, etc.)
+
+**The root `sdsl/` folder is:**
+- **Root Substrate** - The foundational layer
+- **MVC as System Bus** - The communication substrate
+- **FCI (Formal Concept Integration)** - The integration point
+
+**The Agent is the Root Meaning of MVC:**
+- The Controller is really the Agent
+- The Agent orchestrates all Models
+- The Agent speaks all Views
+- The Agent controls all Controllers
+
+See: `doc/agent-as-root-synthesis.md` for the full vision.
+
+### Agent MVC
+
+The Agent MVC extends MVC for agent reasoning:
 
 - **AgentModel** — Overlays (relevance, confidence, provenance)
 - **AgentView** — ContextDocument, prompts, function calls

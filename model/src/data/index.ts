@@ -1,14 +1,8 @@
 /**
- * @model/data - Data Access Services
+ * @model/data - Data Services
  *
- * The Data layer provides service interfaces for CRUD operations
- * on Model entities. These services abstract the underlying
- * persistence layer (semantic models, FactStore, etc.) from the MVC components.
- *
- * Architecture:
- * - Services are stateless, pure functions
- * - Each service can be backed by semantic queries, form stores, or mocks
- * - Services can be mocked for testing
+ * Data access services for CRUD operations on entities.
+ * These are separate from execution engines.
  */
 
 // Entity service
@@ -30,7 +24,7 @@ export {
   mockDashboardService
 } from './dashboard.service';
 
-// FactStore - Root GDSL interface (mocked for MVC development)
+// FactStore - Mock interface (for standalone BI, no Logic dependency)
 export {
   type Appearance,
   type Fact,
@@ -44,45 +38,3 @@ export {
   setFactStore,
   resetFactStore,
 } from './fact-store';
-
-// Data SDSL execution stubs
-export {
-  PolarsExecutionEngine,
-  type PolarsDataset,
-  type ExecutionOptions,
-  type ExecutionResult,
-} from './polars-engine';
-
-export {
-  SqlEngine,
-  type SqlQuery,
-} from './sql-engine';
-
-export {
-  SemanticHydrator,
-  type SemanticDataService,
-  type SemanticResult,
-  type HydratorContext,
-  type HydratorSpec,
-  type HydratorSnapshot,
-  type RowLike,
-  type FormBinding,
-  type CollectionBinding,
-  type MetricBinding,
-} from './semantic-hydrator';
-
-// Data SDSL with Malloy IR generation
-export {
-  defineModel,
-  DataModel,
-  DataView,
-  type DataModelConfig,
-  type MeasureDefinition,
-  type DimensionDefinition,
-  type JoinDefinition,
-  type ViewQuery,
-  sum,
-  count,
-  avg,
-  dimension,
-} from './sdsl';

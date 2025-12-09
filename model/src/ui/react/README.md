@@ -1,6 +1,14 @@
-# React UI Components - Shape Renderers
+# React UI Components - Basic Dashboard Components
 
-This directory contains React components that render Shape objects directly to React elements.
+This directory contains **basic, reusable dashboard components** that render Shape objects directly to React elements.
+
+**Structure:**
+- `components/` = Basic dashboard components (Button, Card, List, etc.)
+- `sdsl/` = React SDSL adapters/controllers
+
+**Note:** This is separate from Malloy-specific components (`ui/malloy/`):
+- `ui/react/components/` = Basic dashboard components
+- `ui/malloy/components/` = Malloy-specific components (ViewRenderer, DashboardRenderer, etc.)
 
 ## Architecture
 

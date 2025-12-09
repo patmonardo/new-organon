@@ -1,82 +1,50 @@
 /**
- * MVC SDSL - Special Data Science Language for @model
+ * @model/sdsl - SDSL Core (Species DSL)
  *
- * The MVC SDSL is a Client of the @logic Form Processor.
- * The FactStore is the First Speaker - this SDSL receives and transforms.
+ * Root SDSL Substrate - The System Bus and FCI (Formal Concept Integration)
  *
- * Architecture:
+ * This is the foundational layer where:
+ * - Agent-MVC is the Root Synthesis (Universal Speaker of GDSL + Every SDSL)
+ * - Form-MVC is the Client of the Form Processor
+ * - All UI SDSLs (React, Radix, Malloy) are particular implementations
  *
- *   @logic/FactStore (First Speaker)
- *         │
- *         │ speaks FormShape
- *         ▼
- *   Form Processor (Host)
- *         │
- *         │ runs
- *         ▼
- *   MVC SDSL (Client)
- *         │
- *         ├── FormModel (State:Structure)
- *         ├── FormView (Representation:Perspective)
- *         └── FormController (Action:Rule)
- *                   │
- *                   │ outputs
- *                   ▼
- *             Generic Display Language
- *                   │
- *                   │ adapted by
- *                   ▼
- *             Runtime Adapters (React, Nest, CLI, etc.)
+ * The Agent alone speaks both GDSL (Genera DSL) and Every SDSL (Sarvadharma).
+ * The root sdsl/ folder is the System Bus - the integration point for all SDSLs.
+ *
+ * Standalone BI package - zero dependencies on GDS/GDSL/Logic/Task.
  */
 
-// Core types
-export * from './types';
+// Core SDSL (semantic modeling)
+export {
+  defineModel,
+  DataModel,
+  DataView,
+  type DataModelConfig,
+  type MeasureDefinition,
+  type DimensionDefinition,
+  type JoinDefinition,
+  type ViewQuery,
+  type ViewSpec,
+  type FilterDefinition,
+  type ViewParameter,
+  sum,
+  count,
+  avg,
+  dimension,
+} from '../data/sdsl';
 
-// Base classes
+// Form MVC Core (Client of Form Processor)
 export * from './form-model';
 export * from './form-view';
 export * from './form-controller';
 
-// Adapter interface
-export * from './adapter';
-
-// React adapter (Tailwind components)
-export * from './react-adapter';
-
-// React Shape adapter (Direct Shape rendering - preferred)
-export * from './react-shape-adapter';
-
-// React Shape View (Direct Shape production - preferred)
-export * from './react-shape-view';
-
-// Radix/Shadcn-inspired adapter
-export * from './radix-adapter';
-export * from './radix-primitives';
-
-// React MVC dyad (View + Controller for React/Next.js)
-export * from './react-view';
-export * from './react-controller';
-
-// =============================================================================
-// AGENT MVC - FactStore Client SDK for Agents
-// =============================================================================
-// The Agent MVC is the agent-facing interface to FactStore.
-// While Form MVC renders for humans (DisplayDocument → React),
-// Agent MVC renders for agents (ContextDocument → Prompts/Functions/Graphs).
-//
-// Pipeline: GraphStore → FactStore → KnowledgeStore
-//                            ↑
-//                     Agent MVC (here)
-// =============================================================================
-
-// Agent Model (relevance, provenance, confidence overlays)
+// Agent MVC Core (Root Synthesis - Universal Speaker)
+// The Agent is the Root Meaning of MVC - it speaks GDSL and Every SDSL
 export * from './agent-model';
-
-// Agent View (ContextDocument - agent's display language)
 export * from './agent-view';
-
-// Agent Controller (query, infer, assert, retract, hypothesize)
 export * from './agent-controller';
-
-// Agent Adapter (prompt, function call, GraphQL, RDF, JSON-LD)
 export * from './agent-adapter';
+
+// Types and adapters (Universal adapter interface)
+export * from './types';
+export * from './adapter';
