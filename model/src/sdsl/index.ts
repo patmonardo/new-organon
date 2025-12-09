@@ -43,6 +43,12 @@ export * from './adapter';
 // React adapter (Tailwind components)
 export * from './react-adapter';
 
+// React Shape adapter (Direct Shape rendering - preferred)
+export * from './react-shape-adapter';
+
+// React Shape View (Direct Shape production - preferred)
+export * from './react-shape-view';
+
 // Radix/Shadcn-inspired adapter
 export * from './radix-adapter';
 export * from './radix-primitives';

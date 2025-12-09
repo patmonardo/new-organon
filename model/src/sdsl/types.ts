@@ -139,10 +139,15 @@ export interface ListResult<T> {
 // ============================================================
 // DISPLAY PRIMITIVES - Generic Display Language Elements
 // ============================================================
+// NOTE: DisplayDocument/DisplayElement are being phased out in favor of
+// direct Shape rendering (ButtonShape, ListShape, CardShape, etc.)
+// See react-shape-adapter.tsx and react-shape-view.tsx for the new approach.
+// These types are kept for backward compatibility with existing FormView/ReactView.
 
 /**
  * DisplayElement: A generic display element
  * This is what the View produces and Adapters consume
+ * @deprecated Use Shape objects directly (ButtonShape, ListShape, etc.)
  */
 export interface DisplayElement {
   type: string;
@@ -160,6 +165,7 @@ export const DisplayElementSchema: z.ZodType<DisplayElement> = z.object({
 
 /**
  * DisplayLayout: Layout container for display elements
+ * @deprecated Use Shape objects directly (ButtonShape, ListShape, etc.)
  */
 export const DisplayLayoutSchema = z.object({
   type: z.enum(['stack', 'row', 'grid', 'card', 'page']),
@@ -174,6 +180,7 @@ export type DisplayLayout = z.infer<typeof DisplayLayoutSchema>;
 /**
  * DisplayDocument: Complete display output from the View
  * This is the Generic Display Language document
+ * @deprecated Use Shape objects directly (ButtonShape, ListShape, etc.)
  */
 export const DisplayDocumentSchema = z.object({
   title: z.string().optional(),

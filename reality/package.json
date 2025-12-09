@@ -1,0 +1,13 @@
+{
+  "name": "@organon/reality",
+  "version": "0.1.0",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "cargo build -p reality",
+    "test": "cargo test -p reality"
+  },
+  "engines": {
+    "node": ">= 10"
+  }
+}

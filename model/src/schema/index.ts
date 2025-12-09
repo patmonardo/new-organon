@@ -17,8 +17,8 @@ export * from './controller';
 
 // Data Model shapes
 export * from './shape';
-export * from './dashboard';
-// export * from './card';  // conflicts with dashboard StatCardSchema
+// export * from './dashboard';
+export * from './card';
 export * from './table';
 // export * from './chart';  // needs visualization module
 export * from './presentation';
@@ -28,4 +28,6 @@ export * from './list';
 export * from './link';
 export * from './text';
 export * from './button';
+export * from './font';
+export * from './image';
 export * from './radix';

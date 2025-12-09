@@ -7,7 +7,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Pat <pat@example.com>"]
 license = "MIT"
-repository = "https://github.com/pat/new-organon"
+repository = "https://github.com/pat/organon"
 
 [workspace.dependencies]
 # Common dependencies for all crates

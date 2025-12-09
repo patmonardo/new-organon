@@ -100,28 +100,6 @@ export class ReactView<T extends FormShape = FormShape> extends SimpleFormView<T
   }
 
   /**
-   * Render a single field by ID
-   */
-  renderFieldById(fieldId: string, handler?: FormHandler): React.ReactNode {
-    const field = this._model.shape.fields.find((f: { id: string }) => f.id === fieldId);
-    if (!field) return null;
-
-    // Create a field display element
-    const displayElement: DisplayElement = {
-      type: 'field',
-      props: {
-        id: field.id,
-        type: field.type,
-        label: field.label || field.id,
-        required: field.required,
-        disabled: field.disabled || this._mode === 'view',
-        value: field.value,
-      },
-    };
-    return renderElement(displayElement, fieldId, { handler, mode: this._mode });
-  }
-
-  /**
    * Render just the actions
    */
   renderActionsOnly(handler?: FormHandler): React.ReactNode {
@@ -175,49 +153,6 @@ export class ReactView<T extends FormShape = FormShape> extends SimpleFormView<T
 // ============================================================
 // REACT COMPONENT WRAPPERS
 // ============================================================
-
-/**
- * FormShapeRenderer: Functional component for rendering FormShape
- */
-export interface FormShapeRendererProps<T extends FormShape = FormShape> {
-  shape: T;
-  mode?: FormMode;
-  handler?: FormHandler;
-  className?: string;
-}
-
-export function FormShapeRenderer<T extends FormShape>({
-  shape,
-  mode = 'view',
-  handler,
-  className,
-}: FormShapeRendererProps<T>): React.ReactElement {
-  const view = ReactView.fromShape(shape, mode, { className });
-  const { element } = view.renderReact(handler);
-  return <>{element}</>;
-}
-
-/**
- * FormWithAction: Form component with Server Action
- */
-export interface FormWithActionProps<T extends FormShape = FormShape> {
-  shape: T;
-  mode?: FormMode;
-  action: (formData: FormData) => Promise<void>;
-  handler?: FormHandler;
-  className?: string;
-}
-
-export function FormWithAction<T extends FormShape>({
-  shape,
-  mode = 'edit',
-  action,
-  handler,
-  className,
-}: FormWithActionProps<T>): React.ReactElement {
-  const view = ReactView.fromShape(shape, mode, { className });
-  return <>{view.renderForm(action, handler)}</>;
-}
 
 // ============================================================
 // HOOKS (for future client-side state management)

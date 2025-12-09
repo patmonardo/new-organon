@@ -5,12 +5,6 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": {
-      "@organon/gdsl": [
-        "../gdsl/dist/index"
-      ],
-      "@organon/gdsl/*": [
-        "../gdsl/dist/*"
-      ],
       "@organon/logic": [
         "../logic/dist/index"
       ],
@@ -22,12 +16,6 @@
       ],
       "@organon/model/*": [
         "../model/dist/*"
-      ],
-      "@organon/reality": [
-        "../reality/dist/index"
-      ],
-      "@organon/reality/*": [
-        "../reality/dist/*"
       ]
     }
   },

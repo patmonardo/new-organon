@@ -6,7 +6,10 @@
   "workspaces": [
     "logic",
     "model",
-    "task"
+    "task",
+    "gds",
+    "gdsl",
+    "reality"
   ],
   "scripts": {
     "all": "pnpm clean && pnpm install && pnpm build && pnpm test",

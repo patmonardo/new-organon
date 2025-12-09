@@ -11,12 +11,6 @@
       "DOM.Iterable"
     ],
      "paths": {
-      "@organon/gdsl": [
-        "../gdsl/dist/index"
-      ],
-      "@organon/gdsl/*": [
-        "../gdsl/dist/*"
-      ],
       "@organon/logic": [
         "../logic/dist/index"
       ],
@@ -29,17 +23,17 @@
       "@organon/model/*": [
         "../model/dist/*"
       ],
-      "@organon/reality": [
-        "../reality/dist/index"
-      ],
-      "@organon/reality/*": [
-        "../reality/dist/*"
-      ],
       "@model": [
         "src/model/index"
       ],
       "@model/*": [
         "src/model/*"
+      ],
+      "@/model": [
+        "./src/index"
+      ],
+      "@/model/*": [
+        "./src/*"
       ],
       "@relative": [
         "../logic/src/relative/index"

@@ -697,11 +697,12 @@ name = "gdsl"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "proc-macro2",
- "quote",
+ "log",
+ "napi",
+ "napi-build",
+ "napi-derive",
  "serde",
  "serde_json",
- "syn 2.0.106",
  "thiserror",
 ]
 

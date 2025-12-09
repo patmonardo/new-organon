@@ -23,5 +23,12 @@
     "**/*.test.ts",
     "**/*.spec.ts",
     "**/*.ts"
+  ],
+  "exclude": [
+    "**/vitest.config.ts",
+    "**/vite.config.ts",
+    "node_modules",
+    "dist",
+    "target"
   ]
 }
