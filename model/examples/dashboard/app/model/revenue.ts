@@ -3,16 +3,34 @@ import { prisma } from "@data/client";
 import {
   CreateRevenueSchema,
   UpdateRevenueSchema,
+  RevenueShapeSchema,
 } from "@/data/schema/revenue";
 import type {
   Revenue,
+  RevenueShape,
   CreateRevenue,
   UpdateRevenue,
   RevenueMetrics,
 } from "@/data/schema/revenue";
 import type { OperationResult } from "@/data/schema/base";
+import { BaseModel } from "./base";
 
-export class RevenueModel {
+export class RevenueModel extends BaseModel<RevenueShape> {
+  constructor(revenue?: Revenue) {
+    const shape: RevenueShape = {
+      base: revenue || ({} as Revenue),
+      state: {
+        status: "active",
+        validation: {},
+        message: undefined,
+      },
+    };
+
+    super(RevenueShapeSchema, shape);
+  }
+
+  // ===== CORE CRUD OPERATIONS =====
+
   static async create(data: CreateRevenue): Promise<OperationResult<Revenue>> {
     try {
       const validated = CreateRevenueSchema.safeParse({

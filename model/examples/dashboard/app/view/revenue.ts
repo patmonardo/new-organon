@@ -9,15 +9,5 @@ export class RevenueView extends FormView<RevenueFormShape> {
         super(new RevenueForm(revenue))
     }
 
-    update(): void {
-      // Implement the update method to update the revenue form
-    }
-
-    async handleSubmit(): Promise<void> {
-      // Implement the handleSubmit method to handle form submission
-    }
-
-    handleCancel(): void {
-      // Implement the handleCancel method to handle form cancellation
-    }
   }
+
