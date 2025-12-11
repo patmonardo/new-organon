@@ -1,4 +1,4 @@
-//@/lib/data/schema/invoice.ts
+//@schema/invoice.ts
 import { z } from 'zod';
 import { BaseSchema, BaseStateSchema } from './base';
 import { CustomerSchema } from './customer';

@@ -1,6 +1,6 @@
 "use server";
 
-import { CustomerController } from "@/(controller)/inner/customer";
+import { CustomerController } from "@controller/customer";
 
 /**
  * Server action that proxies to the controller method for updating a customer

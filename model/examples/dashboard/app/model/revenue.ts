@@ -1,16 +1,16 @@
-//@/lib/model/revenue.ts
-import { prisma } from "../data/client";
+//@model/revenue.ts
+import { prisma } from "@data/client";
 import {
   CreateRevenueSchema,
   UpdateRevenueSchema,
-} from "../schema/revenue";
+} from "@schema/revenue";
 import type {
   Revenue,
   CreateRevenue,
   UpdateRevenue,
   RevenueMetrics,
-} from "../schema/revenue";
-import type { OperationResult } from "../schema/base";
+} from "@schema/revenue";
+import type { OperationResult } from "@schema/base";
 
 export class RevenueModel {
   static async create(data: CreateRevenue): Promise<OperationResult<Revenue>> {

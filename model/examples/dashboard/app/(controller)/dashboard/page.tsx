@@ -1,14 +1,14 @@
 //@/(controller)/dashboard/page.tsx
 import { Suspense } from "react";
-import { Card } from "@/ui/graphics/card/card";
-import { InvoiceController } from "@/(controller)/inner/invoice";
-import { RevenueController } from "@/(controller)/inner/revenue";
-import { DashboardModel } from "@/lib/model/dashboard";
+import { Card } from "@graphics/cards/card";
+import { InvoiceController } from "@controller/invoice";
+import { RevenueController } from "@controller/revenue";
+import { DashboardModel } from "@model/dashboard";
 import {
   CardSkeleton,
   RevenueChartSkeleton,
   LatestInvoicesSkeleton,
-} from "@/ui/graphics/style/skeletons";
+} from "@graphics/styles/skeletons";
 
 export default async function Page(props: {
   searchParams?: Promise<{

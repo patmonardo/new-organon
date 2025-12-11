@@ -1,10 +1,10 @@
-import { prisma } from "@/lib/data/client";
-import type { OperationResult } from "@/lib/data/schema/base";
+import { prisma } from "@data/client";
+import type { OperationResult } from "@schema/base";
 import {
   InvoiceShapeSchema,
   CreateInvoiceSchema,
   UpdateInvoiceSchema,
-} from "@/lib/data/schema/invoice";
+} from "@schema/invoice";
 import type {
   Invoice,
   InvoiceShape,
@@ -12,7 +12,7 @@ import type {
   UpdateInvoice,
   InvoiceWithCustomer,
   InvoiceStatus,
-} from "@/lib/data/schema/invoice";
+} from "@schema/invoice";
 import { BaseModel } from "./base";
 
 export class InvoiceModel extends BaseModel<InvoiceShape> {

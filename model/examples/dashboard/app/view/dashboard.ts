@@ -1,5 +1,5 @@
-//@/ui/view/dashboard.ts
-import { InvoiceWithCustomer } from '@/lib/data/schema/invoice';
+//@view/dashboard.ts
+import { InvoiceWithCustomer } from '@schema/invoice';
 
 export type DashboardCardData = {
   numberOfCustomers: number;

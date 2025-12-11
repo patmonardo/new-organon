@@ -1,7 +1,7 @@
-//@/ui/view/revenue.ts
-import { Revenue } from '@/lib/data/schema/revenue'
-import { RevenueForm } from '@/ui/graphics/form/revenue'
-import { RevenueFormShape } from '@/ui/graphics/schema/revenue';
+//@view/revenue.ts
+import { Revenue } from '@schema/revenue'
+import { RevenueForm } from '@graphics/forms/revenue'
+import { RevenueFormShape } from '@graphics/schema/revenue';
 import { FormView } from './form'
 
 export class RevenueView extends FormView<RevenueFormShape> {

@@ -1,9 +1,9 @@
-//@/lib/model/dashboard.ts
-import type { InvoiceWithCustomer } from "@/lib/data/schema/invoice";
-import type { RevenueMetrics } from "@/lib/data/schema/revenue";
-import { CustomerModel } from "@/lib/model/customer";
-import { InvoiceModel } from "@/lib/model/invoice";
-import { RevenueModel } from "@/lib/model/revenue";
+//@model/dashboard.ts
+import type { InvoiceWithCustomer } from "@schema/invoice";
+import type { RevenueMetrics } from "@schema/revenue";
+import { CustomerModel } from "@model/customer";
+import { InvoiceModel } from "@model/invoice";
+import { RevenueModel } from "@model/revenue";
 
 // Type definitions for the data we'll be returning
 type CardData = {

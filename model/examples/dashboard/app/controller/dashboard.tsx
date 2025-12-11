@@ -1,1 +1,1 @@
-//@/(controller)/inner/dashboard.tsx
+//@controller/dashboard.tsx

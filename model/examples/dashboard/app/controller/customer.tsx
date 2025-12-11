@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import type { FormHandler } from "@/ui/graphics/schema/form";
-import { CustomerModel } from "@/lib/model/customer";
-import { CustomerView } from "@/ui/view/customer";
-import { CreateCustomer, UpdateCustomer } from "@/lib/data/schema/customer";
+import type { FormHandler } from "@graphics/schema/form";
+import { CustomerModel } from "@model/customer";
+import { CustomerView } from "@view/customer";
+import { CreateCustomer, UpdateCustomer } from "@schema/customer";
 import createCustomer from "@/(controller)/customers/actions/create";
 import updateCustomer from "@/(controller)/customers/actions/update";
 import cancelCustomer from "@/(controller)/customers/actions/cancel";

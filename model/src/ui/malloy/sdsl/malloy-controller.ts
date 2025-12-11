@@ -56,33 +56,14 @@ export class MalloyController {
 
   /**
    * Render dashboard - orchestrates multiple views
+   *
+   * EXCLUDED FOR NOW - Stub implementation
    */
   async renderDashboard(
     viewSpecs: ViewSpec[]
   ): Promise<React.ReactNode> {
-    // Execute all views
-    const results = await Promise.all(
-      viewSpecs.map(spec => this.malloyModel.executeView(spec))
-    );
-
-    // Render all views
-    const views = await Promise.all(
-      viewSpecs.map((spec, i) =>
-        this.malloyView.display("view", "jsx", {
-          viewSpec: spec,
-          result: results[i],
-        })
-      )
-    );
-
-    // Return dashboard layout
-    return (
-      <div className="malloy-dashboard">
-        {views.map((view, i) => (
-          <div key={viewSpecs[i].id}>{view}</div>
-        ))}
-      </div>
-    );
+    // Stub - excluded while focusing on transactional CRUD
+    return null;
   }
 }
 

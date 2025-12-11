@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { InvoiceController } from "@/(controller)/inner/invoice";
+import { InvoiceController } from "@controller/invoice";
 
 export default async function Page(props: {
   searchParams?: Promise<{

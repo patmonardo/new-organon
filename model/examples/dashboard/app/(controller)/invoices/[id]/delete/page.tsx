@@ -1,5 +1,5 @@
 //@/(controller)/invoices/[id]/delete/page.tsx
-import { InvoiceController } from "@/(controller)/inner/invoice";
+import { InvoiceController } from "@controller/invoice";
 
 export default async function Page(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;

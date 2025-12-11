@@ -1,6 +1,6 @@
-//@/ui/view/customer.test.ts
+//@view/customer.test.ts
 import { describe, it, expect } from 'vitest'
-import { FormHandler } from '@/ui/graphics/schema/form'
+import { FormHandler } from '@graphics/schema/form'
 import { CustomerView } from './customer'
 
 describe('CustomerView', () => {

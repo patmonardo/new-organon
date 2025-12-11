@@ -1,4 +1,4 @@
-//@/lib/data/schema/revenue.ts
+//@schema/revenue.ts
 import { z } from 'zod'
 import { BaseSchema, BaseStateSchema } from './base'
 

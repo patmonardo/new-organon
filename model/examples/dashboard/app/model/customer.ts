@@ -1,17 +1,17 @@
-//@/lib/model/customer.ts
-import { prisma } from "@/lib/data/client";
-import type { OperationResult } from "@/lib/data/schema/base";
+//@model/customer.ts
+import { prisma } from "@data/client";
+import type { OperationResult } from "@schema/base";
 import type {
   Customer,
   CustomerShape,
   CreateCustomer,
   UpdateCustomer,
-} from "@/lib/data/schema/customer";
+} from "@schema/customer";
 import {
   CustomerShapeSchema,
   CreateCustomerSchema,
   UpdateCustomerSchema,
-} from "@/lib/data/schema/customer";
+} from "@schema/customer";
 import { BaseModel } from "./base";
 
 export class CustomerModel extends BaseModel<CustomerShape> {

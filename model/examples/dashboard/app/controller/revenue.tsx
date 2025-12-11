@@ -1,6 +1,6 @@
-import { RevenueChart } from "@/ui/graphics/chart/revenue";
-import { RevenueChartDisplay } from "@/ui/graphics/schema/revenue";
-import { RevenueModel } from "@/lib/model/revenue";
+import { RevenueChart } from "@graphics/charts/revenue";
+import { RevenueChartDisplay } from "@graphics/schema/revenue";
+import { RevenueModel } from "@model/revenue";
 
 export class RevenueController {
   /**

@@ -18,7 +18,7 @@ export const DataPropertySchema = z.object({
   required: z.boolean().default(false),
   unique: z.boolean().default(false),
   default: z.any().optional(),
-  validation: z.record(z.any()).optional(),
+  validation: z.record(z.string(), z.any()).optional(),
   // Reference to other entities (Link structure)
   reference: z.object({
     entity: z.string(),
@@ -29,7 +29,7 @@ export const DataPropertySchema = z.object({
 // Entity definition - pure data structure
 export const DataEntitySchema = z.object({
   name: z.string(),
-  properties: z.record(DataPropertySchema),
+  properties: z.record(z.string(), DataPropertySchema),
   primaryKey: z.string().default('id'),
 });
 
@@ -38,7 +38,7 @@ export type DataEntity = z.infer<typeof DataEntitySchema>;
 
 // Domain schema - collection of entities
 export const DataSchemaDefinition = z.object({
-  entities: z.record(DataEntitySchema),
+  entities: z.record(z.string(), DataEntitySchema),
 });
 
 export type DataSchema = z.infer<typeof DataSchemaDefinition>;

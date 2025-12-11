@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { CustomerController } from "@/(controller)/inner/customer";
+import { CustomerController } from "@controller/customer";
 
 export default async function Page(props: {
   searchParams?: Promise<{

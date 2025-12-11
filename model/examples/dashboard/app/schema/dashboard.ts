@@ -1,4 +1,4 @@
-//@/lib/data/schema/dashboard.ts
+//@schema/dashboard.ts
 import { z } from 'zod'
 
 // Widget types we support
@@ -20,7 +20,7 @@ export const WidgetSchema = z.object({
     w: z.number(),
     h: z.number()
   }),
-  config: z.record(z.unknown()).optional()
+  config: z.record(z.string(), z.unknown()).optional()
 })
 
 // Layout configuration
@@ -32,7 +32,7 @@ export const LayoutSchema = z.object({
 
 // The complete dashboard schema
 export const DashboardSchema = z.object({
-  id: z.string(),
+  id: z.uuid(),
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   layout: LayoutSchema,

@@ -23,7 +23,7 @@ export interface DimensionDefinition {
 }
 
 export interface JoinDefinition {
-  model: DataModel<any>;
+  model: DataModel;
   on: string;
   type: 'left' | 'inner' | 'full';
 }
@@ -43,7 +43,7 @@ export interface ViewQuery {
   filter?: Record<string, any>;
   limit?: number;
   order_by?: Array<{ field: string; direction: 'asc' | 'desc' }>;
-  
+
   // Malloy-Lite extensions (optional, non-breaking)
   where?: FilterDefinition[];  // Structured filters
   parameters?: ViewParameter[]; // View parameters

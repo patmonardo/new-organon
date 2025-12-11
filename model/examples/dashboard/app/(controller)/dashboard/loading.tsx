@@ -1,5 +1,5 @@
 //@/(controller)/dashboard/loading.tsx
-import { DashboardSkeleton } from '@/ui/graphics/style/skeletons';
+import { DashboardSkeleton } from '@graphics/styles/skeletons';
 
 export default function Loading() {
     return <DashboardSkeleton />;

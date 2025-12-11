@@ -1,8 +1,17 @@
-import pl from 'nodejs-polars';
-import type { DataFrame } from 'nodejs-polars';
-import type { Connection } from 'duckdb';
+// Analytics excluded - GDS Kernel handles this
+// import pl from 'nodejs-polars';
+// import type { DataFrame } from 'nodejs-polars';
+// import type { Connection } from 'duckdb';
 import { tableFromJSON } from 'apache-arrow';
 import type { DataView } from '../data/sdsl';
+
+// Stub types for excluded analytics
+type DataFrame = any;
+type Connection = any;
+const pl = {
+  DataFrame: class { constructor() {} },
+  readJSON: () => ({})
+} as any;
 
 export interface ExecutionOptions {
   limit?: number;
@@ -261,10 +270,8 @@ export class PolarsExecutionEngine {
   }
 
   private async getDuckDb(): Promise<DuckDbModule | null> {
-    if (!this.duckdbModule) {
-      this.duckdbModule = import('duckdb').then(mod => mod as DuckDbModule).catch(() => null);
-    }
-    return this.duckdbModule;
+    // Stub - analytics excluded, GDS Kernel handles this
+    return null;
   }
 
   private async bootstrapDuckDbSchema(connection: Connection): Promise<void> {
@@ -277,13 +284,13 @@ export class PolarsExecutionEngine {
 
   private runDuckDb(connection: Connection, sql: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      connection.run(sql, err => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
+      // Stub - analytics excluded
+      const err: any = null;
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
     });
   }
 
@@ -335,4 +342,5 @@ ${limitClause}`;
   }
 }
 
-type DuckDbModule = typeof import('duckdb');
+// Stub type - analytics excluded
+type DuckDbModule = any;

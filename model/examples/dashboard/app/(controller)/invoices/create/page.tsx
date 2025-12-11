@@ -1,4 +1,4 @@
-import { InvoiceController } from "@/(controller)/inner/invoice";
+import { InvoiceController } from "@controller/invoice";
 
 export default async function CreateInvoicePage() {
   return (

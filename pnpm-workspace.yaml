@@ -5,6 +5,7 @@ packages:
   - gds
   - gdsl
   - reality
+  - model/examples/dashboard
 
 ignoredBuiltDependencies:
   - '@firebase/util'

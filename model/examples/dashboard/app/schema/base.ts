@@ -1,9 +1,9 @@
-//@/lib/data/schema/base.ts
+//@schema/base.ts
 import { z } from 'zod'
 
 // Base Schema (all entities have these properties)
 export const BaseSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   createdAt: z.date(),
   updatedAt: z.date(),
 })
@@ -11,7 +11,7 @@ export const BaseSchema = z.object({
 // Base State (runtime state)
 export const BaseStateSchema = z.object({
   status: z.enum(['active', 'archived', 'deleted']),
-  validation: z.record(z.array(z.string())).optional(),
+  validation: z.record(z.string(), z.array(z.string())).optional(),
   message: z.string().optional()
 })
 

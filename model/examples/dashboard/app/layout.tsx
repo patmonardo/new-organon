@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata = {
-  title: "Dashboard V2 Demo",
+  title: "Dashboard V4 Demo",
   description: "Example data modeling dashboard",
 };
 

@@ -5,6 +5,7 @@
     "outDir": "dist",
     "baseUrl": ".",
     "jsx": "react-jsx",
+    "types": ["node"],
     "lib": [
       "ES2022",
       "DOM",
@@ -52,9 +53,11 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
-    "examples/**/*.ts",
-    "examples/**/*.tsx",
+    "prisma.config.ts",
     "test/link.test.ts",
     "test/list.test.ts"
+  ],
+  "exclude": [
+    "examples/**/*"
   ]
 }
