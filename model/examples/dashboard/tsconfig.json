@@ -23,19 +23,19 @@
         "./app/*"
       ],
       "@schema/*": [
-        "app/data/schema/*"
-      ],
-      "@data/*": [
-        "./app/data/*"
-      ],
-      "@graphics/*": [
-        "./app/graphics/*"
+        ".app/data/schema/*"
       ],
       "@controller": [
         "./app/controller/index"
       ],
       "@controller/*": [
         "./app/controller/*"
+      ],
+      "@data/*": [
+        "./app/data/*"
+      ],
+      "@graphics/*": [
+        "./app/graphics/*"
       ],
       "@model": [
         "./app/model/index"

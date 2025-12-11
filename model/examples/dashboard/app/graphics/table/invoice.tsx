@@ -109,7 +109,7 @@ export class InvoiceTable extends Table<TableShape> {
     column: TableColumn,
     invoice: InvoiceWithCustomer
   ): ReactNode {
-    console.log("Rendering cell for column:", column.key);
+    // console.log("Rendering cell for column:", column.key);
     switch (column.key) {
       case "customer":
         return (
