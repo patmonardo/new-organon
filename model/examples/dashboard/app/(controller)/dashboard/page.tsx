@@ -1,6 +1,6 @@
 //@/(controller)/dashboard/page.tsx
 import { Suspense } from "react";
-import { Card } from "@graphics/cards/card";
+import { Card } from "@/graphics/card/card";
 import { InvoiceController } from "@controller/invoice";
 import { RevenueController } from "@controller/revenue";
 import { DashboardModel } from "@model/dashboard";
@@ -8,7 +8,7 @@ import {
   CardSkeleton,
   RevenueChartSkeleton,
   LatestInvoicesSkeleton,
-} from "@graphics/styles/skeletons";
+} from "@/graphics/style/skeletons";
 
 export default async function Page(props: {
   searchParams?: Promise<{

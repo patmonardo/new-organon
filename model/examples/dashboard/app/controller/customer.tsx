@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { FormHandler } from "@graphics/schema/form";
 import { CustomerModel } from "@model/customer";
 import { CustomerView } from "@view/customer";
-import { CreateCustomer, UpdateCustomer } from "@schema/customer";
+import { CreateCustomer, UpdateCustomer } from "@/data/schema/customer";
 import createCustomer from "@/(controller)/customers/actions/create";
 import updateCustomer from "@/(controller)/customers/actions/update";
 import cancelCustomer from "@/(controller)/customers/actions/cancel";

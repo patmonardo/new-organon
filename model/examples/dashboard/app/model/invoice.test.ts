@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { InvoiceModel } from './invoice';
-import { CreateInvoice, UpdateInvoice } from '../schema/invoice';
+import { CreateInvoice, UpdateInvoice } from '../data/schema/invoice';
 import { CustomerModel } from './customer';
-import { CreateCustomer } from '../schema/customer';
+import { CreateCustomer } from '../data/schema/customer';
 import { prisma } from '../data/client';
 import { v4 as uuidv4 } from 'uuid';
 

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { FormHandler } from "@graphics/schema/form";
 import { InvoiceModel } from "@model/invoice";
 import { InvoiceView } from "@view/invoice";
-import { CreateInvoice, UpdateInvoice } from "@schema/invoice";
+import { CreateInvoice, UpdateInvoice } from "@/data/schema/invoice";
 import createInvoice from "@/(controller)/invoices/actions/create";
 import updateInvoice from "@/(controller)/invoices/actions/update";
 import cancelInvoice from "@/(controller)/invoices/actions/cancel";

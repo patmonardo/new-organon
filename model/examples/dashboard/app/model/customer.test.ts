@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { CustomerModel } from './customer';
-import { CreateCustomer, UpdateCustomer } from '../schema/customer';
+import { CreateCustomer, UpdateCustomer } from '../data/schema/customer';
 import { prisma } from '../data/client';
 import { v4 as uuidv4 } from 'uuid';
 

@@ -1,6 +1,6 @@
 //@view/revenue.ts
-import { Revenue } from '@schema/revenue'
-import { RevenueForm } from '@graphics/forms/revenue'
+import { Revenue } from '@/data/schema/revenue'
+import { RevenueForm } from '@graphics/form/revenue'
 import { RevenueFormShape } from '@graphics/schema/revenue';
 import { FormView } from './form'
 

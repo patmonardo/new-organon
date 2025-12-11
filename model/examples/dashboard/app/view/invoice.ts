@@ -1,10 +1,10 @@
 //@view/invoice.ts
 import { ReactNode } from "react";
-import { OperationResult } from "@schema/base";
-import { Invoice, InvoiceWithCustomer } from "@schema/invoice";
+import { OperationResult } from "@/data/schema/base";
+import { Invoice, InvoiceWithCustomer } from "@/data/schema/invoice";
 import { InvoiceFormShape } from "@graphics/schema/invoice";
-import { InvoiceForm } from "@graphics/forms/invoice";
-import { InvoiceTable } from "@graphics/tables/invoice";
+import { InvoiceForm } from "@graphics/form/invoice";
+import { InvoiceTable } from "@graphics/table/invoice";
 import { FormView } from "./form";
 
 export class InvoiceView extends FormView<InvoiceFormShape> {

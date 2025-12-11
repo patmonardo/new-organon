@@ -1,4 +1,4 @@
-import { RevenueChart } from "@graphics/charts/revenue";
+import { RevenueChart } from "@/graphics/chart/revenue";
 import { RevenueChartDisplay } from "@graphics/schema/revenue";
 import { RevenueModel } from "@model/revenue";
 

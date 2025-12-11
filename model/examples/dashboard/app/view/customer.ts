@@ -1,10 +1,10 @@
 //@view/customer.ts7
 import { ReactNode } from "react";
-import { OperationResult } from "@schema/base";
-import { Customer } from "@schema/customer";
+import { OperationResult } from "@/data/schema/base";
+import { Customer } from "@/data/schema/customer";
 import { CustomerFormShape } from "@graphics/schema/customer";
-import { CustomerForm } from "@graphics/forms/customer";
-import { CustomerTable } from "@graphics/tables/customer";
+import { CustomerForm } from "@graphics/form/customer";
+import { CustomerTable } from "@graphics/table/customer";
 import { FormView } from "./form";
 
 export class CustomerView extends FormView<CustomerFormShape> {

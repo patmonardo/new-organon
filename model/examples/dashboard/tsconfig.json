@@ -23,7 +23,7 @@
         "./app/*"
       ],
       "@schema/*": [
-        "./app/schema/*"
+        "app/data/schema/*"
       ],
       "@data/*": [
         "./app/data/*"

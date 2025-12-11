@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { RevenueModel } from "./revenue";
-import { CreateRevenue, UpdateRevenue } from "../schema/revenue";
+import { CreateRevenue, UpdateRevenue } from "../data/schema/revenue";
 import { prisma } from "../data/client";
 
 describe("RevenueModel (Database)", () => {

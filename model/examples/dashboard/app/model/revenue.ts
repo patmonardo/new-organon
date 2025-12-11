@@ -3,14 +3,14 @@ import { prisma } from "@data/client";
 import {
   CreateRevenueSchema,
   UpdateRevenueSchema,
-} from "@schema/revenue";
+} from "@/data/schema/revenue";
 import type {
   Revenue,
   CreateRevenue,
   UpdateRevenue,
   RevenueMetrics,
-} from "@schema/revenue";
-import type { OperationResult } from "@schema/base";
+} from "@/data/schema/revenue";
+import type { OperationResult } from "@/data/schema/base";
 
 export class RevenueModel {
   static async create(data: CreateRevenue): Promise<OperationResult<Revenue>> {

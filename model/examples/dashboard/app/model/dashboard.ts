@@ -1,6 +1,6 @@
 //@model/dashboard.ts
-import type { InvoiceWithCustomer } from "@schema/invoice";
-import type { RevenueMetrics } from "@schema/revenue";
+import type { InvoiceWithCustomer } from "@/data/schema/invoice";
+import type { RevenueMetrics } from "@/data/schema/revenue";
 import { CustomerModel } from "@model/customer";
 import { InvoiceModel } from "@model/invoice";
 import { RevenueModel } from "@model/revenue";

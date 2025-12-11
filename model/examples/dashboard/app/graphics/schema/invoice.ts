@@ -1,7 +1,7 @@
 //@graphics/schema/invoice.ts
 import { z } from "zod";
 import { FormOptionSchema, FormActionSchema, FormShapeSchema } from "./form";
-import { InvoiceStatusSchema } from "@schema/invoice";
+import { InvoiceStatusSchema } from "@/data/schema/invoice";
 
 // Invoice field identifiers
 const InvoiceFieldId = z.enum(["customerId", "amount", "date", "status"]);

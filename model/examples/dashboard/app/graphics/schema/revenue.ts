@@ -1,6 +1,6 @@
 //@graphics/schema/revenue.ts
 import { z } from "zod";
-import { TimeIntervalSchema } from "@schema/revenue";
+import { TimeIntervalSchema } from "@/data/schema/revenue";
 import { FormOptionSchema, FormActionSchema, FormShapeSchema } from "@graphics/schema/form";
 
 // Revenue field identifiers
