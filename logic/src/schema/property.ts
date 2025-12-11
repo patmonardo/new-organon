@@ -79,21 +79,53 @@ export const PropertyFacets = z.object({
 }).catchall(z.any());
 export type PropertyFacets = z.infer<typeof PropertyFacets>;
 
+// ==========================================
+// PROPERTY SHAPE (Pure Form for Neo4j)
+// ==========================================
+export const PropertyShapeSchema = z.object({
+  id: z.string(),
+  type: Type,
+  name: Label.optional(),
+
+  // Signature: operational interface
+  signature: PropertySignature.optional(),
+
+  // Facets: law/invariant structure
+  facets: PropertyFacets.optional(),
+
+  // State metadata
+  status: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  meta: z.record(z.string(), z.unknown()).optional(),
+
+  // Timestamps
+  createdAt: z
+    .number()
+    .optional()
+    .default(() => Date.now())
+    .optional(),
+  updatedAt: z
+    .number()
+    .optional()
+    .default(() => Date.now())
+    .optional(),
+});
+export type PropertyShape = z.infer<typeof PropertyShapeSchema>;
+
+// ==========================================
+// PROPERTY DOCUMENT (Envelope)
+// ==========================================
 // Doc shape (skeletal)
 export const PropertyDoc = z.object({
   core: PropertyCore,
   state: BaseState.default({}),
   signature: PropertySignature.optional(),
   facets: z.record(z.string(), z.any()).default({}),
+  property: PropertyShapeSchema.optional(), // EMBED PropertyShape
 });
 
 export const PropertySchema = BaseSchema.extend({
-  shape: z.object({
-    core: PropertyCore,
-    state: BaseState.default({}),            // <= ensure this
-    signature: z.object({}).catchall(z.any()).optional(),
-    facets: z.record(z.string(), z.any()).default({}),
-  }),
+  shape: PropertyDoc,
 });
 export type Property = z.infer<typeof PropertySchema>;
 

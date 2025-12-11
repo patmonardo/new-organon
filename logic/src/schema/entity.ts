@@ -73,12 +73,51 @@ export const EntityFacets = z.object({
 }).catchall(z.any());
 export type EntityFacets = z.infer<typeof EntityFacets>;
 
+// ==========================================
+// ENTITY SHAPE (Pure Form for Neo4j)
+// ==========================================
+// This is the concrete shape that gets persisted to FormDB
+export const EntityShapeSchema = z.object({
+  id: z.string(),
+  type: Type,
+  name: Label.optional(),
+  description: z.string().optional(),
+
+  // Signature: operational interface
+  signature: EntitySignature.optional(),
+
+  // Facets: dialectical structure
+  facets: EntityFacets.optional(),
+
+  // State metadata
+  status: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  meta: z.record(z.string(), z.unknown()).optional(),
+
+  // Timestamps
+  createdAt: z
+    .number()
+    .optional()
+    .default(() => Date.now())
+    .optional(),
+  updatedAt: z
+    .number()
+    .optional()
+    .default(() => Date.now())
+    .optional(),
+});
+export type EntityShape = z.infer<typeof EntityShapeSchema>;
+
+// ==========================================
+// ENTITY DOCUMENT (Envelope)
+// ==========================================
 // Shape doc
 const EntityDoc = z.object({
   core: EntityCore,
   state: EntityState.default({}),
   signature: EntitySignature.optional(),
   facets: z.record(z.string(), z.any()).default({}),
+  entity: EntityShapeSchema.optional(), // EMBED EntityShape
 });
 
 export const EntitySchema = BaseSchema.extend({

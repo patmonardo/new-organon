@@ -1,15 +1,14 @@
 import { Neo4jConnection } from "../connection";
-import { PropertyShape } from "../schema/property";
+import { AspectShape } from "../schema/aspect";
 import { v4 as uuidv4 } from "uuid";
 
 /**
- * PropertyShapeRepository
+ * AspectShapeRepository
  *
- * Manages the persistence of Property Shapes in Neo4j.
- * Properties represent Law/Invariant as Middle Terms mediating Entity ↔ Aspect.
- * Based on Ground, Condition, Facticity, Entity - the conditional genesis of ground:conditions.
+ * Manages the persistence of Aspect Shapes in Neo4j.
+ * Aspects represent spectral/relational perspectives - how essences appear in existence.
  */
-export class PropertyShapeRepository {
+export class AspectShapeRepository {
   private connection: Neo4jConnection;
 
   constructor(connection: Neo4jConnection) {
@@ -17,34 +16,34 @@ export class PropertyShapeRepository {
   }
 
   /**
-   * Save a property to Neo4j
+   * Save an aspect to Neo4j
    */
-  async saveProperty(propertyData: Partial<PropertyShape>): Promise<PropertyShape> {
+  async saveAspect(aspectData: Partial<AspectShape>): Promise<AspectShape> {
     const now = Date.now();
-    const property: PropertyShape = {
-      id: propertyData.id || uuidv4(),
-      type: propertyData.type || "property.unknown",
-      name: propertyData.name,
-      signature: propertyData.signature,
-      facets: propertyData.facets,
-      status: propertyData.status,
-      tags: propertyData.tags || [],
-      meta: propertyData.meta || {},
-      createdAt: propertyData.createdAt || now,
+    const aspect: AspectShape = {
+      id: aspectData.id || uuidv4(),
+      type: aspectData.type || "aspect.unknown",
+      name: aspectData.name,
+      signature: aspectData.signature,
+      facets: aspectData.facets,
+      status: aspectData.status,
+      tags: aspectData.tags || [],
+      meta: aspectData.meta || {},
+      createdAt: aspectData.createdAt || now,
       updatedAt: now,
     };
 
     // Prepare properties for Neo4j
     const props = {
-      id: property.id,
-      type: property.type,
-      name: property.name || null,
-      signature: property.signature ? JSON.stringify(property.signature) : null,
-      facets: property.facets ? JSON.stringify(property.facets) : null,
-      status: property.status || null,
-      meta: property.meta ? JSON.stringify(property.meta) : null,
-      createdAt: property.createdAt,
-      updatedAt: property.updatedAt,
+      id: aspect.id,
+      type: aspect.type,
+      name: aspect.name || null,
+      signature: aspect.signature ? JSON.stringify(aspect.signature) : null,
+      facets: aspect.facets ? JSON.stringify(aspect.facets) : null,
+      status: aspect.status || null,
+      meta: aspect.meta ? JSON.stringify(aspect.meta) : null,
+      createdAt: aspect.createdAt,
+      updatedAt: aspect.updatedAt,
     };
 
     const session = this.connection.getSession({ defaultAccessMode: "WRITE" });
@@ -52,36 +51,36 @@ export class PropertyShapeRepository {
       await session.executeWrite(async (txc) => {
         await txc.run(
           `
-          MERGE (p:Property {id: $props.id})
-          ON CREATE SET p += $props
-          ON MATCH SET p += $props
-          RETURN p.id as id
+          MERGE (a:Aspect {id: $props.id})
+          ON CREATE SET a += $props
+          ON MATCH SET a += $props
+          RETURN a.id as id
           `,
           { props }
         );
 
         // Sync tags
         await txc.run(
-          `MATCH (p:Property {id: $id})-[r:HAS_TAG]->() DELETE r`,
-          { id: property.id }
+          `MATCH (a:Aspect {id: $id})-[r:HAS_TAG]->() DELETE r`,
+          { id: aspect.id }
         );
 
-        if (property.tags && property.tags.length > 0) {
+        if (aspect.tags && aspect.tags.length > 0) {
           await txc.run(
             `
             UNWIND $tags as tagName
-            MATCH (p:Property {id: $id})
+            MATCH (a:Aspect {id: $id})
             MERGE (t:Tag {name: tagName})
-            MERGE (p)-[:HAS_TAG]->(t)
+            MERGE (a)-[:HAS_TAG]->(t)
             `,
-            { id: property.id, tags: property.tags }
+            { id: aspect.id, tags: aspect.tags }
           );
         }
       });
 
-      return property;
+      return aspect;
     } catch (error) {
-      console.error(`Error saving property: ${error}`);
+      console.error(`Error saving aspect: ${error}`);
       throw error;
     } finally {
       await session.close();
@@ -89,17 +88,17 @@ export class PropertyShapeRepository {
   }
 
   /**
-   * Get a property by ID
+   * Get an aspect by ID
    */
-  async getPropertyById(id: string): Promise<PropertyShape | null> {
+  async getAspectById(id: string): Promise<AspectShape | null> {
     const session = this.connection.getSession({ defaultAccessMode: "READ" });
     try {
       const result = await session.executeRead(async (txc) => {
         return await txc.run<{ props: Record<string, any>; tags: string[] }>(
           `
-          MATCH (p:Property {id: $id})
-          OPTIONAL MATCH (p)-[:HAS_TAG]->(t:Tag)
-          RETURN properties(p) as props, collect(t.name) as tags
+          MATCH (a:Aspect {id: $id})
+          OPTIONAL MATCH (a)-[:HAS_TAG]->(t:Tag)
+          RETURN properties(a) as props, collect(t.name) as tags
           `,
           { id }
         );
@@ -112,7 +111,7 @@ export class PropertyShapeRepository {
       const rawProps = result.records[0].get("props");
       const tags = result.records[0].get("tags") || [];
 
-      const property: PropertyShape = {
+      const aspect: AspectShape = {
         id: rawProps.id,
         type: rawProps.type,
         name: rawProps.name || undefined,
@@ -125,9 +124,9 @@ export class PropertyShapeRepository {
         updatedAt: rawProps.updatedAt,
       };
 
-      return property;
+      return aspect;
     } catch (error) {
-      console.error(`Error getting property by ID (${id}): ${error}`);
+      console.error(`Error getting aspect by ID (${id}): ${error}`);
       throw error;
     } finally {
       await session.close();
@@ -135,20 +134,20 @@ export class PropertyShapeRepository {
   }
 
   /**
-   * Find properties by criteria
+   * Find aspects by criteria
    */
-  async findProperties(criteria: {
+  async findAspects(criteria: {
     type?: string;
     tags?: string[];
-  } = {}): Promise<PropertyShape[]> {
+  } = {}): Promise<AspectShape[]> {
     const session = this.connection.getSession({ defaultAccessMode: "READ" });
     try {
       const params: Record<string, any> = {};
-      let matchClause = `MATCH (p:Property)`;
+      let matchClause = `MATCH (a:Aspect)`;
       let whereClauses: string[] = [];
 
       if (criteria.type) {
-        whereClauses.push(`p.type = $type`);
+        whereClauses.push(`a.type = $type`);
         params.type = criteria.type;
       }
 
@@ -157,7 +156,7 @@ export class PropertyShapeRepository {
           const paramName = `tag${index}`;
           params[paramName] = tag;
           whereClauses.push(
-            `EXISTS { MATCH (p)-[:HAS_TAG]->(:Tag {name: $${paramName}}) }`
+            `EXISTS { MATCH (a)-[:HAS_TAG]->(:Tag {name: $${paramName}}) }`
           );
         });
       }
@@ -167,19 +166,19 @@ export class PropertyShapeRepository {
         cypher += `\nWHERE ${whereClauses.join(" AND ")}`;
       }
       cypher += `
-        OPTIONAL MATCH (p)-[:HAS_TAG]->(t:Tag)
-        RETURN properties(p) as props, collect(t.name) as tags`;
+        OPTIONAL MATCH (a)-[:HAS_TAG]->(t:Tag)
+        RETURN properties(a) as props, collect(t.name) as tags`;
 
       const result = await session.executeRead(async (txc) => {
         return await txc.run(cypher, params);
       });
 
-      const properties: PropertyShape[] = [];
+      const aspects: AspectShape[] = [];
       for (const record of result.records) {
         const rawProps = record.get("props");
         const tags = record.get("tags") || [];
 
-        const property: PropertyShape = {
+        const aspect: AspectShape = {
           id: rawProps.id,
           type: rawProps.type,
           name: rawProps.name || undefined,
@@ -192,12 +191,12 @@ export class PropertyShapeRepository {
           updatedAt: rawProps.updatedAt,
         };
 
-        properties.push(property);
+        aspects.push(aspect);
       }
 
-      return properties;
+      return aspects;
     } catch (error) {
-      console.error(`Error finding properties: ${error}`);
+      console.error(`Error finding aspects: ${error}`);
       throw error;
     } finally {
       await session.close();
@@ -205,16 +204,16 @@ export class PropertyShapeRepository {
   }
 
   /**
-   * Delete a property by ID
+   * Delete an aspect by ID
    */
-  async deleteProperty(id: string): Promise<boolean> {
+  async deleteAspect(id: string): Promise<boolean> {
     const session = this.connection.getSession({ defaultAccessMode: "WRITE" });
     try {
       const summary = await session.executeWrite(async (txc) => {
         const result = await txc.run(
           `
-          MATCH (p:Property {id: $id})
-          DETACH DELETE p
+          MATCH (a:Aspect {id: $id})
+          DETACH DELETE a
           `,
           { id }
         );
@@ -224,7 +223,7 @@ export class PropertyShapeRepository {
       const nodesDeleted = summary.counters.updates().nodesDeleted;
       return nodesDeleted > 0;
     } catch (error) {
-      console.error(`Error deleting property (${id}): ${error}`);
+      console.error(`Error deleting aspect (${id}): ${error}`);
       throw error;
     } finally {
       await session.close();

@@ -7,7 +7,7 @@ declare global {
 // Connection configuration using environment variables with defaults
 const uri = process.env.NEO4J_URI || 'neo4j://localhost:7687';
 const username = process.env.NEO4J_USER || 'neo4j';
-const password = process.env.NEO4J_PASSWORD || 'password';
+const password = process.env.NEO4J_PASSWORD || 'pjm070FF';
 
 // Create Neo4j driver instance
 const createDriver = () => {
@@ -45,7 +45,7 @@ const registerShutdownHook = () => {
     await shutdown();
     process.exit(0);
   });
-  
+
   process.on('SIGINT', async () => {
     console.log('SIGINT signal received');
     await shutdown();

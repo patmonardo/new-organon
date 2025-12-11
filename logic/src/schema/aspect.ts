@@ -100,20 +100,52 @@ export const AspectFacets = z.object({
 }).catchall(z.any());
 export type AspectFacets = z.infer<typeof AspectFacets>;
 
+// ==========================================
+// ASPECT SHAPE (Pure Form for Neo4j)
+// ==========================================
+export const AspectShapeSchema = z.object({
+  id: z.string(),
+  type: Type,
+  name: Label.optional(),
+
+  // Signature: operational interface
+  signature: AspectSignature.optional(),
+
+  // Facets: spectral/relational structure
+  facets: AspectFacets.optional(),
+
+  // State metadata
+  status: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  meta: z.record(z.string(), z.unknown()).optional(),
+
+  // Timestamps
+  createdAt: z
+    .number()
+    .optional()
+    .default(() => Date.now())
+    .optional(),
+  updatedAt: z
+    .number()
+    .optional()
+    .default(() => Date.now())
+    .optional(),
+});
+export type AspectShape = z.infer<typeof AspectShapeSchema>;
+
+// ==========================================
+// ASPECT DOCUMENT (Envelope)
+// ==========================================
 export const AspectDoc = z.object({
   core: AspectCore,
   state: BaseState.default({}),
   signature: AspectSignature.optional(),
   facets: z.record(z.string(), z.any()).default({}),
+  aspect: AspectShapeSchema.optional(), // EMBED AspectShape
 });
 
 export const AspectSchema = BaseSchema.extend({
-  shape: z.object({
-    core: AspectCore,
-    state: BaseState.default({}),            // <= ensure this
-    signature: z.object({}).catchall(z.any()).optional(),
-    facets: z.record(z.string(), z.any()).default({}),
-  }),
+  shape: AspectDoc,
 });
 export type Aspect = z.infer<typeof AspectSchema>;
 

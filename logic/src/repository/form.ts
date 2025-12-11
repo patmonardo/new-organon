@@ -7,8 +7,8 @@ import {
   FormAction,
   FormLayout,
   FormShape,
-} from "@organon/model/schema/shape";
-import { FormShapeSchema } from "@/form/schema/shape";
+} from "../schema/form";
+import { FormShapeSchema } from "../schema/form";
 import { ManagedTransaction, Session } from "neo4j-driver"; // Removed unused Transaction import
 import neo4j, { Integer } from "neo4j-driver";
 import { v4 as uuidv4 } from "uuid"; // Import uuid
@@ -37,8 +37,7 @@ export class FormShapeRepository {
     const validatedShape = FormShapeSchema.parse(shape);
 
     // 2. Get Neo4j driver and session
-    const driver = this.connection.getDriver();
-    const session: Session = driver.session({
+    const session: Session = this.connection.getSession({
       defaultAccessMode: neo4j.session.WRITE,
     });
 
@@ -49,7 +48,10 @@ export class FormShapeRepository {
       const createdAt = validatedShape.createdAt ?? now;
       const updatedAt = now;
 
-      // Main FormShape properties
+      // Extract props to avoid 'apoc.map.removeKeys' in Cypher
+      // We explicitly pull properties we want to set on the FormShape node
+      const { data, state, meta, isValid, name, title, description, tags, ..._fsRest } = validatedShape;
+
       const props = {
         id: shapeId,
         name: validatedShape.name,
@@ -73,61 +75,87 @@ export class FormShapeRepository {
         const fieldCreatedAt = field.createdAt ?? now;
         const fieldUpdatedAt = now;
         const { options, validation, meta, ...simpleFieldProps } = field;
+
+        // Prepare the options list for this field
+        const optionsList = (options || []).map(opt => ({
+             ...opt,
+             // Ensure options have props we might want
+        }));
+
         return {
-          ...simpleFieldProps,
-          validation: validation ? JSON.stringify(validation) : null,
-          meta: meta ? JSON.stringify(meta) : null,
-          options: options || [], // Keep options array for Cypher UNWIND
-          createdAt: fieldCreatedAt,
-          updatedAt: fieldUpdatedAt,
+          props: {
+             ...simpleFieldProps,
+             validation: validation ? JSON.stringify(validation) : null,
+             meta: meta ? JSON.stringify(meta) : null,
+             createdAt: fieldCreatedAt,
+             updatedAt: fieldUpdatedAt,
+          },
+          options: optionsList // Options kept separate for UNWIND
         };
       });
 
       // FormLayout, FormSection, and FormAction data
-      const layoutData = validatedShape.layout
-        ? {
-            // Use spread first for layout base properties
-            ...validatedShape.layout,
-            // Overwrite/ensure ID, timestamps, and potentially stringified complex props
-            id: validatedShape.layout.id ?? uuidv4(),
-            createdAt: validatedShape.layout.createdAt ?? now,
-            updatedAt: now,
-            responsive: validatedShape.layout.responsive
-              ? JSON.stringify(validatedShape.layout.responsive)
-              : null,
-            // Map sections
-            sections: (validatedShape.layout.sections || []).map((section) => ({
-              // Use spread first for section base properties
-              ...section,
-              // Overwrite/ensure ID, timestamps, and potentially stringified complex props
-              id: section.id ?? uuidv4(),
-              createdAt: section.createdAt ?? now,
-              updatedAt: now,
-              fields: section.fields || [], // Keep field IDs list
-            })),
-            // Map actions
-            actions: (validatedShape.layout.actions || []).map((action) => ({
-              // Use spread first for action base properties
-              ...action,
-              // Overwrite/ensure ID and timestamps
-              id: action.id ?? uuidv4(),
-              createdAt: action.createdAt ?? now,
-              updatedAt: now,
-            })),
-          }
-        : null;
+      // We structure this so Cypher can iterate easily without map manipulation
+      // If layout is null, we pass an empty list for the FOREACH trick, otherwise a list with 1 element
+      const layoutList = validatedShape.layout ? [validatedShape.layout] : [];
+
+      const layoutDataPrepared = layoutList.map(layout => {
+           const lCreatedAt = layout.createdAt ?? now;
+           const lUpdatedAt = now;
+           // Destructure known complex props to handle separately
+           const { sections, actions, responsive, ...layoutSimple } = layout;
+
+           const sectionsList = (sections || []).map(section => {
+               const sCreatedAt = section.createdAt ?? now;
+               const sUpdatedAt = now;
+               // Section does NOT have meta, so don't destructure it
+               const { fields: fieldIds, ...sectionSimple } = section;
+               return {
+                   props: {
+                       ...sectionSimple,
+                       id: section.id ?? uuidv4(),
+                       createdAt: sCreatedAt,
+                       updatedAt: sUpdatedAt,
+                   },
+                   fieldIds: fieldIds || []
+               };
+           });
+
+           const actionsList = (actions || []).map(action => {
+               const aCreatedAt = action.createdAt ?? now;
+               const aUpdatedAt = now;
+               return {
+                   props: {
+                       ...action,
+                       id: action.id ?? uuidv4(),
+                       createdAt: aCreatedAt,
+                       updatedAt: aUpdatedAt,
+                   }
+               };
+           });
+
+           return {
+               props: {
+                   ...layoutSimple,
+                   id: layout.id ?? uuidv4(),
+                   responsive: responsive ? JSON.stringify(responsive) : null,
+                   createdAt: lCreatedAt,
+                   updatedAt: lUpdatedAt
+               },
+               sections: sectionsList,
+               actions: actionsList
+           }
+      });
+
 
       // 4. Define the Cypher query
-      // ... inside saveForm method ...
-      // ... inside saveForm method ...
       const cypher = `
               // 1. Merge main :FormShape node & set properties
               MERGE (fs:FormShape {id: $shapeId})
-              ON CREATE SET fs.createdAt = $props.createdAt
-              SET fs += apoc.map.removeKeys($props, ['createdAt']) // Update properties, keep updatedAt
+              ON CREATE SET fs += $props
+              ON MATCH SET fs += $props
 
               // 2. Detach and delete existing subgraph components
-              // ... (DETACH DELETE part remains the same) ...
               WITH fs
               OPTIONAL MATCH (fs)-[r1:HAS_FIELD]->(oldField:FormField)
               OPTIONAL MATCH (oldField)-[r2:HAS_OPTION]->(oldOption:FormOption)
@@ -139,73 +167,62 @@ export class FormShapeRepository {
 
 
               // 3. Create new Fields and Options (Uses fieldsData prepared earlier)
-              // ... (UNWIND fieldsData part remains the same) ...
               WITH fs
-              UNWIND $fieldsData AS fieldMap
+              UNWIND $fieldsData AS fieldItem
               CREATE (newField:FormField)
-              SET newField = apoc.map.removeKeys(fieldMap, ['options']) // Set props, remove options map
+              SET newField += fieldItem.props
               CREATE (fs)-[:HAS_FIELD]->(newField)
+
               // Create Options for the current field if they exist
-              WITH fs, newField, fieldMap.options AS optionList WHERE size(optionList) > 0
-              UNWIND optionList AS optionMap
-              CREATE (newOption:FormOption)
-              SET newOption = optionMap // Assuming simple {value, label}
-              CREATE (newField)-[:HAS_OPTION]->(newOption)
+              FOREACH (opt IN fieldItem.options |
+                  CREATE (newOption:FormOption)
+                  SET newOption += opt
+                  CREATE (newField)-[:HAS_OPTION]->(newOption)
+              )
 
 
-              // 4. Create new Layout, Sections, and Actions conditionally (Uses layoutData)
-              WITH DISTINCT fs // Ensure we only proceed once per FormShape
-              CALL apoc.do.when($layoutData IS NOT NULL,
-                '
-                // Create Layout node
-                CREATE (newLayout:FormLayout)
-                // Set layout props, remove nested sections and actions maps
-                SET newLayout = apoc.map.removeKeys($layoutData, ["sections", "actions"])
-                CREATE (fs)-[:HAS_LAYOUT]->(newLayout)
+              // 4. Create new Layout, Sections, and Actions conditionally (Uses layoutDataPrepared)
+              // Since layoutDataPrepared is a list of 0 or 1 elements, FOREACH works like "IF layout exists"
+              WITH fs
+              FOREACH (lItem IN $layoutDataPrepared |
+                  // Create Layout node
+                  CREATE (newLayout:FormLayout)
+                  SET newLayout += lItem.props
+                  CREATE (fs)-[:HAS_LAYOUT]->(newLayout)
 
-                // Create Sections and link fields if sections exist
-                WITH newLayout, $layoutData.sections AS sectionList WHERE size(sectionList) > 0
-                UNWIND sectionList AS sectionMap
-                CREATE (newSection:FormSection)
-                // Set section props, remove nested fields list
-                SET newSection = apoc.map.removeKeys(sectionMap, ["fields"])
-                CREATE (newLayout)-[:HAS_SECTION]->(newSection)
-                // Link fields contained within this section if fields exist
-                WITH newLayout, newSection, sectionMap.fields AS fieldIdList WHERE size(fieldIdList) > 0
-                UNWIND fieldIdList AS fieldId
-                // Find the field created earlier in this transaction by ID
-                MATCH (targetField:FormField {id: fieldId}) // REMOVED the WHERE clause here
-                CREATE (newSection)-[:CONTAINS_FIELD]->(targetField)
+                  // Create Sections
+                  FOREACH (sItem IN lItem.sections |
+                      CREATE (newSection:FormSection)
+                      SET newSection += sItem.props
+                      CREATE (newLayout)-[:HAS_SECTION]->(newSection)
 
-                // Create Actions if actions exist
-                WITH DISTINCT newLayout // Operate on the single newLayout node
-                WHERE size($layoutData.actions) > 0
-                UNWIND $layoutData.actions AS actionMap
-                CREATE (newAction:FormAction)
-                SET newAction = actionMap // Set action properties from map
-                CREATE (newLayout)-[:HAS_ACTION]->(newAction) // Link action to layout
+                      // Link Fields to Section
+                      FOREACH (fid IN sItem.fieldIds |
+                          // We match the field we *just created* in step 3.
+                          // It must exist and be linked to fs.
+                          MERGE (targetField:FormField {id: fid})
+                          MERGE (newSection)-[:CONTAINS_FIELD]->(targetField)
+                      )
+                  )
 
-                RETURN count(*) // Must return something from within apoc.do.when branch
-                ',
-                // Else branch if $layoutData is NULL
-                'RETURN 0',
-                // Parameters for apoc.do.when
-                { fs: fs, layoutData: $layoutData }
-              ) YIELD value AS layoutResult
+                  // Create Actions
+                  FOREACH (aItem IN lItem.actions |
+                      CREATE (newAction:FormAction)
+                      SET newAction += aItem.props
+                      CREATE (newLayout)-[:HAS_ACTION]->(newAction)
+                  )
+              )
 
               // 5. Synchronize Tags (Uses tagsData)
-              // ... (UNWIND tagsData part remains the same) ...
               WITH fs
-              // Merge tags from the new list, ensuring they exist
               UNWIND $tagsData AS tagValue
               MERGE (newTag:FormTag {value: tagValue})
-              // Ensure relationship exists between FormShape and Tag
               MERGE (fs)-[:HAS_TAG]->(newTag)
 
-
-              // 6. Return ID (optional, for confirmation)
+              // 6. Return ID
               RETURN fs.id AS id
             `;
+
       // 5. Execute the Cypher query
       await session.executeWrite(async (tx: ManagedTransaction) => {
         await tx.run(cypher, {
@@ -213,73 +230,59 @@ export class FormShapeRepository {
           props,
           tagsData,
           fieldsData,
-          layoutData,
+          layoutDataPrepared, // New parameter name
         });
       });
 
       // 6. Construct the final saved shape object to return (Spread First approach)
+        // Helper to extract clean layout from prepared data
+      let reconstructedLayout = undefined;
+      if (layoutDataPrepared.length > 0) {
+          const lData = layoutDataPrepared[0];
+          reconstructedLayout = {
+            ...validatedShape.layout!, // safe assert as we have prepared data
+            id: lData.props.id,
+            createdAt: lData.props.createdAt,
+            updatedAt: lData.props.updatedAt,
+             sections: lData.sections.map(sData => {
+                 const originalSection = validatedShape.layout?.sections?.find(s => s.id === sData.props.id);
+                 return {
+                     ...originalSection, // spread original
+                     ...sData.props, // overwrite with props (includes ID and timestamps)
+                     fields: sData.fieldIds,
+                 } as FormSection;
+            }),
+            actions: lData.actions.map(aData => {
+                 const originalAction = validatedShape.layout?.actions?.find(a => a.id === aData.props.id);
+                 return {
+                     ...originalAction,
+                     ...aData.props
+                 } as FormAction;
+            })
+          } as FormLayout;
+      }
+
       const savedShape: FormShape = {
         ...validatedShape, // Spread base validated shape first
         createdAt: createdAt, // Overwrite timestamp
         updatedAt: updatedAt, // Overwrite timestamp
-        // Reconstruct layout
-        layout: layoutData
-          ? {
-              ...validatedShape.layout, // Spread original layout first
-              id: layoutData.id, // Overwrite ID
-              createdAt: layoutData.createdAt, // Overwrite timestamp
-              updatedAt: layoutData.updatedAt, // Overwrite timestamp
-              // Reconstruct sections
-              sections: layoutData.sections.map((secData) => {
-                const originalSection = validatedShape.layout?.sections?.find(
-                  (s) => s.id === secData.id
-                );
-                return {
-                  ...originalSection, // Spread original section first
-                  id: secData.id, // Overwrite ID
-                  createdAt: secData.createdAt, // Overwrite timestamp
-                  updatedAt: secData.updatedAt, // Overwrite timestamp
-                  fields: secData.fields, // Use prepared field IDs
-                };
-              }),
-              // Reconstruct actions
-              actions: layoutData.actions.map((actData) => {
-                const originalAction = validatedShape.layout?.actions?.find(
-                  (a) => a.id === actData.id
-                );
-                return {
-                  ...originalAction, // Spread original action first
-                  id: actData.id, // Overwrite ID
-                  createdAt: actData.createdAt, // Overwrite timestamp
-                  updatedAt: actData.updatedAt, // Overwrite timestamp
-                };
-              }),
-            }
-          : undefined, // Use undefined if layout was null
+
+        layout: reconstructedLayout,
+
         // Reconstruct fields
         fields: fieldsData.map((fieldData) => {
           const originalField = validatedShape.fields?.find(
-            (f) => f.id === fieldData.id
+            (f) => f.id === fieldData.props.id
           );
-          // Destructure prepared data to separate simple props
-          const {
-            options,
-            validation,
-            meta,
-            createdAt: _c,
-            updatedAt: _u,
-            ...simplePreparedProps
-          } = fieldData;
+
           return {
             ...originalField, // Spread original field first
-            ...simplePreparedProps, // Overwrite simple props from prepared data
-            createdAt: fieldData.createdAt, // Use prepared timestamp
-            updatedAt: fieldData.updatedAt, // Use prepared timestamp
-            // Ensure complex objects from original are preserved if not explicitly handled
-            options: originalField?.options,
+            ...fieldData.props, // Overwrite simple props from prepared data
+            // Restore complex objects that were stringified in props
             validation: originalField?.validation,
             meta: originalField?.meta,
-          };
+            options: fieldData.options, // Options were kept separate
+          } as FormField;
         }),
         // Tags remain as they were in the validated input
         tags: validatedShape.tags,
