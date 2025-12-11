@@ -1,4 +1,4 @@
-//@/lib/data/client.ts
+//@/data/client.ts
 import { PrismaClient } from '@prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 

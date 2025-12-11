@@ -1,4 +1,4 @@
-//@schema/base.ts
+//@/data/schema/base.ts
 import { z } from 'zod'
 
 // Base Schema (all entities have these properties)

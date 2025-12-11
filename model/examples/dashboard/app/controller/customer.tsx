@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { FormHandler } from "@graphics/schema/form";
+import { CreateCustomer, UpdateCustomer } from "@/data/schema/customer";
 import { CustomerModel } from "@model/customer";
 import { CustomerView } from "@view/customer";
-import { CreateCustomer, UpdateCustomer } from "@/data/schema/customer";
 import createCustomer from "@/(controller)/customers/actions/create";
 import updateCustomer from "@/(controller)/customers/actions/update";
 import cancelCustomer from "@/(controller)/customers/actions/cancel";
@@ -162,7 +162,6 @@ export class CustomerController {
    * @param page Page number
    * @param pageSize Items per page
    */
-  // In CustomerController.tsx (or wherever your controller is)
   static async listCustomers(query = "", page = 1): Promise<ReactNode> {
     // Fetch data with pagination and search
     const result = await CustomerModel.findAll({ query, page, pageSize: 10 });
