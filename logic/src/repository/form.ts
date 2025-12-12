@@ -401,9 +401,10 @@ export class FormShapeRepository {
       const tags: FormTag[] = (tagsResult || [])
         .filter((tag: any) => tag)
         .map((tag: any) => ({
-          ...tag.properties,
-          createdAt: this.toNumber(tag.properties.createdAt),
-          updatedAt: this.toNumber(tag.properties.updatedAt),
+          value: tag.properties.value,
+          label: tag.properties.label || tag.properties.value, // Default label to value if missing
+          createdAt: this.toNumber(tag.properties.createdAt) ?? Date.now(),
+          updatedAt: this.toNumber(tag.properties.updatedAt) ?? Date.now(),
         }));
 
       // Reconstruct Fields
@@ -418,14 +419,14 @@ export class FormShapeRepository {
               createdAt: this.toNumber(opt.properties.createdAt),
               updatedAt: this.toNumber(opt.properties.updatedAt),
             }));
-          return {
-            ...fieldProps,
-            validation: this.safeJsonParse(fieldProps.validation),
-            meta: this.safeJsonParse(fieldProps.meta),
-            options: options.length > 0 ? options : undefined,
-            createdAt: this.toNumber(fieldProps.createdAt),
-            updatedAt: this.toNumber(fieldProps.updatedAt),
-          };
+            return {
+              ...fieldProps,
+              validation: this.nullToUndefined(this.safeJsonParse(fieldProps.validation)),
+              meta: this.nullToUndefined(this.safeJsonParse(fieldProps.meta)),
+              options: options.length > 0 ? options : undefined,
+              createdAt: this.toNumber(fieldProps.createdAt) ?? Date.now(),
+              updatedAt: this.toNumber(fieldProps.updatedAt) ?? Date.now(),
+            };
         });
 
       // Reconstruct Layout (conditionally)
@@ -459,9 +460,9 @@ export class FormShapeRepository {
 
           layout = {
               ...layoutProps,
-              responsive: this.safeJsonParse(layoutProps.responsive),
-              createdAt: this.toNumber(layoutProps.createdAt),
-              updatedAt: this.toNumber(layoutProps.updatedAt),
+              responsive: this.nullToUndefined(this.safeJsonParse(layoutProps.responsive)),
+              createdAt: this.toNumber(layoutProps.createdAt) ?? Date.now(),
+              updatedAt: this.toNumber(layoutProps.updatedAt) ?? Date.now(),
               sections: sections.length > 0 ? sections : undefined,
               actions: actions.length > 0 ? actions : undefined,
           };
@@ -471,14 +472,14 @@ export class FormShapeRepository {
       // Note: state/meta removed - those belong in Entity (Empirical), not Form (Rational)
       const formShape: FormShape = {
         ...formShapeProps,
-        schemaId: formShapeProps.schemaId, // Ensure schemaId is mapped
-        data: this.safeJsonParse(formShapeProps.data),
+        schemaId: this.nullToUndefined(formShapeProps.schemaId),
+        data: this.nullToUndefined(this.safeJsonParse(formShapeProps.data)),
         fields: fields.length > 0 ? fields : undefined,
         layout: layout, // Use the conditionally reconstructed layout
         tags: tags.length > 0 ? tags : undefined,
-        createdAt: this.toNumber(formShapeProps.createdAt),
-        updatedAt: this.toNumber(formShapeProps.updatedAt),
-        isValid: this.toBoolean(formShapeProps.isValid),
+        createdAt: this.toNumber(formShapeProps.createdAt) ?? Date.now(),
+        updatedAt: this.toNumber(formShapeProps.updatedAt) ?? Date.now(),
+        isValid: this.nullToUndefined(this.toBoolean(formShapeProps.isValid)),
       };
 
       // Validate final shape before returning
@@ -611,9 +612,10 @@ export class FormShapeRepository {
         const tags: FormTag[] = (tagsResult || [])
           .filter((tag: any) => tag)
           .map((tag: any) => ({
-            ...tag.properties,
-            createdAt: this.toNumber(tag.properties.createdAt),
-            updatedAt: this.toNumber(tag.properties.updatedAt),
+            value: tag.properties.value,
+            label: tag.properties.label || tag.properties.value, // Default label to value if missing
+            createdAt: this.toNumber(tag.properties.createdAt) ?? Date.now(),
+            updatedAt: this.toNumber(tag.properties.updatedAt) ?? Date.now(),
           }));
 
         // Reconstruct Fields (Correctly placed within the loop)
@@ -633,15 +635,15 @@ export class FormShapeRepository {
             // *** Added missing return statement for the field object ***
             return {
               ...fieldProps,
-              validation: this.safeJsonParse(fieldProps.validation),
-              meta: this.safeJsonParse(fieldProps.meta),
+              validation: this.nullToUndefined(this.safeJsonParse(fieldProps.validation)),
+              meta: this.nullToUndefined(this.safeJsonParse(fieldProps.meta)),
               options: options.length > 0 ? options : undefined,
-              createdAt: this.toNumber(fieldProps.createdAt),
-              updatedAt: this.toNumber(fieldProps.updatedAt),
-              required: this.toBoolean(fieldProps.required),
-              disabled: this.toBoolean(fieldProps.disabled),
-              readOnly: this.toBoolean(fieldProps.readOnly),
-              visible: this.toBoolean(fieldProps.visible),
+              createdAt: this.toNumber(fieldProps.createdAt) ?? Date.now(),
+              updatedAt: this.toNumber(fieldProps.updatedAt) ?? Date.now(),
+              required: this.nullToUndefined(this.toBoolean(fieldProps.required)),
+              disabled: this.nullToUndefined(this.toBoolean(fieldProps.disabled)),
+              readOnly: this.nullToUndefined(this.toBoolean(fieldProps.readOnly)),
+              visible: this.nullToUndefined(this.toBoolean(fieldProps.visible)),
             };
           }); // *** End map callback for fields ***
 
@@ -687,12 +689,12 @@ export class FormShapeRepository {
 
           layout = {
             ...layoutProps,
-            responsive: this.safeJsonParse(layoutProps.responsive),
+            responsive: this.nullToUndefined(this.safeJsonParse(layoutProps.responsive)),
             sections: sections.length > 0 ? sections : undefined,
             actions: actions.length > 0 ? actions : undefined,
-            columns: this.toNumber(layoutProps.columns),
-            createdAt: this.toNumber(layoutProps.createdAt),
-            updatedAt: this.toNumber(layoutProps.updatedAt),
+            columns: this.toNumber(layoutProps.columns) ?? 1,
+            createdAt: this.toNumber(layoutProps.createdAt) ?? Date.now(),
+            updatedAt: this.toNumber(layoutProps.updatedAt) ?? Date.now(),
           };
         } // End layout reconstruction
 
@@ -700,13 +702,13 @@ export class FormShapeRepository {
         // Note: state/meta removed - those belong in Entity (Empirical), not Form (Rational)
         const formShape: FormShape = {
           ...formShapeProps,
-          data: this.safeJsonParse(formShapeProps.data),
+          data: this.nullToUndefined(this.safeJsonParse(formShapeProps.data)),
           fields: fields.length > 0 ? fields : undefined,
           layout: layout,
           tags: tags.length > 0 ? tags : undefined,
-          createdAt: this.toNumber(formShapeProps.createdAt),
-          updatedAt: this.toNumber(formShapeProps.updatedAt),
-          isValid: this.toBoolean(formShapeProps.isValid),
+          createdAt: this.toNumber(formShapeProps.createdAt) ?? Date.now(),
+          updatedAt: this.toNumber(formShapeProps.updatedAt) ?? Date.now(),
+          isValid: this.nullToUndefined(this.toBoolean(formShapeProps.isValid)),
         };
 
         // Validate and push the fully reconstructed shape (Correctly placed within the loop)
@@ -933,7 +935,7 @@ export class FormShapeRepository {
 
   private safeJsonParse(
     jsonString: string | null | undefined,
-    defaultValue: any = null
+    defaultValue: any = undefined
   ): any {
     if (!jsonString) return defaultValue;
     try {
@@ -944,17 +946,22 @@ export class FormShapeRepository {
     }
   }
 
-  private toNumber(value: Integer | number | null | undefined): number | null {
-    if (value === null || value === undefined) return null;
+  private toNumber(value: Integer | number | null | undefined): number | undefined {
+    if (value === null || value === undefined) return undefined;
     if (neo4j.isInt(value)) {
       return value.toNumber();
     }
     const num = Number(value);
-    return isNaN(num) ? null : num;
+    return isNaN(num) ? undefined : num;
   }
 
-  private toBoolean(value: boolean | null | undefined): boolean | null {
-    if (value === null || value === undefined) return null;
+  private toBoolean(value: boolean | null | undefined): boolean | undefined {
+    if (value === null || value === undefined) return undefined;
     return Boolean(value);
+  }
+
+  // Helper to convert null to undefined for optional fields
+  private nullToUndefined<T>(value: T | null | undefined): T | undefined {
+    return value === null ? undefined : value;
   }
 }
