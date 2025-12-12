@@ -23,19 +23,27 @@ export class EntityShapeRepository {
 
   /**
    * Saves an entity instance (EntityShape) to Neo4j.
-   * Applies a dynamic label like :Entity:Kind based on the 'kind' property within entityData.
-   * Stores metadata and instance values as node properties.
+   * Entity is the reciprocation of Form (Rational) and Data (Empirical).
+   * Stores formId reference and actual field values.
    *
-   * @param entityData The entity instance data (metadata + values), must include 'kind'.
+   * @param entityData The entity instance data with formId and values
    */
   async saveEntity(entityData: Partial<EntityShape>): Promise<EntityShape> {
     // 1. Prepare entity object
     const now = Date.now();
+
+    // Validate formId is provided (Entity must reference its Form Principle)
+    if (!entityData.formId) {
+      throw new Error("Entity must have formId reference to Form Principle");
+    }
+
     const entity: EntityShape = {
       id: entityData.id || uuidv4(),
       type: entityData.type || "entity.unknown",
+      formId: entityData.formId, // Reference to Form Principle
       name: entityData.name,
       description: entityData.description,
+      values: entityData.values || {}, // Actual field values (Data)
       signature: entityData.signature,
       facets: entityData.facets,
       status: entityData.status,
@@ -49,8 +57,10 @@ export class EntityShapeRepository {
     const props = {
       id: entity.id,
       type: entity.type,
+      formId: entity.formId, // Store Form reference
       name: entity.name || null,
       description: entity.description || null,
+      values: entity.values ? JSON.stringify(entity.values) : '{}', // Store actual data values
       signature: entity.signature ? JSON.stringify(entity.signature) : null,
       facets: entity.facets ? JSON.stringify(entity.facets) : null,
       status: entity.status || null,
@@ -123,8 +133,10 @@ export class EntityShapeRepository {
       const entity: EntityShape = {
         id: rawProps.id,
         type: rawProps.type,
+        formId: rawProps.formId, // Form Principle reference
         name: rawProps.name || undefined,
         description: rawProps.description || undefined,
+        values: rawProps.values ? JSON.parse(rawProps.values) : {}, // Field values (Data)
         signature: rawProps.signature ? JSON.parse(rawProps.signature) : undefined,
         facets: rawProps.facets ? JSON.parse(rawProps.facets) : undefined,
         status: rawProps.status || undefined,
@@ -196,8 +208,10 @@ export class EntityShapeRepository {
         const entity: EntityShape = {
           id: rawProps.id,
           type: rawProps.type,
+          formId: rawProps.formId, // Form Principle reference
           name: rawProps.name || undefined,
           description: rawProps.description || undefined,
+          values: rawProps.values ? JSON.parse(rawProps.values) : {}, // Field values
           signature: rawProps.signature ? JSON.parse(rawProps.signature) : undefined,
           facets: rawProps.facets ? JSON.parse(rawProps.facets) : undefined,
           status: rawProps.status || undefined,

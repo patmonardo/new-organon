@@ -49,19 +49,15 @@ export class FormShapeRepository {
       const updatedAt = now;
 
       // Extract props to avoid 'apoc.map.removeKeys' in Cypher
-      // We explicitly pull properties we want to set on the FormShape node
-      const { data, state, meta, isValid, name, title, description, tags, ..._fsRest } = validatedShape;
+      // FormShape now stores only Rational structure (no state/meta)
+      const { data, isValid, name, title, description, tags, ..._fsRest } = validatedShape;
 
       const props = {
         id: shapeId,
         name: validatedShape.name,
         title: validatedShape.title ?? null,
         description: validatedShape.description ?? null,
-        data: validatedShape.data ? JSON.stringify(validatedShape.data) : null,
-        state: validatedShape.state
-          ? JSON.stringify(validatedShape.state)
-          : null,
-        meta: validatedShape.meta ? JSON.stringify(validatedShape.meta) : null,
+        data: validatedShape.data ? JSON.stringify(validatedShape.data) : null, // Data binding config
         createdAt: createdAt,
         updatedAt: updatedAt,
         isValid: validatedShape.isValid ?? null,

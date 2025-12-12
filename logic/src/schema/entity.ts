@@ -74,14 +74,21 @@ export const EntityFacets = z.object({
 export type EntityFacets = z.infer<typeof EntityFacets>;
 
 // ==========================================
-// ENTITY SHAPE (Pure Form for Neo4j)
+// ENTITY SHAPE (Empirical - Principled Effect)
 // ==========================================
-// This is the concrete shape that gets persisted to FormDB
+// Entity is the reciprocation of Form (Rational) and Data (Empirical)
+// It holds formId (reference to Principle) and values (actual data)
 export const EntityShapeSchema = z.object({
   id: z.string(),
   type: Type,
   name: Label.optional(),
   description: z.string().optional(),
+
+  // Reference to Form Principle (Form:Entity relationship)
+  formId: z.string(), // Required - every Entity has a Form
+
+  // Actual field values (Data from Model system)
+  values: z.record(z.string(), z.any()).optional().default({}),
 
   // Signature: operational interface
   signature: EntitySignature.optional(),
@@ -89,7 +96,7 @@ export const EntityShapeSchema = z.object({
   // Facets: dialectical structure
   facets: EntityFacets.optional(),
 
-  // State metadata
+  // Runtime state (Empirical concerns)
   status: z.string().optional(),
   tags: z.array(z.string()).optional(),
   meta: z.record(z.string(), z.unknown()).optional(),

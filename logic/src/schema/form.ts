@@ -314,14 +314,13 @@ export const FormShapeSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
   schemaId: z.string().optional(),
-  data: FormDataSchema.optional(),
+  data: FormDataSchema.optional(), // Data binding configuration (how to get/set data)
   fields: z.array(FormFieldSchema),
   options: z.array(FormOptionSchema).optional(),
   tags: z.array(FormTagSchema).optional(),
   isValid: z.boolean().optional(),
   layout: FormLayoutSchema.optional(),
-  state: FormStateSchema.optional(),
-  meta: FormMetaSchema.optional(),
+  // state and meta removed - those belong in Entity (Empirical)
   createdAt: z
     .number()
     .optional()
