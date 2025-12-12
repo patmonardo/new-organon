@@ -64,20 +64,16 @@ task/src/schema/
 ```
 **Completion**: The **Absolute Dialectic** where **BEC-MVC** unity becomes **systematic practical synthesis**
 
-### **@organon/gds** - Computational Substrate
-```bash
-core/src/
-├── graph/        # Graph processing kernel
-├── execution/    # Kriya execution engine
-└── synthesis/    # Dialectical synthesis operations
-```
-**Realization**: The **computational substrate** where **Action–Knowledge** becomes **actual system operations**
+### **Rust computational substrate** (`gds/`, `gdsl/`, `reality/`)
+Rust crates exist in a Cargo workspace and provide the performance-critical kernel pieces.
+
+Note: these crates are currently **not part of the PNPM workspace build** (no stable TS binding yet); build/test them with Cargo directly.
 
 ## Development
 
 ### Prerequisites
-- Node.js 18+
-- pnpm 8+
+- Node.js 20+
+- pnpm 9+
 - Understanding of **Hegelian dialectics** and action‑oriented system design principles
 
 ### Setup
@@ -136,24 +132,22 @@ pnpm task:dev
 pnpm task:start
 ```
 
-#### Core Substrate (`@organon/gds`)
+#### Rust crates (Cargo workspace)
 ```bash
-# Build computational kernel
-pnpm core:build
+# Build/test Rust crates directly
+cargo build -p gds
+cargo test -p gds
 
-# Test dialectical execution
-pnpm core:test
-
-# Develop action execution substrate
-pnpm core:dev
+cargo build -p gdsl
+cargo test -p gdsl
 ```
 
 ### Complete System Scripts
 - `pnpm build` - Build entire dialectical cube
 - `pnpm test` - Test complete Action–Knowledge system
 - `pnpm dev` - Develop full BEC-MVC-TAW architecture
-- `pnpm action:*` - Action transformation operations
-- `pnpm dialectic:*` - Dialectical synthesis operations
+
+Rust crates are built/tested via Cargo and intentionally excluded from PNPM recursion for now.
 
 ## Philosophy - The Science of Action
 

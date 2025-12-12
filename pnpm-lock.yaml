@@ -18,17 +18,9 @@ importers:
         specifier: ^4.15.7
         version: 4.20.4
 
-  gds:
-    devDependencies:
-      '@napi-rs/cli':
-        specifier: ^2.18.0
-        version: 2.18.4
+  gds: {}
 
-  gdsl:
-    devDependencies:
-      '@napi-rs/cli':
-        specifier: ^2.18.0
-        version: 2.18.4
+  gdsl: {}
 
   logic:
     dependencies:
@@ -858,11 +850,6 @@ packages:
   '@mrleebo/prisma-ast@0.12.1':
     resolution: {integrity: sha512-JwqeCQ1U3fvccttHZq7Tk0m/TMC6WcFAQZdukypW3AzlJYKYTGNVd1ANU2GuhKnv4UQuOFj3oAl0LLG/gxFN1w==}
     engines: {node: '>=16'}
-
-  '@napi-rs/cli@2.18.4':
-    resolution: {integrity: sha512-SgJeA4df9DE2iAEpr3M2H0OKl/yjtg1BnRI5/JyowS71tUWhrfSu2LT0V3vlHET+g1hBVlrO60PmEXwUEKp8Mg==}
-    engines: {node: '>= 10'}
-    hasBin: true
 
   '@nestjs/cli@9.5.0':
     resolution: {integrity: sha512-Z7q+3vNsQSG2d2r2Hl/OOj5EpfjVx3OfnJ9+KuAsOdw1sKLm7+Zc6KbhMFTd/eIvfx82ww3Nk72xdmfPYCulWA==}
@@ -4771,8 +4758,6 @@ snapshots:
     dependencies:
       chevrotain: 10.5.0
       lilconfig: 2.1.0
-
-  '@napi-rs/cli@2.18.4': {}
 
   '@nestjs/cli@9.5.0':
     dependencies:

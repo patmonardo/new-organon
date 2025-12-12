@@ -2,9 +2,6 @@ packages:
   - logic
   - model
   - task
-  - gds
-  - gdsl
-  - reality
   - model/examples/dashboard
 
 ignoredBuiltDependencies:
