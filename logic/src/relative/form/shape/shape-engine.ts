@@ -2,8 +2,10 @@ import type { Command, Event } from '@absolute';
 import type { EventBus } from '@absolute';
 import { InMemoryEventBus } from '@absolute';
 import { startTrace, childSpan } from '@absolute';
-import type { Repository } from '@repository';
-import { ShapeSchema, type Shape } from '@schema';
+import { InMemoryRepository } from '@repository';
+import { FormShapeRepository } from '@repository';
+import type { FormShape as RepoFormShape } from '@schema/form';
+import { FormShapeSchema } from '@schema/form';
 import { FormShape } from './shape-form';
 import { ActiveShape } from '@schema';
 import { parseActiveShapes } from '@schema';
@@ -16,9 +18,9 @@ import type {
   DialecticCommand
 } from '@schema';
 
-type BaseState = Shape['shape']['state'];
-type Signature = NonNullable<Shape['shape']['signature']>;
-type Facets = Shape['shape']['facets'];
+type BaseState = Record<string, unknown>;
+type Signature = Record<string, unknown>;
+type Facets = Record<string, unknown>;
 
 type ShapeCreateCmd = {
   kind: 'shape.create';
@@ -84,11 +86,14 @@ export type ShapeCommand =
   | ShapeDescribeCmd
   | DialecticCommand;
 
+// Direct wiring: accept FormShapeRepository (Neo4j) or InMemoryRepository<FormShape> (testing)
+type FormShapeRepo = FormShapeRepository | InMemoryRepository<typeof FormShapeSchema>;
+
 export class ShapeEngine {
   private readonly shapes = new Map<string, FormShape>();
 
   constructor(
-    private readonly repo?: Repository<Shape>,
+    private readonly repo?: FormShapeRepo,
     private readonly bus: EventBus = new InMemoryEventBus(),
     private readonly scope: string = 'shape',
   ) {}
@@ -97,8 +102,49 @@ export class ShapeEngine {
     return this.bus;
   }
 
-  getShape(id: string): FormShape | undefined {
-    return this.shapes.get(id);
+  async getShape(id: string): Promise<FormShape | undefined> {
+    // Check in-memory cache first
+    const cached = this.shapes.get(id);
+    if (cached) return cached;
+
+    // Load from repository if available
+    if (this.repo) {
+      const loaded = await this.loadFromRepo(id);
+      if (loaded) {
+        this.shapes.set(id, loaded);
+        return loaded;
+      }
+    }
+
+    return undefined;
+  }
+
+  private async loadFromRepo(id: string): Promise<FormShape | undefined> {
+    if (!this.repo) return undefined;
+
+    // Check if it's FormShapeRepository (Neo4j)
+    if (this.repo instanceof FormShapeRepository) {
+      const repoShape = await this.repo.getFormById(id);
+      if (!repoShape) return undefined;
+      // Convert repository FormShape to dialectical FormShape class
+      return this.repoFormShapeToFormShape(repoShape);
+    }
+
+    // Otherwise it's InMemoryRepository
+    if (this.repo instanceof InMemoryRepository) {
+      const doc = await this.repo.get(id);
+      if (!doc) return undefined;
+      // InMemoryRepository stores FormShape schema type
+      return this.repoFormShapeToFormShape(doc as RepoFormShape);
+    }
+
+    return undefined;
+  }
+
+  private repoFormShapeToFormShape(repoShape: RepoFormShape): FormShape {
+    // Convert repository FormShape to dialectical FormShape class
+    // FormShape class now works directly with FormShapeSchema
+    return FormShape.from(repoShape);
   }
 
   private emit(base: any, kind: Event['kind'], payload: Event['payload']) {
@@ -108,19 +154,40 @@ export class ShapeEngine {
     return evt;
   }
 
-  private mustGet(id: string): FormShape {
-    const s = this.getShape(id);
+  private async mustGet(id: string): Promise<FormShape> {
+    const s = await this.getShape(id);
     if (!s) throw new Error(`Shape not found: ${id}`);
     return s;
   }
 
   private async persist(s: FormShape) {
     if (!this.repo) return;
-    const id = s.id;
-    const doc = ShapeSchema.parse(s.toSchema());
-    const current = await this.repo.get(id);
-    if (current) await this.repo.update(id, () => doc);
-    else await this.repo.create(doc);
+
+    // Convert dialectical FormShape to repository FormShape
+    const repoShape = this.formShapeToRepoFormShape(s);
+
+    // Check if it's FormShapeRepository (Neo4j)
+    if (this.repo instanceof FormShapeRepository) {
+      await this.repo.saveForm(repoShape);
+      return;
+    }
+
+    // Otherwise it's InMemoryRepository
+    if (this.repo instanceof InMemoryRepository) {
+      const id = s.id;
+      const current = await this.repo.get(id);
+      if (current) {
+        await this.repo.update(id, repoShape as any);
+      } else {
+        await this.repo.create(repoShape as any);
+      }
+    }
+  }
+
+  private formShapeToRepoFormShape(formShape: FormShape): RepoFormShape {
+    // Convert dialectical FormShape class to repository FormShape type
+    // FormShape class now works directly with FormShapeSchema, so just return it
+    return formShape.toSchema();
   }
 
   async handle(cmd: ShapeCommand | Command): Promise<Event[]> {
@@ -148,13 +215,19 @@ export class ShapeEngine {
       case 'shape.delete': {
         const { id } = (cmd as ShapeDeleteCmd).payload;
         const existed = this.shapes.delete(id);
-        if (this.repo) await this.repo.delete(id);
+        if (this.repo) {
+          if (this.repo instanceof FormShapeRepository) {
+            await this.repo.deleteForm(id);
+          } else if (this.repo instanceof InMemoryRepository) {
+            await this.repo.delete(id);
+          }
+        }
         return [this.emit(base, 'shape.delete', { id, ok: existed })];
       }
 
       case 'shape.setCore': {
         const { id, name, type } = (cmd as ShapeSetCoreCmd).payload;
-        const s = this.mustGet(id);
+        const s = await this.mustGet(id);
         if (name !== undefined) s.setName(name);
         if (type !== undefined) s.setType(type);
         await this.persist(s);
@@ -169,7 +242,7 @@ export class ShapeEngine {
 
       case 'shape.setSignature': {
         const { id, signature } = (cmd as ShapeSetSignatureCmd).payload;
-        const s = this.mustGet(id);
+        const s = await this.mustGet(id);
         s.setSignature(signature);
         await this.persist(s);
         return [this.emit(base, 'shape.setSignature', { id })];
@@ -177,7 +250,7 @@ export class ShapeEngine {
 
       case 'shape.mergeSignature': {
         const { id, patch } = (cmd as ShapeMergeSignatureCmd).payload;
-        const s = this.mustGet(id);
+        const s = await this.mustGet(id);
         s.patchSignature(patch);
         await this.persist(s);
         return [this.emit(base, 'shape.mergeSignature', { id })];
@@ -185,7 +258,7 @@ export class ShapeEngine {
 
       case 'shape.setFacets': {
         const { id, facets } = (cmd as ShapeSetFacetsCmd).payload;
-        const s = this.mustGet(id);
+        const s = await this.mustGet(id);
         s.setFacets(facets);
         await this.persist(s);
         return [this.emit(base, 'shape.setFacets', { id })];
@@ -193,7 +266,7 @@ export class ShapeEngine {
 
       case 'shape.mergeFacets': {
         const { id, patch } = (cmd as ShapeMergeFacetsCmd).payload;
-        const s = this.mustGet(id);
+        const s = await this.mustGet(id);
         s.mergeFacets(patch);
         await this.persist(s);
         return [this.emit(base, 'shape.mergeFacets', { id })];
@@ -201,7 +274,7 @@ export class ShapeEngine {
 
       case 'shape.setState': {
         const { id, state } = (cmd as ShapeSetStateCmd).payload;
-        const s = this.mustGet(id);
+        const s = await this.mustGet(id);
         s.setState(state);
         await this.persist(s);
         return [
@@ -211,7 +284,7 @@ export class ShapeEngine {
 
       case 'shape.patchState': {
         const { id, patch } = (cmd as ShapePatchStateCmd).payload;
-        const s = this.mustGet(id);
+        const s = await this.mustGet(id);
         s.patchState(patch);
         await this.persist(s);
         return [
@@ -221,18 +294,17 @@ export class ShapeEngine {
 
       case 'shape.describe': {
         const { id } = (cmd as ShapeDescribeCmd).payload;
-        const s = this.mustGet(id);
-        const doc = s.toSchema();
+        const s = await this.mustGet(id);
         return [
           this.emit(base, 'shape.describe', {
             id,
             type: s.type,
             name: s.name ?? null,
-            state: doc.shape.state,
+            state: s.state,
             signatureKeys: Object.keys(
-              (doc.shape.signature ?? {}) as Record<string, unknown>,
+              (s.signature ?? {}) as Record<string, unknown>,
             ),
-            facetsKeys: Object.keys(doc.shape.facets ?? {}),
+            facetsKeys: Object.keys(s.facets ?? {}),
           }),
         ];
       }
@@ -243,7 +315,7 @@ export class ShapeEngine {
         const { fromStateId, toStateId, dialecticState } = (cmd as DialecticStateTransitionCmd).payload;
 
         // Get the current shape (represents fromState)
-        const fromShape = this.mustGet(fromStateId);
+        const fromShape = await this.mustGet(fromStateId);
         const fromDialecticState = fromShape.getDialecticState();
 
         if (!fromDialecticState) {
@@ -266,7 +338,7 @@ export class ShapeEngine {
 
 
         // Create or update target shape
-        let toShape = this.getShape(toStateId);
+        let toShape = await this.getShape(toStateId);
         if (!toShape) {
           toShape = FormShape.create({
             id: toStateId,
@@ -309,7 +381,7 @@ export class ShapeEngine {
 
       case 'dialectic.moment.activate': {
         const { stateId, moment } = (cmd as DialecticMomentActivateCmd).payload;
-        const shape = this.mustGet(stateId);
+        const shape = await this.mustGet(stateId);
 
         // Store moment in signature
         shape.patchSignature({
@@ -332,7 +404,7 @@ export class ShapeEngine {
 
       case 'dialectic.force.apply': {
         const { stateId, force } = (cmd as DialecticForceApplyCmd).payload;
-        const shape = this.mustGet(stateId);
+        const shape = await this.mustGet(stateId);
 
         // Check trigger condition (simplified - would need proper evaluation)
         const triggerMet = true; // TODO: Evaluate force.trigger
@@ -364,7 +436,7 @@ export class ShapeEngine {
 
       case 'dialectic.invariant.check': {
         const { stateId, invariants } = (cmd as DialecticInvariantCheckCmd).payload;
-        const shape = this.mustGet(stateId);
+        const shape = await this.mustGet(stateId);
 
         const violations: Event[] = [];
 
@@ -480,7 +552,7 @@ export class ShapeEngine {
       } else if (a.type === 'shape.upsert') {
         // Upsert → create or set core
         const id = a.id as string;
-        if (!this.getShape(id)) {
+        if (!(await this.getShape(id))) {
           const [evt] = await this.handle({
             kind: 'shape.create',
             payload: { id, type: a.kind, name: a.name },

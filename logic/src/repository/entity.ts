@@ -32,6 +32,14 @@ export class EntityShapeRepository {
     // 1. Prepare entity object
     const now = Date.now();
 
+    // FormDB rule: do not persist empirical data values in Neo4j.
+    // The Model layer owns data (e.g., Postgres). Neo4j stores only transcendental linkage.
+    if (entityData.values && Object.keys(entityData.values).length > 0) {
+      throw new Error(
+        'EntityShape.values must not be persisted in FormDB (Neo4j). Store data in Model/Postgres and keep values empty here.',
+      );
+    }
+
     // Validate formId is provided (Entity must reference its Form Principle)
     if (!entityData.formId) {
       throw new Error("Entity must have formId reference to Form Principle");
@@ -43,7 +51,7 @@ export class EntityShapeRepository {
       formId: entityData.formId, // Reference to Form Principle
       name: entityData.name,
       description: entityData.description,
-      values: entityData.values || {}, // Actual field values (Data)
+      values: {}, // Data values are not persisted in FormDB
       signature: entityData.signature,
       facets: entityData.facets,
       status: entityData.status,
@@ -60,7 +68,7 @@ export class EntityShapeRepository {
       formId: entity.formId, // Store Form reference
       name: entity.name || null,
       description: entity.description || null,
-      values: entity.values ? JSON.stringify(entity.values) : '{}', // Store actual data values
+      values: '{}', // Do not store empirical values in FormDB
       signature: entity.signature ? JSON.stringify(entity.signature) : null,
       facets: entity.facets ? JSON.stringify(entity.facets) : null,
       status: entity.status || null,
@@ -136,7 +144,7 @@ export class EntityShapeRepository {
         formId: rawProps.formId, // Form Principle reference
         name: rawProps.name || undefined,
         description: rawProps.description || undefined,
-        values: rawProps.values ? JSON.parse(rawProps.values) : {}, // Field values (Data)
+        values: {}, // Do not rehydrate empirical values from FormDB
         signature: rawProps.signature ? JSON.parse(rawProps.signature) : undefined,
         facets: rawProps.facets ? JSON.parse(rawProps.facets) : undefined,
         status: rawProps.status || undefined,
@@ -211,7 +219,7 @@ export class EntityShapeRepository {
           formId: rawProps.formId, // Form Principle reference
           name: rawProps.name || undefined,
           description: rawProps.description || undefined,
-          values: rawProps.values ? JSON.parse(rawProps.values) : {}, // Field values
+          values: {}, // Do not rehydrate empirical values from FormDB
           signature: rawProps.signature ? JSON.parse(rawProps.signature) : undefined,
           facets: rawProps.facets ? JSON.parse(rawProps.facets) : undefined,
           status: rawProps.status || undefined,

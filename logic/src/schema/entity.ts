@@ -144,6 +144,10 @@ type CreateEntityInput = {
   type: string;
   name?: string;
   description?: string;
+  // If provided, we embed an EntityShape (Empirical) into the Entity envelope.
+  // This is required for Neo4j persistence via EntityShapeRepository.
+  formId?: string;
+  values?: Record<string, unknown>;
   signature?: z.input<typeof EntitySignature>;
   facets?: Record<string, unknown>;
   state?: z.input<typeof EntityState>;
@@ -153,12 +157,26 @@ type CreateEntityInput = {
 
 export function createEntity(input: CreateEntityInput): Entity {
   const id = input.id ?? genId();
+
+  const maybeEntityShape =
+    input.formId !== undefined
+      ? EntityShapeSchema.parse({
+          id,
+          type: input.type,
+          name: input.name,
+          description: input.description,
+          formId: input.formId,
+          values: input.values ?? {},
+        })
+      : undefined;
+
   const draft = {
     shape: {
       core: { id, type: input.type, name: input.name, description: input.description },
       state: input.state ?? {},
       signature: input.signature,
       facets: input.facets ?? {},
+      ...(maybeEntityShape ? { entity: maybeEntityShape } : {}),
     },
     revision: 0,
     version: input.version,

@@ -1,7 +1,6 @@
 import type { Event, EventBus } from '@absolute';
 import { InMemoryEventBus } from '@absolute';
-import type { Repository } from '@repository';
-import { ShapeSchema, type Shape } from '@schema';
+import type { FormShape as RepoFormShape } from '@schema/form';
 import { ShapeEngine } from './shape-engine';
 
 export type ShapeId = string;
@@ -10,7 +9,7 @@ export class ShapeService {
   private readonly engine: ShapeEngine;
   private readonly bus: EventBus;
 
-  constructor(private readonly repo?: Repository<Shape>, bus?: EventBus) {
+  constructor(private readonly repo?: any, bus?: EventBus) {
     this.bus = bus ?? new InMemoryEventBus();
     this.engine = new ShapeEngine(this.repo, this.bus);
   }
@@ -30,14 +29,19 @@ export class ShapeService {
   }
 
   // Reads
-  async get(id: ShapeId): Promise<Shape | undefined> {
+  async get(id: ShapeId): Promise<RepoFormShape | undefined> {
     // Prefer repo (Sthiti), fall back to in-memory engine (session)
     if (this.repo) {
+      // If it's FormShapeRepository, use it directly
+      if (this.repo.getFormById) {
+        return await this.repo.getFormById(id);
+      }
+      // Otherwise it's InMemoryRepository
       const doc = await this.repo.get(id);
-      return doc ? ShapeSchema.parse(doc) : undefined;
+      return doc ? doc : undefined;
     }
-    const fs = this.engine.getShape(id);
-    return fs ? ShapeSchema.parse(fs.toSchema()) : undefined;
+    const fs = await this.engine.getShape(id);
+    return fs ? fs.toSchema() : undefined;
   }
 
   // SDK conveniences (unified verbs)

@@ -1,12 +1,12 @@
-export * from './kriya';
-export * from './qualquant';
-export * from './knowledge';
-export * from './action';
-// export * from './orchestrator';
-export * from './contracts';
-export * from './dialectic';
-export * from './driver';
-export * from './protocol';
+/**
+ * Core Engine Bus Infrastructure
+ * 
+ * Minimal exports for Engine Bus pattern:
+ * - message.ts: Command/Event types
+ * - bus.ts: EventBus interface and InMemoryEventBus
+ * - trace.ts: Tracing utilities
+ */
+
 export * from './message';
-export * from './trace';
 export * from './bus';
+export * from './trace';

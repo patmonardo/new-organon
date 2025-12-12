@@ -5,7 +5,7 @@ import { PropertySchema } from '@schema';
 import { ContextSchema } from '@schema';
 import { MorphSchema } from '@schema';
 import { WorldSchema } from '@schema';
-import { ShapeSchema } from '@schema';
+// ShapeSchema removed - use FormShapeSchema from @schema/form for form structures
 import { ContentSchema } from '@schema';
 import { ConceptSchema } from '@schema';
 import { JudgmentSchema } from '@schema';
@@ -13,7 +13,7 @@ import { SyllogismSchema } from '@schema';
 
 // Inputs accepted by the Form Processor. Keep defaults for incremental adoption.
 export const ProcessorInputs = z.object({
-  shapes: z.array(ShapeSchema).default([]),
+  // shapes removed - use form structures directly via FormShapeRepository
   entities: z.array(EntitySchema).default([]),
   properties: z.array(PropertySchema).default([]),
   contexts: z.array(ContextSchema).default([]),

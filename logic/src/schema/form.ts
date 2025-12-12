@@ -102,6 +102,7 @@ export const FormDataSchema = z
       })
       .optional(),
   })
+  .catchall(z.any()) // Allow dialectical and other custom fields
   .optional();
 
 export const FormModeSchema = z

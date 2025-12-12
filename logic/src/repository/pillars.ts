@@ -1,16 +1,14 @@
 import { makeInMemoryRepository } from "./memory";
 import {
-  ShapeSchema,
   ContextSchema,
   MorphSchema,
   EntitySchema,
   PropertySchema,
   AspectSchema,
-
 } from "../schema";
 
 export const Repos = {
-  shape: () => makeInMemoryRepository(ShapeSchema),
+  // shape removed - use FormShapeRepository directly
   context: () => makeInMemoryRepository(ContextSchema),
   morph: () => makeInMemoryRepository(MorphSchema),
   entity: () => makeInMemoryRepository(EntitySchema),

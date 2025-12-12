@@ -3,10 +3,9 @@
 //       Absolute Relative Form = Pure Form (GDS)
 //       Absolute Absolute Form = Projection (GDS)
 export * from "./base";
-export * from "./form";
 
 // Essence (six pillars)
-export * from "./shape";
+export * from "./form";
 export * from "./entity";
 export * from "./context";
 export * from "./property";
@@ -25,7 +24,7 @@ export * from "./active";
 export * from "./content";
 
 // Concept (truth of reflection; UPS + logic hooks)
-export * from "./concept";
+// export * from "./concept"; // DELETED - speculative bubble
 export * from "./judgment";
 export * from "./syllogism";
 

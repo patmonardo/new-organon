@@ -28,6 +28,8 @@ export class FormEntity {
     id?: string;
     name?: string;
     description?: string;
+    formId?: string;
+    values?: Record<string, unknown>;
     state?: z.infer<typeof EntityStateSchema>;
     version?: string;
     ext?: Record<string, unknown>;
@@ -118,7 +120,10 @@ export class FormEntity {
 
   // Core mutators (schema-safe via updateEntityDoc)
   setCore(core: { name?: string; type?: string }): this {
-    this.doc = updateEntityDoc(this.doc, { core } as any);
+    const patch: any = { core: {} };
+    if (core.name !== undefined) patch.core.name = core.name;
+    if (core.type !== undefined) patch.core.type = core.type;
+    this.doc = updateEntityDoc(this.doc, patch);
     return this;
   }
   setState(state: EntityState): this {

@@ -38,11 +38,31 @@
     "src/**/*.test.ts",
     "src/**/*.spec.ts",
     "src/relative/index.ts",
-    "src/relative/form/**/*",
+    // "src/relative/form/**/*",
+    "src/relative/form/morph/core",
+    "src/relative/form/morph/form",
+    "src/relative/form/morph/graph",
+    "src/relative/form/morph/cypher",
     "src/relative/concept/**/*",
     "src/relative/essence/**/*",
     "src/relative/being/**/*",
     "src/relative/types.ts",
-    "src/absolute/**/*"
+    // Exclude speculative Absolute modules, keep only Engine Bus core
+    "src/absolute/concept/**/*",
+    "src/absolute/essence/**/*",
+    "src/absolute/being/**/*",
+    "src/absolute/form/**/*",
+    // Exclude speculative core files, keep only: message.ts, bus.ts, trace.ts
+    "src/absolute/core/kriya.ts",
+    "src/absolute/core/qualquant.ts",
+    "src/absolute/core/knowledge.ts",
+    "src/absolute/core/action.ts",
+    "src/absolute/core/contracts.ts",
+    "src/absolute/core/dialectic.ts",
+    "src/absolute/core/driver.ts",
+    "src/absolute/core/protocol.ts",
+    "src/absolute/core/orchestrator.ts",
+    "src/absolute/core/jnana.ts",
+    "src/absolute/core/derive.ts"
   ]
 }

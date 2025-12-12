@@ -1,61 +1,78 @@
-import { ShapeSchema } from '@schema';
-import type { Shape, DialecticState, Moment } from '@schema';
-import { createShape } from '@schema';
-import { updateShape } from '@schema';
-
-type BaseState = Shape["shape"]["state"];
+import { FormShapeSchema, type FormShape as RepoFormShape } from '@schema/form';
+import type { DialecticState, Moment } from '@schema';
 
 /**
  * FormShape — Principle of Shape of Forms.
+ * 
+ * Works directly with FormShapeSchema (repository form structure).
+ * Dialectical data (signature, facets) is stored in the form's data/metadata.
  */
 export class FormShape {
-  private _doc: Shape;
+  private _doc: RepoFormShape;
 
-  private constructor(doc: Shape) {
+  private constructor(doc: RepoFormShape) {
     // Validate on construction to keep invariants tight
-    this._doc = ShapeSchema.parse(doc);
+    this._doc = FormShapeSchema.parse(doc);
   }
 
-  // Factory: create from inputs (delegates to schema helper)
+  // Factory: create from inputs
   static create(input: {
-    type: string;
+    type?: string; // Not in FormShapeSchema, but we can store in data
     name?: string;
     id?: string;
     state?: Record<string, unknown>;
     signature?: Record<string, unknown>;
     facets?: Record<string, unknown>;
   }): FormShape {
-    const doc = createShape(input as any);
+    const now = Date.now();
+    const doc: RepoFormShape = {
+      id: input.id || `form:${now}:${Math.random().toString(36).slice(2, 10)}`,
+      name: input.name || '',
+      fields: [],
+      // Store dialectical data in facets (we'll use a custom field or extend schema)
+      // For now, store in data field as a workaround
+      data: {
+        dialectical: {
+          type: input.type || 'system.Form',
+          state: input.state || {},
+          signature: input.signature,
+          facets: input.facets || {},
+        },
+      },
+      createdAt: now,
+      updatedAt: now,
+    };
     return new FormShape(doc);
   }
 
-  // Factory: wrap an existing Shape doc (validates)
-  static from(doc: Shape): FormShape {
+  // Factory: wrap an existing FormShape doc (validates)
+  static from(doc: RepoFormShape): FormShape {
     return new FormShape(doc);
   }
 
-  // Accessors required by ShapeEngine
+  // Accessors
   get id(): string {
-    return this._doc.shape.core.id;
+    return this._doc.id;
   }
   get type(): string {
-    return this._doc.shape.core.type;
+    // Extract from dialectical data
+    return (this._doc.data as any)?.dialectical?.type || 'system.Form';
   }
-  get name(): string | undefined {
-    return this._doc.shape.core.name;
+  get name(): string {
+    return this._doc.name;
   }
-  get state(): BaseState {
-    return this._doc.shape.state;
+  get state(): Record<string, unknown> {
+    return (this._doc.data as any)?.dialectical?.state || {};
   }
   get signature(): Record<string, unknown> | undefined {
-    return this._doc.shape.signature as any;
+    return (this._doc.data as any)?.dialectical?.signature;
   }
   get facets(): Record<string, unknown> {
-    return (this._doc.shape.facets ?? {}) as any;
+    return (this._doc.data as any)?.dialectical?.facets || {};
   }
   // Data is stored under facets.data
   get data(): unknown {
-    return (this._doc.shape.facets as any)?.data;
+    return this.facets.data;
   }
 
   // Dialectic Helpers
@@ -76,80 +93,153 @@ export class FormShape {
     }));
   }
 
-  toSchema(): Shape {
+  toSchema(): RepoFormShape {
     return this._doc;
   }
 
   toJSON(): any {
-    // Include top-level id for convenience in tests/telemetry
-    return { id: this._doc.shape.core.id, ...this._doc };
+    return this._doc;
   }
 
   // Mutators (chainable)
 
   setName(name?: string) {
-    this._doc = updateShape(this._doc, { core: { name } });
+    this._doc = { ...this._doc, name: name || '' };
     return this;
   }
 
   setType(type: string) {
-    this._doc = updateShape(this._doc, { core: { type } as any });
+    const dialectical = (this._doc.data as any)?.dialectical || {};
+    this._doc = {
+      ...this._doc,
+      data: {
+        ...(this._doc.data as any),
+        dialectical: { ...dialectical, type },
+      },
+    };
     return this;
   }
 
   setState(state: Record<string, unknown>) {
-    // Replace state
-    this._doc = updateShape(this._doc, { state: state as any });
+    const dialectical = (this._doc.data as any)?.dialectical || {};
+    this._doc = {
+      ...this._doc,
+      data: {
+        ...(this._doc.data as any),
+        dialectical: { ...dialectical, state },
+      },
+      updatedAt: Date.now(),
+    };
     return this;
   }
 
   patchState(patch: Record<string, unknown>) {
-    // Merge state fields
-    this._doc = updateShape(this._doc, { state: patch as any });
+    const dialectical = (this._doc.data as any)?.dialectical || {};
+    const currentState = dialectical.state || {};
+    this._doc = {
+      ...this._doc,
+      data: {
+        ...(this._doc.data as any),
+        dialectical: { ...dialectical, state: { ...currentState, ...patch } },
+      },
+      updatedAt: Date.now(),
+    };
     return this;
   }
 
   // Data helpers
   setData(data: unknown) {
-    const facets = { ...this.facets, data };
-    this._doc = updateShape(this._doc, { facets });
+    const dialectical = (this._doc.data as any)?.dialectical || {};
+    const facets = { ...(dialectical.facets || {}), data };
+    this._doc = {
+      ...this._doc,
+      data: {
+        ...(this._doc.data as any),
+        dialectical: { ...dialectical, facets },
+      },
+      updatedAt: Date.now(),
+    };
     return this;
   }
 
   clearData() {
-    const { data: _drop, ...rest } = this.facets;
-    this._doc = updateShape(this._doc, { facets: rest });
+    const dialectical = (this._doc.data as any)?.dialectical || {};
+    const { data: _drop, ...rest } = dialectical.facets || {};
+    this._doc = {
+      ...this._doc,
+      data: {
+        ...(this._doc.data as any),
+        dialectical: { ...dialectical, facets: rest },
+      },
+      updatedAt: Date.now(),
+    };
     return this;
   }
 
   mergeFacets(facets: Record<string, unknown>) {
-    const merged = { ...(this._doc.shape.facets ?? {}), ...facets };
-    this._doc = updateShape(this._doc, { facets: merged });
+    const dialectical = (this._doc.data as any)?.dialectical || {};
+    const currentFacets = dialectical.facets || {};
+    this._doc = {
+      ...this._doc,
+      data: {
+        ...(this._doc.data as any),
+        dialectical: { ...dialectical, facets: { ...currentFacets, ...facets } },
+      },
+      updatedAt: Date.now(),
+    };
     return this;
   }
 
   setFacets(facets: Record<string, unknown>) {
-    this._doc = updateShape(this._doc, { facets });
+    const dialectical = (this._doc.data as any)?.dialectical || {};
+    this._doc = {
+      ...this._doc,
+      data: {
+        ...(this._doc.data as any),
+        dialectical: { ...dialectical, facets },
+      },
+      updatedAt: Date.now(),
+    };
     return this;
   }
 
   patchSignature(partial: Record<string, unknown>) {
-    const merged = { ...(this._doc.shape.signature ?? {}), ...partial };
-    this._doc = updateShape(this._doc, { signature: merged });
+    const dialectical = (this._doc.data as any)?.dialectical || {};
+    const currentSignature = dialectical.signature || {};
+    this._doc = {
+      ...this._doc,
+      data: {
+        ...(this._doc.data as any),
+        dialectical: { ...dialectical, signature: { ...currentSignature, ...partial } },
+      },
+      updatedAt: Date.now(),
+    };
     return this;
   }
 
   setSignature(sig?: Record<string, unknown>) {
-    if (sig === undefined) {
-      return this.clearSignature();
-    }
-    this._doc = updateShape(this._doc, { signature: sig });
+    const dialectical = (this._doc.data as any)?.dialectical || {};
+    this._doc = {
+      ...this._doc,
+      data: {
+        ...(this._doc.data as any),
+        dialectical: { ...dialectical, signature: sig },
+      },
+      updatedAt: Date.now(),
+    };
     return this;
   }
 
   clearSignature() {
-    // Use null sentinel; schema clears to undefined
-    this._doc = updateShape(this._doc, { signature: null as any });
+    const dialectical = (this._doc.data as any)?.dialectical || {};
+    this._doc = {
+      ...this._doc,
+      data: {
+        ...(this._doc.data as any),
+        dialectical: { ...dialectical, signature: undefined },
+      },
+      updatedAt: Date.now(),
+    };
     return this;
   }
 }
