@@ -468,12 +468,11 @@ export class FormShapeRepository {
       }
 
       // Construct final FormShape
+      // Note: state/meta removed - those belong in Entity (Empirical), not Form (Rational)
       const formShape: FormShape = {
         ...formShapeProps,
         schemaId: formShapeProps.schemaId, // Ensure schemaId is mapped
         data: this.safeJsonParse(formShapeProps.data),
-        state: this.safeJsonParse(formShapeProps.state),
-        meta: this.safeJsonParse(formShapeProps.meta),
         fields: fields.length > 0 ? fields : undefined,
         layout: layout, // Use the conditionally reconstructed layout
         tags: tags.length > 0 ? tags : undefined,
@@ -698,11 +697,10 @@ export class FormShapeRepository {
         } // End layout reconstruction
 
         // Construct the final FormShape object (Correctly placed within the loop)
+        // Note: state/meta removed - those belong in Entity (Empirical), not Form (Rational)
         const formShape: FormShape = {
           ...formShapeProps,
           data: this.safeJsonParse(formShapeProps.data),
-          state: this.safeJsonParse(formShapeProps.state),
-          meta: this.safeJsonParse(formShapeProps.meta),
           fields: fields.length > 0 ? fields : undefined,
           layout: layout,
           tags: tags.length > 0 ? tags : undefined,
