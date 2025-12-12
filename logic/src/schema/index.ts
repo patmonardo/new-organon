@@ -1,4 +1,7 @@
-// Being (Form theory, canon)
+// Being (Shape theory - Relative Form, not Absolute Form)
+// Note: Relative Form = Shape Theory (UserLand)
+//       Absolute Relative Form = Pure Form (GDS)
+//       Absolute Absolute Form = Projection (GDS)
 export * from "./base";
 export * from "./form";
 

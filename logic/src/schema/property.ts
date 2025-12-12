@@ -10,13 +10,13 @@
  * - Embodies universal law through invariants
  * - Mediates Thing ↔ Relation (Entity ↔ Aspect)
  *
- * Relationship to Form Engines:
+ * Relationship to Shape Engines:
  * - Used by PropertyEngine to manage invariant laws
  * - Property.facets.law contains invariants and universality
  * - Property.facets.facticity contains grounding evidence
  * - Property.facets.mediates shows Entity ↔ Aspect connections
  *
- * Form Engine Pattern:
+ * Shape Engine Pattern:
  * - Facets: Law structure (invariants, facticity, mediation)
  * - Signature: Operational interface (what this property does)
  * - State: Runtime status

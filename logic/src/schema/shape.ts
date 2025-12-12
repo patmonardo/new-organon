@@ -1,5 +1,5 @@
 /**
- * Shape Schema - "Logic in Itself"
+ * Shape Schema - "Logic in Itself" (Relative Form)
  *
  * Shape represents the pure dialectical form/structure independent of application.
  * It is the foundational schema for storing dialectical states and their transformations.
@@ -11,8 +11,19 @@
  *
  * Relationship to Other Schemas:
  * - Shape + Context = Morph (Ground)
- * - Shape is used by all Form Engines to store dialectical structure
+ * - Shape is used by all Shape Engines to store dialectical structure
  * - Shape.facets.dialecticState contains the full IR representation
+ *
+ * Ontological Hierarchy (Mega Ontology):
+ * - Absolute Absolute Form = Projection (GDS) - the highest level, controls everything
+ * - Absolute Relative Form = Pure Form (GDS) - controls Application forms
+ * - Relative Form = Shape Theory (UserLand/logic) - THIS IS WHAT WE ARE
+ *
+ * What we have in UserLand:
+ * - These are "mere UserLand Form engines" = Shape Engines (Relative Form)
+ * - They operate on Shape (the active manifestation of Relative Form)
+ * - The *true* Form Engine is elusive and belongs in GDS, not UserLand
+ * - Shape Theory focuses on Relative Form, far from Absolute Form
  */
 
 import { z } from 'zod';
@@ -128,7 +139,7 @@ export function updateShape(doc: Shape, patch: UpdateShapePatch): Shape {
 
 /**
  * Helper: Extract dialectic state from Shape facets
- * Used by Form Engines to access the embedded dialectical structure
+ * Used by Shape Engines to access the embedded dialectical structure
  */
 export function getDialecticState(shape: Shape): any | undefined {
   return (shape.shape.facets as any)?.dialecticState;

@@ -9,7 +9,7 @@
  * - Expression: The external manifestation or action (For-another)
  * - Power: The unity of Force and Expression (Actuality)
  *
- * Relationship to Form Engines:
+ * Relationship to Shape Engines:
  * - Used by **Entity** and **Aspect** engines to model capabilities and dynamics
  * - Connects to **Active** schema for runtime execution
  */

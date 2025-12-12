@@ -10,12 +10,12 @@
  * - Exposes operational interface via signature (the "for-another")
  * - Represents "what is" as opposed to "what could be"
  *
- * Relationship to Form Engines:
+ * Relationship to Shape Engines:
  * - Used by EntityEngine to manage existential instances
  * - Entity.facets.dialecticState contains the embedded DialecticState
  * - Entity.signature contains moments as operational interface
  *
- * Form Engine Pattern:
+ * Shape Engine Pattern:
  * - Facets: Internal dialectical structure (moments, invariants, phase)
  * - Signature: External operational interface (what this entity does)
  * - State: Runtime status and metadata

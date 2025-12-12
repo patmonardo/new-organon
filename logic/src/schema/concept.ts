@@ -9,8 +9,8 @@
  * - Object: Mechanism, Chemism, Teleology
  * - Idea: Life, Cognition, Absolute Idea
  *
- * Relationship to Form Engines:
- * - Concept is the logical domain for the **Morph** Form Engine
+ * Relationship to Shape Engines:
+ * - Concept is the logical domain for the **Morph** Shape Engine
  * - Morph manifests the active self-determination of the Concept
  * - Concept -> Absolute (The end of logic)
  *

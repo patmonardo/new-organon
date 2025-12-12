@@ -1,4 +1,4 @@
-import { seedForms } from "../initial-data/seed-forms";
+import { seedForms } from "../repository/initial-data/seed-forms";
 
 seedForms()
   .then(() => console.log("Done."))

@@ -1,4 +1,4 @@
-import { Neo4jConnection } from "../connection";
+import { Neo4jConnection } from "./neo4j-client";
 import { MorphShape } from "../schema/morph";
 import { v4 as uuidv4 } from "uuid";
 

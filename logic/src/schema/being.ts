@@ -9,8 +9,8 @@
  * - Quantity: Determinateness external to being (Number/Degree)
  * - Measure: Unity of Quality and Quantity (Specific Quantum)
  *
- * Relationship to Form Engines:
- * - Being is the logical domain for the **Entity** Form Engine
+ * Relationship to Shape Engines:
+ * - Being is the logical domain for the **Entity** Shape Engine
  * - Entity instances manifest the logic of Being
  * - Being -> Essence (Transition via Measure/Indifference)
  *

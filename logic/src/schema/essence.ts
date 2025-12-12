@@ -9,8 +9,8 @@
  * - Appearance: Existence emerging from Ground (Phenomenon)
  * - Actuality: Unity of Essence and Existence (Substance/Cause)
  *
- * Relationship to Form Engines:
- * - Essence is the logical domain for **Property** and **Aspect** Form Engines
+ * Relationship to Shape Engines:
+ * - Essence is the logical domain for **Property** and **Aspect** Shape Engines
  * - Property manifests Essential Laws (Reflection)
  * - Aspect manifests Spectral Relations (Appearance)
  * - Essence -> Concept (Transition via Reciprocity/Freedom)
@@ -57,7 +57,7 @@ export const EssenceFacets = z.object({
     reciprocity: z.string().optional(), // Reciprocal action
   }).optional(),
 
-  // Integration with Form Engines
+  // Integration with Shape Engines
   propertyRef: z.string().optional(),   // Reference to Property (Law)
   aspectRef: z.string().optional(),     // Reference to Aspect (Relation)
 

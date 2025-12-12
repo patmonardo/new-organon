@@ -1,4 +1,4 @@
-import { Neo4jConnection } from "../connection";
+import { Neo4jConnection } from "./neo4j-client";
 import { EntityShape, EntityShapeSchema } from "../schema/entity";
 import {
   ManagedTransaction,

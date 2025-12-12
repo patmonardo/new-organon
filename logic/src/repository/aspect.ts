@@ -1,4 +1,4 @@
-import { Neo4jConnection } from "../connection";
+import { Neo4jConnection } from "./neo4j-client";
 import { AspectShape } from "../schema/aspect";
 import { v4 as uuidv4 } from "uuid";
 

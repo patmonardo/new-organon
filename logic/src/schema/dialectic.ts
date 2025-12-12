@@ -410,7 +410,7 @@ export type DialecticEvent =
   | DialecticInvariantSatisfiedEvent
   | DialecticEvaluatedEvent;
 
-// --- Form Engine Integration Helpers ---
+// --- Shape Engine Integration Helpers ---
 
 /**
  * Extract invariants from dialectic state for Property Engine

@@ -10,13 +10,13 @@
  * - Connects Entity and Property through the lens of Morph (Ground)
  * - Shows how relations appear rather than what they are in-themselves
  *
- * Relationship to Form Engines:
+ * Relationship to Shape Engines:
  * - Used by AspectEngine to manage relational appearances
  * - Aspect.facets.spectrum contains poles and dialectical range
  * - Aspect.facets.essentialRelation shows the underlying connection
  * - Aspect.facets.appearing describes mode of manifestation
  *
- * Form Engine Pattern:
+ * Shape Engine Pattern:
  * - Facets: Spectral structure (spectrum, relations, appearing)
  * - Signature: Operational interface (relational operations)
  * - State: Runtime status with spectral metadata

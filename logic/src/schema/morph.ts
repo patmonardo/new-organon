@@ -10,13 +10,13 @@
  * - Defines the transformation principle (Reason/Ratio)
  * - Mediates the transition from Essence to Concept
  *
- * Relationship to Form Engines:
+ * Relationship to Shape Engines:
  * - Used by MorphEngine to manage grounds and transformations
  * - Morph.facets.container shows what it holds (active unity)
  * - Morph.facets.transformation describes the mechanism of change
  * - Morph.composition defines pipeline/composite structures
  *
- * Form Engine Pattern:
+ * Shape Engine Pattern:
  * - Facets: Ground structure (container, transformation)
  * - Signature: Operational interface (transform/pipeline ops)
  * - State: Runtime status and composition state

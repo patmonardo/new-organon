@@ -98,6 +98,33 @@ async function query() {
     console.log(`  ${allKeysValid ? "✅" : "❌"} All entity value keys match form field names`);
   }
 
+  // === Customer → Invoice → LineItems ===
+  console.log("\n\n🧾 Customer → Invoice → LineItems:");
+  console.log("─".repeat(60));
+  const customer = await entityRepo.getEntityById("entity-customer-001");
+  const invoice = await entityRepo.getEntityById("entity-invoice-1001");
+  const lineitem1 = await entityRepo.getEntityById("entity-lineitem-1001-1");
+  const lineitem2 = await entityRepo.getEntityById("entity-lineitem-1001-2");
+
+  if (customer && invoice) {
+    console.log(`\nCustomer: ${customer.name} (${customer.id})`);
+    console.log(`  Email: ${customer.values.email}`);
+    console.log(`Invoice: ${invoice.values.invoiceNumber} (${invoice.id})`);
+    console.log(`  Date: ${invoice.values.invoiceDate}`);
+    console.log(`  Total: ${invoice.values.total}`);
+    console.log("Line Items:");
+    if (lineitem1) {
+      console.log(
+        `  - ${lineitem1.values.sku} ${lineitem1.values.description} x${lineitem1.values.quantity} @ ${lineitem1.values.unitPrice}`
+      );
+    }
+    if (lineitem2) {
+      console.log(
+        `  - ${lineitem2.values.sku} ${lineitem2.values.description} x${lineitem2.values.quantity} @ ${lineitem2.values.unitPrice}`
+      );
+    }
+  }
+
   console.log("\n✨ Query complete\n");
 
   await defaultConnection.close();

@@ -204,6 +204,117 @@ async function seed() {
   const savedProductEntity = await entityRepo.saveEntity(productEntity);
   console.log(`   ✓ Saved Entity: ${savedProductEntity.id} (formId: ${savedProductEntity.formId})`);
 
+  // === RICH DOMAIN: Customer, Invoice, LineItem ===
+  console.log("\n🧩 Seeding Customer, Invoice, LineItem domain...");
+
+  // Customer Form
+  const customerForm: FormShape = {
+    id: "form-customer",
+    name: "Customer",
+    title: "Customer Profile",
+    description: "Customer master record",
+    fields: [
+      { id: "first-name", name: "firstName", label: "First Name", required: true },
+      { id: "last-name", name: "lastName", label: "Last Name", required: true },
+      { id: "email", name: "email", label: "Email", required: true },
+    ],
+    layout: {
+      id: "customer-layout",
+      sections: [
+        { id: "name", title: "Name", fields: ["first-name", "last-name"] },
+        { id: "contact", title: "Contact", fields: ["email"] },
+      ],
+    },
+    tags: [{ value: "customer", label: "Customer" }],
+  };
+  await formRepo.saveForm(customerForm);
+
+  // Invoice Form
+  const invoiceForm: FormShape = {
+    id: "form-invoice",
+    name: "Invoice",
+    title: "Invoice",
+    description: "Customer invoice",
+    fields: [
+      { id: "invoice-number", name: "invoiceNumber", label: "Invoice #", required: true },
+      { id: "invoice-date", name: "invoiceDate", label: "Date", required: true },
+      { id: "customer-id", name: "customerId", label: "Customer Id", required: true },
+      { id: "total", name: "total", label: "Total ($)", required: true },
+    ],
+    layout: { id: "invoice-layout", sections: [] },
+    tags: [{ value: "invoice", label: "Invoice" }],
+  };
+  await formRepo.saveForm(invoiceForm);
+
+  // LineItem Form
+  const lineItemForm: FormShape = {
+    id: "form-line-item",
+    name: "Line Item",
+    title: "Line Item",
+    description: "Invoice line item",
+    fields: [
+      { id: "sku", name: "sku", label: "SKU", required: true },
+      { id: "description", name: "description", label: "Description", required: true },
+      { id: "quantity", name: "quantity", label: "Qty", required: true },
+      { id: "unit-price", name: "unitPrice", label: "Unit Price", required: true },
+      { id: "invoice-id", name: "invoiceId", label: "Invoice Id", required: true },
+    ],
+    layout: { id: "lineitem-layout", sections: [] },
+    tags: [{ value: "line-item", label: "LineItem" }],
+  };
+  await formRepo.saveForm(lineItemForm);
+
+  // Create Customer Entity
+  const customerEntity: EntityShape = {
+    id: "entity-customer-001",
+    type: "entity.Customer",
+    formId: "form-customer",
+    name: "Alice Johnson",
+    values: { firstName: "Alice", lastName: "Johnson", email: "alice@example.com" },
+    status: "active",
+    tags: ["customer"],
+  };
+  await entityRepo.saveEntity(customerEntity);
+
+  // Create Invoice Entity referencing Customer
+  const invoiceEntity: EntityShape = {
+    id: "entity-invoice-1001",
+    type: "entity.Invoice",
+    formId: "form-invoice",
+    name: "Invoice #1001",
+    values: {
+      invoiceNumber: "1001",
+      invoiceDate: new Date().toISOString().slice(0, 10),
+      customerId: customerEntity.id,
+      total: 349.97,
+    },
+    status: "open",
+    tags: ["invoice"],
+  };
+  await entityRepo.saveEntity(invoiceEntity);
+
+  // Create Line Items referencing Invoice
+  const lineItem1: EntityShape = {
+    id: "entity-lineitem-1001-1",
+    type: "entity.LineItem",
+    formId: "form-line-item",
+    name: "Widget Pro",
+    values: { sku: "WDG-PRO-001", description: "Widget Pro", quantity: 2, unitPrice: 99.99, invoiceId: invoiceEntity.id },
+    tags: ["line-item"],
+  };
+  const lineItem2: EntityShape = {
+    id: "entity-lineitem-1001-2",
+    type: "entity.LineItem",
+    formId: "form-line-item",
+    name: "Widget Mini",
+    values: { sku: "WDG-MINI-010", description: "Widget Mini", quantity: 1, unitPrice: 149.99, invoiceId: invoiceEntity.id },
+    tags: ["line-item"],
+  };
+  await entityRepo.saveEntity(lineItem1);
+  await entityRepo.saveEntity(lineItem2);
+
+  console.log("   ✓ Seeded Customer, Invoice, LineItems domain");
+
   // === Summary ===
   console.log("\n✨ Seeding complete!\n");
   console.log("Summary:");
@@ -212,6 +323,9 @@ async function seed() {
   console.log("\nForm:Entity pairs:");
   console.log(`  1. ${orderForm.id} → ${orderEntity.id}`);
   console.log(`  2. ${productForm.id} → ${productEntity.id}`);
+  console.log(`  3. ${customerForm.id} → ${customerEntity.id}`);
+  console.log(`  4. ${invoiceForm.id} → ${invoiceEntity.id}`);
+  console.log(`  5. ${lineItemForm.id} → ${lineItem1.id}, ${lineItem2.id}`);
   console.log("\nTest the persistence:");
   console.log("  pnpm test test/repository/form-entity-neo4j.test.ts");
 

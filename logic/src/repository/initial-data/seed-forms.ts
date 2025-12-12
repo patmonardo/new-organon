@@ -1,6 +1,6 @@
-import { defaultConnection } from "../connection";
-import { FormShapeRepository } from "../repository/form";
-import { FormShape } from "../schema/form";
+import { defaultConnection } from "../neo4j-client";
+import { FormShapeRepository } from "../form";
+import { FormShape } from "@schema/form";
 import { v4 as uuidv4 } from "uuid";
 
 export async function seedForms() {
@@ -98,9 +98,6 @@ export async function seedForms() {
             position: "bottom"
           }
         ]
-      },
-      state: {
-        status: "idle"
       }
     };
 
