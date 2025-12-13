@@ -1,7 +1,14 @@
 import type { FunctionCallOutput } from './agent-adapter';
 import type { PromptOutput } from './agent-adapter';
 import type { ContextDocument } from './agent-view';
-import { TawEventSchema, type TawEvent } from './taw-schema';
+import {
+  TawEventSchema,
+  type TawActEvent,
+  type TawEvent,
+  type TawIntentEvent,
+  type TawPlanEvent,
+  type TawResultEvent,
+} from './taw-schema';
 import {
   KERNEL_TAW_ACTIONS,
   KernelRunRequestSchema,
@@ -58,7 +65,7 @@ export type PlanStepInput =
 export function functionCallOutputToTawActEvent(
   call: FunctionCallOutput,
   opts: FunctionCallToTawActOptions,
-): TawEvent {
+): TawActEvent {
   return TawEventSchema.parse({
     kind: 'taw.act',
     payload: {
@@ -76,7 +83,7 @@ export function functionCallOutputToTawActEvent(
 export function contextDocumentToTawIntentEvent(
   context: ContextDocument,
   opts: ContextToTawIntentOptions = {},
-): TawEvent {
+): TawIntentEvent {
   const goal = opts.goal ?? context.goal;
   if (!goal) {
     throw new Error('Cannot build taw.intent: no goal provided and context.goal is missing');
@@ -97,7 +104,7 @@ export function contextDocumentToTawIntentEvent(
 export function stepsToTawPlanEvent(
   steps: readonly PlanStepInput[],
   opts: StepsToTawPlanOptions,
-): TawEvent {
+): TawPlanEvent {
   const stepIdPrefix = opts.stepIdPrefix ?? 's';
 
   const normalizedSteps = steps
@@ -146,7 +153,7 @@ export function stepsToTawPlanEvent(
 export function planTextToTawPlanEvent(
   planText: string,
   opts: StepsToTawPlanOptions,
-): TawEvent {
+): TawPlanEvent {
   const lines = planText.split(/\r?\n/);
   const steps: string[] = [];
 
@@ -175,7 +182,7 @@ export function planTextToTawPlanEvent(
 export function promptOutputToTawPlanEvent(
   prompt: PromptOutput,
   opts: StepsToTawPlanOptions,
-): TawEvent {
+): TawPlanEvent {
   return planTextToTawPlanEvent(prompt.content, opts);
 }
 
@@ -223,7 +230,7 @@ export type KernelRunToTawActOptions = {
 export function kernelRunRequestToTawActEvent(
   request: KernelRunRequest,
   opts: KernelRunToTawActOptions,
-): TawEvent {
+): TawActEvent {
   const validated = KernelRunRequestSchema.parse(request);
 
   return TawEventSchema.parse({
@@ -251,7 +258,7 @@ export type KernelResultToTawResultOptions = {
 export function kernelRunResultToTawResultEvent(
   result: KernelRunResult,
   opts: KernelResultToTawResultOptions,
-): TawEvent {
+): TawResultEvent {
   return TawEventSchema.parse({
     kind: 'taw.result',
     payload: {

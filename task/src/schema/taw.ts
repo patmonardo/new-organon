@@ -72,11 +72,44 @@ export const TawPayloadSchema = z.union([
 ]);
 export type TawPayload = z.infer<typeof TawPayloadSchema>;
 
-export const TawEventSchema = z.object({
-  kind: TawKindSchema,
-  payload: TawPayloadSchema,
+const TawEventBaseFields = {
   meta: z.record(z.string(), z.unknown()).optional(),
   correlationId: z.string().optional(),
   source: z.string().optional(),
+} as const;
+
+export const TawIntentEventSchema = z.object({
+  kind: z.literal('taw.intent'),
+  payload: TawIntentPayloadSchema,
+  ...TawEventBaseFields,
 });
+export type TawIntentEvent = z.infer<typeof TawIntentEventSchema>;
+
+export const TawPlanEventSchema = z.object({
+  kind: z.literal('taw.plan'),
+  payload: TawPlanPayloadSchema,
+  ...TawEventBaseFields,
+});
+export type TawPlanEvent = z.infer<typeof TawPlanEventSchema>;
+
+export const TawActEventSchema = z.object({
+  kind: z.literal('taw.act'),
+  payload: TawActPayloadSchema,
+  ...TawEventBaseFields,
+});
+export type TawActEvent = z.infer<typeof TawActEventSchema>;
+
+export const TawResultEventSchema = z.object({
+  kind: z.literal('taw.result'),
+  payload: TawResultPayloadSchema,
+  ...TawEventBaseFields,
+});
+export type TawResultEvent = z.infer<typeof TawResultEventSchema>;
+
+export const TawEventSchema = z.discriminatedUnion('kind', [
+  TawIntentEventSchema,
+  TawPlanEventSchema,
+  TawActEventSchema,
+  TawResultEventSchema,
+]);
 export type TawEvent = z.infer<typeof TawEventSchema>;

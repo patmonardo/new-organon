@@ -7,6 +7,10 @@ export {
   TawActPayloadSchema,
   TawResultPayloadSchema,
   TawPayloadSchema,
+  TawIntentEventSchema,
+  TawPlanEventSchema,
+  TawActEventSchema,
+  TawResultEventSchema,
   TawEventSchema,
 } from '@organon/task';
 
@@ -18,6 +22,10 @@ export type {
   TawActPayload,
   TawResultPayload,
   TawPayload,
+  TawIntentEvent,
+  TawPlanEvent,
+  TawActEvent,
+  TawResultEvent,
   TawEvent,
 } from '@organon/task';
 

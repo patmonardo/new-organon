@@ -13,13 +13,13 @@ import {
   type PlanPromptOptions,
   type StepsToTawPlanOptions,
 } from './agent-to-taw';
-import type { TawEvent } from './taw-schema';
+import type { TawActEvent, TawIntentEvent, TawPlanEvent } from './taw-schema';
 import type { KernelRunRequest } from './kernel';
 
 export type DemoLoopSeed = {
   context: ContextDocument;
   prompt: PromptOutput;
-  intentEvent: TawEvent;
+  intentEvent: TawIntentEvent;
   planPromptText: string;
 };
 
@@ -65,7 +65,7 @@ export function seedDemoLoopFromTrace(
 export function plannerTextToTawPlan(
   planText: string,
   opts: StepsToTawPlanOptions,
-): TawEvent {
+): TawPlanEvent {
   return planTextToTawPlanEvent(planText, opts);
 }
 
@@ -81,7 +81,7 @@ export function choiceToTawAct(
   opts:
     | (Omit<FunctionCallToTawActOptions, 'goalId'> & { goalId: string })
     | (Omit<KernelRunToTawActOptions, 'goalId'> & { goalId: string }),
-): TawEvent {
+): TawActEvent {
   if (choice.type === 'function') {
     return functionCallOutputToTawActEvent(choice.call, opts as FunctionCallToTawActOptions);
   }
