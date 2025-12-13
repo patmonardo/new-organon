@@ -45,6 +45,47 @@ export * from './agent-view';
 export * from './agent-controller';
 export * from './agent-adapter';
 
+// Fact trace bridge (Logic → Agent Context)
+export * from './fact-trace';
+
+// Logical model/view trace (SDSL Model/View → FactTrace)
+export * from './logical-model-trace';
+
+// Essence → View → Agent helpers
+export * from './essence-to-agent';
+
+// Middleware primitives (event stream → agent outputs)
+export * from './agent-bus';
+export * from './agent-runtime';
+
+// Model → TAW bridges
+export * from './agent-to-taw';
+
+// Demo loop helpers (trace → intent/plan/act)
+export * from './demo-loop';
+
+// Kernel models (GDS/GNN/ML etc.)
+export * from './kernel';
+
+// Kernel execution port (TAW/execution boundary)
+export * from './kernel-port';
+
+// Kernel → FactTrace helpers (closing the loop)
+export * from './kernel-trace';
+
+// System Bus primitives (FCI: internal middleware)
+export * from './fci-bus';
+
+// Terminology (transcendentally located)
+export * from './terminology';
+
+// TAW surface (moment of concept)
+export * from './taw';
+export * from './taw-schema';
+
+// Algorithm-first core
+export * from './runtime-algorithms';
+
 // Types and adapters (Universal adapter interface)
 export * from './types';
 export * from './adapter';

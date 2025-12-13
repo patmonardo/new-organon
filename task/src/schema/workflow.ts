@@ -121,6 +121,49 @@ export type Process = z.infer<typeof ProcessSchema>;
 export type Coordination = z.infer<typeof CoordinationSchema>;
 export type Workflow = z.infer<typeof WorkflowSchema>;
 
+// =====================================================================
+// WORKFLOW UNITY (W = C + C)
+// =====================================================================
+//
+// The public/external interface may later add agent-facing specifications,
+// but the internal absolute meaning here is:
+// - Concept: the goal/constraints (what)
+// - Controller: the operational driver (how)
+//
+// Workflow = Concept + Controller
+
+export const WorkflowConceptSchema = z.object({
+  goal: z.object({
+    id: z.string(),
+    type: z.string(),
+    description: z.string(),
+  }),
+  constraints: z.array(z.string()).optional(),
+});
+
+export const WorkflowControllerStepSchema = z.object({
+  id: z.string(),
+  description: z.string(),
+  action: z.string(),
+  defaultInput: z.unknown().optional(),
+});
+
+export const WorkflowControllerSchema = z.object({
+  goalId: z.string(),
+  steps: z.array(WorkflowControllerStepSchema),
+});
+
+export const WorkflowUnitySchema = z.object({
+  id: z.string(),
+  concept: WorkflowConceptSchema,
+  controller: WorkflowControllerSchema,
+});
+
+export type WorkflowConcept = z.infer<typeof WorkflowConceptSchema>;
+export type WorkflowControllerStep = z.infer<typeof WorkflowControllerStepSchema>;
+export type WorkflowController = z.infer<typeof WorkflowControllerSchema>;
+export type WorkflowUnity = z.infer<typeof WorkflowUnitySchema>;
+
 /**
  * Workflow Factory: Creates workflows with dialectical organization principles
  */

@@ -7,7 +7,6 @@ import { MorphSchema } from '@schema';
 import { WorldSchema } from '@schema';
 // ShapeSchema removed - use FormShapeSchema from @schema/form for form structures
 import { ContentSchema } from '@schema';
-import { ConceptSchema } from '@schema';
 import { JudgmentSchema } from '@schema';
 import { SyllogismSchema } from '@schema';
 
@@ -20,7 +19,6 @@ export const ProcessorInputs = z.object({
   morphs: z.array(MorphSchema).default([]),
   relations: z.array(RelationSchema).default([]),
   content: z.array(ContentSchema).default([]),
-  concepts: z.array(ConceptSchema).default([]),
   judgments: z.array(JudgmentSchema).default([]),
   syllogisms: z.array(SyllogismSchema).default([]),
 });
@@ -33,7 +31,7 @@ export type ProcessorRunOptions = {
   deriveSyllogistic?: false;
 };
 
-const GrossByThing = z.record(z.number().int().nonnegative());
+const GrossByThing = z.record(z.string(), z.number().int().nonnegative());
 export const ProcessorSnapshot = z.object({
   world: WorldSchema,
   indexes: z

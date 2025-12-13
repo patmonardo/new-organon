@@ -3,6 +3,57 @@
 
 export type Meta = Record<string, unknown>;
 
+/**
+ * DialecticalInfo
+ *
+ * A conventional (optional) payload that engines may attach to Command/Event meta.
+ * Kept dependency-free (no @schema imports) so the Engine Bus remains minimal.
+ */
+export type DialecticalInfo = {
+  /** Discrete tags, e.g. { layer: 'shape', rule: 'posting' } */
+  tags?: Array<{ layer: string; rule: string }>;
+
+  /**
+   * Optional progression hints. Semantics are domain-defined.
+   * Example: { axis: 'diagonal', from: {layer:'shape',rule:'determining'}, to: {layer:'morph',rule:'facticity'} }
+   */
+  progressions?: Array<{
+    axis: string;
+    from: { layer: string; rule: string };
+    to: { layer: string; rule: string };
+  }>;
+
+  /** Freeform provenance/explanation */
+  note?: string;
+};
+
+/**
+ * FactStoreInfo
+ *
+ * Conventional (optional) meta describing FactStore maintenance operations.
+ * This keeps the “Reflection = maintenance of our FactStore” mapping explicit
+ * without baking persistence details into engines or schemas.
+ */
+export type FactStoreInfo = {
+  /** What kind of maintenance this is in the Essence pipeline */
+  mode?: 'reflection' | 'logic' | 'transcendental';
+
+  /** The store being maintained (e.g. 'FormDB', 'FactDB', 'WorldIndex') */
+  store?: string;
+
+  /** Operation semantics (informational; engines may still be pure) */
+  op?: 'assert' | 'retract' | 'revise' | 'index' | 'project';
+
+  /** What is being maintained (e.g. 'FormShape', 'Entity', 'Context') */
+  kind?: string;
+
+  /** Optional IDs affected */
+  ids?: string[];
+
+  /** Optional note for why/how this maintenance relates to facticity */
+  note?: string;
+};
+
 // Unscoped (stringly-typed)
 export type Command<P = unknown> = { kind: string; payload: P; meta?: Meta };
 export type Event<P = unknown> = { kind: string; payload?: P; meta?: Meta };

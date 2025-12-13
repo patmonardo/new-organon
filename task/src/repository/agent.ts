@@ -12,13 +12,13 @@ export class AgentRepository {
     return agent;
   }
 
-  async getAgentById(id: string): Promise<AgentDefinition | undefined> {
+  async getAgentById(id: string): Promise<Agent | undefined> {
     return this.agents.get(id);
   }
 
   async findAgents(
-    query?: Partial<AgentDefinition>,
-  ): Promise<AgentDefinition[]> {
+    query?: Partial<Agent>,
+  ): Promise<Agent[]> {
     return Array.from(this.agents.values()).filter((agent) => {
       if (!query) return true;
       return Object.entries(query).every(

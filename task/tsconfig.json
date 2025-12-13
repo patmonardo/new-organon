@@ -3,29 +3,15 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "baseUrl": ".",
-    "paths": {
-      "@organon/logic": [
-        "../logic/dist/index"
-      ],
-      "@organon/logic/*": [
-        "../logic/dist/*"
-      ],
-      "@organon/model": [
-        "../model/dist/index"
-      ],
-      "@organon/model/*": [
-        "../model/dist/*"
-      ]
-    }
+    "baseUrl": "."
   },
   "include": [
     "tsconfig.json",
-    "src/index.ts",
-    "src/task.ts"
+    "src/**/*.ts"
   ],
   "exclude": [
     "src/archive/**/*.ts",
+    "src/relative/**/*.ts",
     "src/eval/**/*.ts"
   ]
 }

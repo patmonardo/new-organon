@@ -11,10 +11,15 @@ import {
   type EntityShape,
   EntityShapeSchema,
 } from '@schema';
+import {
+  toDialecticalInfo,
+  type DiscursiveRuleTag,
+} from '@schema';
 import * as active from '@schema';
 import { FormEntity } from './entity-form';
 import type {
   DialecticEvaluateCmd,
+  DialecticInvariantCheckCmd,
   DialecticCommand
 } from '@schema';
 
@@ -90,6 +95,8 @@ export type EntityCommand =
 type EntityShapeRepo = EntityShapeRepository | InMemoryRepository<typeof EntityShapeSchema>;
 
 export class EntityEngine {
+  private readonly entities = new Map<string, FormEntity>();
+
   constructor(
     private readonly repo?: EntityShapeRepo,
     private readonly bus: EventBus = new InMemoryEventBus(),
@@ -101,6 +108,8 @@ export class EntityEngine {
   }
 
   async getEntity(id: string): Promise<FormEntity | undefined> {
+    const cached = this.entities.get(id);
+    if (cached) return cached;
     if (!this.repo) return undefined;
 
     // Check if it's EntityShapeRepository (Neo4j)
@@ -151,10 +160,90 @@ export class EntityEngine {
   }
 
   private emit(base: any, kind: Event['kind'], payload: Event['payload']) {
-    const meta = childSpan(base, { action: kind, scope: this.scope });
+    const meta = {
+      ...childSpan(base, { action: kind, scope: this.scope }),
+      ...(this.metaFor(kind, payload) ?? {}),
+    };
     const evt: Event = { kind, payload, meta };
     this.bus.publish(evt);
     return evt;
+  }
+
+  private metaFor(kind: Event['kind'], payload: Event['payload']) {
+    if (
+      kind !== 'entity.create' &&
+      kind !== 'entity.setCore' &&
+      kind !== 'entity.setState'
+    ) {
+      return undefined;
+    }
+
+    const id = (payload as any)?.id as string | undefined;
+    if (!id) return undefined;
+
+    const op = kind === 'entity.create' ? 'assert' : 'revise';
+    const tags: DiscursiveRuleTag[] = [{ layer: 'entity', rule: 'thing' }];
+
+    return {
+      factStore: {
+        mode: 'logic',
+        store: 'FormDB',
+        op,
+        kind: 'Entity',
+        ids: [id],
+      },
+      dialectic: toDialecticalInfo(tags),
+    };
+  }
+
+  private readPath(obj: unknown, path: string): unknown {
+    if (!path) return undefined;
+    const parts = path.split('.').filter(Boolean);
+    let cur: any = obj;
+    for (const p of parts) {
+      if (cur === null || cur === undefined) return undefined;
+      cur = cur[p];
+    }
+    return cur;
+  }
+
+  private evalInvariantPredicate(entity: Entity, predicate: string | undefined): { ok: boolean; reason?: string } {
+    if (!predicate) {
+      // Seed behavior: if no formal predicate, treat as satisfied (caller can still log constraint text).
+      return { ok: true };
+    }
+
+    // Mini predicate DSL (seed):
+    // - exists:<path>
+    // - eq:<path>:<json-or-string>
+    const trimmed = predicate.trim();
+
+    if (trimmed.startsWith('exists:')) {
+      const path = trimmed.slice('exists:'.length).trim();
+      const v = this.readPath(entity, path);
+      const ok = v !== undefined && v !== null;
+      return ok ? { ok } : { ok, reason: `missing value at ${path}` };
+    }
+
+    if (trimmed.startsWith('eq:')) {
+      const rest = trimmed.slice('eq:'.length);
+      const idx = rest.indexOf(':');
+      if (idx <= 0) return { ok: false, reason: 'invalid eq predicate (expected eq:<path>:<value>)' };
+      const path = rest.slice(0, idx).trim();
+      const raw = rest.slice(idx + 1).trim();
+      let expected: any = raw;
+      try {
+        expected = JSON.parse(raw);
+      } catch {
+        // keep as string
+      }
+      const actual = this.readPath(entity, path);
+      const ok = actual === expected;
+      return ok ? { ok } : { ok, reason: `expected ${path} === ${JSON.stringify(expected)}; got ${JSON.stringify(actual)}` };
+    }
+
+    // Unknown predicate form: seed treats as not evaluable => violated.
+    return { ok: false, reason: `unknown predicate: ${trimmed}` };
   }
 
   private async mustGet(id: string): Promise<FormEntity> {
@@ -192,11 +281,11 @@ export class EntityEngine {
     const entity = formEntity.toSchema();
     const core = entity.shape.core;
     const state = entity.shape.state;
-    
+
     // Extract formId from embedded entity shape if present
     const embeddedEntityShape = entity.shape.entity;
     const formId = embeddedEntityShape?.formId;
-    
+
     if (!formId) {
       throw new Error('Entity must have formId reference to Form Principle. Provide formId when creating entity.');
     }
@@ -230,6 +319,7 @@ export class EntityEngine {
         const { payload } = cmd as EntityCreateCmd;
         const created = EntitySchema.parse(createEntity(payload as any));
         const ent = FormEntity.from(created);
+        this.entities.set(ent.id, ent);
         await this.persist(ent);
         return [
           this.emit(base, 'entity.create', {
@@ -257,6 +347,7 @@ export class EntityEngine {
         const { id, name, type } = (cmd as EntitySetCoreCmd).payload;
         const e = await this.mustGet(id);
         e.setCore({ name, type });
+        this.entities.set(e.id, e);
         await this.persist(e);
         return [
           this.emit(base, 'entity.setCore', {
@@ -271,6 +362,7 @@ export class EntityEngine {
         const { id, state } = (cmd as EntitySetStateCmd).payload;
         const e = await this.mustGet(id);
         e.setState(state as any);
+        this.entities.set(e.id, e);
         await this.persist(e);
         return [this.emit(base, 'entity.setState', { id })];
       }
@@ -279,6 +371,7 @@ export class EntityEngine {
         const { id, patch } = (cmd as EntityPatchStateCmd).payload;
         const e = await this.mustGet(id);
         e.patchState(patch as any);
+        this.entities.set(e.id, e);
         await this.persist(e);
         return [this.emit(base, 'entity.patchState', { id })];
       }
@@ -287,6 +380,7 @@ export class EntityEngine {
         const { id, facets } = (cmd as EntitySetFacetsCmd).payload;
         const e = await this.mustGet(id);
         e.setFacets(facets as any);
+        this.entities.set(e.id, e);
         await this.persist(e);
         return [this.emit(base, 'entity.setFacets', { id })];
       }
@@ -295,6 +389,7 @@ export class EntityEngine {
         const { id, patch } = (cmd as EntityMergeFacetsCmd).payload;
         const e = await this.mustGet(id);
         e.mergeFacets(patch as any);
+        this.entities.set(e.id, e);
         await this.persist(e);
         return [this.emit(base, 'entity.mergeFacets', { id })];
       }
@@ -303,6 +398,7 @@ export class EntityEngine {
         const { id, signature } = (cmd as EntitySetSignatureCmd).payload;
         const e = await this.mustGet(id);
         e.setSignature(signature as any);
+        this.entities.set(e.id, e);
         await this.persist(e);
         return [this.emit(base, 'entity.setSignature', { id })];
       }
@@ -311,6 +407,7 @@ export class EntityEngine {
         const { id, patch } = (cmd as EntityMergeSignatureCmd).payload;
         const e = await this.mustGet(id);
         e.mergeSignature(patch as any);
+        this.entities.set(e.id, e);
         await this.persist(e);
         return [this.emit(base, 'entity.mergeSignature', { id })];
       }
@@ -335,6 +432,35 @@ export class EntityEngine {
               (entity.shape.signature ?? {}) as Record<string, unknown>,
             ),
             facetsKeys: Object.keys(entity.shape.facets ?? {}),
+          }),
+        ];
+      }
+
+      case 'dialectic.invariant.check': {
+        const { stateId, invariants } = (cmd as DialecticInvariantCheckCmd).payload;
+        const e = await this.mustGet(stateId);
+        const entity = e.toSchema();
+
+        const violations: Event[] = [];
+        for (const inv of invariants) {
+          const res = this.evalInvariantPredicate(entity, (inv as any)?.predicate);
+          if (!res.ok) {
+            violations.push(
+              this.emit(base, 'dialectic.invariant.violated', {
+                stateId,
+                invariant: (inv as any)?.id ?? 'invariant.unknown',
+                reason: res.reason ?? 'Constraint not satisfied',
+              }),
+            );
+          }
+        }
+
+        if (violations.length > 0) return violations;
+
+        return [
+          this.emit(base, 'dialectic.invariant.satisfied', {
+            stateId,
+            count: invariants.length,
           }),
         ];
       }

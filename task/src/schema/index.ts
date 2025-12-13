@@ -5,3 +5,4 @@ export * from './knowledge';
 export * from './graph';
 export * from './provenance';
 export * from './topic';
+export * from './taw';

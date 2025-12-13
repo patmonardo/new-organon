@@ -10,6 +10,7 @@ import {
   PropertySchema,
   createProperty,
 } from '@schema';
+import { toDialecticalInfo, type DiscursiveRuleTag } from '@schema';
 import * as active from '@schema';
 import type {
   DialecticEvaluateCmd,
@@ -75,10 +76,41 @@ export class PropertyEngine {
   }
 
   private emit(base: any, kind: Event['kind'], payload: Event['payload']) {
-    const meta = childSpan(base, { action: kind, scope: this.scope });
+    const meta = {
+      ...childSpan(base, { action: kind, scope: this.scope }),
+      ...(this.metaFor(kind, payload) ?? {}),
+    };
     const evt: Event = { kind, payload, meta };
     this.bus.publish(evt);
     return evt;
+  }
+
+  private metaFor(kind: Event['kind'], payload: Event['payload']) {
+    if (
+      kind !== 'property.create' &&
+      kind !== 'property.setCore' &&
+      kind !== 'property.setState'
+    ) {
+      return undefined;
+    }
+
+    const id = (payload as any)?.id as string | undefined;
+    if (!id) return undefined;
+
+    const op = kind === 'property.create' ? 'assert' : 'revise';
+
+    const tags: DiscursiveRuleTag[] = [{ layer: 'property', rule: 'relation' }];
+
+    return {
+      factStore: {
+        mode: 'logic',
+        store: 'FormDB',
+        op,
+        kind: 'Property',
+        ids: [id],
+      },
+      dialectic: toDialecticalInfo(tags),
+    };
   }
 
   private async mustGet(id: string): Promise<FormProperty> {

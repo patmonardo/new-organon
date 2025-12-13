@@ -6,5 +6,5 @@
 export * from "./logic"
 // export * from "./schema"
 // export * from "./repository"
-// export * from "./absolute"
+export * from "./absolute/form";
 // export * from "./relative"

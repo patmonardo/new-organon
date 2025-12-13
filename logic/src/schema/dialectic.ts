@@ -20,6 +20,7 @@
  */
 
 import { z } from 'zod';
+import { DiscursiveRuleTagSchema } from './rules';
 
 /**
  * CPU/GPU Phase Tags
@@ -206,6 +207,12 @@ export const DialecticStateSchema = z.object({
 
   /** Key points (from TopicMapEntry.keyPoints) */
   keyPoints: z.array(z.string()).optional(),
+
+  /**
+   * Optional tags for “rules of discursivity” alignment.
+   * This is the Shape→Context→Morph triadic rule surface, without prescribing execution.
+   */
+  discursivity: z.array(DiscursiveRuleTagSchema).optional(),
 });
 
 export type DialecticState = z.infer<typeof DialecticStateSchema>;

@@ -11,6 +11,7 @@ import {
 } from '@schema';
 import { FormMorph } from './morph-form';
 import * as active from '@schema';
+import { toDialecticalInfo, type DiscursiveRuleTag } from '@schema';
 import type {
   DialecticEvaluateCmd,
   DialecticCommand,
@@ -75,10 +76,49 @@ export class MorphEngine {
   }
 
   private emit(base: any, kind: Event['kind'], payload: Event['payload']) {
-    const meta = childSpan(base, { action: kind, scope: this.scope });
+    const meta = {
+      ...childSpan(base, { action: kind, scope: this.scope }),
+      ...(this.metaFor(kind, payload) ?? {}),
+    };
     const evt: Event = { kind, payload, meta };
     this.bus.publish(evt);
     return evt;
+  }
+
+  private metaFor(kind: Event['kind'], payload: Event['payload']) {
+    if (
+      kind !== 'morph.create' &&
+      kind !== 'morph.setCore' &&
+      kind !== 'morph.setState'
+    ) {
+      return undefined;
+    }
+
+    const id = (payload as any)?.id as string | undefined;
+    if (!id) return undefined;
+
+    const op = kind === 'morph.create' ? 'assert' : 'revise';
+
+    const tags: DiscursiveRuleTag[] = [];
+    const add = (t: DiscursiveRuleTag) => {
+      if (!tags.some((x) => x.layer === t.layer && x.rule === t.rule)) tags.push(t);
+    };
+
+    // Minimal explicit mapping by engine verb
+    if (kind === 'morph.create') add({ layer: 'morph', rule: 'ground' });
+    if (kind === 'morph.setCore') add({ layer: 'morph', rule: 'condition' });
+    if (kind === 'morph.setState') add({ layer: 'morph', rule: 'facticity' });
+
+    return {
+      factStore: {
+        mode: 'transcendental',
+        store: 'FormDB',
+        op,
+        kind: 'Morph',
+        ids: [id],
+      },
+      dialectic: toDialecticalInfo(tags),
+    };
   }
 
   private async mustGet(id: string): Promise<FormMorph> {
@@ -132,7 +172,10 @@ export class MorphEngine {
       case 'morph.setCore': {
         const { id, name, type } = (cmd as MorphSetCoreCmd).payload;
         const m = await this.mustGet(id);
-        m.setCore({ name, type });
+        m.setCore({
+          ...(name !== undefined ? { name } : {}),
+          ...(type !== undefined ? { type } : {}),
+        });
         await this.persist(m);
         return [
           this.emit(base, 'morph.setCore', {

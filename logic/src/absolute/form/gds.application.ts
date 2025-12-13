@@ -1,0 +1,158 @@
+import { z } from 'zod';
+
+/**
+ * GDS Application Form (presentation layer)
+ *
+ * TypeScript mirror of the high-level GDS "applications" facade surface.
+ * Intentionally non-executable: it models invocation shapes + operation IDs.
+ */
+
+export const GdsUserSchema = z.object({
+	username: z.string().min(1),
+	isAdmin: z.boolean().optional().default(false),
+});
+export type GdsUser = z.infer<typeof GdsUserSchema>;
+
+export const GdsDatabaseIdSchema = z.string().min(1);
+export type GdsDatabaseId = z.infer<typeof GdsDatabaseIdSchema>;
+
+export const GdsGraphNameSchema = z.string().min(1);
+export type GdsGraphName = z.infer<typeof GdsGraphNameSchema>;
+
+export const GdsGraphStoreCatalogFacadeSchema = z.literal('graph_store_catalog');
+export type GdsGraphStoreCatalogFacade = z.infer<
+	typeof GdsGraphStoreCatalogFacadeSchema
+>;
+
+const GraphStoreCatalogBase = z.object({
+	facade: GdsGraphStoreCatalogFacadeSchema,
+	user: GdsUserSchema,
+	databaseId: GdsDatabaseIdSchema,
+});
+
+/**
+ * Mirrors the Rust trait `GraphCatalogApplications` operations.
+ *
+ * See: gds/src/applications/graph_store_catalog/facade/graph_catalog_applications.rs
+ */
+export const GdsGraphStoreCatalogCallSchema = z.discriminatedUnion('op', [
+	GraphStoreCatalogBase.extend({
+		op: z.literal('list_graphs'),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('graph_memory_usage'),
+		graphName: GdsGraphNameSchema,
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('drop_graph'),
+		graphName: GdsGraphNameSchema,
+		failIfMissing: z.boolean().default(false),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('drop_graphs'),
+		graphNames: z.array(GdsGraphNameSchema).default([]),
+		failIfMissing: z.boolean().default(false),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('drop_node_properties'),
+		graphName: GdsGraphNameSchema,
+		nodeProperties: z.array(z.string().min(1)).default([]),
+		failIfMissing: z.boolean().default(false),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('drop_relationships'),
+		graphName: GdsGraphNameSchema,
+		relationshipType: z.string().min(1),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('stream_node_properties'),
+		graphName: GdsGraphNameSchema,
+		nodeProperties: z.array(z.string().min(1)).default([]),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('stream_relationship_properties'),
+		graphName: GdsGraphNameSchema,
+		relationshipProperties: z.array(z.string().min(1)).default([]),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('stream_relationships'),
+		graphName: GdsGraphNameSchema,
+		relationshipTypes: z.array(z.string().min(1)).default([]),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('write_node_properties'),
+		graphName: GdsGraphNameSchema,
+		nodeProperties: z.array(z.string().min(1)).default([]),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('write_node_labels'),
+		graphName: GdsGraphNameSchema,
+		nodeLabels: z.array(z.string().min(1)).default([]),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('write_relationship_properties'),
+		graphName: GdsGraphNameSchema,
+		relationshipProperties: z.array(z.string().min(1)).default([]),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('write_relationships'),
+		graphName: GdsGraphNameSchema,
+		relationshipType: z.string().min(1),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('export_to_csv'),
+		graphName: GdsGraphNameSchema,
+		exportPath: z.string().min(1),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('export_to_database'),
+		graphName: GdsGraphNameSchema,
+		targetDatabase: z.string().min(1),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('project_native'),
+		projectionConfig: z.unknown(),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('project_generic'),
+		projectionConfig: z.unknown(),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('generate_graph'),
+		generationConfig: z.unknown(),
+	}),
+
+	GraphStoreCatalogBase.extend({
+		op: z.literal('sample_graph'),
+		graphName: GdsGraphNameSchema,
+		samplingConfig: z.unknown(),
+	}),
+]);
+
+export type GdsGraphStoreCatalogCall = z.infer<
+	typeof GdsGraphStoreCatalogCallSchema
+>;
+
+export const GdsApplicationCallSchema = z.union([GdsGraphStoreCatalogCallSchema]);
+export type GdsApplicationCall = z.infer<typeof GdsApplicationCallSchema>;
+
+export function gdsApplicationOperationId(call: GdsApplicationCall): string {
+	return `gds.${call.facade}.${call.op}`;
+}

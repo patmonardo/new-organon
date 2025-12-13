@@ -17,6 +17,10 @@ Provide a type-safe, extensible framework for defining and executing computation
 - `src/schema/definition.ts` — conceptual foundation (reference)  
 - `src/schema/index.ts` — consolidated exports
 
+## Relative runtime platform (disabled)
+- `src/relative/` contains an early “relative” runtime platform (historical / Nest-flavored).
+- It is currently **disabled** (excluded from the active SDK build) so we can rebuild TAW step-by-step without committing to a framework runtime.
+
 ## Design Principles
 - API-first: clear schemas suitable for REST/GraphQL endpoints.  
 - Type-safe: derive types from Zod schemas for runtime + compile-time guarantees.  

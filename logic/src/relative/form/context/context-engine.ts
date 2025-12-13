@@ -14,6 +14,7 @@ import type {
   DialecticEvaluateCmd,
   DialecticCommand,
 } from '@schema';
+import { toDialecticalInfo, type DiscursiveRuleTag } from '@schema';
 import { FormContext } from './context-form';
 
 type BaseState = Context['shape']['state'];
@@ -108,10 +109,58 @@ export class ContextEngine {
   }
 
   private emit(base: any, kind: Event['kind'], payload: Event['payload']) {
-    const meta = childSpan(base, { action: kind, scope: this.scope });
+    const meta = {
+      ...childSpan(base, { action: kind, scope: this.scope }),
+      ...(this.metaFor(kind, payload) ?? {}),
+    };
     const evt: Event = { kind, payload, meta };
     this.bus.publish(evt);
     return evt;
+  }
+
+  private metaFor(kind: Event['kind'], payload: Event['payload']) {
+    if (
+      kind !== 'context.create' &&
+      kind !== 'context.setCore' &&
+      kind !== 'context.setState'
+    ) {
+      return undefined;
+    }
+
+    const id = (payload as any)?.id as string | undefined;
+    if (!id) return undefined;
+
+    const op = kind === 'context.create' ? 'assert' : 'revise';
+
+    const tags: DiscursiveRuleTag[] = [];
+    const add = (t: DiscursiveRuleTag) => {
+      if (!tags.some((x) => x.layer === t.layer && x.rule === t.rule)) tags.push(t);
+    };
+
+    // Minimal explicit mapping by engine verb
+    if (kind === 'context.create') add({ layer: 'context', rule: 'identity' });
+    if (kind === 'context.setCore') add({ layer: 'context', rule: 'difference' });
+    if (kind === 'context.setState') add({ layer: 'context', rule: 'contradiction' });
+
+    // Objective projection: Context as World
+    if (
+      kind === 'context.create' ||
+      kind === 'context.setCore' ||
+      kind === 'context.setState'
+    ) {
+      add({ layer: 'context', rule: 'world' } as any);
+    }
+
+    return {
+      factStore: {
+        mode: 'logic',
+        store: 'FormDB',
+        op,
+        kind: 'Context',
+        ids: [id],
+      },
+      dialectic: toDialecticalInfo(tags),
+    };
   }
 
   private mustGet(id: string): MemContext {

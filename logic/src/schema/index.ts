@@ -6,6 +6,7 @@ export * from "./base";
 
 // Essence (six pillars)
 export * from "./form";
+export * from './rules';
 export * from "./entity";
 export * from "./context";
 export * from "./property";

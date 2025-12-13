@@ -12,6 +12,7 @@
     "clean": "rm -rf dist node_modules tsconfig.tsbuildinfo",
     "dev": "tsc --watch",
     "d": "tsc --watch",
+    "demo:loop": "pnpm -w tsx model/src/demo/demo-loop-run.ts",
     "test": "vitest run",
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui",
@@ -30,6 +31,7 @@
   "dependencies": {
     "@heroicons/react": "^2.1.1",
     "@prisma/client": "^7.1.0",
+    "@organon/task": "workspace:*",
     "apache-arrow": "^17.0.0",
     "clsx": "^2.1.1",
     "next": "^14.2.5",

@@ -51,7 +51,10 @@
     "src/absolute/concept/**/*",
     "src/absolute/essence/**/*",
     "src/absolute/being/**/*",
-    "src/absolute/form/**/*",
+    // Exclude legacy absolute/form shims (moved to Rust)
+    "src/absolute/form/project.ts",
+    "src/absolute/form/projection.aspect.ts",
+    "src/absolute/form/projection.conflict.ts",
     // Exclude speculative core files, keep only: message.ts, bus.ts, trace.ts
     "src/absolute/core/kriya.ts",
     "src/absolute/core/qualquant.ts",

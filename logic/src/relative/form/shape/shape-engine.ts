@@ -9,6 +9,11 @@ import { FormShapeSchema } from '@schema/form';
 import { FormShape } from './shape-form';
 import { ActiveShape } from '@schema';
 import { parseActiveShapes } from '@schema';
+import {
+  inferReflectionRulesFromCrudFormShape,
+  toDialecticalInfo,
+  type DiscursiveRuleTag,
+} from '@schema';
 import type {
   DialecticStateTransitionCmd,
   DialecticMomentActivateCmd,
@@ -148,10 +153,54 @@ export class ShapeEngine {
   }
 
   private emit(base: any, kind: Event['kind'], payload: Event['payload']) {
-    const meta = childSpan(base, { action: kind, scope: this.scope });
+    const meta = {
+      ...childSpan(base, { action: kind, scope: this.scope }),
+      ...(this.metaFor(kind, payload) ?? {}),
+    };
     const evt: Event = { kind, payload, meta };
     this.bus.publish(evt);
     return evt;
+  }
+
+  private metaFor(kind: Event['kind'], payload: Event['payload']) {
+    if (
+      kind !== 'shape.create' &&
+      kind !== 'shape.setCore' &&
+      kind !== 'shape.setState'
+    ) {
+      return undefined;
+    }
+
+    const id = (payload as any)?.id as string | undefined;
+    if (!id) return undefined;
+
+    const op = kind === 'shape.create' ? 'assert' : 'revise';
+
+    const tags: DiscursiveRuleTag[] = [];
+    const add = (t: DiscursiveRuleTag) => {
+      if (!tags.some((x) => x.layer === t.layer && x.rule === t.rule)) tags.push(t);
+    };
+
+    // Minimal explicit mapping by engine verb
+    if (kind === 'shape.create') add({ layer: 'shape', rule: 'posting' });
+    if (kind === 'shape.setCore') add({ layer: 'shape', rule: 'external' });
+    if (kind === 'shape.setState') add({ layer: 'shape', rule: 'determining' });
+
+    // Heuristic lift from the underlying CRUD-ish shape structure (fields/layout/name)
+    const s = this.shapes.get(id);
+    const inferred = inferReflectionRulesFromCrudFormShape(s?.toSchema());
+    for (const r of inferred) add({ layer: 'shape', rule: r });
+
+    return {
+      factStore: {
+        mode: 'reflection',
+        store: 'FormDB',
+        op,
+        kind: 'FormShape',
+        ids: [id],
+      },
+      dialectic: toDialecticalInfo(tags),
+    };
   }
 
   private async mustGet(id: string): Promise<FormShape> {

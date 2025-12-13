@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { BaseCore, BaseSchema, BaseState, Type, Label } from './base';
+import { FormDialecticSchema } from './rules';
 
 // ==========================================
 // FORM SHAPE DEFINITIONS (Migrated from form-shape.ts)
@@ -319,6 +320,7 @@ export const FormShapeSchema = z.object({
   fields: z.array(FormFieldSchema),
   options: z.array(FormOptionSchema).optional(),
   tags: z.array(FormTagSchema).optional(),
+  dialectic: FormDialecticSchema.optional(),
   isValid: z.boolean().optional(),
   layout: FormLayoutSchema.optional(),
   // state and meta removed - those belong in Entity (Empirical)
