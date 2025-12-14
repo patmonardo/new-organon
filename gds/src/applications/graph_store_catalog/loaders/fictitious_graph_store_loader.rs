@@ -1,30 +1,41 @@
-use super::{GraphStoreCreator, GraphStoreLoader, GraphProjectConfig, GraphStore, ResultStore, GraphDimensions, MemoryEstimation};
+use super::{GraphStoreCreator, GraphStoreLoader, GraphProjectConfig, MemoryEstimation, ResultStore};
+use crate::core::{ConcreteGraphDimensions, GraphDimensions};
+use crate::types::graph_store::DefaultGraphStore;
+use crate::types::graph_store::GraphStore as _;
+use crate::types::random::{RandomGraphConfig, Randomizable};
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 
 /// Implementation of GraphStoreCreator for fictitious/testing scenarios.
-/// 
+///
 /// Mirrors Java FictitiousGraphStoreLoader class.
 /// Implementation for testing that doesn't actually load real data.
 pub struct FictitiousGraphStoreLoader {
     graph_project_config: Box<dyn GraphProjectConfig>,
-    graph_store: Box<dyn GraphStore>,
     result_store: Box<dyn ResultStore>,
-    graph_dimensions: Box<dyn GraphDimensions>,
 }
 
 impl FictitiousGraphStoreLoader {
     /// Creates a new FictitiousGraphStoreLoader.
     pub fn new(graph_project_config: Box<dyn GraphProjectConfig>) -> Self {
-        // Create fictitious implementations
-        let graph_store = Box::new(FictitiousGraphStore::new());
         let result_store = Box::new(FictitiousResultStore::new());
-        let graph_dimensions = Box::new(FictitiousGraphDimensions::new());
-        
+
         Self {
             graph_project_config,
-            graph_store,
             result_store,
-            graph_dimensions,
         }
+    }
+
+    fn generate_store(&self) -> DefaultGraphStore {
+        let config = RandomGraphConfig {
+            graph_name: self.graph_project_config.graph_name().to_string(),
+            database_name: "fictitious".to_string(),
+            ..Default::default()
+        };
+
+        let mut rng = StdRng::seed_from_u64(0);
+        DefaultGraphStore::random_with_rng(&config, &mut rng)
+            .expect("fictitious default graph store generation should succeed")
     }
 }
 
@@ -36,17 +47,21 @@ impl GraphStoreLoader for FictitiousGraphStoreLoader {
             self.graph_project_config.username().to_string(),
         ))
     }
-    
-    fn graph_store(&self) -> Box<dyn GraphStore> {
-        Box::new(FictitiousGraphStore::new())
+
+    fn graph_store(&self) -> DefaultGraphStore {
+        self.generate_store()
     }
-    
+
     fn result_store(&self) -> Box<dyn ResultStore> {
         Box::new(FictitiousResultStore::new())
     }
-    
+
     fn graph_dimensions(&self) -> Box<dyn GraphDimensions> {
-        Box::new(FictitiousGraphDimensions::new())
+        let store = self.generate_store();
+        Box::new(ConcreteGraphDimensions::new(
+            store.node_count() as usize,
+            store.relationship_count() as usize,
+        ))
     }
 }
 
@@ -54,7 +69,7 @@ impl GraphStoreCreator for FictitiousGraphStoreLoader {
     fn estimate_memory_usage_during_loading(&self) -> Box<dyn MemoryEstimation> {
         Box::new(FictitiousMemoryEstimation::new())
     }
-    
+
     fn estimate_memory_usage_after_loading(&self) -> Box<dyn MemoryEstimation> {
         Box::new(FictitiousMemoryEstimation::new())
     }
@@ -78,34 +93,9 @@ impl GraphProjectConfig for FictitiousGraphProjectConfig {
     fn graph_name(&self) -> &str {
         &self.graph_name
     }
-    
+
     fn username(&self) -> &str {
         &self.username
-    }
-}
-
-#[derive(Clone, Debug)]
-struct FictitiousGraphStore {
-    node_count: u64,
-    relationship_count: u64,
-}
-
-impl FictitiousGraphStore {
-    fn new() -> Self {
-        Self {
-            node_count: 1000,
-            relationship_count: 5000,
-        }
-    }
-}
-
-impl GraphStore for FictitiousGraphStore {
-    fn node_count(&self) -> u64 {
-        self.node_count
-    }
-    
-    fn relationship_count(&self) -> u64 {
-        self.relationship_count
     }
 }
 
@@ -123,31 +113,6 @@ impl FictitiousResultStore {
 impl ResultStore for FictitiousResultStore {
     fn is_empty(&self) -> bool {
         self.is_empty
-    }
-}
-
-#[derive(Clone, Debug)]
-struct FictitiousGraphDimensions {
-    node_count: u64,
-    relationship_count: u64,
-}
-
-impl FictitiousGraphDimensions {
-    fn new() -> Self {
-        Self {
-            node_count: 1000,
-            relationship_count: 5000,
-        }
-    }
-}
-
-impl GraphDimensions for FictitiousGraphDimensions {
-    fn node_count(&self) -> u64 {
-        self.node_count
-    }
-    
-    fn relationship_count(&self) -> u64 {
-        self.relationship_count
     }
 }
 

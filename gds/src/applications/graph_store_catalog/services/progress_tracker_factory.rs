@@ -1,7 +1,9 @@
 /// Factory for creating progress trackers.
-/// 
+///
 /// Mirrors Java ProgressTrackerFactory class.
 /// Simple factory wrapper for creating progress trackers with logging and registry support.
+use crate::applications::services::logging::Log;
+
 pub struct ProgressTrackerFactory {
     log: Log,
     task_registry_factory: TaskRegistryFactory,
@@ -17,9 +19,9 @@ impl ProgressTrackerFactory {
             user_log_registry_factory,
         }
     }
-    
+
     /// Creates a progress tracker for a given task.
-    /// 
+    ///
     /// In Java, this calls progressTrackerFactory.create(task).
     pub fn create(&self, task: Task) -> ProgressTracker {
         ProgressTracker::new(task, self.log.clone())
@@ -38,11 +40,11 @@ impl Task {
     pub fn new(name: String, total_work: u64) -> Self {
         Self { name, total_work }
     }
-    
+
     pub fn name(&self) -> &str {
         &self.name
     }
-    
+
     pub fn total_work(&self) -> u64 {
         self.total_work
     }
@@ -65,22 +67,22 @@ impl ProgressTracker {
             current_work: 0,
         }
     }
-    
+
     pub fn log_progress(&mut self) {
         self.current_work += 1;
         if self.current_work % 1000 == 0 {
             self.log.info(&format!("Progress: {}/{}", self.current_work, self.task.total_work()));
         }
     }
-    
+
     pub fn begin_sub_task(&mut self) {
         self.log.info("Beginning sub-task");
     }
-    
+
     pub fn end_sub_task(&mut self) {
         self.log.info("Ending sub-task");
     }
-    
+
     pub fn end_sub_task_with_failure(&mut self) {
         self.log.error("Sub-task failed");
     }
@@ -115,34 +117,6 @@ impl UserLogRegistryFactory {
 }
 
 impl Default for UserLogRegistryFactory {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// Placeholder for Log type with additional methods.
-#[derive(Clone, Debug)]
-pub struct Log;
-
-impl Log {
-    pub fn new() -> Self {
-        Self
-    }
-    
-    pub fn info(&self, message: &str) {
-        println!("INFO: {}", message);
-    }
-    
-    pub fn error(&self, message: &str) {
-        eprintln!("ERROR: {}", message);
-    }
-    
-    pub fn warn(&self, message: &str) {
-        eprintln!("WARN: {}", message);
-    }
-}
-
-impl Default for Log {
     fn default() -> Self {
         Self::new()
     }

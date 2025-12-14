@@ -1,9 +1,19 @@
 use super::*;
-use crate::logging::Log;
-use crate::types::graph_store::{DatabaseId, GraphStore};
+use crate::applications::services::logging::Log;
+use crate::core::User;
+use crate::types::graph_store::{DatabaseId, DefaultGraphStore};
+use crate::types::random::{RandomGraphConfig, Randomizable};
+use rand::rngs::StdRng;
+use rand::SeedableRng;
+
+use crate::applications::graph_store_catalog::applications::*;
+use crate::applications::graph_store_catalog::loaders::GraphStoreCatalogService;
+use crate::applications::graph_store_catalog::services::progress_tracker_factory::{
+    TaskRegistryFactory, UserLogRegistryFactory,
+};
 
 /// Builder for DefaultGraphCatalogApplications.
-/// 
+///
 /// Mirrors Java DefaultGraphCatalogApplicationsBuilder class.
 /// Implements the builder pattern for constructing the facade with all dependencies.
 pub struct DefaultGraphCatalogApplicationsBuilder {
@@ -57,25 +67,25 @@ impl DefaultGraphCatalogApplicationsBuilder {
             user_log_registry_factory: UserLogRegistryFactory::new(),
         }
     }
-    
+
     /// Sets the graph store catalog service.
     pub fn with_graph_store_catalog_service(mut self, service: Box<dyn GraphStoreCatalogService>) -> Self {
         self.graph_store_catalog_service = service;
         self
     }
-    
+
     /// Sets the task registry factory.
     pub fn with_task_registry_factory(mut self, factory: TaskRegistryFactory) -> Self {
         self.task_registry_factory = factory;
         self
     }
-    
+
     /// Sets the user log registry factory.
     pub fn with_user_log_registry_factory(mut self, factory: UserLogRegistryFactory) -> Self {
         self.user_log_registry_factory = factory;
         self
     }
-    
+
     /// Builds the DefaultGraphCatalogApplications.
     pub fn build(self) -> DefaultGraphCatalogApplications {
         DefaultGraphCatalogApplications::new(self)
@@ -93,33 +103,22 @@ impl DefaultGraphStoreCatalogService {
 }
 
 impl GraphStoreCatalogService for DefaultGraphStoreCatalogService {
-    fn get_graph_store(&self, _user: &User, _database_id: &DatabaseId, _graph_name: &str) -> Box<dyn GraphStore> {
-        Box::new(DefaultGraphStore::new())
-    }
-}
+    fn get_graph_store(
+        &self,
+        _user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: &str,
+    ) -> DefaultGraphStore {
+        let config = RandomGraphConfig {
+            graph_name: graph_name.to_string(),
+            database_name: database_id.to_string(),
+            ..Default::default()
+        };
 
-/// Default implementation of GraphStore for the builder.
-#[derive(Clone, Debug)]
-struct DefaultGraphStore {
-    node_count: u64,
-    relationship_count: u64,
-}
+        let mut rng = StdRng::seed_from_u64(0);
+        let store = DefaultGraphStore::random_with_rng(&config, &mut rng)
+            .expect("default graph store generation should succeed");
 
-impl DefaultGraphStore {
-    fn new() -> Self {
-        Self {
-            node_count: 1000,
-            relationship_count: 5000,
-        }
-    }
-}
-
-impl GraphStore for DefaultGraphStore {
-    fn node_count(&self) -> u64 {
-        self.node_count
-    }
-    
-    fn relationship_count(&self) -> u64 {
-        self.relationship_count
+        store
     }
 }

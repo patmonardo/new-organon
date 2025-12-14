@@ -29,7 +29,7 @@ impl MiscellaneousApplications {
     }
 
     pub fn create(
-        log: crate::logging::Log,
+        log: crate::applications::services::logging::Log,
         request_scoped_dependencies: RequestScopedDependencies,
         write_context: WriteContext,
         estimation_template: crate::applications::algorithms::machinery::AlgorithmEstimationTemplate,

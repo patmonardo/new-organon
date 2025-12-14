@@ -1,10 +1,14 @@
 import { z } from 'zod';
 
 /**
- * GDS Application Form (presentation layer)
+ * GDSL IR: GDS application protocol shapes
  *
- * TypeScript mirror of the high-level GDS "applications" facade surface.
- * Intentionally non-executable: it models invocation shapes + operation IDs.
+ * This is the TypeScript-first "IR protocol language" used to communicate with
+ * the Rust GDS boundary (JSON-in/JSON-out via NAPI).
+ *
+ * Notes:
+ * - TB-safe: heavy data is never returned directly; prefer handles/jobs/exports.
+ * - Schema-first: operation IDs are stable string literals.
  */
 
 export const GdsUserSchema = z.object({

@@ -25,16 +25,16 @@ impl MiscellaneousAlgorithmsWriteModeBusinessFacade {
         algorithm_processing_template_convenience: AlgorithmProcessingTemplateConvenience,
         write_to_database: Box<dyn WriteToDatabase>,
     ) -> Self {
-        Self { 
-            estimation_facade, 
-            miscellaneous_algorithms, 
-            algorithm_processing_template_convenience, 
-            write_to_database 
+        Self {
+            estimation_facade,
+            miscellaneous_algorithms,
+            algorithm_processing_template_convenience,
+            write_to_database
         }
     }
 
     pub fn create(
-        _log: crate::logging::Log,
+        _log: crate::applications::services::logging::Log,
         _request_scoped_dependencies: RequestScopedDependencies,
         _write_context: WriteContext,
         estimation_facade: MiscellaneousAlgorithmsEstimationModeBusinessFacade,

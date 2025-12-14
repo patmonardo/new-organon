@@ -3,7 +3,7 @@ use crate::applications::algorithms::machinery::MutateStep;
 use crate::applications::algorithms::metadata::{RelationshipsWritten, Algorithm};
 use crate::applications::algorithms::similarity::results::*;
 use crate::config::base_types::Config;
-use crate::logging::Log;
+use crate::applications::services::logging::Log;
 use std::collections::HashMap;
 
 /// Filtered KNN mutate step implementation
@@ -20,7 +20,7 @@ impl<C: Config> FilteredKnnMutateStep<C> {
         should_compute_similarity_distribution: bool,
     ) -> Self {
         let similarity_mutation = SimilarityMutation::new(log);
-        
+
         Self {
             similarity_mutation,
             configuration,
@@ -61,7 +61,7 @@ impl<C: Config> FilteredNodeSimilarityMutateStep<C> {
         should_compute_similarity_distribution: bool,
     ) -> Self {
         let similarity_mutation = SimilarityMutation::new(log);
-        
+
         Self {
             similarity_mutation,
             configuration,
@@ -102,7 +102,7 @@ impl<C: Config> KnnMutateStep<C> {
         should_compute_similarity_distribution: bool,
     ) -> Self {
         let similarity_mutation = SimilarityMutation::new(log);
-        
+
         Self {
             similarity_mutation,
             configuration,
@@ -143,7 +143,7 @@ impl<C: Config> NodeSimilarityMutateStep<C> {
         should_compute_similarity_distribution: bool,
     ) -> Self {
         let similarity_mutation = SimilarityMutation::new(log);
-        
+
         Self {
             similarity_mutation,
             configuration,
@@ -222,10 +222,10 @@ impl SimilarityMutation {
         // 2. Mutating relationships using the service
         // 3. Computing similarity summary
         // 4. Returning the results
-        
+
         let relationships_written = RelationshipsWritten::new(0);
         let similarity_summary = HashMap::new();
-        
+
         (relationships_written, similarity_summary)
     }
 
@@ -241,7 +241,7 @@ impl SimilarityMutation {
         // 1. Creating similarity graph builder
         // 2. Building the graph from the stream
         // 3. Returning the result
-        
+
         todo!("Implement similarity graph computation")
     }
 }

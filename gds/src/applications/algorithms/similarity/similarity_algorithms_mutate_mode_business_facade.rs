@@ -9,7 +9,7 @@ use crate::applications::algorithms::similarity::{
 use crate::applications::algorithms::similarity::results::*;
 use crate::applications::algorithms::similarity::mutate_steps::*;
 use crate::config::base_types::Config;
-use crate::logging::Log;
+use crate::applications::services::logging::Log;
 use std::collections::HashMap;
 
 /// Business facade for similarity algorithms in mutate mode.

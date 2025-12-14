@@ -41,7 +41,7 @@ impl CentralityAlgorithmsWriteModeBusinessFacade {
 
     /// Creates a new CentralityAlgorithmsWriteModeBusinessFacade instance.
     pub fn create(
-        _log: crate::logging::Log,
+        _log: crate::applications::services::logging::Log,
         _request_scoped_dependencies: RequestScopedDependencies,
         _write_context: WriteContext,
         estimation_facade: CentralityAlgorithmsEstimationModeBusinessFacade,
@@ -72,7 +72,7 @@ impl CentralityAlgorithmsWriteModeBusinessFacade {
         // 1. Creating write step
         // 2. Processing algorithm in write mode
         // 3. Returning the result
-        
+
         // For now, return a placeholder
         todo!("Implement PageRank write mode processing")
     }
@@ -89,7 +89,7 @@ impl CentralityAlgorithmsWriteModeBusinessFacade {
         // 1. Creating write step
         // 2. Processing algorithm in write mode
         // 3. Returning the result
-        
+
         // For now, return a placeholder
         todo!("Implement ArticleRank write mode processing")
     }
@@ -106,7 +106,7 @@ impl CentralityAlgorithmsWriteModeBusinessFacade {
         // 1. Creating write step
         // 2. Processing algorithm in write mode
         // 3. Returning the result
-        
+
         // For now, return a placeholder
         todo!("Implement EigenVector write mode processing")
     }
@@ -123,7 +123,7 @@ impl CentralityAlgorithmsWriteModeBusinessFacade {
         // 1. Creating write step
         // 2. Processing algorithm in write mode
         // 3. Returning the result
-        
+
         // For now, return a placeholder
         todo!("Implement BetweennessCentrality write mode processing")
     }
@@ -140,7 +140,7 @@ impl CentralityAlgorithmsWriteModeBusinessFacade {
         // 1. Creating write step
         // 2. Processing algorithm in write mode
         // 3. Returning the result
-        
+
         // For now, return a placeholder
         todo!("Implement ClosenessCentrality write mode processing")
     }
@@ -157,7 +157,7 @@ impl CentralityAlgorithmsWriteModeBusinessFacade {
         // 1. Creating write step
         // 2. Processing algorithm in write mode
         // 3. Returning the result
-        
+
         // For now, return a placeholder
         todo!("Implement DegreeCentrality write mode processing")
     }
@@ -174,7 +174,7 @@ impl CentralityAlgorithmsWriteModeBusinessFacade {
         // 1. Creating write step
         // 2. Processing algorithm in write mode
         // 3. Returning the result
-        
+
         // For now, return a placeholder
         todo!("Implement HarmonicCentrality write mode processing")
     }
@@ -191,7 +191,7 @@ impl CentralityAlgorithmsWriteModeBusinessFacade {
         // 1. Creating write step
         // 2. Processing algorithm in write mode with hooks
         // 3. Returning the result
-        
+
         // For now, return a placeholder
         todo!("Implement HITS write mode processing")
     }
@@ -208,7 +208,7 @@ impl CentralityAlgorithmsWriteModeBusinessFacade {
         // 1. Creating write step
         // 2. Processing algorithm in write mode
         // 3. Returning the result
-        
+
         // For now, return a placeholder
         todo!("Implement ArticulationPoints write mode processing")
     }
@@ -225,7 +225,7 @@ impl CentralityAlgorithmsWriteModeBusinessFacade {
         // 1. Creating write step
         // 2. Processing algorithm in write mode
         // 3. Returning the result
-        
+
         // For now, return a placeholder
         todo!("Implement Bridges write mode processing")
     }
@@ -242,7 +242,7 @@ impl CentralityAlgorithmsWriteModeBusinessFacade {
         // 1. Creating write step
         // 2. Processing algorithm in write mode
         // 3. Returning the result
-        
+
         // For now, return a placeholder
         todo!("Implement CELF write mode processing")
     }
@@ -259,7 +259,7 @@ impl CentralityAlgorithmsWriteModeBusinessFacade {
         // 1. Creating write step
         // 2. Processing algorithm in write mode
         // 3. Returning the result
-        
+
         // For now, return a placeholder
         todo!("Implement IndirectExposure write mode processing")
     }

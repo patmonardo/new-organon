@@ -8,7 +8,7 @@ use crate::applications::algorithms::similarity::{
     SimilarityAlgorithmsStreamModeBusinessFacade, SimilarityAlgorithmsWriteModeBusinessFacade,
 };
 use crate::applications::algorithms::similarity::write_steps::WriteRelationshipService;
-use crate::logging::Log;
+use crate::applications::services::logging::Log;
 
 /// Main facade for similarity algorithms.
 /// This is the top-level interface that provides access to all
@@ -35,7 +35,7 @@ impl SimilarityApplications {
         let estimation_mode_facade = SimilarityAlgorithmsEstimationModeBusinessFacade::new(
             algorithm_estimation_template.clone(),
         );
-        
+
         let similarity_algorithms = SimilarityAlgorithms::new(
             progress_tracker_creator.clone(),
             request_scoped_dependencies.termination_flag().clone(),

@@ -36,7 +36,7 @@ impl MachineLearningApplications {
 
     /// Creates a new MachineLearningApplications instance with default dependencies.
     pub fn create(
-        _log: crate::logging::Log,
+        _log: crate::applications::services::logging::Log,
         request_scoped_dependencies: RequestScopedDependencies,
         write_context: WriteContext,
         progress_tracker_creator: DefaultProgressTrackerCreator,
@@ -44,7 +44,7 @@ impl MachineLearningApplications {
     ) -> Self {
         let estimation_template = crate::applications::algorithms::machinery::AlgorithmEstimationTemplate::new();
         let estimation = MachineLearningAlgorithmsEstimationModeBusinessFacade::new(estimation_template);
-        
+
         let algorithms = MachineLearningAlgorithms::new(
             progress_tracker_creator.clone(),
             request_scoped_dependencies.termination_flag().clone(),
@@ -55,13 +55,13 @@ impl MachineLearningApplications {
             algorithms.clone(),
             algorithm_processing_template_convenience.clone(),
         );
-        
+
         let streaming = MachineLearningAlgorithmsStreamModeBusinessFacade::new(
             estimation.clone(),
             algorithms.clone(),
             algorithm_processing_template_convenience.clone(),
         );
-        
+
         let writing = MachineLearningAlgorithmsWriteModeBusinessFacade::new(
             estimation.clone(),
             algorithms,

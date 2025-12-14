@@ -1,9 +1,13 @@
-use super::{GraphStoreCreator, GraphStoreLoader, GraphProjectConfig, GraphStore, ResultStore, GraphDimensions, MemoryEstimation};
-use crate::types::graph_store::DatabaseId;
+use super::{GraphProjectConfig, GraphStoreCreator, GraphStoreLoader, MemoryEstimation, ResultStore};
+use crate::core::{ConcreteGraphDimensions, GraphDimensions};
+use crate::types::graph_store::{DatabaseId, DefaultGraphStore};
+use crate::types::random::{RandomGraphConfig, Randomizable};
 use crate::concurrency::TerminationFlag;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 
 /// Implementation of GraphStoreCreator for loading from database.
-/// 
+///
 /// Mirrors Java GraphStoreFromDatabaseLoader class.
 /// Loads graph stores directly from the database using GraphStoreFactory.
 pub struct GraphStoreFromDatabaseLoader {
@@ -21,7 +25,7 @@ impl GraphStoreFromDatabaseLoader {
         graph_loader_context: GraphLoaderContext,
     ) -> Self {
         let graph_store_factory = Box::new(DatabaseGraphStoreFactory::new());
-        
+
         Self {
             graph_project_config,
             username,
@@ -38,15 +42,15 @@ impl GraphStoreLoader for GraphStoreFromDatabaseLoader {
             self.username.clone(),
         ))
     }
-    
-    fn graph_store(&self) -> Box<dyn GraphStore> {
+
+    fn graph_store(&self) -> DefaultGraphStore {
         self.graph_store_factory.build()
     }
-    
+
     fn result_store(&self) -> Box<dyn ResultStore> {
         Box::new(DatabaseResultStore::new())
     }
-    
+
     fn graph_dimensions(&self) -> Box<dyn GraphDimensions> {
         self.graph_store_factory.estimation_dimensions()
     }
@@ -56,7 +60,7 @@ impl GraphStoreCreator for GraphStoreFromDatabaseLoader {
     fn estimate_memory_usage_during_loading(&self) -> Box<dyn MemoryEstimation> {
         self.graph_store_factory.estimate_memory_usage_during_loading()
     }
-    
+
     fn estimate_memory_usage_after_loading(&self) -> Box<dyn MemoryEstimation> {
         self.graph_store_factory.estimate_memory_usage_after_loading()
     }
@@ -64,7 +68,7 @@ impl GraphStoreCreator for GraphStoreFromDatabaseLoader {
 
 // Placeholder types for database operations
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct GraphLoaderContext {
     database_id: DatabaseId,
     termination_flag: TerminationFlag,
@@ -93,7 +97,7 @@ impl TransactionContext {
 }
 
 pub trait GraphStoreFactory {
-    fn build(&self) -> Box<dyn GraphStore>;
+    fn build(&self) -> DefaultGraphStore;
     fn estimation_dimensions(&self) -> Box<dyn GraphDimensions>;
     fn estimate_memory_usage_during_loading(&self) -> Box<dyn MemoryEstimation>;
     fn estimate_memory_usage_after_loading(&self) -> Box<dyn MemoryEstimation>;
@@ -115,45 +119,32 @@ impl DatabaseGraphStoreFactory {
 }
 
 impl GraphStoreFactory for DatabaseGraphStoreFactory {
-    fn build(&self) -> Box<dyn GraphStore> {
-        Box::new(DatabaseGraphStore::new(self.node_count, self.relationship_count))
+    fn build(&self) -> DefaultGraphStore {
+        let config = RandomGraphConfig {
+            graph_name: "database-graph".to_string(),
+            database_name: "database".to_string(),
+            node_count: self.node_count as usize,
+            ..Default::default()
+        };
+
+        let mut rng = StdRng::seed_from_u64(0);
+        DefaultGraphStore::random_with_rng(&config, &mut rng)
+            .expect("database graph store generation should succeed")
     }
-    
+
     fn estimation_dimensions(&self) -> Box<dyn GraphDimensions> {
-        Box::new(DatabaseGraphDimensions::new(self.node_count, self.relationship_count))
+        Box::new(ConcreteGraphDimensions::new(
+            self.node_count as usize,
+            self.relationship_count as usize,
+        ))
     }
-    
+
     fn estimate_memory_usage_during_loading(&self) -> Box<dyn MemoryEstimation> {
         Box::new(DatabaseMemoryEstimation::new())
     }
-    
+
     fn estimate_memory_usage_after_loading(&self) -> Box<dyn MemoryEstimation> {
         Box::new(DatabaseMemoryEstimation::new())
-    }
-}
-
-#[derive(Clone, Debug)]
-struct DatabaseGraphStore {
-    node_count: u64,
-    relationship_count: u64,
-}
-
-impl DatabaseGraphStore {
-    fn new(node_count: u64, relationship_count: u64) -> Self {
-        Self {
-            node_count,
-            relationship_count,
-        }
-    }
-}
-
-impl GraphStore for DatabaseGraphStore {
-    fn node_count(&self) -> u64 {
-        self.node_count
-    }
-    
-    fn relationship_count(&self) -> u64 {
-        self.relationship_count
     }
 }
 
@@ -190,34 +181,9 @@ impl GraphProjectConfig for DatabaseGraphProjectConfig {
     fn graph_name(&self) -> &str {
         &self.graph_name
     }
-    
+
     fn username(&self) -> &str {
         &self.username
-    }
-}
-
-#[derive(Clone, Debug)]
-struct DatabaseGraphDimensions {
-    node_count: u64,
-    relationship_count: u64,
-}
-
-impl DatabaseGraphDimensions {
-    fn new(node_count: u64, relationship_count: u64) -> Self {
-        Self {
-            node_count,
-            relationship_count,
-        }
-    }
-}
-
-impl GraphDimensions for DatabaseGraphDimensions {
-    fn node_count(&self) -> u64 {
-        self.node_count
-    }
-    
-    fn relationship_count(&self) -> u64 {
-        self.relationship_count
     }
 }
 

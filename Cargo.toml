@@ -1,5 +1,5 @@
 [workspace]
-members = ["gds", "gdsl", "reality"]
+members = ["gds", "reality"]
 resolver = "2"
 
 [workspace.package]

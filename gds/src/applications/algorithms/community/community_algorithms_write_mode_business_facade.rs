@@ -37,7 +37,7 @@ impl CommunityAlgorithmsWriteModeBusinessFacade {
     }
 
     pub fn create(
-        _log: crate::logging::Log,
+        _log: crate::applications::services::logging::Log,
         _request_scoped_dependencies: RequestScopedDependencies,
         _write_context: WriteContext,
         estimation_facade: CommunityAlgorithmsEstimationModeBusinessFacade,

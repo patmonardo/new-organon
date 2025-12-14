@@ -2,7 +2,7 @@ use crate::api::GraphStore;
 use crate::applications::algorithms::machinery::{AlgorithmLabel, DimensionTransformer};
 use crate::config::base_types::Config;
 use crate::mem::MemoryEstimation;
-use crate::logging::Log;
+use crate::applications::services::logging::Log;
 use crate::core::GraphDimensions;
 
 /// Memory Guard - memory protection and validation
@@ -97,7 +97,7 @@ impl MemoryGuard for DefaultMemoryGuard {
         ) {
             Ok(memory_requirement) => {
                 let bytes_to_reserve = memory_requirement.required_memory();
-                
+
                 if configuration.sudo() {
                     self.memory_tracker.track(username, label.as_string(), configuration.job_id(), bytes_to_reserve);
                     return Ok(());
@@ -138,12 +138,12 @@ impl MemoryRequirement {
         let memory_estimation = estimation_factory();
         let graph_dimensions = graph_dimension_factory.create(graph_store, configuration);
         let transformed_graph_dimensions = dimension_transformer.transform(graph_dimensions);
-        
+
         // TODO: Implement actual memory estimation
         // let memory_tree = memory_estimation.estimate(transformed_graph_dimensions, configuration.concurrency());
         // let memory_range = memory_tree.memory_usage();
         // let bytes_required = if use_max_memory_estimation { memory_range.max } else { memory_range.min };
-        
+
         // For now, return a placeholder
         Ok(Self::new(1000))
     }

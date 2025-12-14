@@ -1,1 +1,1 @@
-export * from "./gds.application";
+export * from '@organon/gdsl/ir';

@@ -1,7 +1,9 @@
 /// Service for validating memory usage of operations.
-/// 
+///
 /// Mirrors Java MemoryUsageValidator class.
 /// Contains memory validation logic for graph operations.
+use crate::applications::services::logging::Log;
+
 pub struct MemoryUsageValidator {
     log: Log,
     use_max_memory_estimation: bool,
@@ -19,32 +21,38 @@ impl MemoryUsageValidator {
             username,
         }
     }
-    
+
     /// Tries to validate memory usage for a configuration.
     /// In Java, this returns MemoryRange and handles estimation.
-    pub fn try_validate_memory_usage<C>(&self, task_name: &str, config: &C, run_estimation: impl FnOnce(&C) -> MemoryTreeWithDimensions) -> Result<MemoryRange, String> {
+    pub fn try_validate_memory_usage<C: JobIdConfig>(
+        &self,
+        task_name: &str,
+        config: &C,
+        run_estimation: impl FnOnce(&C) -> MemoryTreeWithDimensions,
+    ) -> Result<MemoryRange, String> {
         let memory_tree_with_dimensions = run_estimation(config);
         let estimated_memory_range = self.compute_memory_range(&memory_tree_with_dimensions);
-        
+
         let available_bytes = self.memory_tracker.available_memory();
+        let job_id = config.job_id();
         self.validate_memory_usage(
             task_name,
-            estimated_memory_range,
+            &estimated_memory_range,
             available_bytes,
             self.use_max_memory_estimation,
-            config.job_id(),
+            &job_id,
             &self.log,
         );
-        
+
         Ok(estimated_memory_range)
     }
-    
+
     /// Validates memory usage against available memory.
     /// In Java, this throws exceptions if memory is insufficient.
     pub fn validate_memory_usage(
         &self,
         task_name: &str,
-        estimated_memory_range: MemoryRange,
+        estimated_memory_range: &MemoryRange,
         available_bytes: u64,
         use_max_memory_estimation: bool,
         job_id: &JobId,
@@ -55,7 +63,7 @@ impl MemoryUsageValidator {
         } else {
             estimated_memory_range.min_bytes()
         };
-        
+
         if required_bytes > available_bytes {
             let memory_string = format!("{} bytes", required_bytes);
             self.validate_memory_usage_with_details(
@@ -69,7 +77,7 @@ impl MemoryUsageValidator {
             );
         }
     }
-    
+
     /// Validates memory usage with detailed error messages.
     fn validate_memory_usage_with_details(
         &self,
@@ -85,39 +93,15 @@ impl MemoryUsageValidator {
             "Insufficient memory for {}: required {} but only {} available",
             task_name, memory_string, available_bytes
         );
-        
+
         log.error(&error_message);
         panic!("{}", error_message); // In Java, this would throw an exception
     }
-    
+
     /// Computes memory range from memory tree with dimensions.
     fn compute_memory_range(&self, memory_tree_with_dimensions: &MemoryTreeWithDimensions) -> MemoryRange {
         // Placeholder implementation - in real implementation would compute from tree
         MemoryRange::new(1024, 2048)
-    }
-}
-
-/// Placeholder for Log type.
-#[derive(Clone, Debug)]
-pub struct Log;
-
-impl Log {
-    pub fn new() -> Self {
-        Self
-    }
-    
-    pub fn error(&self, message: &str) {
-        eprintln!("ERROR: {}", message);
-    }
-    
-    pub fn warn(&self, message: &str) {
-        eprintln!("WARN: {}", message);
-    }
-}
-
-impl Default for Log {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -129,7 +113,7 @@ impl MemoryTracker {
     pub fn new() -> Self {
         Self
     }
-    
+
     pub fn available_memory(&self) -> u64 {
         // Placeholder implementation - in real implementation would query system memory
         1024 * 1024 * 1024 // 1GB
@@ -153,11 +137,11 @@ impl MemoryTreeWithDimensions {
     pub fn new(min_bytes: u64, max_bytes: u64) -> Self {
         Self { min_bytes, max_bytes }
     }
-    
+
     pub fn min_bytes(&self) -> u64 {
         self.min_bytes
     }
-    
+
     pub fn max_bytes(&self) -> u64 {
         self.max_bytes
     }
@@ -174,11 +158,11 @@ impl MemoryRange {
     pub fn new(min_bytes: u64, max_bytes: u64) -> Self {
         Self { min_bytes, max_bytes }
     }
-    
+
     pub fn min_bytes(&self) -> u64 {
         self.min_bytes
     }
-    
+
     pub fn max_bytes(&self) -> u64 {
         self.max_bytes
     }
@@ -194,7 +178,7 @@ impl JobId {
     pub fn new(id: String) -> Self {
         Self { id }
     }
-    
+
     pub fn id(&self) -> &str {
         &self.id
     }

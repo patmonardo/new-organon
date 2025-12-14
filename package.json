@@ -4,6 +4,7 @@
   "private": false,
   "description": "Organon Research Assistant Platform",
   "workspaces": [
+    "gdsl",
     "logic",
     "model",
     "task"

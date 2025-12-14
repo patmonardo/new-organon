@@ -20,6 +20,8 @@ pub mod projection;
 pub mod types;
 pub mod values;
 
+pub mod applications;
+
 // pub use core::*;
 // pub use ml::*;
 // pub use procedures::*;
@@ -29,4 +31,4 @@ pub use values::*;
 
 // Re-export procedure macros for procedures module
 #[cfg(feature = "procedures")]
-pub use projection::codegen::algorithm::*;  
+pub use projection::codegen::algorithm::*;

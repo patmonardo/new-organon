@@ -1,11 +1,43 @@
 {
   "name": "@organon/gdsl",
+  "private": false,
   "version": "0.1.0",
+  "description": "Organon GDSL IR protocol (TS-first)",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ir": {
+      "types": "./dist/ir/index.d.ts",
+      "default": "./dist/ir/index.js"
+    }
+  },
   "scripts": {
-    "build": "cargo build -p gdsl",
-    "test": "cargo test -p gdsl"
+    "build": "tsc && tsc-alias",
+    "b": "tsc && tsc-alias",
+    "clean": "rm -rf dist node_modules tsconfig.tsbuildinfo",
+    "dev": "tsc --watch",
+    "d": "tsc --watch",
+    "test": "vitest run",
+    "t": "vitest run",
+    "lint": "eslint . --cache",
+    "format": "prettier --write \"**/*.{ts,js,md,json,yml,yaml}\" --ignore-path .gitignore"
+  },
+  "dependencies": {
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "tsc-alias": "^1.8.16",
+    "typescript": "^5.9.2",
+    "vitest": "^3.1.3"
   },
   "engines": {
-    "node": ">= 10"
+    "node": ">=20.19.0",
+    "pnpm": ">=9"
   }
 }

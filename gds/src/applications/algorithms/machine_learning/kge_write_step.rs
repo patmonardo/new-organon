@@ -18,7 +18,7 @@ pub struct KgeWriteStep {
 
 impl KgeWriteStep {
     pub fn new(
-        _log: crate::logging::Log,
+        _log: crate::applications::services::logging::Log,
         _request_scoped_dependencies: crate::applications::algorithms::machinery::RequestScopedDependencies,
         _write_context: crate::applications::algorithms::machinery::WriteContext,
     ) -> Self {
@@ -42,7 +42,7 @@ impl WriteStep<crate::kge::KgePredictResult, NodePropertiesWritten> for KgeWrite
         // 3. Creating relationship exporter
         // 4. Writing relationships to database
         // 5. Returning metadata about relationships written
-        
+
         todo!("Implement KGE write step")
     }
 }

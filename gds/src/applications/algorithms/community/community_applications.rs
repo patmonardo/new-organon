@@ -39,7 +39,7 @@ impl CommunityApplications {
 
     /// Creates a new CommunityApplications instance with default dependencies.
     pub fn create(
-        _log: crate::logging::Log,
+        _log: crate::applications::services::logging::Log,
         request_scoped_dependencies: RequestScopedDependencies,
         write_context: WriteContext,
         estimation_template: crate::applications::algorithms::machinery::AlgorithmEstimationTemplate,

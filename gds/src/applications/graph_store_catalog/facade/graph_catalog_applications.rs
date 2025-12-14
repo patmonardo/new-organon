@@ -1,69 +1,71 @@
-use crate::logging::Log;
+use crate::applications::services::logging::Log;
 use crate::types::graph_store::{DatabaseId, GraphStore};
 use crate::types::schema::{NodeLabel, RelationshipType};
 use crate::core::User;
+use crate::types::graph_store::DeletionResult;
+use crate::applications::graph_store_catalog::results::GraphMemoryUsage;
 
 /// Main trait interface for GraphStore catalog operations.
-/// 
+///
 /// Mirrors Java GraphCatalogApplications interface.
 /// This is the primary facade that GDSL will consume - the TS Application Facade Consumer interface!
 pub trait GraphCatalogApplications {
     /// Lists all graphs in the catalog.
-    fn list_graphs(&self, user: &User, database_id: &DatabaseId) -> Vec<GraphStoreCatalogEntry>;
-    
+    fn list_graphs(&self, user: &dyn User, database_id: &DatabaseId) -> Vec<GraphStoreCatalogEntry>;
+
     /// Gets memory usage for a specific graph.
-    fn graph_memory_usage(&self, user: &User, database_id: &DatabaseId, graph_name: &str) -> GraphMemoryUsage;
-    
+    fn graph_memory_usage(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str) -> GraphMemoryUsage;
+
     /// Drops a graph from the catalog.
-    fn drop_graph(&self, user: &User, database_id: &DatabaseId, graph_name: &str, fail_if_missing: bool) -> Result<GraphStoreCatalogEntry, String>;
-    
+    fn drop_graph(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str, fail_if_missing: bool) -> Result<GraphStoreCatalogEntry, String>;
+
     /// Drops multiple graphs from the catalog.
-    fn drop_graphs(&self, user: &User, database_id: &DatabaseId, graph_names: &[String], fail_if_missing: bool) -> Result<Vec<GraphStoreCatalogEntry>, String>;
-    
+    fn drop_graphs(&self, user: &dyn User, database_id: &DatabaseId, graph_names: &[String], fail_if_missing: bool) -> Result<Vec<GraphStoreCatalogEntry>, String>;
+
     /// Drops node properties from a graph.
-    fn drop_node_properties(&self, user: &User, database_id: &DatabaseId, graph_name: &str, node_properties: &[String], fail_if_missing: bool) -> Result<u64, String>;
-    
+    fn drop_node_properties(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str, node_properties: &[String], fail_if_missing: bool) -> Result<u64, String>;
+
     /// Drops relationships from a graph.
-    fn drop_relationships(&self, user: &User, database_id: &DatabaseId, graph_name: &str, relationship_type: &str) -> Result<DeletionResult, String>;
-    
+    fn drop_relationships(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str, relationship_type: &str) -> Result<DeletionResult, String>;
+
     /// Streams node properties from a graph.
-    fn stream_node_properties(&self, user: &User, database_id: &DatabaseId, graph_name: &str, node_properties: &[String]) -> Result<Vec<NodePropertyResult>, String>;
-    
+    fn stream_node_properties(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str, node_properties: &[String]) -> Result<Vec<NodePropertyResult>, String>;
+
     /// Streams relationship properties from a graph.
-    fn stream_relationship_properties(&self, user: &User, database_id: &DatabaseId, graph_name: &str, relationship_properties: &[String]) -> Result<Vec<RelationshipPropertyResult>, String>;
-    
+    fn stream_relationship_properties(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str, relationship_properties: &[String]) -> Result<Vec<RelationshipPropertyResult>, String>;
+
     /// Streams relationships from a graph.
-    fn stream_relationships(&self, user: &User, database_id: &DatabaseId, graph_name: &str, relationship_types: &[String]) -> Result<Vec<RelationshipResult>, String>;
-    
+    fn stream_relationships(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str, relationship_types: &[String]) -> Result<Vec<RelationshipResult>, String>;
+
     /// Writes node properties to the database.
-    fn write_node_properties(&self, user: &User, database_id: &DatabaseId, graph_name: &str, node_properties: &[String]) -> Result<WriteResult, String>;
-    
+    fn write_node_properties(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str, node_properties: &[String]) -> Result<WriteResult, String>;
+
     /// Writes node labels to the database.
-    fn write_node_labels(&self, user: &User, database_id: &DatabaseId, graph_name: &str, node_labels: &[String]) -> Result<WriteResult, String>;
-    
+    fn write_node_labels(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str, node_labels: &[String]) -> Result<WriteResult, String>;
+
     /// Writes relationship properties to the database.
-    fn write_relationship_properties(&self, user: &User, database_id: &DatabaseId, graph_name: &str, relationship_properties: &[String]) -> Result<WriteResult, String>;
-    
+    fn write_relationship_properties(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str, relationship_properties: &[String]) -> Result<WriteResult, String>;
+
     /// Writes relationships to the database.
-    fn write_relationships(&self, user: &User, database_id: &DatabaseId, graph_name: &str, relationship_type: &str) -> Result<WriteResult, String>;
-    
+    fn write_relationships(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str, relationship_type: &str) -> Result<WriteResult, String>;
+
     /// Exports graph to CSV.
-    fn export_to_csv(&self, user: &User, database_id: &DatabaseId, graph_name: &str, export_path: &str) -> Result<ExportResult, String>;
-    
+    fn export_to_csv(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str, export_path: &str) -> Result<ExportResult, String>;
+
     /// Exports graph to database.
-    fn export_to_database(&self, user: &User, database_id: &DatabaseId, graph_name: &str, target_database: &str) -> Result<ExportResult, String>;
-    
+    fn export_to_database(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str, target_database: &str) -> Result<ExportResult, String>;
+
     /// Projects a graph using native projection.
-    fn project_native(&self, user: &User, database_id: &DatabaseId, projection_config: &NativeProjectionConfig) -> Result<ProjectionResult, String>;
-    
+    fn project_native(&self, user: &dyn User, database_id: &DatabaseId, projection_config: &NativeProjectionConfig) -> Result<ProjectionResult, String>;
+
     /// Projects a graph using generic projection.
-    fn project_generic(&self, user: &User, database_id: &DatabaseId, projection_config: &GenericProjectionConfig) -> Result<ProjectionResult, String>;
-    
+    fn project_generic(&self, user: &dyn User, database_id: &DatabaseId, projection_config: &GenericProjectionConfig) -> Result<ProjectionResult, String>;
+
     /// Generates a synthetic graph.
-    fn generate_graph(&self, user: &User, database_id: &DatabaseId, generation_config: &GraphGenerationConfig) -> Result<GenerationResult, String>;
-    
+    fn generate_graph(&self, user: &dyn User, database_id: &DatabaseId, generation_config: &GraphGenerationConfig) -> Result<GenerationResult, String>;
+
     /// Samples a graph using random walk.
-    fn sample_graph(&self, user: &User, database_id: &DatabaseId, graph_name: &str, sampling_config: &SamplingConfig) -> Result<SamplingResult, String>;
+    fn sample_graph(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str, sampling_config: &SamplingConfig) -> Result<SamplingResult, String>;
 }
 
 /// Placeholder result types for the facade operations
@@ -85,7 +87,7 @@ impl NodePropertyResult {
             node_labels,
         }
     }
-    
+
     pub fn node_id(&self) -> u64 { self.node_id }
     pub fn property_name(&self) -> &str { &self.property_name }
     pub fn property_value(&self) -> &serde_json::Value { &self.property_value }
@@ -111,7 +113,7 @@ impl RelationshipPropertyResult {
             property_value,
         }
     }
-    
+
     pub fn source_id(&self) -> u64 { self.source_id }
     pub fn target_id(&self) -> u64 { self.target_id }
     pub fn relationship_type(&self) -> &str { &self.relationship_type }
@@ -134,7 +136,7 @@ impl RelationshipResult {
             relationship_type,
         }
     }
-    
+
     pub fn source_id(&self) -> u64 { self.source_id }
     pub fn target_id(&self) -> u64 { self.target_id }
     pub fn relationship_type(&self) -> &str { &self.relationship_type }
@@ -155,7 +157,7 @@ impl WriteResult {
             properties_written,
         }
     }
-    
+
     pub fn nodes_written(&self) -> u64 { self.nodes_written }
     pub fn relationships_written(&self) -> u64 { self.relationships_written }
     pub fn properties_written(&self) -> u64 { self.properties_written }
@@ -176,7 +178,7 @@ impl ExportResult {
             file_path,
         }
     }
-    
+
     pub fn nodes_exported(&self) -> u64 { self.nodes_exported }
     pub fn relationships_exported(&self) -> u64 { self.relationships_exported }
     pub fn file_path(&self) -> Option<&str> { self.file_path.as_deref() }
@@ -199,7 +201,7 @@ impl ProjectionResult {
             projection_time_ms,
         }
     }
-    
+
     pub fn graph_name(&self) -> &str { &self.graph_name }
     pub fn nodes_projected(&self) -> u64 { self.nodes_projected }
     pub fn relationships_projected(&self) -> u64 { self.relationships_projected }
@@ -223,7 +225,7 @@ impl GenerationResult {
             generation_time_ms,
         }
     }
-    
+
     pub fn graph_name(&self) -> &str { &self.graph_name }
     pub fn nodes_generated(&self) -> u64 { self.nodes_generated }
     pub fn relationships_generated(&self) -> u64 { self.relationships_generated }
@@ -249,7 +251,7 @@ impl SamplingResult {
             sampled_relationships,
         }
     }
-    
+
     pub fn sampled_graph_name(&self) -> &str { &self.sampled_graph_name }
     pub fn original_nodes(&self) -> u64 { self.original_nodes }
     pub fn sampled_nodes(&self) -> u64 { self.sampled_nodes }
@@ -282,15 +284,15 @@ impl GraphStoreCatalogEntry {
             relationship_count,
         }
     }
-    
+
     pub fn graph_name(&self) -> &str {
         &self.graph_name
     }
-    
+
     pub fn node_count(&self) -> u64 {
         self.node_count
     }
-    
+
     pub fn relationship_count(&self) -> u64 {
         self.relationship_count
     }

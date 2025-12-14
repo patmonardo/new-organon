@@ -1,20 +1,19 @@
 use super::*;
-use crate::logging::Log;
+use crate::applications::services::logging::Log;
 
 /// This is the top level facade for GDS applications. If you are integrating GDS,
 /// this is the one thing you want to work with. See for example Neo4j Procedures.
-/// 
+///
 /// We use the facade pattern for well known reasons,
 /// and we apply a breakdown into sub-facades to keep things smaller and more manageable.
-/// 
+///
 /// This is the main entry point for our Semantic Web Nondual Platonic Form Server!
-/// 
+///
 /// Currently focused on GraphStore Catalog operations - the Storage ISA!
-#[derive(Clone)]
 pub struct ApplicationsFacade {
     // GraphStore Catalog - The Storage ISA (our main focus)
     pub graph_store_catalog_applications: Box<dyn GraphCatalogApplications>,
-    
+
     // Placeholder applications (to be implemented later)
     pub graph_catalog_applications: GraphCatalogApplicationsStub,
     pub model_catalog_applications: ModelCatalogApplicationsStub,
@@ -24,13 +23,13 @@ pub struct ApplicationsFacade {
 impl ApplicationsFacade {
     /// Creates a new ApplicationsFacade with all dependencies.
     /// This is where all the boring structure stuff goes so nobody needs to worry about it.
-    /// 
+    ///
     /// Currently focused on GraphStore Catalog operations - the Storage ISA!
     pub fn create(log: Log) -> Self {
         // Create the main GraphStore Catalog applications using our builder
         let graph_store_catalog_applications = DefaultGraphCatalogApplicationsBuilder::new(log.clone())
             .build();
-        
+
         // Create placeholder applications (to be implemented later)
         let graph_catalog_applications = GraphCatalogApplicationsStub::new();
         let model_catalog_applications = ModelCatalogApplicationsStub::new();

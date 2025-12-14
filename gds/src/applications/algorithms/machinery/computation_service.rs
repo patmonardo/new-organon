@@ -5,13 +5,13 @@ use crate::applications::algorithms::machinery::{
 use crate::config::base_types::Config;
 use crate::mem::MemoryEstimation;
 use crate::core::loading::GraphResources;
-use crate::logging::Log;
+use crate::applications::services::logging::Log;
 
 /// The framework hook for all algorithm computations.
 /// This is the lowest common denominator of things algorithm computations need.
 pub trait Computation<RESULT> {
     /// The lowest common denominator of things algorithm computations need
-    /// 
+    ///
     /// # Arguments
     /// * `graph` - most algorithms need this
     /// * `graph_store` - very few algorithms need this
@@ -19,7 +19,7 @@ pub trait Computation<RESULT> {
 }
 
 /// Computation Service - encapsulates computing stuff with memory guard and metrics.
-/// This encapsulates computing stuff with memory guard and metrics. 
+/// This encapsulates computing stuff with memory guard and metrics.
 /// _Could_ be algorithms, could be something else.
 pub struct ComputationService {
     log: Log,
