@@ -13,7 +13,7 @@
 
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::{Matrix, Tensor};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use crate::ml::core::abstract_variable::AbstractVariable;
 use std::fmt;
 
@@ -33,6 +33,11 @@ impl Softmax {
     /// Create new softmax activation.
     /// Java: `public Softmax(Variable<Matrix> parent) { super(parent, parent.dimensions()); }`
     pub fn new(parent: Box<dyn Variable>) -> Self {
+        Self::new_ref(parent.into())
+    }
+
+    /// Ref-based constructor for DAG-safe graph building.
+    pub fn new_ref(parent: VariableRef) -> Self {
         let dimensions = parent.dimensions().to_vec();
 
         // Java: super(parent, parent.dimensions())
@@ -193,7 +198,7 @@ impl Variable for Softmax {
 
     /// Get parent variables.
     /// Java: Inherited from `super(parent, ...)`
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 

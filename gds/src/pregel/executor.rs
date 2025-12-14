@@ -5,6 +5,7 @@
 
 use crate::collections::HugeAtomicBitSet;
 use crate::concurrency::Concurrency;
+use crate::concurrency::install_with_concurrency;
 use crate::core::utils::progress::tasks::LeafTask;
 use crate::pregel::{
     projection::PropertyProjection, ComputeFn, DefaultValue, ForkJoinComputer, InitFn,
@@ -13,6 +14,8 @@ use crate::pregel::{
 };
 use crate::types::graph::Graph;
 use std::sync::Arc;
+
+type MasterComputeFn<C> = Arc<dyn Fn(&mut MasterComputeContext<C>) -> bool + Send + Sync>;
 
 /// Main executor for Pregel computations.
 ///
@@ -30,15 +33,8 @@ use std::sync::Arc;
 /// ```ignore
 /// use gds::pregel::Pregel;
 ///
-/// let pregel = Pregel::create(
-///     graph,
-///     config,
-///     init_fn,
-///     compute_fn,
-///     progress_tracker,
-/// )?;
-///
-/// let result = pregel.run()?;
+/// let pregel = Pregel::new(graph, config, schema, init_fn, compute_fn, messenger, None);
+/// let result = pregel.run();
 ///
 /// if result.did_converge {
 ///     println!("Converged after {} iterations", result.ran_iterations);
@@ -55,11 +51,15 @@ pub struct Pregel<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageItera
     node_values: Arc<parking_lot::RwLock<NodeValue>>,
 
     /// Message passing system (held for lifecycle management)
-    #[allow(dead_code)]
     messenger: Arc<dyn Messenger<I>>,
 
     /// The computer that executes iterations
     computer: ForkJoinComputer<C, I>,
+
+    /// Optional master-compute hook executed once after each superstep.
+    ///
+    /// This runs on a single thread and may request early termination.
+    master_compute_fn: Option<MasterComputeFn<C>>,
 
     /// Progress tracking task (optional)
     progress_task: Option<Arc<LeafTask>>,
@@ -124,8 +124,18 @@ impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> Pregel<C
             node_values,
             messenger,
             computer,
+            master_compute_fn: None,
             progress_task,
         }
+    }
+
+    /// Provide a master-compute hook executed once after each superstep.
+    pub fn with_master_compute_fn(
+        mut self,
+        master_compute_fn: impl Fn(&mut MasterComputeContext<C>) -> bool + Send + Sync + 'static,
+    ) -> Self {
+        self.master_compute_fn = Some(Arc::new(master_compute_fn));
+        self
     }
 
     /// Initialize node values from PropertyStore based on schema mappings.
@@ -194,7 +204,7 @@ impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> Pregel<C
     /// # Example
     ///
     /// ```ignore
-    /// let result = pregel.run()?;
+    /// let result = pregel.run();
     /// println!("Ran {} iterations", result.ran_iterations);
     /// println!("Converged: {}", result.did_converge);
     /// ```
@@ -209,24 +219,29 @@ impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> Pregel<C
             task.base().start();
         }
 
-        let mut iteration = 0;
+        let mut ran_iterations = 0;
         for iter in 0..self.config.max_iterations() {
-            iteration = iter;
+            ran_iterations = iter + 1;
 
-            // Log iteration progress
-            if let Some(task) = &self.progress_task {
-                task.log_progress(1); // Log one unit of progress per iteration
-            }
+            // Run this superstep inside the configured Rayon pool.
+            //
+            // Pregel is compute-parallel and barriered: each superstep is a synchronization
+            // boundary, and we want all Rayon work inside it to respect the configured
+            // concurrency (and pooled thread creation).
+            let concurrency = Concurrency::from_usize(self.config.concurrency());
+            install_with_concurrency(concurrency, || {
+                // Advance/swap message queues for this superstep.
+                self.messenger.init_iteration(iter);
 
-            // Initialize iteration in computer
-            // (Messenger init is handled by computer/compute_step)
-            self.computer.init_iteration(iteration);
+                // Initialize iteration in computer
+                self.computer.init_iteration(iter);
 
-            // Run the compute step (parallel execution)
-            self.computer.run_iteration();
+                // Run the compute step (parallel execution)
+                self.computer.run_iteration();
+            });
 
             // Run master compute step (convergence check)
-            let master_converged = self.run_master_compute(iteration);
+            let master_converged = self.run_master_compute(iter);
 
             // Check convergence
             did_converge = master_converged || self.computer.has_converged();
@@ -244,12 +259,15 @@ impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> Pregel<C
         // Release resources
         self.computer.release();
 
+        // Give the messenger a chance to free internal buffers.
+        self.messenger.release();
+
         // Return results - unwrap Arc<RwLock<NodeValue>> to get NodeValue
         let node_values = Arc::try_unwrap(self.node_values)
             .map(|lock| lock.into_inner())
             .unwrap_or_else(|_arc| NodeValue::stub()); // Fallback if still shared
 
-        PregelResult::new(node_values, iteration, did_converge)
+        PregelResult::new(node_values, ran_iterations, did_converge)
     }
 
     /// Run the master compute step for convergence checking.
@@ -258,7 +276,7 @@ impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> Pregel<C
     /// and can signal early termination.
     fn run_master_compute(&self, iteration: usize) -> bool {
         // Create master compute context
-        let context = MasterComputeContext::new(
+        let mut context = MasterComputeContext::new(
             self.config.clone(),
             Arc::clone(&self.graph),
             iteration,
@@ -266,10 +284,10 @@ impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> Pregel<C
             self.progress_task.clone(),
         );
 
-        // For now, always return false (don't terminate early)
-        // In full implementation, this would call computation.master_compute(context)
-        let _ = context; // Suppress unused warning
-        false
+        match &self.master_compute_fn {
+            Some(f) => f(&mut context),
+            None => false,
+        }
     }
 }
 
@@ -281,6 +299,7 @@ pub struct PregelBuilder<C: PregelRuntimeConfig, I: crate::pregel::MessageIterat
     init_fn: Option<InitFn<C>>,
     compute_fn: Option<ComputeFn<C, I>>,
     messenger: Option<Arc<dyn Messenger<I>>>,
+    master_compute_fn: Option<MasterComputeFn<C>>,
     progress_task: Option<Arc<LeafTask>>,
 }
 
@@ -294,6 +313,7 @@ impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> PregelBu
             init_fn: None,
             compute_fn: None,
             messenger: None,
+            master_compute_fn: None,
             progress_task: None,
         }
     }
@@ -334,6 +354,15 @@ impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> PregelBu
         self
     }
 
+    /// Set the master-compute hook.
+    pub fn master_compute_fn(
+        mut self,
+        master_compute_fn: impl Fn(&mut MasterComputeContext<C>) -> bool + Send + Sync + 'static,
+    ) -> Self {
+        self.master_compute_fn = Some(Arc::new(master_compute_fn));
+        self
+    }
+
     /// Set the progress task (optional).
     pub fn progress_task(mut self, progress_task: Arc<LeafTask>) -> Self {
         self.progress_task = Some(progress_task);
@@ -346,7 +375,7 @@ impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> PregelBu
     ///
     /// Panics if any required field is missing.
     pub fn build(self) -> Pregel<C, I> {
-        Pregel::new(
+        let mut pregel = Pregel::new(
             self.graph.expect("graph is required"),
             self.config.expect("config is required"),
             self.schema.expect("schema is required"),
@@ -354,7 +383,13 @@ impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> PregelBu
             self.compute_fn.expect("compute_fn is required"),
             self.messenger.expect("messenger is required"),
             self.progress_task, // Optional
-        )
+        );
+
+        if let Some(master_compute_fn) = self.master_compute_fn {
+            pregel.master_compute_fn = Some(master_compute_fn);
+        }
+
+        pregel
     }
 }
 

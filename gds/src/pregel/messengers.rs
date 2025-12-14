@@ -7,7 +7,7 @@
 //! 3. **ReducingMessenger**: Atomic double arrays with reducers for aggregated message passing
 
 use crate::collections::{HugeAtomicDoubleArray, HugeAtomicLongArray};
-use crate::pregel::{AsyncDoubleQueues, SyncDoubleQueues};
+use crate::pregel::AsyncDoubleQueues;
 use crate::pregel::{MessageIterator, MessageReducer, Messenger};
 
 // ================================================================================================
@@ -19,7 +19,8 @@ use crate::pregel::{MessageIterator, MessageReducer, Messenger};
 /// Stores a copy of messages and provides iteration over them.
 /// This iterator is reused across multiple nodes for efficiency.
 pub struct SyncQueueMessageIterator {
-    messages: Vec<f64>,
+    queues: Option<std::sync::Arc<crate::collections::HugeObjectArray<Vec<f64>>>>,
+    node_id: usize,
     index: usize,
 }
 
@@ -27,15 +28,21 @@ impl SyncQueueMessageIterator {
     /// Create a new iterator (typically called by messageIterator())
     fn new() -> Self {
         Self {
-            messages: Vec::new(),
+            queues: None,
+            node_id: 0,
             index: 0,
         }
     }
 
     /// Initialize the iterator for a specific node's messages
-    fn init(&mut self, messages: &[f64]) {
-        self.messages.clear();
-        self.messages.extend_from_slice(messages);
+    fn init(&mut self, queues: std::sync::Arc<crate::collections::HugeObjectArray<Vec<f64>>>, node_id: usize) {
+        self.queues = Some(queues);
+        self.node_id = node_id;
+        self.index = 0;
+    }
+
+    fn init_empty(&mut self) {
+        self.queues = None;
         self.index = 0;
     }
 }
@@ -44,8 +51,10 @@ impl Iterator for SyncQueueMessageIterator {
     type Item = f64;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.messages.len() {
-            let value = self.messages[self.index];
+        let queues = self.queues.as_ref()?;
+        let messages = queues.get(self.node_id);
+        if self.index < messages.len() {
+            let value = messages[self.index];
             self.index += 1;
             Some(value)
         } else {
@@ -56,7 +65,10 @@ impl Iterator for SyncQueueMessageIterator {
 
 impl MessageIterator for SyncQueueMessageIterator {
     fn is_empty(&self) -> bool {
-        self.messages.is_empty()
+        match self.queues.as_ref() {
+            None => true,
+            Some(queues) => queues.get(self.node_id).is_empty(),
+        }
     }
 
     fn reset(&mut self) {
@@ -88,25 +100,66 @@ impl MessageIterator for SyncQueueMessageIterator {
 /// }
 /// ```
 pub struct SyncQueueMessenger {
-    queues: parking_lot::RwLock<SyncDoubleQueues>,
+    state: parking_lot::RwLock<SyncQueueMessengerState>,
+}
+
+struct SyncQueueMessengerState {
+    node_count: usize,
+    read_queues: std::sync::Arc<crate::collections::HugeObjectArray<Vec<f64>>>,
+    write_queues: crate::collections::HugeObjectArray<Vec<f64>>,
 }
 
 impl SyncQueueMessenger {
     /// Create a new synchronous messenger for the given number of nodes.
     pub fn new(node_count: usize) -> Self {
+        let write_queues = crate::collections::HugeObjectArray::new(node_count);
+        let read_queues = std::sync::Arc::new(crate::collections::HugeObjectArray::new(node_count));
         Self {
-            queues: parking_lot::RwLock::new(SyncDoubleQueues::new(node_count)),
+            state: parking_lot::RwLock::new(SyncQueueMessengerState {
+                node_count,
+                read_queues,
+                write_queues,
+            }),
         }
     }
 }
 
 impl Messenger<SyncQueueMessageIterator> for SyncQueueMessenger {
     fn init_iteration(&self, _iteration: usize) {
-        self.queues.write().swap();
+        let mut state = self.state.write();
+
+        let node_count = state.node_count;
+
+        // Swap read/write without copying.
+        // Safety invariant: at superstep boundaries, no iterators should still be alive.
+        let old_read = std::mem::replace(
+            &mut state.read_queues,
+            std::sync::Arc::new(crate::collections::HugeObjectArray::new(node_count)),
+        );
+
+        let mut new_write = match std::sync::Arc::try_unwrap(old_read) {
+            Ok(read_queues) => read_queues,
+            Err(_) => panic!(
+                "SyncQueueMessenger: read queues still referenced at init_iteration"
+            ),
+        };
+
+        // Clear the new write queues (which were the old read queues)
+        for i in 0..new_write.size() {
+            new_write.get_mut(i).clear();
+        }
+
+        // Promote current write queues to be the new read snapshot.
+        let old_write = std::mem::replace(&mut state.write_queues, new_write);
+        state.read_queues = std::sync::Arc::new(old_write);
     }
 
     fn send_to(&self, _source_node_id: u64, target_node_id: u64, message: f64) {
-        self.queues.write().push(target_node_id as usize, message);
+        let mut state = self.state.write();
+        state
+            .write_queues
+            .get_mut(target_node_id as usize)
+            .push(message);
     }
 
     fn message_iterator(&self) -> SyncQueueMessageIterator {
@@ -121,11 +174,13 @@ impl Messenger<SyncQueueMessageIterator> for SyncQueueMessenger {
     ) {
         if is_first_iteration {
             // No messages in the first iteration
-            message_iterator.init(&[]);
+            message_iterator.init_empty();
         } else {
-            let queues = self.queues.read();
-            let messages = queues.messages(node_id as usize);
-            message_iterator.init(messages);
+            let read_snapshot = {
+                let state = self.state.read();
+                std::sync::Arc::clone(&state.read_queues)
+            };
+            message_iterator.init(read_snapshot, node_id as usize);
         }
     }
 
@@ -699,7 +754,9 @@ mod tests {
     fn test_message_iterator_traits() {
         // Test that iterators implement MessageIterator properly
         let mut sync_iter = SyncQueueMessageIterator::new();
-        sync_iter.init(&[1.0, 2.0, 3.0]);
+        let mut snapshot = crate::collections::HugeObjectArray::new(1);
+        snapshot.set(0, vec![1.0, 2.0, 3.0]);
+        sync_iter.init(std::sync::Arc::new(snapshot), 0);
 
         assert!(!sync_iter.is_empty());
         assert_eq!(sync_iter.next(), Some(1.0));

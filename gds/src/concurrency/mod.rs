@@ -3,6 +3,11 @@
 // This package provides the foundational types for parallel graph algorithm execution.
 // It mirrors the Java GDS concurrency package while leveraging Rust's safety guarantees.
 
+/// Default concurrency / pool size for the Open GDS (community) profile.
+///
+/// Keep this value as the single source of truth for "open" defaults.
+pub const OPEN_GDS_DEFAULT_CONCURRENCY: usize = 4;
+
 pub mod atomics;
 pub mod parallel_util;
 pub mod pool;
@@ -11,7 +16,10 @@ pub mod virtual_threads;
 
 mod batch_size;
 mod concurrency_level;
+mod rayon_pool;
 mod termination;
 pub use batch_size::*;
 pub use concurrency_level::*;
 pub use termination::*;
+
+pub(crate) use rayon_pool::*;

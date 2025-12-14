@@ -24,7 +24,7 @@ use rayon::prelude::*;
 /// ```
 /// use gds::concurrency::virtual_threads::{Executor, Scope};
 /// use gds::concurrency::Concurrency;
-/// use gds::termination::TerminationFlag;
+/// use gds::concurrency::TerminationFlag;
 ///
 /// let executor = Executor::new(Concurrency::of(4));
 /// let termination = TerminationFlag::running_true();
@@ -66,7 +66,7 @@ impl<'a> Scope<'a> {
     /// ```
     /// use gds::concurrency::virtual_threads::Executor;
     /// use gds::concurrency::Concurrency;
-    /// use gds::termination::TerminationFlag;
+    /// use gds::concurrency::TerminationFlag;
     ///
     /// let executor = Executor::new(Concurrency::of(4));
     /// let termination = TerminationFlag::running_true();
@@ -98,7 +98,7 @@ impl<'a> Scope<'a> {
                 task(i);
                 Ok(())
             })
-            .ok(); // Ignore termination errors
+            .ok();
     }
 
     /// Spawn tasks over a range with custom start and end.
@@ -108,7 +108,7 @@ impl<'a> Scope<'a> {
     /// ```
     /// use gds::concurrency::virtual_threads::Executor;
     /// use gds::concurrency::Concurrency;
-    /// use gds::termination::TerminationFlag;
+    /// use gds::concurrency::TerminationFlag;
     ///
     /// let executor = Executor::new(Concurrency::of(4));
     /// let termination = TerminationFlag::running_true();
@@ -141,7 +141,9 @@ impl<'a> Scope<'a> {
             return;
         }
 
-        task();
+        rayon::scope(|s| {
+            s.spawn(|_| task());
+        });
     }
 
     /// Get the concurrency level for this scope.

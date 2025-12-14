@@ -286,12 +286,6 @@ impl<W: CumulativeWeightSupplier> RandomWalkSampler<W> {
     }
 }
 
-// Safety: RandomWalkSampler can be sent between threads if W is Send
-unsafe impl<W: CumulativeWeightSupplier + Send> Send for RandomWalkSampler<W> {}
-
-// Safety: RandomWalkSampler can be shared if W is Sync (but needs &mut for walking)
-unsafe impl<W: CumulativeWeightSupplier + Sync> Sync for RandomWalkSampler<W> {}
-
 #[cfg(test)]
 mod tests {
     use super::*;

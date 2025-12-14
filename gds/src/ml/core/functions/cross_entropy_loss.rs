@@ -16,7 +16,7 @@
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use crate::ml::core::abstract_variable::AbstractVariable;
 use std::fmt;
 
@@ -45,13 +45,19 @@ impl CrossEntropyLoss {
         targets: Box<dyn Variable>,
         class_weights: Vec<f64>,
     ) -> Self {
-        // Java: super(List.of(predictions, targets), Dimensions.scalar())
-        let base = AbstractVariable::with_gradient_requirement(vec![predictions, targets], dimensions::scalar(), true);
+        Self::new_ref(predictions.into(), targets.into(), class_weights)
+    }
 
-        Self {
-            base,
-            class_weights,
-        }
+    /// Ref-based constructor for DAG-safe graph building.
+    pub fn new_ref(predictions: VariableRef, targets: VariableRef, class_weights: Vec<f64>) -> Self {
+        // Java: super(List.of(predictions, targets), Dimensions.scalar())
+        let base = AbstractVariable::with_gradient_requirement(
+            vec![predictions, targets],
+            dimensions::scalar(),
+            true,
+        );
+
+        Self { base, class_weights }
     }
 
     /// Get predictions parent (first operand).
@@ -219,7 +225,7 @@ impl Variable for CrossEntropyLoss {
 
     /// Get parent variables (predictions, targets).
     /// Java: Inherited from `super(List.of(predictions, targets), ...)`
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 

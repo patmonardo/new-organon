@@ -9,11 +9,12 @@ use crate::ml::{
             softmax::Softmax,
         },
         tensor::Matrix,
-        variable::Variable,
+        variable::{Variable, VariableRef},
         ComputationContext,
     },
     models::{Classifier, Features},
 };
+use std::sync::Arc;
 
 /// Logistic Regression classifier implementation
 #[derive(Debug, Clone)]
@@ -52,21 +53,20 @@ impl LogisticRegressionClassifier {
     }
 
     /// Creates the predictions variable for the computation graph
-    pub(crate) fn predictions_variable(&self, batch_features: Constant) -> Box<dyn Variable> {
+    pub(crate) fn predictions_variable(&self, batch_features: VariableRef) -> VariableRef {
         let weights = self.data.weights();
-        let weighted_features = MatrixMultiplyWithTransposedSecondOperand::new(
-            Box::new(batch_features),
-            Box::new(weights.clone()) as Box<dyn Variable>,
-        );
-        let softmax_input = MatrixVectorSum::new(
-            Box::new(weighted_features),
-            Box::new(self.data.bias().clone()) as Box<dyn Variable>,
+        let weights_var: VariableRef = weights.clone();
+        let weighted_features: VariableRef = Arc::new(
+            MatrixMultiplyWithTransposedSecondOperand::new_ref(batch_features, weights_var),
         );
 
+        let bias_var: VariableRef = self.data.bias().clone();
+        let softmax_input: VariableRef = Arc::new(MatrixVectorSum::new_ref(weighted_features, bias_var));
+
         if weights.borrow_matrix().rows() == self.data.number_of_classes() {
-            Box::new(Softmax::new(Box::new(softmax_input)))
+            Arc::new(Softmax::new_ref(softmax_input))
         } else {
-            Box::new(ReducedSoftmax::new(Box::new(softmax_input)))
+            Arc::new(ReducedSoftmax::new_ref(softmax_input))
         }
     }
 
@@ -129,6 +129,7 @@ impl Classifier for LogisticRegressionClassifier {
             PredictionStrategy::MultiClass => {
                 let ctx = ComputationContext::new();
                 let features_variable = Constant::matrix(features.to_vec(), 1, features.len());
+                let features_variable: VariableRef = Arc::new(features_variable);
                 let predictions_variable = self.predictions_variable(features_variable);
                 let result = ctx.forward(predictions_variable.as_ref());
                 result.data().to_vec()
@@ -139,6 +140,7 @@ impl Classifier for LogisticRegressionClassifier {
     fn predict_probabilities_batch(&self, batch: &[usize], features: &dyn Features) -> Matrix {
         let ctx = ComputationContext::new();
         let batch_features = self.batch_feature_matrix_from_indices(batch, features);
+        let batch_features: VariableRef = Arc::new(batch_features);
         let predictions = self.predictions_variable(batch_features);
         let result = ctx.forward(predictions.as_ref());
         let dimensions = result.dimensions();

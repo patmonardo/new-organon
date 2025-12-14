@@ -1,15 +1,8 @@
-// Concurrency validation system
+// Concurrency validation system.
 //
-// This module provides validation for concurrency settings, primarily for
-// license enforcement. The "enterprise" pattern exists to enforce limits
-// based on license tiers.
-//
-// ## The Validation "System"
-//
-// Java made this complex because EJB. The actual logic is just:
-//   if (requested > limit) throw error;
-//
-// But we package it nicely for license-based enforcement!
+// This module validates concurrency settings against configured limitations.
+// The API shape is compatible with the Java GDS ConcurrencyValidator pattern,
+// but the Rust implementation keeps the surface area small and explicit.
 
 mod concurrency_validator;
 mod open_gds_concurrency_validator;
@@ -47,7 +40,7 @@ pub struct ConcurrencyValidatorService;
 
 impl ConcurrencyValidatorService {
     /// Default concurrency limit for open source version.
-    pub const DEFAULT_CONCURRENCY_LIMIT: usize = 4;
+    pub const DEFAULT_CONCURRENCY_LIMIT: usize = super::OPEN_GDS_DEFAULT_CONCURRENCY;
 
     /// Get the global validator instance.
     ///
@@ -92,11 +85,17 @@ mod tests {
 
     #[test]
     fn test_service_max_concurrency() {
-        assert_eq!(ConcurrencyValidatorService::max_concurrency(), 4);
+        assert_eq!(
+            ConcurrencyValidatorService::max_concurrency(),
+            crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
+        );
     }
 
     #[test]
     fn test_service_default_limit() {
-        assert_eq!(ConcurrencyValidatorService::DEFAULT_CONCURRENCY_LIMIT, 4);
+        assert_eq!(
+            ConcurrencyValidatorService::DEFAULT_CONCURRENCY_LIMIT,
+            crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
+        );
     }
 }

@@ -13,9 +13,9 @@
 //!
 //! Rust + Rayon gives us:
 //! - **Work-stealing**: Automatic load balancing across CPU cores
-//! - **Scoped threads**: Perfect synchronization without barriers
-//! - **Zero cost**: Compiled to same code as manual threading
-//! - **Type safety**: Compiler prevents data races
+//! - **Scoped work**: Structured parallelism with clear join points
+//! - **Type safety**: Rust helps avoid many accidental data races, but correctness
+//!   still depends on using thread-safe data structures and synchronization
 //!
 //! ## What We Provide
 //!
@@ -26,29 +26,29 @@
 //!
 //! ## Example: Pregel-Style Iteration
 //!
-//! ```rust
-//! use gds::concurrency::virtual_threads::{Executor, Scope};
-//! use gds::concurrency::Concurrency;
-//! use gds::termination::TerminationFlag;
+//! ```no_run
+//! use gds::concurrency::virtual_threads::Executor;
+//! use gds::concurrency::{TerminatedException, TerminationFlag};
 //!
-//! let executor = Executor::new(Concurrency::available_cores());
-//! let termination = TerminationFlag::running_true();
+//! fn compute_vertex(_node_id: usize) {}
+//! fn converged() -> bool { false }
 //!
-//! for iteration in 0..max_iterations {
-//!     // Each iteration is a synchronization boundary (superstep)
-//!     executor.scope(&termination, |scope| {
-//!         // All workers execute in parallel
-//!         scope.spawn_many(node_count, |node_id| {
-//!             // Process node
-//!             compute_vertex(node_id);
-//!         });
-//!         // Implicit barrier here - all spawned work completes before scope ends
-//!     })?;
-//!     
-//!     // Synchronization point between iterations
-//!     if converged() {
-//!         break;
+//! fn run() -> Result<(), TerminatedException> {
+//!     let node_count = 1_000usize;
+//!     let max_iterations = 10usize;
+//!     let executor = Executor::default();
+//!     let termination = TerminationFlag::running_true();
+//!
+//!     for _iteration in 0..max_iterations {
+//!         executor.scope(&termination, |scope| {
+//!             scope.spawn_many(node_count, |node_id| compute_vertex(node_id));
+//!         })?;
+//!
+//!         if converged() {
+//!             break;
+//!         }
 //!     }
+//!     Ok(())
 //! }
 //! ```
 

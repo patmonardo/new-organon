@@ -13,7 +13,7 @@ use super::OpenGdsPoolSizes;
 /// let license = LicenseState::Open;
 /// let provider = PoolSizesProvider;
 /// let pool = provider.get(license);
-/// assert_eq!(pool.core_pool_size(), 4);
+/// assert_eq!(pool.core_pool_size(), gds::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY);
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LicenseState {
@@ -25,8 +25,10 @@ pub enum LicenseState {
 
 /// Pool sizes provider - determines pool sizes based on license state.
 ///
-/// This is a **radically simplified** version of Java's service provider pattern.
-/// No annotations, no service loading, no MIN_VALUE priorities - just clean code.
+/// This is a simplified version of Java's service provider pattern.
+///
+/// Rust does not use a dynamic service-loading framework here; callers can
+/// construct and use a provider directly.
 ///
 /// In Java GDS:
 /// ```java
@@ -39,7 +41,7 @@ pub enum LicenseState {
 /// }
 /// ```
 ///
-/// In Rust: **Just call a function.** No service framework needed!
+/// In Rust: construct a provider and call `get`.
 ///
 /// # Examples
 ///
@@ -48,7 +50,7 @@ pub enum LicenseState {
 ///
 /// let provider = PoolSizesProvider;
 /// let pool = provider.get(LicenseState::Open);
-/// assert_eq!(pool.core_pool_size(), 4);
+/// assert_eq!(pool.core_pool_size(), gds::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY);
 /// ```
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PoolSizesProvider;
@@ -110,7 +112,7 @@ impl PoolSizesProvider {
 /// use gds::concurrency::pool::{PoolSizes, PoolSizesService};
 ///
 /// let pool = PoolSizesService::pool_sizes();
-/// assert_eq!(pool.core_pool_size(), 4);
+/// assert_eq!(pool.core_pool_size(), gds::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY);
 /// ```
 pub struct PoolSizesService;
 
@@ -151,8 +153,8 @@ mod tests {
     fn test_provider_get_open() {
         let provider = PoolSizesProvider;
         let pool = provider.get(LicenseState::Open);
-        assert_eq!(pool.core_pool_size(), 4);
-        assert_eq!(pool.max_pool_size(), 4);
+        assert_eq!(pool.core_pool_size(), crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY);
+        assert_eq!(pool.max_pool_size(), crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY);
     }
 
     #[test]
@@ -160,8 +162,8 @@ mod tests {
         let provider = PoolSizesProvider;
         // Currently returns same for enterprise
         let pool = provider.get(LicenseState::Enterprise);
-        assert_eq!(pool.core_pool_size(), 4);
-        assert_eq!(pool.max_pool_size(), 4);
+        assert_eq!(pool.core_pool_size(), crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY);
+        assert_eq!(pool.max_pool_size(), crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY);
     }
 
     #[test]
@@ -174,14 +176,14 @@ mod tests {
     fn test_provider_default() {
         let provider = PoolSizesProvider::default();
         let pool = provider.get(LicenseState::Open);
-        assert_eq!(pool.core_pool_size(), 4);
+        assert_eq!(pool.core_pool_size(), crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY);
     }
 
     #[test]
     fn test_service_pool_sizes() {
         let pool = PoolSizesService::pool_sizes();
-        assert_eq!(pool.core_pool_size(), 4);
-        assert_eq!(pool.max_pool_size(), 4);
+        assert_eq!(pool.core_pool_size(), crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY);
+        assert_eq!(pool.max_pool_size(), crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY);
     }
 
     #[test]

@@ -1,6 +1,7 @@
 use super::{TerminatedException, TerminationMonitor};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 
 /// Flag for checking if an algorithm should terminate.
@@ -12,7 +13,7 @@ use std::time::{Duration, Instant};
 /// # Examples
 ///
 /// ```
-/// use gds::termination::{TerminationFlag, EmptyTerminationMonitor};
+/// use gds::concurrency::{TerminationFlag, EmptyTerminationMonitor};
 ///
 /// let flag = TerminationFlag::new(EmptyTerminationMonitor);
 ///
@@ -23,23 +24,15 @@ use std::time::{Duration, Instant};
 /// flag.assert_running();
 /// ```
 pub struct TerminationFlag {
-    monitor: Arc<dyn TerminationMonitor + Send + Sync>,
-    last_check: parking_lot::Mutex<Instant>,
-    cached_running: AtomicBool,
-    interval: Duration,
+    inner: Arc<TerminationFlagInner>,
 }
 
-impl Clone for TerminationFlag {
-    fn clone(&self) -> Self {
-        // Create a new TerminationFlag with the same monitor and interval
-        // The cached state will be reset to the default (running)
-        Self {
-            monitor: self.monitor.clone(),
-            last_check: parking_lot::Mutex::new(Instant::now()),
-            cached_running: AtomicBool::new(true),
-            interval: self.interval,
-        }
-    }
+struct TerminationFlagInner {
+    monitor: Arc<dyn TerminationMonitor + Send + Sync>,
+    start: Instant,
+    last_check_nanos: AtomicU64,
+    cached_running: AtomicBool,
+    interval_nanos: u64,
 }
 
 impl TerminationFlag {
@@ -51,7 +44,7 @@ impl TerminationFlag {
     /// # Examples
     ///
     /// ```
-    /// use gds::termination::{TerminationFlag, EmptyTerminationMonitor};
+    /// use gds::concurrency::{TerminationFlag, EmptyTerminationMonitor};
     ///
     /// let flag = TerminationFlag::new(EmptyTerminationMonitor);
     /// assert!(flag.running());
@@ -68,7 +61,7 @@ impl TerminationFlag {
     /// # Examples
     ///
     /// ```
-    /// use gds::termination::{TerminationFlag, EmptyTerminationMonitor};
+    /// use gds::concurrency::{TerminationFlag, EmptyTerminationMonitor};
     /// use std::time::Duration;
     ///
     /// let flag = TerminationFlag::with_interval(
@@ -81,11 +74,15 @@ impl TerminationFlag {
     where
         M: TerminationMonitor + Send + Sync + 'static,
     {
+        const UNINITIALIZED: u64 = u64::MAX;
         Self {
-            monitor: Arc::new(monitor),
-            last_check: parking_lot::Mutex::new(Instant::now()),
-            cached_running: AtomicBool::new(true),
-            interval,
+            inner: Arc::new(TerminationFlagInner {
+                monitor: Arc::new(monitor),
+                start: Instant::now(),
+                last_check_nanos: AtomicU64::new(UNINITIALIZED),
+                cached_running: AtomicBool::new(true),
+                interval_nanos: interval.as_nanos().min(u128::from(u64::MAX)) as u64,
+            }),
         }
     }
 
@@ -97,24 +94,62 @@ impl TerminationFlag {
     /// # Examples
     ///
     /// ```
-    /// use gds::termination::{TerminationFlag, EmptyTerminationMonitor};
+    /// use gds::concurrency::{TerminationFlag, EmptyTerminationMonitor};
     ///
     /// let flag = TerminationFlag::new(EmptyTerminationMonitor);
     /// assert!(flag.running());
     /// ```
     pub fn running(&self) -> bool {
-        let now = Instant::now();
-        let mut last_check = self.last_check.lock();
-
-        if now.duration_since(*last_check) > self.interval {
-            // Time to check the monitor
-            if self.monitor.is_terminated() {
-                self.cached_running.store(false, Ordering::Release);
-            }
-            *last_check = now;
+        if !self.inner.cached_running.load(Ordering::Acquire) {
+            return false;
         }
 
-        self.cached_running.load(Ordering::Acquire)
+        const UNINITIALIZED: u64 = u64::MAX;
+
+        let now_nanos = Instant::now()
+            .duration_since(self.inner.start)
+            .as_nanos()
+            .min(u128::from(u64::MAX)) as u64;
+
+        let mut last = self.inner.last_check_nanos.load(Ordering::Relaxed);
+        let should_check = if last == UNINITIALIZED {
+            true
+        } else {
+            now_nanos.saturating_sub(last) > self.inner.interval_nanos
+        };
+
+        if should_check {
+            // Only one racing caller performs the (potentially expensive) monitor check.
+            loop {
+                match self.inner.last_check_nanos.compare_exchange_weak(
+                    last,
+                    now_nanos,
+                    Ordering::AcqRel,
+                    Ordering::Relaxed,
+                ) {
+                    Ok(_) => {
+                        if self.inner.monitor.is_terminated() {
+                            self.inner.cached_running.store(false, Ordering::Release);
+                        }
+                        break;
+                    }
+                    Err(observed) => {
+                        last = observed;
+                        let still_should_check = if last == UNINITIALIZED {
+                            true
+                        } else {
+                            now_nanos.saturating_sub(last) > self.inner.interval_nanos
+                        };
+
+                        if !still_should_check {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        self.inner.cached_running.load(Ordering::Acquire)
     }
 
     /// Asserts that the computation is still running.
@@ -126,7 +161,7 @@ impl TerminationFlag {
     /// # Examples
     ///
     /// ```
-    /// use gds::termination::{TerminationFlag, EmptyTerminationMonitor};
+    /// use gds::concurrency::{TerminationFlag, EmptyTerminationMonitor};
     ///
     /// let flag = TerminationFlag::new(EmptyTerminationMonitor);
     /// flag.assert_running(); // Does not panic
@@ -156,7 +191,7 @@ impl TerminationFlag {
     /// # Examples
     ///
     /// ```
-    /// use gds::termination::TerminationFlag;
+    /// use gds::concurrency::TerminationFlag;
     ///
     /// let flag = TerminationFlag::running_true();
     /// assert!(flag.running());
@@ -171,7 +206,7 @@ impl TerminationFlag {
     /// # Examples
     ///
     /// ```should_panic
-    /// use gds::termination::TerminationFlag;
+    /// use gds::concurrency::TerminationFlag;
     ///
     /// let flag = TerminationFlag::stop_running();
     /// flag.assert_running(); // Panics!
@@ -184,9 +219,17 @@ impl TerminationFlag {
             }
         }
         let flag = Self::new(AlwaysTerminated);
-        // Force immediate check to set cached state correctly
-        flag.cached_running.store(false, Ordering::Release);
+        // Ensure the cached state is false immediately.
+        flag.inner.cached_running.store(false, Ordering::Release);
         flag
+    }
+}
+
+impl Clone for TerminationFlag {
+    fn clone(&self) -> Self {
+        Self {
+            inner: Arc::clone(&self.inner),
+        }
     }
 }
 
@@ -220,7 +263,6 @@ mod tests {
     #[test]
     fn test_stop_running() {
         let flag = TerminationFlag::stop_running();
-        thread::sleep(Duration::from_millis(50)); // Wait for first check
         assert!(!flag.running());
     }
 
@@ -234,7 +276,6 @@ mod tests {
     #[should_panic(expected = "terminated")]
     fn test_assert_running_panics() {
         let flag = TerminationFlag::stop_running();
-        thread::sleep(Duration::from_millis(50));
         flag.assert_running(); // Should panic
     }
 

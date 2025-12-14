@@ -533,9 +533,9 @@ pub struct PagedHugeLongArray {
 
 impl PagedHugeLongArray {
     fn new(size: usize) -> Self {
-        // Calculate page size for i64 elements with 4KB pages
+        // Calculate page size for i64 elements with 32KB pages (canonical paged size)
         let page_size =
-            PageUtil::page_size_for(PageUtil::PAGE_SIZE_4KB, std::mem::size_of::<i64>());
+            PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<i64>());
         let page_shift = page_size.trailing_zeros(); // log2 of page_size
         let page_mask = page_size - 1;
         let num_pages = PageUtil::num_pages_for(size, page_size);
@@ -568,7 +568,7 @@ impl PagedHugeLongArray {
         let page_size = if !pages.is_empty() && !pages[0].is_empty() {
             pages[0].len()
         } else {
-            PageUtil::page_size_for(PageUtil::PAGE_SIZE_4KB, std::mem::size_of::<i64>())
+            PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<i64>())
         };
         let page_shift = page_size.trailing_zeros(); // log2 of page_size
         let page_mask = page_size - 1;
@@ -961,7 +961,7 @@ mod tests {
 
         // Test exact page boundary
         let page_size =
-            PageUtil::page_size_for(PageUtil::PAGE_SIZE_4KB, std::mem::size_of::<i64>());
+            PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<i64>());
         let array = HugeLongArray::with_generator(page_size * 10, Concurrency::of(4), |i| i as i64);
 
         // Check boundaries between pages

@@ -6,7 +6,7 @@
 use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::Tensor;
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 /// A function that scales a tensor by a constant value.
@@ -15,15 +15,23 @@ use std::fmt;
 /// Uses composition with AbstractVariable to match Java's inheritance pattern.
 pub struct ConstantScale {
     base: AbstractVariable,
-    parent: Box<dyn Variable>,
+    parent: VariableRef,
     constant: f64,
 }
 
 impl ConstantScale {
     pub fn new(parent: Box<dyn Variable>, constant: f64) -> Self {
+        Self::new_ref(parent.into(), constant)
+    }
+
+    pub fn new_ref(parent: VariableRef, constant: f64) -> Self {
         let dimensions = parent.dimensions().to_vec();
         let require_gradient = parent.require_gradient();
-        let base = AbstractVariable::with_gradient_requirement(vec![], dimensions, require_gradient);
+        let base = AbstractVariable::with_gradient_requirement(
+            vec![parent.clone()],
+            dimensions,
+            require_gradient,
+        );
         Self {
             base,
             parent,
@@ -58,8 +66,8 @@ impl Variable for ConstantScale {
     }
 
     // DELEGATION: Forward to AbstractVariable
-    fn parents(&self) -> &[Box<dyn Variable>] {
-        std::slice::from_ref(&self.parent)
+    fn parents(&self) -> &[VariableRef] {
+        self.base.parents()
     }
 
     // DELEGATION: Forward to AbstractVariable

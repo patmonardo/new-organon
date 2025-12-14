@@ -395,9 +395,9 @@ pub struct PagedHugeBooleanArray {
 
 impl PagedHugeBooleanArray {
     fn new(size: usize) -> Self {
-        // Calculate page size for bool elements with 4KB pages
+        // Calculate page size for bool elements with 32KB pages (canonical paged size)
         let page_size =
-            PageUtil::page_size_for(PageUtil::PAGE_SIZE_4KB, std::mem::size_of::<bool>());
+            PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<bool>());
         let page_shift = page_size.trailing_zeros(); // log2 of page_size
         let page_mask = page_size - 1;
         let num_pages = PageUtil::num_pages_for(size, page_size);

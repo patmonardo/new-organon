@@ -5,7 +5,7 @@
 
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::{Matrix, Tensor};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use crate::ml::core::abstract_variable::AbstractVariable;
 use std::fmt;
 
@@ -21,6 +21,7 @@ pub struct NormalizeRows {
 
 impl NormalizeRows {
     pub fn new(parent: Box<dyn Variable>) -> Self {
+        let parent: VariableRef = parent.into();
         let dimensions = parent.dimensions().to_vec();
         let base = AbstractVariable::with_gradient_requirement(vec![parent], dimensions, true);
         Self { base }
@@ -125,7 +126,7 @@ impl Variable for NormalizeRows {
         self.base.require_gradient()
     }
 
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 

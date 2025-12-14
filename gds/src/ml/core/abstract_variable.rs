@@ -4,7 +4,7 @@
 //! This is a literal 1:1 translation following repository translation policy.
 
 use crate::ml::core::dimensions;
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 /// Error type for functions that are not actually functions (like constants).
@@ -25,14 +25,14 @@ impl std::error::Error for NotAFunctionException {}
 /// parent tracking, dimension handling, and gradient requirements while
 /// leaving function-specific behaviour to concrete types.
 pub struct AbstractVariable {
-    parents: Vec<Box<dyn Variable>>,
+    parents: Vec<VariableRef>,
     dimensions: Vec<usize>,
     require_gradient: bool,
 }
 
 impl AbstractVariable {
     /// Java: `protected AbstractVariable(List<? extends Variable<?>> parents, int[] dimensions)`
-    pub fn new(parents: Vec<Box<dyn Variable>>, dimensions: Vec<usize>) -> Self {
+    pub fn new(parents: Vec<VariableRef>, dimensions: Vec<usize>) -> Self {
         let require_gradient = Self::any_parent_requires_gradient(&parents);
         Self {
             parents,
@@ -43,7 +43,7 @@ impl AbstractVariable {
 
     /// Convenience constructor for leaf variables that control the gradient flag.
     pub fn with_gradient_requirement(
-        parents: Vec<Box<dyn Variable>>,
+        parents: Vec<VariableRef>,
         dimensions: Vec<usize>,
         require_gradient: bool,
     ) -> Self {
@@ -55,7 +55,7 @@ impl AbstractVariable {
     }
 
     /// Java: `public List<? extends Variable<?>> parents()`
-    pub fn parents(&self) -> &[Box<dyn Variable>] {
+    pub fn parents(&self) -> &[VariableRef] {
         &self.parents
     }
 
@@ -75,7 +75,7 @@ impl AbstractVariable {
     }
 
     /// Helper used by constructors.
-    fn any_parent_requires_gradient(parents: &[Box<dyn Variable>]) -> bool {
+    fn any_parent_requires_gradient(parents: &[VariableRef]) -> bool {
         parents.iter().any(|parent| parent.require_gradient())
     }
 

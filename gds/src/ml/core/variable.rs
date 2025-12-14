@@ -17,13 +17,14 @@ use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::Tensor;
 use std::any::Any;
 use std::fmt;
+use std::sync::Arc;
 
 /// Trait for variables in ML computations.
 ///
 /// This corresponds to the Variable interface in Java GDS.
 /// All tensor values are type-erased via `Box<dyn Tensor>`.
 /// Extends Any for downcasting and pointer-based keying.
-pub trait Variable: fmt::Display + Any {
+pub trait Variable: fmt::Display + Any + Send + Sync {
     /// Apply this variable to get its tensor value.
     /// Java: `T apply(ComputationContext ctx)`
     fn apply(&self, ctx: &ComputationContext) -> Box<dyn Tensor>;
@@ -38,7 +39,7 @@ pub trait Variable: fmt::Display + Any {
 
     /// Get parent variables.
     /// Java: `Iterable<? extends Variable<?>> parents()`
-    fn parents(&self) -> &[Box<dyn Variable>];
+    fn parents(&self) -> &[VariableRef];
 
     /// Get dimensions of this variable's output tensor.
     /// Java: `int[] dimensions()`
@@ -51,22 +52,42 @@ pub trait Variable: fmt::Display + Any {
     }
 }
 
+/// Shared reference to a variable node.
+///
+/// This enables **DAG-shaped computation graphs** (shared parents) like Java object graphs.
+pub type VariableRef = Arc<dyn Variable>;
+
+/// Identity of a `Variable` instance, based on its allocation address.
+///
+/// This mirrors Java-style reference identity (object identity), not structural identity.
+///
+/// Note: this is only meaningful within a single process execution.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct VariableId(pub usize);
+
+/// Return the process-local identity of a variable instance.
+///
+/// We intentionally key by the *data pointer* behind the trait object (thin pointer),
+/// so identity remains stable even if metadata (vtable) details differ.
+pub fn variable_id(variable: &dyn Variable) -> VariableId {
+    VariableId(variable as *const dyn Variable as *const () as usize)
+}
+
 /// Helper function to traverse variable tree and collect all variables.
-pub fn collect_variables(variable: &dyn Variable) -> Vec<Box<dyn Variable>> {
+pub fn collect_variables(variable: &VariableRef) -> Vec<VariableRef> {
     let mut result = Vec::new();
     collect_variables_recursive(variable, &mut result);
     result
 }
 
-fn collect_variables_recursive(variable: &dyn Variable, result: &mut Vec<Box<dyn Variable>>) {
+fn collect_variables_recursive(variable: &VariableRef, result: &mut Vec<VariableRef>) {
     for parent in variable.parents() {
-        collect_variables_recursive(parent.as_ref(), result);
+        collect_variables_recursive(parent, result);
     }
-    // Note: We can't clone variables, so we'll skip this for now
-    // result.push(Box::new(variable.clone_box()));
+    result.push(variable.clone());
 }
 
 /// Helper function to check if any parent requires gradient.
-pub fn any_parent_requires_gradient(parents: &[Box<dyn Variable>]) -> bool {
+pub fn any_parent_requires_gradient(parents: &[VariableRef]) -> bool {
     parents.iter().any(|parent| parent.require_gradient())
 }

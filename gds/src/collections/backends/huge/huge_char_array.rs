@@ -395,9 +395,9 @@ pub struct PagedHugeCharArray {
 
 impl PagedHugeCharArray {
     fn new(size: usize) -> Self {
-        // Calculate page size for char elements with 4KB pages
+        // Calculate page size for char elements with 32KB pages (canonical paged size)
         let page_size =
-            PageUtil::page_size_for(PageUtil::PAGE_SIZE_4KB, std::mem::size_of::<char>());
+            PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<char>());
         let page_shift = page_size.trailing_zeros(); // log2 of page_size
         let page_mask = page_size - 1;
         let num_pages = PageUtil::num_pages_for(size, page_size);
@@ -590,7 +590,7 @@ mod tests {
         array.set(2, '🚀'); // Rocket emoji
         array.set(3, '中'); // Chinese character
         array.set(4, 'ñ'); // Spanish n with tilde
-        
+
         assert_eq!(array.get(0), 'α');
         assert_eq!(array.get(1), 'β');
         assert_eq!(array.get(2), '🚀');

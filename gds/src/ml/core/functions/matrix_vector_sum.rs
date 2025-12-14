@@ -15,7 +15,7 @@ use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions::{COLUMNS_INDEX, ROWS_INDEX};
 use crate::ml::core::tensor::{Matrix, Tensor, Vector};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 /// Adds a vector to each row of a matrix (broadcasting).
@@ -36,6 +36,11 @@ impl MatrixVectorSum {
     /// Create new matrix-vector sum (broadcast addition).
     /// Java: `public MatrixVectorSum(Variable<Matrix> matrix, Variable<Vector> vector)`
     pub fn new(matrix: Box<dyn Variable>, vector: Box<dyn Variable>) -> Self {
+        Self::new_ref(matrix.into(), vector.into())
+    }
+
+    /// Ref-based constructor for DAG-safe graph building.
+    pub fn new_ref(matrix: VariableRef, vector: VariableRef) -> Self {
         // Validate dimensions
         assert_eq!(
             matrix.dimension(COLUMNS_INDEX),
@@ -123,7 +128,7 @@ impl Variable for MatrixVectorSum {
 
     /// Get parent variables.
     /// Java: Inherited from `super(List.of(matrix, vector), ...)`
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 

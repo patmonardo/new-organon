@@ -6,7 +6,7 @@
 /// # Examples
 ///
 /// ```
-/// use gds::termination::TerminationMonitor;
+/// use gds::concurrency::TerminationMonitor;
 ///
 /// struct MyMonitor {
 ///     should_stop: bool,
@@ -43,7 +43,7 @@ impl<T: TerminationMonitor + ?Sized> TerminationMonitor for std::sync::Arc<T> {
 /// # Examples
 ///
 /// ```
-/// use gds::termination::{TerminationMonitor, EmptyTerminationMonitor};
+/// use gds::concurrency::{TerminationMonitor, EmptyTerminationMonitor};
 ///
 /// let monitor = EmptyTerminationMonitor;
 /// assert!(!monitor.is_terminated());

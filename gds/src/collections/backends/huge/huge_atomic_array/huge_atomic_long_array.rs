@@ -1,13 +1,16 @@
-/// A huge atomic array of i64 integers supporting lock-free concurrent operations.
+/// A huge atomic array of i64 integers supporting concurrent atomic operations.
 ///
-/// This array provides thread-safe atomic operations on massive datasets that can
-/// exceed standard array size limits. Built on Rust's `AtomicI64`, it offers true
-/// lock-free operations with strong memory ordering guarantees.
+/// This array provides thread-safe, element-wise atomic operations on massive datasets
+/// that can exceed standard array size limits. Built on Rust's `AtomicI64`, it supports
+/// lock-free (atomic) element access with strong memory ordering guarantees.
 ///
 /// # Thread Safety
 ///
-/// All operations are atomic and thread-safe. Multiple threads can safely read,
+/// Element-wise operations are atomic and thread-safe. Multiple threads can safely read,
 /// write, and perform read-modify-write operations concurrently.
+///
+/// Bulk helpers like `set_all` are intended for initialization/reset only and require that
+/// no other threads are accessing the array.
 ///
 /// # Design
 ///
@@ -44,7 +47,7 @@ use std::sync::atomic::{AtomicI64, Ordering};
 const MAX_ARRAY_LENGTH: usize = 1 << 28; // 268,435,456 elements
 const PAGE_SIZE_IN_BYTES: usize = 4096; // 4KB pages
 
-/// Huge atomic array supporting >2 billion i64 elements with lock-free operations.
+/// Huge atomic array supporting >2 billion i64 elements with atomic operations.
 pub enum HugeAtomicLongArray {
     Single(SingleHugeAtomicLongArray),
     Paged(PagedHugeAtomicLongArray),

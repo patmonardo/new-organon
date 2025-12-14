@@ -6,7 +6,7 @@
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions::{COLUMNS_INDEX, ROWS_INDEX};
 use crate::ml::core::tensor::{Matrix, Tensor};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 /// Computes the softmax for all classes except the last one which is
@@ -14,13 +14,18 @@ use std::fmt;
 ///
 /// Corresponds to ReducedSoftmax in Java GDS.
 pub struct ReducedSoftmax {
-    parent: Box<dyn Variable>,
+    parent: VariableRef,
     dimensions: Vec<usize>,
     require_gradient: bool,
 }
 
 impl ReducedSoftmax {
     pub fn new(parent: Box<dyn Variable>) -> Self {
+        Self::new_ref(parent.into())
+    }
+
+    /// Ref-based constructor for DAG-safe graph building.
+    pub fn new_ref(parent: VariableRef) -> Self {
         let dimensions = vec![
             parent.dimension(ROWS_INDEX),
             parent.dimension(COLUMNS_INDEX) + 1,
@@ -161,7 +166,7 @@ impl Variable for ReducedSoftmax {
         self.require_gradient
     }
 
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         std::slice::from_ref(&self.parent)
     }
 

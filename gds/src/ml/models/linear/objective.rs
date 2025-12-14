@@ -10,6 +10,8 @@ use crate::ml::core::functions::{
 use crate::ml::gradient_descent::{batch_feature_matrix, Objective};
 use crate::ml::models::linear::{data::LinearRegressionData, regressor::LinearRegressor};
 use crate::ml::models::Features;
+use crate::ml::core::variable::VariableRef;
+use std::sync::Arc;
 
 /// Objective used by gradient descent training of linear regression.
 pub struct LinearRegressionObjective<'a> {
@@ -35,18 +37,19 @@ impl<'a> LinearRegressionObjective<'a> {
         &self,
         batch: &B,
         train_size: usize,
-    ) -> ConstantScale {
-        let penalty_variable = L2NormSquared::new(Box::new(self.model_data.weights().clone()));
+    ) -> VariableRef {
+        let weights: VariableRef = self.model_data.weights().clone();
+        let penalty_variable: VariableRef = Arc::new(L2NormSquared::new_ref(weights));
         let scale = (batch.size() as f64) * self.penalty / (train_size as f64);
-        ConstantScale::new(Box::new(penalty_variable), scale)
+        Arc::new(ConstantScale::new_ref(penalty_variable, scale))
     }
 
-    fn batch_targets<B: crate::ml::core::batch::Batch>(&self, batch: &B) -> Constant {
+    fn batch_targets<B: crate::ml::core::batch::Batch>(&self, batch: &B) -> VariableRef {
         let mut batched_targets = Vec::with_capacity(batch.size());
         for element_id in batch.element_ids() {
             batched_targets.push(self.targets.get(element_id as usize));
         }
-        Constant::vector(batched_targets)
+        Arc::new(Constant::vector(batched_targets))
     }
 
     pub fn penalty(&self) -> f64 {
@@ -57,36 +60,33 @@ impl<'a> LinearRegressionObjective<'a> {
 impl<'a> Objective for LinearRegressionObjective<'a> {
     type ModelData = LinearRegressionData;
 
-    fn weights(&self) -> Vec<Weights> {
-        vec![
-            self.model_data.weights().clone(),
-            self.model_data.bias().clone(),
-        ]
+    fn weights(&self) -> Vec<Arc<Weights>> {
+        vec![self.model_data.weights().clone(), self.model_data.bias().clone()]
     }
 
     fn loss<B: crate::ml::core::batch::Batch>(
         &self,
         batch: &B,
         train_size: usize,
-    ) -> Box<dyn crate::ml::core::variable::Variable> {
-        let batch_features = batch_feature_matrix(batch, self.features);
+    ) -> VariableRef {
+        let batch_features: VariableRef = Arc::new(batch_feature_matrix(batch, self.features));
         let regressor = LinearRegressor::new(self.model_data.clone());
 
         // Use the same Weights instances that are returned by weights() method
-        let weights_var = self.model_data.weights().clone();
-        let bias_var = self.model_data.bias().clone();
+        let weights_var: VariableRef = self.model_data.weights().clone();
+        let bias_var: VariableRef = self.model_data.bias().clone();
         let predictions = regressor.predictions_variable_with_weights(
-            Box::new(batch_features),
-            Box::new(weights_var),
-            Box::new(bias_var),
+            batch_features,
+            weights_var,
+            bias_var,
         );
 
         let targets = self.batch_targets(batch);
 
-        let mse = MeanSquareError::new(predictions, Box::new(targets));
+        let mse: VariableRef = Arc::new(MeanSquareError::new_ref(predictions, targets));
         let penalty = self.penalty_for_batch(batch, train_size);
 
-        Box::new(ElementSum::new(vec![Box::new(mse), Box::new(penalty)]))
+        Arc::new(ElementSum::new_ref(vec![mse, penalty]))
     }
 
     fn model_data(&self) -> &Self::ModelData {

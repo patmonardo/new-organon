@@ -2,9 +2,10 @@ use crate::ml::core::{
     batch::Batch,
     functions::{weights::Weights, Constant},
     tensor::Matrix,
-    variable::Variable,
+    variable::{Variable, VariableRef},
 };
 use crate::ml::models::Features;
+use std::sync::Arc;
 
 /// A training objective that computes a loss over a batch of nodes
 pub trait Objective {
@@ -12,10 +13,10 @@ pub trait Objective {
 
     /// Returns the Weights variables used in the computation graph.
     /// These are the actual Variable objects that can be used with ctx.gradient().
-    fn weights(&self) -> Vec<Weights>;
+    fn weights(&self) -> Vec<Arc<Weights>>;
 
     /// Computes the loss for a batch
-    fn loss<B: Batch>(&self, batch: &B, train_size: usize) -> Box<dyn Variable>;
+    fn loss<B: Batch>(&self, batch: &B, train_size: usize) -> VariableRef;
 
     /// Returns the model data needed for storage/loading
     fn model_data(&self) -> &Self::ModelData;

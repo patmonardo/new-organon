@@ -14,7 +14,7 @@
 use crate::ml::core::abstract_variable::NotAFunctionException;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use crate::ml::core::abstract_variable::AbstractVariable;
 use parking_lot::{
     MappedRwLockReadGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
@@ -169,8 +169,8 @@ impl Weights {
 impl Clone for Weights {
     fn clone(&self) -> Self {
         let base = AbstractVariable::with_gradient_requirement(
-            vec![], 
-            self.base.dimensions().to_vec(), 
+            vec![],
+            self.base.dimensions().to_vec(),
             true
         );
         Self {
@@ -214,7 +214,7 @@ impl Variable for Weights {
 
     /// Weights have no parents (leaf variables).
     /// Java: Inherited from `super(List.of(), ...)`
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 
@@ -240,8 +240,6 @@ impl fmt::Display for Weights {
     }
 }
 
-unsafe impl Send for Weights {}
-unsafe impl Sync for Weights {}
 
 // ============================================================================
 // Tests

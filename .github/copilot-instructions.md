@@ -7,6 +7,9 @@
   - **TAW**: `task/` (@organon/task) — Task/Agent/Workflow orchestration (NestJS-flavored, plus Zod schemas).
 - Rust crates exist under `gds/`, `gdsl/`, `reality/` (Cargo workspace), but **they are not part of the PNPM workspace build** right now (no JS/Rust binding yet). Don’t add scripts that implicitly build NAPI.
 
+## Codegen boundaries (read before generating)
+- See `.github/codegen-boundaries.md` for the intended split between **GDSL/SDSL (TS user space)** and **GDS (Rust kernel)**.
+
 ## Repo workflows (do this)
 - Install: `pnpm install`
 - Build all TS packages: `pnpm -r build`

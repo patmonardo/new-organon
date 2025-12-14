@@ -239,23 +239,6 @@ impl PageAllocatorFactory<Vec<i64>> {
 
         Self::new(page_size, bytes_per_page)
     }
-
-    /// Creates a factory optimized for i64 arrays with 4KB pages.
-    ///
-    /// Configuration:
-    /// - Page size: 512 elements (4KB for 8-byte i64s)
-    /// - Optimized for: Cache-friendly access, smaller datasets
-    ///
-    /// # Returns
-    ///
-    /// Factory configured for small i64 pages
-    pub fn for_long_array_4kb() -> Self {
-        let page_size =
-            PageUtil::page_size_for(PageUtil::PAGE_SIZE_4KB, std::mem::size_of::<i64>());
-        let bytes_per_page = Estimate::size_of_long_array(page_size);
-
-        Self::new(page_size, bytes_per_page)
-    }
 }
 
 impl PageAllocatorFactory<Vec<f64>> {
@@ -287,15 +270,6 @@ impl PageAllocatorFactory<Vec<f64>> {
 
         Self::new(page_size, bytes_per_page)
     }
-
-    /// Creates a factory optimized for f64 arrays with 4KB pages.
-    pub fn for_double_array_4kb() -> Self {
-        let page_size =
-            PageUtil::page_size_for(PageUtil::PAGE_SIZE_4KB, std::mem::size_of::<f64>());
-        let bytes_per_page = Estimate::size_of_double_array(page_size);
-
-        Self::new(page_size, bytes_per_page)
-    }
 }
 
 impl PageAllocatorFactory<Vec<f32>> {
@@ -323,15 +297,6 @@ impl PageAllocatorFactory<Vec<f32>> {
     pub fn for_float_array() -> Self {
         let page_size =
             PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<f32>());
-        let bytes_per_page = Estimate::size_of_float_array(page_size);
-
-        Self::new(page_size, bytes_per_page)
-    }
-
-    /// Creates a factory optimized for f32 arrays with 4KB pages.
-    pub fn for_float_array_4kb() -> Self {
-        let page_size =
-            PageUtil::page_size_for(PageUtil::PAGE_SIZE_4KB, std::mem::size_of::<f32>());
         let bytes_per_page = Estimate::size_of_float_array(page_size);
 
         Self::new(page_size, bytes_per_page)
@@ -564,18 +529,6 @@ mod tests {
 
         let memory = allocator.estimate_memory_usage(1_000_000);
         assert_eq!(memory, factory.estimate_memory_usage(1_000_000));
-    }
-
-    #[test]
-    fn test_4kb_pages() {
-        let factory = PageAllocatorFactory::<Vec<i64>>::for_long_array_4kb();
-
-        assert_eq!(factory.page_size(), 512); // 4KB / 8 bytes
-
-        let allocator = factory.new_allocator();
-        let page = allocator.new_page();
-
-        assert_eq!(page.capacity(), 512);
     }
 
     #[test]

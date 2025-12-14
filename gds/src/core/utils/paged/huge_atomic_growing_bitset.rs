@@ -9,17 +9,15 @@
 //!
 //! # Performance Characteristics
 //!
-//! - Atomic operations using compare-and-swap (CAS)
-//! - Lock-free growth through atomic page array updates
+//! - Atomic bit operations at the word level (CAS on `AtomicI64`)
+//! - Page-table growth synchronized via a lock (safe, avoids `AtomicPtr` hazards)
 //! - Efficient bit operations with 64-bit word alignment
 //! - Page-based allocation reduces memory waste
 //!
 //! # Dynamic Growth Features
 //!
 //! - Thread-safe capacity expansion during runtime
-//! - Atomic page allocation race resolution
-//! - Zero-copy page transfer during growth
-//! - Minimal synchronization overhead
+//! - Growth is coordinated to avoid raw-pointer swapping / reclamation hazards
 //! - Predictable memory allocation patterns
 //!
 //! # Example
@@ -53,21 +51,24 @@
 
 use crate::collections::page_util::PageUtil;
 use crate::mem::bit_util::BitUtil;
-use std::sync::atomic::{AtomicI64, AtomicPtr, Ordering};
-use std::sync::Arc;
+use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::{Arc, RwLock};
 
 /// Self-growing thread-safe atomic bitset.
 ///
 /// Automatically expands capacity when bits are set beyond current size.
-/// All operations are thread-safe and lock-free.
+/// Word operations are atomic; page-table growth is synchronized.
 pub struct HugeAtomicGrowingBitSet {
     /// Each page stores 2^PAGE_SHIFT_BITS entries (bits).
     /// Word-size is 64 bit, so we store 2^(PAGE_SHIFT_BITS - 6) words per page.
     page_size: usize,
     page_shift: u32,
     page_mask: usize,
-    /// Atomic reference to pages - enables thread-safe growth
-    pages: AtomicPtr<Pages>,
+    /// Page storage with thread-safe growth.
+    ///
+    /// Reads are lock-free at the word level (`AtomicI64`), but growing the page table is
+    /// synchronized to avoid raw-pointer swapping / reclamation hazards.
+    pages: RwLock<Pages>,
 }
 
 /// Number of bits per word (i64).
@@ -110,13 +111,11 @@ impl HugeAtomicGrowingBitSet {
         // Calculate initial page count
         let page_count = PageUtil::num_pages_for_shift(word_size, page_shift, page_mask);
 
-        let pages = Box::into_raw(Box::new(Pages::new(page_count, page_size)));
-
         Self {
             page_size,
             page_shift,
             page_mask,
-            pages: AtomicPtr::new(pages),
+            pages: RwLock::new(Pages::new(page_count, page_size)),
         }
     }
 
@@ -266,14 +265,17 @@ impl HugeAtomicGrowingBitSet {
     ///
     /// Count of set bits
     pub fn cardinality(&self) -> usize {
-        let pages = unsafe { &*self.pages.load(Ordering::Acquire) };
-        let page_count = pages.length();
+        let pages_snapshot = {
+            let pages = self.pages.read().expect("pages lock poisoned");
+            pages.pages.clone()
+        };
+        let page_count = pages_snapshot.len();
         let page_size = self.page_size;
 
         let mut set_bit_count = 0;
 
         for page_index in 0..page_count {
-            let page = pages.get_page(page_index);
+            let page = &pages_snapshot[page_index];
             for word_index in 0..page_size {
                 set_bit_count += page.get(word_index).count_ones() as usize;
             }
@@ -295,14 +297,17 @@ impl HugeAtomicGrowingBitSet {
     where
         F: FnMut(usize),
     {
-        let pages = unsafe { &*self.pages.load(Ordering::Acquire) };
-        let page_count = pages.length();
+        let pages_snapshot = {
+            let pages = self.pages.read().expect("pages lock poisoned");
+            pages.pages.clone()
+        };
+        let page_count = pages_snapshot.len();
         let page_size = self.page_size;
 
         let mut base = 0;
 
         for page_index in 0..page_count {
-            let page = pages.get_page(page_index);
+            let page = &pages_snapshot[page_index];
             for word_index in 0..page_size {
                 let mut word = page.get(word_index);
 
@@ -354,8 +359,8 @@ impl HugeAtomicGrowingBitSet {
     ///
     /// Current bit capacity
     pub fn capacity(&self) -> usize {
-        let pages = unsafe { &*self.pages.load(Ordering::Acquire) };
-        pages.length() * (1 << self.page_shift) * NUM_BITS
+        let page_count = self.pages.read().expect("pages lock poisoned").length();
+        page_count * (1 << self.page_shift) * NUM_BITS
     }
 
     /// Returns the page at the given index, growing the structure if necessary.
@@ -368,61 +373,21 @@ impl HugeAtomicGrowingBitSet {
     /// # Returns
     ///
     /// Reference to the atomic page at the specified index
-    fn get_page(&self, page_index: usize) -> &AtomicPage {
-        let mut pages_ptr = self.pages.load(Ordering::Acquire);
-        let mut pages = unsafe { &*pages_ptr };
-
-        while pages.length() <= page_index {
-            // Need to grow the number of pages to fit the requested index
-            // Loop handles race conditions where multiple threads try to grow
-            let new_pages = Box::into_raw(Box::new(Pages::from_existing(
-                pages,
-                page_index + 1,
-                self.page_size,
-            )));
-
-            // Atomic update - only one thread succeeds
-            match self.pages.compare_exchange(
-                pages_ptr,
-                new_pages,
-                Ordering::AcqRel,
-                Ordering::Acquire,
-            ) {
-                Ok(_) => {
-                    // Success - we updated the pages reference
-                    // The old pages pointer will be leaked intentionally
-                    // (we can't safely drop it while other threads may still be using it)
-                    pages_ptr = new_pages;
-                    pages = unsafe { &*pages_ptr };
-                }
-                Err(current) => {
-                    // Another thread won the race - use their pages
-                    // Drop our speculative allocation
-                    unsafe {
-                        let _ = Box::from_raw(new_pages);
-                    }
-                    pages_ptr = current;
-                    pages = unsafe { &*pages_ptr };
-                }
+    fn get_page(&self, page_index: usize) -> Arc<AtomicPage> {
+        // Fast path: if already in-bounds, clone the Arc.
+        {
+            let pages = self.pages.read().expect("pages lock poisoned");
+            if pages.length() > page_index {
+                return pages.get_page(page_index);
             }
         }
 
+        // Slow path: grow under a write lock.
+        let mut pages = self.pages.write().expect("pages lock poisoned");
+        pages.ensure_len(page_index + 1, self.page_size);
         pages.get_page(page_index)
     }
 }
-
-impl Drop for HugeAtomicGrowingBitSet {
-    fn drop(&mut self) {
-        let pages_ptr = self.pages.load(Ordering::Acquire);
-        unsafe {
-            let _ = Box::from_raw(pages_ptr);
-        }
-    }
-}
-
-// Safety: HugeAtomicGrowingBitSet uses atomic operations for all shared state
-unsafe impl Send for HugeAtomicGrowingBitSet {}
-unsafe impl Sync for HugeAtomicGrowingBitSet {}
 
 /// Atomic page - a fixed-size array of atomic i64 words.
 struct AtomicPage {
@@ -461,25 +426,18 @@ impl Pages {
         Self { pages }
     }
 
-    /// Creates a new Pages by copying existing pages and adding new ones.
-    fn from_existing(old_pages: &Pages, new_page_count: usize, page_size: usize) -> Self {
-        let mut pages = Vec::with_capacity(new_page_count);
-
-        // Transfer existing pages (Arc clone is cheap)
-        for page in &old_pages.pages {
-            pages.push(Arc::clone(page));
-        }
-
-        // Create new pages for the remaining slots
-        for _ in old_pages.pages.len()..new_page_count {
-            pages.push(Arc::new(AtomicPage::new(page_size)));
-        }
-
-        Self { pages }
+    fn get_page(&self, page_index: usize) -> Arc<AtomicPage> {
+        Arc::clone(&self.pages[page_index])
     }
 
-    fn get_page(&self, page_index: usize) -> &AtomicPage {
-        &self.pages[page_index]
+    fn ensure_len(&mut self, new_page_count: usize, page_size: usize) {
+        if self.pages.len() >= new_page_count {
+            return;
+        }
+        self.pages.reserve(new_page_count - self.pages.len());
+        while self.pages.len() < new_page_count {
+            self.pages.push(Arc::new(AtomicPage::new(page_size)));
+        }
     }
 
     fn length(&self) -> usize {

@@ -6,8 +6,8 @@
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::variable::Variable;
 use crate::ml::core::abstract_variable::AbstractVariable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 /// Computes focal loss given weights, bias, predictions, features and labels,
@@ -19,7 +19,7 @@ use std::fmt;
 /// Note: predictions is NOT a parent for gradient tracking.
 pub struct ReducedFocalLoss {
     base: AbstractVariable,
-    predictions: Box<dyn Variable>,
+    predictions: VariableRef,
     focus_weight: f64,
     class_weights: Vec<f64>,
 }
@@ -34,8 +34,28 @@ impl ReducedFocalLoss {
         focus_weight: f64,
         class_weights: Vec<f64>,
     ) -> Self {
+        Self::new_ref(
+            predictions.into(),
+            weights.into(),
+            bias.into(),
+            features.into(),
+            labels.into(),
+            focus_weight,
+            class_weights,
+        )
+    }
+
+    pub fn new_ref(
+        predictions: VariableRef,
+        weights: VariableRef,
+        bias: VariableRef,
+        features: VariableRef,
+        labels: VariableRef,
+        focus_weight: f64,
+        class_weights: Vec<f64>,
+    ) -> Self {
         // Parents are [weights, features, labels, bias] - NOT predictions
-        let parents = vec![weights, features, labels, bias];
+        let parents: Vec<VariableRef> = vec![weights, features, labels, bias];
         let dimensions = dimensions::scalar();
         let base = AbstractVariable::with_gradient_requirement(parents, dimensions, true);
 
@@ -92,7 +112,7 @@ impl ReducedFocalLoss {
         let chain_rule_gradient =
             predicted_probability_for_wrong_classes.powf(self.focus_weight - 1.0);
 
-        
+
 
         self.class_weights[true_class]
             * (self.focus_weight * chain_rule_gradient * predicted_probability_for_true_class.ln()
@@ -262,7 +282,7 @@ impl Variable for ReducedFocalLoss {
         self.base.require_gradient()
     }
 
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 

@@ -4,14 +4,14 @@
 //! - Concurrent visited node tracking in parallel BFS/DFS
 //! - Thread-safe membership testing in distributed algorithms
 //! - Atomic flag setting in parallel graph construction
-//! - Lock-free synchronization in multi-threaded processing
+//! - Atomic synchronization in multi-threaded processing
 //! - Parallel community detection with shared membership
 //! - Concurrent duplicate detection in graph streaming
 //!
 //! # Performance Characteristics
 //!
 //! - Atomic operations using compare-and-swap (CAS)
-//! - Lock-free bit manipulation for high concurrency
+//! - Atomic bit manipulation for high concurrency
 //! - Word-level operations for bulk bit setting
 //! - Cache-friendly i64 word alignment
 //! - Billion-bit capacity with paged backing storage
@@ -21,8 +21,8 @@
 //! - Thread-safe set/get/flip operations
 //! - Atomic get_and_set for synchronization primitives
 //! - Range setting with consistent intermediate states
-//! - Safe iteration while other threads modify
 //! - Compare-and-exchange for conflict resolution
+//! - Aggregate/iteration helpers require no concurrent writes
 //!
 //! # Memory Efficiency
 //!
@@ -39,7 +39,10 @@ const NUM_BITS: usize = 64; // 64 bits per i64 word
 /// Thread-safe atomic bitset supporting billions of bits.
 ///
 /// Uses `HugeAtomicLongArray` for storage, packing 64 bits per word.
-/// All operations are lock-free and thread-safe.
+///
+/// Bit-level set/get operations are atomic and thread-safe; aggregate and iteration helpers
+/// (e.g. `for_each_set_bit`, `cardinality`, `all_set`) require that no concurrent modifications
+/// occur.
 ///
 /// # Example
 ///
@@ -456,6 +459,10 @@ impl HugeAtomicBitSet {
     pub fn all_set(&self) -> bool {
         let size = self.bits.size();
 
+        if self.num_bits == 0 {
+            return true;
+        }
+
         // Check all complete words
         for word_index in 0..(size - 1) {
             if self.bits.get(word_index).count_ones() < NUM_BITS as u32 {
@@ -465,7 +472,12 @@ impl HugeAtomicBitSet {
 
         // Check last (potentially partial) word
         let last_word_bit_count = self.bits.get(size - 1).count_ones() as usize;
-        last_word_bit_count >= self.remainder
+        let required_last_bits = if self.remainder == 0 {
+            NUM_BITS
+        } else {
+            self.remainder
+        };
+        last_word_bit_count >= required_last_bits
     }
 
     /// Returns the number of bits in the bitset.
@@ -558,6 +570,21 @@ mod tests {
         let bitset = HugeAtomicBitSet::new(100);
         assert_eq!(bitset.size(), 100);
         assert!(bitset.is_empty());
+    }
+
+    #[test]
+    fn test_all_set_full_word_boundary() {
+        let bitset = HugeAtomicBitSet::new(64);
+        assert!(!bitset.all_set());
+
+        bitset.set_range(0, 64);
+        assert!(bitset.all_set());
+    }
+
+    #[test]
+    fn test_all_set_empty() {
+        let bitset = HugeAtomicBitSet::new(0);
+        assert!(bitset.all_set());
     }
 
     #[test]

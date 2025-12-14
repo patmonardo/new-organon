@@ -15,7 +15,7 @@ use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions::{COLUMNS_INDEX, ROWS_INDEX};
 use crate::ml::core::tensor::{Matrix, Tensor};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 /// Sums multiple matrices element-wise.
@@ -34,6 +34,7 @@ impl MatrixSum {
     /// Create new matrix sum from multiple parent matrices.
     /// Java: `public MatrixSum(List<Variable<Matrix>> parents) { super(parents, validatedDimensions(parents)); }`
     pub fn new(parents: Vec<Box<dyn Variable>>) -> Self {
+        let parents: Vec<VariableRef> = parents.into_iter().map(Into::into).collect();
         let dimensions = Self::validated_dimensions(&parents);
         let base = AbstractVariable::new(parents, dimensions);
         Self { base }
@@ -45,7 +46,7 @@ impl MatrixSum {
 
     /// Validate that all parents have the same dimensions.
     /// Java: `private static int[] validatedDimensions(List<Variable<Matrix>> parents)`
-    fn validated_dimensions(parents: &[Box<dyn Variable>]) -> Vec<usize> {
+    fn validated_dimensions(parents: &[VariableRef]) -> Vec<usize> {
         assert!(
             !parents.is_empty(),
             "MatrixSum requires at least one parent"
@@ -113,7 +114,7 @@ impl Variable for MatrixSum {
 
     /// Get parent variables.
     /// Java: Inherited from `super(parents, ...)`
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 

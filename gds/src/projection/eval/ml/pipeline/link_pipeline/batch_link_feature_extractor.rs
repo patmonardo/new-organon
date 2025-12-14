@@ -165,10 +165,6 @@ impl BatchLinkFeatureExtractor {
     }
 }
 
-// Make it work with thread pools (Send + Sync)
-unsafe impl Send for BatchLinkFeatureExtractor {}
-unsafe impl Sync for BatchLinkFeatureExtractor {}
-
 #[cfg(test)]
 mod tests {
     use super::*;

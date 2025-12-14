@@ -11,20 +11,20 @@
 //! public class EWiseAddMatrixScalar extends AbstractVariable<Matrix> {
 //!     private final Variable<Matrix> matrixVariable;
 //!     private final Variable<Scalar> scalarVariable;
-//!     
+//!
 //!     public EWiseAddMatrixScalar(Variable<Matrix> matrixVariable, Variable<Scalar> scalarVariable) {
 //!         super(List.of(matrixVariable, scalarVariable), matrixVariable.dimensions());
 //!         this.matrixVariable = matrixVariable;
 //!         this.scalarVariable = scalarVariable;
 //!     }
-//!     
+//!
 //!     @Override
 //!     public Matrix apply(ComputationContext ctx) {
 //!         var matrix = ctx.data(matrixVariable);
 //!         double scalarValue = ctx.data(scalarVariable).value();
 //!         return matrix.map(v -> v + scalarValue);
 //!     }
-//!     
+//!
 //!     @Override
 //!     public Tensor<?> gradient(Variable<?> parent, ComputationContext ctx) {
 //!         Matrix selfGradient = ctx.gradient(this);
@@ -39,7 +39,7 @@
 
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use crate::ml::core::abstract_variable::AbstractVariable;
 use std::any::Any;
 
@@ -84,11 +84,20 @@ impl EWiseAddMatrixScalar {
     /// }
     /// ```
     pub fn new(matrix_variable: Box<dyn Variable>, scalar_variable: Box<dyn Variable>) -> Self {
+        Self::new_ref(matrix_variable.into(), scalar_variable.into())
+    }
+
+    /// Ref-based constructor for DAG-safe graph building.
+    pub fn new_ref(matrix_variable: VariableRef, scalar_variable: VariableRef) -> Self {
         let dimensions = matrix_variable.dimensions().to_vec();
 
         // Java: super(List.of(matrixVariable, scalarVariable), matrixVariable.dimensions())
         // Store parents [matrix, scalar] in VariableBase
-        let base = AbstractVariable::with_gradient_requirement(vec![matrix_variable, scalar_variable], dimensions, true);
+        let base = AbstractVariable::with_gradient_requirement(
+            vec![matrix_variable, scalar_variable],
+            dimensions,
+            true,
+        );
 
         Self { base }
     }
@@ -185,15 +194,14 @@ impl Variable for EWiseAddMatrixScalar {
             .downcast_ref::<Matrix>()
             .expect("Expected Matrix gradient");
 
-        // Compare parent pointers using helper methods
-        let matrix_ptr = self.matrix_variable() as *const dyn Variable;
-        let scalar_ptr = self.scalar_variable() as *const dyn Variable;
-        let parent_ptr = parent as *const dyn Variable;
+        let matrix_id = crate::ml::core::variable::variable_id(self.matrix_variable());
+        let scalar_id = crate::ml::core::variable::variable_id(self.scalar_variable());
+        let parent_id = crate::ml::core::variable::variable_id(parent);
 
-        if parent_ptr == matrix_ptr {
+        if parent_id == matrix_id {
             // Gradient w.r.t. matrix: pass through
             Box::new(self_gradient_matrix.clone())
-        } else if parent_ptr == scalar_ptr {
+        } else if parent_id == scalar_id {
             // Gradient w.r.t. scalar: sum all gradients
             let sum = self_gradient_matrix.aggregate_sum();
             Box::new(Scalar::new(sum))
@@ -210,7 +218,7 @@ impl Variable for EWiseAddMatrixScalar {
         self.base.require_gradient()
     }
 
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 }

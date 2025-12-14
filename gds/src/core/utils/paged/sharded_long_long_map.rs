@@ -19,7 +19,7 @@
 //! - Per-shard locking for fine-grained concurrency
 //! - Thread-local batches for high-throughput building
 //! - Atomic node counting across all shards
-//! - Lock-free read operations after building
+//! - Reads take no locks after building (immutable data)
 //! - Parallel shard construction and finalization
 //!
 //! # Use Cases

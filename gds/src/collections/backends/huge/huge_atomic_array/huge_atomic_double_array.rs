@@ -1,4 +1,4 @@
-/// A huge atomic array of f64 floating-point values supporting lock-free concurrent operations.
+/// A huge atomic array of f64 floating-point values supporting concurrent atomic operations.
 ///
 /// This array provides thread-safe atomic operations on massive floating-point datasets.
 /// Since Rust doesn't have `AtomicF64`, we use `AtomicU64` with bitwise transmutation
@@ -6,8 +6,11 @@
 ///
 /// # Thread Safety
 ///
-/// All operations are atomic and thread-safe. Multiple threads can safely read,
+/// Element-wise operations are atomic and thread-safe. Multiple threads can safely read,
 /// write, and perform read-modify-write operations concurrently.
+///
+/// Bulk helpers like `set_all` are intended for initialization/reset only and require that
+/// no other threads are accessing the array.
 ///
 /// # Implementation Note
 ///
@@ -50,7 +53,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 const MAX_ARRAY_LENGTH: usize = 1 << 28; // 268,435,456 elements
 const PAGE_SIZE_IN_BYTES: usize = 4096; // 4KB pages
 
-/// Huge atomic array supporting >2 billion f64 elements with lock-free operations.
+/// Huge atomic array supporting >2 billion f64 elements with atomic operations.
 pub enum HugeAtomicDoubleArray {
     Single(SingleHugeAtomicDoubleArray),
     Paged(PagedHugeAtomicDoubleArray),

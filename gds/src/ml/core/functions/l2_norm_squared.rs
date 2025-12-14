@@ -7,7 +7,7 @@ use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
 use crate::ml::core::tensor::{Scalar, Tensor};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 /// L2 norm squared of a tensor.
@@ -16,17 +16,22 @@ use std::fmt;
 /// Uses composition with AbstractVariable to match Java's inheritance pattern.
 pub struct L2NormSquared {
     base: AbstractVariable,
-    parent: Box<dyn Variable>,
+    parent: VariableRef,
 }
 
 impl L2NormSquared {
     pub fn new(parent: Box<dyn Variable>) -> Self {
+        Self::new_ref(parent.into())
+    }
+
+    pub fn new_ref(parent: VariableRef) -> Self {
         let require_gradient = parent.require_gradient();
-        let base = AbstractVariable::with_gradient_requirement(vec![], dimensions::scalar(), require_gradient);
-        Self {
-            base,
-            parent,
-        }
+        let base = AbstractVariable::with_gradient_requirement(
+            vec![parent.clone()],
+            dimensions::scalar(),
+            require_gradient,
+        );
+        Self { base, parent }
     }
 
     pub fn size_in_bytes_of_apply() -> usize {
@@ -81,8 +86,8 @@ impl Variable for L2NormSquared {
     }
 
     // DELEGATION: Forward to AbstractVariable
-    fn parents(&self) -> &[Box<dyn Variable>] {
-        std::slice::from_ref(&self.parent)
+    fn parents(&self) -> &[VariableRef] {
+        self.base.parents()
     }
 
     // DELEGATION: Forward to AbstractVariable

@@ -6,8 +6,9 @@ use crate::ml::core::functions::{
     ewise_add_matrix_scalar::EWiseAddMatrixScalar,
     matrix_multiply_with_transposed_second_operand::MatrixMultiplyWithTransposedSecondOperand,
 };
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::VariableRef;
 use crate::ml::models::Regressor;
+use std::sync::Arc;
 
 use super::data::LinearRegressionData;
 
@@ -31,32 +32,28 @@ impl LinearRegressor {
     /// Build the computation-graph variable producing predictions for a batch of features.
     /// Mirrors `LinearRegressor.predictionsVariable(Variable<Matrix> features)`.
     /// Returns a Variable<Matrix> containing predictions for the batch.
-    pub fn predictions_variable(&self, features: Box<dyn Variable>) -> Box<dyn Variable> {
-        let weighted_features = MatrixMultiplyWithTransposedSecondOperand::new(
-            features,
-            Box::new(self.data.weights().clone()),
+    pub fn predictions_variable(&self, features: VariableRef) -> VariableRef {
+        let weights_var: VariableRef = self.data.weights().clone();
+        let weighted_features: VariableRef = Arc::new(
+            MatrixMultiplyWithTransposedSecondOperand::new_ref(features, weights_var),
         );
 
-        Box::new(EWiseAddMatrixScalar::new(
-            Box::new(weighted_features),
-            Box::new(self.data.bias().clone()),
-        ))
+        let bias_var: VariableRef = self.data.bias().clone();
+        Arc::new(EWiseAddMatrixScalar::new_ref(weighted_features, bias_var))
     }
 
     /// Build predictions using provided weight variables (for gradient computation)
     pub fn predictions_variable_with_weights(
         &self,
-        features: Box<dyn Variable>,
-        weights_var: Box<dyn Variable>,
-        bias_var: Box<dyn Variable>,
-    ) -> Box<dyn Variable> {
-        let weighted_features =
-            MatrixMultiplyWithTransposedSecondOperand::new(features, weights_var);
+        features: VariableRef,
+        weights_var: VariableRef,
+        bias_var: VariableRef,
+    ) -> VariableRef {
+        let weighted_features: VariableRef = Arc::new(
+            MatrixMultiplyWithTransposedSecondOperand::new_ref(features, weights_var),
+        );
 
-        Box::new(EWiseAddMatrixScalar::new(
-            Box::new(weighted_features),
-            bias_var,
-        ))
+        Arc::new(EWiseAddMatrixScalar::new_ref(weighted_features, bias_var))
     }
 }
 

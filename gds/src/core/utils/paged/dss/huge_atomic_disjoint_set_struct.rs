@@ -360,10 +360,6 @@ impl DisjointSetStruct for HugeAtomicDisjointSetStruct {
     }
 }
 
-// Thread safety: All atomic operations are thread-safe
-unsafe impl Send for HugeAtomicDisjointSetStruct {}
-unsafe impl Sync for HugeAtomicDisjointSetStruct {}
-
 #[cfg(test)]
 mod tests {
     use super::*;

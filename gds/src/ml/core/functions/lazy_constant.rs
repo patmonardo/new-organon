@@ -6,21 +6,21 @@
 use crate::ml::core::abstract_variable::NotAFunctionException;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::Tensor;
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 /// A constant that lazily produces its value via a supplier function.
 ///
 /// Corresponds to LazyConstant in Java GDS.
 pub struct LazyConstant {
-    data_producer: Box<dyn Fn() -> Box<dyn Tensor>>,
+    data_producer: Box<dyn Fn() -> Box<dyn Tensor> + Send + Sync>,
     dimensions: Vec<usize>,
 }
 
 impl LazyConstant {
     pub fn new<F>(data_producer: F, expected_dimensions: Vec<usize>) -> Self
     where
-        F: Fn() -> Box<dyn Tensor> + 'static,
+        F: Fn() -> Box<dyn Tensor> + Send + Sync + 'static,
     {
         Self {
             data_producer: Box::new(data_producer),
@@ -42,7 +42,7 @@ impl Variable for LazyConstant {
         false
     }
 
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         &[]
     }
 

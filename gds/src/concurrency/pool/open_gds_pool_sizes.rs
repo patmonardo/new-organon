@@ -30,11 +30,11 @@ pub struct OpenGdsPoolSizes;
 
 impl PoolSizes for OpenGdsPoolSizes {
     fn core_pool_size(&self) -> usize {
-        4
+        crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
     }
 
     fn max_pool_size(&self) -> usize {
-        4
+        crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
     }
 }
 

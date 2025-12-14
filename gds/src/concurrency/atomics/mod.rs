@@ -1,8 +1,8 @@
-// Atomic aggregators for lock-free parallel algorithm operations.
+// Atomic aggregators for parallel algorithm operations.
 //
-// This module provides lock-free atomic types for concurrent aggregation operations
-// commonly needed in parallel graph algorithms. All types use Compare-And-Swap (CAS)
-// operations to ensure thread-safety without locks.
+// This module provides atomic types for concurrent aggregation operations
+// commonly needed in parallel graph algorithms. Implementations use
+// Compare-And-Swap (CAS) loops over standard atomics.
 
 mod atomic_double;
 mod atomic_max;

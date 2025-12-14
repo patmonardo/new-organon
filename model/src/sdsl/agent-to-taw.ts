@@ -2,12 +2,15 @@ import type { FunctionCallOutput } from './agent-adapter';
 import type { PromptOutput } from './agent-adapter';
 import type { ContextDocument } from './agent-view';
 import {
-  TawEventSchema,
   type TawActEvent,
   type TawEvent,
   type TawIntentEvent,
   type TawPlanEvent,
   type TawResultEvent,
+  TawActEventSchema,
+  TawIntentEventSchema,
+  TawPlanEventSchema,
+  TawResultEventSchema,
 } from './taw-schema';
 import {
   KERNEL_TAW_ACTIONS,
@@ -66,7 +69,7 @@ export function functionCallOutputToTawActEvent(
   call: FunctionCallOutput,
   opts: FunctionCallToTawActOptions,
 ): TawActEvent {
-  return TawEventSchema.parse({
+  return TawActEventSchema.parse({
     kind: 'taw.act',
     payload: {
       goalId: opts.goalId,
@@ -89,7 +92,7 @@ export function contextDocumentToTawIntentEvent(
     throw new Error('Cannot build taw.intent: no goal provided and context.goal is missing');
   }
 
-  return TawEventSchema.parse({
+  return TawIntentEventSchema.parse({
     kind: 'taw.intent',
     payload: {
       goal,
@@ -130,7 +133,7 @@ export function stepsToTawPlanEvent(
     throw new Error('Cannot build taw.plan: no steps provided');
   }
 
-  return TawEventSchema.parse({
+  return TawPlanEventSchema.parse({
     kind: 'taw.plan',
     payload: {
       goalId: opts.goalId,
@@ -233,7 +236,7 @@ export function kernelRunRequestToTawActEvent(
 ): TawActEvent {
   const validated = KernelRunRequestSchema.parse(request);
 
-  return TawEventSchema.parse({
+  return TawActEventSchema.parse({
     kind: 'taw.act',
     payload: {
       goalId: opts.goalId,
@@ -259,7 +262,7 @@ export function kernelRunResultToTawResultEvent(
   result: KernelRunResult,
   opts: KernelResultToTawResultOptions,
 ): TawResultEvent {
-  return TawEventSchema.parse({
+  return TawResultEventSchema.parse({
     kind: 'taw.result',
     payload: {
       goalId: opts.goalId,

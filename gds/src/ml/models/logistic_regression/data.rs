@@ -3,12 +3,13 @@ use crate::ml::{
     models::{BaseModelData, ClassifierData},
     TrainingMethod,
 };
+use std::sync::Arc;
 
 /// Data structure holding the parameters of a logistic regression model
 #[derive(Clone)]
 pub struct LogisticRegressionData {
-    weights: Weights,
-    bias: Weights,
+    weights: Arc<Weights>,
+    bias: Arc<Weights>,
     number_of_classes: usize,
 }
 
@@ -39,8 +40,8 @@ impl LogisticRegressionData {
             class_count
         };
 
-        let weights = Weights::of_matrix(rows, feature_count);
-        let bias = Weights::of_vector(vec![0.0; rows]);
+        let weights = Arc::new(Weights::of_matrix(rows, feature_count));
+        let bias = Arc::new(Weights::of_vector(vec![0.0; rows]));
 
         Self {
             weights,
@@ -50,12 +51,12 @@ impl LogisticRegressionData {
     }
 
     /// Returns the weights matrix
-    pub fn weights(&self) -> &Weights {
+    pub fn weights(&self) -> &Arc<Weights> {
         &self.weights
     }
 
     /// Returns the bias vector
-    pub fn bias(&self) -> &Weights {
+    pub fn bias(&self) -> &Arc<Weights> {
         &self.bias
     }
 

@@ -6,20 +6,24 @@
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
 use crate::ml::core::tensor::{Scalar, Tensor};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 /// Sums all elements across multiple parent tensors into a scalar.
 ///
 /// Corresponds to ElementSum in Java GDS.
 pub struct ElementSum {
-    parents: Vec<Box<dyn Variable>>,
+    parents: Vec<VariableRef>,
     dimensions: Vec<usize>,
     require_gradient: bool,
 }
 
 impl ElementSum {
     pub fn new(parents: Vec<Box<dyn Variable>>) -> Self {
+        Self::new_ref(parents.into_iter().map(Into::into).collect())
+    }
+
+    pub fn new_ref(parents: Vec<VariableRef>) -> Self {
         let require_gradient = parents.iter().any(|p| p.require_gradient());
         Self {
             parents,
@@ -58,7 +62,7 @@ impl Variable for ElementSum {
         self.require_gradient
     }
 
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         &self.parents
     }
 

@@ -3,7 +3,6 @@ use super::{ConcurrencyValidator, ConcurrencyValidatorError, LicenseState};
 /// Open GDS concurrency validator - default implementation.
 ///
 /// Enforces the simple rule: requested <= limit.
-/// That's it. That's the whole "enterprise validation system." 🎯
 ///
 /// In Java GDS:
 /// ```java

@@ -24,8 +24,8 @@
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::variable::Variable;
 use crate::ml::core::abstract_variable::AbstractVariable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 /// Mean square error loss function.
@@ -39,9 +39,13 @@ pub struct MeanSquareError {
 
 impl MeanSquareError {
     pub fn new(predictions: Box<dyn Variable>, targets: Box<dyn Variable>) -> Self {
+        Self::new_ref(predictions.into(), targets.into())
+    }
+
+    pub fn new_ref(predictions: VariableRef, targets: VariableRef) -> Self {
         Self::validate_dimensions(predictions.as_ref(), targets.as_ref());
 
-        let parents = vec![predictions, targets];
+        let parents: Vec<VariableRef> = vec![predictions, targets];
         let dimensions = dimensions::scalar();
         // Require gradient if any parent requires gradient
         let require_gradient = parents.iter().any(|p| p.require_gradient());
@@ -142,7 +146,7 @@ impl Variable for MeanSquareError {
         self.base.require_gradient()
     }
 
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 

@@ -15,7 +15,7 @@ use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions::{self, COLUMNS_INDEX, ROWS_INDEX};
 use crate::ml::core::tensor::{Matrix, Tensor};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 /// Matrix multiplication where the second operand is transposed: A * B^T
@@ -37,6 +37,11 @@ impl MatrixMultiplyWithTransposedSecondOperand {
     /// Create new matrix multiplication A * B^T.
     /// Java: `public MatrixMultiplyWithTransposedSecondOperand(Variable<Matrix> A, Variable<Matrix> B)`
     pub fn new(a: Box<dyn Variable>, b: Box<dyn Variable>) -> Self {
+        Self::new_ref(a.into(), b.into())
+    }
+
+    /// Ref-based constructor for DAG-safe graph building.
+    pub fn new_ref(a: VariableRef, b: VariableRef) -> Self {
         Self::assert_dimensions(a.as_ref(), b.as_ref());
 
         // Result dimensions: (m, n) x (p, n)^T = (m, p)
@@ -59,6 +64,11 @@ impl MatrixMultiplyWithTransposedSecondOperand {
     /// Java: `public static MatrixMultiplyWithTransposedSecondOperand of(Variable<Matrix> A, Variable<Matrix> B)`
     pub fn of(a: Box<dyn Variable>, b: Box<dyn Variable>) -> Self {
         Self::new(a, b)
+    }
+
+    /// Ref-based factory method.
+    pub fn of_ref(a: VariableRef, b: VariableRef) -> Self {
+        Self::new_ref(a, b)
     }
 
     // ========================================================================
@@ -178,7 +188,7 @@ impl Variable for MatrixMultiplyWithTransposedSecondOperand {
 
     /// Get parent variables.
     /// Java: Inherited from `super(List.of(A, B), ...)`
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 

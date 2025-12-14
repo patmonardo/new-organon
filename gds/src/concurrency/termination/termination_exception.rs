@@ -9,7 +9,7 @@ use std::fmt;
 /// # Examples
 ///
 /// ```
-/// use gds::termination::TerminatedException;
+/// use gds::concurrency::TerminatedException;
 ///
 /// fn compute() -> Result<(), TerminatedException> {
 ///     // Check termination flag

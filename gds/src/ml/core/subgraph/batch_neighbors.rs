@@ -12,7 +12,7 @@
 /// - Relationship weights (if applicable)
 ///
 /// This is the core abstraction for graph neural network batch processing.
-pub trait BatchNeighbors {
+pub trait BatchNeighbors: Send + Sync {
     /// Get the IDs of nodes in this batch.
     ///
     /// These are local (mapped) IDs, not original graph IDs.

@@ -14,7 +14,7 @@
 use crate::ml::core::abstract_variable::NotAFunctionException;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use crate::ml::core::abstract_variable::AbstractVariable;
 use std::fmt;
 
@@ -100,7 +100,7 @@ impl Variable for Constant {
     }
 
     // DELEGATION: Forward to AbstractVariable
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 

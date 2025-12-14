@@ -2,7 +2,7 @@
 //!
 //! ## What is ReLU?
 //! **Rectified Linear Unit (ReLU)** is the most famous activation function in deep learning!
-//! 
+//!
 //! - **Formula**: `f(x) = max(0, x)` (standard) or `f(x) = x if x > 0, else α·x` (leaky)
 //! - **Why Famous**: Solves the vanishing gradient problem, computationally efficient
 //! - **Used Everywhere**: CNNs, Transformers, ResNets - you name it!
@@ -21,7 +21,7 @@
 use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 const ALPHA: f64 = 0.01;
@@ -44,7 +44,7 @@ const ALPHA: f64 = 0.01;
 /// ```
 pub struct Relu {
     base: AbstractVariable, // COMPOSITION: wraps shared Variable logic
-    parent: Box<dyn Variable>,
+    parent: VariableRef,
     alpha: f64,             // Leak factor for negative values
 }
 
@@ -56,9 +56,18 @@ impl Relu {
     /// Create new leaky ReLU with custom alpha.
     /// Java: `public Relu(Variable<T> parent, double alpha) { super(parent, parent.dimensions()); this.alpha = alpha; }`
     pub fn new(parent: Box<dyn Variable>, alpha: f64) -> Self {
+        Self::new_ref(parent.into(), alpha)
+    }
+
+    /// Ref-based constructor for DAG-safe graph building.
+    pub fn new_ref(parent: VariableRef, alpha: f64) -> Self {
         let dimensions = parent.dimensions().to_vec();
         let require_gradient = parent.require_gradient();
-        let base = AbstractVariable::with_gradient_requirement(vec![], dimensions, require_gradient);
+        let base = AbstractVariable::with_gradient_requirement(
+            vec![parent.clone()],
+            dimensions,
+            require_gradient,
+        );
         Self { base, parent, alpha }
     }
 
@@ -66,6 +75,11 @@ impl Relu {
     /// Java: `public Relu(Variable<T> parent) { this(parent, ALPHA); }`
     pub fn with_default_alpha(parent: Box<dyn Variable>) -> Self {
         Self::new(parent, ALPHA)
+    }
+
+    /// Ref-based default alpha constructor.
+    pub fn with_default_alpha_ref(parent: VariableRef) -> Self {
+        Self::new_ref(parent, ALPHA)
     }
 
     /// Get parent variable.
@@ -90,7 +104,7 @@ impl Relu {
         for &value in parent_data.data() {
             gradient_data.push(if value > 0.0 { 1.0 } else { alpha });
         }
-        
+
         // Create gradient tensor based on parent type
         let gradient = if let Some(matrix) = parent_data.as_any().downcast_ref::<Matrix>() {
             Box::new(Matrix::new(gradient_data, matrix.rows(), matrix.cols())) as Box<dyn Tensor>
@@ -101,7 +115,7 @@ impl Relu {
         } else {
             panic!("Unknown tensor type");
         };
-        
+
         // Element-wise product with self gradient
         gradient.elementwise_product(self_gradient.as_ref())
     }
@@ -128,7 +142,7 @@ impl Variable for Relu {
         for &value in parent_data.data() {
             result_data.push(if value > 0.0 { value } else { alpha * value });
         }
-        
+
         // Create result tensor based on parent type
         if let Some(matrix) = parent_data.as_any().downcast_ref::<Matrix>() {
             Box::new(Matrix::new(result_data, matrix.rows(), matrix.cols())) as Box<dyn Tensor>
@@ -163,8 +177,8 @@ impl Variable for Relu {
 
     /// Get parent variables.
     /// Java: Inherited from `super(parent, ...)`
-    fn parents(&self) -> &[Box<dyn Variable>] {
-        std::slice::from_ref(&self.parent)
+    fn parents(&self) -> &[VariableRef] {
+        self.base.parents()
     }
 
     /// Get output dimensions (same as input).

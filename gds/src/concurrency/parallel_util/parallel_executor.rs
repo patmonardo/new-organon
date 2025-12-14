@@ -5,6 +5,7 @@
 
 use crate::concurrency::{BatchSize, Concurrency};
 use crate::concurrency::TerminationFlag;
+use crate::concurrency::install_with_concurrency;
 use rayon::prelude::*;
 use std::ops::Range;
 
@@ -23,8 +24,9 @@ use std::ops::Range;
 /// # Examples
 ///
 /// ```
-/// use gds::concurrency::{Concurrency, parallel_for_each_node};
-/// use gds::termination::TerminationFlag;
+/// use gds::concurrency::Concurrency;
+/// use gds::concurrency::parallel_util::parallel_for_each_node;
+/// use gds::concurrency::TerminationFlag;
 ///
 /// let node_count = 1000;
 /// let concurrency = Concurrency::available_cores();
@@ -48,29 +50,28 @@ pub fn parallel_for_each_node<F>(
 ) where
     F: Fn(usize) + Send + Sync,
 {
-    if node_count == 0 {
-        return;
-    }
+    install_with_concurrency(concurrency, || {
+        if node_count == 0 {
+            return;
+        }
 
-    // Check termination before starting
-    if !termination.running() {
-        return;
-    }
+        if !termination.running() {
+            return;
+        }
 
-    // Use Rayon's parallel iterator over node range
-    (0..node_count)
-        .into_par_iter()
-        .with_max_len(BatchSize::for_parallel_work(node_count, concurrency).value())
-        .try_for_each(|node_id| {
-            // Check termination periodically
-            if !termination.running() {
-                return Err(());
-            }
+        (0..node_count)
+            .into_par_iter()
+            .with_max_len(BatchSize::for_parallel_work(node_count, concurrency).value())
+            .try_for_each(|node_id| {
+                if !termination.running() {
+                    return Err(());
+                }
 
-            task(node_id);
-            Ok(())
-        })
-        .ok(); // Ignore termination errors
+                task(node_id);
+                Ok(())
+            })
+            .ok();
+    })
 }
 
 /// Execute a read-only parallel operation over a range with batching.
@@ -90,8 +91,9 @@ pub fn parallel_for_each_node<F>(
 /// # Examples
 ///
 /// ```
-/// use gds::concurrency::{Concurrency, BatchSize, read_parallel};
-/// use gds::termination::TerminationFlag;
+/// use gds::concurrency::{BatchSize, Concurrency};
+/// use gds::concurrency::parallel_util::read_parallel;
+/// use gds::concurrency::TerminationFlag;
 ///
 /// let concurrency = Concurrency::available_cores();
 /// let batch_size = BatchSize::default();
@@ -119,41 +121,35 @@ pub fn read_parallel<F>(
 ) where
     F: Fn(Range<usize>) + Send + Sync,
 {
-    if start >= end {
-        return;
-    }
+    install_with_concurrency(concurrency, || {
+        if start >= end {
+            return;
+        }
 
-    // Check termination before starting
-    if !termination.running() {
-        return;
-    }
+        if !termination.running() {
+            return;
+        }
 
-    let total_work = end - start;
-    let batch_size = batch_size.value().min(total_work);
+        let total_work = end - start;
+        let batch_size = batch_size.value().min(total_work);
 
-    // Create batches
-    let batches: Vec<Range<usize>> = (start..end)
-        .step_by(batch_size)
-        .map(|batch_start| {
-            let batch_end = (batch_start + batch_size).min(end);
-            batch_start..batch_end
-        })
-        .collect();
+        let num_batches = (total_work + batch_size - 1) / batch_size;
 
-    // Process batches in parallel
-    batches
-        .into_par_iter()
-        .with_max_len((total_work / concurrency.value()).max(1))
-        .try_for_each(|range| {
-            // Check termination before each batch
-            if !termination.running() {
-                return Err(());
-            }
+        (0..num_batches)
+            .into_par_iter()
+            .with_max_len((num_batches / concurrency.value()).max(1))
+            .try_for_each(|batch_idx| {
+                if !termination.running() {
+                    return Err(());
+                }
 
-            task(range);
-            Ok(())
-        })
-        .ok(); // Ignore termination errors
+                let batch_start = start + batch_idx * batch_size;
+                let batch_end = (batch_start + batch_size).min(end);
+                task(batch_start..batch_end);
+                Ok(())
+            })
+            .ok();
+    })
 }
 
 /// Execute a simple parallel task across multiple threads.
@@ -170,8 +166,9 @@ pub fn read_parallel<F>(
 /// # Examples
 ///
 /// ```
-/// use gds::concurrency::{Concurrency, run};
-/// use gds::termination::TerminationFlag;
+/// use gds::concurrency::Concurrency;
+/// use gds::concurrency::parallel_util::run;
+/// use gds::concurrency::TerminationFlag;
 ///
 /// let concurrency = Concurrency::of(4);
 /// let termination = TerminationFlag::running_true();
@@ -184,24 +181,23 @@ pub fn run<F>(concurrency: Concurrency, termination: &TerminationFlag, task: F)
 where
     F: Fn(usize) + Send + Sync,
 {
-    // Check termination before starting
-    if !termination.running() {
-        return;
-    }
+    install_with_concurrency(concurrency, || {
+        if !termination.running() {
+            return;
+        }
 
-    // Execute task in parallel for each thread
-    (0..concurrency.value())
-        .into_par_iter()
-        .try_for_each(|thread_id| {
-            // Check termination before executing
-            if !termination.running() {
-                return Err(());
-            }
+        (0..concurrency.value())
+            .into_par_iter()
+            .try_for_each(|thread_id| {
+                if !termination.running() {
+                    return Err(());
+                }
 
-            task(thread_id);
-            Ok(())
-        })
-        .ok(); // Ignore termination errors
+                task(thread_id);
+                Ok(())
+            })
+            .ok();
+    })
 }
 
 /// Partition a range of work into equal-sized chunks for parallel processing.
@@ -212,7 +208,8 @@ where
 /// # Examples
 ///
 /// ```
-/// use gds::concurrency::{Concurrency, partition_work};
+/// use gds::concurrency::Concurrency;
+/// use gds::concurrency::parallel_util::partition_work;
 ///
 /// let partitions = partition_work(0, 1000, Concurrency::of(4));
 /// assert_eq!(partitions.len(), 4);
@@ -272,8 +269,9 @@ pub fn partition_work(start: usize, end: usize, concurrency: Concurrency) -> Vec
 /// # Examples
 ///
 /// ```
-/// use gds::concurrency::{Concurrency, parallel_reduce};
-/// use gds::termination::TerminationFlag;
+/// use gds::concurrency::Concurrency;
+/// use gds::concurrency::parallel_util::parallel_reduce;
+/// use gds::concurrency::TerminationFlag;
 ///
 /// let concurrency = Concurrency::available_cores();
 /// let termination = TerminationFlag::running_true();
@@ -301,24 +299,26 @@ where
     M: Fn(usize) -> T + Send + Sync,
     R: Fn(T, T) -> T + Send + Sync,
 {
-    if node_count == 0 || !termination.running() {
-        return identity;
-    }
+    install_with_concurrency(concurrency, || {
+        if node_count == 0 || !termination.running() {
+            return identity;
+        }
 
-    (0..node_count)
-        .into_par_iter()
-        .with_max_len(BatchSize::for_parallel_work(node_count, concurrency).value())
-        .try_fold(
-            || identity.clone(),
-            |acc, node_id| {
-                if !termination.running() {
-                    return Err(());
-                }
-                Ok(reducer(acc, mapper(node_id)))
-            },
-        )
-        .try_reduce(|| identity.clone(), |a, b| Ok(reducer(a, b)))
-        .unwrap_or(identity)
+        (0..node_count)
+            .into_par_iter()
+            .with_max_len(BatchSize::for_parallel_work(node_count, concurrency).value())
+            .try_fold(
+                || identity.clone(),
+                |acc, node_id| {
+                    if !termination.running() {
+                        return Err(());
+                    }
+                    Ok(reducer(acc, mapper(node_id)))
+                },
+            )
+            .try_reduce(|| identity.clone(), |a, b| Ok(reducer(a, b)))
+            .unwrap_or(identity)
+    })
 }
 
 #[cfg(test)]

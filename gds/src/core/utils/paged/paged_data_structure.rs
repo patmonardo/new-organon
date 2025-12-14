@@ -25,10 +25,9 @@
 //!
 //! # Concurrency Features
 //!
-//! - Thread-safe growth with mutex semantics
-//! - Atomic size and capacity counters
-//! - Lock-free reads during normal operations
-//! - Safe concurrent access during structure growth
+//! - Thread-safe growth coordinated by a `Mutex` protecting the page table
+//! - Atomic size and capacity counters for cheap reads of metadata
+//! - Page access is lock-based (callers hold a `MutexGuard` while reading/writing pages)
 //!
 //! # Example
 //!
@@ -400,10 +399,6 @@ impl<T> PagedDataStructure<T> {
         }
     }
 }
-
-// Safety: PagedDataStructure is thread-safe through Mutex and atomic operations
-unsafe impl<T: Send> Send for PagedDataStructure<T> {}
-unsafe impl<T: Send> Sync for PagedDataStructure<T> {}
 
 #[cfg(test)]
 mod tests {

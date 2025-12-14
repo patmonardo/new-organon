@@ -1,10 +1,10 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
-/// Atomic f64 value using bit-casting to/from u64.
+/// Atomic `f64` value using bit-casting to/from `u64`.
 ///
 /// Provides atomic operations on floating-point values by storing them as u64
 /// and converting via bit-casting. This matches the Java GDS `AtomicDouble` implementation
-/// which uses `AtomicLong` + `Double.longBitsToDouble/doubleToLongBits`.
+/// which performs atomic operations over the underlying IEEE-754 bit-pattern.
 ///
 /// # Thread Safety
 ///
@@ -13,9 +13,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 ///
 /// # Memory Ordering
 ///
-/// Most operations use `Ordering::SeqCst` for full sequential consistency, matching
-/// Java's default volatile semantics. For performance-critical code, weaker orderings
-/// can be used with the explicit ordering methods.
+/// Convenience methods (`get`, `set`, etc.) use `Ordering::SeqCst` (a conservative, strong default).
+/// This is at least as strong as Java's volatile access guarantees, but not a byte-for-byte mapping
+/// of the Java Memory Model.
 ///
 /// # Examples
 ///
@@ -67,6 +67,91 @@ impl AtomicDouble {
     /// ```
     pub fn zero() -> Self {
         Self::new(0.0)
+    }
+
+    /// Java-style convenience: volatile-like load (uses `Ordering::SeqCst`).
+    #[inline]
+    pub fn get(&self) -> f64 {
+        self.load(Ordering::SeqCst)
+    }
+
+    /// Java-style convenience: volatile-like store (uses `Ordering::SeqCst`).
+    #[inline]
+    pub fn set(&self, value: f64) {
+        self.store(value, Ordering::SeqCst)
+    }
+
+    /// Java-style convenience: release-store (similar intent to Java `lazySet`).
+    #[inline]
+    pub fn lazy_set(&self, value: f64) {
+        self.store(value, Ordering::Release)
+    }
+
+    /// Java-style convenience: get-and-set (uses `Ordering::SeqCst`).
+    #[inline]
+    pub fn get_and_set(&self, value: f64) -> f64 {
+        self.swap(value, Ordering::SeqCst)
+    }
+
+    /// Java-style convenience: get-and-add (returns the previous value).
+    #[inline]
+    pub fn get_and_add(&self, delta: f64) -> f64 {
+        self.add(delta, Ordering::SeqCst)
+    }
+
+    /// Java-style convenience: add-and-get (returns the updated value).
+    pub fn add_and_get(&self, delta: f64) -> f64 {
+        let mut current_bits = self.bits.load(Ordering::Relaxed);
+        loop {
+            let current = f64::from_bits(current_bits);
+            let next = current + delta;
+            let next_bits = next.to_bits();
+            match self
+                .bits
+                .compare_exchange_weak(current_bits, next_bits, Ordering::SeqCst, Ordering::Relaxed)
+            {
+                Ok(_) => return next,
+                Err(actual) => current_bits = actual,
+            }
+        }
+    }
+
+    /// Java-style convenience: get-and-update.
+    ///
+    /// The function may be invoked multiple times under contention.
+    pub fn get_and_update(&self, update: impl Fn(f64) -> f64) -> f64 {
+        let mut current_bits = self.bits.load(Ordering::Relaxed);
+        loop {
+            let current = f64::from_bits(current_bits);
+            let next = update(current);
+            let next_bits = next.to_bits();
+            match self
+                .bits
+                .compare_exchange_weak(current_bits, next_bits, Ordering::SeqCst, Ordering::Relaxed)
+            {
+                Ok(_) => return current,
+                Err(actual) => current_bits = actual,
+            }
+        }
+    }
+
+    /// Java-style convenience: update-and-get.
+    ///
+    /// The function may be invoked multiple times under contention.
+    pub fn update_and_get(&self, update: impl Fn(f64) -> f64) -> f64 {
+        let mut current_bits = self.bits.load(Ordering::Relaxed);
+        loop {
+            let current = f64::from_bits(current_bits);
+            let next = update(current);
+            let next_bits = next.to_bits();
+            match self
+                .bits
+                .compare_exchange_weak(current_bits, next_bits, Ordering::SeqCst, Ordering::Relaxed)
+            {
+                Ok(_) => return next,
+                Err(actual) => current_bits = actual,
+            }
+        }
     }
 
     /// Loads a value from the atomic double.
@@ -308,6 +393,42 @@ mod tests {
     fn test_zero() {
         let atomic = AtomicDouble::zero();
         assert_eq!(atomic.load(Ordering::SeqCst), 0.0);
+    }
+
+    #[test]
+    fn test_get_set() {
+        let atomic = AtomicDouble::new(1.25);
+        assert_eq!(atomic.get(), 1.25);
+
+        atomic.set(2.5);
+        assert_eq!(atomic.get(), 2.5);
+    }
+
+    #[test]
+    fn test_get_and_set() {
+        let atomic = AtomicDouble::new(1.0);
+        assert_eq!(atomic.get_and_set(2.0), 1.0);
+        assert_eq!(atomic.get(), 2.0);
+    }
+
+    #[test]
+    fn test_get_and_add_and_add_and_get() {
+        let atomic = AtomicDouble::new(1.0);
+        assert_eq!(atomic.get_and_add(2.5), 1.0);
+        assert_eq!(atomic.get(), 3.5);
+
+        assert_eq!(atomic.add_and_get(1.5), 5.0);
+        assert_eq!(atomic.get(), 5.0);
+    }
+
+    #[test]
+    fn test_get_and_update_update_and_get() {
+        let atomic = AtomicDouble::new(10.0);
+        assert_eq!(atomic.get_and_update(|v| v + 1.0), 10.0);
+        assert_eq!(atomic.get(), 11.0);
+
+        assert_eq!(atomic.update_and_get(|v| v * 2.0), 22.0);
+        assert_eq!(atomic.get(), 22.0);
     }
 
     #[test]

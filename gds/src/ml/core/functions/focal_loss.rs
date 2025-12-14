@@ -5,7 +5,7 @@
 
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use crate::ml::core::abstract_variable::AbstractVariable;
 use std::fmt;
 
@@ -25,6 +25,16 @@ impl FocalLoss {
     pub fn new(
         predictions: Box<dyn Variable>,
         targets: Box<dyn Variable>,
+        focus_weight: f64,
+        class_weights: Vec<f64>,
+    ) -> Self {
+        Self::new_ref(predictions.into(), targets.into(), focus_weight, class_weights)
+    }
+
+    /// Ref-based constructor for DAG-safe graph building.
+    pub fn new_ref(
+        predictions: VariableRef,
+        targets: VariableRef,
         focus_weight: f64,
         class_weights: Vec<f64>,
     ) -> Self {
@@ -68,7 +78,7 @@ impl FocalLoss {
         let chain_rule_gradient =
             predicted_probability_for_wrong_classes.powf(self.focus_weight - 1.0);
 
-        
+
 
         self.class_weights[true_class]
             * (self.focus_weight * chain_rule_gradient * predicted_probability_for_true_class.ln()
@@ -166,7 +176,7 @@ impl Variable for FocalLoss {
         self.base.require_gradient()
     }
 
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 

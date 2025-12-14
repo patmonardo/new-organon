@@ -373,10 +373,6 @@ impl PaddedAtomicLong {
     }
 }
 
-// Thread safety markers
-unsafe impl Send for PaddedAtomicLong {}
-unsafe impl Sync for PaddedAtomicLong {}
-
 // Default implementation
 impl Default for PaddedAtomicLong {
     fn default() -> Self {

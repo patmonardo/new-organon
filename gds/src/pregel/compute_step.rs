@@ -102,6 +102,9 @@ pub struct ForkJoinComputeStep<C: PregelRuntimeConfig, I: MessageIterator> {
     /// Compute context (one per step)
     compute_context: ComputeContext<C, I>,
 
+    /// Init context (one per step; used only on superstep 0)
+    init_context: InitContext<C>,
+
     /// Configuration (needed to create new contexts for child tasks)
     config: C,
 }
@@ -149,6 +152,12 @@ impl<C: PregelRuntimeConfig + Clone, I: MessageIterator> ForkJoinComputeStep<C, 
             Arc::clone(&has_sent_message),
         );
 
+        let init_context = InitContext::new(
+            Arc::clone(&graph),
+            config.clone(),
+            Arc::clone(&node_value),
+        );
+
         Self {
             init_fn,
             compute_fn,
@@ -162,6 +171,7 @@ impl<C: PregelRuntimeConfig + Clone, I: MessageIterator> ForkJoinComputeStep<C, 
             has_sent_message,
             progress_task,
             compute_context,
+            init_context,
             config,
         }
     }
@@ -217,6 +227,11 @@ impl<C: PregelRuntimeConfig + Clone, I: MessageIterator> ForkJoinComputeStep<C, 
                     Arc::clone(&self.vote_bits),
                     Arc::clone(&self.has_sent_message),
                 ),
+                init_context: InitContext::new(
+                    Arc::clone(&self.graph),
+                    self.config.clone(),
+                    Arc::clone(&self.node_value),
+                ),
                 config: self.config.clone(),
             };
 
@@ -226,11 +241,6 @@ impl<C: PregelRuntimeConfig + Clone, I: MessageIterator> ForkJoinComputeStep<C, 
         } else {
             // Base case - process sequentially
             self.compute_batch();
-
-            // Update sent message flag (TODO: implement has_sent_message in ComputeContext)
-            // if self.compute_context.has_sent_message() {
-            //     self.has_sent_message.store(true, Ordering::Relaxed);
-            // }
         }
     }
 
@@ -266,19 +276,14 @@ impl<C: PregelRuntimeConfig + Clone, I: MessageIterator> ForkJoinComputeStep<C, 
     fn compute_batch(&mut self) {
         let is_initial_superstep = self.compute_context.is_initial_superstep();
 
-        self.node_batch.consume(|node_id_usize| {
+        for node_id_usize in self.node_batch.iter() {
             // Convert usize node_id from Partition to u64 for contexts
             let node_id = node_id_usize as u64;
 
             // Initialize on first superstep
             if is_initial_superstep {
-                let mut init_ctx = InitContext::new(
-                    Arc::clone(&self.graph),
-                    self.config.clone(),
-                    Arc::clone(&self.node_value),
-                );
-                init_ctx.set_node_id(node_id);
-                (self.init_fn)(&mut init_ctx);
+                self.init_context.set_node_id(node_id);
+                (self.init_fn)(&mut self.init_context);
             }
 
             // Get messages for this node
@@ -301,7 +306,7 @@ impl<C: PregelRuntimeConfig + Clone, I: MessageIterator> ForkJoinComputeStep<C, 
                 // Invoke user's compute function
                 (self.compute_fn)(&mut self.compute_context, &mut messages);
             }
-        });
+        }
 
         // Log progress for entire batch
         if let Some(task) = &self.progress_task {

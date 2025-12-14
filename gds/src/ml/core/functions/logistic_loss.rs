@@ -6,8 +6,8 @@
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::variable::Variable;
 use crate::ml::core::abstract_variable::AbstractVariable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 /// Logistic loss function combining logistic regression prediction and cross-entropy loss.
@@ -26,7 +26,7 @@ use std::fmt;
 /// Note: predictions is NOT a parent (graph optimization - bypasses predictions node).
 pub struct LogisticLoss {
     base: AbstractVariable,
-    predictions: Box<dyn Variable>, // NOT a parent - graph optimization
+    predictions: VariableRef, // NOT a parent - graph optimization
     has_bias: bool,                 // Track if bias is included
 }
 
@@ -51,12 +51,12 @@ impl LogisticLoss {
         );
 
         // Parents: [weights, features, targets] - NOT predictions (graph optimization)
-        let parents = vec![weights, features, targets];
+        let parents: Vec<VariableRef> = vec![weights.into(), features.into(), targets.into()];
         let base = AbstractVariable::with_gradient_requirement(parents, dimensions::scalar(), true);
 
         Self {
             base,
-            predictions,
+            predictions: predictions.into(),
             has_bias: false,
         }
     }
@@ -82,12 +82,17 @@ impl LogisticLoss {
         );
 
         // Parents: [weights, bias, features, targets] - NOT predictions (graph optimization)
-        let parents = vec![weights, bias, features, targets];
+        let parents: Vec<VariableRef> = vec![
+            weights.into(),
+            bias.into(),
+            features.into(),
+            targets.into(),
+        ];
         let base = AbstractVariable::with_gradient_requirement(parents, dimensions::scalar(), true);
 
         Self {
             base,
-            predictions,
+            predictions: predictions.into(),
             has_bias: true,
         }
     }
@@ -286,7 +291,7 @@ impl Variable for LogisticLoss {
         self.base.require_gradient()
     }
 
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 

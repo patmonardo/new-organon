@@ -469,9 +469,9 @@ pub struct PagedHugeDoubleArray {
 
 impl PagedHugeDoubleArray {
     fn new(size: usize) -> Self {
-        // Calculate page size for f64 elements with 4KB pages
+        // Calculate page size for f64 elements with 32KB pages (canonical paged size)
         let page_size =
-            PageUtil::page_size_for(PageUtil::PAGE_SIZE_4KB, std::mem::size_of::<f64>());
+            PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<f64>());
         let page_shift = page_size.trailing_zeros();
         let page_mask = page_size - 1;
         let num_pages = PageUtil::num_pages_for(size, page_size);

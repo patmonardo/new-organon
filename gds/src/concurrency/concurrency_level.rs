@@ -154,9 +154,8 @@ impl Concurrency {
     /// assert_eq!(c.value(), 1);
     /// ```
     pub const fn single_threaded() -> Self {
-        // SAFETY: 1 is never zero
         Self {
-            value: unsafe { NonZeroUsize::new_unchecked(1) },
+            value: NonZeroUsize::MIN,
         }
     }
 

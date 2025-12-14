@@ -3,9 +3,14 @@
 //! The Executor provides a clean API for parallel execution with termination support,
 //! built on top of Rayon's work-stealing scheduler.
 
-use crate::concurrency::Concurrency;
+use crate::concurrency::{BatchSize, Concurrency};
 use crate::concurrency::{TerminatedException, TerminationFlag};
+use crate::concurrency::install_with_concurrency;
+use crate::concurrency::pool::PoolSizes as _;
+use crate::concurrency::pool::PoolSizesService;
 use rayon::prelude::*;
+
+const TERMINATION_POLL_EVERY: usize = 256;
 
 /// Parallel executor for graph algorithms.
 ///
@@ -17,7 +22,7 @@ use rayon::prelude::*;
 /// ```
 /// use gds::concurrency::virtual_threads::Executor;
 /// use gds::concurrency::Concurrency;
-/// use gds::termination::TerminationFlag;
+/// use gds::concurrency::TerminationFlag;
 ///
 /// let executor = Executor::new(Concurrency::of(4));
 /// let termination = TerminationFlag::running_true();
@@ -67,7 +72,7 @@ impl Executor {
     /// ```
     /// use gds::concurrency::virtual_threads::Executor;
     /// use gds::concurrency::Concurrency;
-    /// use gds::termination::TerminationFlag;
+    /// use gds::concurrency::TerminationFlag;
     ///
     /// let executor = Executor::new(Concurrency::of(4));
     /// let termination = TerminationFlag::running_true();
@@ -88,16 +93,20 @@ impl Executor {
         F: FnOnce(&super::Scope) -> R + Send,
         R: Send,
     {
-        // Check termination before starting
-        if !termination.running() {
-            return Err(TerminatedException);
-        }
+        install_with_concurrency(self.concurrency, || {
+            if !termination.running() {
+                return Err(TerminatedException);
+            }
 
-        // Create scope with termination flag
-        let scope = super::Scope::new(self.concurrency, termination);
+            let scope = super::Scope::new(self.concurrency, termination);
+            let result = work(&scope);
 
-        // Execute work and return result
-        Ok(work(&scope))
+            if termination.running() {
+                Ok(result)
+            } else {
+                Err(TerminatedException)
+            }
+        })
     }
 
     /// Execute a simple parallel loop over a range.
@@ -110,7 +119,7 @@ impl Executor {
     /// ```
     /// use gds::concurrency::virtual_threads::Executor;
     /// use gds::concurrency::Concurrency;
-    /// use gds::termination::TerminationFlag;
+    /// use gds::concurrency::TerminationFlag;
     ///
     /// let executor = Executor::new(Concurrency::of(4));
     /// let termination = TerminationFlag::running_true();
@@ -129,21 +138,36 @@ impl Executor {
     where
         F: Fn(usize) + Send + Sync,
     {
-        if start >= end || !termination.running() {
-            return if termination.running() {
-                Ok(())
-            } else {
-                Err(TerminatedException)
-            };
-        }
-
-        // Use Rayon's parallel iteration with termination checking
-        (start..end).into_par_iter().try_for_each(|i| {
-            if !termination.running() {
-                return Err(TerminatedException);
+        install_with_concurrency(self.concurrency, || {
+            if start >= end || !termination.running() {
+                return if termination.running() {
+                    Ok(())
+                } else {
+                    Err(TerminatedException)
+                };
             }
-            task(i);
-            Ok(())
+
+            let total = end - start;
+            let batch_size = BatchSize::for_parallel_work(total, self.concurrency).value();
+            let num_batches = (total + batch_size - 1) / batch_size;
+
+            (0..num_batches).into_par_iter().try_for_each(|batch_idx| {
+                if !termination.running() {
+                    return Err(TerminatedException);
+                }
+
+                let batch_start = start + batch_idx * batch_size;
+                let batch_end = (batch_start + batch_size).min(end);
+
+                for (local_idx, i) in (batch_start..batch_end).enumerate() {
+                    if (local_idx & (TERMINATION_POLL_EVERY - 1)) == 0 && !termination.running() {
+                        return Err(TerminatedException);
+                    }
+                    task(i);
+                }
+
+                Ok(())
+            })
         })
     }
 
@@ -156,7 +180,7 @@ impl Executor {
     /// ```
     /// use gds::concurrency::virtual_threads::Executor;
     /// use gds::concurrency::Concurrency;
-    /// use gds::termination::TerminationFlag;
+    /// use gds::concurrency::TerminationFlag;
     ///
     /// let executor = Executor::new(Concurrency::of(4));
     /// let termination = TerminationFlag::running_true();
@@ -175,23 +199,27 @@ impl Executor {
         F: Fn(usize) -> T + Send + Sync,
         T: Send,
     {
-        if start >= end || !termination.running() {
-            return if termination.running() {
-                Ok(Vec::new())
-            } else {
-                Err(TerminatedException)
-            };
-        }
+        install_with_concurrency(self.concurrency, || {
+            if start >= end || !termination.running() {
+                return if termination.running() {
+                    Ok(Vec::new())
+                } else {
+                    Err(TerminatedException)
+                };
+            }
 
-        (start..end)
-            .into_par_iter()
-            .map(|i| {
-                if !termination.running() {
-                    return Err(TerminatedException);
-                }
-                Ok(mapper(i))
-            })
-            .collect()
+            (start..end)
+                .into_par_iter()
+                .with_max_len(BatchSize::for_parallel_work(end - start, self.concurrency).value())
+                .enumerate()
+                .map(|(idx, i)| {
+                    if (idx & (TERMINATION_POLL_EVERY - 1)) == 0 && !termination.running() {
+                        return Err(TerminatedException);
+                    }
+                    Ok(mapper(i))
+                })
+                .collect()
+        })
     }
 
     /// Execute a parallel reduction operation over a range.
@@ -203,7 +231,7 @@ impl Executor {
     /// ```
     /// use gds::concurrency::virtual_threads::Executor;
     /// use gds::concurrency::Concurrency;
-    /// use gds::termination::TerminationFlag;
+    /// use gds::concurrency::TerminationFlag;
     ///
     /// let executor = Executor::new(Concurrency::of(4));
     /// let termination = TerminationFlag::running_true();
@@ -231,38 +259,50 @@ impl Executor {
         M: Fn(usize) -> T + Send + Sync,
         R: Fn(T, T) -> T + Send + Sync,
     {
-        if start >= end || !termination.running() {
-            return if termination.running() {
-                Ok(identity)
-            } else {
-                Err(TerminatedException)
-            };
-        }
+        install_with_concurrency(self.concurrency, || {
+            if start >= end || !termination.running() {
+                return if termination.running() {
+                    Ok(identity)
+                } else {
+                    Err(TerminatedException)
+                };
+            }
 
-        (start..end)
-            .into_par_iter()
-            .try_fold(
-                || identity.clone(),
-                |acc, i| {
-                    if !termination.running() {
-                        return Err(TerminatedException);
-                    }
-                    Ok(reducer(acc, mapper(i)))
-                },
-            )
-            .try_reduce(|| identity.clone(), |a, b| Ok(reducer(a, b)))
+            (start..end)
+                .into_par_iter()
+                .with_max_len(BatchSize::for_parallel_work(end - start, self.concurrency).value())
+                .try_fold(
+                    || (identity.clone(), 0usize),
+                    |(acc, idx), i| {
+                        if (idx & (TERMINATION_POLL_EVERY - 1)) == 0 && !termination.running() {
+                            return Err(TerminatedException);
+                        }
+                        Ok((reducer(acc, mapper(i)), idx + 1))
+                    },
+                )
+                .try_reduce(
+                    || (identity.clone(), 0usize),
+                    |(a, _), (b, _)| Ok((reducer(a, b), 0usize)),
+                )
+                .map(|(result, _)| result)
+        })
     }
 }
 
 impl Default for Executor {
     fn default() -> Self {
-        Self::new(Concurrency::available_cores())
+        // Default to the platform's configured pool sizes (Open GDS: 4).
+        // This avoids unbounded thread creation and keeps defaults consistent
+        // with the licensing-oriented concurrency limits.
+        let pool_sizes = PoolSizesService::pool_sizes();
+        Self::new(Concurrency::from_usize(pool_sizes.core_pool_size()))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rayon::current_num_threads;
     use std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -399,6 +439,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(counter.load(Ordering::Relaxed), 100);
+    }
+
+    #[test]
+    fn test_scope_installs_configured_thread_pool() {
+        let executor = Executor::new(Concurrency::of(3));
+        let termination = TerminationFlag::running_true();
+
+        let threads = executor
+            .scope(&termination, |_scope| current_num_threads())
+            .unwrap();
+
+        assert_eq!(threads, 3);
     }
 
     #[test]

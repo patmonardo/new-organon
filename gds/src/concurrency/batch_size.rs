@@ -28,6 +28,13 @@ pub struct BatchSize {
 }
 
 impl BatchSize {
+    const fn non_zero(value: usize) -> NonZeroUsize {
+        match NonZeroUsize::new(value) {
+            Some(v) => v,
+            None => panic!("BatchSize must be at least 1"),
+        }
+    }
+
     /// Creates a new `BatchSize` with the specified value.
     ///
     /// Returns `None` if value is 0.
@@ -195,9 +202,8 @@ impl BatchSize {
     /// assert_eq!(batch.value(), 64);
     /// ```
     pub const fn small() -> Self {
-        // SAFETY: 64 is never zero
         Self {
-            value: unsafe { NonZeroUsize::new_unchecked(64) },
+            value: Self::non_zero(64),
         }
     }
 
@@ -214,9 +220,8 @@ impl BatchSize {
     /// assert_eq!(batch.value(), 1024);
     /// ```
     pub const fn medium() -> Self {
-        // SAFETY: 1024 is never zero
         Self {
-            value: unsafe { NonZeroUsize::new_unchecked(1024) },
+            value: Self::non_zero(1024),
         }
     }
 
@@ -233,9 +238,8 @@ impl BatchSize {
     /// assert_eq!(batch.value(), 10_000);
     /// ```
     pub const fn large() -> Self {
-        // SAFETY: 10_000 is never zero
         Self {
-            value: unsafe { NonZeroUsize::new_unchecked(10_000) },
+            value: Self::non_zero(10_000),
         }
     }
 }

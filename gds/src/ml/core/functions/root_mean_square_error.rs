@@ -28,8 +28,8 @@
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::variable::Variable;
 use crate::ml::core::abstract_variable::AbstractVariable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 /// Root mean square error loss function.
@@ -43,6 +43,9 @@ pub struct RootMeanSquareError {
 
 impl RootMeanSquareError {
     pub fn new(predictions: Box<dyn Variable>, targets: Box<dyn Variable>) -> Self {
+        let predictions: VariableRef = predictions.into();
+        let targets: VariableRef = targets.into();
+
         assert!(
             dimensions::is_vector(predictions.dimensions()),
             "Predictions need to be a vector"
@@ -54,7 +57,7 @@ impl RootMeanSquareError {
             "Predictions and targets need to have the same total size"
         );
 
-        let parents = vec![predictions, targets];
+        let parents: Vec<VariableRef> = vec![predictions, targets];
         let dimensions = dimensions::scalar();
         let base = AbstractVariable::with_gradient_requirement(parents, dimensions, true);
 
@@ -175,7 +178,7 @@ impl Variable for RootMeanSquareError {
         self.base.require_gradient()
     }
 
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 

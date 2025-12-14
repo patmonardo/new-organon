@@ -1,27 +1,11 @@
-//! High-performance concurrent builder for huge long arrays.
+//! Thread-safe builder for huge long arrays.
 //!
-//! Essential for dynamic array construction during graph loading:
-//! - Thread-safe concurrent page allocation and growth
-//! - Lock-free reads with memory barriers for consistency  
-//! - Efficient batch allocation with cursor-based access
-//! - Memory-efficient on-demand page creation
-//! - Optimal for streaming data ingestion scenarios
+//! This is used for dynamic array construction during graph loading.
+//! The implementation is intentionally **safe and lock-based**:
+//! - pages are stored in a `RwLock<Vec<Vec<i64>>>`
+//! - growth and writes acquire the lock to ensure correctness
 //!
-//! # Performance Characteristics
-//!
-//! - Concurrent allocation with minimal lock contention
-//! - Lock-free array access after allocation
-//! - Memory barriers ensure consistency across threads
-//! - Batch processing for high-throughput scenarios
-//! - On-demand page allocation reduces memory waste
-//!
-//! # Concurrency Features
-//!
-//! - Atomic page array with acquire/release semantics
-//! - Fine-grained locking only during growth operations
-//! - Memory fences for visibility guarantees
-//! - Thread-safe allocator instances
-//! - Lock-free reads for maximum performance
+//! This trades some write concurrency for eliminating UB-prone pointer/atomic patterns.
 //!
 //! # Use Cases
 //!
@@ -47,7 +31,7 @@
 //!     thread::spawn(move || {
 //!         let start = worker_id * 100_000;
 //!         let data: Vec<i64> = (start..start + 100_000).map(|i| i as i64).collect();
-//!         
+//!
 //!         // Direct, thread-safe writing
 //!         builder_clone.write_range(start, &data);
 //!     })
@@ -64,36 +48,22 @@
 //! assert_eq!(array.get(399_999), 399_999);
 //! ```
 
-use crate::collections::HugeLongArray;
-use std::sync::atomic::{AtomicPtr, Ordering};
-use std::sync::Mutex;
+use crate::collections::{HugeLongArray, PageUtil};
+use std::sync::RwLock;
 
-/// High-performance concurrent builder for huge long arrays.
-///
-/// This builder enables efficient concurrent construction of huge arrays by:
-/// - Allowing multiple threads to allocate and fill different ranges
-/// - Using lock-free reads after allocation
-/// - Providing cursor-based batch insertion for optimal cache behavior
-/// - Managing page allocation automatically with minimal contention
+const LONG_PAGE_SIZE: usize = PageUtil::PAGE_SIZE_32KB / std::mem::size_of::<i64>();
+const LONG_PAGE_MASK: usize = LONG_PAGE_SIZE - 1;
+const LONG_PAGE_SHIFT: u32 = 12; // log2(4096)
+
+/// Thread-safe builder for huge long arrays.
 ///
 /// # Thread Safety
 ///
-/// - Page array uses atomic pointer with acquire/release semantics
-/// - Growth operations are protected by mutex (fine-grained locking)
-/// - Allocators provide thread-safe batch insertion
-/// - Multiple threads can safely allocate different ranges concurrently
-///
-/// # Memory Model
-///
-/// Uses Rust's memory ordering guarantees:
-/// - `Acquire` load ensures visibility of all prior writes to pages
-/// - `Release` store ensures all page allocations visible to other threads
-/// - `SeqCst` fence in `build()` provides full memory barrier
+/// - Growth and writes are synchronized via a lock on the page table.
+/// - Multiple threads may call `write_range()` concurrently; correctness is preserved.
+/// - Overlapping writes are allowed but yield last-writer-wins nondeterminism.
 pub struct HugeLongArrayBuilder {
-    /// Atomic pointer to page array (for lock-free reads)
-    pages: AtomicPtr<Vec<Vec<i64>>>,
-    /// Lock for coordinating growth operations
-    lock: Mutex<()>,
+    pages: RwLock<Vec<Vec<i64>>>,
 }
 
 impl HugeLongArrayBuilder {
@@ -107,22 +77,14 @@ impl HugeLongArrayBuilder {
     /// let builder = HugeLongArrayBuilder::new();
     /// ```
     pub fn new() -> Self {
-        let pages = Box::new(Vec::new());
         Self {
-            pages: AtomicPtr::new(Box::into_raw(pages)),
-            lock: Mutex::new(()),
+            pages: RwLock::new(Vec::new()),
         }
     }
 
     /// Builds the final HugeLongArray with the specified size.
     ///
-    /// Ensures memory consistency with full fence before reading pages.
-    /// After this call, the builder should not be used for further allocations.
-    ///
-    /// # Thread Safety
-    ///
-    /// Safe to call concurrently after all allocations complete.
-    /// The memory fence ensures all prior writes are visible.
+    /// After this call, the builder should not be used for further writes.
     ///
     /// # Examples
     ///
@@ -143,11 +105,11 @@ impl HugeLongArrayBuilder {
     /// assert_eq!(array.get(999), 999);
     /// ```
     pub fn build(&self, size: usize) -> HugeLongArray {
-        // Full memory fence - equivalent to VarHandle.fullFence()
-        std::sync::atomic::fence(Ordering::SeqCst);
-
-        // Get latest version of pages with acquire semantics
-        let pages = self.get_pages_acquire();
+        let pages = self
+            .pages
+            .read()
+            .expect("HugeLongArrayBuilder pages lock poisoned")
+            .clone();
 
         // Convert Vec<Vec<i64>> to HugeLongArray
         HugeLongArray::of(pages, size)
@@ -215,38 +177,27 @@ impl HugeLongArrayBuilder {
             return;
         }
 
-        const PAGE_SIZE: usize = 4096 / std::mem::size_of::<i64>(); // 512 elements
-        const PAGE_SHIFT: u32 = 9; // log2(512)
-        const PAGE_MASK: usize = PAGE_SIZE - 1; // 511
-
-        let end = start + data.len();
-        let end_page = (end - 1) >> PAGE_SHIFT;
+        let end = start
+            .checked_add(data.len())
+            .expect("HugeLongArrayBuilder::write_range overflow: start + data.len()");
+        let end_page = (end - 1) >> LONG_PAGE_SHIFT;
 
         // Ensure we have enough pages (with lock for thread safety)
         self.ensure_pages(end_page);
 
-        // Serialize writes to avoid undefined behavior from concurrent &mut access.
-        // This keeps growth granular while ensuring soundness for concurrent writers
-        // targeting disjoint ranges.
-        let _guard = self.lock.lock().unwrap();
-
-        // Get pages for writing (mutable access under lock)
-        let pages_ptr = self.pages.load(Ordering::Acquire);
-        let pages = unsafe {
-            if pages_ptr.is_null() {
-                panic!("Pages should be allocated after ensure_pages");
-            }
-            &mut *pages_ptr
-        };
+        let mut pages = self
+            .pages
+            .write()
+            .expect("HugeLongArrayBuilder pages lock poisoned");
 
         // Write data across pages
         let mut data_offset = 0;
         let mut current_pos = start;
 
         while data_offset < data.len() {
-            let page_index = current_pos >> PAGE_SHIFT;
-            let offset_in_page = current_pos & PAGE_MASK;
-            let remaining_in_page = PAGE_SIZE - offset_in_page;
+            let page_index = current_pos >> LONG_PAGE_SHIFT;
+            let offset_in_page = current_pos & LONG_PAGE_MASK;
+            let remaining_in_page = LONG_PAGE_SIZE - offset_in_page;
             let remaining_data = data.len() - data_offset;
             let to_copy = remaining_in_page.min(remaining_data);
 
@@ -262,80 +213,18 @@ impl HugeLongArrayBuilder {
     }
 
     /// Ensures the page array has at least `required_page + 1` pages.
-    ///
-    /// Uses double-checked locking for efficiency.
     fn ensure_pages(&self, required_page: usize) {
-        const PAGE_SIZE: usize = 4096 / std::mem::size_of::<i64>();
+        let mut pages = self
+            .pages
+            .write()
+            .expect("HugeLongArrayBuilder pages lock poisoned");
 
-        // Fast path: check without lock
-        let pages = self.get_pages_acquire();
         if required_page < pages.len() {
             return;
         }
 
-        // Slow path: acquire lock and grow
-        let _guard = self.lock.lock().unwrap();
-
-        // Double-check after lock
-        let pages = self.get_pages_volatile();
-        if required_page < pages.len() {
-            return;
-        }
-
-        // Grow the page array
-        let mut new_pages = Vec::with_capacity(required_page + 1);
-
-        // Copy existing pages
-        for page in pages.iter() {
-            new_pages.push(page.clone());
-        }
-
-        // Allocate new pages
         for _ in pages.len()..=required_page {
-            new_pages.push(vec![0i64; PAGE_SIZE]);
-        }
-
-        // Update with release semantics
-        self.set_pages_release(new_pages);
-    }
-    /// Gets pages with acquire semantics (ensures visibility of prior writes).
-    #[inline]
-    fn get_pages_acquire(&self) -> Vec<Vec<i64>> {
-        let ptr = self.pages.load(Ordering::Acquire);
-        unsafe {
-            if ptr.is_null() {
-                Vec::new()
-            } else {
-                (*ptr).clone()
-            }
-        }
-    }
-
-    /// Gets pages with volatile semantics (latest value, all orderings respected).
-    #[inline]
-    fn get_pages_volatile(&self) -> Vec<Vec<i64>> {
-        let ptr = self.pages.load(Ordering::SeqCst);
-        unsafe {
-            if ptr.is_null() {
-                Vec::new()
-            } else {
-                (*ptr).clone()
-            }
-        }
-    }
-
-    /// Sets pages with release semantics (makes all prior writes visible).
-    #[inline]
-    fn set_pages_release(&self, pages: Vec<Vec<i64>>) {
-        let old_ptr = self.pages.load(Ordering::Acquire);
-        let new_ptr = Box::into_raw(Box::new(pages));
-        self.pages.store(new_ptr, Ordering::Release);
-
-        // Clean up old pointer
-        if !old_ptr.is_null() {
-            unsafe {
-                let _ = Box::from_raw(old_ptr);
-            }
+            pages.push(vec![0i64; LONG_PAGE_SIZE]);
         }
     }
 }
@@ -345,21 +234,6 @@ impl Default for HugeLongArrayBuilder {
         Self::new()
     }
 }
-
-impl Drop for HugeLongArrayBuilder {
-    fn drop(&mut self) {
-        let ptr = self.pages.load(Ordering::Acquire);
-        if !ptr.is_null() {
-            unsafe {
-                let _ = Box::from_raw(ptr);
-            }
-        }
-    }
-}
-
-// Safety: HugeLongArrayBuilder can be safely shared between threads
-unsafe impl Send for HugeLongArrayBuilder {}
-unsafe impl Sync for HugeLongArrayBuilder {}
 
 #[cfg(test)]
 mod tests {
@@ -410,16 +284,17 @@ mod tests {
     fn test_write_across_page_boundary() {
         let builder = HugeLongArrayBuilder::new();
 
-        // Write across page boundary (512 elements per page for i64)
+        // Write across page boundary
         let size = 10_000;
+        let boundary = LONG_PAGE_SIZE;
         let data: Vec<i64> = (0..size as i64).collect();
         builder.write_range(0, &data);
 
         let array = builder.build(size);
         assert_eq!(array.size(), size);
         assert_eq!(array.get(0), 0);
-        assert_eq!(array.get(511), 511); // Last element of first page
-        assert_eq!(array.get(512), 512); // First element of second page
+        assert_eq!(array.get(boundary - 1), (boundary - 1) as i64); // Last element of first page
+        assert_eq!(array.get(boundary), boundary as i64); // First element of second page
         assert_eq!(array.get(size - 1), (size - 1) as i64);
     }
 

@@ -21,7 +21,7 @@ use crate::concurrency::TerminationFlag;
 /// ```
 /// use gds::concurrency::virtual_threads::RunWithConcurrency;
 /// use gds::concurrency::Concurrency;
-/// use gds::termination::TerminationFlag;
+/// use gds::concurrency::TerminationFlag;
 ///
 /// let tasks: Vec<Box<dyn FnOnce() + Send>> = vec![
 ///     Box::new(|| println!("Task 1")),
@@ -209,19 +209,25 @@ impl RunWithConcurrencyParams {
     }
 
     fn run_parallel(self) -> Result<(), String> {
-        // Use a scope to ensure all tasks complete
-        // We need to store tasks in a way that allows safe parallel access
-        let tasks = std::sync::Arc::new(std::sync::Mutex::new(self.tasks));
-        let task_count = tasks.lock().unwrap().len();
+        // Use a scope to ensure all tasks complete.
+        // Avoid a single contended mutex by storing tasks in per-index slots.
+        // Each index is executed at most once by `spawn_many`.
+        let tasks = std::sync::Arc::new(
+            self.tasks
+                .into_iter()
+                .map(|task| parking_lot::Mutex::new(Some(task)))
+                .collect::<Vec<_>>(),
+        );
+        let task_count = tasks.len();
 
         self.executor
             .scope(&self.termination_flag, |scope| {
-                scope.spawn_many(task_count, |_| {
-                    // Pop one task at a time from the shared Vec
-                    let task = {
-                        let mut tasks_guard = tasks.lock().unwrap();
-                        tasks_guard.pop()
-                    };
+                scope.spawn_many(task_count, |i| {
+                    // `spawn_many` gives each worker a unique index; execute that slot.
+                    // If termination triggers, some tasks may remain unexecuted.
+                    let task = tasks
+                        .get(i)
+                        .and_then(|slot| slot.lock().take());
 
                     if let Some(task) = task {
                         task();

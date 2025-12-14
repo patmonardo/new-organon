@@ -57,25 +57,17 @@
 //! }
 //! ```
 
-use crate::core::utils::paged::{PageAllocatorFactory, PagedDataStructure};
+use crate::collections::PageUtil;
+use crate::core::utils::paged::PageAllocatorFactory;
 use crate::mem::Estimate;
 
 /// High-performance paged stack for i64 values.
 ///
 /// Provides billion-scale stack capacity with efficient push/pop operations.
 pub struct PagedLongStack {
-    /// Base paged structure managing page allocation and growth
-    base: PagedDataStructure<Vec<i64>>,
-    /// Current number of elements in the stack
+    page_size: usize,
+    pages: Vec<Vec<i64>>,
     size: usize,
-    /// Current page index
-    page_index: usize,
-    /// Current index within the page (top of stack)
-    page_top: isize,
-    /// Limit of current page (cached for performance)
-    page_limit: usize,
-    /// Current page reference (cached for performance)
-    current_page_len: usize,
 }
 
 impl PagedLongStack {
@@ -99,21 +91,21 @@ impl PagedLongStack {
     /// assert!(stack.is_empty());
     /// ```
     pub fn new(initial_size: usize) -> Self {
-        let factory = PageAllocatorFactory::<Vec<i64>>::for_long_array();
-        let allocator = factory.new_allocator();
-        let base = PagedDataStructure::new(initial_size.max(1), allocator);
+        let page_size = PageAllocatorFactory::<Vec<i64>>::for_long_array().page_size();
 
-        let mut stack = Self {
-            base,
+        let mut pages = Vec::new();
+        pages.push(Vec::with_capacity(page_size));
+
+        let reserved_pages = PageUtil::num_pages_for(initial_size.max(1), page_size);
+        if reserved_pages > 1 {
+            pages.reserve(reserved_pages - 1);
+        }
+
+        Self {
+            page_size,
+            pages,
             size: 0,
-            page_index: 0,
-            page_top: -1,
-            page_limit: 0,
-            current_page_len: 0,
-        };
-
-        stack.clear();
-        stack
+        }
     }
 
     /// Memory estimation for capacity planning.
@@ -137,9 +129,8 @@ impl PagedLongStack {
     /// println!("1B stack needs ~{} GB", memory / (1024 * 1024 * 1024));
     /// ```
     pub fn memory_estimation(size: usize) -> usize {
-        // size is usize, so always >= 0
-        let page_size = 4096; // Default page size for i64 arrays
-        let num_pages = size.div_ceil(page_size);
+        let page_size = PageAllocatorFactory::<Vec<i64>>::for_long_array().page_size();
+        let num_pages = PageUtil::num_pages_for(size, page_size);
         let total_size_for_pages = num_pages * Estimate::size_of_long_array(page_size);
 
         // Add overhead for instance variables
@@ -168,17 +159,11 @@ impl PagedLongStack {
     /// ```
     pub fn clear(&mut self) {
         self.size = 0;
-        self.page_top = -1;
-        self.page_index = 0;
-
-        let pages = self.base.pages();
-        if !pages.is_empty() {
-            // use capacity as the page limit (allocator may return Vec::with_capacity)
-            self.current_page_len = pages[0].capacity();
-            self.page_limit = self.current_page_len;
-        } else {
-            self.current_page_len = 0;
-            self.page_limit = 0;
+        for page in &mut self.pages {
+            page.clear();
+        }
+        if self.pages.is_empty() {
+            self.pages.push(Vec::with_capacity(self.page_size));
         }
     }
 
@@ -215,28 +200,10 @@ impl PagedLongStack {
     /// assert_eq!(stack.pop(), 42);
     /// ```
     pub fn push(&mut self, value: i64) {
-        // advance logical top
-        self.page_top += 1;
-
-        // If we've hit or exceeded the capacity of the current page, move to next page
-        if self.page_top as usize >= self.page_limit {
-            self.next_page();
-        }
-
+        let page_index = self.size / self.page_size;
+        self.ensure_page(page_index);
+        self.pages[page_index].push(value);
         self.size += 1;
-
-        // Get mutable access to the page and set or push the value
-        let mut pages = self.base.pages();
-        let page = &mut pages[self.page_index];
-        let idx = self.page_top as usize;
-
-        if idx == page.len() {
-            // append new element if this slot is the next available
-            page.push(value);
-        } else {
-            // overwrite existing slot
-            page[idx] = value;
-        }
     }
 
     /// Pops a value from the stack.
@@ -275,26 +242,12 @@ impl PagedLongStack {
     pub fn pop(&mut self) -> i64 {
         assert!(!self.is_empty(), "Cannot pop from empty stack");
 
-        if self.page_top < 0 {
-            self.previous_page();
-        }
-
-        // take value, and if we removed the last element from the page, pop to keep len consistent
-        let mut pages = self.base.pages();
-        let page = &mut pages[self.page_index];
-        let idx = self.page_top as usize;
-        let result = page[idx];
-
-        if idx + 1 == page.len() {
-            // we removed the last pushed element on this page, pop to keep len consistent
-            page.pop();
-        } else {
-            // keep the slot but value is discarded; leave len unchanged
-        }
-
-        self.page_top -= 1;
+        let top_index = self.size - 1;
+        let page_index = top_index / self.page_size;
+        let result = self.pages[page_index]
+            .pop()
+            .expect("PagedLongStack invariant violated: missing top element");
         self.size -= 1;
-
         result
     }
 
@@ -328,16 +281,11 @@ impl PagedLongStack {
     pub fn peek(&self) -> i64 {
         assert!(!self.is_empty(), "Cannot peek at empty stack");
 
-        if self.page_top < 0 {
-            // Look at the last filled element of the previous page
-            let prev_page_index = self.page_index - 1;
-            let pages = self.base.pages();
-            let prev_page = &pages[prev_page_index];
-            prev_page[prev_page.len() - 1]
-        } else {
-            let pages = self.base.pages();
-            pages[self.page_index][self.page_top as usize]
-        }
+        let top_index = self.size - 1;
+        let page_index = top_index / self.page_size;
+        *self.pages[page_index]
+            .last()
+            .expect("PagedLongStack invariant violated: missing top element")
     }
 
     /// Checks if the stack is empty.
@@ -389,52 +337,24 @@ impl PagedLongStack {
     ///
     /// Estimated bytes freed
     pub fn release(&mut self) -> usize {
-        let released = self.base.release();
+        let mut released = 0usize;
+        for page in &self.pages {
+            released += Estimate::size_of_long_array(page.capacity());
+        }
+
+        self.pages.clear();
         self.size = 0;
-        self.page_top = 0;
-        self.page_index = 0;
-        self.page_limit = 0;
-        self.current_page_len = 0;
         released
     }
 
-    /// Advances to the next page, allocating if necessary.
-    ///
-    /// Thread-safe growth through PagedDataStructure base.
-    fn next_page(&mut self) {
-        self.page_index += 1;
-
-        // Check if we need to grow the structure
-        let pages_len = self.base.pages().len();
-        if self.page_index >= pages_len {
-            let new_capacity = self.base.capacity_for(self.page_index + 1);
-            self.base.grow(new_capacity);
+    fn ensure_page(&mut self, page_index: usize) {
+        if self.pages.is_empty() {
+            self.pages.push(Vec::with_capacity(self.page_size));
         }
 
-        let pages = self.base.pages();
-        // use capacity (allocator may have returned capacity-only vecs)
-        self.current_page_len = pages[self.page_index].capacity();
-        self.page_limit = self.current_page_len;
-        // first valid index in new page is 0 but no elements yet
-        self.page_top = 0;
-    }
-
-    /// Returns to the previous page.
-    ///
-    /// Used when popping from an empty current page.
-    fn previous_page(&mut self) {
-        self.page_index -= 1;
-
-        assert!(
-            self.page_index < self.base.pages().len(),
-            "Stack underflow - no previous page"
-        );
-
-        let pages = self.base.pages();
-        // last valid filled index is len() - 1
-        self.current_page_len = pages[self.page_index].capacity();
-        self.page_limit = self.current_page_len;
-        self.page_top = (pages[self.page_index].len().saturating_sub(1)) as isize;
+        while self.pages.len() <= page_index {
+            self.pages.push(Vec::with_capacity(self.page_size));
+        }
     }
 }
 

@@ -3,8 +3,13 @@
 //! This provides thread-local state management for parallel algorithms,
 //! useful for accumulating per-thread results before final aggregation.
 
+use parking_lot::Mutex;
+use std::any::Any;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::marker::PhantomData;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 
 /// Per-thread worker context.
 ///
@@ -17,7 +22,7 @@ use std::marker::PhantomData;
 /// ```
 /// use gds::concurrency::virtual_threads::{WorkerContext, Executor};
 /// use gds::concurrency::Concurrency;
-/// use gds::termination::TerminationFlag;
+/// use gds::concurrency::TerminationFlag;
 ///
 /// // Each worker accumulates a local sum
 /// let context = WorkerContext::new(|| 0usize);
@@ -35,7 +40,9 @@ use std::marker::PhantomData;
 /// let total: usize = context.collect().into_iter().sum();
 /// ```
 pub struct WorkerContext<T> {
+    id: usize,
     init: Box<dyn Fn() -> T + Send + Sync>,
+    values: Arc<Mutex<Vec<Arc<Mutex<T>>>>>,
     _phantom: PhantomData<T>,
 }
 
@@ -48,8 +55,13 @@ impl<T: 'static> WorkerContext<T> {
     where
         F: Fn() -> T + Send + Sync + 'static,
     {
+        static NEXT_ID: AtomicUsize = AtomicUsize::new(1);
+        let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
+
         Self {
+            id,
             init: Box::new(init),
+            values: Arc::new(Mutex::new(Vec::new())),
             _phantom: PhantomData,
         }
     }
@@ -62,39 +74,40 @@ impl<T: 'static> WorkerContext<T> {
         F: FnOnce(&mut T) -> R,
     {
         thread_local! {
-            static CONTEXT: RefCell<Option<Box<dyn std::any::Any>>> = RefCell::new(None);
+            static CONTEXTS: RefCell<HashMap<usize, Box<dyn Any>>> = RefCell::new(HashMap::new());
         }
 
-        CONTEXT.with(|cell| {
-            let mut storage = cell.borrow_mut();
+        let handle: Arc<Mutex<T>> = CONTEXTS.with(|cell| {
+            let mut contexts = cell.borrow_mut();
+            let entry = contexts.entry(self.id).or_insert_with(|| {
+                let handle = Arc::new(Mutex::new((self.init)()));
+                self.values.lock().push(Arc::clone(&handle));
+                Box::new(handle) as Box<dyn Any>
+            });
 
-            // Initialize if needed
-            if storage.is_none() {
-                *storage = Some(Box::new((self.init)()));
-            }
+            entry
+                .downcast_ref::<Arc<Mutex<T>>>()
+                .expect("WorkerContext internal type mismatch")
+                .clone()
+        });
 
-            // Get mutable reference to stored value
-            let any_ref = storage.as_mut().unwrap();
-            let value: &mut T = any_ref
-                .downcast_mut()
-                .expect("Type mismatch in WorkerContext");
-
-            f(value)
-        })
+        let mut guard = handle.lock();
+        f(&mut guard)
     }
 
     /// Collect all worker-local values.
     ///
-    /// Note: This is a simplified version. In a real implementation,
-    /// you'd want to track all worker threads and collect from each.
-    /// For now, this returns an empty vec as we don't track workers globally.
+    /// This returns a snapshot of the values for every thread that has ever called [`WorkerContext::with`]
+    /// for this context instance.
     pub fn collect(&self) -> Vec<T>
     where
         T: Clone,
     {
-        // TODO: Track worker states globally for proper collection
-        // For now, this is a placeholder
-        Vec::new()
+        self.values
+            .lock()
+            .iter()
+            .map(|v| v.lock().clone())
+            .collect()
     }
 }
 
@@ -190,11 +203,8 @@ mod tests {
             })
             .unwrap();
 
-        // Each thread accumulated some subset of 0..100
-        // Verify we can read the value
-        let local_sum = context.with(|v| *v);
-        // Sum is valid (Rayon might use 1 or more threads)
-        assert!(local_sum <= 4950, "Sum should not exceed total");
+        let total: usize = context.collect().into_iter().sum();
+        assert_eq!(total, 4950);
     }
 
     #[test]
@@ -228,10 +238,7 @@ mod tests {
             })
             .unwrap();
 
-        // Each worker thread accumulated its share of work
-        // The exact count depends on thread scheduling, but work was done
-        let count = aggregator.get();
-        // In tests, Rayon might use 1 thread, so we just verify it's in valid range
-        assert!(count <= 100, "Count should not exceed total work");
+        let total: usize = aggregator.collect().into_iter().sum();
+        assert_eq!(total, 100);
     }
 }

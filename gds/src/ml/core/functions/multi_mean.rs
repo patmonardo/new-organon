@@ -7,7 +7,7 @@ use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions::{COLUMNS_INDEX, ROWS_INDEX};
 use crate::ml::core::subgraph::BatchNeighbors;
 use crate::ml::core::tensor::{Matrix, Tensor};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use crate::ml::core::abstract_variable::AbstractVariable;
 use std::fmt;
 
@@ -23,6 +23,7 @@ pub struct MultiMean {
 
 impl MultiMean {
     pub fn new(parent: Box<dyn Variable>, sub_graph: Box<dyn BatchNeighbors>) -> Self {
+        let parent: VariableRef = parent.into();
         assert!(
             parent.dimension(ROWS_INDEX) >= sub_graph.node_count(),
             "Expecting a row for each node in the subgraph"
@@ -151,7 +152,7 @@ impl Variable for MultiMean {
         self.base.require_gradient()
     }
 
-    fn parents(&self) -> &[Box<dyn Variable>] {
+    fn parents(&self) -> &[VariableRef] {
         self.base.parents()
     }
 

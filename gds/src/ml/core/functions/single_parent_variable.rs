@@ -8,7 +8,7 @@
 use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::Tensor;
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 
 /// Abstract base for variables with a single parent.
 ///
@@ -18,16 +18,17 @@ use crate::ml::core::variable::Variable;
 /// This corresponds to Java's `SingleParentVariable<P extends Tensor<P>, T extends Tensor<T>> extends AbstractVariable<T>`
 pub struct SingleParentVariable {
     base: AbstractVariable,
-    parent: Box<dyn Variable>,
+    parent: VariableRef,
 }
 
 impl SingleParentVariable {
     /// Create a new single parent variable.
     /// Java: `public SingleParentVariable(Variable<P> parent, int[] dimensions)`
     pub fn new(parent: Box<dyn Variable>, dimensions: Vec<usize>) -> Self {
-        // We can't clone Box<dyn Variable>, so we'll create the AbstractVariable differently
+        let parent: VariableRef = parent.into();
         let require_gradient = parent.require_gradient();
-        let base = AbstractVariable::with_gradient_requirement(vec![], dimensions, require_gradient);
+        let base =
+            AbstractVariable::with_gradient_requirement(vec![parent.clone()], dimensions, require_gradient);
         Self {
             base,
             parent,
@@ -43,17 +44,14 @@ impl SingleParentVariable {
     /// Validate that the given variable is our parent.
     /// Java: `private void validateParent(Variable<?> variable)`
     pub fn validate_parent(&self, variable: &dyn Variable) {
-        let parent_ptr = self.parent.as_ref() as *const dyn Variable;
-        let variable_ptr = variable as *const dyn Variable;
-
-        if parent_ptr != variable_ptr {
+        if !std::ptr::eq::<dyn Variable>(self.parent.as_ref(), variable) {
             panic!("Calling gradient with a `parent` that was not expected");
         }
     }
 
     /// Template method for gradient computation.
     /// Java: `protected abstract P gradientForParent(ComputationContext ctx);`
-    /// 
+    ///
     /// Concrete implementations must override this method.
     pub fn gradient_for_parent(&self, _ctx: &ComputationContext) -> Box<dyn Tensor> {
         unimplemented!("gradient_for_parent() must be implemented by concrete subclasses")
@@ -85,9 +83,8 @@ impl Variable for SingleParentVariable {
     }
 
     // DELEGATION: Forward to AbstractVariable
-    fn parents(&self) -> &[Box<dyn Variable>] {
-        // Return a slice containing our parent
-        std::slice::from_ref(&self.parent)
+    fn parents(&self) -> &[VariableRef] {
+        self.base.parents()
     }
 }
 

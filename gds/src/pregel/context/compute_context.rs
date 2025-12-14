@@ -185,16 +185,18 @@ impl<C: PregelRuntimeConfig, I: crate::pregel::MessageIterator> ComputeContext<C
     /// ```java
     /// void sendToNeighbors(double message)
     /// ```
-    pub fn send_to_neighbors(&mut self, message: f64) {
-        // Collect neighbors first (we need &mut self for send_to)
-        let mut neighbors = Vec::new();
-        self.base.for_each_neighbor(|neighbor_id| {
-            neighbors.push(neighbor_id);
+    pub fn send_to_neighbors(&self, message: f64) {
+        let source = self.base.node_id();
+        let mut sent_any = false;
+
+        self.base.for_each_neighbor(|target| {
+            self.messenger.send_to(source, target, message);
+            sent_any = true;
         });
 
-        // Now send messages to all neighbors
-        for target in neighbors {
-            self.send_to(target, message);
+        if sent_any {
+            self.has_sent_message
+                .store(true, std::sync::atomic::Ordering::Relaxed);
         }
     }
 
@@ -205,7 +207,7 @@ impl<C: PregelRuntimeConfig, I: crate::pregel::MessageIterator> ComputeContext<C
     /// ```java
     /// void sendTo(long targetNodeId, double message)
     /// ```
-    pub fn send_to(&mut self, target: u64, message: f64) {
+    pub fn send_to(&self, target: u64, message: f64) {
         let source = self.base.node_id();
         self.messenger.send_to(source, target, message);
         self.has_sent_message
@@ -222,7 +224,7 @@ impl<C: PregelRuntimeConfig, I: crate::pregel::MessageIterator> ComputeContext<C
     /// ```java
     /// void voteToHalt()
     /// ```
-    pub fn vote_to_halt(&mut self) {
+    pub fn vote_to_halt(&self) {
         let node_id = self.base.node_id();
         self.vote_bits.set(node_id as usize);
     }

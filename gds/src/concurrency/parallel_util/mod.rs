@@ -8,13 +8,10 @@
 //! ## Design Philosophy
 //!
 //! Java GDS uses ExecutorService/ThreadPoolExecutor with manual task management.
-//! Rust GDS uses Rayon's work-stealing scheduler which is:
-//!   - Faster (lock-free work stealing)
-//!   - Simpler (no manual thread pool management)
-//!   - Safer (compile-time data race prevention)
+//! Rust GDS uses Rayon's work-stealing scheduler.
 //!
-//! We keep the GDS API surface for algorithm compatibility, but underneath
-//! it's pure Rayon magic!
+//! We keep the GDS API surface for algorithm compatibility, but the runtime
+//! behavior is implemented in terms of Rayon parallel iterators and scoped work.
 
 mod batch_util;
 mod parallel_executor;

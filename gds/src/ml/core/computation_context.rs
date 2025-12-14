@@ -6,7 +6,7 @@
 //! ## Key Features
 //! - **Forward Pass**: Computes variable values with caching
 //! - **Backward Pass**: Computes gradients via backpropagation using topological sorting
-//! - **Type Safety**: Uses content-based keys to avoid trait object pointer issues
+//! - **Identity**: Uses pointer-based keys to avoid trait object identity pitfalls
 //! - **Interior Mutability**: Allows caching during forward/backward passes
 //!
 //! ## Thread Safety
@@ -23,13 +23,14 @@
 use crate::ml::core::{dimensions, tensor::Tensor, variable::Variable};
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 /// The computation context manages forward and backward propagation over computation graphs.
 ///
 /// ## Architecture
 /// - **Data Cache**: Stores computed variable values (`HashMap<String, Box<dyn Tensor>>`)
 /// - **Gradient Cache**: Stores computed gradients (`HashMap<String, Box<dyn Tensor>>`)
-/// - **Content-Based Keys**: Uses variable dimensions + type name for stable identity
+/// - **Pointer-Based Keys**: Uses trait object address + shape for identity
 /// - **Interior Mutability**: Uses `RefCell` to allow caching with immutable references
 ///
 /// ## Thread Safety
@@ -47,18 +48,16 @@ impl ComputationContext {
         }
     }
 
-    /// Create a unique key for a variable based on its content.
-    /// 
-    /// This avoids issues with trait object pointer identity by using:
-    /// - Variable dimensions (shape information)
-    /// - Type name (for disambiguation)
-    /// 
-    /// This ensures stable identity regardless of memory address changes.
+    /// Create a unique key for a variable.
+    ///
+    /// This uses the trait object address plus shape information.
+    ///
+    /// Note: this is identity-by-instance (like Java object identity), not structural identity.
     fn variable_key(&self, variable: &dyn Variable) -> String {
         let dims = variable.dimensions();
         let dim_str = format!("{:?}", dims);
-        // Use memory address for unique identification
-        let addr = variable as *const dyn Variable as *const () as usize;
+        // Use process-local identity (allocation address) for unique identification
+        let addr = crate::ml::core::variable::variable_id(variable).0;
         format!("{}:{}", addr, dim_str)
     }
 
@@ -114,12 +113,11 @@ impl ComputationContext {
     /// 1. **Validate**: Ensure root is scalar and requires gradients
     /// 2. **Initialize**: Set root gradient to 1.0
     /// 3. **Topological Sort**: Collect variables in dependency order
-    /// 4. **Multi-Pass**: Process variables until all gradients computed
+    /// 4. **Reverse Topological Pass**: For each variable with a gradient, propagate to its parents
     /// 5. **Gradient Accumulation**: Accumulate gradients from multiple children
     ///
-    /// ## Key Innovation
-    /// Uses **content-based keys** instead of raw pointers to avoid trait object
-    /// identity issues that plagued earlier implementations.
+    /// ## Key Detail
+    /// Uses pointer-based keys for identity, mirroring Java object identity.
     ///
     /// ## Thread Safety
     /// ⚠️ **NOT thread-safe** - modifies internal state
@@ -142,59 +140,59 @@ impl ComputationContext {
 
         // Collect all variables in topological order (children before parents)
         let mut execution_order = Vec::new();
-        self.collect_variables_topological(function, &mut execution_order);
+        let mut visited = HashSet::new();
+        self.collect_variables_topological(VariableNode::Borrowed(function), &mut visited, &mut execution_order);
 
-        // Process variables in multiple passes until all gradients are computed
-        let max_passes = execution_order.len() * 2; // Safety limit - allow extra passes for leaf variables
-        for _pass in 0..max_passes {
-            let mut progress_made = false;
-            
-            // Process variables in reverse topological order (parents before children)
-            for var_ptr in execution_order.iter().rev() {
-                let variable = unsafe { &**var_ptr };
-                
-                // Skip if gradient not available yet
-                if self.gradient(variable).is_none() {
+        // Single reverse-topological pass:
+        // - Each edge (variable -> parent) is visited once.
+        // - If a parent has multiple children, `update_gradient` will accumulate.
+        for node in execution_order.iter().rev() {
+            let variable = node.as_dyn();
+
+            // Skip if gradient not available yet (should not happen with correct ordering).
+            if self.gradient(variable).is_none() {
+                continue;
+            }
+
+            for parent in variable.parents() {
+                if !parent.require_gradient() {
                     continue;
                 }
-                
-                // Compute gradients for all parents
-                for parent in variable.parents() {
-                    if parent.require_gradient() && self.gradient(parent.as_ref()).is_none() {
-                        // Compute gradient for this parent
-                        let parent_gradient = variable.gradient(parent.as_ref(), self);
-                        self.update_gradient(parent.as_ref(), parent_gradient);
-                        progress_made = true;
-                    }
-                }
-            }
-            
-            // If no progress was made, we're done
-            if !progress_made {
-                break;
+
+                let parent_gradient = variable.gradient(parent.as_ref(), self);
+                self.update_gradient(parent.as_ref(), parent_gradient);
             }
         }
     }
 
     /// Collect all variables in topological order (children before parents).
     /// This ensures that when we process in reverse order, parents are processed before children.
-    fn collect_variables_topological(&self, variable: &dyn Variable, result: &mut Vec<*const dyn Variable>) {
-        let var_key = variable as *const _ as *const dyn Variable;
+    fn collect_variables_topological<'a>(
+        &self,
+        variable: VariableNode<'a>,
+        visited: &mut HashSet<usize>,
+        result: &mut Vec<VariableNode<'a>>,
+    ) {
+        let key = variable.ptr_usize();
 
         // Skip if already collected
-        if result.contains(&var_key) {
+        if !visited.insert(key) {
             return;
         }
 
         // First, collect all parents (recursively)
-        for parent in variable.parents() {
+        for parent in variable.as_dyn().parents() {
             if parent.require_gradient() {
-                self.collect_variables_topological(parent.as_ref(), result);
+                self.collect_variables_topological(
+                    VariableNode::Owned(parent.clone()),
+                    visited,
+                    result,
+                );
             }
         }
 
         // Then add this variable
-        result.push(var_key);
+        result.push(variable);
     }
 
     /// Update gradient for a variable (accumulate if already exists)
@@ -212,6 +210,24 @@ impl ComputationContext {
     }
 }
 
+enum VariableNode<'a> {
+    Borrowed(&'a dyn Variable),
+    Owned(crate::ml::core::variable::VariableRef),
+}
+
+impl VariableNode<'_> {
+    fn as_dyn(&self) -> &dyn Variable {
+        match self {
+            VariableNode::Borrowed(v) => *v,
+            VariableNode::Owned(v) => v.as_ref(),
+        }
+    }
+
+    fn ptr_usize(&self) -> usize {
+        crate::ml::core::variable::variable_id(self.as_dyn()).0
+    }
+}
+
 impl Default for ComputationContext {
     fn default() -> Self {
         Self::new()
@@ -221,11 +237,74 @@ impl Default for ComputationContext {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ml::core::tensor::{Scalar, Tensor};
+    use std::fmt;
 
     #[test]
     fn test_context_creation() {
         let ctx = ComputationContext::new();
         assert!(ctx.data.borrow().is_empty());
         assert!(ctx.gradients.borrow().is_empty());
+    }
+
+    struct TestLeafVariable {
+        dims: Vec<usize>,
+        parents: Vec<crate::ml::core::variable::VariableRef>,
+    }
+
+    impl TestLeafVariable {
+        fn new() -> Self {
+            Self {
+                dims: crate::ml::core::dimensions::scalar(),
+                parents: vec![],
+            }
+        }
+    }
+
+    impl fmt::Display for TestLeafVariable {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "TestLeafVariable")
+        }
+    }
+
+    impl Variable for TestLeafVariable {
+        fn apply(&self, _ctx: &ComputationContext) -> Box<dyn Tensor> {
+            Box::new(Scalar::new(0.0))
+        }
+
+        fn gradient(&self, _parent: &dyn Variable, _ctx: &ComputationContext) -> Box<dyn Tensor> {
+            panic!("TestLeafVariable has no parents")
+        }
+
+        fn require_gradient(&self) -> bool {
+            true
+        }
+
+        fn parents(&self) -> &[crate::ml::core::variable::VariableRef] {
+            &self.parents
+        }
+
+        fn dimensions(&self) -> &[usize] {
+            &self.dims
+        }
+    }
+
+    #[test]
+    fn test_update_gradient_accumulates() {
+        let ctx = ComputationContext::new();
+        let leaf = TestLeafVariable::new();
+
+        ctx.update_gradient(&leaf, Box::new(Scalar::new(1.25)));
+        ctx.update_gradient(&leaf, Box::new(Scalar::new(2.75)));
+
+        let grad = ctx
+            .gradient(&leaf)
+            .expect("Expected gradient to be present")
+            .as_any()
+            .downcast_ref::<Scalar>()
+            .expect("Expected Scalar gradient")
+            .value();
+
+        assert!((grad - 4.0).abs() < 1e-12);
     }
 }

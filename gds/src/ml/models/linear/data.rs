@@ -12,12 +12,13 @@ use crate::ml::{
 };
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 /// Stored parameters for a trained linear regression model.
 #[derive(Clone)]
 pub struct LinearRegressionData {
-    weights: Weights,
-    bias: Weights,
+    weights: Arc<Weights>,
+    bias: Arc<Weights>,
     feature_dimension: usize,
 }
 
@@ -33,19 +34,19 @@ impl LinearRegressionData {
     /// Factory method mirroring `LinearRegressionData.of(int featureDimension)` in Java.
     pub fn of(feature_dimension: usize) -> Self {
         Self {
-            weights: Weights::of_matrix(1, feature_dimension),
-            bias: Weights::of_scalar(0.0),
+            weights: Arc::new(Weights::of_matrix(1, feature_dimension)),
+            bias: Arc::new(Weights::of_scalar(0.0)),
             feature_dimension,
         }
     }
 
     /// Trainable weight matrix (shape 1 × feature_dimension).
-    pub fn weights(&self) -> &Weights {
+    pub fn weights(&self) -> &Arc<Weights> {
         &self.weights
     }
 
     /// Trainable bias scalar.
-    pub fn bias(&self) -> &Weights {
+    pub fn bias(&self) -> &Arc<Weights> {
         &self.bias
     }
 }
@@ -87,8 +88,8 @@ impl ModelData for LinearRegressionData {
         let bias_scalar = Scalar::new(snapshot.bias);
 
         Ok(Self {
-            weights: Weights::from_tensor(Box::new(weights_matrix)),
-            bias: Weights::from_tensor(Box::new(bias_scalar)),
+            weights: Arc::new(Weights::from_tensor(Box::new(weights_matrix))),
+            bias: Arc::new(Weights::from_tensor(Box::new(bias_scalar))),
             feature_dimension: snapshot.feature_dimension,
         })
     }

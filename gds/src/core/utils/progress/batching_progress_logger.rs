@@ -268,8 +268,6 @@ impl ProgressLogger for BatchingProgressLogger {
     }
 }
 
-// Implement Send for thread-safety (ThreadLocal already handles this)
-unsafe impl Send for BatchingProgressLogger {}
 
 #[cfg(test)]
 mod tests {

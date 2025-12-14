@@ -14,7 +14,7 @@
 use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::Tensor;
-use crate::ml::core::variable::Variable;
+use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
 /// Sigmoid activation function: σ(x) = 1 / (1 + e^(-x))
@@ -23,7 +23,7 @@ use std::fmt;
 /// Single-parent activation function with element-wise non-linearity.
 pub struct Sigmoid {
     base: AbstractVariable, // COMPOSITION: wraps shared Variable logic
-    parent: Box<dyn Variable>,
+    parent: VariableRef,
 }
 
 impl Sigmoid {
@@ -34,9 +34,11 @@ impl Sigmoid {
     /// Create new sigmoid activation.
     /// Java: `public Sigmoid(Variable<T> parent) { super(parent, parent.dimensions()); }`
     pub fn new(parent: Box<dyn Variable>) -> Self {
+        let parent: VariableRef = parent.into();
         let dimensions = parent.dimensions().to_vec();
         let require_gradient = parent.require_gradient();
-        let base = AbstractVariable::with_gradient_requirement(vec![], dimensions, require_gradient);
+        let base =
+            AbstractVariable::with_gradient_requirement(vec![parent.clone()], dimensions, require_gradient);
         Self { base, parent }
     }
 
@@ -120,8 +122,8 @@ impl Variable for Sigmoid {
 
     /// Get parent variables.
     /// Java: Inherited from `super(parent, ...)`
-    fn parents(&self) -> &[Box<dyn Variable>] {
-        std::slice::from_ref(&self.parent)
+    fn parents(&self) -> &[VariableRef] {
+        self.base.parents()
     }
 
     /// Get output dimensions (same as input).
