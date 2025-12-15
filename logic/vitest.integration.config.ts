@@ -6,8 +6,7 @@ export default defineConfig({
   plugins: [tsconfigPaths({ projects: [path.resolve(__dirname, 'tsconfig.json')] })],
   test: {
     environment: 'node',
-    include: ['test/**/*.test.ts', 'test/**/*.spec.ts'],
-    exclude: ['test/absolute', 'test/relative', 'test/integration/**'],
+    include: ['test/integration/**/*.test.ts', 'test/integration/**/*.spec.ts'],
     globals: true,
   },
 });

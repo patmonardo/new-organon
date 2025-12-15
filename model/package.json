@@ -5,7 +5,7 @@
   "description": "Organon Model Processor",
   "type": "module",
   "main": "dist/index.js",
-  "types": "dist/index.d.ts ",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc && tsc-alias",
     "b": "tsc && tsc-alias",
@@ -21,7 +21,7 @@
     "lint": "eslint . --cache",
     "format": "prettier --write \"**/*.{ts,js,md,json,yml,yaml}\" --ignore-path .gitignore",
     "doc:api": "typedoc --options typedoc.json",
-    "db:generate": "prisma generate",
+    "db:generate": "prisma generate --no-hints",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
@@ -34,9 +34,13 @@
     "@organon/task": "workspace:*",
     "apache-arrow": "^17.0.0",
     "clsx": "^2.1.1",
-    "next": "^14.2.5",
     "tailwind-merge": "^2.5.5",
     "zod": "^4.0.0"
+  },
+  "peerDependencies": {
+    "next": "^15.4.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.10",
@@ -44,6 +48,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.1",
     "autoprefixer": "^10.4.22",
+    "next": "^15.4.0",
     "postcss": "^8.5.6",
     "prisma": "^7.1.0",
     "react": "^19.2.0",
