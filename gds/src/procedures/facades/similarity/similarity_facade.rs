@@ -1,9 +1,10 @@
 use crate::procedures::facades::traits::Result;
 use crate::procedures::similarity::{
-    NodeSimilarity, NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult,
+    NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult,
 };
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
-use crate::types::prelude::DefaultGraphStore;
+use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -85,10 +86,21 @@ impl SimilarityBuilder {
         let graph = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+            .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
 
-        let algo = NodeSimilarity::new(self.build_config());
-        Ok(algo.compute(graph.as_ref()))
+        let config = self.build_config();
+        let storage =
+            crate::procedures::similarity::NodeSimilarityStorageRuntime::new(config.concurrency);
+        let mut computation =
+            crate::procedures::similarity::NodeSimilarityComputationRuntime::new();
+
+        let results = storage.compute(&mut computation, graph.as_ref(), &config);
+
+        // Convert to public result type
+        Ok(results
+            .into_iter()
+            .map(NodeSimilarityResult::from)
+            .collect())
     }
 
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = NodeSimilarityResult>>> {

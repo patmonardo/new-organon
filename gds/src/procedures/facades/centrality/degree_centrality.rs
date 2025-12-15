@@ -25,11 +25,13 @@
 //! graph.degree_centrality().mutate("degree")?;
 //! ```
 
-use crate::procedures::facades::traits::{Result, CentralityScore};
-use crate::procedures::facades::builder_base::{MutationResult, ConfigValidator};
-use crate::procedures::degree_centrality::{DegreeCentralityComputationRuntime, DegreeCentralityStorageRuntime};
+use crate::procedures::degree_centrality::{
+    DegreeCentralityComputationRuntime, DegreeCentralityStorageRuntime,
+};
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult};
+use crate::procedures::facades::traits::{CentralityScore, Result};
 use crate::types::graph::id_map::NodeId;
-use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::types::prelude::DefaultGraphStore;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -218,8 +220,8 @@ impl DegreeCentralityFacade {
         let stddev = var.sqrt();
 
         let percentile = |p: f64| -> f64 {
-            let idx = ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round()
-                as usize;
+            let idx =
+                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
             sorted[idx]
         };
 
@@ -253,9 +255,11 @@ impl DegreeCentralityFacade {
     pub fn mutate(&self, property_name: &str) -> Result<MutationResult> {
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "DegreeCentrality mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "DegreeCentrality mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 }
 

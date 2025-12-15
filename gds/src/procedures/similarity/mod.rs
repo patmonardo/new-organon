@@ -1,8 +1,13 @@
-mod similarity_metric;
-pub use similarity_metric::{Cosine, Jaccard, NodeSimilarityMetric, Overlap, SimilarityMetric};
+pub mod computation;
+pub mod similarity_metric;
+pub mod spec;
+pub mod storage;
+pub mod vector_computer;
 
-mod vector_computer;
-pub use vector_computer::{UnweightedVectorComputer, VectorComputer, WeightedVectorComputer};
+#[cfg(test)]
+mod tests;
 
-mod node_similarity;
-pub use node_similarity::{NodeSimilarity, NodeSimilarityConfig, NodeSimilarityResult};
+pub use computation::NodeSimilarityComputationRuntime;
+pub use similarity_metric::NodeSimilarityMetric;
+pub use spec::{NodeSimilarityAlgorithmSpec, NodeSimilarityConfig, NodeSimilarityResult};
+pub use storage::NodeSimilarityStorageRuntime;

@@ -113,7 +113,7 @@ impl AggregatedNeighborProcessingMsBfs {
         &mut self,
         allow_start_node_traversal: bool,
         get_neighbors: G,
-        mut per_node_action: F,
+        per_node_action: F,
     ) where
         G: Fn(usize) -> Vec<usize> + Copy,
         F: FnMut(usize, u32, u64) + Copy,
