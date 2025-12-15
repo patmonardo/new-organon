@@ -6,6 +6,7 @@
 
 use super::mutable_path_result::MutablePathResult;
 use super::relationship_filterer::RelationshipFilterer;
+use crate::types::graph::id_map::NodeId;
 use std::collections::HashMap;
 
 /// Yen's Computation Runtime - handles ephemeral computation state
@@ -14,9 +15,9 @@ use std::collections::HashMap;
 /// This implements the "Subtle pole" for managing Yen's algorithm state
 pub struct YensComputationRuntime {
     /// Source node for path finding
-    pub source_node: u32,
+    pub source_node: NodeId,
     /// Target node for path finding
-    pub target_node: u32,
+    pub target_node: NodeId,
     /// Number of shortest paths to find (K)
     pub k: usize,
     /// Whether to track relationships
@@ -26,14 +27,14 @@ pub struct YensComputationRuntime {
     /// Relationship filterer for avoiding cycles
     relationship_filterer: RelationshipFilterer,
     /// Visited nodes for cycle avoidance
-    visited_nodes: HashMap<u32, bool>,
+    visited_nodes: HashMap<NodeId, bool>,
 }
 
 impl YensComputationRuntime {
     /// Create new Yen's computation runtime
     pub fn new(
-        source_node: u32,
-        target_node: u32,
+        source_node: NodeId,
+        target_node: NodeId,
         k: usize,
         track_relationships: bool,
         concurrency: usize,
@@ -53,7 +54,13 @@ impl YensComputationRuntime {
     ///
     /// Translation of: `YensTask` constructor and initialization
     /// This resets the internal state for a new computation
-    pub fn initialize(&mut self, source_node: u32, target_node: u32, k: usize, track_relationships: bool) {
+    pub fn initialize(
+        &mut self,
+        source_node: NodeId,
+        target_node: NodeId,
+        k: usize,
+        track_relationships: bool,
+    ) {
         self.source_node = source_node;
         self.target_node = target_node;
         self.k = k;
@@ -66,7 +73,11 @@ impl YensComputationRuntime {
     ///
     /// Translation of: `YensTask.process()` (lines 100-112)
     /// This processes a single spur node to find alternative paths
-    pub fn process_spur_node(&mut self, spur_node: u32, _root_path: &MutablePathResult) -> Result<Option<MutablePathResult>, String> {
+    pub fn process_spur_node(
+        &mut self,
+        spur_node: NodeId,
+        _root_path: &MutablePathResult,
+    ) -> Result<Option<MutablePathResult>, String> {
         // Set up relationship filter
         self.relationship_filterer.set_filter(spur_node);
 
@@ -79,12 +90,12 @@ impl YensComputationRuntime {
     ///
     /// Translation of: `YensTask.withVisited()` (lines 128-130)
     /// This marks nodes as visited to avoid cycles
-    pub fn add_visited_node(&mut self, node: u32) {
+    pub fn add_visited_node(&mut self, node: NodeId) {
         self.visited_nodes.insert(node, true);
     }
 
     /// Check if a node has been visited
-    pub fn is_visited(&self, node: u32) -> bool {
+    pub fn is_visited(&self, node: NodeId) -> bool {
         self.visited_nodes.get(&node).copied().unwrap_or(false)
     }
 

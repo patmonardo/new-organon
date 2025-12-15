@@ -41,7 +41,7 @@ impl DegreeCentralityComputationRuntime {
     ///
     /// This is the core operation of the Subtle pole.
     /// Degrees coming from GraphStore (Gross) are accumulated here.
-    pub fn add_node_degree(&mut self, _node_id: u32, degree: f64) {
+    pub fn add_node_degree(&mut self, _node_id: crate::types::graph::id_map::NodeId, degree: f64) {
         self.scores.push(degree);
 
         // Update min/max tracking

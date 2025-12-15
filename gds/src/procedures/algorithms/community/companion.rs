@@ -6,6 +6,79 @@
 
 use super::super::stubs::{LongNodePropertyValues, NodePropertyValues};
 use super::consecutive_values::ConsecutiveLongNodePropertyValues;
+use super::super::stubs::FilteredNodePropertyValuesMarker;
+use std::collections::HashMap;
+
+struct CommunitySizeFilter {
+    inner: Box<dyn LongNodePropertyValues>,
+    min_community_size: usize,
+    community_sizes: HashMap<i64, usize>,
+}
+
+impl CommunitySizeFilter {
+    fn new(inner: Box<dyn LongNodePropertyValues>, min_community_size: usize) -> Self {
+        let mut community_sizes: HashMap<i64, usize> = HashMap::new();
+        for node_id in 0..inner.node_count() {
+            if inner.has_value(node_id) {
+                let cid = inner.long_value(node_id);
+                if cid != i64::MIN {
+                    *community_sizes.entry(cid).or_insert(0) += 1;
+                }
+            }
+        }
+
+        Self {
+            inner,
+            min_community_size,
+            community_sizes,
+        }
+    }
+}
+
+impl NodePropertyValues for CommunitySizeFilter {
+    fn node_count(&self) -> usize {
+        self.inner.node_count()
+    }
+
+    fn value_type(&self) -> crate::procedures::algorithms::stubs::ValueType {
+        crate::procedures::algorithms::stubs::ValueType::Long
+    }
+}
+
+impl LongNodePropertyValues for CommunitySizeFilter {
+    fn long_value(&self, node_id: usize) -> i64 {
+        if !self.inner.has_value(node_id) {
+            return i64::MIN;
+        }
+
+        let cid = self.inner.long_value(node_id);
+        if cid == i64::MIN {
+            return i64::MIN;
+        }
+
+        match self.community_sizes.get(&cid) {
+            Some(size) if *size >= self.min_community_size => cid,
+            _ => i64::MIN,
+        }
+    }
+
+    fn has_value(&self, node_id: usize) -> bool {
+        if !self.inner.has_value(node_id) {
+            return false;
+        }
+
+        let cid = self.inner.long_value(node_id);
+        if cid == i64::MIN {
+            return false;
+        }
+
+        self.community_sizes
+            .get(&cid)
+            .is_some_and(|size| *size >= self.min_community_size)
+    }
+}
+
+impl FilteredNodePropertyValuesMarker for CommunitySizeFilter {}
 
 /// Community algorithm companion utilities
 ///
@@ -87,12 +160,9 @@ impl CommunityCompanion {
     ) -> Box<dyn LongNodePropertyValues> {
         // Apply minimum community size filter if specified
         // Translation of: applySizeFilter() (lines 86-88)
-        let filtered = if let Some(_min_size) = min_community_size {
-            // TODO: Implement CommunitySizeFilter when we have HugeSparseLongArray
-            // For now, return original properties
-            node_properties
-        } else {
-            node_properties
+        let filtered: Box<dyn LongNodePropertyValues> = match min_community_size {
+            Some(min_size) => Box::new(CommunitySizeFilter::new(node_properties, min_size)),
+            None => node_properties,
         };
 
         // Apply incremental filtering if needed
@@ -129,12 +199,9 @@ impl CommunityCompanion {
         min_community_size: Option<usize>,
         _concurrency: usize,
     ) -> Box<dyn LongNodePropertyValues> {
-        let filtered = if let Some(_min_size) = min_community_size {
-            // TODO: Implement CommunitySizeFilter when we have HugeSparseLongArray
-            // For now, return original properties
-            node_properties
-        } else {
-            node_properties
+        let filtered: Box<dyn LongNodePropertyValues> = match min_community_size {
+            Some(min_size) => Box::new(CommunitySizeFilter::new(node_properties, min_size)),
+            None => node_properties,
         };
 
         Self::node_property_values(consecutive_ids, filtered)
@@ -232,7 +299,7 @@ mod tests {
     #[test]
     fn test_node_property_values_with_filter() {
         let props = Box::new(TestLongProperty {
-            values: vec![1, 2, 3, 4, 5],
+            values: vec![1, 1, 2, 3, 3],
         });
 
         // Test with minimum community size filter
@@ -243,9 +310,12 @@ mod tests {
             1,       // concurrency
         );
 
-        // TODO: When CommunitySizeFilter is implemented, this should filter communities
-        // For now, just verify it returns something
         assert_eq!(result.node_count(), 5);
+        // sizes: 1->2, 2->1, 3->2; min=3 means everything filtered
+        for node_id in 0..5 {
+            assert!(!result.has_value(node_id));
+            assert_eq!(result.long_value(node_id), i64::MIN);
+        }
     }
 
     #[test]

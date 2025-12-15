@@ -4,6 +4,7 @@
 //! It represents ephemeral computation state (shortest path results and statistics).
 
 use super::storage::ShortestPathResult;
+use crate::types::graph::id_map::NodeId;
 
 /// Computation Runtime for All Shortest Paths
 ///
@@ -49,7 +50,7 @@ impl AllShortestPathsComputationRuntime {
     pub fn add_shortest_paths(&mut self, source_results: Vec<ShortestPathResult>) {
         for result in source_results {
             self.results.push(result.clone());
-            
+
             // Update statistics
             if result.distance == f64::INFINITY {
                 self.infinite_distances += 1;
@@ -62,14 +63,14 @@ impl AllShortestPathsComputationRuntime {
                 }
             }
         }
-        
+
         self.node_count += 1;
     }
 
     /// Add a single shortest path result
     pub fn add_result(&mut self, result: ShortestPathResult) {
         self.results.push(result.clone());
-        
+
         // Update statistics
         if result.distance == f64::INFINITY {
             self.infinite_distances += 1;
@@ -89,7 +90,7 @@ impl AllShortestPathsComputationRuntime {
     }
 
     /// Get results for a specific source node
-    pub fn get_results_for_source(&self, source: u32) -> Vec<ShortestPathResult> {
+    pub fn get_results_for_source(&self, source: NodeId) -> Vec<ShortestPathResult> {
         self.results
             .iter()
             .filter(|result| result.source == source)
@@ -98,13 +99,14 @@ impl AllShortestPathsComputationRuntime {
     }
 
     /// Get results for a specific target node
-    pub fn get_results_for_target(&self, target: u32) -> Vec<ShortestPathResult> {
+    pub fn get_results_for_target(&self, target: NodeId) -> Vec<ShortestPathResult> {
         self.results
             .iter()
             .filter(|result| result.target == target)
             .cloned()
             .collect()
     }
+
 
     /// Get maximum distance found
     pub fn max_distance(&self) -> f64 {
@@ -151,7 +153,7 @@ impl AllShortestPathsComputationRuntime {
             .iter()
             .filter(|result| result.distance != f64::INFINITY)
             .collect();
-            
+
         if finite_results.is_empty() {
             0.0
         } else {

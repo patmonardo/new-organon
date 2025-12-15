@@ -27,8 +27,17 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
-use crate::procedures::facades::traits::{Result, CentralityScore};
-use crate::procedures::facades::builder_base::{MutationResult, ConfigValidator};
+use crate::config::PageRankConfig;
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult};
+use crate::procedures::facades::traits::{CentralityScore, Result};
+use crate::procedures::pagerank::run_pagerank_pregel;
+use crate::projection::orientation::Orientation;
+use crate::projection::RelationshipType;
+use crate::config::base_types::AlgoBaseConfig;
+use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use std::collections::HashSet;
+use std::sync::Arc;
+use std::time::Instant;
 
 // ============================================================================
 // Statistics Type
@@ -83,28 +92,62 @@ pub struct PageRankStats {
 ///     .damping_factor(0.85)
 ///     .tolerance(1e-5);
 /// ```
+#[derive(Clone)]
 pub struct PageRankBuilder {
+    graph_store: Arc<DefaultGraphStore>,
+    direction: String,
+    /// Pregel concurrency (Rayon worker threads)
+    concurrency: usize,
     /// Maximum iterations to run
     iterations: u32,
-    /// Probability of teleporting to random node (1 - damping_factor = teleport_prob)
+    /// Probability of following a relationship (damping)
     damping_factor: f64,
-    /// Convergence threshold
+    /// Convergence threshold on delta
     tolerance: f64,
+    /// Optional source nodes for personalized PageRank
+    source_nodes: Option<Vec<u64>>,
 }
 
 impl PageRankBuilder {
-    /// Create a new PageRank builder with defaults
+    /// Create a new PageRank builder bound to a live graph store.
     ///
     /// Defaults:
     /// - iterations: 20
     /// - damping_factor: 0.85
     /// - tolerance: 1e-4
-    pub fn new() -> Self {
+    pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
+            graph_store,
+            direction: "outgoing".to_string(),
+            concurrency: num_cpus::get().max(1),
             iterations: 20,
             damping_factor: 0.85,
             tolerance: 1e-4,
+            source_nodes: None,
         }
+    }
+
+    /// Set Pregel concurrency (Rayon worker threads).
+    ///
+    /// Use `1` for deterministic single-threaded debugging.
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
+        self
+    }
+
+    /// Direction of traversal: "outgoing", "incoming", or "both".
+    ///
+    /// PageRank typically uses outgoing (natural) relationships.
+    pub fn direction(mut self, direction: &str) -> Self {
+        self.direction = direction.to_string();
+        self
+    }
+
+    /// Personalize PageRank by only seeding `source_nodes` with $\alpha$.
+    /// When set, all non-source nodes start at 0.
+    pub fn source_nodes(mut self, source_nodes: Vec<u64>) -> Self {
+        self.source_nodes = Some(source_nodes);
+        self
     }
 
     /// Set maximum iterations
@@ -145,10 +188,59 @@ impl PageRankBuilder {
 
     /// Validate configuration before execution
     fn validate(&self) -> Result<()> {
+        ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
         ConfigValidator::iterations(self.iterations, "iterations")?;
         ConfigValidator::in_range(self.damping_factor, 0.01, 0.99, "damping_factor")?;
         ConfigValidator::positive(self.tolerance, "tolerance")?;
         Ok(())
+    }
+
+    fn orientation(&self) -> Orientation {
+        match self.direction.as_str() {
+            "incoming" => Orientation::Reverse,
+            "outgoing" => Orientation::Natural,
+            _ => Orientation::Undirected,
+        }
+    }
+
+    fn compute_scores(&self) -> Result<(Vec<f64>, u32, bool, std::time::Duration)> {
+        self.validate()?;
+        let start = Instant::now();
+
+        let rel_types: HashSet<RelationshipType> = HashSet::new();
+        let graph_view = self
+            .graph_store
+            .get_graph_with_types_and_orientation(&rel_types, self.orientation())
+            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+
+        let pr_config = PageRankConfig::builder()
+            .base(AlgoBaseConfig {
+                concurrency: self.concurrency,
+                ..AlgoBaseConfig::default()
+            })
+            .max_iterations(self.iterations as usize)
+            .damping_factor(self.damping_factor)
+            .tolerance(self.tolerance)
+            .build()
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "PageRankConfig invalid: {e}"
+                ))
+            })?;
+
+        let source_set = self
+            .source_nodes
+            .clone()
+            .map(|v| v.into_iter().collect::<std::collections::HashSet<u64>>());
+
+        let run = run_pagerank_pregel(graph_view, pr_config, source_set);
+
+        Ok((
+            run.scores,
+            run.ran_iterations as u32,
+            run.did_converge,
+            start.elapsed(),
+        ))
     }
 
     /// Stream mode: Get PageRank score for each node
@@ -166,9 +258,15 @@ impl PageRankBuilder {
     /// }
     /// ```
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
-        self.validate()?;
-        // TODO: Call actual algorithm spec and return stream
-        Ok(Box::new(std::iter::empty()))
+        let (scores, _iters, _converged, _elapsed) = self.compute_scores()?;
+        let iter = scores
+            .into_iter()
+            .enumerate()
+            .map(|(node_id, score)| CentralityScore {
+                node_id: node_id as u64,
+                score,
+            });
+        Ok(Box::new(iter))
     }
 
     /// Stats mode: Get aggregated statistics
@@ -185,19 +283,54 @@ impl PageRankBuilder {
     /// println!("Converged: {}, Iterations: {}", stats.converged, stats.iterations_ran);
     /// ```
     pub fn stats(self) -> Result<PageRankStats> {
-        self.validate()?;
-        // TODO: Call actual algorithm spec and compute statistics
+        let (scores, iterations_ran, converged, elapsed) = self.compute_scores()?;
+        if scores.is_empty() {
+            return Ok(PageRankStats {
+                min: 0.0,
+                max: 0.0,
+                mean: 0.0,
+                stddev: 0.0,
+                p50: 0.0,
+                p90: 0.0,
+                p99: 0.0,
+                iterations_ran,
+                converged,
+                execution_time_ms: elapsed.as_millis() as u64,
+            });
+        }
+
+        let mut sorted = scores.clone();
+        sorted.sort_by(|a, b| a.total_cmp(b));
+        let min = *sorted.first().unwrap();
+        let max = *sorted.last().unwrap();
+        let mean = scores.iter().sum::<f64>() / scores.len() as f64;
+        let var = scores
+            .iter()
+            .map(|x| {
+                let d = x - mean;
+                d * d
+            })
+            .sum::<f64>()
+            / scores.len() as f64;
+        let stddev = var.sqrt();
+
+        let percentile = |p: f64| -> f64 {
+            let idx = ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round()
+                as usize;
+            sorted[idx]
+        };
+
         Ok(PageRankStats {
-            min: 0.0,
-            max: 0.0,
-            mean: 0.0,
-            stddev: 0.0,
-            p50: 0.0,
-            p90: 0.0,
-            p99: 0.0,
-            iterations_ran: 0,
-            converged: false,
-            execution_time_ms: 0,
+            min,
+            max,
+            mean,
+            stddev,
+            p50: percentile(50.0),
+            p90: percentile(90.0),
+            p99: percentile(99.0),
+            iterations_ran,
+            converged,
+            execution_time_ms: elapsed.as_millis() as u64,
         })
     }
 
@@ -217,18 +350,9 @@ impl PageRankBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        // TODO: Call actual algorithm spec and store results
-        Ok(MutationResult::new(
-            0,
-            property_name.to_string(),
-            std::time::Duration::from_millis(0),
+        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
+            "PageRank mutate/write is not implemented yet".to_string(),
         ))
-    }
-}
-
-impl Default for PageRankBuilder {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -240,9 +364,21 @@ impl Default for PageRankBuilder {
 mod tests {
     use super::*;
 
+    use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
+
+    fn store() -> Arc<DefaultGraphStore> {
+        let config = RandomGraphConfig {
+            seed: Some(23),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        Arc::new(DefaultGraphStore::random(&config).unwrap())
+    }
+
     #[test]
     fn test_builder_defaults() {
-        let builder = PageRankBuilder::new();
+        let builder = PageRankBuilder::new(store());
         assert_eq!(builder.iterations, 20);
         assert_eq!(builder.damping_factor, 0.85);
         assert_eq!(builder.tolerance, 1e-4);
@@ -250,7 +386,7 @@ mod tests {
 
     #[test]
     fn test_builder_fluent_chain() {
-        let builder = PageRankBuilder::new()
+        let builder = PageRankBuilder::new(store())
             .iterations(30)
             .damping_factor(0.90)
             .tolerance(1e-5);
@@ -262,64 +398,101 @@ mod tests {
 
     #[test]
     fn test_validate_iterations() {
-        let builder = PageRankBuilder::new().iterations(0);
+        let builder = PageRankBuilder::new(store()).iterations(0);
         assert!(builder.validate().is_err()); // 0 is invalid
 
-        let builder = PageRankBuilder::new().iterations(2_000_000);
+        let builder = PageRankBuilder::new(store()).iterations(2_000_000);
         assert!(builder.validate().is_err()); // Too large is invalid
 
-        let builder = PageRankBuilder::new().iterations(50);
+        let builder = PageRankBuilder::new(store()).iterations(50);
         assert!(builder.validate().is_ok()); // 50 is valid
     }
 
     #[test]
     fn test_validate_damping_factor() {
-        let builder = PageRankBuilder::new().damping_factor(0.0);
+        let builder = PageRankBuilder::new(store()).damping_factor(0.0);
         assert!(builder.validate().is_err()); // 0.0 is invalid
 
-        let builder = PageRankBuilder::new().damping_factor(1.0);
+        let builder = PageRankBuilder::new(store()).damping_factor(1.0);
         assert!(builder.validate().is_err()); // 1.0 is invalid
 
-        let builder = PageRankBuilder::new().damping_factor(0.85);
+        let builder = PageRankBuilder::new(store()).damping_factor(0.85);
         assert!(builder.validate().is_ok()); // 0.85 is valid
     }
 
     #[test]
     fn test_validate_tolerance() {
-        let builder = PageRankBuilder::new().tolerance(0.0);
+        let builder = PageRankBuilder::new(store()).tolerance(0.0);
         assert!(builder.validate().is_err()); // 0.0 is invalid (not positive)
 
-        let builder = PageRankBuilder::new().tolerance(1e-4);
+        let builder = PageRankBuilder::new(store()).tolerance(1e-4);
         assert!(builder.validate().is_ok()); // positive is valid
     }
 
     #[test]
     fn test_stream_requires_validation() {
-        let builder = PageRankBuilder::new().iterations(0); // Invalid
+        let builder = PageRankBuilder::new(store()).iterations(0); // Invalid
         assert!(builder.stream().is_err());
     }
 
     #[test]
     fn test_stats_requires_validation() {
-        let builder = PageRankBuilder::new().damping_factor(0.0); // Invalid
+        let builder = PageRankBuilder::new(store()).damping_factor(0.0); // Invalid
         assert!(builder.stats().is_err());
     }
 
     #[test]
     fn test_mutate_requires_validation() {
-        let builder = PageRankBuilder::new().tolerance(0.0); // Invalid
+        let builder = PageRankBuilder::new(store()).tolerance(0.0); // Invalid
         assert!(builder.mutate("pr").is_err());
     }
 
     #[test]
     fn test_mutate_validates_property_name() {
-        let builder = PageRankBuilder::new(); // Valid config
+        let builder = PageRankBuilder::new(store()); // Valid config
         assert!(builder.mutate("").is_err()); // But empty property name
     }
 
     #[test]
     fn test_mutate_accepts_valid_property() {
-        let builder = PageRankBuilder::new();
-        assert!(builder.mutate("pagerank").is_ok());
+        let builder = PageRankBuilder::new(store());
+        assert!(builder.mutate("pagerank").is_err());
+    }
+
+    #[test]
+    fn test_stream_returns_node_count_rows() {
+        let rows: Vec<_> = PageRankBuilder::new(store()).stream().unwrap().collect();
+        assert_eq!(rows.len(), 8);
+    }
+
+    #[test]
+    fn test_stats_shape() {
+        let stats = PageRankBuilder::new(store()).stats().unwrap();
+        assert!(stats.max >= stats.min);
+    }
+
+    #[test]
+    fn test_cycle_three_nodes_equal_scores() {
+        let config = RandomGraphConfig {
+            seed: Some(7),
+            node_count: 3,
+            // 1.0 density gives a symmetric complete digraph in the generator, which
+            // should yield equal PageRank scores.
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+
+        let scores: Vec<_> = PageRankBuilder::new(store)
+            .iterations(50)
+            .tolerance(1e-9)
+            .stream()
+            .unwrap()
+            .map(|r| r.score)
+            .collect();
+
+        assert_eq!(scores.len(), 3);
+        assert!((scores[0] - scores[1]).abs() < 1e-8);
+        assert!((scores[1] - scores[2]).abs() < 1e-8);
     }
 }

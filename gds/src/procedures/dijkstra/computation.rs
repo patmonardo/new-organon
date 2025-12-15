@@ -8,11 +8,12 @@
 
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::cmp::Ordering;
+use crate::types::graph::id_map::NodeId;
 
 /// Priority queue item for Dijkstra algorithm
 #[derive(Debug, Clone)]
 struct QueueItem {
-    node_id: u32,
+    node_id: NodeId,
     cost: f64,
 }
 
@@ -47,19 +48,19 @@ pub struct DijkstraComputationRuntime {
     priority_queue: BinaryHeap<QueueItem>,
 
     /// Visited set
-    visited: HashSet<u32>,
+    visited: HashSet<NodeId>,
 
     /// Predecessor map for path reconstruction
-    predecessors: HashMap<u32, Option<u32>>,
+    predecessors: HashMap<NodeId, Option<NodeId>>,
 
     /// Relationship ID map (if tracking relationships)
-    relationship_ids: HashMap<u32, Option<u32>>,
+    relationship_ids: HashMap<NodeId, Option<NodeId>>,
 
     /// Cost map for all nodes
-    costs: HashMap<u32, f64>,
+    costs: HashMap<NodeId, f64>,
 
     /// Source node
-    source_node: u32,
+    source_node: NodeId,
 
     /// Whether to track relationship IDs
     track_relationships: bool,
@@ -77,7 +78,7 @@ impl DijkstraComputationRuntime {
     ///
     /// Translation of: Constructor initialization (lines 118-140)
     pub fn new(
-        source_node: u32,
+        source_node: NodeId,
         track_relationships: bool,
         concurrency: usize,
         use_heuristic: bool,
@@ -98,7 +99,13 @@ impl DijkstraComputationRuntime {
     /// Initialize the computation runtime
     ///
     /// Translation of: Initialization in `compute()` method (lines 170-173)
-    pub fn initialize(&mut self, source_node: u32, track_relationships: bool, use_heuristic: bool, node_count: usize) {
+    pub fn initialize(
+        &mut self,
+        source_node: NodeId,
+        track_relationships: bool,
+        use_heuristic: bool,
+        node_count: usize,
+    ) {
         self.source_node = source_node;
         self.track_relationships = track_relationships;
         self.use_heuristic = use_heuristic;
@@ -111,7 +118,8 @@ impl DijkstraComputationRuntime {
         self.costs.clear();
 
         // Initialize with infinite costs
-        for node_id in 0..(node_count as u32) {
+        for idx in 0..node_count {
+            let node_id = idx as NodeId;
             self.costs.insert(node_id, f64::INFINITY);
             self.predecessors.insert(node_id, None);
             if self.track_relationships {
@@ -123,7 +131,7 @@ impl DijkstraComputationRuntime {
     /// Add a node to the priority queue
     ///
     /// Translation of: `queue.add()` calls (lines 173, 228)
-    pub fn add_to_queue(&mut self, node_id: u32, cost: f64) {
+    pub fn add_to_queue(&mut self, node_id: NodeId, cost: f64) {
         self.costs.insert(node_id, cost);
         self.priority_queue.push(QueueItem { node_id, cost });
     }
@@ -131,7 +139,7 @@ impl DijkstraComputationRuntime {
     /// Pop the node with minimum cost from the queue
     ///
     /// Translation of: `queue.pop()` method (line 189)
-    pub fn pop_from_queue(&mut self) -> (u32, f64) {
+    pub fn pop_from_queue(&mut self) -> (NodeId, f64) {
         if let Some(item) = self.priority_queue.pop() {
             (item.node_id, item.cost)
         } else {
@@ -149,7 +157,7 @@ impl DijkstraComputationRuntime {
     /// Check if a node is in the queue
     ///
     /// Translation of: `queue.containsElement()` method (line 226)
-    pub fn is_in_queue(&self, node_id: u32) -> bool {
+    pub fn is_in_queue(&self, node_id: NodeId) -> bool {
         self.costs
             .get(&node_id)
             .is_some_and(|&cost| cost != f64::INFINITY)
@@ -158,14 +166,14 @@ impl DijkstraComputationRuntime {
     /// Get the cost of a node
     ///
     /// Translation of: `queue.cost()` method (lines 190, 260)
-    pub fn get_cost(&self, node_id: u32) -> f64 {
+    pub fn get_cost(&self, node_id: NodeId) -> f64 {
         self.costs.get(&node_id).copied().unwrap_or(f64::INFINITY)
     }
 
     /// Update the cost of a node in the queue
     ///
     /// Translation of: `queue.set()` method (line 235)
-    pub fn update_queue_cost(&mut self, node_id: u32, new_cost: f64) {
+    pub fn update_queue_cost(&mut self, node_id: NodeId, new_cost: f64) {
         self.costs.insert(node_id, new_cost);
         // Note: In a real implementation, we'd need to update the priority queue
         // For now, we'll add a new item (the old one will be ignored when visited)
@@ -175,35 +183,35 @@ impl DijkstraComputationRuntime {
     /// Mark a node as visited
     ///
     /// Translation of: `visited.set()` method (line 191)
-    pub fn mark_visited(&mut self, node_id: u32) {
+    pub fn mark_visited(&mut self, node_id: NodeId) {
         self.visited.insert(node_id);
     }
 
     /// Check if a node is visited
     ///
     /// Translation of: `visited.get()` method (line 222)
-    pub fn is_visited(&self, node_id: u32) -> bool {
+    pub fn is_visited(&self, node_id: NodeId) -> bool {
         self.visited.contains(&node_id)
     }
 
     /// Set the predecessor of a node
     ///
     /// Translation of: `predecessors.put()` method (lines 229, 236)
-    pub fn set_predecessor(&mut self, node_id: u32, predecessor: Option<u32>) {
+    pub fn set_predecessor(&mut self, node_id: NodeId, predecessor: Option<NodeId>) {
         self.predecessors.insert(node_id, predecessor);
     }
 
     /// Get the predecessor of a node
     ///
     /// Translation of: `predecessors.getOrDefault()` method (line 271)
-    pub fn get_predecessor(&self, node_id: u32) -> Option<u32> {
+    pub fn get_predecessor(&self, node_id: NodeId) -> Option<NodeId> {
         self.predecessors.get(&node_id).copied().flatten()
     }
 
     /// Set the relationship ID of a node
     ///
     /// Translation of: `relationships.put()` method (lines 231, 238)
-    pub fn set_relationship_id(&mut self, node_id: u32, relationship_id: Option<u32>) {
+    pub fn set_relationship_id(&mut self, node_id: NodeId, relationship_id: Option<NodeId>) {
         if self.track_relationships {
             self.relationship_ids.insert(node_id, relationship_id);
         }
@@ -212,7 +220,7 @@ impl DijkstraComputationRuntime {
     /// Get the relationship ID of a node
     ///
     /// Translation of: `relationships.getOrDefault()` method (line 273)
-    pub fn get_relationship_id(&self, node_id: u32) -> Option<u32> {
+    pub fn get_relationship_id(&self, node_id: NodeId) -> Option<NodeId> {
         if self.track_relationships {
             self.relationship_ids.get(&node_id).copied().flatten()
         } else {
@@ -231,7 +239,7 @@ impl DijkstraComputationRuntime {
     }
 
     /// Get source node
-    pub fn source_node(&self) -> u32 {
+    pub fn source_node(&self) -> NodeId {
         self.source_node
     }
 

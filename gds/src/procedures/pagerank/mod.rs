@@ -36,7 +36,7 @@ pub mod memory_estimation;
 pub mod degree_functions;
 
 pub use spec::{PageRankAlgorithmSpec, PageRankComputationResult};
-pub use pregel_computation::PageRankPregelComputation;
+pub use pregel_computation::{PAGE_RANK, PageRankPregelRunResult, run_pagerank_pregel};
 pub use memory_estimation::{PageRankMemoryEstimation, estimate_pagerank_memory};
 pub use degree_functions::{
     DegreeFunction,

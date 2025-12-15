@@ -7,8 +7,11 @@ fn percentile(sorted: &[f64], p: f64) -> f64 {
 }
 
 pub fn centrality_summary(values: &[f64]) -> HashMap<String, f64> {
+    if values.iter().any(|v| !v.is_finite()) {
+        return HashMap::new();
+    }
     let mut v = values.to_vec();
-    v.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    v.sort_by(|a, b| a.total_cmp(b));
     if v.is_empty() { return HashMap::new(); }
     let min = *v.first().unwrap();
     let max = *v.last().unwrap();
@@ -28,8 +31,11 @@ pub fn centrality_summary(values: &[f64]) -> HashMap<String, f64> {
 
 pub fn similarity_summary(values: &[f64]) -> HashMap<String, f64> {
     // includes stdDev and p100 like Java util
+    if values.iter().any(|v| !v.is_finite()) {
+        return HashMap::new();
+    }
     let mut v = values.to_vec();
-    v.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    v.sort_by(|a, b| a.total_cmp(b));
     if v.is_empty() { return HashMap::new(); }
     let min = *v.first().unwrap();
     let max = *v.last().unwrap();
@@ -50,7 +56,7 @@ pub fn community_summary(values: &[u64]) -> HashMap<String, f64> {
     // Convert u64 histogram values into f64 stats akin to AbstractHistogram
     if values.is_empty() { return HashMap::new(); }
     let mut v: Vec<f64> = values.iter().map(|x| *x as f64).collect();
-    v.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    v.sort_by(|a, b| a.total_cmp(b));
     let min = *v.first().unwrap();
     let max = *v.last().unwrap();
     let mean = v.iter().sum::<f64>() / v.len() as f64;

@@ -11,7 +11,7 @@
 //!    - For each reached node v at depth d: accumulate 1/d to centrality[s]
 //! 2. Normalize: divide by (n-1) for each node
 
-use crate::procedures::msbfs::SimpleMSBFS;
+use crate::procedures::msbfs::{AggregatedNeighborProcessingMsBfs, OMEGA};
 
 #[derive(Clone)]
 pub struct HarmonicComputationResult {
@@ -20,14 +20,14 @@ pub struct HarmonicComputationResult {
 
 pub struct HarmonicComputationRuntime {
     centralities: Vec<f64>,
-    msbfs: SimpleMSBFS,
+    msbfs: AggregatedNeighborProcessingMsBfs,
 }
 
 impl HarmonicComputationRuntime {
     pub fn new(node_count: usize) -> Self {
         Self {
             centralities: vec![0.0f64; node_count],
-            msbfs: SimpleMSBFS::new(node_count),
+            msbfs: AggregatedNeighborProcessingMsBfs::new(node_count),
         }
     }
 
@@ -41,31 +41,35 @@ impl HarmonicComputationRuntime {
             *c = 0.0;
         }
 
-        // Edge case: single node has no other nodes to reach
-        if node_count == 1 {
+        // Edge case: single node has no other nodes to reach.
+        if node_count <= 1 {
             return HarmonicComputationResult {
                 centralities: self.centralities.clone(),
             };
         }
 
-        // Phase 1: For each source node, run MSBFS and accumulate inverse farness
-        for source_node in 0..node_count {
-            self.msbfs.compute(
-                &[source_node],
-                |_node_id, depth, _sources_mask| {
-                    // Accumulate 1/distance for all reached nodes
-                    // Skip the source itself (depth == 0)
-                    if depth > 0 {
-                        let inverse_distance = 1.0 / (depth as f64);
-                        self.centralities[source_node] += inverse_distance;
-                    }
-                },
+        // Phase 1: ANP MSBFS in batches of up to 64 sources.
+        // Matches Neo4j GDS: for each reached node at depth d, add (len * 1/d)
+        // to the reached node's inverse farness.
+        for source_offset in (0..node_count).step_by(OMEGA) {
+            let source_len = (source_offset + OMEGA).min(node_count) - source_offset;
+
+            self.msbfs.run(
+                source_offset,
+                source_len,
+                false,
                 &get_neighbors,
+                |node_id, depth, sources_mask| {
+                    if depth == 0 {
+                        return;
+                    }
+                    let len = sources_mask.count_ones() as f64;
+                    self.centralities[node_id] += len * (1.0 / depth as f64);
+                },
             );
         }
 
         // Phase 2: Normalize by (n-1)
-        // This converts inverse farness to harmonic centrality
         let normalization_factor = 1.0 / ((node_count - 1) as f64);
         for centrality in self.centralities.iter_mut() {
             *centrality *= normalization_factor;

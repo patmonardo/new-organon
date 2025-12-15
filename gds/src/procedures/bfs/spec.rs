@@ -11,6 +11,7 @@ use super::storage::BfsStorageRuntime;
 use super::computation::BfsComputationRuntime;
 use crate::projection::RelationshipType;
 use crate::projection::orientation::Orientation;
+use crate::types::graph::id_map::NodeId;
 use serde::{Deserialize, Serialize};
 
 /// BFS algorithm configuration
@@ -20,9 +21,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BfsConfig {
     /// Source node for BFS traversal
-    pub source_node: u32,
+    pub source_node: NodeId,
     /// Target nodes to find (empty means find all reachable)
-    pub target_nodes: Vec<u32>,
+    pub target_nodes: Vec<NodeId>,
     /// Maximum depth to traverse (None means unlimited)
     pub max_depth: Option<u32>,
     /// Whether to track paths during traversal
@@ -49,6 +50,20 @@ impl Default for BfsConfig {
 impl BfsConfig {
     /// Validate configuration parameters
     pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.source_node < 0 {
+            return Err(ConfigError::FieldValidation {
+                field: "source_node".to_string(),
+                message: "must be >= 0".to_string(),
+            });
+        }
+
+        if self.target_nodes.iter().any(|&node_id| node_id < 0) {
+            return Err(ConfigError::FieldValidation {
+                field: "target_nodes".to_string(),
+                message: "all target nodes must be >= 0".to_string(),
+            });
+        }
+
         if self.concurrency == 0 {
             return Err(ConfigError::FieldValidation {
                 field: "concurrency".to_string(),
@@ -66,7 +81,7 @@ impl BfsConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BfsResult {
     /// Visited nodes with their distances from source
-    pub visited_nodes: Vec<(u32, u32)>,
+    pub visited_nodes: Vec<(NodeId, u32)>,
     /// Paths found (if track_paths was enabled)
     pub paths: Vec<BfsPathResult>,
     /// Total nodes visited
@@ -79,11 +94,11 @@ pub struct BfsResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BfsPathResult {
     /// Source node
-    pub source_node: u32,
+    pub source_node: NodeId,
     /// Target node
-    pub target_node: u32,
+    pub target_node: NodeId,
     /// Path as sequence of node IDs
-    pub node_ids: Vec<u32>,
+    pub node_ids: Vec<NodeId>,
     /// Path length (number of edges)
     pub path_length: u32,
 }

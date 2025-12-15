@@ -10,6 +10,7 @@ use std::collections::HashSet;
 use crate::projection::orientation::Orientation;
 use serde::{Deserialize, Serialize};
 // use serde_json::json; // not needed here
+use crate::types::graph::id_map::NodeId;
 
 /// A* algorithm configuration
 ///
@@ -17,9 +18,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AStarConfig {
     /// Source node ID
-    pub source_node: usize,
+    pub source_node: NodeId,
     /// Target node ID
-    pub target_node: usize,
+    pub target_node: NodeId,
     /// Latitude property name
     pub latitude_property: String,
     /// Longitude property name
@@ -99,7 +100,7 @@ impl AStarConfig {
 #[derive(Debug, Clone)]
 pub struct AStarResult {
     /// Path from source to target
-    pub path: Option<Vec<usize>>,
+    pub path: Option<Vec<NodeId>>,
     /// Total cost of the path
     pub total_cost: f64,
     /// Execution time in milliseconds
@@ -111,7 +112,7 @@ pub struct AStarResult {
 impl AStarResult {
     /// Create a new A* result
     pub fn new(
-        path: Option<Vec<usize>>,
+        path: Option<Vec<NodeId>>,
         total_cost: f64,
         execution_time_ms: u64,
         nodes_explored: usize,

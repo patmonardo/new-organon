@@ -10,6 +10,7 @@ use super::spec::{BfsResult, BfsPathResult};
 use crate::procedures::traversal::{ExitPredicate, Aggregator, FollowExitPredicate, TargetExitPredicate, OneHopAggregator};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::Graph;
+use crate::types::graph::id_map::NodeId;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// BFS Storage Runtime - handles persistent data access and algorithm orchestration
@@ -18,9 +19,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 /// This implements the "Gross pole" for accessing graph data using parallel BFS architecture
 pub struct BfsStorageRuntime {
     /// Source node for BFS traversal
-    pub source_node: u32,
+    pub source_node: NodeId,
     /// Target nodes to find
-    pub target_nodes: Vec<u32>,
+    pub target_nodes: Vec<NodeId>,
     /// Maximum depth to traverse
     pub max_depth: Option<u32>,
     /// Whether to track paths during traversal
@@ -38,8 +39,8 @@ pub struct BfsStorageRuntime {
 impl BfsStorageRuntime {
     /// Create new BFS storage runtime with default predicates
     pub fn new(
-        source_node: u32,
-        target_nodes: Vec<u32>,
+        source_node: NodeId,
+        target_nodes: Vec<NodeId>,
         max_depth: Option<u32>,
         track_paths: bool,
         concurrency: usize,
@@ -66,8 +67,8 @@ impl BfsStorageRuntime {
     /// Create new BFS storage runtime with custom predicates
     #[allow(clippy::too_many_arguments)]
     pub fn with_predicates(
-        source_node: u32,
-        target_nodes: Vec<u32>,
+        source_node: NodeId,
+        target_nodes: Vec<NodeId>,
         max_depth: Option<u32>,
         track_paths: bool,
         concurrency: usize,
@@ -99,9 +100,20 @@ impl BfsStorageRuntime {
 
         // Parallel BFS state - following Java GDS architecture
         let node_count = graph.map(|g| g.node_count()).unwrap_or(1000);
-        let mut traversed_nodes = vec![0u32; node_count];
+        let mut traversed_nodes = vec![0 as NodeId; node_count];
         let mut weights = vec![0.0f64; node_count];
         let mut visited = vec![false; node_count];
+
+        let node_id_to_index = |node_id: NodeId| -> Option<usize> {
+            if node_id < 0 {
+                return None;
+            }
+            let index = node_id as usize;
+            if index >= node_count {
+                return None;
+            }
+            Some(index)
+        };
 
         // Atomic counters for parallel processing
         let traversed_nodes_index = AtomicUsize::new(0);
@@ -109,7 +121,14 @@ impl BfsStorageRuntime {
         let target_found_index = AtomicUsize::new(usize::MAX);
 
         // Initialize with source node
-        visited[self.source_node as usize] = true;
+        let source_index = node_id_to_index(self.source_node).ok_or_else(|| {
+            AlgorithmError::Execution(format!(
+                "source_node {} is out of bounds for node_count {}",
+                self.source_node, node_count
+            ))
+        })?;
+
+        visited[source_index] = true;
         traversed_nodes[0] = self.source_node;
         weights[0] = 0.0;
 
@@ -150,8 +169,12 @@ impl BfsStorageRuntime {
                         // Relax node - get neighbors and add to next level
                         let neighbors = self.get_neighbors(graph, node_id);
                         for neighbor in neighbors {
-                            if !visited[neighbor as usize] {
-                                visited[neighbor as usize] = true;
+                            let Some(neighbor_index) = node_id_to_index(neighbor) else {
+                                continue;
+                            };
+
+                            if !visited[neighbor_index] {
+                                visited[neighbor_index] = true;
                                 let new_index = traversed_nodes_length.fetch_add(1, Ordering::SeqCst);
                                 if new_index < node_count {
                                     traversed_nodes[new_index] = neighbor;
@@ -190,8 +213,12 @@ impl BfsStorageRuntime {
             traversed_nodes_length.load(Ordering::SeqCst)
         };
 
-        let visited_nodes: Vec<(u32, u32)> = (0..final_length)
-            .map(|i| (traversed_nodes[i], i as u32))
+        let visited_nodes: Vec<(NodeId, u32)> = (0..final_length)
+            .map(|i| {
+                let node_id = traversed_nodes[i];
+                let distance = computation.get_distance(node_id).unwrap_or(0);
+                (node_id, distance)
+            })
             .collect();
 
         let paths = if self.track_paths {
@@ -211,7 +238,7 @@ impl BfsStorageRuntime {
     }
 
     /// Build paths from traversed nodes
-    fn build_paths(&self, traversed_nodes: &[u32]) -> Vec<BfsPathResult> {
+    fn build_paths(&self, traversed_nodes: &[NodeId]) -> Vec<BfsPathResult> {
         let mut paths = Vec::new();
 
         // For each target node, find its position and build path
@@ -231,11 +258,11 @@ impl BfsStorageRuntime {
     }
 
     /// Get neighbors of a node (graph-backed when available; mock fallback)
-    fn get_neighbors(&self, graph: Option<&dyn Graph>, node: u32) -> Vec<u32> {
+    fn get_neighbors(&self, graph: Option<&dyn Graph>, node: NodeId) -> Vec<NodeId> {
         if let Some(g) = graph {
             let fallback: f64 = 1.0;
-            let stream = g.stream_relationships(node as i64, fallback);
-            stream.into_iter().map(|c| c.target_id() as u32).collect()
+            let stream = g.stream_relationships(node, fallback);
+            stream.into_iter().map(|c| c.target_id()).collect()
         } else {
             match node {
                 0 => vec![1, 2],

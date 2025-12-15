@@ -29,6 +29,9 @@ pub mod applications;
 pub use types::*;
 pub use values::*;
 
+// User-facing facade entrypoint (live-by-default).
+pub use procedures::facades::Graph;
+
 // Re-export procedure macros for procedures module
 #[cfg(feature = "procedures")]
 pub use projection::codegen::algorithm::*;

@@ -95,7 +95,7 @@ mod tests {
                 costs: vec![0.0, 3.5, 7.0, 10.5],
             },
         ];
-        
+
         let result = PathFindingResult::new(paths);
         assert_eq!(result.path_count(), 1);
         assert!(!result.is_empty());
@@ -128,10 +128,10 @@ mod tests {
                 costs: vec![0.0, 2.0, 6.0, 8.0],
             },
         ];
-        
+
         let mut result = PathFindingResult::new(paths);
         let first = result.find_first();
-        
+
         assert!(first.is_some());
         let first_path = first.unwrap();
         assert_eq!(first_path.index, 0);
@@ -150,14 +150,14 @@ mod tests {
                 costs: vec![0.0, 3.5, 7.0, 10.5],
             },
         ];
-        
+
         let mut result = PathFindingResult::new(paths);
         let mut count = 0;
-        
+
         result.for_each_path(|_path| {
             count += 1;
         });
-        
+
         assert_eq!(count, 1);
     }
 
@@ -173,10 +173,10 @@ mod tests {
                 costs: vec![0.0, 3.5, 7.0, 10.5],
             },
         ];
-        
+
         let mut result = PathFindingResult::new(paths);
-        let target_nodes: Vec<u32> = result.map_paths(|path| path.target_node);
-        
+        let target_nodes: Vec<crate::types::graph::id_map::NodeId> = result.map_paths(|path| path.target_node);
+
         assert_eq!(target_nodes, vec![5]);
     }
 
@@ -192,10 +192,10 @@ mod tests {
                 costs: vec![0.0, 3.5, 7.0, 10.5],
             },
         ];
-        
+
         let mut result = PathFindingResult::new(paths);
         let path_set = result.path_set();
-        
+
         assert_eq!(path_set.len(), 1);
     }
 }

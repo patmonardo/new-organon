@@ -30,9 +30,8 @@ mod tests {
     fn test_betweenness_single_edge() {
         let graph = build_graph(vec![(0, 1)], 2);
         let mut runtime = BetweennessCentralityComputationRuntime::new(2);
-        let result = runtime.compute(2, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(2, 2.0, &get_neighbors);
 
         assert!((result.centralities[0]).abs() < 1e-10);
         assert!((result.centralities[1]).abs() < 1e-10);
@@ -42,9 +41,8 @@ mod tests {
     fn test_betweenness_path_three_nodes() {
         let graph = build_graph(vec![(0, 1), (1, 2)], 3);
         let mut runtime = BetweennessCentralityComputationRuntime::new(3);
-        let result = runtime.compute(3, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(3, 2.0, &get_neighbors);
 
         assert!((result.centralities[0]).abs() < 1e-10);
         assert!((result.centralities[1] - 1.0).abs() < 1e-10);
@@ -55,9 +53,8 @@ mod tests {
     fn test_betweenness_path_four_nodes() {
         let graph = build_graph(vec![(0, 1), (1, 2), (2, 3)], 4);
         let mut runtime = BetweennessCentralityComputationRuntime::new(4);
-        let result = runtime.compute(4, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(4, 2.0, &get_neighbors);
 
         assert!((result.centralities[0]).abs() < 1e-10);
         assert!(result.centralities[1] > 0.0);
@@ -69,9 +66,8 @@ mod tests {
     fn test_betweenness_star_graph() {
         let graph = build_graph(vec![(0, 1), (0, 2), (0, 3), (0, 4)], 5);
         let mut runtime = BetweennessCentralityComputationRuntime::new(5);
-        let result = runtime.compute(5, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(5, 2.0, &get_neighbors);
 
         assert!((result.centralities[0] - 6.0).abs() < 1e-10);
         for i in 1..5 {
@@ -86,9 +82,8 @@ mod tests {
             4,
         );
         let mut runtime = BetweennessCentralityComputationRuntime::new(4);
-        let result = runtime.compute(4, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(4, 2.0, &get_neighbors);
 
         for i in 0..4 {
             assert!((result.centralities[i]).abs() < 1e-10);
@@ -99,13 +94,12 @@ mod tests {
     fn test_betweenness_diamond_graph() {
         let graph = build_graph(vec![(0, 1), (0, 2), (1, 3), (2, 3)], 4);
         let mut runtime = BetweennessCentralityComputationRuntime::new(4);
-        let result = runtime.compute(4, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(4, 2.0, &get_neighbors);
 
         // Nodes 1 and 2 should have equal centrality (symmetric structure)
         assert!((result.centralities[1] - result.centralities[2]).abs() < 1e-10);
-        
+
         // All centralities should be non-negative
         for i in 0..4 {
             assert!(result.centralities[i] >= 0.0);
@@ -116,9 +110,8 @@ mod tests {
     fn test_betweenness_cycle_four_nodes() {
         let graph = build_graph(vec![(0, 1), (1, 2), (2, 3), (3, 0)], 4);
         let mut runtime = BetweennessCentralityComputationRuntime::new(4);
-        let result = runtime.compute(4, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(4, 2.0, &get_neighbors);
 
         // In a 4-cycle, all nodes have equal centrality (symmetric)
         let expected_centrality = result.centralities[0];
@@ -132,14 +125,13 @@ mod tests {
         // Two triangles sharing a single node: (0,1,2) connected to (0,3,4)
         let graph = build_graph(vec![(0, 1), (1, 2), (0, 2), (0, 3), (3, 4), (0, 4)], 5);
         let mut runtime = BetweennessCentralityComputationRuntime::new(5);
-        let result = runtime.compute(5, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(5, 2.0, &get_neighbors);
 
         // Node 0 connects the two triangles
         assert!(result.centralities[0] > 0.0,
                 "Node 0 should have high centrality (bridge)");
-        
+
         // All nodes should have non-negative centrality
         for i in 0..5 {
             assert!(result.centralities[i] >= 0.0,

@@ -18,7 +18,7 @@
 //!
 //! ```rust,no_run
 //! # use gds::Graph;
-//! # let graph = Graph::default();
+//! # let graph: Graph = unimplemented!();
 //! let traversal = graph
 //!     .dfs()
 //!     .source(42)
@@ -31,6 +31,13 @@
 
 use crate::procedures::facades::traits::{Result, PathResult};
 use crate::procedures::facades::builder_base::{MutationResult, WriteResult, ConfigValidator};
+use crate::procedures::dfs::{DfsComputationRuntime, DfsStorageRuntime};
+use crate::projection::orientation::Orientation;
+use crate::projection::RelationshipType;
+use crate::types::graph::id_map::NodeId;
+use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 // ============================================================================
 // Statistics Type
@@ -74,15 +81,16 @@ pub struct DfsStats {
 /// ## Example
 /// ```rust,no_run
 /// # use gds::Graph;
-/// # let graph = Graph::default();
+/// # let graph: Graph = unimplemented!();
 /// # use gds::procedures::facades::pathfinding::DfsBuilder;
-/// let builder = DfsBuilder::new()
+/// let builder = graph.dfs()
 ///     .source(42)
 ///     .max_depth(10)
 ///     .track_paths(true)
 ///     .targets(vec![99, 100]);
 /// ```
 pub struct DfsBuilder {
+    graph_store: Arc<DefaultGraphStore>,
     /// Source node for DFS traversal
     source: Option<u64>,
     /// Target nodes (empty = all reachable, specific = stop when found)
@@ -96,7 +104,7 @@ pub struct DfsBuilder {
 }
 
 impl DfsBuilder {
-    /// Create a new DFS builder with defaults
+    /// Create a new DFS builder bound to a live graph store.
     ///
     /// Defaults:
     /// - source: None (must be set)
@@ -104,14 +112,117 @@ impl DfsBuilder {
     /// - max_depth: None (unlimited traversal)
     /// - track_paths: false (only discovery order, not full paths)
     /// - concurrency: 1 (DFS is typically single-threaded)
-    pub fn new() -> Self {
+    pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
+            graph_store,
             source: None,
             targets: vec![],
             max_depth: None,
             track_paths: false,
             concurrency: 1,
         }
+    }
+
+    fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
+        NodeId::try_from(value).map_err(|_| {
+            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                "{} must fit into i64 (got {})",
+                field, value
+            ))
+        })
+    }
+
+    fn compute(self) -> Result<(Vec<PathResult>, DfsStats)> {
+        self.validate()?;
+
+        let source_u64 = self.source.expect("validate() ensures source is set");
+        let source_node = Self::checked_node_id(source_u64, "source")?;
+        let target_nodes: Vec<NodeId> = self
+            .targets
+            .iter()
+            .map(|&value| Self::checked_node_id(value, "targets"))
+            .collect::<Result<Vec<_>>>()?;
+
+        let storage = DfsStorageRuntime::new(
+            source_node,
+            target_nodes.clone(),
+            self.max_depth,
+            self.track_paths,
+            self.concurrency,
+        );
+
+        let mut computation = DfsComputationRuntime::new(source_node, self.track_paths, self.concurrency);
+
+        let rel_types: HashSet<RelationshipType> = HashSet::new();
+        let graph_view = self
+            .graph_store
+            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
+            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+
+        let result = storage.compute_dfs(&mut computation, Some(graph_view.as_ref()))?;
+
+        let mut path_map: HashMap<NodeId, Vec<u64>> = HashMap::new();
+        if self.track_paths {
+            for path in result.paths {
+                let node_path: Vec<u64> = path
+                    .node_ids
+                    .into_iter()
+                    .filter(|node_id| *node_id >= 0)
+                    .map(|node_id| node_id as u64)
+                    .collect();
+                path_map.insert(path.target_node, node_path);
+            }
+        }
+
+        let max_depth_reached: u64 = if self.track_paths {
+            path_map
+                .values()
+                .map(|p| p.len().saturating_sub(1) as u64)
+                .max()
+                .unwrap_or(0)
+        } else {
+            0
+        };
+
+        let targets_found: u64 = if target_nodes.is_empty() {
+            0
+        } else {
+            result
+                .visited_nodes
+                .iter()
+                .filter(|(node_id, _)| target_nodes.contains(node_id))
+                .count() as u64
+        };
+
+        let all_targets_reached = !target_nodes.is_empty() && targets_found == target_nodes.len() as u64;
+
+        let stats = DfsStats {
+            nodes_visited: result.nodes_visited as u64,
+            max_depth_reached,
+            execution_time_ms: result.computation_time_ms,
+            targets_found,
+            all_targets_reached,
+            backtrack_operations: 0,
+            avg_branch_depth: 0.0,
+        };
+
+        let rows: Vec<PathResult> = result
+            .visited_nodes
+            .into_iter()
+            .filter(|(node_id, _)| *node_id >= 0)
+            .map(|(node_id, discovery_order)| {
+                let target = node_id as u64;
+                let path = path_map.get(&node_id).cloned().unwrap_or_default();
+                PathResult {
+                    source: source_u64,
+                    target,
+                    path,
+                    cost: discovery_order as f64,
+                }
+            })
+            .collect();
+
+        Ok((rows, stats))
     }
 
     /// Set source node
@@ -204,64 +315,16 @@ impl DfsBuilder {
     /// Use this when you want individual traversal results:
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
+    /// # let graph: Graph = unimplemented!();
     /// # use gds::procedures::facades::pathfinding::DfsBuilder;
-    /// let builder = DfsBuilder::new().source(0).max_depth(5);
+    /// let builder = graph.dfs().source(0).max_depth(5);
     /// for result in builder.stream()? {
     ///     println!("Node {} at depth {}", result.target, result.cost);
     /// }
     /// ```
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
-        self.validate()?;
-
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy results for demonstration
-        let dummy_results = if self.targets.is_empty() {
-            // No specific targets - return all reachable nodes in DFS order
-            vec![
-                PathResult {
-                    source: self.source.unwrap(),
-                    target: 1,
-                    path: vec![self.source.unwrap(), 1],
-                    cost: 1.0, // Depth from source
-                },
-                PathResult {
-                    source: self.source.unwrap(),
-                    target: 3,
-                    path: vec![self.source.unwrap(), 1, 3],
-                    cost: 2.0,
-                },
-                PathResult {
-                    source: self.source.unwrap(),
-                    target: 2,
-                    path: vec![self.source.unwrap(), 2],
-                    cost: 1.0,
-                },
-            ]
-        } else {
-            // Specific targets - return paths to targets in DFS order
-            self.targets
-                .into_iter()
-                .enumerate()
-                .map(|(i, target)| {
-                    // Simulate DFS path discovery order
-                    let path = match i {
-                        0 => vec![self.source.unwrap(), target],
-                        1 => vec![self.source.unwrap(), 1, target],
-                        _ => vec![self.source.unwrap(), target],
-                    };
-                    let cost = path.len() as f64 - 1.0; // Edge count = depth
-                    PathResult {
-                        source: self.source.unwrap(),
-                        target,
-                        path,
-                        cost,
-                    }
-                })
-                .collect()
-        };
-
-        Ok(Box::new(dummy_results.into_iter()))
+        let (rows, _) = self.compute()?;
+        Ok(Box::new(rows.into_iter()))
     }
 
     /// Stats mode: Get aggregated statistics
@@ -271,26 +334,15 @@ impl DfsBuilder {
     /// Use this when you want performance metrics:
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
+    /// # let graph: Graph = unimplemented!();
     /// # use gds::procedures::facades::pathfinding::DfsBuilder;
-    /// let builder = DfsBuilder::new().source(0);
+    /// let builder = graph.dfs().source(0);
     /// let stats = builder.stats()?;
     /// println!("Visited {} nodes, backtracked {} times", stats.nodes_visited, stats.backtrack_operations);
     /// ```
     pub fn stats(self) -> Result<DfsStats> {
-        self.validate()?;
-
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy stats for demonstration
-        Ok(DfsStats {
-            nodes_visited: 8,
-            max_depth_reached: 3,
-            execution_time_ms: 18,
-            targets_found: self.targets.len() as u64,
-            all_targets_reached: !self.targets.is_empty(),
-            backtrack_operations: 5,
-            avg_branch_depth: 2.2,
-        })
+        let (_, stats) = self.compute()?;
+        Ok(stats)
     }
 
     /// Mutate mode: Compute and store as node property
@@ -300,9 +352,9 @@ impl DfsBuilder {
     ///
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
+    /// # let graph: Graph = unimplemented!();
     /// # use gds::procedures::facades::pathfinding::DfsBuilder;
-    /// let builder = DfsBuilder::new().source(0);
+    /// let builder = graph.dfs().source(0);
     /// let result = builder.mutate("dfs_order")?;
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
@@ -310,12 +362,8 @@ impl DfsBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy result for demonstration
-        Ok(MutationResult::new(
-            6, // Dummy count of nodes updated
-            property_name.to_string(),
-            std::time::Duration::from_millis(25),
+        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
+            "DFS mutate/write is not implemented yet".to_string(),
         ))
     }
 
@@ -325,9 +373,9 @@ impl DfsBuilder {
     ///
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
+    /// # let graph: Graph = unimplemented!();
     /// # use gds::procedures::facades::pathfinding::DfsBuilder;
-    /// let builder = DfsBuilder::new().source(0);
+    /// let builder = graph.dfs().source(0);
     /// let result = builder.write("dfs_results")?;
     /// println!("Wrote {} nodes", result.nodes_written);
     /// ```
@@ -335,19 +383,9 @@ impl DfsBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy result for demonstration
-        Ok(WriteResult::new(
-            4, // Dummy count of nodes written
-            property_name.to_string(),
-            std::time::Duration::from_millis(45),
+        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
+            "DFS mutate/write is not implemented yet".to_string(),
         ))
-    }
-}
-
-impl Default for DfsBuilder {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -358,10 +396,22 @@ impl Default for DfsBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
+    use std::sync::Arc;
+
+    fn store() -> Arc<DefaultGraphStore> {
+        let config = RandomGraphConfig {
+            seed: Some(2),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        Arc::new(DefaultGraphStore::random(&config).unwrap())
+    }
 
     #[test]
     fn test_builder_defaults() {
-        let builder = DfsBuilder::new();
+        let builder = DfsBuilder::new(store());
         assert_eq!(builder.source, None);
         assert!(builder.targets.is_empty());
         assert!(builder.max_depth.is_none());
@@ -371,7 +421,7 @@ mod tests {
 
     #[test]
     fn test_builder_fluent_chain() {
-        let builder = DfsBuilder::new()
+        let builder = DfsBuilder::new(store())
             .source(42)
             .targets(vec![99, 100])
             .max_depth(10)
@@ -387,25 +437,25 @@ mod tests {
 
     #[test]
     fn test_validate_missing_source() {
-        let builder = DfsBuilder::new();
+        let builder = DfsBuilder::new(store());
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_invalid_concurrency() {
-        let builder = DfsBuilder::new().source(0).concurrency(0);
+        let builder = DfsBuilder::new(store()).source(0).concurrency(0);
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_invalid_max_depth() {
-        let builder = DfsBuilder::new().source(0).max_depth(0);
+        let builder = DfsBuilder::new(store()).source(0).max_depth(0);
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_valid_config() {
-        let builder = DfsBuilder::new()
+        let builder = DfsBuilder::new(store())
             .source(0)
             .max_depth(10)
             .track_paths(true);
@@ -414,69 +464,57 @@ mod tests {
 
     #[test]
     fn test_stream_requires_validation() {
-        let builder = DfsBuilder::new(); // Missing source
+        let builder = DfsBuilder::new(store()); // Missing source
         assert!(builder.stream().is_err());
     }
 
     #[test]
     fn test_stats_requires_validation() {
-        let builder = DfsBuilder::new().concurrency(0); // Invalid concurrency
+        let builder = DfsBuilder::new(store()).concurrency(0); // Invalid concurrency
         assert!(builder.stats().is_err());
     }
 
     #[test]
     fn test_mutate_requires_validation() {
-        let builder = DfsBuilder::new().source(0); // Valid config but...
+        let builder = DfsBuilder::new(store()).source(0); // Valid config but...
         assert!(builder.mutate("").is_err()); // Empty property name
     }
 
     #[test]
     fn test_mutate_validates_property_name() {
-        let builder = DfsBuilder::new().source(0);
-        assert!(builder.mutate("dfs_order").is_ok());
+        let builder = DfsBuilder::new(store()).source(0);
+        assert!(builder.mutate("dfs_order").is_err());
     }
 
     #[test]
     fn test_write_validates_property_name() {
-        let builder = DfsBuilder::new().source(0);
-        assert!(builder.write("dfs_results").is_ok());
+        let builder = DfsBuilder::new(store()).source(0);
+        assert!(builder.write("dfs_results").is_err());
     }
 
     #[test]
     fn test_stream_returns_paths_to_targets() {
-        let builder = DfsBuilder::new().source(0).targets(vec![2, 3]);
+        let builder = DfsBuilder::new(store()).source(0).targets(vec![2, 3]);
         let results: Vec<_> = builder.stream().unwrap().collect();
 
-        assert_eq!(results.len(), 2);
+        assert!(!results.is_empty());
         assert_eq!(results[0].source, 0);
-        assert_eq!(results[0].target, 2);
-        assert_eq!(results[1].source, 0);
-        assert_eq!(results[1].target, 3);
     }
 
     #[test]
     fn test_stream_returns_all_reachable() {
-        let builder = DfsBuilder::new().source(0); // No targets specified
+        let builder = DfsBuilder::new(store()).source(0); // No targets specified
         let results: Vec<_> = builder.stream().unwrap().collect();
 
-        assert_eq!(results.len(), 3); // Dummy implementation returns 3 nodes in DFS order
+        assert!(!results.is_empty());
         assert_eq!(results[0].source, 0);
-        assert_eq!(results[0].target, 1);
-        assert_eq!(results[1].source, 0);
-        assert_eq!(results[1].target, 3); // DFS goes deep first
-        assert_eq!(results[2].source, 0);
-        assert_eq!(results[2].target, 2);
     }
 
     #[test]
     fn test_stats_returns_aggregated_info() {
-        let builder = DfsBuilder::new().source(0).targets(vec![1, 2, 3]);
+        let builder = DfsBuilder::new(store()).source(0).targets(vec![1, 2, 3]);
         let stats = builder.stats().unwrap();
 
-        assert_eq!(stats.nodes_visited, 8);
-        assert_eq!(stats.targets_found, 3);
-        assert!(stats.all_targets_reached);
-        assert_eq!(stats.backtrack_operations, 5);
-        assert_eq!(stats.avg_branch_depth, 2.2);
+        assert!(stats.nodes_visited > 0);
     }
 }

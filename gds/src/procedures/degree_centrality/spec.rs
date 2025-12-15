@@ -11,6 +11,7 @@
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use std::time::Duration;
+use std::time::Instant;
 
 use super::storage::{DegreeCentralityStorageRuntime, Orientation};
 use super::computation::DegreeCentralityComputationRuntime;
@@ -87,16 +88,16 @@ define_algorithm_spec! {
     output_type: DegreeCentralityResult,
     projection_hint: Dense,
     modes: [Stream, Stats],
-    
+
     execute: |self, graph_store, config, context| {
         // Extract configuration
         let parsed_config: DegreeCentralityConfig = serde_json::from_value(config.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {}", e)))?;
-        
+
         let normalize = parsed_config.normalize;
         let orientation = parsed_config.orientation;
         let has_weights = parsed_config.has_relationship_weight_property;
-        
+
         context.log(
             LogLevel::Info,
             &format!(
@@ -107,6 +108,8 @@ define_algorithm_spec! {
                 graph_store.node_count()
             ),
         );
+
+        let start = Instant::now();
 
         // Create storage runtime (Gross pole - knows GraphStore)
         let storage = DegreeCentralityStorageRuntime::with_settings(
@@ -120,10 +123,12 @@ define_algorithm_spec! {
 
         // Iterate all nodes and compute degrees
         let node_count = storage.node_count();
-        for node_id in 0..node_count as u32 {
+        for node_id in 0..node_count {
             // **FUNCTOR IN ACTION**:
             // Project from Storage (Gross/GraphStore)
             // to Computation (Subtle/degree scores)
+            let node_id = crate::types::graph::id_map::NodeId::try_from(node_id as i64)
+                .map_err(|_| AlgorithmError::Execution(format!("node_id out of range: {}", node_id)))?;
             let degree = storage.get_node_degree(node_id)?;
             computation.add_node_degree(node_id, degree);
         }
@@ -148,7 +153,7 @@ define_algorithm_spec! {
             node_count: computation.node_count(),
             max_degree: computation.max_degree(),
             min_degree: computation.min_degree(),
-            execution_time: Duration::from_millis(50), // TODO: Use actual elapsed time
+            execution_time: start.elapsed(),
         })
     }
 }
@@ -192,7 +197,7 @@ mod tests {
     fn test_degree_centrality_config_validation() {
         let config = DegreeCentralityConfig::default();
         assert!(config.validate().is_ok());
-        
+
         // Test invalid config
         let mut invalid_config = DegreeCentralityConfig::default();
         invalid_config.min_batch_size = 0;
@@ -209,7 +214,7 @@ mod tests {
         assert_eq!(runtime.node_count(), 3);
         assert_eq!(runtime.max_degree(), 8.0);
         assert_eq!(runtime.min_degree(), 3.0);
-        
+
         // Test normalization
         runtime.normalize_scores();
         assert_eq!(runtime.max_degree(), 1.0);

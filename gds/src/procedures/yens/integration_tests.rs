@@ -10,6 +10,9 @@ use super::computation::YensComputationRuntime;
 use crate::projection::eval::procedure::{ProcedureExecutor, ExecutionMode, ExecutionContext};
 use crate::projection::eval::procedure::AlgorithmSpec;
 use serde_json::json;
+use crate::types::prelude::DefaultGraphStore;
+use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
+use std::sync::Arc;
 
 #[cfg(test)]
 mod tests {
@@ -53,7 +56,7 @@ mod tests {
     fn test_yens_computation_runtime() {
         let mut runtime = YensComputationRuntime::new(0, 3, 5, true, 1);
         runtime.initialize(1, 4, 3, false);
-        
+
         assert_eq!(runtime.source_node, 1);
         assert_eq!(runtime.target_node, 4);
         assert_eq!(runtime.k, 3);
@@ -65,18 +68,30 @@ mod tests {
         let spec = crate::procedures::yens::YENSAlgorithmSpec::new("test_graph".to_string());
         assert_eq!(spec.name(), "yens");
         assert_eq!(spec.graph_name(), "test_graph");
-        
+
     // Test that the algorithm can be created
     assert_eq!(spec.graph_name(), "test_graph");
     }
 
     #[test]
     fn test_yens_storage_computation_integration() {
+        let config = RandomGraphConfig {
+            seed: Some(7),
+            node_count: 10,
+            relationships: vec![RandomRelationshipConfig::new("REL", 0.7)],
+            ..RandomGraphConfig::default()
+        };
+
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let graph = store.graph();
+
         let storage = YensStorageRuntime::new(0, 3, 3, false, 1);
         let mut computation = YensComputationRuntime::new(0, 3, 3, false, 1);
-        
-        let result = storage.compute_yens(&mut computation).unwrap();
-        
+
+        let result = storage
+            .compute_yens(&mut computation, Some(graph.as_ref()), 0)
+            .unwrap();
+
         assert!(result.path_count >= 0);
         assert!(result.computation_time_ms >= 0);
     }
@@ -91,7 +106,7 @@ mod tests {
 
         let json = serde_json::to_string(&result).unwrap();
         let deserialized: YensResult = serde_json::from_str(&json).unwrap();
-        
+
         assert_eq!(deserialized.path_count, 0);
         assert_eq!(deserialized.computation_time_ms, 5);
     }
@@ -100,9 +115,9 @@ mod tests {
     fn test_yens_with_executor() {
         let context = ExecutionContext::new("test_user");
         let mut executor = ProcedureExecutor::new(context, ExecutionMode::Stream);
-        
+
         let mut spec = crate::procedures::yens::YENSAlgorithmSpec::new("test_graph".to_string());
-        
+
         let config = json!({
             "source_node": 0,
             "target_node": 3,
@@ -110,9 +125,9 @@ mod tests {
             "track_relationships": true,
             "concurrency": 4
         });
-        
+
         let result = executor.compute(&mut spec, &config);
-        
+
         // Should get GraphNotFound error since test_graph doesn't exist
         assert!(result.is_err());
         let error = result.unwrap_err();

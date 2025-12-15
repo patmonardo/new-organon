@@ -6,15 +6,17 @@
 
 use super::mutable_path_result::MutablePathResult;
 
+use crate::types::graph::id_map::NodeId;
+
 /// Relationship filterer for Yen's algorithm
 ///
 /// Translation of: `RelationshipFilterer.java` (lines 25-83)
 /// Filters relationships to avoid cycles and duplicate paths
 pub struct RelationshipFilterer {
     /// Neighbors to avoid
-    neighbors: Vec<u32>,
+    neighbors: Vec<NodeId>,
     /// Current filtering spur node
-    filtering_spur_node: u32,
+    filtering_spur_node: NodeId,
     /// Number of neighbors to avoid
     all_neighbors: usize,
     /// Current neighbor index for binary search
@@ -46,7 +48,7 @@ impl RelationshipFilterer {
         } else {
             path.node(index_id + 1).unwrap_or(0)
         };
-        
+
         if self.all_neighbors < self.neighbors.len() {
             self.neighbors[self.all_neighbors] = avoid_id;
             self.all_neighbors += 1;
@@ -56,7 +58,7 @@ impl RelationshipFilterer {
     /// Set the filtering spur node
     ///
     /// Translation of: `setFilter()` method (lines 52-56)
-    pub fn set_filter(&mut self, filtering_spur_node: u32) {
+    pub fn set_filter(&mut self, filtering_spur_node: NodeId) {
         self.filtering_spur_node = filtering_spur_node;
         self.neighbor_index = 0;
         self.all_neighbors = 0;
@@ -72,7 +74,7 @@ impl RelationshipFilterer {
     /// Check if a relationship is valid (not blocked)
     ///
     /// Translation of: `validRelationship()` method (lines 60-80)
-    pub fn valid_relationship(&mut self, source: u32, target: u32, relationship_id: u32) -> bool {
+    pub fn valid_relationship(&mut self, source: NodeId, target: NodeId, relationship_id: NodeId) -> bool {
         if source == self.filtering_spur_node {
             let forbidden = if self.track_relationships {
                 relationship_id
@@ -125,19 +127,19 @@ mod tests {
     #[test]
     fn test_relationship_filterer_add_blocking_neighbor() {
         let mut filterer = RelationshipFilterer::new(5, true);
-        
+
         let path = MutablePathResult::new(0, 0, 3, vec![0, 1, 2, 3], vec![10, 11, 12], vec![0.0, 1.0, 2.0, 3.0]);
-        
+
         filterer.add_blocking_neighbor(&path, 0);
         filterer.add_blocking_neighbor(&path, 1);
-        
+
         assert_eq!(filterer.blocked_count(), 2);
     }
 
     #[test]
     fn test_relationship_filterer_set_filter() {
         let mut filterer = RelationshipFilterer::new(5, false);
-        
+
         filterer.set_filter(5);
         assert_eq!(filterer.filtering_spur_node, 5);
         assert_eq!(filterer.blocked_count(), 0);
@@ -147,21 +149,21 @@ mod tests {
     #[ignore] // Algorithm needs review
     fn test_relationship_filterer_valid_relationship() {
         let mut filterer = RelationshipFilterer::new(5, false);
-        
+
         // Set up filter for node 1
         filterer.set_filter(1);
-        
+
         // Add some blocked neighbors
         let path = MutablePathResult::new(0, 0, 3, vec![0, 1, 2, 3], vec![10, 11, 12], vec![0.0, 1.0, 2.0, 3.0]);
         filterer.add_blocking_neighbor(&path, 0); // blocks target node 2
         filterer.prepare();
-        
+
         // Test valid relationship (different source)
         assert!(filterer.valid_relationship(0, 2, 10));
-        
+
         // Test invalid relationship (blocked target)
         assert!(!filterer.valid_relationship(1, 2, 10));
-        
+
         // Test valid relationship (different target)
         assert!(filterer.valid_relationship(1, 3, 11));
     }
@@ -169,16 +171,16 @@ mod tests {
     #[test]
     fn test_relationship_filterer_with_relationships() {
         let mut filterer = RelationshipFilterer::new(5, true);
-        
+
         filterer.set_filter(1);
-        
+
         let path = MutablePathResult::new(0, 0, 3, vec![0, 1, 2, 3], vec![10, 11, 12], vec![0.0, 1.0, 2.0, 3.0]);
         filterer.add_blocking_neighbor(&path, 0); // blocks relationship 10
         filterer.prepare();
-        
+
         // Test invalid relationship (blocked relationship)
         assert!(!filterer.valid_relationship(1, 2, 10));
-        
+
         // Test valid relationship (different relationship)
         assert!(filterer.valid_relationship(1, 2, 15));
     }

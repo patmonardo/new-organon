@@ -11,9 +11,14 @@
 pub mod degree_centrality;
 pub mod pagerank;
 pub mod betweenness;
+pub mod closeness;
+pub mod harmonic;
 
 // Re-export main facades
 pub use degree_centrality::DegreeCentralityFacade;
 pub use pagerank::PageRankBuilder;
-pub use betweenness::BetweenessBuilder;
+pub use betweenness::BetweennessCentralityFacade;
+pub use closeness::ClosenessCentralityFacade;
+pub use harmonic::HarmonicCentralityFacade;
+
 

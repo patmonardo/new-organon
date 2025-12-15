@@ -12,6 +12,7 @@ use super::targets::Targets;
 use crate::projection::eval::procedure::AlgorithmError;
 use std::time::Instant;
 use crate::types::graph::Graph;
+use crate::types::graph::id_map::NodeId;
 
 /// Dijkstra Storage Runtime
 ///
@@ -19,7 +20,7 @@ use crate::types::graph::Graph;
 /// Handles the persistent data access and algorithm orchestration
 pub struct DijkstraStorageRuntime {
     /// Source node for shortest path computation
-    pub source_node: u32,
+    pub source_node: NodeId,
 
     /// Whether to track relationship IDs
     pub track_relationships: bool,
@@ -29,6 +30,14 @@ pub struct DijkstraStorageRuntime {
 
     /// Whether to use heuristic function (for A* behavior)
     pub use_heuristic: bool,
+
+    /// Relationship filter (Java: `RelationshipFilter`) applied during relaxation.
+    ///
+    /// Signature: `(source_node, target_node, relationship_id) -> bool`.
+    ///
+    /// Note: `relationship_id` follows Java GDS semantics here: index within the
+    /// enumerated adjacency stream for the current source node.
+    relationship_filter: Box<dyn Fn(NodeId, NodeId, NodeId) -> bool + Send + Sync>,
 }
 
 impl DijkstraStorageRuntime {
@@ -36,7 +45,7 @@ impl DijkstraStorageRuntime {
     ///
     /// Translation of: Constructor (lines 118-140)
     pub fn new(
-        source_node: u32,
+        source_node: NodeId,
         track_relationships: bool,
         concurrency: usize,
         use_heuristic: bool,
@@ -46,7 +55,22 @@ impl DijkstraStorageRuntime {
             track_relationships,
             concurrency,
             use_heuristic,
+            relationship_filter: Box::new(|_, _, _| true),
         }
+    }
+
+    /// Compose an additional relationship filter.
+    ///
+    /// Mirrors Java `Dijkstra.withRelationshipFilter(...)` which AND-combines filters.
+    pub fn with_relationship_filter<F>(mut self, filter: F) -> Self
+    where
+        F: Fn(NodeId, NodeId, NodeId) -> bool + Send + Sync + 'static,
+    {
+        let previous = self.relationship_filter;
+        self.relationship_filter = Box::new(move |source, target, relationship_id| {
+            previous(source, target, relationship_id) && filter(source, target, relationship_id)
+        });
+        self
     }
 
     /// Compute Dijkstra shortest paths
@@ -120,17 +144,22 @@ impl DijkstraStorageRuntime {
     fn relax_edges(
         &self,
         computation: &mut DijkstraComputationRuntime,
-        source_node: u32,
+        source_node: NodeId,
         source_cost: f64,
         graph: Option<&dyn Graph>,
         direction: u8,
     ) -> Result<(), AlgorithmError> {
         // Get neighbors with weights for the source node
-        let neighbors = self.get_neighbors_with_weights(graph, source_node, direction);
+        let neighbors = self.get_neighbors_with_weights(graph, source_node, direction)?;
 
-        for (target_node, weight) in neighbors {
+        for (target_node, weight, relationship_id) in neighbors {
             // Skip if target is already visited
             if computation.is_visited(target_node) {
+                continue;
+            }
+
+            // Java GDS: RelationshipFilter is applied during relaxation.
+            if !(self.relationship_filter)(source_node, target_node, relationship_id) {
                 continue;
             }
 
@@ -141,14 +170,14 @@ impl DijkstraStorageRuntime {
                 computation.add_to_queue(target_node, new_cost);
                 computation.set_predecessor(target_node, Some(source_node));
                 if self.track_relationships {
-                    computation.set_relationship_id(target_node, Some(0)); // TODO: Get actual relationship ID
+                    computation.set_relationship_id(target_node, Some(relationship_id));
                 }
             } else if new_cost < computation.get_cost(target_node) {
                 // Found a shorter path
                 computation.update_queue_cost(target_node, new_cost);
                 computation.set_predecessor(target_node, Some(source_node));
                 if self.track_relationships {
-                    computation.set_relationship_id(target_node, Some(0)); // TODO: Get actual relationship ID
+                    computation.set_relationship_id(target_node, Some(relationship_id));
                 }
             }
         }
@@ -162,7 +191,7 @@ impl DijkstraStorageRuntime {
     fn reconstruct_path(
         &self,
         computation: &DijkstraComputationRuntime,
-        target_node: u32,
+        target_node: NodeId,
         path_index: u64,
     ) -> Result<DijkstraPathResult, AlgorithmError> {
         let mut node_ids = Vec::new();
@@ -209,30 +238,44 @@ impl DijkstraStorageRuntime {
     ///
     /// TODO: Replace with actual GraphStore API call
     /// This simulates the Java `forEachRelationship` logic
-    fn get_neighbors_with_weights(&self, graph: Option<&dyn Graph>, node_id: u32, direction: u8) -> Vec<(u32, f64)> {
+    fn get_neighbors_with_weights(
+        &self,
+        graph: Option<&dyn Graph>,
+        node_id: NodeId,
+        direction: u8,
+    ) -> Result<Vec<(NodeId, f64, NodeId)>, AlgorithmError> {
         if let Some(g) = graph {
             let fallback = g.default_property_value();
-            let mapped = node_id as u64; // MappedNodeId
-            let iter: Box<dyn Iterator<Item = crate::types::properties::relationship::traits::WeightedRelationshipCursorBox> + Send> =
-                if direction == 1 { // 1 = incoming
-                    g.stream_inverse_relationships_weighted(mapped as i64, fallback)
-                } else {
-                    g.stream_relationships_weighted(mapped as i64, fallback)
-                };
-            return iter
-                .into_iter()
-                .map(|cursor| (cursor.target_id() as u32, cursor.weight()))
-                .collect();
+            let mapped: NodeId = node_id;
+            let iter = if direction == 1 { // 1 = incoming
+                g.stream_inverse_relationships_weighted(mapped, fallback)
+            } else {
+                g.stream_relationships_weighted(mapped, fallback)
+            };
+
+            let mut out = Vec::new();
+            for (idx, cursor) in iter.enumerate() {
+                let relationship_id = idx as NodeId;
+                let target_node = cursor.target_id();
+                out.push((target_node, cursor.weight(), relationship_id));
+            }
+            return Ok(out);
         }
 
         // Deterministic mock when no Graph is provided
-        match node_id {
+        let neighbors: Vec<(NodeId, f64)> = match node_id {
             0 => vec![(1, 1.0), (2, 4.0)],
             1 => vec![(2, 2.0), (3, 5.0)],
             2 => vec![(3, 1.0), (4, 3.0)],
             3 => vec![(4, 2.0)],
             _ => vec![],
-        }
+        };
+
+        Ok(neighbors
+            .into_iter()
+            .enumerate()
+            .map(|(idx, (target, weight))| (target, weight, idx as NodeId))
+            .collect())
     }
 
     /// Best-effort node count hint from a bound GraphStore once integrated.
@@ -303,12 +346,35 @@ mod tests {
     fn test_neighbors_with_weights() {
         let storage = DijkstraStorageRuntime::new(0, false, 4, false);
 
-        let neighbors = storage.get_neighbors_with_weights(None, 0, 0);
+        let neighbors = storage.get_neighbors_with_weights(None, 0, 0).unwrap();
         assert_eq!(neighbors.len(), 2);
-        assert_eq!(neighbors[0], (1, 1.0));
-        assert_eq!(neighbors[1], (2, 4.0));
+        assert_eq!(neighbors[0], (1, 1.0, 0));
+        assert_eq!(neighbors[1], (2, 4.0, 1));
 
-        let neighbors_empty = storage.get_neighbors_with_weights(None, 99, 0);
+        let neighbors_empty = storage.get_neighbors_with_weights(None, 99, 0).unwrap();
         assert!(neighbors_empty.is_empty());
+    }
+
+    #[test]
+    fn relationship_filter_blocks_by_relationship_id_and_tracking_records_ids() {
+        // Block the first adjacency entry for source=0 (relationship_id=0), forcing
+        // the path 0->2->3 instead of 0->1->2->3 on the deterministic mock graph.
+        let mut storage = DijkstraStorageRuntime::new(0, true, 4, false)
+            .with_relationship_filter(|source, _target, relationship_id| {
+                !(source == 0 && relationship_id == 0)
+            });
+
+        let mut computation = DijkstraComputationRuntime::new(0, true, 4, false);
+        let targets = Box::new(SingleTarget::new(3));
+
+        let result = storage.compute_dijkstra(&mut computation, targets, None, 0).unwrap();
+        let mut paths = result.path_finding_result.clone();
+        let first = paths.find_first().expect("expected at least one path");
+
+        assert_eq!(first.node_ids, vec![0, 2, 3]);
+        // relationship_id semantics here: index within enumerated adjacency per source node.
+        // - for 0->2 on node 0, that's index 1
+        // - for 2->3 on node 2, that's index 0
+        assert_eq!(first.relationship_ids, vec![1, 0]);
     }
 }

@@ -9,17 +9,18 @@ use crate::types::graph::Graph;
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::types::properties::node::NodePropertyValues;
+use crate::types::graph::id_map::NodeId;
 
 /// A* storage runtime for accessing graph data
 ///
 /// Translation of: `org.neo4j.gds.paths.astar.AStar` (lines 37-88)
 pub struct AStarStorageRuntime {
-    source_node: usize,
-    target_node: usize,
+    source_node: NodeId,
+    target_node: NodeId,
     latitude_property: String,
     longitude_property: String,
     // Cache for latitude/longitude values to avoid repeated property lookups
-    pub coordinate_cache: HashMap<usize, (f64, f64)>,
+    pub coordinate_cache: HashMap<NodeId, (f64, f64)>,
     // Optional bound property value accessors (preferred over mock)
     lat_values: Option<Arc<dyn NodePropertyValues>>,
     lon_values: Option<Arc<dyn NodePropertyValues>>,
@@ -30,8 +31,8 @@ impl AStarStorageRuntime {
     ///
     /// Translation of: `AStar.sourceTarget()` (lines 47-88)
     pub fn new(
-        source_node: usize,
-        target_node: usize,
+        source_node: NodeId,
+        target_node: NodeId,
         latitude_property: String,
         longitude_property: String,
     ) -> Self {
@@ -48,8 +49,8 @@ impl AStarStorageRuntime {
 
     /// Create new A* storage runtime bound to concrete latitude/longitude property values
     pub fn new_with_values(
-        source_node: usize,
-        target_node: usize,
+        source_node: NodeId,
+        target_node: NodeId,
         latitude_property: String,
         longitude_property: String,
         lat_values: Arc<dyn NodePropertyValues>,
@@ -116,7 +117,7 @@ impl AStarStorageRuntime {
 
             // Expand neighbors via relationship streams
             let fallback: f64 = 1.0;
-            let source_mapped = current as i64;
+            let source_mapped = current;
             let stream = if direction == 1 {
                 g.stream_inverse_relationships(source_mapped, fallback)
             } else {
@@ -124,7 +125,7 @@ impl AStarStorageRuntime {
             };
 
             for cursor in stream {
-                let neighbor = cursor.target_id() as usize;
+                let neighbor: NodeId = cursor.target_id();
                 if computation.is_visited(neighbor) { continue; }
 
                 let tentative_g = computation.get_g_cost(current) + cursor.property();
@@ -145,31 +146,44 @@ impl AStarStorageRuntime {
     /// Compute Haversine distance between two nodes
     ///
     /// Translation of: `HaversineHeuristic.distance()` (lines 1.038-1.056)
-    pub fn compute_haversine_distance(&mut self, source: usize, target: usize) -> Result<f64, String> {
+    pub fn compute_haversine_distance(
+        &mut self,
+        source: NodeId,
+        target: NodeId,
+    ) -> Result<f64, String> {
         let (source_lat, source_lon) = self.get_coordinates(source)?;
         let (target_lat, target_lon) = self.get_coordinates(target)?;
 
-        Ok(Self::haversine_distance(source_lat, source_lon, target_lat, target_lon))
+        Ok(Self::haversine_distance(
+            source_lat,
+            source_lon,
+            target_lat,
+            target_lon,
+        ))
     }
 
     /// Get coordinates for a node (with caching)
-    pub fn get_coordinates(&mut self, node_id: usize) -> Result<(f64, f64), String> {
+    pub fn get_coordinates(&mut self, node_id: NodeId) -> Result<(f64, f64), String> {
         if let Some(&coords) = self.coordinate_cache.get(&node_id) {
             return Ok(coords);
         }
         // Prefer bound property values when available; fallback to mock
         let coords = if let (Some(lat_vals), Some(lon_vals)) = (&self.lat_values, &self.lon_values) {
+            let idx = u64::try_from(node_id)
+                .map_err(|_| format!("invalid node id for property lookup: {node_id}"))?;
             let lat = lat_vals
-                .double_value(node_id as u64)
+                .double_value(idx)
                 .map_err(|e| format!("lat read error: {e}"))?;
             let lon = lon_vals
-                .double_value(node_id as u64)
+                .double_value(idx)
                 .map_err(|e| format!("lon read error: {e}"))?;
             (lat, lon)
         } else {
             // Mock fallback
-            let lat = (node_id as f64) * 0.01;
-            let lon = (node_id as f64) * 0.01;
+            let idx = u64::try_from(node_id)
+                .map_err(|_| format!("invalid node id for mock coordinates: {node_id}"))?;
+            let lat = (idx as f64) * 0.01;
+            let lon = (idx as f64) * 0.01;
             (lat, lon)
         };
         self.coordinate_cache.insert(node_id, coords);
@@ -202,12 +216,12 @@ impl AStarStorageRuntime {
     }
 
     /// Get source node ID
-    pub fn source_node(&self) -> usize {
+    pub fn source_node(&self) -> NodeId {
         self.source_node
     }
 
     /// Get target node ID
-    pub fn target_node(&self) -> usize {
+    pub fn target_node(&self) -> NodeId {
         self.target_node
     }
 

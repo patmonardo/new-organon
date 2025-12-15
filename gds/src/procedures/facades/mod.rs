@@ -56,16 +56,18 @@
 //!     .write("pr")?   // Persist results to storage
 //! ```
 
-pub mod traits;
 pub mod builder_base;
+pub mod graph;
+pub mod traits;
 
 // Facade implementations by algorithm family
 pub mod centrality;
 pub mod community;
 pub mod pathfinding;
+pub mod similarity;
 pub mod utilities;
 
 // Re-export commonly used types
 pub use builder_base::{ExecutionContext, MutationResult, WriteResult};
-pub use traits::{AlgorithmRunner, StreamResults, StatsResults, MutateResults, WriteResults};
-
+pub use graph::Graph;
+pub use traits::{AlgorithmRunner, MutateResults, StatsResults, StreamResults, WriteResults};

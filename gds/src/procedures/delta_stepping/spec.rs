@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use super::storage::DeltaSteppingStorageRuntime;
 use super::computation::DeltaSteppingComputationRuntime;
 use crate::projection::orientation::Orientation;
+use crate::types::graph::id_map::NodeId;
 
 /// Delta Stepping algorithm configuration
 ///
@@ -20,7 +21,7 @@ use crate::projection::orientation::Orientation;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeltaSteppingConfig {
     /// Source node for shortest path computation
-    pub source_node: u32,
+    pub source_node: NodeId,
 
     /// Delta parameter for binning strategy
     pub delta: f64,
@@ -112,13 +113,13 @@ pub struct DeltaSteppingPathResult {
     pub index: u64,
 
     /// Source node ID
-    pub source_node: u32,
+    pub source_node: NodeId,
 
     /// Target node ID
-    pub target_node: u32,
+    pub target_node: NodeId,
 
     /// Node IDs along the path
-    pub node_ids: Vec<u32>,
+    pub node_ids: Vec<NodeId>,
 
     /// Costs for each step along the path
     pub costs: Vec<f64>,

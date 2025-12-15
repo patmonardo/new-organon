@@ -6,6 +6,7 @@
 
 use super::mutable_path_result::MutablePathResult;
 use std::collections::BinaryHeap;
+use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use std::cmp::Ordering;
 
@@ -16,6 +17,7 @@ use std::cmp::Ordering;
 pub struct CandidatePathsPriorityQueue {
     /// Thread-safe queue for candidate paths
     queue: Arc<Mutex<BinaryHeap<PathWrapper>>>,
+    seen: Arc<Mutex<HashSet<MutablePathResult>>>,
 }
 
 /// Wrapper for MutablePathResult to implement ordering
@@ -32,7 +34,7 @@ impl PathWrapper {
 
 impl PartialEq for PathWrapper {
     fn eq(&self, other: &Self) -> bool {
-        self.path.total_cost() == other.path.total_cost() && 
+        self.path.total_cost() == other.path.total_cost() &&
         self.path.node_count() == other.path.node_count()
     }
 }
@@ -47,14 +49,20 @@ impl PartialOrd for PathWrapper {
 
 impl Ord for PathWrapper {
     fn cmp(&self, other: &Self) -> Ordering {
-        // Primary ordering by total cost (ascending)
-        let cost_cmp = self.path.total_cost().partial_cmp(&other.path.total_cost()).unwrap_or(Ordering::Equal);
+        // `BinaryHeap` pops the *greatest* element.
+        // We want the *lowest-cost* path first, so we reverse ordering here.
+        let cost_cmp = self
+            .path
+            .total_cost()
+            .partial_cmp(&other.path.total_cost())
+            .unwrap_or(Ordering::Equal);
+
         if cost_cmp != Ordering::Equal {
-            return cost_cmp;
+            return cost_cmp.reverse();
         }
-        
-        // Secondary ordering by node count (ascending)
-        self.path.node_count().cmp(&other.path.node_count())
+
+        // Tie-breaker: fewer nodes first (also reversed for BinaryHeap).
+        self.path.node_count().cmp(&other.path.node_count()).reverse()
     }
 }
 
@@ -63,6 +71,7 @@ impl CandidatePathsPriorityQueue {
     pub fn new() -> Self {
         Self {
             queue: Arc::new(Mutex::new(BinaryHeap::new())),
+            seen: Arc::new(Mutex::new(HashSet::new())),
         }
     }
 
@@ -70,10 +79,18 @@ impl CandidatePathsPriorityQueue {
     ///
     /// Translation of: `addPath()` method (lines 38-44)
     pub fn add_path(&self, path: MutablePathResult) {
+        let inserted = if let Ok(mut seen) = self.seen.lock() {
+            seen.insert(path.clone())
+        } else {
+            true
+        };
+
+        if !inserted {
+            return;
+        }
+
         if let Ok(mut queue) = self.queue.lock() {
-            // Check if path already exists (simplified check)
-            let wrapper = PathWrapper::new(path);
-            queue.push(wrapper);
+            queue.push(PathWrapper::new(path));
         }
     }
 
@@ -82,7 +99,15 @@ impl CandidatePathsPriorityQueue {
     /// Translation of: `pop()` method (lines 46-48)
     pub fn pop(&self) -> Option<MutablePathResult> {
         if let Ok(mut queue) = self.queue.lock() {
-            queue.pop().map(|wrapper| wrapper.path)
+            let path = queue.pop().map(|wrapper| wrapper.path);
+
+            if let Some(ref p) = path {
+                if let Ok(mut seen) = self.seen.lock() {
+                    seen.remove(p);
+                }
+            }
+
+            path
         } else {
             None
         }
@@ -127,48 +152,46 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // Algorithm needs review - priority queue ordering
     fn test_candidate_queue_add_and_pop() {
         let queue = CandidatePathsPriorityQueue::new();
-        
+
         let path1 = MutablePathResult::new(0, 0, 3, vec![0, 1, 2, 3], vec![10, 11, 12], vec![0.0, 1.0, 2.0, 3.0]);
         let path2 = MutablePathResult::new(0, 0, 3, vec![0, 1, 3], vec![10, 13], vec![0.0, 1.0, 2.0]);
-        
+
         queue.add_path(path1.clone());
         queue.add_path(path2.clone());
-        
+
         assert_eq!(queue.len(), 2);
         assert!(!queue.is_empty());
-        
+
         // Should pop the shorter path first (lower cost)
         let popped = queue.pop().unwrap();
         assert_eq!(popped.total_cost(), 2.0); // path2 has lower cost
-        
+
         assert_eq!(queue.len(), 1);
-        
+
         let popped2 = queue.pop().unwrap();
         assert_eq!(popped2.total_cost(), 3.0); // path1
-        
+
         assert!(queue.is_empty());
     }
 
     #[test]
-    #[ignore] // Algorithm needs review - priority queue ordering
     fn test_candidate_queue_priority_ordering() {
         let queue = CandidatePathsPriorityQueue::new();
-        
+
         // Add paths in reverse order of priority
         let path_long = MutablePathResult::new(0, 0, 4, vec![0, 1, 2, 3, 4], vec![10, 11, 12, 13], vec![0.0, 1.0, 2.0, 3.0, 4.0]);
         let path_short = MutablePathResult::new(0, 0, 3, vec![0, 1, 3], vec![10, 13], vec![0.0, 1.0, 2.0]);
-        
+
         queue.add_path(path_long);
         queue.add_path(path_short);
-        
+
         // Should pop shorter path first
         let first = queue.pop().unwrap();
         assert_eq!(first.total_cost(), 2.0);
         assert_eq!(first.node_count(), 3);
-        
+
         let second = queue.pop().unwrap();
         assert_eq!(second.total_cost(), 4.0);
         assert_eq!(second.node_count(), 5);

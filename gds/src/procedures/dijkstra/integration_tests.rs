@@ -18,7 +18,7 @@ use serde_json::json;
 #[test]
 fn test_dijkstra_algorithm_spec_contract() {
     let spec = DIJKSTRAAlgorithmSpec::new("test_graph".to_string());
-    
+
     // Test basic contract
     assert_eq!(spec.name(), "dijkstra");
     assert_eq!(spec.graph_name(), "test_graph");
@@ -27,7 +27,7 @@ fn test_dijkstra_algorithm_spec_contract() {
 #[test]
 fn test_dijkstra_config_validation() {
     let spec = DIJKSTRAAlgorithmSpec::new("test_graph".to_string());
-    
+
     // Test valid configuration
     let valid_config = json!({
         "source_node": 0,
@@ -36,10 +36,10 @@ fn test_dijkstra_config_validation() {
         "concurrency": 4,
         "use_heuristic": false
     });
-    
+
     let validation_config = spec.validation_config(&ExecutionContext::new("test"));
     assert!(validation_config.validate_before_load(&valid_config).is_ok());
-    
+
     // Test invalid configuration - the validation_config doesn't validate our custom fields
     // so we'll test the config validation directly instead
     let invalid_config = DijkstraConfig {
@@ -51,14 +51,14 @@ fn test_dijkstra_config_validation() {
         relationship_types: vec![],
         direction: "outgoing".to_string(),
     };
-    
+
     assert!(invalid_config.validate().is_err());
 }
 
 #[test]
 fn test_dijkstra_execution_modes() {
     let spec = DIJKSTRAAlgorithmSpec::new("test_graph".to_string());
-    
+
     // Test execution mode support - the macro doesn't generate this method
     // so we'll just test that the spec was created successfully
     assert_eq!(spec.name(), "dijkstra");
@@ -68,7 +68,7 @@ fn test_dijkstra_execution_modes() {
 #[test]
 fn test_dijkstra_storage_runtime() {
     let storage = DijkstraStorageRuntime::new(0, true, 4, false);
-    
+
     // Test storage runtime creation
     assert_eq!(storage.source_node, 0);
     assert!(storage.track_relationships);
@@ -80,7 +80,7 @@ fn test_dijkstra_storage_runtime() {
 fn test_dijkstra_computation_runtime() {
     let mut computation = DijkstraComputationRuntime::new(0, true, 4, false);
     computation.initialize(0, true, false, 100);
-    
+
     // Test computation runtime
     assert_eq!(computation.source_node(), 0);
     assert!(computation.track_relationships());
@@ -95,14 +95,14 @@ fn test_dijkstra_targets_system() {
     let mut single_target = SingleTarget::new(5);
     assert_eq!(single_target.apply(3), TraversalState::Continue);
     assert_eq!(single_target.apply(5), TraversalState::EmitAndStop);
-    
+
     // Test ManyTargets
     let mut many_targets = ManyTargets::new(vec![3, 5, 7]);
     assert_eq!(many_targets.apply(1), TraversalState::Continue);
     assert_eq!(many_targets.apply(3), TraversalState::EmitAndContinue);
     assert_eq!(many_targets.apply(5), TraversalState::EmitAndContinue);
     assert_eq!(many_targets.apply(7), TraversalState::EmitAndStop);
-    
+
     // Test AllTargets
     let mut all_targets = AllTargets::new();
     assert_eq!(all_targets.apply(1), TraversalState::EmitAndContinue);
@@ -114,11 +114,11 @@ fn test_dijkstra_targets_factory() {
     // Test factory function
     let mut targets = create_targets(vec![]);
     assert_eq!(targets.apply(5), TraversalState::EmitAndContinue); // AllTargets
-    
+
     let mut targets = create_targets(vec![5]);
     assert_eq!(targets.apply(3), TraversalState::Continue);
     assert_eq!(targets.apply(5), TraversalState::EmitAndStop); // SingleTarget
-    
+
     let mut targets = create_targets(vec![3, 5, 7]);
     assert_eq!(targets.apply(1), TraversalState::Continue);
     assert_eq!(targets.apply(3), TraversalState::EmitAndContinue);
@@ -132,11 +132,11 @@ fn test_dijkstra_traversal_state() {
     assert!(TraversalState::EmitAndStop.should_emit());
     assert!(TraversalState::EmitAndStop.should_stop());
     assert!(!TraversalState::EmitAndStop.should_continue());
-    
+
     assert!(TraversalState::EmitAndContinue.should_emit());
     assert!(!TraversalState::EmitAndContinue.should_stop());
     assert!(TraversalState::EmitAndContinue.should_continue());
-    
+
     assert!(!TraversalState::Continue.should_emit());
     assert!(!TraversalState::Continue.should_stop());
     assert!(TraversalState::Continue.should_continue());
@@ -152,13 +152,13 @@ fn test_dijkstra_path_finding_result() {
         relationship_ids: vec![0, 1, 2],
         costs: vec![0.0, 3.5, 7.0, 10.5],
     };
-    
+
     let mut path_finding_result = PathFindingResult::new(vec![path_result]);
-    
+
     // Test path finding result
     assert_eq!(path_finding_result.path_count(), 1);
     assert!(!path_finding_result.is_empty());
-    
+
     let first = path_finding_result.find_first();
     assert!(first.is_some());
     let first_path = first.unwrap();
@@ -170,11 +170,11 @@ fn test_dijkstra_path_finding_result() {
 #[test]
 fn test_dijkstra_focused_macro_integration() {
     let spec = DIJKSTRAAlgorithmSpec::new("test_graph".to_string());
-    
+
     // Test that the focused macro generated the correct structure
     assert_eq!(spec.name(), "dijkstra");
     assert_eq!(spec.graph_name(), "test_graph");
-    
+
     // Test that we can create a config
     let config = DijkstraConfig::default();
     assert_eq!(config.source_node, 0);
@@ -185,11 +185,11 @@ fn test_dijkstra_focused_macro_integration() {
 #[test]
 fn test_dijkstra_algorithm_completeness() {
     let spec = DIJKSTRAAlgorithmSpec::new("test_graph".to_string());
-    
+
     // Test algorithm completeness
     assert_eq!(spec.name(), "dijkstra");
     assert_eq!(spec.graph_name(), "test_graph");
-    
+
     // Test config validation
     let validation_config = spec.validation_config(&ExecutionContext::new("test"));
     assert!(validation_config.validate_before_load(&json!({})).is_ok());
@@ -200,11 +200,11 @@ fn test_dijkstra_storage_computation_integration() {
     let mut storage = DijkstraStorageRuntime::new(0, false, 4, false);
     let mut computation = DijkstraComputationRuntime::new(0, false, 4, false);
     let targets = Box::new(SingleTarget::new(3));
-    
+
     // Test integration between storage and computation
     let result = storage.compute_dijkstra(&mut computation, targets, None, 0);
     assert!(result.is_ok());
-    
+
     let dijkstra_result = result.unwrap();
     assert!(dijkstra_result.computation_time_ms >= 0); // Allow 0 for very fast execution
     // Note: The mock graph has paths, so we expect to find some shortest paths
@@ -222,17 +222,17 @@ fn test_dijkstra_result_serialization() {
         relationship_ids: vec![0, 1, 2],
         costs: vec![0.0, 3.5, 7.0, 10.5],
     };
-    
+
     let path_finding_result = PathFindingResult::new(vec![path_result]);
     let result = DijkstraResult {
         path_finding_result,
         computation_time_ms: 100,
     };
-    
+
     // Test serialization
     let json = serde_json::to_value(&result).unwrap();
     assert_eq!(json["computation_time_ms"], json!(100));
-    
+
     // Test deserialization
     let deserialized: DijkstraResult = serde_json::from_value(json).unwrap();
     assert_eq!(deserialized.computation_time_ms, 100);
@@ -244,7 +244,7 @@ fn test_dijkstra_with_executor() {
     let context = ExecutionContext::new("test_user");
     let mut executor = ProcedureExecutor::new(context, ExecutionMode::Stream);
     let mut algorithm = DIJKSTRAAlgorithmSpec::new("test_graph".to_string());
-    
+
     let config = json!({
         "source_node": 0,
         "target_nodes": [5, 7],
@@ -252,10 +252,10 @@ fn test_dijkstra_with_executor() {
         "concurrency": 4,
         "use_heuristic": false
     });
-    
+
     // Execute the algorithm
     let result = executor.compute(&mut algorithm, &config);
-    
+
     // Should get GraphNotFound error since we don't have a real graph
     assert!(result.is_err());
     let error = result.unwrap_err();

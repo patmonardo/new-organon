@@ -9,7 +9,7 @@
 //! - Default: component_size / farness
 //! - Wasserman-Faust: (component_size / farness) * (component_size / (n-1))
 
-use crate::procedures::msbfs::SimpleMSBFS;
+use crate::procedures::msbfs::AggregatedNeighborProcessingMsBfs;
 
 #[derive(Clone)]
 pub struct ClosenessCentralityComputationResult {
@@ -19,7 +19,7 @@ pub struct ClosenessCentralityComputationResult {
 pub struct ClosenessCentralityComputationRuntime {
     farness: Vec<u64>,          // Sum of distances from each node
     component_size: Vec<u64>,   // Count of reachable nodes from each node
-    msbfs: SimpleMSBFS,
+    msbfs: AggregatedNeighborProcessingMsBfs,
 }
 
 impl ClosenessCentralityComputationRuntime {
@@ -27,7 +27,7 @@ impl ClosenessCentralityComputationRuntime {
         Self {
             farness: vec![0u64; node_count],
             component_size: vec![0u64; node_count],
-            msbfs: SimpleMSBFS::new(node_count),
+            msbfs: AggregatedNeighborProcessingMsBfs::new(node_count),
         }
     }
 
@@ -43,19 +43,27 @@ impl ClosenessCentralityComputationRuntime {
             self.component_size[i] = 0;
         }
 
-        // Phase 1: For each source node, run MSBFS and accumulate distances
-        for source_node in 0..node_count {
-            self.msbfs.compute(
-                &[source_node],
-                |_node_id, depth, _sources_mask| {
-                    // Accumulate distance for all reached nodes
-                    // Skip the source itself (depth == 0)
-                    if depth > 0 {
-                        self.farness[source_node] += depth as u64;
-                        self.component_size[source_node] += 1;
-                    }
-                },
+        // Phase 1: Run MSBFS in batches of up to 64 sources (bit-packed).
+        // This mirrors the Java aggregated MSBFS behavior:
+        // for each reached node at `depth`, add (number_of_sources_at_node * depth)
+        // into farness[node] and add number_of_sources_at_node into component_size[node].
+        for source_offset in (0..node_count).step_by(crate::procedures::msbfs::OMEGA) {
+            let source_len = (source_offset + crate::procedures::msbfs::OMEGA).min(node_count) - source_offset;
+
+            self.msbfs.run(
+                source_offset,
+                source_len,
+                false,
                 &get_neighbors,
+                |node_id, depth, sources_mask| {
+                    if depth == 0 {
+                        return;
+                    }
+
+                    let len = sources_mask.count_ones() as u64;
+                    self.farness[node_id] += len * depth as u64;
+                    self.component_size[node_id] += len;
+                },
             );
         }
 
@@ -81,6 +89,10 @@ impl ClosenessCentralityComputationRuntime {
         wasserman_faust: bool,
     ) -> f64 {
         if farness == 0 {
+            return 0.0;
+        }
+
+        if wasserman_faust && node_count <= 1 {
             return 0.0;
         }
 

@@ -7,9 +7,13 @@
 use crate::define_algorithm_spec;
 use crate::projection::codegen::config::validation::ConfigError;
 use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::orientation::Orientation;
+use crate::projection::relationship_type::RelationshipType;
+use crate::types::graph::id_map::NodeId;
 use super::storage::YensStorageRuntime;
 use super::computation::YensComputationRuntime;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 
 /// Yen's algorithm configuration
 ///
@@ -18,11 +22,20 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct YensConfig {
     /// Source node for path finding
-    pub source_node: u32,
+    pub source_node: NodeId,
     /// Target node for path finding
-    pub target_node: u32,
+    pub target_node: NodeId,
     /// Number of shortest paths to find (K)
     pub k: usize,
+    /// Property name for relationship weights
+    #[serde(default = "YensConfig::default_weight_property")]
+    pub weight_property: String,
+    /// Optional relationship types to include (empty means all types)
+    #[serde(default)]
+    pub relationship_types: Vec<String>,
+    /// Direction for traversal ("outgoing" or "incoming")
+    #[serde(default = "YensConfig::default_direction")]
+    pub direction: String,
     /// Whether to track relationships
     pub track_relationships: bool,
     /// Concurrency level for parallel processing
@@ -35,6 +48,9 @@ impl Default for YensConfig {
             source_node: 0,
             target_node: 1,
             k: 3,
+            weight_property: Self::default_weight_property(),
+            relationship_types: vec![],
+            direction: Self::default_direction(),
             track_relationships: false,
             concurrency: 1,
         }
@@ -42,8 +58,28 @@ impl Default for YensConfig {
 }
 
 impl YensConfig {
+    fn default_weight_property() -> String {
+        "weight".to_string()
+    }
+
+    fn default_direction() -> String {
+        "outgoing".to_string()
+    }
+
     /// Validate configuration parameters
     pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.source_node < 0 {
+            return Err(ConfigError::FieldValidation {
+                field: "source_node".to_string(),
+                message: "must be >= 0".to_string(),
+            });
+        }
+        if self.target_node < 0 {
+            return Err(ConfigError::FieldValidation {
+                field: "target_node".to_string(),
+                message: "must be >= 0".to_string(),
+            });
+        }
         if self.concurrency == 0 {
             return Err(ConfigError::FieldValidation {
                 field: "concurrency".to_string(),
@@ -60,6 +96,23 @@ impl YensConfig {
             return Err(ConfigError::FieldValidation {
                 field: "source_node".to_string(),
                 message: "source and target nodes must be different".to_string()
+            });
+        }
+
+        match self.direction.to_ascii_lowercase().as_str() {
+            "outgoing" | "incoming" => {}
+            other => {
+                return Err(ConfigError::FieldValidation {
+                    field: "direction".to_string(),
+                    message: format!("must be 'outgoing' or 'incoming' (got '{other}')"),
+                });
+            }
+        }
+
+        if self.weight_property.trim().is_empty() {
+            return Err(ConfigError::FieldValidation {
+                field: "weight_property".to_string(),
+                message: "must be non-empty".to_string(),
             });
         }
         Ok(())
@@ -86,13 +139,13 @@ pub struct YensPathResult {
     /// Index of this path (1st, 2nd, 3rd shortest, etc.)
     pub index: u32,
     /// Source node
-    pub source_node: u32,
+    pub source_node: NodeId,
     /// Target node
-    pub target_node: u32,
+    pub target_node: NodeId,
     /// Path as sequence of node IDs
-    pub node_ids: Vec<u32>,
+    pub node_ids: Vec<NodeId>,
     /// Path as sequence of relationship IDs
-    pub relationship_ids: Vec<u32>,
+    pub relationship_ids: Vec<NodeId>,
     /// Costs accumulated along the path
     pub costs: Vec<f64>,
     /// Total cost of the path
@@ -105,7 +158,7 @@ define_algorithm_spec! {
     output_type: YensResult,
     projection_hint: Dense,
     modes: [Stream, WriteNodeProperty],
-    execute: |_self, _graph_store, config_input, _context| {
+    execute: |_self, graph_store, config_input, _context| {
         // Parse and validate configuration
         let parsed_config: YensConfig = serde_json::from_value(config_input.clone())
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to parse config: {}", e)))?;
@@ -130,8 +183,30 @@ define_algorithm_spec! {
             parsed_config.concurrency,
         );
 
+        let rel_types: HashSet<RelationshipType> = if parsed_config.relationship_types.is_empty() {
+            graph_store.relationship_types()
+        } else {
+            RelationshipType::list_of(parsed_config.relationship_types.clone())
+                .into_iter()
+                .collect()
+        };
+
+        let (orientation, direction_byte) = match parsed_config.direction.to_ascii_lowercase().as_str() {
+            "incoming" => (Orientation::Reverse, 1u8),
+            _ => (Orientation::Natural, 0u8),
+        };
+
+        let selectors: HashMap<RelationshipType, String> = rel_types
+            .iter()
+            .map(|t| (t.clone(), parsed_config.weight_property.clone()))
+            .collect();
+
+        let graph = graph_store
+            .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
+            .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to obtain graph view: {}", e)))?;
+
         // Execute Yen's algorithm
-        let result = storage.compute_yens(&mut computation)?;
+        let result = storage.compute_yens(&mut computation, Some(graph.as_ref()), direction_byte)?;
 
         Ok(result)
     }
@@ -191,6 +266,9 @@ mod tests {
         assert_eq!(config.source_node, 0);
         assert_eq!(config.target_node, 1);
         assert_eq!(config.k, 3);
+        assert_eq!(config.weight_property, "weight");
+        assert!(config.relationship_types.is_empty());
+        assert_eq!(config.direction, "outgoing");
         assert!(!config.track_relationships);
         assert_eq!(config.concurrency, 1);
     }

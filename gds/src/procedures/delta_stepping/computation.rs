@@ -7,6 +7,7 @@
 //! for efficient frontier management.
 
 use std::collections::{HashMap, VecDeque};
+use crate::types::graph::id_map::NodeId;
 
 /// Delta Stepping Computation Runtime
 ///
@@ -14,16 +15,16 @@ use std::collections::{HashMap, VecDeque};
 /// Handles ephemeral computation state for the Delta Stepping algorithm
 pub struct DeltaSteppingComputationRuntime {
     /// Distances from source to each node
-    distances: HashMap<u32, f64>,
+    distances: HashMap<NodeId, f64>,
 
     /// Predecessor for each node in shortest path (if storing predecessors)
-    predecessors: HashMap<u32, Option<u32>>,
+    predecessors: HashMap<NodeId, Option<NodeId>>,
 
     /// Bins for organizing nodes by distance ranges
-    bins: Vec<VecDeque<u32>>,
+    bins: Vec<VecDeque<NodeId>>,
 
     /// Source node
-    source_node: u32,
+    source_node: NodeId,
 
     /// Delta parameter for binning strategy
     delta: f64,
@@ -41,7 +42,7 @@ impl DeltaSteppingComputationRuntime {
     ///
     /// Translation of: `TentativeDistances.distanceAndPredecessors()` (lines 76-100)
     pub fn new(
-        source_node: u32,
+        source_node: NodeId,
         delta: f64,
         concurrency: usize,
         store_predecessors: bool,
@@ -60,7 +61,13 @@ impl DeltaSteppingComputationRuntime {
     /// Initialize the computation runtime
     ///
     /// Translation of: Initialization in `compute()` method (lines 124-125)
-    pub fn initialize(&mut self, source_node: u32, delta: f64, store_predecessors: bool, node_count: usize) {
+    pub fn initialize(
+        &mut self,
+        source_node: NodeId,
+        delta: f64,
+        store_predecessors: bool,
+        node_count: usize,
+    ) {
         self.source_node = source_node;
         self.delta = delta;
         self.store_predecessors = store_predecessors;
@@ -71,7 +78,8 @@ impl DeltaSteppingComputationRuntime {
         self.bins.clear();
 
         // Initialize with infinite distances
-        for node_id in 0..node_count as u32 {
+        for node_id in 0..node_count {
+            let node_id = node_id as NodeId;
             self.distances.insert(node_id, f64::INFINITY);
             if self.store_predecessors {
                 self.predecessors.insert(node_id, None);
@@ -82,21 +90,21 @@ impl DeltaSteppingComputationRuntime {
     /// Get distance to a node
     ///
     /// Translation of: `distance()` method (lines 40, 109, 154)
-    pub fn distance(&self, node_id: u32) -> f64 {
+    pub fn distance(&self, node_id: NodeId) -> f64 {
         self.distances.get(&node_id).copied().unwrap_or(f64::INFINITY)
     }
 
     /// Set distance to a node
     ///
     /// Translation of: `set()` method (lines 50, 119, 173)
-    pub fn set_distance(&mut self, node_id: u32, distance: f64) {
+    pub fn set_distance(&mut self, node_id: NodeId, distance: f64) {
         self.distances.insert(node_id, distance);
     }
 
     /// Get predecessor of a node
     ///
     /// Translation of: `predecessor()` method (lines 45, 114, 158)
-    pub fn predecessor(&self, node_id: u32) -> Option<u32> {
+    pub fn predecessor(&self, node_id: NodeId) -> Option<NodeId> {
         if self.store_predecessors {
             self.predecessors.get(&node_id).copied().flatten()
         } else {
@@ -107,7 +115,7 @@ impl DeltaSteppingComputationRuntime {
     /// Set predecessor of a node
     ///
     /// Translation of: `set()` method (lines 50, 119, 173)
-    pub fn set_predecessor(&mut self, node_id: u32, predecessor: Option<u32>) {
+    pub fn set_predecessor(&mut self, node_id: NodeId, predecessor: Option<NodeId>) {
         if self.store_predecessors {
             self.predecessors.insert(node_id, predecessor);
         }
@@ -116,7 +124,7 @@ impl DeltaSteppingComputationRuntime {
     /// Add a node to a specific bin
     ///
     /// Translation of: Bin management in `DeltaSteppingTask.relaxNode()` (lines 270-279)
-    pub fn add_to_bin(&mut self, node_id: u32, bin_index: usize) {
+    pub fn add_to_bin(&mut self, node_id: NodeId, bin_index: usize) {
         // Ensure we have enough bins
         while self.bins.len() <= bin_index {
             self.bins.push(VecDeque::new());
@@ -140,10 +148,9 @@ impl DeltaSteppingComputationRuntime {
     /// Get all nodes in a specific bin
     ///
     /// Translation of: Bin access in `DeltaSteppingTask.updateFrontier()` (lines 291-303)
-    pub fn get_bin_nodes(&mut self, bin_index: usize) -> Vec<u32> {
+    pub fn get_bin_nodes(&mut self, bin_index: usize) -> Vec<NodeId> {
         if bin_index < self.bins.len() {
-            let nodes: Vec<u32> = self.bins[bin_index].drain(..).collect();
-            nodes
+            self.bins[bin_index].drain(..).collect()
         } else {
             vec![]
         }
@@ -155,10 +162,10 @@ impl DeltaSteppingComputationRuntime {
     /// Simplified version without atomic operations for now
     pub fn compare_and_exchange(
         &mut self,
-        node_id: u32,
+        node_id: NodeId,
         expected_distance: f64,
         new_distance: f64,
-        predecessor: u32,
+        predecessor: NodeId,
     ) -> f64 {
         let current_distance = self.distance(node_id);
 
@@ -180,7 +187,7 @@ impl DeltaSteppingComputationRuntime {
     }
 
     /// Get source node
-    pub fn source_node(&self) -> u32 {
+    pub fn source_node(&self) -> NodeId {
         self.source_node
     }
 
@@ -200,11 +207,11 @@ impl DeltaSteppingComputationRuntime {
     }
 
     /// Get nodes in a specific bin (without removing them)
-    pub fn peek_bin_nodes(&self, bin_index: usize) -> &VecDeque<u32> {
+    pub fn peek_bin_nodes(&self, bin_index: usize) -> &VecDeque<NodeId> {
         if bin_index < self.bins.len() {
             &self.bins[bin_index]
         } else {
-            static EMPTY: VecDeque<u32> = VecDeque::new();
+            static EMPTY: VecDeque<NodeId> = VecDeque::new();
             &EMPTY
         }
     }

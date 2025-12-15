@@ -28,6 +28,8 @@ use std::collections::HashMap;
 pub struct PageRankDistribution {
     /// Centrality statistics summary
     pub centrality_summary: HashMap<String, f64>,
+    /// Optional error message (e.g., histogram not available)
+    pub error: Option<String>,
     /// Post-processing time in milliseconds
     pub post_processing_millis: u64,
 }
@@ -36,9 +38,14 @@ impl PageRankDistribution {
     /// Create a new PageRank distribution result
     ///
     /// Translation of: Constructor (lines 29-32)
-    pub fn new(centrality_summary: HashMap<String, f64>, post_processing_millis: u64) -> Self {
+    pub fn new(
+        centrality_summary: HashMap<String, f64>,
+        error: Option<String>,
+        post_processing_millis: u64,
+    ) -> Self {
         Self {
             centrality_summary,
+            error,
             post_processing_millis,
         }
     }
@@ -87,16 +94,17 @@ impl PageRankDistributionComputer {
     where
         R: CentralityAlgorithmResult,
     {
-    let mut centrality_summary = HashMap::new();
-    let mut post_processing_millis = 0;
+        let mut centrality_summary = HashMap::new();
+        let mut error: Option<String> = None;
+        let mut post_processing_millis = 0;
 
-    if should_compute_distribution {
-        if use_log_scaler {
-            // LOG scaler prevents histogram computation
-            // Translation of: lines 46-51
-            // Use a special value to indicate error (Java uses String, we use f64::NAN)
-            centrality_summary.insert("Error".to_string(), f64::NAN);
-        } else {
+        if should_compute_distribution {
+            if use_log_scaler {
+                // LOG scaler prevents histogram computation
+                // Java stores a String in the summary map; we keep summary numeric
+                // and carry the message separately.
+                error = Some("Unable to create histogram when using scaler of type LOG".to_string());
+            } else {
                 let start = std::time::Instant::now();
 
                 // Compute statistics using our enhanced core
@@ -135,7 +143,7 @@ impl PageRankDistributionComputer {
             }
         }
 
-        PageRankDistribution::new(centrality_summary, post_processing_millis)
+        PageRankDistribution::new(centrality_summary, error, post_processing_millis)
     }
 }
 
@@ -143,7 +151,10 @@ impl PageRankDistributionComputer {
 mod tests {
     use super::*;
     use crate::procedures::algorithms::centrality::result::CentralityAlgorithmResult;
-    use crate::procedures::algorithms::stubs::{NodePropertyValues, ValueType};
+    use crate::types::properties::{PropertyValues, PropertyValuesError, PropertyValuesResult};
+    use crate::types::properties::node::NodePropertyValues;
+    use crate::types::ValueType;
+    use std::fmt;
 
     // Test implementation
     struct TestCentralityResult {
@@ -151,13 +162,81 @@ mod tests {
         node_count: usize,
     }
 
-    impl NodePropertyValues for TestCentralityResult {
-        fn node_count(&self) -> usize {
-            self.node_count
+    impl fmt::Debug for TestCentralityResult {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_struct("TestCentralityResult")
+                .field("node_count", &self.node_count)
+                .finish()
         }
+    }
 
+    impl PropertyValues for TestCentralityResult {
         fn value_type(&self) -> ValueType {
             ValueType::Double
+        }
+
+        fn element_count(&self) -> usize {
+            self.node_count
+        }
+    }
+
+    impl NodePropertyValues for TestCentralityResult {
+        fn double_value(&self, node_id: u64) -> PropertyValuesResult<f64> {
+            self.scores
+                .get(node_id as usize)
+                .copied()
+                .ok_or(PropertyValuesError::InvalidNodeId(node_id))
+        }
+
+        fn long_value(&self, _node_id: u64) -> PropertyValuesResult<i64> {
+            Err(PropertyValuesError::unsupported_type(
+                ValueType::Double,
+                ValueType::Long,
+            ))
+        }
+
+        fn double_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<f64>> {
+            Err(PropertyValuesError::unsupported_operation(
+                "double_array_value not supported",
+            ))
+        }
+
+        fn float_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<f32>> {
+            Err(PropertyValuesError::unsupported_operation(
+                "float_array_value not supported",
+            ))
+        }
+
+        fn long_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<i64>> {
+            Err(PropertyValuesError::unsupported_operation(
+                "long_array_value not supported",
+            ))
+        }
+
+        fn get_object(&self, _node_id: u64) -> PropertyValuesResult<Box<dyn std::any::Any>> {
+            Err(PropertyValuesError::unsupported_operation(
+                "get_object not supported",
+            ))
+        }
+
+        fn dimension(&self) -> Option<usize> {
+            Some(1)
+        }
+
+        fn get_max_long_property_value(&self) -> Option<i64> {
+            None
+        }
+
+        fn get_max_double_property_value(&self) -> Option<f64> {
+            self.scores
+                .iter()
+                .copied()
+                .filter(|v| v.is_finite())
+                .reduce(f64::max)
+        }
+
+        fn has_value(&self, node_id: u64) -> bool {
+            (node_id as usize) < self.node_count
         }
     }
 
@@ -201,9 +280,7 @@ mod tests {
         assert_eq!(distribution.centrality_summary["min"], 0.1);
         assert_eq!(distribution.centrality_summary["max"], 0.5);
         assert_eq!(distribution.centrality_summary["mean"], 0.3);
-
-        // Check timing (may be 0 for very fast operations)
-        assert!(distribution.post_processing_millis >= 0);
+        assert!(distribution.error.is_none());
     }
 
     #[test]
@@ -221,8 +298,8 @@ mod tests {
         );
 
         // Should have error message instead of statistics
-        assert!(distribution.centrality_summary.contains_key("Error"));
-        assert!(distribution.centrality_summary["Error"].is_nan());
+        assert!(distribution.centrality_summary.is_empty());
+        assert!(distribution.error.is_some());
     }
 
     #[test]
@@ -241,6 +318,7 @@ mod tests {
 
         // Should have empty summary
         assert!(distribution.centrality_summary.is_empty());
+        assert!(distribution.error.is_none());
         assert_eq!(distribution.post_processing_millis, 0);
     }
 }

@@ -1,36 +1,18 @@
-//! Betweenness Centrality Facade
+//! Harmonic Centrality Facade
 //!
-//! **What is it?**: Fraction of shortest paths that pass through each node
-//! **Why care?**: Identifies "bridge" nodes that connect different network regions
-//! **Complexity**: O(V*(V+E)) using Brandes' algorithm - more expensive!
-//! **Best for**: Finding bottlenecks and critical connectors in networks
+//! **What is it?**: A closeness variant that sums reciprocal distances.
+//! **Why care?**: Highlights nodes that are, on average, close to many others,
+//! including in disconnected graphs (unreachable pairs contribute 0).
+//! **Complexity**: O(V*(V+E)) in the worst case (all-pairs BFS).
 //!
-//! ## What Betweenness Means
-//!
-//! For each node N:
-//! - For every pair of other nodes (S, T), find shortest path from S to T
-//! - Count how many of those shortest paths pass through N
-//! - Betweenness = (# paths through N) / (# shortest paths total)
-//!
-//! High betweenness = critical for network flow/communication
-//!
-//! ## Example
-//!
-//! ```rust,no_run
-//! # use gds::Graph;
-//! # let graph = Graph::default();
-//! let results = graph
-//!     .betweenness()
-//!     .stream()?
-//!     .collect::<Vec<_>>();
-//!
-//! let stats = graph.betweenness().stats()?;
-//! println!("Max betweenness: {} (bottleneck identified)", stats.max);
-//! ```
+//! This implementation follows the Neo4j GDS behavior:
+//! - Uses MSBFS-style aggregated neighbor processing
+//! - Accumulates into the *reached node* per depth
+//! - Normalizes by `(nodeCount - 1)`
 
-use crate::procedures::betweenness::BetweennessCentralityComputationRuntime;
 use crate::procedures::facades::builder_base::ConfigValidator;
 use crate::procedures::facades::traits::{CentralityScore, Result};
+use crate::procedures::msbfs::AggregatedNeighborProcessingMsBfs;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -39,41 +21,28 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
-// ============================================================================
-// Statistics Type
-// ============================================================================
-
-/// Statistics about betweenness centrality in the graph
+/// Statistics about harmonic centrality.
 #[derive(Debug, Clone)]
-pub struct BetweennessStats {
-    /// Minimum betweenness score
+pub struct HarmonicCentralityStats {
     pub min: f64,
-    /// Maximum betweenness score
     pub max: f64,
-    /// Average betweenness
     pub mean: f64,
-    /// Standard deviation
     pub stddev: f64,
-    /// Median (50th percentile)
     pub p50: f64,
-    /// 90th percentile
     pub p90: f64,
-    /// 99th percentile
     pub p99: f64,
-    /// Number of "bridge" nodes (high betweenness > mean + stddev)
-    pub bridge_nodes: u64,
-    /// Execution time in milliseconds
+    pub isolated_nodes: u64,
     pub execution_time_ms: u64,
 }
 
-/// Betweenness centrality facade/builder bound to a live graph store.
+/// Harmonic centrality facade/builder bound to a live graph store.
 #[derive(Clone)]
-pub struct BetweennessCentralityFacade {
+pub struct HarmonicCentralityFacade {
     graph_store: Arc<DefaultGraphStore>,
     direction: String,
 }
 
-impl BetweennessCentralityFacade {
+impl HarmonicCentralityFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
@@ -118,6 +87,9 @@ impl BetweennessCentralityFacade {
             return Ok((Vec::new(), start.elapsed()));
         }
 
+        let mut centralities = vec![0.0f64; node_count];
+        let mut msbfs = AggregatedNeighborProcessingMsBfs::new(node_count);
+
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {
             let node_id = match Self::checked_node_id(node_idx) {
@@ -133,37 +105,36 @@ impl BetweennessCentralityFacade {
                 .collect()
         };
 
-        let divisor = if self.orientation() == Orientation::Undirected {
-            2.0
+        for source_offset in (0..node_count).step_by(crate::procedures::msbfs::OMEGA) {
+            let source_len = (source_offset + crate::procedures::msbfs::OMEGA).min(node_count) - source_offset;
+
+            msbfs.run(
+                source_offset,
+                source_len,
+                false,
+                &get_neighbors,
+                |node_id, depth, sources_mask| {
+                    if depth == 0 {
+                        return;
+                    }
+                    let len = sources_mask.count_ones() as f64;
+                    centralities[node_id] += len * (1.0 / depth as f64);
+                },
+            );
+        }
+
+        if node_count > 1 {
+            let norm = (node_count - 1) as f64;
+            for score in &mut centralities {
+                *score /= norm;
+            }
         } else {
-            1.0
-        };
+            centralities[0] = 0.0;
+        }
 
-        let mut runtime = BetweennessCentralityComputationRuntime::new(node_count);
-        let result = runtime.compute(node_count, divisor, &get_neighbors);
-
-        Ok((result.centralities, start.elapsed()))
+        Ok((centralities, start.elapsed()))
     }
 
-    /// Stream mode: Get betweenness score for each node
-    ///
-    /// Returns an iterator over (node_id, score) tuples.
-    ///
-    /// **Warning**: This algorithm is O(V*E), so streaming on large graphs
-    /// may take a while. Consider computing stats instead for overview.
-    ///
-    /// ## Example
-    /// ```rust,no_run
-    /// # use gds::Graph;
-    /// # let graph = Graph::default();
-    /// # use gds::procedures::facades::centrality::BetweenessBuilder;
-    /// let builder = BetweenessBuilder::new();
-    /// for score in builder.stream()? {
-    ///     if score.score > 0.1 {
-    ///         println!("Bridge node: {} (betweenness: {:.4})", score.node_id, score.score);
-    ///     }
-    /// }
-    /// ```
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
         let (scores, _elapsed) = self.compute_scores()?;
         let iter = scores
@@ -176,25 +147,10 @@ impl BetweennessCentralityFacade {
         Ok(Box::new(iter))
     }
 
-    /// Stats mode: Get aggregated statistics
-    ///
-    /// This is the recommended way to analyze betweenness on large graphs.
-    /// Returns min, max, mean, stddev, percentiles, and identifies "bridge" nodes.
-    ///
-    /// ## Example
-    /// ```rust,no_run
-    /// # use gds::Graph;
-    /// # let graph = Graph::default();
-    /// # use gds::procedures::facades::centrality::BetweenessBuilder;
-    /// let builder = BetweenessBuilder::new();
-    /// let stats = builder.stats()?;
-    /// println!("Found {} bridge nodes", stats.bridge_nodes);
-    /// println!("Execution took {}ms", stats.execution_time_ms);
-    /// ```
-    pub fn stats(&self) -> Result<BetweennessStats> {
+    pub fn stats(&self) -> Result<HarmonicCentralityStats> {
         let (scores, elapsed) = self.compute_scores()?;
         if scores.is_empty() {
-            return Ok(BetweennessStats {
+            return Ok(HarmonicCentralityStats {
                 min: 0.0,
                 max: 0.0,
                 mean: 0.0,
@@ -202,10 +158,12 @@ impl BetweennessCentralityFacade {
                 p50: 0.0,
                 p90: 0.0,
                 p99: 0.0,
-                bridge_nodes: 0,
+                isolated_nodes: 0,
                 execution_time_ms: elapsed.as_millis() as u64,
             });
         }
+
+        let isolated_nodes = scores.iter().filter(|v| **v == 0.0).count() as u64;
 
         let mut sorted = scores.clone();
         sorted.sort_by(|a, b| a.total_cmp(b));
@@ -223,15 +181,11 @@ impl BetweennessCentralityFacade {
         let stddev = var.sqrt();
 
         let percentile = |p: f64| -> f64 {
-            let idx = ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round()
-                as usize;
+            let idx = ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
             sorted[idx]
         };
 
-        let threshold = mean + stddev;
-        let bridge_nodes = scores.iter().filter(|v| **v > threshold).count() as u64;
-
-        Ok(BetweennessStats {
+        Ok(HarmonicCentralityStats {
             min,
             max,
             mean,
@@ -239,25 +193,12 @@ impl BetweennessCentralityFacade {
             p50: percentile(50.0),
             p90: percentile(90.0),
             p99: percentile(99.0),
-            bridge_nodes,
+            isolated_nodes,
             execution_time_ms: elapsed.as_millis() as u64,
         })
     }
 
-    /// Mutate mode: Compute and store as node property
-    ///
-    /// Stores betweenness scores as a node property.
-    /// Useful for follow-up analysis like identifying connectors.
-    ///
-    /// ## Example
-    /// ```rust,no_run
-    /// # use gds::Graph;
-    /// # let graph = Graph::default();
-    /// # use gds::procedures::facades::centrality::BetweenessBuilder;
-    /// let builder = BetweenessBuilder::new();
-    /// let result = builder.mutate("betweenness")?;
-    /// println!("Computed and stored for {} nodes", result.nodes_updated);
-    /// ```
+    /// Mutate mode is not implemented yet for harmonic.
     pub fn mutate(
         &self,
         property_name: &str,
@@ -265,24 +206,19 @@ impl BetweennessCentralityFacade {
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
         Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "BetweennessCentrality mutate/write is not implemented yet".to_string(),
+            "HarmonicCentrality mutate/write is not implemented yet".to_string(),
         ))
     }
 }
 
-// ============================================================================
-// Tests
-// ============================================================================
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 
     fn store() -> Arc<DefaultGraphStore> {
         let config = RandomGraphConfig {
-            seed: Some(19),
+            seed: Some(11),
             node_count: 8,
             relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
             ..RandomGraphConfig::default()
@@ -292,22 +228,22 @@ mod tests {
 
     #[test]
     fn test_stream_returns_node_count_rows() {
-        let facade = BetweennessCentralityFacade::new(store());
+        let facade = HarmonicCentralityFacade::new(store());
         let rows: Vec<_> = facade.stream().unwrap().collect();
         assert_eq!(rows.len(), 8);
     }
 
     #[test]
     fn test_stats_shape() {
-        let facade = BetweennessCentralityFacade::new(store());
+        let facade = HarmonicCentralityFacade::new(store());
         let stats = facade.stats().unwrap();
         assert!(stats.max >= stats.min);
     }
 
     #[test]
     fn test_mutate_validates_property_name() {
-        let facade = BetweennessCentralityFacade::new(store());
+        let facade = HarmonicCentralityFacade::new(store());
         assert!(facade.mutate("").is_err());
-        assert!(facade.mutate("betweenness").is_err());
+        assert!(facade.mutate("harmonic").is_err());
     }
 }

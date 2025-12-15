@@ -12,8 +12,7 @@ use crate::config::PageRankConfig;
 use serde_json::{json, Value as JsonValue};
 use std::time::Instant;
 
-use super::computation::PageRankComputationRuntime;
-use super::storage::PageRankStorageRuntime;
+use super::pregel_computation::run_pagerank_pregel;
 
 // ============================================================================
 // Algorithm Specification
@@ -108,19 +107,19 @@ impl AlgorithmSpec for PageRankAlgorithmSpec {
     fn parse_config(&self, input: &JsonValue) -> Result<JsonValue, ConfigError> {
         // Extract fields manually (since PageRankConfig doesn't derive Deserialize from define_config!)
         let mut builder = PageRankConfig::builder();
-        
+
         if let Some(df) = input.get("dampingFactor").and_then(|v| v.as_f64()) {
             builder = builder.damping_factor(df);
         }
-        
+
         if let Some(tol) = input.get("tolerance").and_then(|v| v.as_f64()) {
             builder = builder.tolerance(tol);
         }
-        
+
         if let Some(max_iter) = input.get("maxIterations").and_then(|v| v.as_u64()) {
             builder = builder.max_iterations(max_iter as usize);
         }
-        
+
         if let Some(src_nodes) = input.get("sourceNodes").and_then(|v| v.as_array()) {
             let nodes: Vec<String> = src_nodes
                 .iter()
@@ -158,7 +157,7 @@ impl AlgorithmSpec for PageRankAlgorithmSpec {
     /// 1. **Before-load validation** (config only):
     ///    - Range checks (damping factor, tolerance) → Handled by `PageRankConfig::builder().build()` validation
     ///    - Required parameters → Handled by config defaults
-    ///    
+    ///
     ///    Note: Most validation is already done by the config system in `parse_config()`,
     ///    so before-load validators are typically not needed here.
     ///
@@ -201,18 +200,18 @@ impl AlgorithmSpec for PageRankAlgorithmSpec {
             .get("dampingFactor")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.85);
-        
+
         let tolerance = config
             .get("tolerance")
             .and_then(|v| v.as_f64())
             .unwrap_or(0.0000001);
-        
+
         let max_iterations = config
             .get("maxIterations")
             .and_then(|v| v.as_u64())
             .unwrap_or(20) as usize;
-        
-        // Extract weight_property separately (not yet in PageRankConfig)
+
+        // Extract weight_property (currently not supported by the Pregel runtime wiring)
         let weight_property = config
             .get("weightProperty")
             .and_then(|v| v.as_str())
@@ -243,47 +242,26 @@ impl AlgorithmSpec for PageRankAlgorithmSpec {
 
         let timer = Instant::now();
 
-        // Clone source_nodes for both runtimes
-        let source_nodes_clone = source_nodes.clone();
-
-        // Create storage runtime (Real pole - knows GraphStore)
-        let storage = PageRankStorageRuntime::new(graph_store, source_nodes_clone, weight_property)?;
-
-        // Create computation runtime (Ideal pole - knows PageRank scores)
-        let mut computation = PageRankComputationRuntime::new(
-            storage.node_count(),
-            damping_factor,
-            tolerance,
-            source_nodes,
-        );
-
-        // Run PageRank iterations
-        for iteration in 0..max_iterations {
+        if weight_property.is_some() {
             context.log(
-                LogLevel::Debug,
-                &format!("PageRank iteration {}", iteration + 1),
+                LogLevel::Warn,
+                "PageRank weightProperty is currently ignored (weighted Pregel messaging not wired yet)",
             );
-
-            // Advance to next iteration
-            computation.advance_iteration();
-
-            // Check convergence
-            if computation.converged() {
-                context.log(
-                    LogLevel::Info,
-                    &format!("PageRank converged after {} iterations", computation.iteration()),
-                );
-                break;
-            }
-
-            // TODO: Implement actual PageRank message passing
-            // For now, this is a placeholder that simulates the algorithm
-            // In a real implementation, this would:
-            // 1. For each node, compute outgoing messages
-            // 2. Distribute messages to neighbors
-            // 3. Accumulate incoming messages
-            // 4. Update scores
         }
+
+        // Build a validated PageRankConfig for the Pregel runner.
+        let pr_config = PageRankConfig::builder()
+            .damping_factor(damping_factor)
+            .tolerance(tolerance)
+            .max_iterations(max_iterations)
+            .build()
+            .map_err(|e| AlgorithmError::Execution(format!("PageRankConfig invalid: {e}")))?;
+
+        // Use the store's default graph view (natural orientation).
+        let graph = graph_store.get_graph();
+
+        let source_set = source_nodes.map(|v| v.into_iter().collect());
+        let run_result = run_pagerank_pregel(graph, pr_config, source_set);
 
         let elapsed = timer.elapsed();
 
@@ -291,17 +269,17 @@ impl AlgorithmSpec for PageRankAlgorithmSpec {
             LogLevel::Info,
             &format!(
                 "PageRank completed: {} iterations, converged={}, time={:?}",
-                computation.iteration(),
-                computation.converged(),
+                run_result.ran_iterations,
+                run_result.did_converge,
                 elapsed
             ),
         );
 
         // Create result
         let result = PageRankComputationResult {
-            scores: computation.get_all_scores(),
-            iterations: computation.iteration(),
-            converged: computation.converged(),
+            scores: run_result.scores,
+            iterations: run_result.ran_iterations,
+            converged: run_result.did_converge,
             execution_time: elapsed,
         };
 

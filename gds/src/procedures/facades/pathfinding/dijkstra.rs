@@ -17,7 +17,7 @@
 //!
 //! ```rust,no_run
 //! # use gds::Graph;
-//! # let graph = Graph::default();
+//! # let graph: Graph = unimplemented!();
 //! let paths = graph
 //!     .dijkstra()
 //!     .source(42)
@@ -29,6 +29,14 @@
 
 use crate::procedures::facades::traits::{Result, PathResult};
 use crate::procedures::facades::builder_base::{MutationResult, WriteResult, ConfigValidator};
+use crate::procedures::dijkstra::{DijkstraComputationRuntime, DijkstraStorageRuntime};
+use crate::procedures::dijkstra::targets::create_targets;
+use crate::projection::orientation::Orientation;
+use crate::projection::RelationshipType;
+use crate::types::graph::id_map::NodeId;
+use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use std::collections::HashSet;
+use std::sync::Arc;
 
 // ============================================================================
 // Statistics Type
@@ -71,15 +79,16 @@ pub struct DijkstraStats {
 /// ## Example
 /// ```rust,no_run
 /// # use gds::Graph;
-/// # let graph = Graph::default();
+/// # let graph: Graph = unimplemented!();
 /// # use gds::procedures::facades::pathfinding::DijkstraBuilder;
-/// let builder = DijkstraBuilder::new()
+/// let builder = graph.dijkstra()
 ///     .source(42)
 ///     .target(99)
 ///     .weight_property("cost")
 ///     .direction("outgoing");
 /// ```
 pub struct DijkstraBuilder {
+    graph_store: Arc<DefaultGraphStore>,
     /// Source node for path computation
     source: Option<u64>,
     /// Target nodes (empty = all targets, single = specific target)
@@ -95,7 +104,7 @@ pub struct DijkstraBuilder {
 }
 
 impl DijkstraBuilder {
-    /// Create a new Dijkstra builder with defaults
+    /// Create a new Dijkstra builder bound to a live graph store.
     ///
     /// Defaults:
     /// - source: None (must be set)
@@ -104,8 +113,9 @@ impl DijkstraBuilder {
     /// - direction: "outgoing"
     /// - track_relationships: false
     /// - concurrency: 4
-    pub fn new() -> Self {
+    pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
+            graph_store,
             source: None,
             targets: vec![],
             weight_property: "weight".to_string(),
@@ -113,6 +123,91 @@ impl DijkstraBuilder {
             track_relationships: false,
             concurrency: 4,
         }
+    }
+
+    fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
+        NodeId::try_from(value).map_err(|_| {
+            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                "{} must fit into i64 (got {})",
+                field, value
+            ))
+        })
+    }
+
+    fn compute(self) -> Result<(Vec<PathResult>, DijkstraStats)> {
+        self.validate()?;
+
+        let source_u64 = self.source.expect("validate() ensures source is set");
+        let source_node = Self::checked_node_id(source_u64, "source")?;
+        let target_nodes: Vec<NodeId> = self
+            .targets
+            .iter()
+            .map(|&value| Self::checked_node_id(value, "targets"))
+            .collect::<Result<Vec<_>>>()?;
+
+        let targets = create_targets(target_nodes.clone());
+
+        let mut storage = DijkstraStorageRuntime::new(
+            source_node,
+            self.track_relationships,
+            self.concurrency,
+            false,
+        );
+
+        let mut computation = DijkstraComputationRuntime::new(
+            source_node,
+            self.track_relationships,
+            self.concurrency,
+            false,
+        );
+
+        let rel_types: HashSet<RelationshipType> = HashSet::new();
+        let (orientation, direction_byte) = match self.direction.as_str() {
+            "incoming" => (Orientation::Reverse, 1u8),
+            "both" => (Orientation::Undirected, 0u8),
+            _ => (Orientation::Natural, 0u8),
+        };
+
+        let graph_view = self
+            .graph_store
+            .get_graph_with_types_and_orientation(&rel_types, orientation)
+            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+
+        let result = storage.compute_dijkstra(
+            &mut computation,
+            targets,
+            Some(graph_view.as_ref()),
+            direction_byte,
+        )?;
+
+        let rows: Vec<PathResult> = result
+            .path_finding_result
+            .paths()
+            .filter(|p| p.source_node >= 0 && p.target_node >= 0)
+            .map(|p| PathResult {
+                source: p.source_node as u64,
+                target: p.target_node as u64,
+                path: p
+                    .node_ids
+                    .iter()
+                    .copied()
+                    .filter(|node_id| *node_id >= 0)
+                    .map(|node_id| node_id as u64)
+                    .collect(),
+                cost: p.total_cost(),
+            })
+            .collect();
+
+        let stats = DijkstraStats {
+            paths_found: rows.len() as u64,
+            execution_time_ms: result.computation_time_ms,
+            nodes_expanded: 0,
+            edges_considered: 0,
+            max_queue_size: 0,
+            target_reached: !rows.is_empty() && !target_nodes.is_empty(),
+        };
+
+        Ok((rows, stats))
     }
 
     /// Set source node
@@ -214,26 +309,16 @@ impl DijkstraBuilder {
     /// Use this when you want individual path results:
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
+    /// # let graph: Graph = unimplemented!();
     /// # use gds::procedures::facades::pathfinding::DijkstraBuilder;
-    /// let builder = DijkstraBuilder::new().source(0).target(5);
+    /// let builder = graph.dijkstra().source(0).target(5);
     /// for path in builder.stream()? {
     ///     println!("Path: {:?}, Cost: {}", path.path, path.cost);
     /// }
     /// ```
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
-        self.validate()?;
-
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return a dummy path for demonstration
-        let dummy_path = PathResult {
-            source: self.source.unwrap(),
-            target: self.targets.first().copied().unwrap_or(0),
-            path: vec![self.source.unwrap(), self.targets.first().copied().unwrap_or(0)],
-            cost: 42.0,
-        };
-
-        Ok(Box::new(std::iter::once(dummy_path)))
+        let (rows, _) = self.compute()?;
+        Ok(Box::new(rows.into_iter()))
     }
 
     /// Stats mode: Get aggregated statistics
@@ -243,25 +328,15 @@ impl DijkstraBuilder {
     /// Use this when you want performance metrics:
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
+    /// # let graph: Graph = unimplemented!();
     /// # use gds::procedures::facades::pathfinding::DijkstraBuilder;
-    /// let builder = DijkstraBuilder::new().source(0);
+    /// let builder = graph.dijkstra().source(0);
     /// let stats = builder.stats()?;
     /// println!("Found {} paths in {}ms", stats.paths_found, stats.execution_time_ms);
     /// ```
     pub fn stats(self) -> Result<DijkstraStats> {
-        self.validate()?;
-
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy stats for demonstration
-        Ok(DijkstraStats {
-            paths_found: 1,
-            execution_time_ms: 42,
-            nodes_expanded: 10,
-            edges_considered: 25,
-            max_queue_size: 8,
-            target_reached: !self.targets.is_empty(),
-        })
+        let (_, stats) = self.compute()?;
+        Ok(stats)
     }
 
     /// Mutate mode: Compute and store as node property
@@ -271,9 +346,9 @@ impl DijkstraBuilder {
     ///
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
+    /// # let graph: Graph = unimplemented!();
     /// # use gds::procedures::facades::pathfinding::DijkstraBuilder;
-    /// let builder = DijkstraBuilder::new().source(0);
+    /// let builder = graph.dijkstra().source(0);
     /// let result = builder.mutate("distance")?;
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
@@ -281,12 +356,8 @@ impl DijkstraBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy result for demonstration
-        Ok(MutationResult::new(
-            10, // Dummy count of nodes updated
-            property_name.to_string(),
-            std::time::Duration::from_millis(42),
+        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
+            "Dijkstra mutate/write is not implemented yet".to_string(),
         ))
     }
 
@@ -296,9 +367,9 @@ impl DijkstraBuilder {
     ///
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
+    /// # let graph: Graph = unimplemented!();
     /// # use gds::procedures::facades::pathfinding::DijkstraBuilder;
-    /// let builder = DijkstraBuilder::new().source(0);
+    /// let builder = graph.dijkstra().source(0);
     /// let result = builder.write("paths")?;
     /// println!("Wrote {} nodes", result.nodes_written);
     /// ```
@@ -306,19 +377,9 @@ impl DijkstraBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy result for demonstration
-        Ok(WriteResult::new(
-            5, // Dummy count of nodes written
-            property_name.to_string(),
-            std::time::Duration::from_millis(84),
+        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
+            "Dijkstra mutate/write is not implemented yet".to_string(),
         ))
-    }
-}
-
-impl Default for DijkstraBuilder {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -329,10 +390,22 @@ impl Default for DijkstraBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
+    use std::sync::Arc;
+
+    fn store() -> Arc<DefaultGraphStore> {
+        let config = RandomGraphConfig {
+            seed: Some(3),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        Arc::new(DefaultGraphStore::random(&config).unwrap())
+    }
 
     #[test]
     fn test_builder_defaults() {
-        let builder = DijkstraBuilder::new();
+        let builder = DijkstraBuilder::new(store());
         assert_eq!(builder.source, None);
         assert!(builder.targets.is_empty());
         assert_eq!(builder.weight_property, "weight");
@@ -343,7 +416,7 @@ mod tests {
 
     #[test]
     fn test_builder_fluent_chain() {
-        let builder = DijkstraBuilder::new()
+        let builder = DijkstraBuilder::new(store())
             .source(42)
             .target(99)
             .weight_property("cost")
@@ -361,31 +434,31 @@ mod tests {
 
     #[test]
     fn test_validate_missing_source() {
-        let builder = DijkstraBuilder::new();
+        let builder = DijkstraBuilder::new(store());
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_invalid_concurrency() {
-        let builder = DijkstraBuilder::new().source(0).concurrency(0);
+        let builder = DijkstraBuilder::new(store()).source(0).concurrency(0);
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_invalid_direction() {
-        let builder = DijkstraBuilder::new().source(0).direction("invalid");
+        let builder = DijkstraBuilder::new(store()).source(0).direction("invalid");
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_empty_weight_property() {
-        let builder = DijkstraBuilder::new().source(0).weight_property("");
+        let builder = DijkstraBuilder::new(store()).source(0).weight_property("");
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_valid_config() {
-        let builder = DijkstraBuilder::new()
+        let builder = DijkstraBuilder::new(store())
             .source(0)
             .target(5)
             .weight_property("cost")
@@ -396,31 +469,31 @@ mod tests {
 
     #[test]
     fn test_stream_requires_validation() {
-        let builder = DijkstraBuilder::new(); // Missing source
+        let builder = DijkstraBuilder::new(store()); // Missing source
         assert!(builder.stream().is_err());
     }
 
     #[test]
     fn test_stats_requires_validation() {
-        let builder = DijkstraBuilder::new().direction("invalid");
+        let builder = DijkstraBuilder::new(store()).direction("invalid");
         assert!(builder.stats().is_err());
     }
 
     #[test]
     fn test_mutate_requires_validation() {
-        let builder = DijkstraBuilder::new().source(0); // Valid config but...
+        let builder = DijkstraBuilder::new(store()).source(0); // Valid config but...
         assert!(builder.mutate("").is_err()); // Empty property name
     }
 
     #[test]
     fn test_mutate_validates_property_name() {
-        let builder = DijkstraBuilder::new().source(0);
-        assert!(builder.mutate("distance").is_ok());
+        let builder = DijkstraBuilder::new(store()).source(0);
+        assert!(builder.mutate("distance").is_err());
     }
 
     #[test]
     fn test_write_validates_property_name() {
-        let builder = DijkstraBuilder::new().source(0);
-        assert!(builder.write("paths").is_ok());
+        let builder = DijkstraBuilder::new(store()).source(0);
+        assert!(builder.write("paths").is_err());
     }
 }

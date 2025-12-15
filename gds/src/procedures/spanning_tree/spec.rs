@@ -10,6 +10,7 @@ use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::relationship_type::RelationshipType;
 use crate::projection::orientation::Orientation;
 use std::collections::HashSet;
+use std::collections::HashMap;
 use super::storage::SpanningTreeStorageRuntime;
 use serde::{Deserialize, Serialize};
 
@@ -29,6 +30,15 @@ pub struct SpanningTreeConfig {
     /// Optional relationship types to include (empty means all types)
     #[serde(default)]
     pub relationship_types: Vec<String>,
+
+    /// Relationship weight property to use
+    #[serde(default = "SpanningTreeConfig::default_weight_property")]
+    pub weight_property: String,
+
+    /// Direction to traverse edges: "outgoing", "incoming", or "undirected".
+    /// Spanning trees are typically computed on undirected graphs.
+    #[serde(default = "SpanningTreeConfig::default_direction")]
+    pub direction: String,
 }
 
 impl Default for SpanningTreeConfig {
@@ -38,11 +48,21 @@ impl Default for SpanningTreeConfig {
             compute_minimum: true,
             concurrency: 1,
             relationship_types: vec![],
+            weight_property: Self::default_weight_property(),
+            direction: Self::default_direction(),
         }
     }
 }
 
 impl SpanningTreeConfig {
+    fn default_weight_property() -> String {
+        "weight".to_string()
+    }
+
+    fn default_direction() -> String {
+        "undirected".to_string()
+    }
+
     /// Validates the configuration.
     ///
     /// # Returns
@@ -53,6 +73,20 @@ impl SpanningTreeConfig {
             return Err(crate::config::validation::ConfigError::MustBePositive {
                 name: "concurrency".to_string(),
                 value: self.concurrency as f64,
+            });
+        }
+
+        if self.weight_property.trim().is_empty() {
+            return Err(crate::config::validation::ConfigError::InvalidParameter {
+                parameter: "weight_property".to_string(),
+                reason: "Weight property must be non-empty".to_string(),
+            });
+        }
+
+        if self.direction.trim().is_empty() {
+            return Err(crate::config::validation::ConfigError::InvalidParameter {
+                parameter: "direction".to_string(),
+                reason: "Direction must be non-empty".to_string(),
             });
         }
 
@@ -177,12 +211,26 @@ define_algorithm_spec! {
         // Execute using filtered/oriented graph view
         let rel_types: HashSet<RelationshipType> = if !config.relationship_types.is_empty() {
             RelationshipType::list_of(config.relationship_types.clone()).into_iter().collect()
-        } else { HashSet::new() };
+        } else {
+            graph_store.relationship_types()
+        };
+
+        let (orientation, direction_byte) = match config.direction.to_ascii_lowercase().as_str() {
+            "incoming" => (Orientation::Reverse, 1u8),
+            "undirected" => (Orientation::Natural, 2u8),
+            _ => (Orientation::Natural, 0u8),
+        };
+
+        let selectors: HashMap<RelationshipType, String> = rel_types
+            .iter()
+            .map(|t| (t.clone(), config.weight_property.clone()))
+            .collect();
+
         let graph = graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
+            .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
             .map_err(|e| AlgorithmError::Execution(format!("Failed to obtain graph view: {}", e)))?;
 
-        let spanning_tree = storage.compute_spanning_tree_with_graph(graph.as_ref())
+        let spanning_tree = storage.compute_spanning_tree_with_graph(graph.as_ref(), direction_byte)
             .map_err(|e| AlgorithmError::Execution(format!("Spanning tree computation failed: {}", e)))?;
 
         // Calculate computation time
@@ -210,6 +258,9 @@ mod tests {
         assert_eq!(config.start_node_id, 0);
         assert!(config.compute_minimum);
         assert_eq!(config.concurrency, 1);
+        assert!(config.relationship_types.is_empty());
+        assert_eq!(config.weight_property, "weight");
+        assert_eq!(config.direction, "undirected");
     }
 
     #[test]

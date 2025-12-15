@@ -9,6 +9,7 @@ use super::spec::{BellmanFordResult, PathResult};
 use super::computation::BellmanFordComputationRuntime;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::Graph;
+use crate::types::graph::id_map::NodeId;
 use std::collections::VecDeque;
 
 /// Bellman-Ford Storage Runtime
@@ -17,7 +18,7 @@ use std::collections::VecDeque;
 /// Handles the persistent data access and algorithm orchestration
 pub struct BellmanFordStorageRuntime {
     /// Source node for shortest path computation
-    pub source_node: u32,
+    pub source_node: NodeId,
 
     /// Whether to track negative cycles
     pub track_negative_cycles: bool,
@@ -34,7 +35,7 @@ impl BellmanFordStorageRuntime {
     ///
     /// Translation of: Constructor (lines 55-69)
     pub fn new(
-        source_node: u32,
+        source_node: NodeId,
         track_negative_cycles: bool,
         track_paths: bool,
         concurrency: usize,
@@ -58,7 +59,12 @@ impl BellmanFordStorageRuntime {
     ) -> Result<BellmanFordResult, AlgorithmError> {
         // Initialize computation runtime
         let node_count = graph.map(|g| g.node_count()).unwrap_or(100);
-        computation.initialize(self.source_node, self.track_negative_cycles, self.track_paths, node_count);
+        computation.initialize(
+            self.source_node,
+            self.track_negative_cycles,
+            self.track_paths,
+            node_count,
+        );
 
         // Initialize frontier with source node
         let mut frontier = VecDeque::new();
@@ -138,6 +144,7 @@ impl BellmanFordStorageRuntime {
         let node_count = 100; // TODO: Replace with actual graph store
 
         for target_node in 0..node_count {
+            let target_node = target_node as NodeId;
             if computation.predecessor(target_node).is_some() {
                 let path = self.reconstruct_path(computation, self.source_node, target_node)?;
                 paths.push(path);
@@ -170,8 +177,8 @@ impl BellmanFordStorageRuntime {
     fn reconstruct_path(
         &self,
         computation: &BellmanFordComputationRuntime,
-        source_node: u32,
-        target_node: u32,
+        source_node: NodeId,
+        target_node: NodeId,
     ) -> Result<PathResult, AlgorithmError> {
         let mut node_ids = Vec::new();
         let mut costs = Vec::new();
@@ -210,7 +217,7 @@ impl BellmanFordStorageRuntime {
     fn reconstruct_negative_cycle(
         &self,
         computation: &BellmanFordComputationRuntime,
-        start_node: u32,
+        start_node: NodeId,
     ) -> Result<PathResult, AlgorithmError> {
         let mut node_ids = Vec::new();
         let mut costs = Vec::new();
@@ -258,13 +265,22 @@ impl BellmanFordStorageRuntime {
     /// Get neighbors with weights for a given node
     ///
     /// Uses Graph::stream_relationships to iterate outgoing edges with weights
-    fn get_neighbors_with_weights(&self, graph: Option<&dyn Graph>, node_id: u32, direction: u8) -> Vec<(u32, f64)> {
+    fn get_neighbors_with_weights(
+        &self,
+        graph: Option<&dyn Graph>,
+        node_id: NodeId,
+        direction: u8,
+    ) -> Vec<(NodeId, f64)> {
         if let Some(g) = graph {
             let fallback: f64 = 1.0;
             let iter: Box<dyn Iterator<Item = crate::types::properties::relationship::traits::RelationshipCursorBox> + Send> =
-                if direction == 1 { g.stream_inverse_relationships(node_id as i64, fallback) } else { g.stream_relationships(node_id as i64, fallback) };
+                if direction == 1 {
+                    g.stream_inverse_relationships(node_id, fallback)
+                } else {
+                    g.stream_relationships(node_id, fallback)
+                };
             iter.into_iter()
-                .map(|cursor| (cursor.target_id() as u32, cursor.property()))
+                .map(|cursor| (cursor.target_id(), cursor.property()))
                 .collect()
         } else {
             // Mock implementation for tests

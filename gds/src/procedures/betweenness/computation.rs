@@ -40,7 +40,8 @@ impl BetweennessCentralityComputationRuntime {
     pub fn compute(
         &mut self,
         node_count: usize,
-        get_neighbors: impl Fn(usize) -> Vec<usize>,
+        divisor: f64,
+        get_neighbors: &impl Fn(usize) -> Vec<usize>,
     ) -> BetweennessCentralityComputationResult {
         // Reset centralities (accumulator)
         for c in self.centralities.iter_mut() {
@@ -49,14 +50,14 @@ impl BetweennessCentralityComputationRuntime {
 
         // Process each node as a source
         for source_node in 0..node_count {
-            self.forward_phase(source_node, &get_neighbors);
-            self.backward_phase(source_node, node_count);
+            self.forward_phase(source_node, get_neighbors);
+            self.backward_phase(source_node);
         }
 
-        // Normalize for undirected graphs (divide by 2)
-        let divisor = 2.0;
-        for c in self.centralities.iter_mut() {
-            *c /= divisor;
+        if divisor != 0.0 {
+            for c in self.centralities.iter_mut() {
+                *c /= divisor;
+            }
         }
 
         BetweennessCentralityComputationResult {
@@ -69,7 +70,7 @@ impl BetweennessCentralityComputationRuntime {
     fn forward_phase(
         &mut self,
         source_node: usize,
-        get_neighbors: impl Fn(usize) -> Vec<usize>,
+        get_neighbors: &impl Fn(usize) -> Vec<usize>,
     ) {
         // Reset per-source arrays
         self.sigma.iter_mut().for_each(|s| *s = 0);
@@ -112,7 +113,7 @@ impl BetweennessCentralityComputationRuntime {
 
     /// Phase 2: Backward dependency propagation
     /// Process nodes in reverse BFS order to calculate dependencies
-    fn backward_phase(&mut self, source_node: usize, _node_count: usize) {
+    fn backward_phase(&mut self, source_node: usize) {
         // Reset delta
         self.delta.iter_mut().for_each(|d| *d = 0.0);
 
@@ -178,9 +179,8 @@ mod tests {
     fn test_betweenness_single_edge() {
         let graph = create_graph(vec![(0, 1)], 2);
         let mut runtime = BetweennessCentralityComputationRuntime::new(2);
-        let result = runtime.compute(2, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(2, 2.0, &get_neighbors);
 
         // Single edge: no intermediate nodes
         assert!((result.centralities[0]).abs() < 1e-10);
@@ -191,9 +191,8 @@ mod tests {
     fn test_betweenness_path_three_nodes() {
         let graph = create_graph(vec![(0, 1), (1, 2)], 3);
         let mut runtime = BetweennessCentralityComputationRuntime::new(3);
-        let result = runtime.compute(3, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(3, 2.0, &get_neighbors);
 
         // Node 1 is on the path 0-1-2
         // From 0: sigma[0]=1, sigma[1]=1, sigma[2]=1
@@ -211,9 +210,8 @@ mod tests {
         // Center: 0, Leaves: 1,2,3,4
         let graph = create_graph(vec![(0, 1), (0, 2), (0, 3), (0, 4)], 5);
         let mut runtime = BetweennessCentralityComputationRuntime::new(5);
-        let result = runtime.compute(5, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(5, 2.0, &get_neighbors);
 
         // Center is on every path between leaves
         // From each leaf, 3 paths go through center to other leaves
@@ -232,9 +230,8 @@ mod tests {
     fn test_betweenness_triangle() {
         let graph = create_graph(vec![(0, 1), (1, 2), (0, 2)], 3);
         let mut runtime = BetweennessCentralityComputationRuntime::new(3);
-        let result = runtime.compute(3, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(3, 2.0, &get_neighbors);
 
         // In a triangle, each node is on shortest paths between other two
         // But multiple shortest paths exist, so dependencies spread
@@ -250,9 +247,8 @@ mod tests {
         // 0-1-2-3
         let graph = create_graph(vec![(0, 1), (1, 2), (2, 3)], 4);
         let mut runtime = BetweennessCentralityComputationRuntime::new(4);
-        let result = runtime.compute(4, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(4, 2.0, &get_neighbors);
 
         // Node 1 and 2 are on internal paths
         // Ends should have 0
@@ -270,9 +266,8 @@ mod tests {
             4,
         );
         let mut runtime = BetweennessCentralityComputationRuntime::new(4);
-        let result = runtime.compute(4, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(4, 2.0, &get_neighbors);
 
         // In complete graph, all paths have length 1 (direct edge)
         // No node lies on a shortest path between two others
@@ -292,9 +287,8 @@ mod tests {
         //    3
         let graph = create_graph(vec![(0, 1), (0, 2), (1, 3), (2, 3)], 4);
         let mut runtime = BetweennessCentralityComputationRuntime::new(4);
-        let result = runtime.compute(4, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
+        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
+        let result = runtime.compute(4, 2.0, &get_neighbors);
 
         // Nodes 1 and 2 should have equal centrality (symmetric)
         assert!((result.centralities[1] - result.centralities[2]).abs() < 1e-10,

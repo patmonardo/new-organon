@@ -1,14 +1,16 @@
 //! All Shortest Paths Storage Runtime
 //!
 //! This module implements the **Gross pole** of the Functor machinery for All Shortest Paths.
-//! It represents persistent data structures (GraphStore and graph topology).
+//! It represents persistent data structures (Graph view and graph topology).
 //!
 //! **Translation Source**: `org.neo4j.gds.allshortestpaths.MSBFSAllShortestPaths` and `WeightedAllShortestPaths`
 //! **Key Features**: Multi-source parallelization, weighted/unweighted support, streaming results
 
 use crate::projection::eval::procedure::AlgorithmError;
-use crate::types::graph_store::GraphStore;
+use crate::types::graph::Graph;
+use crate::types::graph::id_map::NodeId;
 use std::sync::mpsc;
+use std::sync::Arc;
 
 /// Algorithm type for All Shortest Paths
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -30,87 +32,78 @@ pub enum AlgorithmType {
 /// - **Storage Runtime** (Gross) = persistent GraphStore and graph topology
 /// - **Computation Runtime** (Subtle) = ephemeral shortest path results
 /// - **Functor** = the mapping between them via shortest path computation
-pub struct AllShortestPathsStorageRuntime<'a, G: GraphStore> {
-    /// Reference to the graph store
-    graph_store: &'a G,
+pub struct AllShortestPathsStorageRuntime {
+    /// Graph view to traverse
+    graph: Arc<dyn Graph>,
     /// Algorithm type (weighted vs unweighted)
     algorithm_type: AlgorithmType,
     /// Number of parallel workers
     concurrency: usize,
 }
 
-impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
-    /// Create a new storage runtime
-    pub fn new(graph_store: &'a G) -> Result<Self, AlgorithmError> {
-        // Determine algorithm type based on graph properties
-        // TODO: Replace with actual GraphStore API call
-        // For now, default to Unweighted
-        let algorithm_type = AlgorithmType::Unweighted;
-
-        Ok(Self {
-            graph_store,
-            algorithm_type,
-            concurrency: num_cpus::get(),
-        })
-    }
-
+impl AllShortestPathsStorageRuntime {
     /// Create with specific settings
     pub fn with_settings(
-        graph_store: &'a G,
+        graph: Arc<dyn Graph>,
         algorithm_type: AlgorithmType,
         concurrency: usize,
-    ) -> Result<Self, AlgorithmError> {
-        Ok(Self {
-            graph_store,
+    ) -> Self {
+        Self {
+            graph,
             algorithm_type,
             concurrency,
-        })
-    }
-
-    /// Get reference to graph store
-    pub fn graph_store(&self) -> &'a G {
-        self.graph_store
+        }
     }
 
     /// Compute shortest paths from a source node
     ///
-    /// This projects from GraphStore (Gross - persistent topology)
+    /// This projects from Graph (Gross - persistent topology)
     /// to shortest path results (Subtle - path distances).
     ///
     /// **This is where the Functor machinery actually works**:
-    /// GraphStore (Gross) → ShortestPathResults (Subtle)
+    /// Graph (Gross) → ShortestPathResults (Subtle)
     ///
     /// **Translation of Java logic**:
     /// - Unweighted: Multi-Source BFS using MSBFS
     /// - Weighted: Multi-Source Dijkstra with priority queue
-    pub fn compute_shortest_paths(&self, source_node: u32) -> Result<Vec<ShortestPathResult>, AlgorithmError> {
+    pub fn compute_shortest_paths(&self, source_node: NodeId, direction: u8) -> Result<Vec<ShortestPathResult>, AlgorithmError> {
         match self.algorithm_type {
-            AlgorithmType::Unweighted => self.compute_unweighted_shortest_paths(source_node),
-            AlgorithmType::Weighted => self.compute_weighted_shortest_paths(source_node),
+            AlgorithmType::Unweighted => self.compute_unweighted_shortest_paths(source_node, direction),
+            AlgorithmType::Weighted => self.compute_weighted_shortest_paths(source_node, direction),
         }
     }
 
     /// Compute unweighted shortest paths using BFS
-    fn compute_unweighted_shortest_paths(&self, source_node: u32) -> Result<Vec<ShortestPathResult>, AlgorithmError> {
-        let node_count = self.graph_store.node_count();
+    fn compute_unweighted_shortest_paths(&self, source_node: NodeId, direction: u8) -> Result<Vec<ShortestPathResult>, AlgorithmError> {
+        let node_count = self.graph.node_count();
+        let source_index = usize::try_from(source_node)
+            .map_err(|_| AlgorithmError::InvalidGraph(format!("Invalid source node id: {source_node}")))?;
+        if source_index >= node_count {
+            return Err(AlgorithmError::InvalidGraph(format!(
+                "Source node id out of range: {source_node} (node_count={node_count})"
+            )));
+        }
         let mut distances = vec![f64::INFINITY; node_count];
         let mut queue = std::collections::VecDeque::new();
 
         // Initialize BFS
-        distances[source_node as usize] = 0.0;
+        distances[source_index] = 0.0;
         queue.push_back(source_node);
 
         // BFS traversal
         while let Some(current_node) = queue.pop_front() {
-            let current_distance = distances[current_node as usize];
+            let current_index = usize::try_from(current_node)
+                .map_err(|_| AlgorithmError::InvalidGraph(format!("Invalid node id: {current_node}")))?;
+            let current_distance = distances[current_index];
 
-            // TODO: Replace with actual GraphStore API call
-            // This simulates the Java MSBFS logic
-            let neighbors = self.get_neighbors_mock(current_node);
-
-            for neighbor in neighbors {
-                if distances[neighbor as usize] == f64::INFINITY {
-                    distances[neighbor as usize] = current_distance + 1.0;
+            for neighbor in self.get_neighbors(current_node, direction) {
+                let neighbor_index = usize::try_from(neighbor)
+                    .map_err(|_| AlgorithmError::InvalidGraph(format!("Invalid neighbor id: {neighbor}")))?;
+                if neighbor_index >= node_count {
+                    continue;
+                }
+                if distances[neighbor_index] == f64::INFINITY {
+                    distances[neighbor_index] = current_distance + 1.0;
                     queue.push_back(neighbor);
                 }
             }
@@ -122,7 +115,7 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
             .enumerate()
             .map(|(target, distance)| ShortestPathResult {
                 source: source_node,
-                target: target as u32,
+                target: target as NodeId,
                 distance,
             })
             .collect();
@@ -131,42 +124,89 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
     }
 
     /// Compute weighted shortest paths using Dijkstra
-    fn compute_weighted_shortest_paths(&self, source_node: u32) -> Result<Vec<ShortestPathResult>, AlgorithmError> {
-        let node_count = self.graph_store.node_count();
+    fn compute_weighted_shortest_paths(&self, source_node: NodeId, direction: u8) -> Result<Vec<ShortestPathResult>, AlgorithmError> {
+        use std::cmp::Ordering;
+        use std::collections::BinaryHeap;
+
+        #[derive(Debug, Clone, Copy)]
+        struct State {
+            cost: f64,
+            node: NodeId,
+        }
+
+        impl PartialEq for State {
+            fn eq(&self, other: &Self) -> bool {
+                self.cost == other.cost && self.node == other.node
+            }
+        }
+
+        impl Eq for State {}
+
+        impl PartialOrd for State {
+            fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+                // Reverse for min-heap behavior.
+                other
+                    .cost
+                    .partial_cmp(&self.cost)
+                    .or_else(|| other.node.partial_cmp(&self.node))
+            }
+        }
+
+        impl Ord for State {
+            fn cmp(&self, other: &Self) -> Ordering {
+                self.partial_cmp(other).unwrap_or(Ordering::Equal)
+            }
+        }
+
+        let node_count = self.graph.node_count();
+        let source_index = usize::try_from(source_node)
+            .map_err(|_| AlgorithmError::InvalidGraph(format!("Invalid source node id: {source_node}")))?;
+        if source_index >= node_count {
+            return Err(AlgorithmError::InvalidGraph(format!(
+                "Source node id out of range: {source_node} (node_count={node_count})"
+            )));
+        }
+
         let mut distances = vec![f64::INFINITY; node_count];
-        let mut visited = vec![false; node_count];
+        distances[source_index] = 0.0;
 
-        // Initialize Dijkstra
-        distances[source_node as usize] = 0.0;
+        let mut heap = BinaryHeap::new();
+        heap.push(State {
+            cost: 0.0,
+            node: source_node,
+        });
 
-        // Simple Dijkstra implementation (without priority queue for now)
-        for _ in 0..node_count {
-            // Find unvisited node with minimum distance
-            let mut min_node = None;
-            let mut min_distance = f64::INFINITY;
-
-            for (node, &distance) in distances.iter().enumerate() {
-                if !visited[node] && distance < min_distance {
-                    min_distance = distance;
-                    min_node = Some(node);
-                }
+        while let Some(State { cost, node }) = heap.pop() {
+            let node_index = match usize::try_from(node) {
+                Ok(idx) => idx,
+                Err(_) => continue,
+            };
+            if node_index >= node_count {
+                continue;
             }
 
-            if let Some(current_node) = min_node {
-                visited[current_node] = true;
+            // Stale queue entry.
+            if cost > distances[node_index] {
+                continue;
+            }
 
-                // TODO: Replace with actual GraphStore API call
-                // This simulates the Java WeightedAllShortestPaths logic
-                let neighbors_with_weights = self.get_neighbors_with_weights_mock(current_node as u32);
-
-                for (neighbor, weight) in neighbors_with_weights {
-                    let new_distance = distances[current_node] + weight;
-                    if new_distance < distances[neighbor as usize] {
-                        distances[neighbor as usize] = new_distance;
-                    }
+            for (neighbor, weight) in self.get_neighbors_with_weights(node, direction) {
+                let neighbor_index = match usize::try_from(neighbor) {
+                    Ok(idx) => idx,
+                    Err(_) => continue,
+                };
+                if neighbor_index >= node_count {
+                    continue;
                 }
-            } else {
-                break;
+
+                let next_cost = cost + weight;
+                if next_cost < distances[neighbor_index] {
+                    distances[neighbor_index] = next_cost;
+                    heap.push(State {
+                        cost: next_cost,
+                        node: neighbor,
+                    });
+                }
             }
         }
 
@@ -176,7 +216,7 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
             .enumerate()
             .map(|(target, distance)| ShortestPathResult {
                 source: source_node,
-                target: target as u32,
+                target: target as NodeId,
                 distance,
             })
             .collect();
@@ -184,24 +224,70 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
         Ok(results)
     }
 
-    /// Get neighbors (unweighted) using real graph data
-    fn get_neighbors_mock(&self, _node: u32) -> Vec<u32> {
-        // TODO: Access graph from graph_store for real implementation
-        // For now, return empty vector as placeholder
-        // This requires either:
-        // 1. Adding graph() method to GraphStore trait
-        // 2. Passing graph as parameter to these methods
-        vec![]
+    fn get_neighbors(&self, node_id: NodeId, direction: u8) -> Vec<NodeId> {
+        let fallback: f64 = 1.0;
+        match direction {
+            1 => self
+                .graph
+                .stream_inverse_relationships(node_id, fallback)
+                .into_iter()
+                .map(|cursor| cursor.target_id())
+                .collect(),
+            2 => {
+                let mut out: Vec<NodeId> = self
+                    .graph
+                    .stream_relationships(node_id, fallback)
+                    .into_iter()
+                    .map(|cursor| cursor.target_id())
+                    .collect();
+                out.extend(
+                    self.graph
+                        .stream_inverse_relationships(node_id, fallback)
+                        .into_iter()
+                        .map(|cursor| cursor.target_id()),
+                );
+                out
+            }
+            _ => self
+                .graph
+                .stream_relationships(node_id, fallback)
+                .into_iter()
+                .map(|cursor| cursor.target_id())
+                .collect(),
+        }
     }
 
-    /// Get neighbors with weights using real graph data
-    fn get_neighbors_with_weights_mock(&self, _node: u32) -> Vec<(u32, f64)> {
-        // TODO: Access graph from graph_store for real implementation
-        // For now, return empty vector as placeholder
-        // This requires either:
-        // 1. Adding graph() method to GraphStore trait
-        // 2. Passing graph as parameter to these methods
-        vec![]
+    fn get_neighbors_with_weights(&self, node_id: NodeId, direction: u8) -> Vec<(NodeId, f64)> {
+        let fallback: f64 = 1.0;
+        match direction {
+            1 => self
+                .graph
+                .stream_inverse_relationships_weighted(node_id, fallback)
+                .into_iter()
+                .map(|cursor| (cursor.target_id(), cursor.weight()))
+                .collect(),
+            2 => {
+                let mut out: Vec<(NodeId, f64)> = self
+                    .graph
+                    .stream_relationships_weighted(node_id, fallback)
+                    .into_iter()
+                    .map(|cursor| (cursor.target_id(), cursor.weight()))
+                    .collect();
+                out.extend(
+                    self.graph
+                        .stream_inverse_relationships_weighted(node_id, fallback)
+                        .into_iter()
+                        .map(|cursor| (cursor.target_id(), cursor.weight())),
+                );
+                out
+            }
+            _ => self
+                .graph
+                .stream_relationships_weighted(node_id, fallback)
+                .into_iter()
+                .map(|cursor| (cursor.target_id(), cursor.weight()))
+                .collect(),
+        }
     }
 
     /// Compute all shortest paths in parallel
@@ -212,31 +298,14 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
     /// Note: This is a simplified version that doesn't use threading
     /// to avoid lifetime issues. In a real implementation, we would
     /// need to handle the GraphStore lifetime properly.
-    pub fn compute_all_shortest_paths_streaming(&self) -> Result<mpsc::Receiver<ShortestPathResult>, AlgorithmError> {
+    pub fn compute_all_shortest_paths_streaming(&self, direction: u8) -> Result<mpsc::Receiver<ShortestPathResult>, AlgorithmError> {
         let (sender, receiver) = mpsc::channel();
-        let node_count = self.graph_store.node_count();
+        let node_count = self.graph.node_count();
 
         // For now, process sequentially to avoid lifetime issues
         // TODO: Implement proper parallel processing with lifetime management
-        for source_node in 0..node_count as u32 {
-            let results = match self.algorithm_type {
-                AlgorithmType::Unweighted => {
-                    // TODO: Implement actual unweighted computation
-                    vec![ShortestPathResult {
-                        source: source_node,
-                        target: source_node,
-                        distance: 0.0,
-                    }]
-                }
-                AlgorithmType::Weighted => {
-                    // TODO: Implement actual weighted computation
-                    vec![ShortestPathResult {
-                        source: source_node,
-                        target: source_node,
-                        distance: 0.0,
-                    }]
-                }
-            };
+        for source_node in 0..node_count as NodeId {
+            let results = self.compute_shortest_paths(source_node, direction)?;
 
             // Send results to stream
             for result in results {
@@ -255,7 +324,7 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
 
     /// Get total number of nodes
     pub fn node_count(&self) -> usize {
-        self.graph_store.node_count()
+        self.graph.node_count()
     }
 
     /// Get algorithm type
@@ -273,9 +342,9 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ShortestPathResult {
     /// Source node ID
-    pub source: u32,
+    pub source: NodeId,
     /// Target node ID
-    pub target: u32,
+    pub target: NodeId,
     /// Shortest path distance
     pub distance: f64,
 }

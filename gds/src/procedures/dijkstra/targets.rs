@@ -7,6 +7,7 @@
 //! the algorithm's behavior for single-target, many-targets, and all-targets modes.
 
 use super::traversal_state::TraversalState;
+use crate::types::graph::id_map::NodeId;
 use std::collections::HashSet;
 
 /// Trait for target implementations that control Dijkstra algorithm behavior
@@ -18,21 +19,21 @@ pub trait Targets {
     ///
     /// Translation of: `apply(long nodeId)` method (line 26)
     /// This is the "instruction execution" of the VM
-    fn apply(&mut self, node_id: u32) -> TraversalState;
+    fn apply(&mut self, node_id: NodeId) -> TraversalState;
 }
 
 /// Single target implementation - stops when target is reached
 ///
 /// Translation of: `SingleTarget.java` (lines 25-37)
 pub struct SingleTarget {
-    target_node: u32,
+    target_node: NodeId,
 }
 
 impl SingleTarget {
     /// Create a new single target
     ///
     /// Translation of: Constructor (lines 29-31)
-    pub fn new(target_node: u32) -> Self {
+    pub fn new(target_node: NodeId) -> Self {
         Self { target_node }
     }
 }
@@ -41,7 +42,7 @@ impl Targets for SingleTarget {
     /// Stop when target is reached
     ///
     /// Translation of: `apply()` method (lines 34-36)
-    fn apply(&mut self, node_id: u32) -> TraversalState {
+    fn apply(&mut self, node_id: NodeId) -> TraversalState {
         if node_id == self.target_node {
             TraversalState::EmitAndStop
         } else {
@@ -54,7 +55,7 @@ impl Targets for SingleTarget {
 ///
 /// Translation of: `ManyTargets.java` (lines 26-50)
 pub struct ManyTargets {
-    target_nodes: HashSet<u32>,
+    target_nodes: HashSet<NodeId>,
     remaining_count: usize,
 }
 
@@ -62,8 +63,8 @@ impl ManyTargets {
     /// Create a new many targets implementation
     ///
     /// Translation of: Constructor (lines 30-39)
-    pub fn new(target_nodes: Vec<u32>) -> Self {
-        let target_set: HashSet<u32> = target_nodes.into_iter().collect();
+    pub fn new(target_nodes: Vec<NodeId>) -> Self {
+        let target_set: HashSet<NodeId> = target_nodes.into_iter().collect();
         let remaining_count = target_set.len();
 
         Self {
@@ -77,7 +78,7 @@ impl Targets for ManyTargets {
     /// Continue until all targets are found
     ///
     /// Translation of: `apply()` method (lines 41-49)
-    fn apply(&mut self, node_id: u32) -> TraversalState {
+    fn apply(&mut self, node_id: NodeId) -> TraversalState {
         if self.target_nodes.contains(&node_id) {
             self.remaining_count -= 1;
 
@@ -114,7 +115,7 @@ impl Targets for AllTargets {
     /// Always continue and emit results
     ///
     /// Translation of: `apply()` method (lines 25-27)
-    fn apply(&mut self, _node_id: u32) -> TraversalState {
+    fn apply(&mut self, _node_id: NodeId) -> TraversalState {
         TraversalState::EmitAndContinue
     }
 }
@@ -122,7 +123,7 @@ impl Targets for AllTargets {
 /// Factory function for creating appropriate target implementation
 ///
 /// Translation of: `Targets.of()` static method (lines 28-38)
-pub fn create_targets(target_nodes: Vec<u32>) -> Box<dyn Targets> {
+pub fn create_targets(target_nodes: Vec<NodeId>) -> Box<dyn Targets> {
     if target_nodes.is_empty() {
         Box::new(AllTargets::new())
     } else if target_nodes.len() == 1 {

@@ -24,7 +24,8 @@
 //!
 //! ```rust,no_run
 //! # use gds::Graph;
-//! # let graph = Graph::default();
+//! # let graph: Graph = unimplemented!();
+//! # use gds::procedures::facades::pathfinding::Heuristic;
 //! let path = graph
 //!     .astar()
 //!     .source(42)
@@ -36,8 +37,16 @@
 //!     .unwrap();
 //! ```
 
-use crate::procedures::facades::traits::{Result, PathResult};
-use crate::procedures::facades::builder_base::{MutationResult, WriteResult, ConfigValidator};
+use crate::procedures::astar::{AStarComputationRuntime, AStarStorageRuntime};
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::facades::traits::{PathResult, Result};
+use crate::projection::orientation::Orientation;
+use crate::projection::relationship_type::RelationshipType;
+use crate::types::graph::id_map::NodeId;
+use crate::types::graph_store::GraphStore;
+use crate::types::prelude::DefaultGraphStore;
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 // ============================================================================
 // Heuristic Types
@@ -123,9 +132,9 @@ pub struct AStarStats {
 /// ## Example
 /// ```rust,no_run
 /// # use gds::Graph;
-/// # let graph = Graph::default();
-/// # use gds::procedures::facades::pathfinding::{AStarBuilder, Heuristic};
-/// let builder = AStarBuilder::new()
+/// # let graph: Graph = unimplemented!();
+/// # use gds::procedures::facades::pathfinding::Heuristic;
+/// let builder = graph.astar()
 ///     .source(42)
 ///     .target(99)
 ///     .weight_property("cost")
@@ -133,12 +142,17 @@ pub struct AStarStats {
 ///     .concurrency(8);
 /// ```
 pub struct AStarBuilder {
+    graph_store: Arc<DefaultGraphStore>,
     /// Source node for A* search
     source: Option<u64>,
     /// Target nodes (empty = all reachable, specific = stop when found)
     targets: Vec<u64>,
     /// Property name for edge weights
     weight_property: String,
+    /// Optional relationship types to include (empty = all types)
+    relationship_types: Vec<String>,
+    /// Traversal direction ("outgoing" or "incoming")
+    direction: String,
     /// Heuristic function type
     heuristic: Heuristic,
     /// Concurrency level for parallel processing
@@ -146,19 +160,22 @@ pub struct AStarBuilder {
 }
 
 impl AStarBuilder {
-    /// Create a new A* builder with defaults
+    /// Create a new A* builder bound to a live graph store.
     ///
     /// Defaults:
     /// - source: None (must be set)
-    /// - targets: empty (compute to all reachable nodes)
+    /// - targets: empty (must be set; A* requires at least one target)
     /// - weight_property: "weight"
     /// - heuristic: Manhattan (simple and fast)
     /// - concurrency: 4
-    pub fn new() -> Self {
+    pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
+            graph_store,
             source: None,
             targets: vec![],
             weight_property: "weight".to_string(),
+            relationship_types: vec![],
+            direction: "outgoing".to_string(),
             heuristic: Heuristic::Manhattan,
             concurrency: 4,
         }
@@ -196,6 +213,22 @@ impl AStarBuilder {
     /// Default: "weight"
     pub fn weight_property(mut self, property: &str) -> Self {
         self.weight_property = property.to_string();
+        self
+    }
+
+    /// Restrict traversal to the provided relationship types.
+    ///
+    /// Empty means all relationship types.
+    pub fn relationship_types(mut self, relationship_types: Vec<String>) -> Self {
+        self.relationship_types = relationship_types;
+        self
+    }
+
+    /// Set traversal direction.
+    ///
+    /// Accepted values: "outgoing" (default) or "incoming".
+    pub fn direction(mut self, direction: &str) -> Self {
+        self.direction = direction.to_string();
         self
     }
 
@@ -238,9 +271,142 @@ impl AStarBuilder {
             ));
         }
 
+        if self.targets.is_empty() {
+            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
+                "at least one target node must be specified for A*".to_string(),
+            ));
+        }
+
+        match self.direction.to_ascii_lowercase().as_str() {
+            "outgoing" | "incoming" => {}
+            other => {
+                return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
+                    format!("direction must be 'outgoing' or 'incoming' (got '{other}')"),
+                ));
+            }
+        }
+
         ConfigValidator::non_empty_string(&self.weight_property, "weight_property")?;
 
         Ok(())
+    }
+
+    fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
+        NodeId::try_from(value).map_err(|_| {
+            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                "{} must fit into i64 (got {})",
+                field, value
+            ))
+        })
+    }
+
+    fn compute(self) -> Result<(Vec<PathResult>, AStarStats)> {
+        self.validate()?;
+
+        let source_u64 = self.source.expect("validate() ensures source is set");
+        let source_node = Self::checked_node_id(source_u64, "source")?;
+        let target_nodes: Vec<(u64, NodeId)> = self
+            .targets
+            .iter()
+            .map(|&value| Ok((value, Self::checked_node_id(value, "targets")?)))
+            .collect::<Result<Vec<_>>>()?;
+
+        let rel_types: HashSet<RelationshipType> = if self.relationship_types.is_empty() {
+            self.graph_store.relationship_types()
+        } else {
+            RelationshipType::list_of(self.relationship_types.clone())
+                .into_iter()
+                .collect()
+        };
+
+        let (orientation, direction_byte) = match self.direction.to_ascii_lowercase().as_str() {
+            "incoming" => (Orientation::Reverse, 1u8),
+            _ => (Orientation::Natural, 0u8),
+        };
+
+        let selectors: HashMap<RelationshipType, String> = rel_types
+            .iter()
+            .map(|t| (t.clone(), self.weight_property.clone()))
+            .collect();
+
+        let graph_view = self
+            .graph_store
+            .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
+            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+
+        let lat_values = graph_view.node_properties("latitude");
+        let lon_values = graph_view.node_properties("longitude");
+
+        let start_time = std::time::Instant::now();
+        let mut rows: Vec<PathResult> = Vec::new();
+        let mut nodes_visited_total: u64 = 0;
+
+        for (target_u64, target_node) in target_nodes {
+            let mut storage = match (&lat_values, &lon_values) {
+                (Some(lat), Some(lon)) => AStarStorageRuntime::new_with_values(
+                    source_node,
+                    target_node,
+                    "latitude".to_string(),
+                    "longitude".to_string(),
+                    Arc::clone(lat),
+                    Arc::clone(lon),
+                ),
+                _ => AStarStorageRuntime::new(
+                    source_node,
+                    target_node,
+                    "latitude".to_string(),
+                    "longitude".to_string(),
+                ),
+            };
+
+            let mut computation = AStarComputationRuntime::new();
+            let result = storage
+                .compute_astar_path(&mut computation, Some(graph_view.as_ref()), direction_byte)
+                .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+
+            nodes_visited_total += result.nodes_explored as u64;
+
+            if let Some(path) = result.path {
+                let node_path: Vec<u64> = path
+                    .into_iter()
+                    .map(|node_id| {
+                        u64::try_from(node_id).map_err(|_| {
+                            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                                "A* returned invalid node id in path: {node_id}"
+                            ))
+                        })
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+
+                rows.push(PathResult {
+                    source: source_u64,
+                    target: target_u64,
+                    path: node_path,
+                    cost: result.total_cost,
+                });
+            }
+        }
+
+        let targets_found = rows.len() as u64;
+        let all_targets_reached = targets_found == self.targets.len() as u64;
+
+        let stats = AStarStats {
+            nodes_visited: nodes_visited_total,
+            final_queue_size: 0,
+            max_queue_size: 0,
+            execution_time_ms: start_time.elapsed().as_millis() as u64,
+            targets_found,
+            all_targets_reached,
+            heuristic_accuracy: match self.heuristic {
+                Heuristic::Manhattan => 1.2,
+                Heuristic::Euclidean => 1.0,
+                Heuristic::Haversine => 1.0,
+                Heuristic::Custom(_) => 1.1,
+            },
+            heuristic_evaluations: nodes_visited_total,
+        };
+
+        Ok((rows, stats))
     }
 
     /// Execute the algorithm and return iterator over path results
@@ -250,9 +416,9 @@ impl AStarBuilder {
     /// Use this when you want individual path results:
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
-    /// # use gds::procedures::facades::pathfinding::{AStarBuilder, Heuristic};
-    /// let builder = AStarBuilder::new()
+    /// # let graph: Graph = unimplemented!();
+    /// # use gds::procedures::facades::pathfinding::Heuristic;
+    /// let builder = graph.astar()
     ///     .source(0)
     ///     .target(5)
     ///     .heuristic(Heuristic::Euclidean);
@@ -261,61 +427,8 @@ impl AStarBuilder {
     /// }
     /// ```
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
-        self.validate()?;
-
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy results for demonstration
-        let dummy_results = if self.targets.is_empty() {
-            // No specific targets - return paths to sample reachable nodes
-            vec![
-                PathResult {
-                    source: self.source.unwrap(),
-                    target: 1,
-                    path: vec![self.source.unwrap(), 1],
-                    cost: self.heuristic.calculate(self.source.unwrap(), 1),
-                },
-                PathResult {
-                    source: self.source.unwrap(),
-                    target: 2,
-                    path: vec![self.source.unwrap(), 1, 2],
-                    cost: self.heuristic.calculate(self.source.unwrap(), 1) + self.heuristic.calculate(1, 2),
-                },
-                PathResult {
-                    source: self.source.unwrap(),
-                    target: 3,
-                    path: vec![self.source.unwrap(), 3],
-                    cost: self.heuristic.calculate(self.source.unwrap(), 3),
-                },
-            ]
-        } else {
-            // Specific targets - return optimal paths to each target
-            self.targets
-                .into_iter()
-                .enumerate()
-                .map(|(i, target)| {
-                    // Simulate A* path with heuristic-based cost estimation
-                    let heuristic_cost = self.heuristic.calculate(self.source.unwrap(), target);
-                    let actual_cost = heuristic_cost * (1.0 + (i as f64 * 0.1)); // Simulate A* optimality
-
-                    // Simulate path reconstruction (in real implementation, this would come from A* algorithm)
-                    let path = match i {
-                        0 => vec![self.source.unwrap(), target],
-                        1 => vec![self.source.unwrap(), 1, target],
-                        2 => vec![self.source.unwrap(), 3, target],
-                        _ => vec![self.source.unwrap(), target],
-                    };
-
-                    PathResult {
-                        source: self.source.unwrap(),
-                        target,
-                        path,
-                        cost: actual_cost,
-                    }
-                })
-                .collect()
-        };
-
-        Ok(Box::new(dummy_results.into_iter()))
+        let (rows, _) = self.compute()?;
+        Ok(Box::new(rows.into_iter()))
     }
 
     /// Stats mode: Get aggregated statistics
@@ -325,32 +438,14 @@ impl AStarBuilder {
     /// Use this when you want performance metrics:
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
-    /// # use gds::procedures::facades::pathfinding::{AStarBuilder, Heuristic};
-    /// let builder = AStarBuilder::new().source(0);
+    /// # let graph: Graph = unimplemented!();
+    /// let builder = graph.astar().source(0).target(1);
     /// let stats = builder.stats()?;
     /// println!("Visited {} nodes, heuristic accuracy: {:.2}", stats.nodes_visited, stats.heuristic_accuracy);
     /// ```
     pub fn stats(self) -> Result<AStarStats> {
-        self.validate()?;
-
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy stats for demonstration
-        Ok(AStarStats {
-            nodes_visited: 15,
-            final_queue_size: 3,
-            max_queue_size: 12,
-            execution_time_ms: 35,
-            targets_found: self.targets.len() as u64,
-            all_targets_reached: !self.targets.is_empty(),
-            heuristic_accuracy: match self.heuristic {
-                Heuristic::Manhattan => 1.2,  // Less accurate but fast
-                Heuristic::Euclidean => 1.0,  // Perfect for Euclidean space
-                Heuristic::Haversine => 1.0,  // Perfect for geographic routing
-                Heuristic::Custom(_) => 1.1,  // User-defined, assume good
-            },
-            heuristic_evaluations: 45,
-        })
+        let (_, stats) = self.compute()?;
+        Ok(stats)
     }
 
     /// Mutate mode: Compute and store as node property
@@ -360,9 +455,8 @@ impl AStarBuilder {
     ///
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
-    /// # use gds::procedures::facades::pathfinding::{AStarBuilder, Heuristic};
-    /// let builder = AStarBuilder::new().source(0);
+    /// # let graph: Graph = unimplemented!();
+    /// let builder = graph.astar().source(0).target(1);
     /// let result = builder.mutate("astar_distance")?;
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
@@ -370,12 +464,8 @@ impl AStarBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy result for demonstration
-        Ok(MutationResult::new(
-            12, // Dummy count of nodes updated
-            property_name.to_string(),
-            std::time::Duration::from_millis(40),
+        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
+            "A* mutate/write is not implemented yet".to_string(),
         ))
     }
 
@@ -385,9 +475,8 @@ impl AStarBuilder {
     ///
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
-    /// # use gds::procedures::facades::pathfinding::{AStarBuilder, Heuristic};
-    /// let builder = AStarBuilder::new().source(0);
+    /// # let graph: Graph = unimplemented!();
+    /// let builder = graph.astar().source(0).target(1);
     /// let result = builder.write("astar_paths")?;
     /// println!("Wrote {} nodes", result.nodes_written);
     /// ```
@@ -395,19 +484,9 @@ impl AStarBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy result for demonstration
-        Ok(WriteResult::new(
-            8, // Dummy count of nodes written
-            property_name.to_string(),
-            std::time::Duration::from_millis(70),
+        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
+            "A* mutate/write is not implemented yet".to_string(),
         ))
-    }
-}
-
-impl Default for AStarBuilder {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -418,13 +497,40 @@ impl Default for AStarBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
+    use std::sync::Arc;
+
+    fn store() -> Arc<DefaultGraphStore> {
+        let config = RandomGraphConfig {
+            seed: Some(7),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+
+        let mut store = DefaultGraphStore::random(&config).unwrap();
+
+        // Ensure latitude/longitude properties exist so A* uses real coordinates.
+        let lat: Vec<f64> = (0..config.node_count).map(|i| i as f64).collect();
+        let lon: Vec<f64> = (0..config.node_count).map(|i| (i as f64) * -1.0).collect();
+        store
+            .add_node_property_f64("latitude".to_string(), lat)
+            .unwrap();
+        store
+            .add_node_property_f64("longitude".to_string(), lon)
+            .unwrap();
+
+        Arc::new(store)
+    }
 
     #[test]
     fn test_builder_defaults() {
-        let builder = AStarBuilder::new();
+        let builder = AStarBuilder::new(store());
         assert_eq!(builder.source, None);
         assert!(builder.targets.is_empty());
         assert_eq!(builder.weight_property, "weight");
+        assert!(builder.relationship_types.is_empty());
+        assert_eq!(builder.direction, "outgoing");
         assert!(matches!(builder.heuristic, Heuristic::Manhattan));
         assert_eq!(builder.concurrency, 4);
     }
@@ -432,16 +538,20 @@ mod tests {
     #[test]
     fn test_builder_fluent_chain() {
         let _custom_heuristic = |a: u64, b: u64| (a as f64 - b as f64).abs();
-        let builder = AStarBuilder::new()
+        let builder = AStarBuilder::new(store())
             .source(42)
             .targets(vec![99, 100])
             .weight_property("cost")
+            .relationship_types(vec!["REL".to_string()])
+            .direction("incoming")
             .heuristic(Heuristic::Euclidean)
             .concurrency(8);
 
         assert_eq!(builder.source, Some(42));
         assert_eq!(builder.targets, vec![99, 100]);
         assert_eq!(builder.weight_property, "cost");
+        assert_eq!(builder.relationship_types, vec!["REL".to_string()]);
+        assert_eq!(builder.direction, "incoming");
         assert!(matches!(builder.heuristic, Heuristic::Euclidean));
         assert_eq!(builder.concurrency, 8);
     }
@@ -465,25 +575,37 @@ mod tests {
 
     #[test]
     fn test_validate_missing_source() {
-        let builder = AStarBuilder::new();
+        let builder = AStarBuilder::new(store());
+        assert!(builder.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_missing_targets() {
+        let builder = AStarBuilder::new(store()).source(0);
+        assert!(builder.validate().is_err());
+    }
+
+    #[test]
+    fn test_validate_invalid_direction() {
+        let builder = AStarBuilder::new(store()).source(0).target(1).direction("both");
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_invalid_concurrency() {
-        let builder = AStarBuilder::new().source(0).concurrency(0);
+        let builder = AStarBuilder::new(store()).source(0).target(1).concurrency(0);
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_empty_weight_property() {
-        let builder = AStarBuilder::new().source(0).weight_property("");
+        let builder = AStarBuilder::new(store()).source(0).target(1).weight_property("");
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_valid_config() {
-        let builder = AStarBuilder::new()
+        let builder = AStarBuilder::new(store())
             .source(0)
             .target(5)
             .weight_property("cost")
@@ -493,37 +615,37 @@ mod tests {
 
     #[test]
     fn test_stream_requires_validation() {
-        let builder = AStarBuilder::new(); // Missing source
+        let builder = AStarBuilder::new(store()); // Missing source
         assert!(builder.stream().is_err());
     }
 
     #[test]
     fn test_stats_requires_validation() {
-        let builder = AStarBuilder::new().concurrency(0); // Invalid concurrency
+        let builder = AStarBuilder::new(store()).source(0).target(1).concurrency(0); // Invalid concurrency
         assert!(builder.stats().is_err());
     }
 
     #[test]
     fn test_mutate_requires_validation() {
-        let builder = AStarBuilder::new().source(0); // Valid config but...
+        let builder = AStarBuilder::new(store()).source(0).target(1); // Valid config but...
         assert!(builder.mutate("").is_err()); // Empty property name
     }
 
     #[test]
     fn test_mutate_validates_property_name() {
-        let builder = AStarBuilder::new().source(0);
-        assert!(builder.mutate("astar_distance").is_ok());
+        let builder = AStarBuilder::new(store()).source(0).target(1);
+        assert!(builder.mutate("astar_distance").is_err());
     }
 
     #[test]
     fn test_write_validates_property_name() {
-        let builder = AStarBuilder::new().source(0);
-        assert!(builder.write("astar_paths").is_ok());
+        let builder = AStarBuilder::new(store()).source(0).target(1);
+        assert!(builder.write("astar_paths").is_err());
     }
 
     #[test]
     fn test_stream_returns_paths_to_targets() {
-        let builder = AStarBuilder::new().source(0).targets(vec![2, 3]);
+        let builder = AStarBuilder::new(store()).source(0).targets(vec![2, 3]);
         let results: Vec<_> = builder.stream().unwrap().collect();
 
         assert_eq!(results.len(), 2);
@@ -532,41 +654,47 @@ mod tests {
         assert_eq!(results[1].source, 0);
         assert_eq!(results[1].target, 3);
 
-        // A* should find optimal paths (lower cost than naive)
-        assert!(results[0].cost <= 10.0);
-        assert!(results[1].cost <= 10.0);
+        // Paths should start from source and end at target
+        assert_eq!(results[0].path.first().copied(), Some(0));
+        assert_eq!(results[0].path.last().copied(), Some(2));
+        assert_eq!(results[1].path.first().copied(), Some(0));
+        assert_eq!(results[1].path.last().copied(), Some(3));
+
+        // Costs should be finite for connected graphs
+        assert!(results[0].cost.is_finite());
+        assert!(results[1].cost.is_finite());
     }
 
     #[test]
-    fn test_stream_returns_all_reachable() {
-        let builder = AStarBuilder::new().source(0); // No targets specified
-        let results: Vec<_> = builder.stream().unwrap().collect();
+    fn test_stream_with_incoming_direction() {
+        let builder = AStarBuilder::new(store())
+            .source(0)
+            .target(3)
+            .direction("incoming")
+            .relationship_types(vec!["REL".to_string()]);
+        let _results: Vec<_> = builder.stream().unwrap().collect();
+    }
 
-        assert_eq!(results.len(), 3); // Dummy implementation returns 3 nodes
-        assert_eq!(results[0].source, 0);
-
-        // All paths should start from source
-        for result in &results {
-            assert_eq!(result.source, 0);
-            assert!(!result.path.is_empty());
-            assert_eq!(result.path[0], 0);
-        }
+    #[test]
+    fn test_stream_requires_targets() {
+        let builder = AStarBuilder::new(store()).source(0);
+        assert!(builder.stream().is_err());
     }
 
     #[test]
     fn test_stats_returns_heuristic_specific_info() {
         // Test Manhattan heuristic
-        let builder = AStarBuilder::new().source(0).heuristic(Heuristic::Manhattan);
+        let builder = AStarBuilder::new(store()).source(0).target(1).heuristic(Heuristic::Manhattan);
         let stats = builder.stats().unwrap();
         assert_eq!(stats.heuristic_accuracy, 1.2); // Manhattan is less accurate
 
         // Test Euclidean heuristic
-        let builder = AStarBuilder::new().source(0).heuristic(Heuristic::Euclidean);
+        let builder = AStarBuilder::new(store()).source(0).target(1).heuristic(Heuristic::Euclidean);
         let stats = builder.stats().unwrap();
         assert_eq!(stats.heuristic_accuracy, 1.0); // Euclidean is perfect
 
         // Test Haversine heuristic
-        let builder = AStarBuilder::new().source(0).heuristic(Heuristic::Haversine);
+        let builder = AStarBuilder::new(store()).source(0).target(1).heuristic(Heuristic::Haversine);
         let stats = builder.stats().unwrap();
         assert_eq!(stats.heuristic_accuracy, 1.0); // Haversine is perfect for geo
     }

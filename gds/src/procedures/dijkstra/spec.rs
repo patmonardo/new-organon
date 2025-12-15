@@ -9,6 +9,7 @@
 use crate::define_algorithm_spec;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
+use crate::types::graph::id_map::NodeId;
 use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 use super::storage::DijkstraStorageRuntime;
@@ -22,10 +23,10 @@ use super::path_finding_result::PathFindingResult;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DijkstraConfig {
     /// Source node for shortest path computation
-    pub source_node: u32,
+    pub source_node: NodeId,
 
     /// Target nodes (empty = all targets, single = single target, multiple = many targets)
-    pub target_nodes: Vec<u32>,
+    pub target_nodes: Vec<NodeId>,
 
     /// Whether to track relationship IDs
     pub track_relationships: bool,
@@ -81,6 +82,20 @@ impl DijkstraDirection {
 impl DijkstraConfig {
     /// Validate configuration parameters
     pub fn validate(&self) -> Result<(), crate::projection::codegen::config::validation::ConfigError> {
+        if self.source_node < 0 {
+            return Err(crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+                field: "source_node".to_string(),
+                message: "Must be >= 0".to_string(),
+            });
+        }
+
+        if let Some(bad) = self.target_nodes.iter().copied().find(|id| *id < 0) {
+            return Err(crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+                field: "target_nodes".to_string(),
+                message: format!("All target nodes must be >= 0, got {}", bad),
+            });
+        }
+
         if self.concurrency == 0 {
             return Err(crate::projection::codegen::config::validation::ConfigError::FieldValidation {
                 field: "concurrency".to_string(),
@@ -113,16 +128,16 @@ pub struct DijkstraPathResult {
     pub index: u64,
 
     /// Source node ID
-    pub source_node: u32,
+    pub source_node: NodeId,
 
     /// Target node ID
-    pub target_node: u32,
+    pub target_node: NodeId,
 
     /// Node IDs along the path
-    pub node_ids: Vec<u32>,
+    pub node_ids: Vec<NodeId>,
 
     /// Relationship IDs along the path (if tracking relationships)
-    pub relationship_ids: Vec<u32>,
+    pub relationship_ids: Vec<NodeId>,
 
     /// Costs for each step along the path
     pub costs: Vec<f64>,
@@ -231,6 +246,11 @@ mod tests {
     fn test_dijkstra_config_validation() {
         let mut config = DijkstraConfig::default();
         assert!(config.validate().is_ok());
+
+        config.source_node = -1;
+        assert!(config.validate().is_err());
+
+        config.source_node = 0;
 
         config.concurrency = 0;
         assert!(config.validate().is_err());

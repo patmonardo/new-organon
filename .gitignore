@@ -51,3 +51,5 @@ logic/docs/api
 doc/api
 .nojekyll
 old
+similarity
+similarity-parama

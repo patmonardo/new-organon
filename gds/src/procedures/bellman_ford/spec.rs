@@ -13,6 +13,7 @@ use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 use super::storage::BellmanFordStorageRuntime;
 use super::computation::BellmanFordComputationRuntime;
+use crate::types::graph::id_map::NodeId;
 
 /// Bellman-Ford algorithm configuration
 ///
@@ -20,7 +21,7 @@ use super::computation::BellmanFordComputationRuntime;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BellmanFordConfig {
     /// Source node for shortest path computation
-    pub source_node: u32,
+    pub source_node: NodeId,
 
     /// Whether to track negative cycles
     pub track_negative_cycles: bool,
@@ -103,16 +104,16 @@ pub struct BellmanFordResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PathResult {
     /// Source node ID
-    pub source_node: u32,
+    pub source_node: NodeId,
 
     /// Target node ID
-    pub target_node: u32,
+    pub target_node: NodeId,
 
     /// Total cost of the path
     pub total_cost: f64,
 
     /// Node IDs along the path
-    pub node_ids: Vec<u32>,
+    pub node_ids: Vec<NodeId>,
 
     /// Costs for each step along the path
     pub costs: Vec<f64>,

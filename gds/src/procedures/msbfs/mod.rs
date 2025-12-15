@@ -1,13 +1,11 @@
-//! Multi-Source Breadth-First Search (MSBFS) Framework
+//! Multi-Source Breadth-First Search (MSBFS)
 //!
-//! **Translation Source**: `org.neo4j.gds.msbfs.MultiSourceBFSAccessMethods`
+//! Translation target: Neo4j GDS `org.neo4j.gds.msbfs.*`.
 //!
-//! Efficiently computes BFS from multiple source nodes simultaneously by bit-packing
-//! up to 64 sources into a single u64 mask per node.
-//!
-//! This enables algorithms like Harmonic Centrality, Closeness Centrality, and
-//! Betweenness Centrality to process multiple sources with minimal memory overhead.
+//! The primary implementation exposed here is **Aggregated Neighbor Processing (ANP)**,
+//! which provides the key invariant used by Neo4j GDS centrality algorithms:
+//! a `(nodeId, depth)` pair is processed at most once per traversal batch.
 
-pub mod simple;
+pub mod anp;
 
-pub use simple::SimpleMSBFS;
+pub use anp::{AggregatedNeighborProcessingMsBfs, OMEGA};

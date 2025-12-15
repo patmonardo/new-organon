@@ -134,19 +134,41 @@ impl SpanningTreeStorageRuntime {
     pub fn compute_spanning_tree_with_graph(
         &self,
         graph: &dyn Graph,
+        direction: u8,
     ) -> Result<SpanningTree, AlgorithmError> {
         let node_count = graph.node_count() as u32;
-        self.compute_spanning_tree(node_count, |node_id| self.get_neighbors_from_graph(graph, node_id))
+        self.compute_spanning_tree(node_count, |node_id| self.get_neighbors_from_graph(graph, node_id, direction))
     }
 
     /// Neighbor retrieval backed by Graph::stream_relationships (outgoing edges), with numeric fallback.
-    fn get_neighbors_from_graph(&self, graph: &dyn Graph, node_id: u32) -> Vec<(u32, f64)> {
+    fn get_neighbors_from_graph(&self, graph: &dyn Graph, node_id: u32, direction: u8) -> Vec<(u32, f64)> {
         let fallback: f64 = 1.0;
-        let stream = graph.stream_relationships(node_id as i64, fallback);
-        stream
-            .into_iter()
-            .map(|cursor| (cursor.target_id() as u32, cursor.property()))
-            .collect()
+        match direction {
+            1 => graph
+                .stream_inverse_relationships_weighted(node_id as i64, fallback)
+                .into_iter()
+                .map(|cursor| (cursor.target_id() as u32, cursor.weight()))
+                .collect(),
+            2 => {
+                let mut out: Vec<(u32, f64)> = graph
+                    .stream_relationships_weighted(node_id as i64, fallback)
+                    .into_iter()
+                    .map(|cursor| (cursor.target_id() as u32, cursor.weight()))
+                    .collect();
+                out.extend(
+                    graph
+                        .stream_inverse_relationships_weighted(node_id as i64, fallback)
+                        .into_iter()
+                        .map(|cursor| (cursor.target_id() as u32, cursor.weight())),
+                );
+                out
+            }
+            _ => graph
+                .stream_relationships_weighted(node_id as i64, fallback)
+                .into_iter()
+                .map(|cursor| (cursor.target_id() as u32, cursor.weight()))
+                .collect(),
+        }
     }
 
     /// Get neighbors of a node (mock implementation for testing).

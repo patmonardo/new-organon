@@ -10,6 +10,11 @@ use super::spec::{YensResult, YensPathResult};
 use super::mutable_path_result::MutablePathResult;
 use super::candidate_queue::CandidatePathsPriorityQueue;
 use crate::projection::eval::procedure::AlgorithmError;
+use crate::procedures::dijkstra::{DijkstraComputationRuntime, DijkstraStorageRuntime};
+use crate::procedures::dijkstra::targets::create_targets;
+use crate::types::graph::Graph;
+use crate::types::graph::id_map::NodeId;
+use std::collections::HashSet;
 
 /// Yen's Storage Runtime - handles persistent data access and algorithm orchestration
 ///
@@ -17,9 +22,9 @@ use crate::projection::eval::procedure::AlgorithmError;
 /// This implements the "Gross pole" for accessing graph data
 pub struct YensStorageRuntime {
     /// Source node for path finding
-    pub source_node: u32,
+    pub source_node: NodeId,
     /// Target node for path finding
-    pub target_node: u32,
+    pub target_node: NodeId,
     /// Number of shortest paths to find (K)
     pub k: usize,
     /// Whether to track relationships
@@ -31,8 +36,8 @@ pub struct YensStorageRuntime {
 impl YensStorageRuntime {
     /// Create new Yen's storage runtime
     pub fn new(
-        source_node: u32,
-        target_node: u32,
+        source_node: NodeId,
+        target_node: NodeId,
         k: usize,
         track_relationships: bool,
         concurrency: usize,
@@ -50,14 +55,19 @@ impl YensStorageRuntime {
     ///
     /// Translation of: `Yens.compute()` (lines 82-129)
     /// This orchestrates the main Yen's algorithm loop
-    pub fn compute_yens(&self, computation: &mut YensComputationRuntime) -> Result<YensResult, AlgorithmError> {
+    pub fn compute_yens(
+        &self,
+        computation: &mut YensComputationRuntime,
+        graph: Option<&dyn Graph>,
+        direction: u8,
+    ) -> Result<YensResult, AlgorithmError> {
         let start_time = std::time::Instant::now();
 
         // Initialize computation runtime
         computation.initialize(self.source_node, self.target_node, self.k, self.track_relationships);
 
         // Find first shortest path using Dijkstra
-        let first_path = self.find_first_path()?;
+        let first_path = self.find_first_path(graph, direction)?;
         if first_path.is_none() {
             return Ok(YensResult {
                 paths: Vec::new(),
@@ -73,7 +83,7 @@ impl YensStorageRuntime {
         for i in 1..self.k {
             if let Some(prev_path) = k_shortest_paths.get(i - 1) {
                 // Generate candidate paths from previous path
-                let candidates = self.generate_candidates(prev_path, &k_shortest_paths)?;
+                let candidates = self.generate_candidates(prev_path, &k_shortest_paths, graph, direction)?;
 
                 for candidate in candidates {
                     candidate_queue.add_path(candidate);
@@ -118,29 +128,140 @@ impl YensStorageRuntime {
     }
 
     /// Find the first shortest path using Dijkstra
-    fn find_first_path(&self) -> Result<Option<MutablePathResult>, AlgorithmError> {
-        // TODO: Implement actual Dijkstra algorithm
-        // For now, return a mock path
+    fn find_first_path(
+        &self,
+        graph: Option<&dyn Graph>,
+        direction: u8,
+    ) -> Result<Option<MutablePathResult>, AlgorithmError> {
+        self.shortest_path(self.source_node, self.target_node, graph, direction, None)
+    }
+
+    fn shortest_path(
+        &self,
+        source: NodeId,
+        target: NodeId,
+        graph: Option<&dyn Graph>,
+        direction: u8,
+        extra_filter: Option<Box<dyn Fn(NodeId, NodeId, NodeId) -> bool + Send + Sync>>,
+    ) -> Result<Option<MutablePathResult>, AlgorithmError> {
+        let targets = create_targets(vec![target]);
+
+        let mut storage = DijkstraStorageRuntime::new(
+            source,
+            self.track_relationships,
+            self.concurrency,
+            false,
+        );
+
+        if let Some(filter) = extra_filter {
+            storage = storage.with_relationship_filter(filter);
+        }
+
+        let mut computation = DijkstraComputationRuntime::new(
+            source,
+            self.track_relationships,
+            self.concurrency,
+            false,
+        );
+
+        let result = storage.compute_dijkstra(&mut computation, targets, graph, direction)?;
+        let first = result.path_finding_result.paths().next().cloned();
+
+        let Some(path) = first else {
+            return Ok(None);
+        };
+
+        let relationship_ids = if self.track_relationships {
+            path.relationship_ids
+        } else {
+            Vec::new()
+        };
+
         Ok(Some(MutablePathResult::new(
             0,
-            self.source_node,
-            self.target_node,
-            vec![self.source_node, self.target_node],
-            vec![10],
-            vec![0.0, 1.0],
+            path.source_node,
+            path.target_node,
+            path.node_ids,
+            relationship_ids,
+            path.costs,
         )))
     }
 
     /// Generate candidate paths from a previous path
     fn generate_candidates(
         &self,
-        _prev_path: &MutablePathResult,
-        _k_shortest_paths: &[MutablePathResult],
+        prev_path: &MutablePathResult,
+        k_shortest_paths: &[MutablePathResult],
+        graph: Option<&dyn Graph>,
+        direction: u8,
     ) -> Result<Vec<MutablePathResult>, AlgorithmError> {
-        let candidates = Vec::new();
+        let mut candidates = Vec::new();
 
-        // TODO: Implement actual Yen's candidate generation
-        // For now, return empty candidates
+        if prev_path.node_ids.len() < 2 {
+            return Ok(candidates);
+        }
+
+        // Standard Yen: for each spur node along the previous shortest path...
+        for spur_index in 0..(prev_path.node_ids.len() - 1) {
+            let spur_node = prev_path.node_ids[spur_index];
+
+            // Root path = prefix up to and including the spur node.
+            let mut root_path = prev_path.sub_path(spur_index + 1);
+
+            // Remove nodes in the root path (except spur node) to prevent loops.
+            let removed_nodes: HashSet<NodeId> = root_path
+                .node_ids
+                .iter()
+                .copied()
+                .take(root_path.node_ids.len().saturating_sub(1))
+                .collect();
+
+            // Remove edges that would recreate previously-found paths with the same root.
+            let mut blocked_next_hops: HashSet<NodeId> = HashSet::new();
+            for p in k_shortest_paths {
+                if p.matches(prev_path, spur_index + 1) {
+                    if let Some(next) = p.node_ids.get(spur_index + 1).copied() {
+                        blocked_next_hops.insert(next);
+                    }
+                }
+            }
+
+            let filter_spur = spur_node;
+            let filter_removed_nodes = removed_nodes.clone();
+            let filter_blocked = blocked_next_hops.clone();
+
+            let filter: Box<dyn Fn(NodeId, NodeId, NodeId) -> bool + Send + Sync> = Box::new(
+                move |source, target, _relationship_id| {
+                    if filter_removed_nodes.contains(&source) || filter_removed_nodes.contains(&target) {
+                        return false;
+                    }
+
+                    if source == filter_spur && filter_blocked.contains(&target) {
+                        return false;
+                    }
+
+                    true
+                },
+            );
+
+            let spur_path = self.shortest_path(spur_node, self.target_node, graph, direction, Some(filter))?;
+            let Some(spur_path) = spur_path else {
+                continue;
+            };
+
+            if self.track_relationships {
+                root_path.append(&spur_path);
+            } else {
+                root_path.append_without_relationship_ids(&spur_path);
+            }
+
+            // Ensure the path is still source->target.
+            root_path.source_node = self.source_node;
+            root_path.target_node = self.target_node;
+
+            candidates.push(root_path);
+        }
+
         Ok(candidates)
     }
 }
@@ -148,6 +269,9 @@ impl YensStorageRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::prelude::DefaultGraphStore;
+    use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
+    use std::sync::Arc;
 
     #[test]
     fn test_yens_storage_runtime_creation() {
@@ -161,12 +285,27 @@ mod tests {
 
     #[test]
     fn test_yens_path_computation() {
-        let storage = YensStorageRuntime::new(0, 3, 3, false, 1);
-        let mut computation = YensComputationRuntime::new(0, 3, 3, false, 1);
+        let config = RandomGraphConfig {
+            seed: Some(42),
+            node_count: 12,
+            relationships: vec![RandomRelationshipConfig::new("REL", 0.8)],
+            ..RandomGraphConfig::default()
+        };
 
-        let result = storage.compute_yens(&mut computation).unwrap();
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let graph = store.graph();
 
-        assert!(result.path_count > 0);
+        let storage = YensStorageRuntime::new(0, 5, 3, true, 1);
+        let mut computation = YensComputationRuntime::new(0, 5, 3, true, 1);
+
+        let result = storage.compute_yens(&mut computation, Some(graph.as_ref()), 0).unwrap();
+
+        assert!(result.path_count <= 3);
         assert!(result.computation_time_ms >= 0);
+
+        // Paths should be unique.
+        let unique: std::collections::HashSet<Vec<NodeId>> =
+            result.paths.iter().map(|p| p.node_ids.clone()).collect();
+        assert_eq!(unique.len(), result.paths.len());
     }
 }

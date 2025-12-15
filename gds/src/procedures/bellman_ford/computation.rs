@@ -6,6 +6,7 @@
 //! handling ephemeral computation state and distance tracking.
 
 use std::collections::HashMap;
+use crate::types::graph::id_map::NodeId;
 
 /// Bellman-Ford Computation Runtime
 ///
@@ -13,19 +14,19 @@ use std::collections::HashMap;
 /// Handles ephemeral computation state for the Bellman-Ford algorithm
 pub struct BellmanFordComputationRuntime {
     /// Distances from source to each node
-    distances: HashMap<u32, f64>,
+    distances: HashMap<NodeId, f64>,
 
     /// Predecessor for each node in shortest path
-    predecessors: HashMap<u32, Option<u32>>,
+    predecessors: HashMap<NodeId, Option<NodeId>>,
 
     /// Path length for each node
-    lengths: HashMap<u32, u32>,
+    lengths: HashMap<NodeId, u32>,
 
     /// Nodes involved in negative cycles
-    negative_cycle_nodes: Vec<u32>,
+    negative_cycle_nodes: Vec<NodeId>,
 
     /// Source node
-    source_node: u32,
+    source_node: NodeId,
 
     /// Whether to track negative cycles
     track_negative_cycles: bool,
@@ -43,7 +44,7 @@ impl BellmanFordComputationRuntime {
     ///
     /// Translation of: `DistanceTracker.create()` method (lines 36-54)
     pub fn new(
-        source_node: u32,
+        source_node: NodeId,
         track_negative_cycles: bool,
         track_paths: bool,
         concurrency: usize,
@@ -63,7 +64,13 @@ impl BellmanFordComputationRuntime {
     /// Initialize the computation runtime
     ///
     /// Translation of: Initialization in `compute()` method (lines 100-103)
-    pub fn initialize(&mut self, source_node: u32, track_negative_cycles: bool, track_paths: bool, node_count: usize) {
+    pub fn initialize(
+        &mut self,
+        source_node: NodeId,
+        track_negative_cycles: bool,
+        track_paths: bool,
+        node_count: usize,
+    ) {
         self.source_node = source_node;
         self.track_negative_cycles = track_negative_cycles;
         self.track_paths = track_paths;
@@ -75,7 +82,8 @@ impl BellmanFordComputationRuntime {
         self.negative_cycle_nodes.clear();
 
         // Initialize with infinite distances
-        for node_id in 0..node_count as u32 {
+        for node_id in 0..node_count {
+            let node_id = node_id as NodeId;
             self.distances.insert(node_id, f64::INFINITY);
             self.predecessors.insert(node_id, None);
             self.lengths.insert(node_id, u32::MAX);
@@ -85,49 +93,49 @@ impl BellmanFordComputationRuntime {
     /// Get distance to a node
     ///
     /// Translation of: `distance()` method (lines 83-85)
-    pub fn distance(&self, node_id: u32) -> f64 {
+    pub fn distance(&self, node_id: NodeId) -> f64 {
         self.distances.get(&node_id).copied().unwrap_or(f64::INFINITY)
     }
 
     /// Set distance to a node
     ///
     /// Translation of: `set()` method (lines 101-105)
-    pub fn set_distance(&mut self, node_id: u32, distance: f64) {
+    pub fn set_distance(&mut self, node_id: NodeId, distance: f64) {
         self.distances.insert(node_id, distance);
     }
 
     /// Get predecessor of a node
     ///
     /// Translation of: `predecessor()` method (lines 87-89)
-    pub fn predecessor(&self, node_id: u32) -> Option<u32> {
+    pub fn predecessor(&self, node_id: NodeId) -> Option<NodeId> {
         self.predecessors.get(&node_id).copied().flatten()
     }
 
     /// Set predecessor of a node
     ///
     /// Translation of: `set()` method (lines 101-105)
-    pub fn set_predecessor(&mut self, node_id: u32, predecessor: Option<u32>) {
+    pub fn set_predecessor(&mut self, node_id: NodeId, predecessor: Option<NodeId>) {
         self.predecessors.insert(node_id, predecessor);
     }
 
     /// Get path length to a node
     ///
     /// Translation of: `length()` method (lines 91-91)
-    pub fn length(&self, node_id: u32) -> u32 {
+    pub fn length(&self, node_id: NodeId) -> u32 {
         self.lengths.get(&node_id).copied().unwrap_or(u32::MAX)
     }
 
     /// Set path length to a node
     ///
     /// Translation of: `set()` method (lines 101-105)
-    pub fn set_length(&mut self, node_id: u32, length: u32) {
+    pub fn set_length(&mut self, node_id: NodeId, length: u32) {
         self.lengths.insert(node_id, length);
     }
 
     /// Add a node to negative cycles
     ///
     /// Translation of: `processNegativeCycle()` method (lines 152-162)
-    pub fn add_negative_cycle_node(&mut self, node_id: u32) {
+    pub fn add_negative_cycle_node(&mut self, node_id: NodeId) {
         if self.track_negative_cycles && !self.negative_cycle_nodes.contains(&node_id) {
             self.negative_cycle_nodes.push(node_id);
         }
@@ -143,7 +151,7 @@ impl BellmanFordComputationRuntime {
     /// Get all negative cycle nodes
     ///
     /// Translation of: `negativeCyclesVertices` usage (lines 83, 122)
-    pub fn get_negative_cycle_nodes(&self) -> &[u32] {
+    pub fn get_negative_cycle_nodes(&self) -> &[NodeId] {
         &self.negative_cycle_nodes
     }
 
@@ -153,10 +161,10 @@ impl BellmanFordComputationRuntime {
     /// Simplified version without atomic operations for now
     pub fn compare_and_exchange(
         &mut self,
-        node_id: u32,
+        node_id: NodeId,
         expected_distance: f64,
         new_distance: f64,
-        predecessor: u32,
+        predecessor: NodeId,
         length: u32,
     ) -> f64 {
         let current_distance = self.distance(node_id);
@@ -178,7 +186,7 @@ impl BellmanFordComputationRuntime {
     }
 
     /// Get source node
-    pub fn source_node(&self) -> u32 {
+    pub fn source_node(&self) -> NodeId {
         self.source_node
     }
 

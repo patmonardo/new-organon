@@ -17,7 +17,7 @@
 //!
 //! ```rust,no_run
 //! # use gds::Graph;
-//! # let graph = Graph::default();
+//! # let graph: Graph = unimplemented!();
 //! let traversal = graph
 //!     .bfs()
 //!     .source(42)
@@ -29,6 +29,13 @@
 
 use crate::procedures::facades::traits::{Result, PathResult};
 use crate::procedures::facades::builder_base::{MutationResult, WriteResult, ConfigValidator};
+use crate::procedures::bfs::{BfsComputationRuntime, BfsStorageRuntime};
+use crate::projection::orientation::Orientation;
+use crate::projection::RelationshipType;
+use crate::types::graph::id_map::NodeId;
+use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 // ============================================================================
 // Statistics Type
@@ -70,15 +77,16 @@ pub struct BfsStats {
 /// ## Example
 /// ```rust,no_run
 /// # use gds::Graph;
-/// # let graph = Graph::default();
+/// # let graph: Graph = unimplemented!();
 /// # use gds::procedures::facades::pathfinding::BfsBuilder;
-/// let builder = BfsBuilder::new()
+/// let builder = graph.bfs()
 ///     .source(42)
 ///     .max_depth(5)
 ///     .track_paths(true)
 ///     .targets(vec![99, 100]);
 /// ```
 pub struct BfsBuilder {
+    graph_store: Arc<DefaultGraphStore>,
     /// Source node for BFS traversal
     source: Option<u64>,
     /// Target nodes (empty = all reachable, specific = stop when found)
@@ -94,7 +102,7 @@ pub struct BfsBuilder {
 }
 
 impl BfsBuilder {
-    /// Create a new BFS builder with defaults
+    /// Create a new BFS builder bound to a live graph store.
     ///
     /// Defaults:
     /// - source: None (must be set)
@@ -103,8 +111,9 @@ impl BfsBuilder {
     /// - track_paths: false (only distances, not full paths)
     /// - concurrency: 1 (BFS is typically single-threaded)
     /// - delta: 64 (chunking parameter)
-    pub fn new() -> Self {
+    pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
+            graph_store,
             source: None,
             targets: vec![],
             max_depth: None,
@@ -176,6 +185,108 @@ impl BfsBuilder {
         self
     }
 
+    fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
+        NodeId::try_from(value).map_err(|_| {
+            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                "{} must fit into i64 (got {})",
+                field, value
+            ))
+        })
+    }
+
+    fn compute(self) -> Result<(Vec<PathResult>, BfsStats)> {
+        self.validate()?;
+
+        let source_u64 = self.source.expect("validate() ensures source is set");
+        let source_node = Self::checked_node_id(source_u64, "source")?;
+        let target_nodes: Vec<NodeId> = self
+            .targets
+            .iter()
+            .map(|&value| Self::checked_node_id(value, "targets") )
+            .collect::<Result<Vec<_>>>()?;
+
+        let storage = BfsStorageRuntime::new(
+            source_node,
+            target_nodes.clone(),
+            self.max_depth,
+            self.track_paths,
+            self.concurrency,
+            self.delta,
+        );
+
+        let mut computation = BfsComputationRuntime::new(source_node, self.track_paths, self.concurrency);
+
+        let rel_types: HashSet<RelationshipType> = HashSet::new();
+        let graph_view = self
+            .graph_store
+            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
+            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+
+        let result = storage.compute_bfs(&mut computation, Some(graph_view.as_ref()))?;
+
+        let mut path_map: HashMap<NodeId, Vec<u64>> = HashMap::new();
+        if self.track_paths {
+            for path in result.paths {
+                let node_path: Vec<u64> = path
+                    .node_ids
+                    .into_iter()
+                    .filter(|node_id| *node_id >= 0)
+                    .map(|node_id| node_id as u64)
+                    .collect();
+                path_map.insert(path.target_node, node_path);
+            }
+        }
+
+        let mut max_depth_reached: u64 = 0;
+        let mut targets_found: u64 = 0;
+        let mut degree_sum: u64 = 0;
+
+        let visited_nodes: Vec<(NodeId, u32)> = result.visited_nodes;
+        for (node_id, depth) in &visited_nodes {
+            max_depth_reached = max_depth_reached.max(*depth as u64);
+            if !target_nodes.is_empty() && target_nodes.contains(node_id) {
+                targets_found += 1;
+            }
+            if *node_id >= 0 {
+                degree_sum += graph_view.degree(*node_id) as u64;
+            }
+        }
+
+        let avg_branching_factor = if visited_nodes.is_empty() {
+            0.0
+        } else {
+            degree_sum as f64 / visited_nodes.len() as f64
+        };
+
+        let all_targets_reached = !target_nodes.is_empty() && targets_found == target_nodes.len() as u64;
+
+        let stats = BfsStats {
+            nodes_visited: result.nodes_visited as u64,
+            max_depth_reached,
+            execution_time_ms: result.computation_time_ms,
+            targets_found,
+            all_targets_reached,
+            avg_branching_factor,
+        };
+
+        let rows: Vec<PathResult> = visited_nodes
+            .into_iter()
+            .filter(|(node_id, _)| *node_id >= 0)
+            .map(|(node_id, depth)| {
+                let target = node_id as u64;
+                let path = path_map.get(&node_id).cloned().unwrap_or_default();
+                PathResult {
+                    source: source_u64,
+                    target,
+                    path,
+                    cost: depth as f64,
+                }
+            })
+            .collect();
+
+        Ok((rows, stats))
+    }
+
     /// Validate configuration before execution
     fn validate(&self) -> Result<()> {
         match self.source {
@@ -212,49 +323,16 @@ impl BfsBuilder {
     /// Use this when you want individual traversal results:
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
+    /// # let graph: Graph = unimplemented!();
     /// # use gds::procedures::facades::pathfinding::BfsBuilder;
-    /// let builder = BfsBuilder::new().source(0).max_depth(3);
+    /// let builder = graph.bfs().source(0).max_depth(3);
     /// for result in builder.stream()? {
     ///     println!("Node {} at distance {}", result.target, result.cost);
     /// }
     /// ```
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
-        self.validate()?;
-
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy results for demonstration
-        let dummy_results = if self.targets.is_empty() {
-            // No specific targets - return all reachable nodes
-            vec![
-                PathResult {
-                    source: self.source.unwrap(),
-                    target: 1,
-                    path: vec![self.source.unwrap(), 1],
-                    cost: 1.0,
-                },
-                PathResult {
-                    source: self.source.unwrap(),
-                    target: 2,
-                    path: vec![self.source.unwrap(), 2],
-                    cost: 1.0,
-                },
-            ]
-        } else {
-            // Specific targets - return paths to targets
-            self.targets
-                .into_iter()
-                .enumerate()
-                .map(|(i, target)| PathResult {
-                    source: self.source.unwrap(),
-                    target,
-                    path: vec![self.source.unwrap(), target],
-                    cost: (i + 1) as f64,
-                })
-                .collect()
-        };
-
-        Ok(Box::new(dummy_results.into_iter()))
+        let (rows, _) = self.compute()?;
+        Ok(Box::new(rows.into_iter()))
     }
 
     /// Stats mode: Get aggregated statistics
@@ -264,25 +342,15 @@ impl BfsBuilder {
     /// Use this when you want performance metrics:
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
+    /// # let graph: Graph = unimplemented!();
     /// # use gds::procedures::facades::pathfinding::BfsBuilder;
-    /// let builder = BfsBuilder::new().source(0);
+    /// let builder = graph.bfs().source(0);
     /// let stats = builder.stats()?;
     /// println!("Visited {} nodes in {}ms", stats.nodes_visited, stats.execution_time_ms);
     /// ```
     pub fn stats(self) -> Result<BfsStats> {
-        self.validate()?;
-
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy stats for demonstration
-        Ok(BfsStats {
-            nodes_visited: 10,
-            max_depth_reached: 3,
-            execution_time_ms: 25,
-            targets_found: self.targets.len() as u64,
-            all_targets_reached: !self.targets.is_empty(),
-            avg_branching_factor: 2.5,
-        })
+        let (_, stats) = self.compute()?;
+        Ok(stats)
     }
 
     /// Mutate mode: Compute and store as node property
@@ -292,9 +360,9 @@ impl BfsBuilder {
     ///
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
+    /// # let graph: Graph = unimplemented!();
     /// # use gds::procedures::facades::pathfinding::BfsBuilder;
-    /// let builder = BfsBuilder::new().source(0);
+    /// let builder = graph.bfs().source(0);
     /// let result = builder.mutate("distance")?;
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
@@ -302,12 +370,8 @@ impl BfsBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy result for demonstration
-        Ok(MutationResult::new(
-            8, // Dummy count of nodes updated
-            property_name.to_string(),
-            std::time::Duration::from_millis(30),
+        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
+            "BFS mutate/write is not implemented yet".to_string(),
         ))
     }
 
@@ -317,9 +381,9 @@ impl BfsBuilder {
     ///
     /// ```rust,no_run
     /// # use gds::Graph;
-    /// # let graph = Graph::default();
+    /// # let graph: Graph = unimplemented!();
     /// # use gds::procedures::facades::pathfinding::BfsBuilder;
-    /// let builder = BfsBuilder::new().source(0);
+    /// let builder = graph.bfs().source(0);
     /// let result = builder.write("bfs_results")?;
     /// println!("Wrote {} nodes", result.nodes_written);
     /// ```
@@ -327,19 +391,9 @@ impl BfsBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        // TODO: Wire to actual algorithm spec when execution pipeline is ready
-        // For now, return dummy result for demonstration
-        Ok(WriteResult::new(
-            5, // Dummy count of nodes written
-            property_name.to_string(),
-            std::time::Duration::from_millis(60),
+        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
+            "BFS mutate/write is not implemented yet".to_string(),
         ))
-    }
-}
-
-impl Default for BfsBuilder {
-    fn default() -> Self {
-        Self::new()
     }
 }
 
@@ -350,10 +404,18 @@ impl Default for BfsBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 
     #[test]
     fn test_builder_defaults() {
-        let builder = BfsBuilder::new();
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let builder = BfsBuilder::new(store);
         assert_eq!(builder.source, None);
         assert!(builder.targets.is_empty());
         assert!(builder.max_depth.is_none());
@@ -364,7 +426,15 @@ mod tests {
 
     #[test]
     fn test_builder_fluent_chain() {
-        let builder = BfsBuilder::new()
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+
+        let builder = BfsBuilder::new(store)
             .source(42)
             .targets(vec![99, 100])
             .max_depth(5)
@@ -382,25 +452,53 @@ mod tests {
 
     #[test]
     fn test_validate_missing_source() {
-        let builder = BfsBuilder::new();
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let builder = BfsBuilder::new(store);
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_invalid_concurrency() {
-        let builder = BfsBuilder::new().source(0).concurrency(0);
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let builder = BfsBuilder::new(store).source(0).concurrency(0);
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_invalid_max_depth() {
-        let builder = BfsBuilder::new().source(0).max_depth(0);
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let builder = BfsBuilder::new(store).source(0).max_depth(0);
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_valid_config() {
-        let builder = BfsBuilder::new()
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let builder = BfsBuilder::new(store)
             .source(0)
             .max_depth(5)
             .track_paths(true);
@@ -409,66 +507,113 @@ mod tests {
 
     #[test]
     fn test_stream_requires_validation() {
-        let builder = BfsBuilder::new(); // Missing source
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let builder = BfsBuilder::new(store); // Missing source
         assert!(builder.stream().is_err());
     }
 
     #[test]
     fn test_stats_requires_validation() {
-        let builder = BfsBuilder::new().concurrency(0); // Invalid concurrency
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let builder = BfsBuilder::new(store).concurrency(0); // Invalid concurrency
         assert!(builder.stats().is_err());
     }
 
     #[test]
     fn test_mutate_requires_validation() {
-        let builder = BfsBuilder::new().source(0); // Valid config but...
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let builder = BfsBuilder::new(store).source(0); // Valid config but...
         assert!(builder.mutate("").is_err()); // Empty property name
     }
 
     #[test]
     fn test_mutate_validates_property_name() {
-        let builder = BfsBuilder::new().source(0);
-        assert!(builder.mutate("distance").is_ok());
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let builder = BfsBuilder::new(store).source(0);
+        assert!(builder.mutate("distance").is_err());
     }
 
     #[test]
     fn test_write_validates_property_name() {
-        let builder = BfsBuilder::new().source(0);
-        assert!(builder.write("bfs_results").is_ok());
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let builder = BfsBuilder::new(store).source(0);
+        assert!(builder.write("bfs_results").is_err());
     }
 
     #[test]
     fn test_stream_returns_paths_to_targets() {
-        let builder = BfsBuilder::new().source(0).targets(vec![3, 5]);
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let builder = BfsBuilder::new(store).source(0).targets(vec![3]);
         let results: Vec<_> = builder.stream().unwrap().collect();
 
-        assert_eq!(results.len(), 2);
+        assert!(!results.is_empty());
         assert_eq!(results[0].source, 0);
-        assert_eq!(results[0].target, 3);
-        assert_eq!(results[1].source, 0);
-        assert_eq!(results[1].target, 5);
     }
 
     #[test]
     fn test_stream_returns_all_reachable() {
-        let builder = BfsBuilder::new().source(0); // No targets specified
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let builder = BfsBuilder::new(store).source(0); // No targets specified
         let results: Vec<_> = builder.stream().unwrap().collect();
 
-        assert_eq!(results.len(), 2); // Dummy implementation returns 2 nodes
+        assert!(!results.is_empty());
         assert_eq!(results[0].source, 0);
-        assert_eq!(results[0].target, 1);
-        assert_eq!(results[1].source, 0);
-        assert_eq!(results[1].target, 2);
     }
 
     #[test]
     fn test_stats_returns_aggregated_info() {
-        let builder = BfsBuilder::new().source(0).targets(vec![1, 2, 3]);
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 8,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let builder = BfsBuilder::new(store).source(0).targets(vec![1, 2, 3]);
         let stats = builder.stats().unwrap();
 
-        assert_eq!(stats.nodes_visited, 10);
-        assert_eq!(stats.targets_found, 3);
-        assert!(stats.all_targets_reached);
-        assert_eq!(stats.avg_branching_factor, 2.5);
+        assert!(stats.nodes_visited > 0);
     }
 }

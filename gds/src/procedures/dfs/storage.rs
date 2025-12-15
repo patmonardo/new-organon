@@ -9,6 +9,7 @@ use super::computation::DfsComputationRuntime;
 use super::spec::{DfsResult, DfsPathResult};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::Graph;
+use crate::types::graph::id_map::NodeId;
 use std::collections::{VecDeque, HashMap};
 
 /// DFS Storage Runtime - handles persistent data access and algorithm orchestration
@@ -17,9 +18,9 @@ use std::collections::{VecDeque, HashMap};
 /// This implements the "Gross pole" for accessing graph data
 pub struct DfsStorageRuntime {
     /// Source node for DFS traversal
-    pub source_node: u32,
+    pub source_node: NodeId,
     /// Target nodes to find
-    pub target_nodes: Vec<u32>,
+    pub target_nodes: Vec<NodeId>,
     /// Maximum depth to traverse
     pub max_depth: Option<u32>,
     /// Whether to track paths during traversal
@@ -31,8 +32,8 @@ pub struct DfsStorageRuntime {
 impl DfsStorageRuntime {
     /// Create new DFS storage runtime
     pub fn new(
-        source_node: u32,
-        target_nodes: Vec<u32>,
+        source_node: NodeId,
+        target_nodes: Vec<NodeId>,
         max_depth: Option<u32>,
         track_paths: bool,
         concurrency: usize,
@@ -57,18 +58,18 @@ impl DfsStorageRuntime {
         computation.initialize(self.source_node, self.max_depth);
 
         // DFS stack for depth-first traversal
-        let mut stack = VecDeque::new();
+        let mut stack: VecDeque<(NodeId, u32)> = VecDeque::new();
         stack.push_back((self.source_node, 0)); // (node, depth)
 
         // Track visited nodes and their discovery order
-        let mut visited = HashMap::new();
+        let mut visited: HashMap<NodeId, u32> = HashMap::new();
         let mut discovery_order = 0;
         visited.insert(self.source_node, discovery_order);
         discovery_order += 1;
 
         // Track paths if requested
         let mut paths = Vec::new();
-        let mut predecessors = HashMap::new();
+        let mut predecessors: HashMap<NodeId, NodeId> = HashMap::new();
 
         // Main DFS loop
         while let Some((current_node, current_depth)) = stack.pop_back() {
@@ -116,8 +117,11 @@ impl DfsStorageRuntime {
         let computation_time = start_time.elapsed().as_millis() as u64;
 
         let visited_count = visited.len();
+        let mut visited_nodes: Vec<(NodeId, u32)> = visited.into_iter().collect();
+        visited_nodes.sort_by_key(|(_, order)| *order);
+
         Ok(DfsResult {
-            visited_nodes: visited.into_iter().collect(),
+            visited_nodes,
             paths,
             nodes_visited: visited_count,
             computation_time_ms: computation_time,
@@ -130,9 +134,9 @@ impl DfsStorageRuntime {
     /// This builds the path result from predecessor information
     fn reconstruct_path(
         &self,
-        source: u32,
-        target: u32,
-        predecessors: &HashMap<u32, u32>,
+        source: NodeId,
+        target: NodeId,
+        predecessors: &HashMap<NodeId, NodeId>,
     ) -> Option<DfsPathResult> {
         let mut path = Vec::new();
         let mut current = target;
@@ -157,11 +161,11 @@ impl DfsStorageRuntime {
     }
 
     /// Get neighbors of a node (graph-backed when available; mock fallback)
-    fn get_neighbors(&self, graph: Option<&dyn Graph>, node: u32) -> Vec<u32> {
+    fn get_neighbors(&self, graph: Option<&dyn Graph>, node: NodeId) -> Vec<NodeId> {
         if let Some(g) = graph {
             let fallback: f64 = 1.0;
-            let stream = g.stream_relationships(node as i64, fallback);
-            stream.into_iter().map(|c| c.target_id() as u32).collect()
+            let stream = g.stream_relationships(node, fallback);
+            stream.into_iter().map(|c| c.target_id()).collect()
         } else {
             match node {
                 0 => vec![1, 2],
