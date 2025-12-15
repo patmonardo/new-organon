@@ -1,0 +1,11 @@
+{
+  "kind": "run",
+  "mode": "stream",
+  "graph": { "kind": "named_graph", "graphName": "g" },
+  "algorithm": {
+    "kind": "pagerank",
+    "damping": 0.85,
+    "maxIterations": 10,
+    "degreeFunction": "out"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "kind": "run",
+  "mode": "stream",
+  "graph": { "kind": "named_graph", "graphName": "g" },
+  "algorithm": {
+    "kind": "dijkstra",
+    "source": { "kind": "node_id", "nodeId": 1 },
+    "targets": [{ "kind": "node_id", "nodeId": 5 }],
+    "trackRelationships": true,
+    "direction": "outgoing"
+  }
+}
