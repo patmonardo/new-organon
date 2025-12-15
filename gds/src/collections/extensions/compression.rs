@@ -11,25 +11,25 @@ use std::marker::PhantomData;
 pub trait CompressionSupport<T> {
     /// Compress the collection data
     fn compress(&mut self, algorithm: CompressionAlgorithm) -> Result<CompressionResult, CompressionError>;
-    
+
     /// Decompress the collection data
     fn decompress(&mut self) -> Result<DecompressionResult, CompressionError>;
-    
+
     /// Check if collection is compressed
     fn is_compressed(&self) -> bool;
-    
+
     /// Get compression ratio
     fn compression_ratio(&self) -> Option<f64>;
-    
+
     /// Get compression statistics
     fn compression_stats(&self) -> Option<CompressionStats>;
-    
+
     /// Enable automatic compression
     fn enable_auto_compression(&mut self, threshold: f64) -> Result<(), CompressionError>;
-    
+
     /// Disable automatic compression
     fn disable_auto_compression(&mut self);
-    
+
     /// Check if auto-compression is enabled
     fn is_auto_compression_enabled(&self) -> bool;
 }
@@ -108,7 +108,7 @@ pub struct CompressionStats {
 }
 
 /// Compression-aware collection wrapper
-pub struct CompressedCollection<T, C> 
+pub struct CompressedCollection<T, C>
 where
     C: Collections<T>,
 {
@@ -121,7 +121,7 @@ where
     _phantom: PhantomData<T>,
 }
 
-impl<T, C> CompressedCollection<T, C> 
+impl<T, C> CompressedCollection<T, C>
 where
     C: Collections<T>,
     T: Clone + Send + Sync + serde::Serialize + serde::de::DeserializeOwned,
@@ -137,7 +137,7 @@ where
             _phantom: PhantomData,
         }
     }
-    
+
     pub fn with_config(inner: C, config: CompressionConfig) -> Self {
         Self {
             inner,
@@ -165,36 +165,36 @@ where
             self.inner.get(index)
         }
     }
-    
+
     fn set(&mut self, index: usize, value: T) {
         if self.is_compressed {
             // Cannot set values in compressed collection
             // Would need to decompress first
             return;
         }
-        
+
         self.inner.set(index, value);
-        
+
         // Check if we should auto-compress
         if self.auto_compression_enabled {
             let current_size = self.inner.len() * std::mem::size_of::<T>();
             let estimated_compressed_size = (current_size as f64 * 0.5) as usize; // Assume 50% compression
             let savings_ratio = 1.0 - (estimated_compressed_size as f64 / current_size as f64);
-            
+
             if savings_ratio >= self.compression_config.auto_compress_threshold {
                 let _ = self.compress(self.compression_config.algorithm.clone());
             }
         }
     }
-    
+
     fn len(&self) -> usize {
         self.inner.len()
     }
-    
+
     fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
-    
+
     fn sum(&self) -> Option<T> where T: std::iter::Sum {
         if self.is_compressed {
             None // Cannot compute sum on compressed data
@@ -202,7 +202,7 @@ where
             self.inner.sum()
         }
     }
-    
+
     fn min(&self) -> Option<T> where T: Ord {
         if self.is_compressed {
             None // Cannot compute min on compressed data
@@ -210,7 +210,7 @@ where
             self.inner.min()
         }
     }
-    
+
     fn max(&self) -> Option<T> where T: Ord {
         if self.is_compressed {
             None // Cannot compute max on compressed data
@@ -218,7 +218,7 @@ where
             self.inner.max()
         }
     }
-    
+
     fn mean(&self) -> Option<f64> {
         if self.is_compressed {
             None // Cannot compute mean on compressed data
@@ -226,7 +226,7 @@ where
             self.inner.mean()
         }
     }
-    
+
     fn std_dev(&self) -> Option<f64> {
         if self.is_compressed {
             None
@@ -234,7 +234,7 @@ where
             self.inner.std_dev()
         }
     }
-    
+
     fn variance(&self) -> Option<f64> {
         if self.is_compressed {
             None
@@ -242,7 +242,7 @@ where
             self.inner.variance()
         }
     }
-    
+
     fn median(&self) -> Option<T> where T: Ord {
         if self.is_compressed {
             None
@@ -250,7 +250,7 @@ where
             self.inner.median()
         }
     }
-    
+
     fn percentile(&self, p: f64) -> Option<T> where T: Ord {
         if self.is_compressed {
             None
@@ -258,7 +258,7 @@ where
             self.inner.percentile(p)
         }
     }
-    
+
     fn binary_search(&self, key: &T) -> Result<usize, usize> where T: Ord {
         if self.is_compressed {
             Err(0) // Cannot binary search compressed data
@@ -266,13 +266,13 @@ where
             self.inner.binary_search(key)
         }
     }
-    
+
     fn sort(&mut self) where T: Ord {
         if !self.is_compressed {
             self.inner.sort();
         }
     }
-    
+
     fn to_vec(self) -> Vec<T> {
         if self.is_compressed {
             // Would need to decompress first
@@ -281,7 +281,7 @@ where
             self.inner.to_vec()
         }
     }
-    
+
     fn as_slice(&self) -> &[T] {
         if self.is_compressed {
             &[] // Cannot provide slice for compressed data
@@ -289,7 +289,7 @@ where
             self.inner.as_slice()
         }
     }
-    
+
     fn is_null(&self, index: usize) -> bool {
         if self.is_compressed {
             false // Cannot check null on compressed data
@@ -297,7 +297,7 @@ where
             self.inner.is_null(index)
         }
     }
-    
+
     fn null_count(&self) -> usize {
         if self.is_compressed {
             0 // Cannot count nulls on compressed data
@@ -305,32 +305,32 @@ where
             self.inner.null_count()
         }
     }
-    
+
     fn default_value(&self) -> T {
         self.inner.default_value()
     }
-    
+
     fn backend(&self) -> crate::config::CollectionsBackend {
         self.inner.backend()
     }
-    
+
     fn features(&self) -> &[crate::config::Extension] {
         &[Extension::Compression]
     }
-    
+
     fn extensions(&self) -> &[crate::config::Extension] {
         &[Extension::Compression]
     }
-    
+
     fn value_type(&self) -> crate::types::ValueType {
         self.inner.value_type()
     }
-    
+
     fn with_capacity(_capacity: usize) -> Self where Self: Sized {
         // Implementation for compressed collections
         todo!("Implement with_capacity for CompressedCollection")
     }
-    
+
     fn with_defaults(_count: usize, _default_value: T) -> Self where Self: Sized {
         // Implementation for compressed collections
         todo!("Implement with_defaults for CompressedCollection")
@@ -346,17 +346,17 @@ where
         if self.is_compressed {
             return Err(CompressionError::AlreadyCompressed);
         }
-        
+
         let start_time = std::time::Instant::now();
         let original_size = self.inner.len() * std::mem::size_of::<T>();
-        
+
         // Serialize the collection data
         let data: Vec<T> = (0..self.inner.len())
             .filter_map(|i| self.inner.get(i))
             .collect();
         let serialized = serde_json::to_vec(&data)
             .map_err(|e| CompressionError::SerializationFailed(e.to_string()))?;
-        
+
         // Compress the serialized data
         let compressed = match algorithm {
             CompressionAlgorithm::Lz4 => {
@@ -383,19 +383,19 @@ where
                 return Err(CompressionError::UnsupportedAlgorithm("Custom algorithms not implemented".to_string()));
             },
         };
-        
+
         let compression_time = start_time.elapsed().as_millis() as u64;
         let compression_ratio = compressed.len() as f64 / original_size as f64;
-        
+
         // Store compressed data
         self.compressed_data = Some(compressed.clone());
         self.is_compressed = true;
-        
+
         // Update statistics
         if let Some(ref mut stats) = self.compression_stats {
             stats.total_compressions += 1;
-            stats.average_compression_ratio = 
-                (stats.average_compression_ratio * (stats.total_compressions - 1) as f64 + compression_ratio) 
+            stats.average_compression_ratio =
+                (stats.average_compression_ratio * (stats.total_compressions - 1) as f64 + compression_ratio)
                 / stats.total_compressions as f64;
             stats.memory_saved_bytes += original_size - compressed.len();
         } else {
@@ -407,7 +407,7 @@ where
                 memory_saved_bytes: original_size - compressed.len(),
             });
         }
-        
+
         Ok(CompressionResult {
             original_size,
             compressed_size: compressed.len(),
@@ -416,71 +416,71 @@ where
             algorithm_used: algorithm,
         })
     }
-    
+
     fn decompress(&mut self) -> Result<DecompressionResult, CompressionError> {
         if !self.is_compressed {
             return Err(CompressionError::NotCompressed);
         }
-        
+
         let start_time = std::time::Instant::now();
-        
+
         // Get compressed data
         let compressed_data = self.compressed_data.take()
             .ok_or(CompressionError::NoCompressedData)?;
-        
+
         // Decompress (placeholder - would use actual decompression)
         let decompressed = compressed_data; // No decompression for now
-        
+
         // Deserialize back to collection
         let data: Vec<T> = serde_json::from_slice(&decompressed)
             .map_err(|e| CompressionError::DeserializationFailed(e.to_string()))?;
-        
+
         let decompression_time = start_time.elapsed().as_millis() as u64;
-        
+
         // Restore the collection
         let mut new_inner = C::with_defaults(data.len(), data[0].clone());
         for (i, value) in data.into_iter().enumerate() {
             new_inner.set(i, value);
         }
         // Replace the inner collection
-        std::mem::replace(&mut self.inner, new_inner);
-        
+        self.inner = new_inner;
+
         self.is_compressed = false;
-        
+
         // Update statistics
         if let Some(ref mut stats) = self.compression_stats {
             stats.total_decompressions += 1;
         }
-        
+
         Ok(DecompressionResult {
             decompressed_size: decompressed.len(),
             decompression_time_ms: decompression_time,
             algorithm_used: self.compression_config.algorithm.clone(),
         })
     }
-    
+
     fn is_compressed(&self) -> bool {
         self.is_compressed
     }
-    
+
     fn compression_ratio(&self) -> Option<f64> {
         self.compression_stats.as_ref().map(|s| s.average_compression_ratio)
     }
-    
+
     fn compression_stats(&self) -> Option<CompressionStats> {
         self.compression_stats.clone()
     }
-    
+
     fn enable_auto_compression(&mut self, threshold: f64) -> Result<(), CompressionError> {
         self.compression_config.auto_compress_threshold = threshold;
         self.auto_compression_enabled = true;
         Ok(())
     }
-    
+
     fn disable_auto_compression(&mut self) {
         self.auto_compression_enabled = false;
     }
-    
+
     fn is_auto_compression_enabled(&self) -> bool {
         self.auto_compression_enabled
     }
@@ -525,7 +525,7 @@ impl CompressionUtils {
             CompressionAlgorithm::Custom(_) => 0.5, // Default estimate
         }
     }
-    
+
     /// Choose optimal compression algorithm based on data characteristics
     pub fn choose_optimal_algorithm<T>(
         _data_size: usize,
@@ -538,7 +538,7 @@ impl CompressionUtils {
             AccessPattern::WriteHeavy => CompressionAlgorithm::Snappy,
         }
     }
-    
+
     /// Calculate compression benefits
     pub fn calculate_compression_benefits(
         original_size: usize,
@@ -549,7 +549,7 @@ impl CompressionUtils {
         let memory_saved = original_size - compressed_size;
         let compression_ratio = compressed_size as f64 / original_size as f64;
         let time_saved_per_access = compression_time_ms as f64 * access_frequency;
-        
+
         CompressionBenefits {
             memory_saved_bytes: memory_saved,
             compression_ratio,

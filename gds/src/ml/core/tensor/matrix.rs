@@ -152,7 +152,7 @@ impl Matrix {
             "Matrix dimensions must match! Got dimensions ({}, {}) + ({}, {})",
             self.rows, self.cols, other.rows, other.cols
         );
-        
+
         let mut result = Matrix::with_dimensions(self.rows, other.cols);
         for i in 0..self.rows {
             for j in 0..other.cols {
@@ -174,7 +174,7 @@ impl Matrix {
             "Cannot multiply matrix having dimensions ({}, {}) with transposed matrix of dimensions ({}, {})",
             self.rows, self.cols, other.rows, other.cols
         );
-        
+
         let mut result = Matrix::with_dimensions(self.rows, other.rows);
         for i in 0..self.rows {
             for j in 0..other.rows {
@@ -221,9 +221,9 @@ impl Matrix {
     /// Java: `public Vector sumPerColumn()`
     pub fn sum_per_column(&self) -> Vector {
         let mut column_sums = vec![0.0; self.cols];
-        for col in 0..self.cols {
+        for (col, sum) in column_sums.iter_mut().enumerate() {
             for row in 0..self.rows {
-                column_sums[col] += self.data_at(row, col);
+                *sum += self.data_at(row, col);
             }
         }
         Vector::new(column_sums)
@@ -309,7 +309,7 @@ impl Tensor for Matrix {
             "Matrix dimensions must match! Got dimensions ({}, {}) + ({}, {})",
             self.rows, self.cols, other_matrix.rows, other_matrix.cols
         );
-        
+
         let mut result = Matrix::with_dimensions(self.rows, self.cols);
         for i in 0..self.data.len() {
             result.data[i] = self.data[i] + other_matrix.data[i];

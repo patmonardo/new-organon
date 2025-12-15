@@ -6,7 +6,9 @@ use crate::applications::services::logging::Log;
 
 pub struct ProgressTrackerFactory {
     log: Log,
+    #[allow(dead_code)]
     task_registry_factory: TaskRegistryFactory,
+    #[allow(dead_code)]
     user_log_registry_factory: UserLogRegistryFactory,
 }
 
@@ -70,7 +72,7 @@ impl ProgressTracker {
 
     pub fn log_progress(&mut self) {
         self.current_work += 1;
-        if self.current_work % 1000 == 0 {
+        if self.current_work.is_multiple_of(1000) {
             self.log.info(&format!("Progress: {}/{}", self.current_work, self.task.total_work()));
         }
     }

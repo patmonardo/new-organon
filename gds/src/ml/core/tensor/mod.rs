@@ -2,6 +2,8 @@
 //!
 //! Translated from Java GDS ml-core tensor package.
 
+#![allow(clippy::module_inception)]
+
 pub mod matrix;
 pub mod operations;
 pub mod scalar;

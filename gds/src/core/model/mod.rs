@@ -1,3 +1,5 @@
+#![allow(clippy::module_inception)]
+
 mod catalog;
 mod types;
 mod user_catalog;

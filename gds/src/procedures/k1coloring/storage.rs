@@ -1,4 +1,5 @@
 pub struct K1ColoringStorageRuntime {
+    #[allow(dead_code)]
     concurrency: usize,
 }
 

@@ -14,6 +14,7 @@ pub struct GraphStoreExportResult {
 }
 
 impl GraphStoreExportResult {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         graph_name: String,
         node_count: u64,
@@ -44,6 +45,7 @@ pub struct DatabaseExportResult {
 }
 
 impl DatabaseExportResult {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         graph_name: String,
         db_name: String,
@@ -78,6 +80,7 @@ pub struct FileExportResult {
 }
 
 impl FileExportResult {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         graph_name: String,
         export_name: String,

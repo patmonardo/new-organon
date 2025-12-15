@@ -8,6 +8,7 @@ pub struct MemoryUsageValidator {
     log: Log,
     use_max_memory_estimation: bool,
     memory_tracker: MemoryTracker,
+    #[allow(dead_code)]
     username: String,
 }
 
@@ -79,15 +80,16 @@ impl MemoryUsageValidator {
     }
 
     /// Validates memory usage with detailed error messages.
+    #[allow(clippy::too_many_arguments)]
     fn validate_memory_usage_with_details(
         &self,
         task_name: &str,
         available_bytes: u64,
-        required_bytes: u64,
+        _required_bytes: u64,
         memory_string: &str,
         log: &Log,
-        job_id: &JobId,
-        messages: &[&str],
+        _job_id: &JobId,
+        _messages: &[&str],
     ) {
         let error_message = format!(
             "Insufficient memory for {}: required {} but only {} available",
@@ -99,7 +101,7 @@ impl MemoryUsageValidator {
     }
 
     /// Computes memory range from memory tree with dimensions.
-    fn compute_memory_range(&self, memory_tree_with_dimensions: &MemoryTreeWithDimensions) -> MemoryRange {
+    fn compute_memory_range(&self, _memory_tree_with_dimensions: &MemoryTreeWithDimensions) -> MemoryRange {
         // Placeholder implementation - in real implementation would compute from tree
         MemoryRange::new(1024, 2048)
     }

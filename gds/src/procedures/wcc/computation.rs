@@ -43,13 +43,14 @@ impl UnionFind {
         let mut component_map: std::collections::HashMap<usize, usize> = std::collections::HashMap::new();
         let mut next_component_id = 0usize;
 
-        for i in 0..node_count {
-            let root = self.find_root(i);
-            if !component_map.contains_key(&root) {
-                component_map.insert(root, next_component_id);
+        for (node_id, component) in components.iter_mut().enumerate() {
+            let root = self.find_root(node_id);
+            let component_id = *component_map.entry(root).or_insert_with(|| {
+                let id = next_component_id;
                 next_component_id += 1;
-            }
-            components[i] = *component_map.get(&root).unwrap() as u64;
+                id
+            });
+            *component = component_id as u64;
         }
 
         (components, next_component_id)
@@ -66,6 +67,12 @@ pub struct WccComputationResult {
 /// WCC computation runtime
 pub struct WccComputationRuntime {
     // Placeholder for runtime state if needed
+}
+
+impl Default for WccComputationRuntime {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl WccComputationRuntime {

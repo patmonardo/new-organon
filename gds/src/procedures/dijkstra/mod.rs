@@ -13,6 +13,7 @@ pub mod computation;
 pub mod targets;
 pub mod traversal_state;
 pub mod path_finding_result;
+#[cfg(test)]
 pub mod integration_tests;
 
 // Re-export main types for easy access

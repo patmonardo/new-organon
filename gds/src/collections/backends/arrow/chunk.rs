@@ -18,6 +18,10 @@ impl ArrowChunk {
         self.chunk.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn column(&self, index: usize) -> Option<&Arc<dyn Array>> {
         self.chunk.arrays().get(index)
     }

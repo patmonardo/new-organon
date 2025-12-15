@@ -26,6 +26,10 @@ impl LongCollection {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn get(&self, index: usize) -> Option<i64> {
         match self {
             LongCollection::Vec(collection) => collection.get(index),
@@ -50,6 +54,10 @@ impl DoubleCollection {
             DoubleCollection::Huge(collection) => collection.len(),
             DoubleCollection::Arrow(collection) => collection.len(),
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn get(&self, index: usize) -> Option<f64> {

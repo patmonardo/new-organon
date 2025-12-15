@@ -18,13 +18,13 @@ use std::collections::VecDeque;
 pub struct BellmanFordStorageRuntime {
     /// Source node for shortest path computation
     pub source_node: u32,
-    
+
     /// Whether to track negative cycles
     pub track_negative_cycles: bool,
-    
+
     /// Whether to track shortest paths
     pub track_paths: bool,
-    
+
     /// Concurrency level for parallel processing
     pub concurrency: usize,
 }
@@ -59,67 +59,67 @@ impl BellmanFordStorageRuntime {
         // Initialize computation runtime
         let node_count = graph.map(|g| g.node_count()).unwrap_or(100);
         computation.initialize(self.source_node, self.track_negative_cycles, self.track_paths, node_count);
-        
+
         // Initialize frontier with source node
         let mut frontier = VecDeque::new();
         frontier.push_back(self.source_node);
-        
+
         // Initialize distances
         computation.set_distance(self.source_node, 0.0);
         computation.set_predecessor(self.source_node, None);
         computation.set_length(self.source_node, 0);
-        
+
         // Main Bellman-Ford loop
         let mut iteration = 0;
         let max_iterations = node_count; // Bellman-Ford converges in at most V-1 iterations
-        
+
         while !frontier.is_empty() && iteration < max_iterations {
             let mut next_frontier = VecDeque::new();
-            
+
             // Process all nodes in current frontier
             while let Some(node_id) = frontier.pop_front() {
                 // Relax edges from this node according to direction
                 let neighbors = self.get_neighbors_with_weights(graph, node_id, direction);
-                
+
                 for (neighbor, weight) in neighbors {
                     let current_distance = computation.distance(node_id);
-                    let new_distance = current_distance + weight as f64;
-                    
+                    let new_distance = current_distance + weight;
+
                     if new_distance < computation.distance(neighbor) {
                         computation.set_distance(neighbor, new_distance);
                         computation.set_predecessor(neighbor, Some(node_id));
                         computation.set_length(neighbor, computation.length(node_id) + 1);
-                        
+
                         // Check for negative cycle (path length > V)
                         if computation.length(neighbor) > node_count as u32 {
                             computation.add_negative_cycle_node(neighbor);
                         }
-                        
+
                         next_frontier.push_back(neighbor);
                     }
                 }
             }
-            
+
             frontier = next_frontier;
             iteration += 1;
         }
-        
+
         // Check if we have negative cycles
         let contains_negative_cycle = computation.has_negative_cycles();
-        
+
         // Generate results
         let shortest_paths = if contains_negative_cycle || !self.track_paths {
             vec![]
         } else {
             self.generate_shortest_paths(computation)?
         };
-        
+
         let negative_cycles = if self.track_negative_cycles {
             self.generate_negative_cycles(computation)?
         } else {
             vec![]
         };
-        
+
         Ok(BellmanFordResult {
             shortest_paths,
             negative_cycles,
@@ -136,14 +136,14 @@ impl BellmanFordStorageRuntime {
     ) -> Result<Vec<PathResult>, AlgorithmError> {
         let mut paths = Vec::new();
         let node_count = 100; // TODO: Replace with actual graph store
-        
+
         for target_node in 0..node_count {
             if computation.predecessor(target_node).is_some() {
                 let path = self.reconstruct_path(computation, self.source_node, target_node)?;
                 paths.push(path);
             }
         }
-        
+
         Ok(paths)
     }
 
@@ -155,12 +155,12 @@ impl BellmanFordStorageRuntime {
         computation: &BellmanFordComputationRuntime,
     ) -> Result<Vec<PathResult>, AlgorithmError> {
         let mut cycles = Vec::new();
-        
+
         for cycle_node in computation.get_negative_cycle_nodes() {
             let cycle = self.reconstruct_negative_cycle(computation, *cycle_node)?;
             cycles.push(cycle);
         }
-        
+
         Ok(cycles)
     }
 
@@ -175,26 +175,26 @@ impl BellmanFordStorageRuntime {
     ) -> Result<PathResult, AlgorithmError> {
         let mut node_ids = Vec::new();
         let mut costs = Vec::new();
-        
+
         let mut current_node = target_node;
-        
+
         // Backtrack from target to source
         while current_node != source_node {
             node_ids.push(current_node);
             costs.push(computation.distance(current_node));
-            
+
             current_node = computation.predecessor(current_node)
                 .ok_or_else(|| AlgorithmError::InvalidGraph("Missing predecessor".to_string()))?;
         }
-        
+
         // Add source node
         node_ids.push(source_node);
         costs.push(computation.distance(source_node));
-        
+
         // Reverse to get correct order
         node_ids.reverse();
         costs.reverse();
-        
+
         Ok(PathResult {
             source_node,
             target_node,
@@ -214,27 +214,27 @@ impl BellmanFordStorageRuntime {
     ) -> Result<PathResult, AlgorithmError> {
         let mut node_ids = Vec::new();
         let mut costs = Vec::new();
-        
+
         let mut current_node = start_node;
         let mut length = 0;
         let max_length = 100; // TODO: Replace with actual graph node count
-        
+
         // Follow predecessors until we complete the cycle
         while length < max_length {
             node_ids.push(current_node);
             costs.push(computation.distance(current_node));
-            
+
             current_node = computation.predecessor(current_node)
                 .ok_or_else(|| AlgorithmError::InvalidGraph("Missing predecessor in cycle".to_string()))?;
-            
+
             length += 1;
-            
+
             // Check if we've completed the cycle
             if current_node == start_node {
                 break;
             }
         }
-        
+
         // If we didn't complete the cycle, return empty result
         if length >= max_length {
             return Ok(PathResult {
@@ -245,7 +245,7 @@ impl BellmanFordStorageRuntime {
                 costs: vec![],
             });
         }
-        
+
         Ok(PathResult {
             source_node: start_node,
             target_node: start_node,
@@ -263,9 +263,9 @@ impl BellmanFordStorageRuntime {
             let fallback: f64 = 1.0;
             let iter: Box<dyn Iterator<Item = crate::types::properties::relationship::traits::RelationshipCursorBox> + Send> =
                 if direction == 1 { g.stream_inverse_relationships(node_id as i64, fallback) } else { g.stream_relationships(node_id as i64, fallback) };
-            return iter.into_iter()
+            iter.into_iter()
                 .map(|cursor| (cursor.target_id() as u32, cursor.property()))
-                .collect();
+                .collect()
         } else {
             // Mock implementation for tests
             match node_id {
@@ -296,11 +296,11 @@ mod tests {
     fn test_bellman_ford_path_computation() {
         let mut storage = BellmanFordStorageRuntime::new(0, true, true, 4);
         let mut computation = BellmanFordComputationRuntime::new(0, true, true, 4);
-        
+
         // Test basic path computation
         let result = storage.compute_bellman_ford(&mut computation, None, 0);
         assert!(result.is_ok());
-        
+
         let bellman_ford_result = result.unwrap();
         assert!(!bellman_ford_result.contains_negative_cycle);
     }
@@ -309,11 +309,11 @@ mod tests {
     fn test_bellman_ford_path_same_source_target() {
         let mut storage = BellmanFordStorageRuntime::new(0, true, true, 4);
         let mut computation = BellmanFordComputationRuntime::new(0, true, true, 4);
-        
+
         // Test with same source and target
         let result = storage.compute_bellman_ford(&mut computation, None, 0);
         assert!(result.is_ok());
-        
+
         let bellman_ford_result = result.unwrap();
         assert!(!bellman_ford_result.contains_negative_cycle);
     }
@@ -321,12 +321,12 @@ mod tests {
     #[test]
     fn test_neighbors_with_weights() {
         let storage = BellmanFordStorageRuntime::new(0, true, true, 4);
-        
+
         let neighbors = storage.get_neighbors_with_weights(None, 0, 0);
         assert_eq!(neighbors.len(), 2);
         assert_eq!(neighbors[0], (1, 1.0));
         assert_eq!(neighbors[1], (2, 4.0));
-        
+
         let neighbors_empty = storage.get_neighbors_with_weights(None, 99, 0);
         assert!(neighbors_empty.is_empty());
     }

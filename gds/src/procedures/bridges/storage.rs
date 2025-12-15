@@ -1,6 +1,7 @@
 //! Bridges Storage Runtime
 
 pub struct BridgesStorageRuntime {
+    #[allow(dead_code)]
     concurrency: usize,
 }
 

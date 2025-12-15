@@ -5,6 +5,7 @@
 pub mod spec;
 pub mod storage;
 pub mod computation;
+#[cfg(test)]
 pub mod integration_tests;
 
 pub use spec::{TriangleCountAlgorithmSpec, TriangleCountConfig, TriangleCountResult};

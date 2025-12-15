@@ -1,7 +1,6 @@
 use crate::applications::services::logging::Log;
 use crate::projection::PropertyMappings;
 use crate::types::graph_store::{GraphName, GraphStore};
-use crate::types::schema::{NodeLabel, RelationshipType};
 
 use crate::applications::graph_store_catalog::configs::GraphStreamRelationshipPropertiesConfig;
 use crate::applications::graph_store_catalog::services::{
@@ -14,6 +13,7 @@ use crate::applications::graph_store_catalog::services::{
 /// Mirrors Java CatalogConfigurationService class.
 /// This handles parsing and validation of configuration objects.
 pub struct CatalogConfigurationService {
+    #[allow(dead_code)]
     log: Log,
     graph_name_validation_service: GraphNameValidationService,
     graph_store_validation_service: GraphStoreValidationService,
@@ -118,7 +118,7 @@ impl CatalogConfigurationService {
 
     /// Creates an export location from configuration.
     pub fn create_export_location(&self, export_path: Option<&str>) -> Box<dyn ExportLocation> {
-        let path = export_path.map(|p| std::path::PathBuf::from(p));
+        let path = export_path.map(std::path::PathBuf::from);
         Box::new(DefaultExportLocation::new(path))
     }
 

@@ -65,6 +65,7 @@ where
     C: ModelConfig,
     I: CustomInfo,
 {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         creator: String,
         name: String,

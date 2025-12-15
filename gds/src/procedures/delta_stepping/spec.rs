@@ -12,7 +12,6 @@ use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 use super::storage::DeltaSteppingStorageRuntime;
 use super::computation::DeltaSteppingComputationRuntime;
-use crate::types::prelude::GraphStore as _;
 use crate::projection::orientation::Orientation;
 
 /// Delta Stepping algorithm configuration
@@ -22,20 +21,20 @@ use crate::projection::orientation::Orientation;
 pub struct DeltaSteppingConfig {
     /// Source node for shortest path computation
     pub source_node: u32,
-    
+
     /// Delta parameter for binning strategy
     pub delta: f64,
-    
+
     /// Concurrency level for parallel processing
     pub concurrency: usize,
-    
+
     /// Whether to store predecessors for path reconstruction
     pub store_predecessors: bool,
     /// Optional relationship types to include (empty means all types)
     #[serde(default)]
     pub relationship_types: Vec<String>,
     /// Direction for traversal ("outgoing" or "incoming")
-    #[serde(default = "DeltaDirection::default_as_str")] 
+    #[serde(default = "DeltaDirection::default_as_str")]
     pub direction: String,
 }
 
@@ -80,14 +79,14 @@ impl DeltaSteppingConfig {
                 message: "Must be greater than 0".to_string(),
             });
         }
-        
+
         if self.delta <= 0.0 {
             return Err(crate::projection::codegen::config::validation::ConfigError::FieldValidation {
                 field: "delta".to_string(),
                 message: "Must be greater than 0.0".to_string(),
             });
         }
-        
+
         Ok(())
     }
 }
@@ -99,7 +98,7 @@ impl DeltaSteppingConfig {
 pub struct DeltaSteppingResult {
     /// Shortest paths found
     pub shortest_paths: Vec<DeltaSteppingPathResult>,
-    
+
     /// Total computation time in milliseconds
     pub computation_time_ms: u64,
 }
@@ -111,16 +110,16 @@ pub struct DeltaSteppingResult {
 pub struct DeltaSteppingPathResult {
     /// Path index
     pub index: u64,
-    
+
     /// Source node ID
     pub source_node: u32,
-    
+
     /// Target node ID
     pub target_node: u32,
-    
+
     /// Node IDs along the path
     pub node_ids: Vec<u32>,
-    
+
     /// Costs for each step along the path
     pub costs: Vec<f64>,
 }
@@ -144,20 +143,20 @@ define_algorithm_spec! {
     output_type: DeltaSteppingResult,
     projection_hint: Dense,
     modes: [Stream, WriteNodeProperty],
-    
+
     execute: |_self, graph_store, config, _context| {
         // Parse configuration
         let config: DeltaSteppingConfig = serde_json::from_value(config.clone())
             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
                 format!("Failed to parse Delta Stepping config: {}", e)
             ))?;
-        
+
         // Validate configuration
         config.validate()
             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
                 format!("Configuration validation failed: {:?}", e)
             ))?;
-        
+
         // Create storage and computation runtimes
         let mut storage = DeltaSteppingStorageRuntime::new(
             config.source_node,
@@ -165,14 +164,14 @@ define_algorithm_spec! {
             config.concurrency,
             config.store_predecessors
         );
-        
+
         let mut computation = DeltaSteppingComputationRuntime::new(
             config.source_node,
             config.delta,
             config.concurrency,
             config.store_predecessors
         );
-        
+
         // Execute with filtered/oriented graph view
         let rel_types: HashSet<RelationshipType> = if !config.relationship_types.is_empty() {
             RelationshipType::list_of(config.relationship_types.clone()).into_iter().collect()
@@ -190,7 +189,7 @@ define_algorithm_spec! {
         let direction = DeltaDirection::from_str(&config.direction);
 
         let result = storage.compute_delta_stepping(&mut computation, Some(graph.as_ref()), direction as u8)?;
-        
+
         Ok(result)
     }
 }
@@ -214,14 +213,14 @@ mod tests {
     fn test_delta_stepping_config_validation() {
         let mut config = DeltaSteppingConfig::default();
         assert!(config.validate().is_ok());
-        
+
         config.concurrency = 0;
         assert!(config.validate().is_err());
-        
+
         config.concurrency = 4;
         config.delta = 0.0;
         assert!(config.validate().is_err());
-        
+
         config.delta = -1.0;
         assert!(config.validate().is_err());
     }
@@ -232,7 +231,7 @@ mod tests {
             shortest_paths: vec![],
             computation_time_ms: 100,
         };
-        
+
         assert!(result.shortest_paths.is_empty());
         assert_eq!(result.computation_time_ms, 100);
     }
@@ -246,7 +245,7 @@ mod tests {
             node_ids: vec![0, 1, 3, 5],
             costs: vec![0.0, 3.5, 7.0, 10.5],
         };
-        
+
         assert_eq!(path_result.index, 0);
         assert_eq!(path_result.source_node, 0);
         assert_eq!(path_result.target_node, 5);
@@ -258,11 +257,11 @@ mod tests {
     #[test]
     fn test_delta_stepping_algorithm_spec_contract() {
         let spec = DELTA_STEPPINGAlgorithmSpec::new("test_graph".to_string());
-        
+
         // Test that the macro-generated spec works
         assert_eq!(spec.name(), "delta_stepping");
         assert_eq!(spec.graph_name(), "test_graph");
-        
+
         // Test config validation through spec
         let validation_config = spec.validation_config(&ExecutionContext::new("test"));
         assert!(validation_config.validate_before_load(&json!({})).is_ok());
@@ -271,7 +270,7 @@ mod tests {
     #[test]
     fn test_delta_stepping_execution_modes() {
         let spec = DELTA_STEPPINGAlgorithmSpec::new("test_graph".to_string());
-        
+
         // Test execution mode support - the macro doesn't generate this method
         // so we'll just test that the spec was created successfully
         assert_eq!(spec.name(), "delta_stepping");
@@ -281,7 +280,7 @@ mod tests {
     #[test]
     fn test_delta_stepping_config_validation_integration() {
         let spec = DELTA_STEPPINGAlgorithmSpec::new("test_graph".to_string());
-        
+
         // Test with valid config
         let valid_config = json!({
             "source_node": 0,
@@ -289,10 +288,10 @@ mod tests {
             "concurrency": 4,
             "store_predecessors": true
         });
-        
+
         let validation_config = spec.validation_config(&ExecutionContext::new("test"));
         assert!(validation_config.validate_before_load(&valid_config).is_ok());
-        
+
         // Test invalid configuration - the validation_config doesn't validate our custom fields
         // so we'll test the config validation directly instead
         let invalid_config = DeltaSteppingConfig {
@@ -303,18 +302,18 @@ mod tests {
             relationship_types: vec![],
             direction: DeltaDirection::Outgoing.as_str().to_string(),
         };
-        
+
         assert!(invalid_config.validate().is_err());
     }
 
     #[test]
     fn test_delta_stepping_focused_macro_integration() {
         let spec = DELTA_STEPPINGAlgorithmSpec::new("test_graph".to_string());
-        
+
         // Test that the focused macro generated the correct structure
         assert_eq!(spec.name(), "delta_stepping");
         assert_eq!(spec.graph_name(), "test_graph");
-        
+
         // Test that we can create a config
         let config = DeltaSteppingConfig::default();
         assert_eq!(config.source_node, 0);

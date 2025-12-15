@@ -13,9 +13,9 @@
 //!     },
 //!     validation: |cfg| {
 //!         if cfg.value <= 0.0 {
-//!             return Err(ConfigError::FieldValidation { 
-//!                 field: "value".to_string(), 
-//!                 message: "Must be positive".to_string() 
+//!             return Err(ConfigError::FieldValidation {
+//!                 field: "value".to_string(),
+//!                 message: "Must be positive".to_string()
 //!             });
 //!         }
 //!         Ok(())
@@ -36,9 +36,9 @@ macro_rules! define_config {
             )*
         }
     ) => {
-        define_config!(@internal $name, $validator, { $($(#[$field_attr])* $field : $ty = $default;)* });
+        define_config!(@internal ( $(#[$struct_attr])* ) $name, $validator, { $($(#[$field_attr])* $field : $ty = $default;)* });
     };
-    
+
     // Without validation
     (
         $( #[$struct_attr:meta] )*
@@ -49,12 +49,12 @@ macro_rules! define_config {
             )*
         }
     ) => {
-        define_config!(@internal $name, (), { $($(#[$field_attr])* $field : $ty = $default;)* });
+        define_config!(@internal ( $(#[$struct_attr])* ) $name, (), { $($(#[$field_attr])* $field : $ty = $default;)* });
     };
-    
-    (@internal $name:ident, (), { $($(#[$field_attr:meta])* $field:ident : $ty:ty = $default:expr;)* }) => {
-        define_config!(@generate $name, { $($(#[$field_attr])* $field : $ty = $default;)* });
-        
+
+    (@internal ( $(#[$struct_attr:meta])* ) $name:ident, (), { $($(#[$field_attr:meta])* $field:ident : $ty:ty = $default:expr;)* }) => {
+        define_config!(@generate ( $(#[$struct_attr])* ) $name, { $($(#[$field_attr])* $field : $ty = $default;)* });
+
         impl $name {
             // Validate the config (no custom validation)
             pub fn validate(&self) -> Result<(), $crate::config::validation::ConfigError> {
@@ -62,10 +62,10 @@ macro_rules! define_config {
             }
         }
     };
-    
-    (@internal $name:ident, $validator:expr, { $($(#[$field_attr:meta])* $field:ident : $ty:ty = $default:expr;)* }) => {
-        define_config!(@generate $name, { $($(#[$field_attr])* $field : $ty = $default;)* });
-        
+
+    (@internal ( $(#[$struct_attr:meta])* ) $name:ident, $validator:expr, { $($(#[$field_attr:meta])* $field:ident : $ty:ty = $default:expr;)* }) => {
+        define_config!(@generate ( $(#[$struct_attr])* ) $name, { $($(#[$field_attr])* $field : $ty = $default;)* });
+
         impl $name {
             // Validate the config (with custom validation)
             pub fn validate(&self) -> Result<(), $crate::config::validation::ConfigError> {
@@ -74,9 +74,10 @@ macro_rules! define_config {
             }
         }
     };
-    
-    (@generate $name:ident, { $($(#[$field_attr:meta])* $field:ident : $ty:ty = $default:expr;)* }) => {
+
+    (@generate ( $(#[$struct_attr:meta])* ) $name:ident, { $($(#[$field_attr:meta])* $field:ident : $ty:ty = $default:expr;)* }) => {
         // Config struct
+        $( #[$struct_attr] )*
         #[derive(Debug, Clone)]
         pub struct $name {
             $(
@@ -119,7 +120,7 @@ macro_rules! define_config {
                             $field: self.$field.unwrap_or(defaults.$field),
                         )*
                     };
-                    
+
                     // Validate the config
                     config.validate()?;
                     Ok(config)
@@ -137,7 +138,7 @@ macro_rules! define_config {
         // Implement Config trait
         impl $crate::config::base_types::Config for $name {}
     };
-    
+
     // Builder method for container fields (with #[container(...)] attribute)
     (@builder_method $field:ident, $ty:ty, #[container(builder = $container_builder:path, method = $container_method:ident)]) => {
         pub fn $field(mut self, value: $ty) -> Self {
@@ -155,7 +156,7 @@ macro_rules! define_config {
             Ok(self)
         }
     };
-    
+
     // Builder method for regular fields (fallback)
     (@builder_method $field:ident, $ty:ty, $(#[$field_attr:meta])*) => {
         pub fn $field(mut self, value: $ty) -> Self {

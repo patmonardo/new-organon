@@ -1,9 +1,9 @@
 //! WCC Storage Runtime
 use crate::types::graph::Graph;
-use crate::types::properties::relationship::traits::RelationshipIterator as _;
 use super::computation::{WccComputationRuntime, WccComputationResult};
 
 pub struct WccStorageRuntime {
+    #[allow(dead_code)]
     concurrency: usize,
 }
 

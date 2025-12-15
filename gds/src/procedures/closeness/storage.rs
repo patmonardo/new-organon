@@ -1,5 +1,6 @@
 //! Closeness Centrality Storage Runtime
 pub struct ClosenessCentralityStorageRuntime {
+    #[allow(dead_code)]
     concurrency: usize,
 }
 

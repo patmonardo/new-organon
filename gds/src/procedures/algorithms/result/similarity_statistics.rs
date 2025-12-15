@@ -19,7 +19,7 @@ where
     let start = Instant::now();
     let values: Vec<f64> = values_iter.into_iter().collect();
     let elapsed = start.elapsed().as_millis();
-    let success = similarity_summary(&values).len() > 0 || !values.is_empty();
+    let success = !similarity_summary(&values).is_empty();
     SimilarityStats { histogram: Some(values), compute_milliseconds: elapsed, success }
 }
 

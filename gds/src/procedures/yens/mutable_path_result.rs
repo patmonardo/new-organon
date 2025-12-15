@@ -129,10 +129,8 @@ impl MutablePathResult {
             if self.node_ids.get(i) != other.node_ids.get(i) {
                 return false;
             }
-            if i >= 1 {
-                if self.relationship_ids.get(i-1) != other.relationship_ids.get(i-1) {
-                    return false;
-                }
+            if i >= 1 && self.relationship_ids.get(i - 1) != other.relationship_ids.get(i - 1) {
+                return false;
             }
         }
         true

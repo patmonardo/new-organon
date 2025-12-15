@@ -66,10 +66,10 @@ impl YensComputationRuntime {
     ///
     /// Translation of: `YensTask.process()` (lines 100-112)
     /// This processes a single spur node to find alternative paths
-    pub fn process_spur_node(&mut self, spur_node: u32, root_path: &MutablePathResult) -> Result<Option<MutablePathResult>, String> {
+    pub fn process_spur_node(&mut self, spur_node: u32, _root_path: &MutablePathResult) -> Result<Option<MutablePathResult>, String> {
         // Set up relationship filter
         self.relationship_filterer.set_filter(spur_node);
-        
+
         // TODO: Implement actual spur path computation using Dijkstra
         // For now, return None (no spur path found)
         Ok(None)
@@ -123,7 +123,7 @@ mod tests {
     fn test_yens_computation_runtime_initialization() {
         let mut runtime = YensComputationRuntime::new(0, 3, 5, true, 1);
         runtime.initialize(1, 4, 3, false);
-        
+
         assert_eq!(runtime.source_node, 1);
         assert_eq!(runtime.target_node, 4);
         assert_eq!(runtime.k, 3);
@@ -134,12 +134,12 @@ mod tests {
     #[test]
     fn test_yens_computation_runtime_visited_operations() {
         let mut runtime = YensComputationRuntime::new(0, 3, 5, true, 1);
-        
+
         assert!(!runtime.is_visited(1));
         runtime.add_visited_node(1);
         assert!(runtime.is_visited(1));
         assert_eq!(runtime.visited_count(), 1);
-        
+
         runtime.reset_visited();
         assert!(!runtime.is_visited(1));
         assert_eq!(runtime.visited_count(), 0);

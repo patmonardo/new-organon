@@ -84,7 +84,7 @@ impl ProgressTracker {
     /// Update progress by adding completed work
     pub fn update_progress(&self, work_completed: u64) {
         let new_completed = self.completed_work.fetch_add(work_completed, Ordering::Relaxed) + work_completed;
-        
+
         if self.config.enable_logging {
             self.maybe_log_progress(new_completed);
         }
@@ -93,7 +93,7 @@ impl ProgressTracker {
     /// Set progress to a specific value
     pub fn set_progress(&self, completed: u64) {
         self.completed_work.store(completed, Ordering::Relaxed);
-        
+
         if self.config.enable_logging {
             self.maybe_log_progress(completed);
         }
@@ -153,15 +153,13 @@ impl ProgressTracker {
             .as_millis() as u64;
 
         let last_update = self.last_update.load(Ordering::Relaxed);
-        if now - last_update >= self.config.update_interval_ms {
-            if self.last_update.compare_exchange(
-                last_update,
-                now,
-                Ordering::Relaxed,
-                Ordering::Relaxed,
-            ).is_ok() {
-                self.log_progress(completed);
-            }
+        if now - last_update >= self.config.update_interval_ms
+            && self
+                .last_update
+                .compare_exchange(last_update, now, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+        {
+            self.log_progress(completed);
         }
     }
 
@@ -169,7 +167,7 @@ impl ProgressTracker {
     fn log_progress(&self, completed: u64) {
         let percentage = self.progress_percentage();
         let elapsed = self.elapsed_time();
-        
+
         let mut message = format!(
             "{}: {}/{} ({:.1}%) - Elapsed: {:.1}s",
             self.task_name,
@@ -205,7 +203,7 @@ impl ThreadSafeProgressTracker {
     /// Update progress from a parallel thread
     pub fn update_progress(&self, work_completed: u64) {
         let new_completed = self.completed_work.fetch_add(work_completed, Ordering::Relaxed) + work_completed;
-        
+
         if self.config.enable_logging {
             self.maybe_log_progress(new_completed);
         }
@@ -214,7 +212,7 @@ impl ThreadSafeProgressTracker {
     /// Set progress to a specific value
     pub fn set_progress(&self, completed: u64) {
         self.completed_work.store(completed, Ordering::Relaxed);
-        
+
         if self.config.enable_logging {
             self.maybe_log_progress(completed);
         }
@@ -242,15 +240,13 @@ impl ThreadSafeProgressTracker {
             .as_millis() as u64;
 
         let last_update = self.last_update.load(Ordering::Relaxed);
-        if now - last_update >= self.config.update_interval_ms {
-            if self.last_update.compare_exchange(
-                last_update,
-                now,
-                Ordering::Relaxed,
-                Ordering::Relaxed,
-            ).is_ok() {
-                self.log_progress(completed);
-            }
+        if now - last_update >= self.config.update_interval_ms
+            && self
+                .last_update
+                .compare_exchange(last_update, now, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+        {
+            self.log_progress(completed);
         }
     }
 
@@ -258,7 +254,7 @@ impl ThreadSafeProgressTracker {
     fn log_progress(&self, completed: u64) {
         let percentage = self.progress_percentage();
         let elapsed = self.start_time.elapsed();
-        
+
         let mut message = format!(
             "{}: {}/{} ({:.1}%) - Elapsed: {:.1}s",
             self.task_name,
@@ -299,7 +295,7 @@ impl LogLevel {
 pub enum ProgressTrackingError {
     #[error("Invalid progress configuration: {0}")]
     InvalidConfig(String),
-    
+
     #[error("Progress tracking failed: {0}")]
     TrackingFailed(String),
 }
@@ -320,13 +316,13 @@ mod tests {
     #[test]
     fn test_progress_update() {
         let tracker = ProgressTracker::new_default("test_task".to_string(), 100);
-        
+
         tracker.update_progress(25);
         assert_eq!(tracker.progress_percentage(), 25.0);
-        
+
         tracker.update_progress(25);
         assert_eq!(tracker.progress_percentage(), 50.0);
-        
+
         tracker.update_progress(50);
         assert_eq!(tracker.progress_percentage(), 100.0);
         assert!(tracker.is_complete());
@@ -335,10 +331,10 @@ mod tests {
     #[test]
     fn test_progress_set() {
         let tracker = ProgressTracker::new_default("test_task".to_string(), 100);
-        
+
         tracker.set_progress(75);
         assert_eq!(tracker.progress_percentage(), 75.0);
-        
+
         tracker.set_progress(100);
         assert_eq!(tracker.progress_percentage(), 100.0);
         assert!(tracker.is_complete());
@@ -348,7 +344,7 @@ mod tests {
     fn test_thread_safe_progress() {
         let tracker = ProgressTracker::new_default("test_task".to_string(), 100);
         let thread_safe = tracker.thread_safe_ref();
-        
+
         let handles: Vec<_> = (0..4)
             .map(|_| {
                 let tracker = thread_safe.clone();
@@ -372,7 +368,7 @@ mod tests {
     #[test]
     fn test_elapsed_time() {
         let tracker = ProgressTracker::new_default("test_task".to_string(), 100);
-        
+
         thread::sleep(Duration::from_millis(100));
         let elapsed = tracker.elapsed_time();
         assert!(elapsed >= Duration::from_millis(100));
@@ -381,14 +377,14 @@ mod tests {
     #[test]
     fn test_eta_calculation() {
         let tracker = ProgressTracker::new_default("test_task".to_string(), 100);
-        
+
         // No ETA when no progress
         assert!(tracker.estimated_time_remaining().is_none());
-        
+
         // Update progress
         tracker.update_progress(25);
         thread::sleep(Duration::from_millis(100));
-        
+
         // Should have ETA now
         let eta = tracker.estimated_time_remaining();
         assert!(eta.is_some());

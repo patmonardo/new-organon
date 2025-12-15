@@ -32,6 +32,7 @@ use crate::applications::graph_store_catalog::services::progress_tracker_factory
 ///
 /// Mirrors Java DefaultGraphCatalogApplications class.
 /// This is the concrete implementation that orchestrates all the applications.
+#[allow(dead_code)]
 pub struct DefaultGraphCatalogApplications {
     log: Log,
     graph_store_catalog_service: Box<dyn GraphStoreCatalogService>,

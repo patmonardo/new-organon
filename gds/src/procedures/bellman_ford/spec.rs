@@ -7,9 +7,7 @@
 //! negative cycles, making it essential for certain graph analysis tasks.
 
 use crate::define_algorithm_spec;
-use crate::projection::eval::procedure::AlgorithmSpec;
 use crate::projection::relationship_type::RelationshipType;
-use crate::types::prelude::GraphStore as _;
 use crate::projection::orientation::Orientation;
 use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
@@ -23,20 +21,20 @@ use super::computation::BellmanFordComputationRuntime;
 pub struct BellmanFordConfig {
     /// Source node for shortest path computation
     pub source_node: u32,
-    
+
     /// Whether to track negative cycles
     pub track_negative_cycles: bool,
-    
+
     /// Whether to track shortest paths
     pub track_paths: bool,
-    
+
     /// Concurrency level for parallel processing
     pub concurrency: usize,
     /// Optional relationship types to include (empty means all types)
     #[serde(default)]
     pub relationship_types: Vec<String>,
     /// Direction for traversal ("outgoing" or "incoming")
-    #[serde(default = "BellmanDirection::default_as_str")] 
+    #[serde(default = "BellmanDirection::default_as_str")]
     pub direction: String,
 }
 
@@ -81,7 +79,7 @@ impl BellmanFordConfig {
                 message: "Must be greater than 0".to_string(),
             });
         }
-        
+
         Ok(())
     }
 }
@@ -93,10 +91,10 @@ impl BellmanFordConfig {
 pub struct BellmanFordResult {
     /// Shortest paths found (empty if negative cycle detected or paths not tracked)
     pub shortest_paths: Vec<PathResult>,
-    
+
     /// Negative cycles found (empty if not tracked)
     pub negative_cycles: Vec<PathResult>,
-    
+
     /// Whether the graph contains negative cycles
     pub contains_negative_cycle: bool,
 }
@@ -106,16 +104,16 @@ pub struct BellmanFordResult {
 pub struct PathResult {
     /// Source node ID
     pub source_node: u32,
-    
+
     /// Target node ID
     pub target_node: u32,
-    
+
     /// Total cost of the path
     pub total_cost: f64,
-    
+
     /// Node IDs along the path
     pub node_ids: Vec<u32>,
-    
+
     /// Costs for each step along the path
     pub costs: Vec<f64>,
 }
@@ -126,20 +124,20 @@ define_algorithm_spec! {
     output_type: BellmanFordResult,
     projection_hint: Dense,
     modes: [Stream, WriteNodeProperty],
-    
+
     execute: |_self, graph_store, config, _context| {
         // Parse configuration
         let config: BellmanFordConfig = serde_json::from_value(config.clone())
             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
                 format!("Failed to parse Bellman-Ford config: {}", e)
             ))?;
-        
+
         // Validate configuration
         config.validate()
             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
                 format!("Configuration validation failed: {:?}", e)
             ))?;
-        
+
         // Create storage and computation runtimes
         let mut storage = BellmanFordStorageRuntime::new(
             config.source_node,
@@ -147,14 +145,14 @@ define_algorithm_spec! {
             config.track_paths,
             config.concurrency
         );
-        
+
         let mut computation = BellmanFordComputationRuntime::new(
             config.source_node,
             config.track_negative_cycles,
             config.track_paths,
             config.concurrency
         );
-        
+
         // Build filtered/oriented graph view via overloads
         let rel_types: HashSet<RelationshipType> = if !config.relationship_types.is_empty() {
             RelationshipType::list_of(config.relationship_types.clone()).into_iter().collect()
@@ -173,7 +171,7 @@ define_algorithm_spec! {
 
         // Execute Bellman-Ford algorithm with graph from graph_store
         let result = storage.compute_bellman_ford(&mut computation, Some(graph.as_ref()), direction as u8)?;
-        
+
         Ok(result)
     }
 }
@@ -181,6 +179,7 @@ define_algorithm_spec! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::projection::eval::procedure::AlgorithmSpec;
     use crate::projection::eval::procedure::ExecutionContext;
     use serde_json::json;
 
@@ -197,7 +196,7 @@ mod tests {
     fn test_bellman_ford_config_validation() {
         let mut config = BellmanFordConfig::default();
         assert!(config.validate().is_ok());
-        
+
         config.concurrency = 0;
         assert!(config.validate().is_err());
     }
@@ -209,7 +208,7 @@ mod tests {
             negative_cycles: vec![],
             contains_negative_cycle: false,
         };
-        
+
         assert!(!result.contains_negative_cycle);
         assert!(result.shortest_paths.is_empty());
         assert!(result.negative_cycles.is_empty());
@@ -218,11 +217,11 @@ mod tests {
     #[test]
     fn test_bellman_ford_algorithm_spec_contract() {
         let spec = BELLMAN_FORDAlgorithmSpec::new("test_graph".to_string());
-        
+
         // Test that the macro-generated spec works
         assert_eq!(spec.name(), "bellman_ford");
         assert_eq!(spec.graph_name(), "test_graph");
-        
+
         // Test config validation through spec
         let validation_config = spec.validation_config(&ExecutionContext::new("test"));
         assert!(validation_config.validate_before_load(&json!({})).is_ok());
@@ -231,7 +230,7 @@ mod tests {
     #[test]
     fn test_bellman_ford_execution_modes() {
         let spec = BELLMAN_FORDAlgorithmSpec::new("test_graph".to_string());
-        
+
         // Test execution mode support - the macro doesn't generate this method
         // so we'll just test that the spec was created successfully
         assert_eq!(spec.name(), "bellman_ford");
@@ -241,7 +240,7 @@ mod tests {
     #[test]
     fn test_bellman_ford_config_validation_integration() {
         let spec = BELLMAN_FORDAlgorithmSpec::new("test_graph".to_string());
-        
+
         // Test with valid config
         let valid_config = json!({
             "source_node": 0,
@@ -249,10 +248,10 @@ mod tests {
             "track_paths": true,
             "concurrency": 4
         });
-        
+
         let validation_config = spec.validation_config(&ExecutionContext::new("test"));
         assert!(validation_config.validate_before_load(&valid_config).is_ok());
-        
+
         // Test with invalid config
         // Test invalid configuration - the validation_config doesn't validate our custom fields
         // so we'll test the config validation directly instead
@@ -264,18 +263,18 @@ mod tests {
             relationship_types: vec![],
             direction: BellmanDirection::Outgoing.as_str().to_string(),
         };
-        
+
         assert!(invalid_config.validate().is_err());
     }
 
     #[test]
     fn test_bellman_ford_focused_macro_integration() {
         let spec = BELLMAN_FORDAlgorithmSpec::new("test_graph".to_string());
-        
+
         // Test that the focused macro generated the correct structure
         assert_eq!(spec.name(), "bellman_ford");
         assert_eq!(spec.graph_name(), "test_graph");
-        
+
         // Test that we can create a config
         let config = BellmanFordConfig::default();
         assert_eq!(config.source_node, 0);
@@ -290,7 +289,7 @@ mod tests {
             node_ids: vec![0, 1, 3, 5],
             costs: vec![0.0, 3.5, 7.0, 10.5],
         };
-        
+
         assert_eq!(path_result.source_node, 0);
         assert_eq!(path_result.target_node, 5);
         assert_eq!(path_result.total_cost, 10.5);

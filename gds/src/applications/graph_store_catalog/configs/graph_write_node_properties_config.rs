@@ -1,14 +1,14 @@
-use super::{GraphNodePropertiesConfig, GraphExportNodePropertiesConfig};
+use super::GraphNodePropertiesConfig;
 
 /// Configuration for writing node properties to the database.
-/// 
+///
 /// Mirrors Java GraphWriteNodePropertiesConfig interface.
 /// Extends GraphNodePropertiesConfig + WriteConfig + JobIdConfig for write operations.
 pub trait GraphWriteNodePropertiesConfig: GraphNodePropertiesConfig {
     /// Returns the list of node property specifications for writing.
     /// In Java, this returns List<UserInputWriteProperties.PropertySpec>.
     fn node_properties(&self) -> Vec<NodePropertySpec>;
-    
+
     /// Parses node properties from user input.
     /// In Java, this uses UserInputWriteProperties.parse().
     fn parse_node_properties(user_input: &str) -> Vec<NodePropertySpec> {
@@ -17,7 +17,7 @@ pub trait GraphWriteNodePropertiesConfig: GraphNodePropertiesConfig {
 }
 
 /// Specification for a node property to be written.
-/// 
+///
 /// Mirrors Java UserInputWriteProperties.PropertySpec.
 #[derive(Clone, Debug)]
 pub struct NodePropertySpec {
@@ -33,12 +33,12 @@ impl NodePropertySpec {
             renamed_node_property,
         }
     }
-    
+
     /// Returns the property name to write to the database.
     pub fn write_property(&self) -> String {
         self.renamed_node_property.clone().unwrap_or_else(|| self.node_property_name.clone())
     }
-    
+
     /// Returns the original node property name.
     pub fn node_property(&self) -> String {
         self.node_property_name.clone()
@@ -72,7 +72,7 @@ impl GraphNodePropertiesConfig for GraphWriteNodePropertiesConfigImpl {
     fn graph_name(&self) -> Option<String> {
         self.graph_name.clone()
     }
-    
+
     fn node_labels(&self) -> Vec<String> {
         self.node_labels.clone()
     }

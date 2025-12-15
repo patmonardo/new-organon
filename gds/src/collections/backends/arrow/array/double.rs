@@ -18,6 +18,12 @@ pub struct ArrowDoubleArray {
     default_value: f64,
 }
 
+impl Default for ArrowDoubleArray {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ArrowDoubleArray {
     pub fn new() -> Self {
         Self::with_defaults(0, DEFAULT_DOUBLE_VALUE)
@@ -40,6 +46,10 @@ impl ArrowDoubleArray {
 
     pub fn len(&self) -> usize {
         self.array.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn values(&self) -> &[f64] {

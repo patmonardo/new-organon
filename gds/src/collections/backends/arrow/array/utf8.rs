@@ -8,6 +8,7 @@ use crate::collections::backends::arrow::bitmap::ArrowBitmap;
 #[derive(Clone, Debug)]
 pub struct ArrowUtf8Array {
     array: Arc<Utf8Array<i32>>,
+    #[allow(dead_code)]
     bitmap: Option<ArrowBitmap>,
 }
 

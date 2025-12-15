@@ -3,6 +3,8 @@
 //! This module provides utilities for working with subgraphs and neighborhoods
 //! in machine learning contexts, particularly for graph neural networks.
 
+#![allow(clippy::module_inception)]
+
 pub mod batch_neighbors;
 pub mod local_id_map;
 pub mod neighborhood_sampler;

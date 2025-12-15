@@ -147,7 +147,7 @@ pub fn estimate_pagerank_memory(node_count: usize) -> MemoryRange {
     let avg_degree = 10.0;
     let estimation = PageRankMemoryEstimation::new(node_count, avg_degree);
     let dims = crate::core::graph_dimensions::ConcreteGraphDimensions::of(node_count, (node_count as f64 * avg_degree) as usize);
-    estimation.estimate(&dims, 1).memory_usage().clone()
+    *estimation.estimate(&dims, 1).memory_usage()
 }
 
 #[cfg(test)]
@@ -166,7 +166,7 @@ mod tests {
     fn test_node_values_estimation() {
         let estimation = PageRankMemoryEstimation::new(1000, 5.0);
         let node_values = estimation.estimate_node_values();
-        
+
         // 1000 nodes * 8 bytes = 8000 bytes
         assert_eq!(node_values.min(), 8000);
         assert_eq!(node_values.max(), 8000);
@@ -176,7 +176,7 @@ mod tests {
     fn test_message_queues_estimation() {
         let estimation = PageRankMemoryEstimation::new(100, 3.0);
         let message_queues = estimation.estimate_message_queues();
-        
+
         // 100 nodes * 3 messages * 8 bytes * 2 (double buffering) = 4800 bytes
         assert_eq!(message_queues.min(), 4800);
         assert_eq!(message_queues.max(), 4800);
@@ -186,7 +186,7 @@ mod tests {
     fn test_convergence_tracking_estimation() {
         let estimation = PageRankMemoryEstimation::new(500, 2.0);
         let convergence = estimation.estimate_convergence_tracking();
-        
+
         // 500 nodes * 8 bytes = 4000 bytes
         assert_eq!(convergence.min(), 4000);
         assert_eq!(convergence.max(), 4000);
@@ -197,7 +197,7 @@ mod tests {
         let estimation = PageRankMemoryEstimation::new(100, 2.0);
         let dims = crate::core::graph_dimensions::ConcreteGraphDimensions::of(100, 200);
         let tree = estimation.estimate(&dims, 1);
-        
+
         // Should be sum of all components
         assert!(tree.memory_usage().min() > 0);
         assert!(tree.memory_usage().max() > 0);
@@ -208,7 +208,7 @@ mod tests {
         let schema = PregelSchemaBuilder::new()
             .add("pagerank", ValueType::Double, Visibility::Public)
             .build();
-        
+
         let estimation = create_pagerank_memory_estimation(&schema, 1000, 5.0);
         assert_eq!(estimation.node_count, 1000);
         assert_eq!(estimation.avg_degree, 5.0);
@@ -227,7 +227,7 @@ mod tests {
         let schema = PregelSchemaBuilder::new()
             .add("other_property", ValueType::Double, Visibility::Public)
             .build();
-        
+
         create_pagerank_memory_estimation(&schema, 1000, 5.0);
     }
 }

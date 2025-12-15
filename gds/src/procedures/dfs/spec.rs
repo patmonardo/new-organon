@@ -6,13 +6,11 @@
 
 use crate::define_algorithm_spec;
 use crate::projection::codegen::config::validation::ConfigError;
-use crate::projection::eval::procedure::AlgorithmSpec;
 use crate::projection::eval::procedure::AlgorithmError;
 use super::storage::DfsStorageRuntime;
 use super::computation::DfsComputationRuntime;
 use crate::projection::RelationshipType;
 use crate::projection::orientation::Orientation;
-use crate::types::prelude::GraphStore as _;
 use serde::{Deserialize, Serialize};
 
 /// DFS algorithm configuration
@@ -49,9 +47,9 @@ impl DfsConfig {
     /// Validate configuration parameters
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.concurrency == 0 {
-            return Err(ConfigError::FieldValidation { 
-                field: "concurrency".to_string(), 
-                message: "must be > 0".to_string() 
+            return Err(ConfigError::FieldValidation {
+                field: "concurrency".to_string(),
+                message: "must be > 0".to_string()
             });
         }
         Ok(())
@@ -97,7 +95,7 @@ define_algorithm_spec! {
         // Parse and validate configuration
         let parsed_config: DfsConfig = serde_json::from_value(config_input.clone())
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to parse config: {}", e)))?;
-        
+
         parsed_config.validate()
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Config validation failed: {}", e)))?;
 
@@ -122,7 +120,7 @@ define_algorithm_spec! {
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to obtain graph view: {}", e)))?;
         let result = storage.compute_dfs(&mut computation, Some(graph_view.as_ref()))?;
-        
+
         Ok(result)
     }
 }
@@ -221,7 +219,7 @@ mod tests {
         let spec = DFSAlgorithmSpec::new("test_graph".to_string());
         assert_eq!(spec.name(), "dfs");
         assert_eq!(spec.graph_name(), "test_graph");
-        
+
         // Test that the algorithm can be created
         assert_eq!(spec.graph_name(), "test_graph");
     }

@@ -68,3 +68,9 @@ impl TriangleCountComputationRuntime {
         }
     }
 }
+
+impl Default for TriangleCountComputationRuntime {
+    fn default() -> Self {
+        Self::new()
+    }
+}

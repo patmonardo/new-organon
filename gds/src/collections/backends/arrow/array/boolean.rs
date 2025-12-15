@@ -8,6 +8,7 @@ use crate::collections::backends::arrow::bitmap::ArrowBitmap;
 #[derive(Clone, Debug)]
 pub struct ArrowBooleanArray {
     array: Arc<BooleanArray>,
+    #[allow(dead_code)]
     bitmap: Option<ArrowBitmap>,
 }
 

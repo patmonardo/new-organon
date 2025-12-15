@@ -52,7 +52,7 @@ impl HarmonicComputationRuntime {
         for source_node in 0..node_count {
             self.msbfs.compute(
                 &[source_node],
-                |node_id, depth, _sources_mask| {
+                |_node_id, depth, _sources_mask| {
                     // Accumulate 1/distance for all reached nodes
                     // Skip the source itself (depth == 0)
                     if depth > 0 {
@@ -136,7 +136,7 @@ mod tests {
         // Node 0: can reach 1 at d=1, 2 at d=2, 3 at d=3
         //         = (1/1 + 1/2 + 1/3) / 3 = (6/6 + 3/6 + 2/6) / 3 = 11/18
         let expected_0 = (1.0 + 0.5 + 1.0/3.0) / 3.0;
-        assert!((result.centralities[0] - expected_0).abs() < 1e-10, 
+        assert!((result.centralities[0] - expected_0).abs() < 1e-10,
                 "Node 0: expected {}, got {}", expected_0, result.centralities[0]);
 
         // Node 1: can reach 0 at d=1, 2 at d=1, 3 at d=2

@@ -1,5 +1,6 @@
 //! Betweenness Centrality Storage Runtime
 pub struct BetweennessCentralityStorageRuntime {
+    #[allow(dead_code)]
     concurrency: usize,
 }
 

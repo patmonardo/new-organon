@@ -16,6 +16,15 @@ where
     mutable: MutablePrimitiveArray<T>,
 }
 
+impl<T> Default for ArrowPrimitiveBuilder<T>
+where
+    T: NativeType,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> ArrowPrimitiveBuilder<T>
 where
     T: NativeType,

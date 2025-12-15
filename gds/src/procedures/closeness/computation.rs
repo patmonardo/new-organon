@@ -47,7 +47,7 @@ impl ClosenessCentralityComputationRuntime {
         for source_node in 0..node_count {
             self.msbfs.compute(
                 &[source_node],
-                |node_id, depth, _sources_mask| {
+                |_node_id, depth, _sources_mask| {
                     // Accumulate distance for all reached nodes
                     // Skip the source itself (depth == 0)
                     if depth > 0 {
@@ -61,8 +61,8 @@ impl ClosenessCentralityComputationRuntime {
 
         // Phase 2: Compute closeness centrality
         let mut centralities = vec![0.0f64; node_count];
-        for node_id in 0..node_count {
-            centralities[node_id] = self.compute_centrality(
+        for (node_id, centrality) in centralities.iter_mut().enumerate() {
+            *centrality = self.compute_centrality(
                 self.farness[node_id],
                 self.component_size[node_id],
                 node_count as u64,

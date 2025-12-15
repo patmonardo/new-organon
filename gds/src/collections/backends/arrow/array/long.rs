@@ -18,6 +18,12 @@ pub struct ArrowLongArray {
     default_value: i64,
 }
 
+impl Default for ArrowLongArray {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ArrowLongArray {
     pub fn new() -> Self {
         Self::with_defaults(0, DEFAULT_LONG_VALUE)
@@ -40,6 +46,10 @@ impl ArrowLongArray {
 
     pub fn len(&self) -> usize {
         self.array.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn values(&self) -> &[i64] {
@@ -198,7 +208,7 @@ impl Collections<i64> for ArrowLongArray {
             return None;
         }
         let mid = values.len() / 2;
-        if values.len() % 2 == 0 {
+        if values.len().is_multiple_of(2) {
             Some((values[mid - 1] + values[mid]) / 2)
         } else {
             Some(values[mid])

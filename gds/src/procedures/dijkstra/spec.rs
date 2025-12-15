@@ -7,8 +7,6 @@
 //! polymorphic target system, traversal state management, and stream-based results.
 
 use crate::define_algorithm_spec;
-use crate::projection::eval::procedure::AlgorithmSpec;
-use crate::types::prelude::GraphStore as _;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use std::collections::HashSet;
@@ -25,16 +23,16 @@ use super::path_finding_result::PathFindingResult;
 pub struct DijkstraConfig {
     /// Source node for shortest path computation
     pub source_node: u32,
-    
+
     /// Target nodes (empty = all targets, single = single target, multiple = many targets)
     pub target_nodes: Vec<u32>,
-    
+
     /// Whether to track relationship IDs
     pub track_relationships: bool,
-    
+
     /// Concurrency level for parallel processing
     pub concurrency: usize,
-    
+
     /// Whether to use heuristic function (for A* behavior)
     pub use_heuristic: bool,
 
@@ -43,7 +41,7 @@ pub struct DijkstraConfig {
     pub relationship_types: Vec<String>,
 
     /// Direction for traversal ("outgoing" or "incoming")
-    #[serde(default = "DijkstraDirection::default_as_str")] 
+    #[serde(default = "DijkstraDirection::default_as_str")]
     pub direction: String,
 }
 
@@ -89,7 +87,7 @@ impl DijkstraConfig {
                 message: "Must be greater than 0".to_string(),
             });
         }
-        
+
         Ok(())
     }
 }
@@ -101,7 +99,7 @@ impl DijkstraConfig {
 pub struct DijkstraResult {
     /// Path finding result with stream-based processing
     pub path_finding_result: PathFindingResult,
-    
+
     /// Total computation time in milliseconds
     pub computation_time_ms: u64,
 }
@@ -113,19 +111,19 @@ pub struct DijkstraResult {
 pub struct DijkstraPathResult {
     /// Path index
     pub index: u64,
-    
+
     /// Source node ID
     pub source_node: u32,
-    
+
     /// Target node ID
     pub target_node: u32,
-    
+
     /// Node IDs along the path
     pub node_ids: Vec<u32>,
-    
+
     /// Relationship IDs along the path (if tracking relationships)
     pub relationship_ids: Vec<u32>,
-    
+
     /// Costs for each step along the path
     pub costs: Vec<f64>,
 }
@@ -149,23 +147,23 @@ define_algorithm_spec! {
     output_type: DijkstraResult,
     projection_hint: Dense,
     modes: [Stream, WriteNodeProperty],
-    
+
     execute: |_self, graph_store, config, _context| {
         // Parse configuration
         let config: DijkstraConfig = serde_json::from_value(config.clone())
             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
                 format!("Failed to parse Dijkstra config: {}", e)
             ))?;
-        
+
         // Validate configuration
         config.validate()
             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
                 format!("Configuration validation failed: {:?}", e)
             ))?;
-        
+
         // Create targets system (the VM's instruction set)
         let targets = create_targets(config.target_nodes.clone());
-        
+
         // Create storage and computation runtimes
         let mut storage = DijkstraStorageRuntime::new(
             config.source_node,
@@ -173,14 +171,14 @@ define_algorithm_spec! {
             config.concurrency,
             config.use_heuristic
         );
-        
+
         let mut computation = DijkstraComputationRuntime::new(
             config.source_node,
             config.track_relationships,
             config.concurrency,
             config.use_heuristic
         );
-        
+
         // Execute Dijkstra with filtered/oriented graph view
         let rel_types: HashSet<RelationshipType> = if !config.relationship_types.is_empty() {
             RelationshipType::list_of(config.relationship_types.clone()).into_iter().collect()
@@ -207,7 +205,7 @@ define_algorithm_spec! {
             Some(graph.as_ref()),
             direction as u8,
         )?;
-        
+
         Ok(result)
     }
 }
@@ -215,6 +213,7 @@ define_algorithm_spec! {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::projection::eval::procedure::AlgorithmSpec;
     use crate::projection::eval::procedure::ExecutionContext;
     use serde_json::json;
 
@@ -232,10 +231,10 @@ mod tests {
     fn test_dijkstra_config_validation() {
         let mut config = DijkstraConfig::default();
         assert!(config.validate().is_ok());
-        
+
         config.concurrency = 0;
         assert!(config.validate().is_err());
-        
+
         config.concurrency = 4;
         assert!(config.validate().is_ok());
     }
@@ -250,13 +249,13 @@ mod tests {
             relationship_ids: vec![0, 1, 2],
             costs: vec![0.0, 3.5, 7.0, 10.5],
         };
-        
+
         let path_finding_result = PathFindingResult::new(vec![path_result.clone()]);
         let result = DijkstraResult {
             path_finding_result,
             computation_time_ms: 100,
         };
-        
+
         assert_eq!(result.path_finding_result.path_count(), 1);
         assert_eq!(result.computation_time_ms, 100);
     }
@@ -271,7 +270,7 @@ mod tests {
             relationship_ids: vec![0, 1, 2],
             costs: vec![0.0, 3.5, 7.0, 10.5],
         };
-        
+
         assert_eq!(path_result.index, 0);
         assert_eq!(path_result.source_node, 0);
         assert_eq!(path_result.target_node, 5);
@@ -284,11 +283,11 @@ mod tests {
     #[test]
     fn test_dijkstra_algorithm_spec_contract() {
         let spec = DIJKSTRAAlgorithmSpec::new("test_graph".to_string());
-        
+
         // Test that the macro-generated spec works
         assert_eq!(spec.name(), "dijkstra");
         assert_eq!(spec.graph_name(), "test_graph");
-        
+
         // Test config validation through spec
         let validation_config = spec.validation_config(&ExecutionContext::new("test"));
         assert!(validation_config.validate_before_load(&json!({})).is_ok());
@@ -297,7 +296,7 @@ mod tests {
     #[test]
     fn test_dijkstra_execution_modes() {
         let spec = DIJKSTRAAlgorithmSpec::new("test_graph".to_string());
-        
+
         // Test execution mode support - the macro doesn't generate this method
         // so we'll just test that the spec was created successfully
         assert_eq!(spec.name(), "dijkstra");
@@ -307,7 +306,7 @@ mod tests {
     #[test]
     fn test_dijkstra_config_validation_integration() {
         let spec = DIJKSTRAAlgorithmSpec::new("test_graph".to_string());
-        
+
         // Test with valid config
         let valid_config = json!({
             "source_node": 0,
@@ -316,10 +315,10 @@ mod tests {
             "concurrency": 4,
             "use_heuristic": false
         });
-        
+
         let validation_config = spec.validation_config(&ExecutionContext::new("test"));
         assert!(validation_config.validate_before_load(&valid_config).is_ok());
-        
+
         // Test invalid configuration - the validation_config doesn't validate our custom fields
         // so we'll test the config validation directly instead
         let invalid_config = DijkstraConfig {
@@ -331,18 +330,18 @@ mod tests {
             relationship_types: vec![],
             direction: DijkstraDirection::Outgoing.as_str().to_string(),
         };
-        
+
         assert!(invalid_config.validate().is_err());
     }
 
     #[test]
     fn test_dijkstra_focused_macro_integration() {
         let spec = DIJKSTRAAlgorithmSpec::new("test_graph".to_string());
-        
+
         // Test that the focused macro generated the correct structure
         assert_eq!(spec.name(), "dijkstra");
         assert_eq!(spec.graph_name(), "test_graph");
-        
+
         // Test that we can create a config
         let config = DijkstraConfig::default();
         assert_eq!(config.source_node, 0);

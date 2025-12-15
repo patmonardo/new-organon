@@ -152,6 +152,7 @@ impl K1ColoringComputationRuntime {
 
 /// Helper trait for BitSet operations
 trait BitSetExt {
+    #[allow(dead_code)]
     fn clear_all(&mut self);
     fn is_empty(&self) -> bool;
 }

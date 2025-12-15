@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.test.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@repository": [
+        "../src/repository/index"
+      ],
+      "@repository/*": [
+        "../src/repository/*"
+      ],
+      "@schema": [
+        "../src/schema/index"
+      ],
+      "@schema/*": [
+        "../src/schema/*"
+      ]
+    }
+  },
+}

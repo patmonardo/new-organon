@@ -8,6 +8,7 @@
 pub mod spec;
 pub mod storage;
 pub mod computation;
+#[cfg(test)]
 pub mod integration_tests;
 
 // Re-export main types

@@ -52,7 +52,7 @@ impl YensStorageRuntime {
     /// This orchestrates the main Yen's algorithm loop
     pub fn compute_yens(&self, computation: &mut YensComputationRuntime) -> Result<YensResult, AlgorithmError> {
         let start_time = std::time::Instant::now();
-        
+
         // Initialize computation runtime
         computation.initialize(self.source_node, self.target_node, self.k, self.track_relationships);
 
@@ -74,7 +74,7 @@ impl YensStorageRuntime {
             if let Some(prev_path) = k_shortest_paths.get(i - 1) {
                 // Generate candidate paths from previous path
                 let candidates = self.generate_candidates(prev_path, &k_shortest_paths)?;
-                
+
                 for candidate in candidates {
                     candidate_queue.add_path(candidate);
                 }
@@ -134,11 +134,11 @@ impl YensStorageRuntime {
     /// Generate candidate paths from a previous path
     fn generate_candidates(
         &self,
-        prev_path: &MutablePathResult,
-        k_shortest_paths: &[MutablePathResult],
+        _prev_path: &MutablePathResult,
+        _k_shortest_paths: &[MutablePathResult],
     ) -> Result<Vec<MutablePathResult>, AlgorithmError> {
         let candidates = Vec::new();
-        
+
         // TODO: Implement actual Yen's candidate generation
         // For now, return empty candidates
         Ok(candidates)
@@ -163,9 +163,9 @@ mod tests {
     fn test_yens_path_computation() {
         let storage = YensStorageRuntime::new(0, 3, 3, false, 1);
         let mut computation = YensComputationRuntime::new(0, 3, 3, false, 1);
-        
+
         let result = storage.compute_yens(&mut computation).unwrap();
-        
+
         assert!(result.path_count > 0);
         assert!(result.computation_time_ms >= 0);
     }

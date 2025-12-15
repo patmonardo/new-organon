@@ -149,7 +149,7 @@ impl Executor {
 
             let total = end - start;
             let batch_size = BatchSize::for_parallel_work(total, self.concurrency).value();
-            let num_batches = (total + batch_size - 1) / batch_size;
+            let num_batches = total.div_ceil(batch_size);
 
             (0..num_batches).into_par_iter().try_for_each(|batch_idx| {
                 if !termination.running() {

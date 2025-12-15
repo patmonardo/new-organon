@@ -144,7 +144,7 @@ impl MemoryEstimationEngine {
     /// Estimate memory for Degree Centrality algorithm
     pub fn estimate_degree_centrality_memory(
         dimensions: &GraphDimensions,
-        concurrency: &ConcurrencyConfig,
+        _concurrency: &ConcurrencyConfig,
     ) -> MemoryEstimation {
         let mut breakdown = HashMap::new();
         let mut notes = Vec::new();
@@ -210,7 +210,7 @@ impl MemoryEstimationEngine {
 
     /// Estimate memory for Sum aggregation algorithm
     pub fn estimate_sum_memory(
-        dimensions: &GraphDimensions,
+        _dimensions: &GraphDimensions,
         concurrency: &ConcurrencyConfig,
     ) -> MemoryEstimation {
         let mut breakdown = HashMap::new();
@@ -272,7 +272,7 @@ impl MemoryEstimationEngine {
         safety_factor: f64,
     ) -> (bool, String) {
         let required_memory = (estimation.estimated_bytes as f64 * safety_factor) as u64;
-        
+
         if required_memory <= available_memory {
             (
                 true,
@@ -300,10 +300,10 @@ impl MemoryEstimationEngine {
 pub enum MemoryEstimationError {
     #[error("Invalid graph dimensions: {0}")]
     InvalidDimensions(String),
-    
+
     #[error("Invalid concurrency configuration: {0}")]
     InvalidConcurrency(String),
-    
+
     #[error("Estimation failed: {0}")]
     EstimationFailed(String),
 }
@@ -316,9 +316,9 @@ mod tests {
     fn test_pagerank_memory_estimation() {
         let dimensions = GraphDimensions::new(1000, 5000);
         let concurrency = ConcurrencyConfig::default();
-        
+
         let estimation = MemoryEstimationEngine::estimate_pagerank_memory(&dimensions, &concurrency);
-        
+
         assert!(estimation.estimated_bytes > 0);
         assert!(estimation.breakdown.contains_key("node_values"));
         assert!(estimation.breakdown.contains_key("graph_csr"));
@@ -329,9 +329,9 @@ mod tests {
     fn test_degree_centrality_memory_estimation() {
         let dimensions = GraphDimensions::new(1000, 5000);
         let concurrency = ConcurrencyConfig::default();
-        
+
         let estimation = MemoryEstimationEngine::estimate_degree_centrality_memory(&dimensions, &concurrency);
-        
+
         assert!(estimation.estimated_bytes > 0);
         assert!(estimation.breakdown.contains_key("degree_values"));
         assert!(!estimation.is_conservative); // Degree centrality is efficient
@@ -341,13 +341,13 @@ mod tests {
     fn test_all_shortest_paths_memory_estimation() {
         let dimensions = GraphDimensions::new(100, 500); // Small graph
         let concurrency = ConcurrencyConfig::default();
-        
+
         let estimation = MemoryEstimationEngine::estimate_all_shortest_paths_memory(&dimensions, &concurrency);
-        
+
         assert!(estimation.estimated_bytes > 0);
         assert!(estimation.breakdown.contains_key("distance_matrix"));
         assert!(estimation.is_conservative);
-        
+
         // Check that distance matrix dominates memory usage
         let distance_memory = estimation.breakdown.get("distance_matrix").unwrap();
         assert!(*distance_memory > estimation.estimated_bytes / 2);
@@ -366,12 +366,12 @@ mod tests {
         let dimensions = GraphDimensions::new(1000, 5000);
         let concurrency = ConcurrencyConfig::default();
         let estimation = MemoryEstimationEngine::estimate_pagerank_memory(&dimensions, &concurrency);
-        
+
         // Test with sufficient memory
         let (feasible, message) = MemoryEstimationEngine::is_feasible(&estimation, estimation.estimated_bytes * 2, 1.0);
         assert!(feasible);
         assert!(message.contains("✅ Feasible"));
-        
+
         // Test with insufficient memory
         let (feasible, message) = MemoryEstimationEngine::is_feasible(&estimation, estimation.estimated_bytes / 2, 1.0);
         assert!(!feasible);

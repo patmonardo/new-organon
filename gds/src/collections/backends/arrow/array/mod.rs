@@ -17,6 +17,9 @@ pub use utf8::ArrowUtf8Array;
 /// Common behavior exposed by Arrow array wrappers.
 pub trait ArrowArrayBehavior {
     fn len(&self) -> usize;
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
     fn null_count(&self) -> usize;
     fn is_null(&self, index: usize) -> bool;
 }

@@ -20,19 +20,19 @@ use serde::{Deserialize, Serialize};
 pub struct SpanningTree {
     /// Root/head node of the spanning tree
     pub head: u32,
-    
+
     /// Total number of nodes in the original graph
     pub node_count: u32,
-    
+
     /// Number of nodes actually included in the spanning tree
     pub effective_node_count: u32,
-    
+
     /// Parent array: parent[node_id] = parent_node_id (-1 if root)
     pub parent: Vec<i32>,
-    
+
     /// Cost to parent for each node
     pub cost_to_parent: Vec<f64>,
-    
+
     /// Total weight of the spanning tree
     pub total_weight: f64,
 }
@@ -69,7 +69,7 @@ impl SpanningTree {
             total_weight,
         }
     }
-    
+
     /// Get the effective node count (nodes in the spanning tree).
     ///
     /// # Returns
@@ -78,7 +78,7 @@ impl SpanningTree {
     pub fn effective_node_count(&self) -> u32 {
         self.effective_node_count
     }
-    
+
     /// Get the total weight of the spanning tree.
     ///
     /// # Returns
@@ -87,7 +87,7 @@ impl SpanningTree {
     pub fn total_weight(&self) -> f64 {
         self.total_weight
     }
-    
+
     /// Get the parent array.
     ///
     /// # Returns
@@ -96,7 +96,7 @@ impl SpanningTree {
     pub fn parent_array(&self) -> &[i32] {
         &self.parent
     }
-    
+
     /// Get the parent of a specific node.
     ///
     /// # Arguments
@@ -113,7 +113,7 @@ impl SpanningTree {
             -1
         }
     }
-    
+
     /// Get the cost to parent for a specific node.
     ///
     /// # Arguments
@@ -130,7 +130,7 @@ impl SpanningTree {
             0.0
         }
     }
-    
+
     /// Find the head/root node for a given node.
     ///
     /// # Arguments
@@ -147,7 +147,7 @@ impl SpanningTree {
         }
         current
     }
-    
+
     /// Iterate over all edges in the spanning tree.
     ///
     /// # Arguments
@@ -166,7 +166,7 @@ impl SpanningTree {
             if parent == -1 {
                 continue; // Skip root nodes
             }
-            
+
             let cost = self.cost_to_parent[i as usize];
             if !consumer(parent as u32, i, cost) {
                 return false;
@@ -193,7 +193,7 @@ impl Default for SpanningTree {
 pub struct SpanningGraph<'a> {
     /// Reference to the underlying spanning tree
     spanning_tree: &'a SpanningTree,
-    
+
     /// Original graph node count
     node_count: u32,
 }
@@ -215,7 +215,7 @@ impl<'a> SpanningGraph<'a> {
             node_count,
         }
     }
-    
+
     /// Get the degree of a node in the spanning tree.
     ///
     /// # Arguments
@@ -229,7 +229,7 @@ impl<'a> SpanningGraph<'a> {
         if node_id >= self.node_count {
             return 0;
         }
-        
+
         let parent = self.spanning_tree.parent(node_id);
         if parent == -1 {
             // Root node - count children
@@ -245,7 +245,7 @@ impl<'a> SpanningGraph<'a> {
             1
         }
     }
-    
+
     /// Iterate over relationships of a node in the spanning tree.
     ///
     /// # Arguments
@@ -263,7 +263,7 @@ impl<'a> SpanningGraph<'a> {
         if node_id >= self.node_count {
             return true;
         }
-        
+
         let parent = self.spanning_tree.parent(node_id);
         if parent >= 0 {
             let cost = self.spanning_tree.cost_to_parent(node_id);
@@ -271,7 +271,7 @@ impl<'a> SpanningGraph<'a> {
                 return false;
             }
         }
-        
+
         // Also iterate over children
         for i in 0..self.node_count {
             if self.spanning_tree.parent(i) == node_id as i32 {
@@ -281,10 +281,10 @@ impl<'a> SpanningGraph<'a> {
                 }
             }
         }
-        
+
         true
     }
-    
+
     /// Check if a relationship exists in the spanning tree.
     ///
     /// # Arguments
@@ -299,20 +299,20 @@ impl<'a> SpanningGraph<'a> {
         if source_node_id >= self.node_count || target_node_id >= self.node_count {
             return false;
         }
-        
+
         // Check if target is parent of source
         if self.spanning_tree.parent(source_node_id) == target_node_id as i32 {
             return true;
         }
-        
+
         // Check if source is parent of target
         if self.spanning_tree.parent(target_node_id) == source_node_id as i32 {
             return true;
         }
-        
+
         false
     }
-    
+
     /// Get the node count.
     ///
     /// # Returns
@@ -339,6 +339,7 @@ impl PartialEq for QueueItem {
 impl Eq for QueueItem {}
 
 impl PartialOrd for QueueItem {
+    #[allow(clippy::non_canonical_partial_ord_impl)]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         // Reverse ordering for min-heap (lower cost = higher priority)
         other.cost.partial_cmp(&self.cost)
@@ -360,29 +361,30 @@ impl std::cmp::Ord for QueueItem {
 pub struct SpanningTreeComputationRuntime {
     /// Start node for the spanning tree
     start_node_id: u32,
-    
+
     /// Whether to compute minimum (true) or maximum (false) spanning tree
     compute_minimum: bool,
-    
+
     /// Priority queue for unvisited nodes
     priority_queue: std::collections::BinaryHeap<QueueItem>,
-    
+
     /// Visited set
     visited: std::collections::HashSet<u32>,
-    
+
     /// Parent array for the spanning tree
     parent: Vec<i32>,
-    
+
     /// Cost to parent for each node
     cost_to_parent: Vec<f64>,
-    
+
     /// Total weight of the spanning tree
     total_weight: f64,
-    
+
     /// Effective node count (nodes in the spanning tree)
     effective_node_count: u32,
-    
+
     /// Concurrency level
+    #[allow(dead_code)]
     concurrency: usize,
 }
 
@@ -417,7 +419,7 @@ impl SpanningTreeComputationRuntime {
             concurrency,
         }
     }
-    
+
     /// Initialize the computation runtime for a new run.
     ///
     /// # Arguments
@@ -431,14 +433,14 @@ impl SpanningTreeComputationRuntime {
         self.cost_to_parent.fill(0.0);
         self.total_weight = 0.0;
         self.effective_node_count = 0;
-        
+
         // Add start node to queue with cost 0
         self.priority_queue.push(QueueItem {
             node_id: start_node_id,
             cost: 0.0,
         });
     }
-    
+
     /// Add a node to the priority queue.
     ///
     /// # Arguments
@@ -454,7 +456,7 @@ impl SpanningTreeComputationRuntime {
         self.parent[node_id as usize] = parent_id as i32;
         self.cost_to_parent[node_id as usize] = cost;
     }
-    
+
     /// Update the cost for a node already in the queue.
     ///
     /// # Arguments
@@ -472,7 +474,7 @@ impl SpanningTreeComputationRuntime {
         self.parent[node_id as usize] = parent_id as i32;
         self.cost_to_parent[node_id as usize] = cost;
     }
-    
+
     /// Pop the next node from the priority queue.
     ///
     /// # Returns
@@ -486,7 +488,7 @@ impl SpanningTreeComputationRuntime {
         }
         None
     }
-    
+
     /// Mark a node as visited.
     ///
     /// # Arguments
@@ -506,7 +508,7 @@ impl SpanningTreeComputationRuntime {
         }
         self.effective_node_count += 1;
     }
-    
+
     /// Check if a node has been visited.
     ///
     /// # Arguments
@@ -519,7 +521,7 @@ impl SpanningTreeComputationRuntime {
     pub fn is_visited(&self, node_id: u32) -> bool {
         self.visited.contains(&node_id)
     }
-    
+
     /// Get the parent of a node.
     ///
     /// # Arguments
@@ -536,7 +538,7 @@ impl SpanningTreeComputationRuntime {
             -1
         }
     }
-    
+
     /// Get the cost to parent for a node.
     ///
     /// # Arguments
@@ -553,7 +555,7 @@ impl SpanningTreeComputationRuntime {
             0.0
         }
     }
-    
+
     /// Get the total weight of the spanning tree.
     ///
     /// # Returns
@@ -562,7 +564,7 @@ impl SpanningTreeComputationRuntime {
     pub fn total_weight(&self) -> f64 {
         self.total_weight
     }
-    
+
     /// Get the effective node count.
     ///
     /// # Returns
@@ -571,7 +573,7 @@ impl SpanningTreeComputationRuntime {
     pub fn effective_node_count(&self) -> u32 {
         self.effective_node_count
     }
-    
+
     /// Get the visited nodes.
     ///
     /// # Returns
@@ -580,7 +582,7 @@ impl SpanningTreeComputationRuntime {
     pub fn visited_nodes(&self) -> &std::collections::HashSet<u32> {
         &self.visited
     }
-    
+
     /// Check if the queue is empty.
     ///
     /// # Returns
@@ -589,7 +591,7 @@ impl SpanningTreeComputationRuntime {
     pub fn is_queue_empty(&self) -> bool {
         self.priority_queue.is_empty()
     }
-    
+
     /// Apply weight transformation for min/max spanning tree.
     ///
     /// # Arguments
@@ -606,7 +608,7 @@ impl SpanningTreeComputationRuntime {
             -weight // For maximum spanning tree, negate weights
         }
     }
-    
+
     /// Build the final spanning tree result.
     ///
     /// # Arguments
@@ -631,11 +633,11 @@ impl SpanningTreeComputationRuntime {
 #[cfg(test)]
 mod computation_tests {
     use super::*;
-    
+
     #[test]
     fn test_computation_runtime_creation() {
         let runtime = SpanningTreeComputationRuntime::new(0, true, 4, 1);
-        
+
         assert_eq!(runtime.start_node_id, 0);
         assert!(runtime.compute_minimum);
         assert_eq!(runtime.parent.len(), 4);
@@ -643,79 +645,79 @@ mod computation_tests {
         assert_eq!(runtime.total_weight(), 0.0);
         assert_eq!(runtime.effective_node_count(), 0);
     }
-    
+
     #[test]
     fn test_computation_runtime_initialization() {
         let mut runtime = SpanningTreeComputationRuntime::new(0, true, 4, 1);
         runtime.initialize(1);
-        
+
         assert_eq!(runtime.start_node_id, 1);
         assert!(!runtime.is_queue_empty());
         assert_eq!(runtime.visited.len(), 0);
         assert_eq!(runtime.total_weight(), 0.0);
     }
-    
+
     #[test]
     fn test_computation_runtime_queue_operations() {
         let mut runtime = SpanningTreeComputationRuntime::new(0, true, 4, 1);
         runtime.initialize(0);
-        
+
         // Add nodes to queue
         runtime.add_to_queue(1, 1.0, 0);
         runtime.add_to_queue(2, 2.0, 0);
-        
+
         // Pop nodes
         let (node1, cost1) = runtime.pop_from_queue().unwrap();
         assert_eq!(node1, 0); // Start node should be first
         assert_eq!(cost1, 0.0);
-        
+
         let (node2, cost2) = runtime.pop_from_queue().unwrap();
         assert_eq!(node2, 1); // Lower cost should be next
         assert_eq!(cost2, 1.0);
-        
+
         let (node3, cost3) = runtime.pop_from_queue().unwrap();
         assert_eq!(node3, 2); // Higher cost should be last
         assert_eq!(cost3, 2.0);
     }
-    
+
     #[test]
     fn test_computation_runtime_visited_tracking() {
         let mut runtime = SpanningTreeComputationRuntime::new(0, true, 4, 1);
         runtime.initialize(0);
-        
+
         assert!(!runtime.is_visited(0));
         runtime.mark_visited(0, 0.0);
         assert!(runtime.is_visited(0));
         assert_eq!(runtime.effective_node_count(), 1);
         assert_eq!(runtime.total_weight(), 0.0);
-        
+
         runtime.mark_visited(1, 1.0);
         assert!(runtime.is_visited(1));
         assert_eq!(runtime.effective_node_count(), 2);
         assert_eq!(runtime.total_weight(), 1.0);
     }
-    
+
     #[test]
     fn test_computation_runtime_weight_transformation() {
         let runtime_min = SpanningTreeComputationRuntime::new(0, true, 4, 1);
         let runtime_max = SpanningTreeComputationRuntime::new(0, false, 4, 1);
-        
+
         assert_eq!(runtime_min.transform_weight(5.0), 5.0);
         assert_eq!(runtime_max.transform_weight(5.0), -5.0);
     }
-    
+
     #[test]
     fn test_computation_runtime_result_building() {
         let mut runtime = SpanningTreeComputationRuntime::new(0, true, 4, 1);
         runtime.initialize(0);
-        
+
         runtime.mark_visited(0, 0.0);
         runtime.mark_visited(1, 1.0);
         runtime.parent[1] = 0;
         runtime.cost_to_parent[1] = 1.0;
-        
+
         let result = runtime.build_result(4);
-        
+
         assert_eq!(result.head(0), 0);
         assert_eq!(result.effective_node_count(), 2);
         assert_eq!(result.total_weight(), 1.0);
@@ -727,12 +729,12 @@ mod computation_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_spanning_tree_creation() {
         let parent = vec![-1, 0, 1, 0]; // Node 0 is root, 1->0, 2->1, 3->0
         let cost_to_parent = vec![0.0, 1.0, 2.0, 1.5];
-        
+
         let spanning_tree = SpanningTree::new(
             0, // head
             4, // node_count
@@ -741,7 +743,7 @@ mod tests {
             cost_to_parent,
             4.5, // total_weight
         );
-        
+
         assert_eq!(spanning_tree.head(0), 0);
         assert_eq!(spanning_tree.effective_node_count(), 4);
         assert_eq!(spanning_tree.total_weight(), 4.5);
@@ -752,72 +754,72 @@ mod tests {
         assert_eq!(spanning_tree.cost_to_parent(2), 2.0);
         assert_eq!(spanning_tree.cost_to_parent(3), 1.5);
     }
-    
+
     #[test]
     fn test_spanning_tree_head_finding() {
         let parent = vec![-1, 0, 1, 0];
         let cost_to_parent = vec![0.0, 1.0, 2.0, 1.5];
-        
+
         let spanning_tree = SpanningTree::new(0, 4, 4, parent, cost_to_parent, 4.5);
-        
+
         assert_eq!(spanning_tree.head(0), 0);
         assert_eq!(spanning_tree.head(1), 0);
         assert_eq!(spanning_tree.head(2), 0);
         assert_eq!(spanning_tree.head(3), 0);
     }
-    
+
     #[test]
     fn test_spanning_tree_edge_iteration() {
         let parent = vec![-1, 0, 1, 0];
         let cost_to_parent = vec![0.0, 1.0, 2.0, 1.5];
-        
+
         let spanning_tree = SpanningTree::new(0, 4, 4, parent, cost_to_parent, 4.5);
-        
+
         let mut edges = Vec::new();
         spanning_tree.for_each_edge(|source, target, cost| {
             edges.push((source, target, cost));
             true
         });
-        
+
         assert_eq!(edges.len(), 3);
         assert!(edges.contains(&(0, 1, 1.0)));
         assert!(edges.contains(&(1, 2, 2.0)));
         assert!(edges.contains(&(0, 3, 1.5)));
     }
-    
+
     #[test]
     fn test_spanning_graph_adapter() {
         let parent = vec![-1, 0, 1, 0];
         let cost_to_parent = vec![0.0, 1.0, 2.0, 1.5];
-        
+
         let spanning_tree = SpanningTree::new(0, 4, 4, parent, cost_to_parent, 4.5);
         let graph = SpanningGraph::new(&spanning_tree, 4);
-        
+
         assert_eq!(graph.degree(0), 2); // Root has 2 children
         assert_eq!(graph.degree(1), 1); // Node 1 has 1 parent
         assert_eq!(graph.degree(2), 1); // Node 2 has 1 parent
         assert_eq!(graph.degree(3), 1); // Node 3 has 1 parent
-        
+
         assert!(graph.exists(0, 1));
         assert!(graph.exists(1, 2));
         assert!(graph.exists(0, 3));
         assert!(!graph.exists(1, 3));
     }
-    
+
     #[test]
     fn test_spanning_graph_relationship_iteration() {
         let parent = vec![-1, 0, 1, 0];
         let cost_to_parent = vec![0.0, 1.0, 2.0, 1.5];
-        
+
         let spanning_tree = SpanningTree::new(0, 4, 4, parent, cost_to_parent, 4.5);
         let graph = SpanningGraph::new(&spanning_tree, 4);
-        
+
         let mut relationships = Vec::new();
         graph.for_each_relationship(0, |source, target, cost| {
             relationships.push((source, target, cost));
             true
         });
-        
+
         assert_eq!(relationships.len(), 2);
         assert!(relationships.contains(&(0, 1, 1.0)));
         assert!(relationships.contains(&(0, 3, 1.5)));

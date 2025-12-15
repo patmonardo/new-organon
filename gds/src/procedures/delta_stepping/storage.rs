@@ -20,13 +20,13 @@ use std::time::Instant;
 pub struct DeltaSteppingStorageRuntime {
     /// Source node for shortest path computation
     pub source_node: u32,
-    
+
     /// Delta parameter for binning strategy
     pub delta: f64,
-    
+
     /// Concurrency level for parallel processing
     pub concurrency: usize,
-    
+
     /// Whether to store predecessors for path reconstruction
     pub store_predecessors: bool,
 }
@@ -59,7 +59,7 @@ impl DeltaSteppingStorageRuntime {
         direction: u8,
     ) -> Result<DeltaSteppingResult, AlgorithmError> {
         let start_time = Instant::now();
-        
+
         // Initialize computation runtime
         let node_count = graph.map(|g| g.node_count()).unwrap_or(100);
         computation.initialize(
@@ -68,43 +68,43 @@ impl DeltaSteppingStorageRuntime {
             self.store_predecessors,
             node_count
         );
-        
+
         // Initialize frontier with source node
         let mut frontier = VecDeque::new();
         frontier.push_back(self.source_node);
-        
+
         // Initialize distances
         computation.set_distance(self.source_node, 0.0);
         if self.store_predecessors {
             computation.set_predecessor(self.source_node, None);
         }
-        
+
         // Main Delta Stepping loop
         let mut current_bin = 0;
         let max_iterations = node_count; // Safety limit
         let mut iteration = 0;
-        
+
         while !frontier.is_empty() && iteration < max_iterations {
             // Phase 1: Relax nodes in current bin
             let mut next_frontier = VecDeque::new();
-            
+
             while let Some(node_id) = frontier.pop_front() {
                 // Check if node is in current bin
                 let node_distance = computation.distance(node_id);
                 if node_distance >= self.delta * current_bin as f64 {
                     // Relax all outgoing edges from this node
                     let neighbors = self.get_neighbors_with_weights(graph, node_id, direction);
-                    
+
                     for (neighbor, weight) in neighbors {
                         let current_distance = computation.distance(node_id);
-                        let new_distance = current_distance + weight as f64;
-                        
+                        let new_distance = current_distance + weight;
+
                         if new_distance < computation.distance(neighbor) {
                             computation.set_distance(neighbor, new_distance);
                             if self.store_predecessors {
                                 computation.set_predecessor(neighbor, Some(node_id));
                             }
-                            
+
                             // Determine which bin this node belongs to
                             let dest_bin = (new_distance / self.delta) as usize;
                             if dest_bin == current_bin {
@@ -117,34 +117,34 @@ impl DeltaSteppingStorageRuntime {
                     }
                 }
             }
-            
+
             // Phase 2: Sync and find next bin
             frontier = next_frontier;
-            
+
             // Find the next non-empty bin
             current_bin = computation.find_next_non_empty_bin(current_bin);
             if current_bin == usize::MAX {
                 break; // No more bins to process
             }
-            
+
             // Move nodes from next bin to frontier
             let bin_nodes = computation.get_bin_nodes(current_bin);
             for node_id in bin_nodes {
                 frontier.push_back(node_id);
             }
-            
+
             iteration += 1;
         }
-        
+
         // Generate results
         let shortest_paths = if self.store_predecessors {
             self.generate_shortest_paths(computation)?
         } else {
             vec![]
         };
-        
+
         let computation_time_ms = start_time.elapsed().as_millis() as u64;
-        
+
         Ok(DeltaSteppingResult {
             shortest_paths,
             computation_time_ms,
@@ -160,14 +160,14 @@ impl DeltaSteppingStorageRuntime {
     ) -> Result<Vec<DeltaSteppingPathResult>, AlgorithmError> {
         let mut paths = Vec::new();
         let node_count = 100; // TODO: Replace with actual graph store
-        
+
         for target_node in 0..node_count {
             if computation.predecessor(target_node).is_some() {
                 let path = self.reconstruct_path(computation, self.source_node, target_node)?;
                 paths.push(path);
             }
         }
-        
+
         Ok(paths)
     }
 
@@ -182,26 +182,26 @@ impl DeltaSteppingStorageRuntime {
     ) -> Result<DeltaSteppingPathResult, AlgorithmError> {
         let mut node_ids = Vec::new();
         let mut costs = Vec::new();
-        
+
         let mut current_node = target_node;
-        
+
         // Backtrack from target to source
         while current_node != source_node {
             node_ids.push(current_node);
             costs.push(computation.distance(current_node));
-            
+
             current_node = computation.predecessor(current_node)
                 .ok_or_else(|| AlgorithmError::InvalidGraph("Missing predecessor".to_string()))?;
         }
-        
+
         // Add source node
         node_ids.push(source_node);
         costs.push(computation.distance(source_node));
-        
+
         // Reverse to get correct order
         node_ids.reverse();
         costs.reverse();
-        
+
         Ok(DeltaSteppingPathResult {
             index: 0, // TODO: Assign proper index
             source_node,
@@ -219,9 +219,9 @@ impl DeltaSteppingStorageRuntime {
             let fallback: f64 = 1.0;
             let iter: Box<dyn Iterator<Item = crate::types::properties::relationship::traits::RelationshipCursorBox> + Send> =
                 if direction == 1 { g.stream_inverse_relationships(node_id as i64, fallback) } else { g.stream_relationships(node_id as i64, fallback) };
-            return iter.into_iter()
+            iter.into_iter()
                 .map(|cursor| (cursor.target_id() as u32, cursor.property()))
-                .collect();
+                .collect()
         } else {
             // Mock implementation for tests
             match node_id {
@@ -252,11 +252,11 @@ mod tests {
     fn test_delta_stepping_path_computation() {
         let mut storage = DeltaSteppingStorageRuntime::new(0, 1.0, 4, true);
         let mut computation = DeltaSteppingComputationRuntime::new(0, 1.0, 4, true);
-        
+
         // Test basic path computation
         let result = storage.compute_delta_stepping(&mut computation, None, 0);
         assert!(result.is_ok());
-        
+
         let delta_stepping_result = result.unwrap();
         assert!(delta_stepping_result.computation_time_ms >= 0); // Allow 0 for very fast execution
     }
@@ -265,11 +265,11 @@ mod tests {
     fn test_delta_stepping_path_same_source_target() {
         let mut storage = DeltaSteppingStorageRuntime::new(0, 1.0, 4, true);
         let mut computation = DeltaSteppingComputationRuntime::new(0, 1.0, 4, true);
-        
+
         // Test with same source and target
         let result = storage.compute_delta_stepping(&mut computation, None, 0);
         assert!(result.is_ok());
-        
+
         let delta_stepping_result = result.unwrap();
         assert!(delta_stepping_result.computation_time_ms >= 0); // Allow 0 for very fast execution
     }
@@ -277,12 +277,12 @@ mod tests {
     #[test]
     fn test_neighbors_with_weights() {
         let storage = DeltaSteppingStorageRuntime::new(0, 1.0, 4, true);
-        
+
         let neighbors = storage.get_neighbors_with_weights(None, 0, 0);
         assert_eq!(neighbors.len(), 2);
         assert_eq!(neighbors[0], (1, 1.0));
         assert_eq!(neighbors[1], (2, 4.0));
-        
+
         let neighbors_empty = storage.get_neighbors_with_weights(None, 99, 0);
         assert!(neighbors_empty.is_empty());
     }

@@ -31,6 +31,7 @@ use std::sync::Arc;
 ///
 /// If `negative_relationship_type` is provided, uses UserInputNegativeSampler.
 /// Otherwise, uses RandomNegativeSampler.
+#[allow(clippy::too_many_arguments)]
 pub fn create_sampler<GS: GraphStore>(
     _graph_store: Arc<GS>,
     graph: Arc<dyn Graph>,

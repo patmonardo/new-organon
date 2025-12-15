@@ -1,4 +1,5 @@
 pub struct LouvainStorageRuntime {
+    #[allow(dead_code)]
     concurrency: usize,
 }
 

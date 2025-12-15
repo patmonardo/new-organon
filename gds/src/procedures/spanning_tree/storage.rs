@@ -8,7 +8,6 @@
 use super::computation::{SpanningTreeComputationRuntime, SpanningTree};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::Graph;
-use crate::types::properties::relationship::traits::RelationshipIterator as _;
 
 /// Spanning Tree Storage Runtime
 ///
@@ -21,10 +20,10 @@ use crate::types::properties::relationship::traits::RelationshipIterator as _;
 pub struct SpanningTreeStorageRuntime {
     /// Start node for the spanning tree
     pub start_node_id: u32,
-    
+
     /// Whether to compute minimum (true) or maximum (false) spanning tree
     pub compute_minimum: bool,
-    
+
     /// Concurrency level
     pub concurrency: usize,
 }
@@ -48,7 +47,7 @@ impl SpanningTreeStorageRuntime {
             concurrency,
         }
     }
-    
+
     /// Compute the spanning tree using Prim's algorithm.
     ///
     /// **Translation Source**: `org.neo4j.gds.spanningtree.Prim.compute()`
@@ -82,10 +81,10 @@ impl SpanningTreeStorageRuntime {
             node_count,
             self.concurrency,
         );
-        
+
         // Initialize computation
         computation.initialize(self.start_node_id);
-        
+
         // Main Prim's algorithm loop
         while !computation.is_queue_empty() {
             // Get next node from priority queue
@@ -93,15 +92,15 @@ impl SpanningTreeStorageRuntime {
                 Some((node, cost)) => (node, cost),
                 None => break,
             };
-            
+
             // Skip if already visited
             if computation.is_visited(current_node) {
                 continue;
             }
-            
+
             // Mark as visited
             computation.mark_visited(current_node, current_cost);
-            
+
             // Process neighbors
             let neighbors = get_neighbors(current_node);
             for (neighbor, weight) in neighbors {
@@ -109,14 +108,14 @@ impl SpanningTreeStorageRuntime {
                 if computation.is_visited(neighbor) {
                     continue;
                 }
-                
+
                 // Transform weight for min/max spanning tree
                 let transformed_weight = computation.transform_weight(weight);
-                
+
                 // Check if neighbor is already in queue
                 let current_parent = computation.parent(neighbor);
                 let current_cost_to_parent = computation.cost_to_parent(neighbor);
-                
+
                 if current_parent == -1 {
                     // Neighbor not in queue, add it
                     computation.add_to_queue(neighbor, transformed_weight, current_node);
@@ -126,11 +125,11 @@ impl SpanningTreeStorageRuntime {
                 }
             }
         }
-        
+
         // Build and return result
         Ok(computation.build_result(node_count))
     }
-    
+
     /// Compute the spanning tree using a bound Graph (neighbor streaming via relationship cursors).
     pub fn compute_spanning_tree_with_graph(
         &self,
@@ -170,7 +169,7 @@ impl SpanningTreeStorageRuntime {
             _ => vec![],
         }
     }
-    
+
     /// Compute spanning tree with mock graph data.
     ///
     /// # Arguments
@@ -188,105 +187,105 @@ impl SpanningTreeStorageRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_storage_runtime_creation() {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
-        
+
         assert_eq!(runtime.start_node_id, 0);
         assert!(runtime.compute_minimum);
         assert_eq!(runtime.concurrency, 1);
     }
-    
+
     #[test]
     fn test_storage_runtime_minimum_spanning_tree() {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
         let result = runtime.compute_spanning_tree_mock(4).unwrap();
-        
+
         // Verify basic properties
         assert_eq!(result.head(0), 0);
         assert_eq!(result.effective_node_count(), 4);
         assert!(result.total_weight() > 0.0);
-        
+
         // Verify tree structure (all nodes should be connected)
         assert_eq!(result.parent(0), -1); // Root has no parent
         assert!(result.parent(1) != -1); // Other nodes have parents
         assert!(result.parent(2) != -1);
         assert!(result.parent(3) != -1);
     }
-    
+
     #[test]
     fn test_storage_runtime_maximum_spanning_tree() {
         let runtime = SpanningTreeStorageRuntime::new(0, false, 1);
         let result = runtime.compute_spanning_tree_mock(4).unwrap();
-        
+
         // Verify basic properties
         assert_eq!(result.head(0), 0);
         assert_eq!(result.effective_node_count(), 4);
         assert!(result.total_weight() > 0.0);
-        
+
         // Verify tree structure
         assert_eq!(result.parent(0), -1); // Root has no parent
         assert!(result.parent(1) != -1); // Other nodes have parents
         assert!(result.parent(2) != -1);
         assert!(result.parent(3) != -1);
     }
-    
+
     #[test]
     fn test_storage_runtime_different_start_nodes() {
         let runtime1 = SpanningTreeStorageRuntime::new(0, true, 1);
         let runtime2 = SpanningTreeStorageRuntime::new(1, true, 1);
-        
+
         let result1 = runtime1.compute_spanning_tree_mock(4).unwrap();
         let result2 = runtime2.compute_spanning_tree_mock(4).unwrap();
-        
+
         // Both should produce valid spanning trees
         assert_eq!(result1.effective_node_count(), 4);
         assert_eq!(result2.effective_node_count(), 4);
-        
+
         // Different start nodes should produce different trees
         assert_eq!(result1.head(0), 0);
         assert_eq!(result2.head(1), 1);
     }
-    
+
     #[test]
     fn test_storage_runtime_edge_iteration() {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
         let result = runtime.compute_spanning_tree_mock(4).unwrap();
-        
+
         let mut edges = Vec::new();
         result.for_each_edge(|source, target, cost| {
             edges.push((source, target, cost));
             true
         });
-        
+
         // Should have exactly 3 edges for a 4-node spanning tree
         assert_eq!(edges.len(), 3);
-        
+
         // All edges should have positive costs
         for (_, _, cost) in &edges {
             assert!(*cost > 0.0);
         }
     }
-    
+
     #[test]
     fn test_storage_runtime_empty_graph() {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
-        
+
         // Mock empty graph
         let result = runtime.compute_spanning_tree(0, |_| vec![]).unwrap();
-        
+
         assert_eq!(result.effective_node_count(), 0);
         assert_eq!(result.total_weight(), 0.0);
     }
-    
+
     #[test]
     fn test_storage_runtime_single_node() {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
-        
+
         // Mock single node graph
         let result = runtime.compute_spanning_tree(1, |_| vec![]).unwrap();
-        
+
         assert_eq!(result.effective_node_count(), 1);
         assert_eq!(result.total_weight(), 0.0);
         assert_eq!(result.parent(0), -1); // Root has no parent

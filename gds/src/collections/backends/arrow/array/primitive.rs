@@ -13,6 +13,7 @@ where
     T: NativeType,
 {
     array: Arc<PrimitiveArray<T>>,
+    #[allow(dead_code)]
     bitmap: Option<ArrowBitmap>,
 }
 

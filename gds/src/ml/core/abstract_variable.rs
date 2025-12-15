@@ -4,7 +4,7 @@
 //! This is a literal 1:1 translation following repository translation policy.
 
 use crate::ml::core::dimensions;
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::variable::VariableRef;
 use std::fmt;
 
 /// Error type for functions that are not actually functions (like constants).

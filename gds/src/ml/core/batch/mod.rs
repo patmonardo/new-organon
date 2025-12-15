@@ -3,6 +3,8 @@
 //! This module contains interfaces and utilities for batch processing
 //! in machine learning operations.
 
+#![allow(clippy::module_inception)]
+
 pub mod batch;
 pub mod batch_queue;
 pub mod batch_transformer;

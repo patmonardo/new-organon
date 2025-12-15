@@ -13,6 +13,7 @@ use rand::SeedableRng;
 pub struct GraphStoreFromDatabaseLoader {
     graph_project_config: Box<dyn GraphProjectConfig>,
     username: String,
+    #[allow(dead_code)]
     graph_loader_context: GraphLoaderContext,
     graph_store_factory: Box<dyn GraphStoreFactory>,
 }
@@ -69,6 +70,7 @@ impl GraphStoreCreator for GraphStoreFromDatabaseLoader {
 // Placeholder types for database operations
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct GraphLoaderContext {
     database_id: DatabaseId,
     termination_flag: TerminationFlag,
@@ -86,6 +88,7 @@ impl GraphLoaderContext {
 }
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
 pub struct TransactionContext {
     transaction_id: String,
 }

@@ -7,3 +7,9 @@ impl LabelPropStorageRuntime {
         Self
     }
 }
+
+impl Default for LabelPropStorageRuntime {
+    fn default() -> Self {
+        Self::new()
+    }
+}

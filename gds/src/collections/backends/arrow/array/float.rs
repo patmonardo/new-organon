@@ -18,6 +18,12 @@ pub struct ArrowFloatArray {
     default_value: f32,
 }
 
+impl Default for ArrowFloatArray {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ArrowFloatArray {
     pub fn new() -> Self {
         Self::with_defaults(0, DEFAULT_FLOAT_VALUE)
@@ -40,6 +46,10 @@ impl ArrowFloatArray {
 
     pub fn len(&self) -> usize {
         self.array.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn values(&self) -> &[f32] {

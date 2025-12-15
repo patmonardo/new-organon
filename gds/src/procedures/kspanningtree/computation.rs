@@ -252,8 +252,8 @@ impl KSpanningTreeComputationRuntime {
         }
 
         // Prune untouched nodes
-        for node_id in 0..node_count {
-            if !included[node_id] {
+        for (node_id, was_included) in included.iter().enumerate() {
+            if !*was_included {
                 self.parent[node_id] = -1;
                 self.cost_to_parent[node_id] = -1.0;
             }

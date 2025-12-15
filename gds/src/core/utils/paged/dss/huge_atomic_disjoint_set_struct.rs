@@ -35,10 +35,10 @@ writes into a single DSS and does not require an additional merge step.
 
 # References
 
-- [1]: <https://github.com/wjakob/dset/blob/7967ef0e6041cd9d73b9c7f614ab8ae92e9e587a/dset.h>
-- [2]: <http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.56.8354&rep=rep1&type=pdf>
-- [3]: <https://github.com/tov/disjoint-sets-rs/blob/88ab08df21f04fcf7c157b6e042efd561ee873ba/src/concurrent.rs>
-- [4]: <https://en.wikipedia.org/wiki/Disjoint-set_data_structure#by_rank>
+[1]: <https://github.com/wjakob/dset/blob/7967ef0e6041cd9d73b9c7f614ab8ae92e9e587a/dset.h>
+[2]: <http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.56.8354&rep=rep1&type=pdf>
+[3]: <https://github.com/tov/disjoint-sets-rs/blob/88ab08df21f04fcf7c157b6e042efd561ee873ba/src/concurrent.rs>
+[4]: <https://en.wikipedia.org/wiki/Disjoint-set_data_structure#by_rank>
 */
 
 use super::DisjointSetStruct;

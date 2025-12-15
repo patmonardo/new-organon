@@ -61,12 +61,12 @@ macro_rules! vec_collections {
             fn backend(&self) -> $crate::config::CollectionsBackend { $crate::config::CollectionsBackend::Vec }
             fn features(&self) -> &[$crate::config::Extension] { &[] }
             fn extensions(&self) -> &[$crate::config::Extension] { &[] }
-            fn value_type(&self) -> crate::types::ValueType { $value_type }
+            fn value_type(&self) -> $crate::types::ValueType { $value_type }
             fn with_capacity(capacity: usize) -> Self where Self: Sized { Self { data: Vec::with_capacity(capacity) } }
             fn with_defaults(count: usize, default_value: $element_type) -> Self where Self: Sized { Self { data: vec![default_value; count] } }
         }
 
-        impl crate::collections::traits::CollectionsFactory<$element_type> for $type_name {
+        impl $crate::collections::traits::CollectionsFactory<$element_type> for $type_name {
             fn new() -> Self { Self { data: Vec::new() } }
             fn with_capacity(capacity: usize) -> Self { Self { data: Vec::with_capacity(capacity) } }
             fn from_vec(values: Vec<$element_type>) -> Self { Self { data: values } }
@@ -82,7 +82,7 @@ macro_rules! vec_collections {
         $default_value:expr,
         kind = OrdNoAgg
     ) => {
-        impl crate::collections::traits::Collections<$element_type> for $type_name {
+        impl $crate::collections::traits::Collections<$element_type> for $type_name {
             fn get(&self, index: usize) -> Option<$element_type> { self.data.get(index).cloned() }
             fn set(&mut self, index: usize, value: $element_type) {
                 if index < self.data.len() { self.data[index] = value; }
@@ -104,15 +104,15 @@ macro_rules! vec_collections {
             fn is_null(&self, _index: usize) -> bool { false }
             fn null_count(&self) -> usize { 0 }
             fn default_value(&self) -> $element_type { $default_value }
-            fn backend(&self) -> crate::config::CollectionsBackend { crate::config::CollectionsBackend::Vec }
-            fn features(&self) -> &[crate::config::Extension] { &[] }
-            fn extensions(&self) -> &[crate::config::Extension] { &[] }
-            fn value_type(&self) -> crate::types::ValueType { $value_type }
+            fn backend(&self) -> $crate::config::CollectionsBackend { $crate::config::CollectionsBackend::Vec }
+            fn features(&self) -> &[$crate::config::Extension] { &[] }
+            fn extensions(&self) -> &[$crate::config::Extension] { &[] }
+            fn value_type(&self) -> $crate::types::ValueType { $value_type }
             fn with_capacity(capacity: usize) -> Self where Self: Sized { Self { data: Vec::with_capacity(capacity) } }
             fn with_defaults(count: usize, default_value: $element_type) -> Self where Self: Sized { Self { data: vec![default_value; count] } }
         }
 
-        impl crate::collections::traits::CollectionsFactory<$element_type> for $type_name {
+        impl $crate::collections::traits::CollectionsFactory<$element_type> for $type_name {
             fn new() -> Self { Self { data: Vec::new() } }
             fn with_capacity(capacity: usize) -> Self { Self { data: Vec::with_capacity(capacity) } }
             fn from_vec(values: Vec<$element_type>) -> Self { Self { data: values } }
@@ -129,7 +129,7 @@ macro_rules! vec_collections {
         to_f64 = $to_f64:expr,       // e.g., |x: i32| x as f64
         kind = Ord                   // comparison kind (currently Ord only)
     ) => {
-        impl crate::collections::traits::Collections<$element_type> for $type_name {
+        impl $crate::collections::traits::Collections<$element_type> for $type_name {
             fn get(&self, index: usize) -> Option<$element_type> {
                 self.data.get(index).cloned()
             }
@@ -184,7 +184,7 @@ macro_rules! vec_collections {
                     let mut v = self.data.clone();
                     v.sort();
                     let mid = v.len() / 2;
-                    if v.len() % 2 == 0 { Some((v[mid - 1] + v[mid]) / 2) } else { Some(v[mid]) }
+                    if v.len().is_multiple_of(2) { Some((v[mid - 1] + v[mid]) / 2) } else { Some(v[mid]) }
                 }
             }
 
@@ -210,15 +210,15 @@ macro_rules! vec_collections {
             fn is_null(&self, _index: usize) -> bool { false }
             fn null_count(&self) -> usize { 0 }
             fn default_value(&self) -> $element_type { $default_value }
-            fn backend(&self) -> crate::config::CollectionsBackend { crate::config::CollectionsBackend::Vec }
-            fn features(&self) -> &[crate::config::Extension] { &[] }
-            fn extensions(&self) -> &[crate::config::Extension] { &[] }
-            fn value_type(&self) -> crate::types::ValueType { $value_type }
+            fn backend(&self) -> $crate::config::CollectionsBackend { $crate::config::CollectionsBackend::Vec }
+            fn features(&self) -> &[$crate::config::Extension] { &[] }
+            fn extensions(&self) -> &[$crate::config::Extension] { &[] }
+            fn value_type(&self) -> $crate::types::ValueType { $value_type }
             fn with_capacity(capacity: usize) -> Self where Self: Sized { Self { data: Vec::with_capacity(capacity) } }
             fn with_defaults(count: usize, default_value: $element_type) -> Self where Self: Sized { Self { data: vec![default_value; count] } }
         }
 
-        impl crate::collections::traits::CollectionsFactory<$element_type> for $type_name {
+        impl $crate::collections::traits::CollectionsFactory<$element_type> for $type_name {
             fn new() -> Self { Self { data: Vec::new() } }
             fn with_capacity(capacity: usize) -> Self { Self { data: Vec::with_capacity(capacity) } }
             fn from_vec(values: Vec<$element_type>) -> Self { Self { data: values } }

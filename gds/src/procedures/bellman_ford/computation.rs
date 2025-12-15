@@ -14,26 +14,27 @@ use std::collections::HashMap;
 pub struct BellmanFordComputationRuntime {
     /// Distances from source to each node
     distances: HashMap<u32, f64>,
-    
+
     /// Predecessor for each node in shortest path
     predecessors: HashMap<u32, Option<u32>>,
-    
+
     /// Path length for each node
     lengths: HashMap<u32, u32>,
-    
+
     /// Nodes involved in negative cycles
     negative_cycle_nodes: Vec<u32>,
-    
+
     /// Source node
     source_node: u32,
-    
+
     /// Whether to track negative cycles
     track_negative_cycles: bool,
-    
+
     /// Whether to track shortest paths
     track_paths: bool,
-    
+
     /// Concurrency level
+    #[allow(dead_code)]
     concurrency: usize,
 }
 
@@ -66,13 +67,13 @@ impl BellmanFordComputationRuntime {
         self.source_node = source_node;
         self.track_negative_cycles = track_negative_cycles;
         self.track_paths = track_paths;
-        
+
         // Clear previous state
         self.distances.clear();
         self.predecessors.clear();
         self.lengths.clear();
         self.negative_cycle_nodes.clear();
-        
+
         // Initialize with infinite distances
         for node_id in 0..node_count as u32 {
             self.distances.insert(node_id, f64::INFINITY);
@@ -159,7 +160,7 @@ impl BellmanFordComputationRuntime {
         length: u32,
     ) -> f64 {
         let current_distance = self.distance(node_id);
-        
+
         if current_distance > new_distance {
             self.set_distance(node_id, new_distance);
             self.set_predecessor(node_id, Some(predecessor));
@@ -200,7 +201,7 @@ mod tests {
     fn test_bellman_ford_computation_runtime_initialization() {
         let mut runtime = BellmanFordComputationRuntime::new(0, true, true, 4);
         runtime.initialize(0, true, true, 100);
-        
+
         assert_eq!(runtime.source_node(), 0);
         assert!(runtime.track_negative_cycles());
         assert!(runtime.track_paths());
@@ -213,7 +214,7 @@ mod tests {
     fn test_bellman_ford_computation_runtime_empty_negative_cycles() {
         let mut runtime = BellmanFordComputationRuntime::new(0, true, true, 4);
         runtime.initialize(0, true, true, 100);
-        
+
         assert!(!runtime.has_negative_cycles());
         assert!(runtime.get_negative_cycle_nodes().is_empty());
     }
@@ -222,11 +223,11 @@ mod tests {
     fn test_bellman_ford_computation_runtime_nodes_explored() {
         let mut runtime = BellmanFordComputationRuntime::new(0, true, true, 4);
         runtime.initialize(0, true, true, 100);
-        
+
         // Set some distances
         runtime.set_distance(1, 5.0);
         runtime.set_distance(2, 10.0);
-        
+
         assert_eq!(runtime.distance(1), 5.0);
         assert_eq!(runtime.distance(2), 10.0);
         assert_eq!(runtime.distance(3), f64::INFINITY);
@@ -236,12 +237,12 @@ mod tests {
     fn test_bellman_ford_computation_runtime_total_cost() {
         let mut runtime = BellmanFordComputationRuntime::new(0, true, true, 4);
         runtime.initialize(0, true, true, 100);
-        
+
         // Set source distance
         runtime.set_distance(0, 0.0);
         runtime.set_predecessor(0, None);
         runtime.set_length(0, 0);
-        
+
         assert_eq!(runtime.distance(0), 0.0);
         assert_eq!(runtime.predecessor(0), None);
         assert_eq!(runtime.length(0), 0);
@@ -251,15 +252,15 @@ mod tests {
     fn test_bellman_ford_computation_runtime_operations() {
         let mut runtime = BellmanFordComputationRuntime::new(0, true, true, 4);
         runtime.initialize(0, true, true, 100);
-        
+
         // Test distance operations
         runtime.set_distance(1, 5.0);
         assert_eq!(runtime.distance(1), 5.0);
-        
+
         // Test predecessor operations
         runtime.set_predecessor(1, Some(0));
         assert_eq!(runtime.predecessor(1), Some(0));
-        
+
         // Test length operations
         runtime.set_length(1, 1);
         assert_eq!(runtime.length(1), 1);
@@ -269,20 +270,20 @@ mod tests {
     fn test_bellman_ford_computation_runtime_path_reconstruction() {
         let mut runtime = BellmanFordComputationRuntime::new(0, true, true, 4);
         runtime.initialize(0, true, true, 100);
-        
+
         // Set up a simple path: 0 -> 1 -> 2
         runtime.set_distance(0, 0.0);
         runtime.set_predecessor(0, None);
         runtime.set_length(0, 0);
-        
+
         runtime.set_distance(1, 5.0);
         runtime.set_predecessor(1, Some(0));
         runtime.set_length(1, 1);
-        
+
         runtime.set_distance(2, 10.0);
         runtime.set_predecessor(2, Some(1));
         runtime.set_length(2, 2);
-        
+
         // Test path reconstruction
         assert_eq!(runtime.predecessor(2), Some(1));
         assert_eq!(runtime.predecessor(1), Some(0));
@@ -293,16 +294,16 @@ mod tests {
     fn test_bellman_ford_computation_runtime_lowest_f_cost() {
         let mut runtime = BellmanFordComputationRuntime::new(0, true, true, 4);
         runtime.initialize(0, true, true, 100);
-        
+
         // Set different distances
         runtime.set_distance(1, 10.0);
         runtime.set_distance(2, 5.0);
         runtime.set_distance(3, 15.0);
-        
+
         // Find node with minimum distance
         let mut min_node = None;
         let mut min_distance = f64::INFINITY;
-        
+
         for node_id in 1..=3 {
             let distance = runtime.distance(node_id);
             if distance < min_distance {
@@ -310,7 +311,7 @@ mod tests {
                 min_node = Some(node_id);
             }
         }
-        
+
         assert_eq!(min_node, Some(2));
         assert_eq!(min_distance, 5.0);
     }
@@ -319,11 +320,11 @@ mod tests {
     fn test_bellman_ford_computation_runtime_negative_cycles() {
         let mut runtime = BellmanFordComputationRuntime::new(0, true, true, 4);
         runtime.initialize(0, true, true, 100);
-        
+
         // Add negative cycle nodes
         runtime.add_negative_cycle_node(5);
         runtime.add_negative_cycle_node(6);
-        
+
         assert!(runtime.has_negative_cycles());
         assert_eq!(runtime.get_negative_cycle_nodes().len(), 2);
         assert!(runtime.get_negative_cycle_nodes().contains(&5));
@@ -334,15 +335,15 @@ mod tests {
     fn test_bellman_ford_computation_runtime_compare_and_exchange() {
         let mut runtime = BellmanFordComputationRuntime::new(0, true, true, 4);
         runtime.initialize(0, true, true, 100);
-        
+
         // Set initial distance
         runtime.set_distance(1, 10.0);
-        
+
         // Try to update with better distance
         let result = runtime.compare_and_exchange(1, 10.0, 5.0, 0, 1);
         assert_eq!(result, 10.0); // Should return expected distance on success
         assert_eq!(runtime.distance(1), 5.0);
-        
+
         // Try to update with worse distance
         let result = runtime.compare_and_exchange(1, 5.0, 8.0, 0, 1);
         assert_eq!(result, -5.0); // Should return negative expected distance on failure

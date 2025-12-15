@@ -65,7 +65,7 @@ impl ManyTargets {
     pub fn new(target_nodes: Vec<u32>) -> Self {
         let target_set: HashSet<u32> = target_nodes.into_iter().collect();
         let remaining_count = target_set.len();
-        
+
         Self {
             target_nodes: target_set,
             remaining_count,
@@ -80,7 +80,7 @@ impl Targets for ManyTargets {
     fn apply(&mut self, node_id: u32) -> TraversalState {
         if self.target_nodes.contains(&node_id) {
             self.remaining_count -= 1;
-            
+
             if self.remaining_count == 0 {
                 TraversalState::EmitAndStop
             } else {
@@ -101,6 +101,12 @@ impl AllTargets {
     /// Create a new all targets implementation
     pub fn new() -> Self {
         Self
+    }
+}
+
+impl Default for AllTargets {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -133,7 +139,7 @@ mod tests {
     #[test]
     fn test_single_target() {
         let mut target = SingleTarget::new(5);
-        
+
         assert_eq!(target.apply(3), TraversalState::Continue);
         assert_eq!(target.apply(5), TraversalState::EmitAndStop);
         assert_eq!(target.apply(7), TraversalState::Continue);
@@ -142,7 +148,7 @@ mod tests {
     #[test]
     fn test_many_targets() {
         let mut target = ManyTargets::new(vec![3, 5, 7]);
-        
+
         assert_eq!(target.apply(1), TraversalState::Continue);
         assert_eq!(target.apply(3), TraversalState::EmitAndContinue);
         assert_eq!(target.apply(5), TraversalState::EmitAndContinue);
@@ -153,7 +159,7 @@ mod tests {
     #[test]
     fn test_all_targets() {
         let mut target = AllTargets::new();
-        
+
         assert_eq!(target.apply(1), TraversalState::EmitAndContinue);
         assert_eq!(target.apply(5), TraversalState::EmitAndContinue);
         assert_eq!(target.apply(10), TraversalState::EmitAndContinue);
@@ -164,12 +170,12 @@ mod tests {
         // Empty list -> AllTargets
         let mut targets = create_targets(vec![]);
         assert_eq!(targets.apply(5), TraversalState::EmitAndContinue);
-        
+
         // Single target -> SingleTarget
         let mut targets = create_targets(vec![5]);
         assert_eq!(targets.apply(3), TraversalState::Continue);
         assert_eq!(targets.apply(5), TraversalState::EmitAndStop);
-        
+
         // Multiple targets -> ManyTargets
         let mut targets = create_targets(vec![3, 5, 7]);
         assert_eq!(targets.apply(1), TraversalState::Continue);

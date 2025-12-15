@@ -25,6 +25,7 @@ impl PartialEq for QueueItem {
 impl Eq for QueueItem {}
 
 impl PartialOrd for QueueItem {
+    #[allow(clippy::non_canonical_partial_ord_impl)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         // Reverse ordering for min-heap (lower cost = higher priority)
         other.cost.partial_cmp(&self.cost)
@@ -44,29 +45,30 @@ impl Ord for QueueItem {
 pub struct DijkstraComputationRuntime {
     /// Priority queue for unvisited nodes
     priority_queue: BinaryHeap<QueueItem>,
-    
+
     /// Visited set
     visited: HashSet<u32>,
-    
+
     /// Predecessor map for path reconstruction
     predecessors: HashMap<u32, Option<u32>>,
-    
+
     /// Relationship ID map (if tracking relationships)
     relationship_ids: HashMap<u32, Option<u32>>,
-    
+
     /// Cost map for all nodes
     costs: HashMap<u32, f64>,
-    
+
     /// Source node
     source_node: u32,
-    
+
     /// Whether to track relationship IDs
     track_relationships: bool,
-    
+
     /// Whether to use heuristic function
     use_heuristic: bool,
-    
+
     /// Concurrency level
+    #[allow(dead_code)]
     concurrency: usize,
 }
 
@@ -100,14 +102,14 @@ impl DijkstraComputationRuntime {
         self.source_node = source_node;
         self.track_relationships = track_relationships;
         self.use_heuristic = use_heuristic;
-        
+
         // Clear previous state
         self.priority_queue.clear();
         self.visited.clear();
         self.predecessors.clear();
         self.relationship_ids.clear();
         self.costs.clear();
-        
+
         // Initialize with infinite costs
         for node_id in 0..(node_count as u32) {
             self.costs.insert(node_id, f64::INFINITY);
@@ -148,7 +150,9 @@ impl DijkstraComputationRuntime {
     ///
     /// Translation of: `queue.containsElement()` method (line 226)
     pub fn is_in_queue(&self, node_id: u32) -> bool {
-        self.costs.get(&node_id).map_or(false, |&cost| cost != f64::INFINITY)
+        self.costs
+            .get(&node_id)
+            .is_some_and(|&cost| cost != f64::INFINITY)
     }
 
     /// Get the cost of a node
@@ -250,7 +254,7 @@ mod tests {
     fn test_dijkstra_computation_runtime_initialization() {
         let mut runtime = DijkstraComputationRuntime::new(0, true, 4, false);
         runtime.initialize(0, true, false, 100);
-        
+
         assert_eq!(runtime.source_node(), 0);
         assert!(runtime.track_relationships());
         assert!(!runtime.use_heuristic());
@@ -262,16 +266,16 @@ mod tests {
     fn test_dijkstra_computation_runtime_queue_operations() {
         let mut runtime = DijkstraComputationRuntime::new(0, false, 4, false);
         runtime.initialize(0, false, false, 100);
-        
+
         // Test queue operations
         assert!(runtime.is_queue_empty());
         assert!(!runtime.is_in_queue(1));
-        
+
         runtime.add_to_queue(1, 5.0);
         assert!(!runtime.is_queue_empty());
         assert!(runtime.is_in_queue(1));
         assert_eq!(runtime.get_cost(1), 5.0);
-        
+
         let (node, cost) = runtime.pop_from_queue();
         assert_eq!(node, 1);
         assert_eq!(cost, 5.0);
@@ -282,11 +286,11 @@ mod tests {
     fn test_dijkstra_computation_runtime_visited_operations() {
         let mut runtime = DijkstraComputationRuntime::new(0, false, 4, false);
         runtime.initialize(0, false, false, 100);
-        
+
         // Test visited operations
         assert!(!runtime.is_visited(1));
         assert_eq!(runtime.visited_count(), 0);
-        
+
         runtime.mark_visited(1);
         assert!(runtime.is_visited(1));
         assert_eq!(runtime.visited_count(), 1);
@@ -296,13 +300,13 @@ mod tests {
     fn test_dijkstra_computation_runtime_predecessor_operations() {
         let mut runtime = DijkstraComputationRuntime::new(0, false, 4, false);
         runtime.initialize(0, false, false, 100);
-        
+
         // Test predecessor operations
         assert_eq!(runtime.get_predecessor(1), None);
-        
+
         runtime.set_predecessor(1, Some(0));
         assert_eq!(runtime.get_predecessor(1), Some(0));
-        
+
         runtime.set_predecessor(1, None);
         assert_eq!(runtime.get_predecessor(1), None);
     }
@@ -311,13 +315,13 @@ mod tests {
     fn test_dijkstra_computation_runtime_relationship_operations() {
         let mut runtime = DijkstraComputationRuntime::new(0, true, 4, false);
         runtime.initialize(0, true, false, 100);
-        
+
         // Test relationship operations
         assert_eq!(runtime.get_relationship_id(1), None);
-        
+
         runtime.set_relationship_id(1, Some(5));
         assert_eq!(runtime.get_relationship_id(1), Some(5));
-        
+
         runtime.set_relationship_id(1, None);
         assert_eq!(runtime.get_relationship_id(1), None);
     }
@@ -326,13 +330,13 @@ mod tests {
     fn test_dijkstra_computation_runtime_cost_operations() {
         let mut runtime = DijkstraComputationRuntime::new(0, false, 4, false);
         runtime.initialize(0, false, false, 100);
-        
+
         // Test cost operations
         assert_eq!(runtime.get_cost(1), f64::INFINITY);
-        
+
         runtime.add_to_queue(1, 5.0);
         assert_eq!(runtime.get_cost(1), 5.0);
-        
+
         runtime.update_queue_cost(1, 3.0);
         assert_eq!(runtime.get_cost(1), 3.0);
     }
@@ -341,17 +345,17 @@ mod tests {
     fn test_dijkstra_computation_runtime_priority_queue_order() {
         let mut runtime = DijkstraComputationRuntime::new(0, false, 4, false);
         runtime.initialize(0, false, false, 100);
-        
+
         // Test priority queue ordering (min-heap)
         runtime.add_to_queue(1, 10.0);
         runtime.add_to_queue(2, 5.0);
         runtime.add_to_queue(3, 15.0);
-        
+
         // Should pop in order of increasing cost
         let (_node1, cost1) = runtime.pop_from_queue();
         let (_node2, cost2) = runtime.pop_from_queue();
         let (_node3, cost3) = runtime.pop_from_queue();
-        
+
         assert_eq!(cost1, 5.0);
         assert_eq!(cost2, 10.0);
         assert_eq!(cost3, 15.0);

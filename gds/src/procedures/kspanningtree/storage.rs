@@ -7,3 +7,9 @@ impl KSpanningTreeStorageRuntime {
         Self
     }
 }
+
+impl Default for KSpanningTreeStorageRuntime {
+    fn default() -> Self {
+        Self::new()
+    }
+}

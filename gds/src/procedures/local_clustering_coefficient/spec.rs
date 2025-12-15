@@ -52,12 +52,12 @@ define_algorithm_spec! {
     output_type: LocalClusteringCoefficientResult,
     projection_hint: Dense,
     modes: [Stream, Stats],
-    
+
     execute: |self, graph_store, config, context| {
         // Parse configuration
-        let parsed_config: LocalClusteringCoefficientConfig = serde_json::from_value(config.clone())
+        let _parsed_config: LocalClusteringCoefficientConfig = serde_json::from_value(config.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {}", e)))?;
-        
+
         context.log(
             LogLevel::Info,
             &format!(
@@ -68,7 +68,7 @@ define_algorithm_spec! {
 
         // Create storage runtime
         let storage = LocalClusteringCoefficientStorageRuntime::new(graph_store)?;
-        
+
         // Create computation runtime
         let node_count = storage.node_count();
         let mut computation = LocalClusteringCoefficientComputationRuntime::new(node_count);
@@ -78,16 +78,16 @@ define_algorithm_spec! {
         // 1. Compute triangle counts using TriangleCount algorithm
         // 2. Get node degrees
         // 3. Apply clustering coefficient formula
-        
+
         let triangle_counts = vec![0u64; node_count];
         let degrees = vec![0i32; node_count];
-        
+
         // For each node, compute degree
         for node_id in 0..node_count {
-            let degree = storage.degree(node_id);
+            let _degree = storage.degree(node_id);
             // TODO: Get actual triangle count for this node
         }
-        
+
         computation.compute(&triangle_counts, &degrees);
 
         context.log(

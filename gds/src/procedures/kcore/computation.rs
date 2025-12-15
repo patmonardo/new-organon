@@ -12,6 +12,7 @@ const REBUILD_CONSTANT: f64 = 0.02;
 
 /// Phase of k-core decomposition
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 enum Phase {
     Scan,
     Act,
@@ -113,7 +114,7 @@ impl KCoreDecompositionRuntime {
 
                 while !self.examination_stack.is_empty() {
                     let node_id = self.examination_stack.pop() as usize;
-                    
+
                     // Skip already assigned nodes
                     if self.core_values[node_id] != UNASSIGNED {
                         continue;

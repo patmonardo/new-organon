@@ -1,6 +1,7 @@
 //! Articulation Points Storage Runtime
 
 pub struct ArticulationPointsStorageRuntime {
+    #[allow(dead_code)]
     concurrency: usize,
 }
 

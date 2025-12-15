@@ -15,6 +15,10 @@ impl ArrowBitmap {
         self.inner.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn is_set(&self, index: usize) -> bool {
         self.inner.get(index).unwrap_or(false)
     }

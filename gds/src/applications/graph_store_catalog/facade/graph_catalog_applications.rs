@@ -1,6 +1,4 @@
-use crate::applications::services::logging::Log;
-use crate::types::graph_store::{DatabaseId, GraphStore};
-use crate::types::schema::{NodeLabel, RelationshipType};
+use crate::types::graph_store::DatabaseId;
 use crate::core::User;
 use crate::types::graph_store::DeletionResult;
 use crate::applications::graph_store_catalog::results::GraphMemoryUsage;

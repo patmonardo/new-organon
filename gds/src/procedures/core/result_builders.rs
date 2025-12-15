@@ -15,13 +15,13 @@ use std::time::Duration;
 pub trait ResultBuilder<T> {
     /// Build the final result
     fn build(self) -> Result<T, ResultBuilderError>;
-    
+
     /// Add statistics to the result
     fn with_statistics(self, stats: StatisticalSummary) -> Self;
-    
+
     /// Add histogram to the result
     fn with_histogram(self, histogram: Option<Histogram>) -> Self;
-    
+
     /// Add execution metadata
     fn with_metadata(self, metadata: ExecutionMetadata) -> Self;
 }
@@ -49,19 +49,19 @@ impl ExecutionMetadata {
             additional: HashMap::new(),
         }
     }
-    
+
     /// Add iteration count
     pub fn with_iterations(mut self, iterations: u32) -> Self {
         self.iterations = Some(iterations);
         self
     }
-    
+
     /// Add convergence status
     pub fn with_convergence(mut self, converged: bool) -> Self {
         self.converged = Some(converged);
         self
     }
-    
+
     /// Add additional metadata
     pub fn with_additional(mut self, key: String, value: String) -> Self {
         self.additional.insert(key, value);
@@ -134,19 +134,19 @@ impl CentralityResultBuilder {
             compute_histogram: true,
         }
     }
-    
+
     /// Enable or disable statistics computation
     pub fn with_statistics(mut self, compute: bool) -> Self {
         self.compute_statistics = compute;
         self
     }
-    
+
     /// Enable or disable histogram computation
     pub fn with_histogram(mut self, compute: bool) -> Self {
         self.compute_histogram = compute;
         self
     }
-    
+
     /// Set execution metadata
     pub fn with_metadata(mut self, metadata: ExecutionMetadata) -> Self {
         self.metadata = Some(metadata);
@@ -158,29 +158,29 @@ impl ResultBuilder<CentralityResult> for CentralityResultBuilder {
     fn build(self) -> Result<CentralityResult, ResultBuilderError> {
         let mut statistics = self.statistics;
         let mut histogram = self.histogram;
-        
+
         // Compute statistics if requested and not already provided
         if self.compute_statistics && statistics.is_none() {
             let config = StatisticsConfig {
                 compute_histogram: self.compute_histogram,
                 ..Default::default()
             };
-            
+
             let (stats, hist) = StatisticsEngine::compute_statistics_from_values(
                 self.scores.clone(),
                 config,
             )?;
-            
+
             statistics = Some(stats);
             if self.compute_histogram {
                 histogram = hist;
             }
         }
-        
+
         let metadata = self.metadata.unwrap_or_else(|| {
             ExecutionMetadata::new(Duration::from_secs(0))
         });
-        
+
         Ok(CentralityResult {
             scores: self.scores,
             statistics,
@@ -188,17 +188,17 @@ impl ResultBuilder<CentralityResult> for CentralityResultBuilder {
             metadata,
         })
     }
-    
+
     fn with_statistics(mut self, stats: StatisticalSummary) -> Self {
         self.statistics = Some(stats);
         self
     }
-    
+
     fn with_histogram(mut self, hist: Option<Histogram>) -> Self {
         self.histogram = hist;
         self
     }
-    
+
     fn with_metadata(mut self, metadata: ExecutionMetadata) -> Self {
         self.metadata = Some(metadata);
         self
@@ -223,19 +223,19 @@ impl CommunityResultBuilder {
             metadata: None,
         }
     }
-    
+
     /// Enable or disable statistics computation
     pub fn with_statistics(mut self, compute: bool) -> Self {
         self.compute_statistics = compute;
         self
     }
-    
+
     /// Enable or disable histogram computation
     pub fn with_histogram(mut self, compute: bool) -> Self {
         self.compute_histogram = compute;
         self
     }
-    
+
     /// Set execution metadata
     pub fn with_metadata(mut self, metadata: ExecutionMetadata) -> Self {
         self.metadata = Some(metadata);
@@ -250,31 +250,31 @@ impl ResultBuilder<CommunityResult> for CommunityResultBuilder {
         for &community_id in &self.communities {
             *community_sizes.entry(community_id).or_insert(0) += 1;
         }
-        
+
         let community_count = community_sizes.len() as u32;
-        
+
         // Compute statistics for community sizes if requested
         let mut size_statistics = None;
         let mut size_histogram = None;
-        
+
         if self.compute_statistics {
             let size_values: Vec<f64> = community_sizes.values().map(|&size| size as f64).collect();
             let config = StatisticsConfig {
                 compute_histogram: self.compute_histogram,
                 ..Default::default()
             };
-            
+
             let (stats, hist) = StatisticsEngine::compute_statistics_from_values(size_values, config)?;
             size_statistics = Some(stats);
             if self.compute_histogram {
                 size_histogram = hist;
             }
         }
-        
+
         let metadata = self.metadata.unwrap_or_else(|| {
             ExecutionMetadata::new(Duration::from_secs(0))
         });
-        
+
         Ok(CommunityResult {
             communities: self.communities,
             community_sizes,
@@ -284,19 +284,19 @@ impl ResultBuilder<CommunityResult> for CommunityResultBuilder {
             metadata,
         })
     }
-    
-    fn with_statistics(self, stats: StatisticalSummary) -> Self {
+
+    fn with_statistics(self, _stats: StatisticalSummary) -> Self {
         // For community results, statistics are computed from community sizes
         // This method is kept for interface compatibility
         self
     }
-    
-    fn with_histogram(self, hist: Option<Histogram>) -> Self {
+
+    fn with_histogram(self, _hist: Option<Histogram>) -> Self {
         // For community results, histogram is computed from community sizes
         // This method is kept for interface compatibility
         self
     }
-    
+
     fn with_metadata(mut self, metadata: ExecutionMetadata) -> Self {
         self.metadata = Some(metadata);
         self
@@ -325,19 +325,19 @@ impl SimilarityResultBuilder {
             compute_histogram: true,
         }
     }
-    
+
     /// Enable or disable statistics computation
     pub fn with_statistics(mut self, compute: bool) -> Self {
         self.compute_statistics = compute;
         self
     }
-    
+
     /// Enable or disable histogram computation
     pub fn with_histogram(mut self, compute: bool) -> Self {
         self.compute_histogram = compute;
         self
     }
-    
+
     /// Set execution metadata
     pub fn with_metadata(mut self, metadata: ExecutionMetadata) -> Self {
         self.metadata = Some(metadata);
@@ -349,29 +349,29 @@ impl ResultBuilder<SimilarityResult> for SimilarityResultBuilder {
     fn build(self) -> Result<SimilarityResult, ResultBuilderError> {
         let mut statistics = self.statistics;
         let mut histogram = self.histogram;
-        
+
         // Compute statistics if requested and not already provided
         if self.compute_statistics && statistics.is_none() {
             let config = StatisticsConfig {
                 compute_histogram: self.compute_histogram,
                 ..Default::default()
             };
-            
+
             let (stats, hist) = StatisticsEngine::compute_statistics_from_values(
                 self.scores.clone(),
                 config,
             )?;
-            
+
             statistics = Some(stats);
             if self.compute_histogram {
                 histogram = hist;
             }
         }
-        
+
         let metadata = self.metadata.unwrap_or_else(|| {
             ExecutionMetadata::new(Duration::from_secs(0))
         });
-        
+
         Ok(SimilarityResult {
             scores: self.scores,
             statistics,
@@ -379,17 +379,17 @@ impl ResultBuilder<SimilarityResult> for SimilarityResultBuilder {
             metadata,
         })
     }
-    
+
     fn with_statistics(mut self, stats: StatisticalSummary) -> Self {
         self.statistics = Some(stats);
         self
     }
-    
+
     fn with_histogram(mut self, hist: Option<Histogram>) -> Self {
         self.histogram = hist;
         self
     }
-    
+
     fn with_metadata(mut self, metadata: ExecutionMetadata) -> Self {
         self.metadata = Some(metadata);
         self
@@ -401,10 +401,10 @@ impl ResultBuilder<SimilarityResult> for SimilarityResultBuilder {
 pub enum ResultBuilderError {
     #[error("Statistics computation failed: {0}")]
     StatisticsError(#[from] crate::procedures::core::statistics::StatisticsError),
-    
+
     #[error("Invalid result data: {0}")]
     InvalidData(String),
-    
+
     #[error("Builder configuration error: {0}")]
     ConfigurationError(String),
 }
@@ -417,12 +417,12 @@ mod tests {
     fn test_centrality_result_builder() {
         let scores = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let metadata = ExecutionMetadata::new(Duration::from_secs(1));
-        
+
         let result = CentralityResultBuilder::new(scores.clone())
             .with_metadata(metadata)
             .build()
             .unwrap();
-        
+
         assert_eq!(result.scores, scores);
         assert!(result.statistics.is_some());
         assert!(result.histogram.is_some());
@@ -433,12 +433,12 @@ mod tests {
     fn test_community_result_builder() {
         let communities = vec![0, 0, 1, 1, 2];
         let metadata = ExecutionMetadata::new(Duration::from_secs(2));
-        
+
         let result = CommunityResultBuilder::new(communities.clone())
             .with_metadata(metadata)
             .build()
             .unwrap();
-        
+
         assert_eq!(result.communities, communities);
         assert_eq!(result.community_count, 3);
         assert_eq!(result.community_sizes.get(&0), Some(&2));
@@ -452,12 +452,12 @@ mod tests {
     fn test_similarity_result_builder() {
         let scores = vec![0.1, 0.2, 0.3, 0.4, 0.5];
         let metadata = ExecutionMetadata::new(Duration::from_secs(3));
-        
+
         let result = SimilarityResultBuilder::new(scores.clone())
             .with_metadata(metadata)
             .build()
             .unwrap();
-        
+
         assert_eq!(result.scores, scores);
         assert!(result.statistics.is_some());
         assert!(result.histogram.is_some());
@@ -467,13 +467,13 @@ mod tests {
     #[test]
     fn test_result_builder_without_statistics() {
         let scores = vec![1.0, 2.0, 3.0];
-        
+
         let result = CentralityResultBuilder::new(scores.clone())
             .with_statistics(false)
             .with_histogram(false)
             .build()
             .unwrap();
-        
+
         assert_eq!(result.scores, scores);
         assert!(result.statistics.is_none());
         assert!(result.histogram.is_none());
@@ -485,7 +485,7 @@ mod tests {
             .with_iterations(100)
             .with_convergence(true)
             .with_additional("algorithm".to_string(), "pagerank".to_string());
-        
+
         assert_eq!(metadata.execution_time, Duration::from_secs(5));
         assert_eq!(metadata.iterations, Some(100));
         assert_eq!(metadata.converged, Some(true));

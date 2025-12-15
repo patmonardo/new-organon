@@ -71,8 +71,6 @@ impl BetweennessCentralityComputationRuntime {
         source_node: usize,
         get_neighbors: impl Fn(usize) -> Vec<usize>,
     ) {
-        let node_count = self.distances.len();
-
         // Reset per-source arrays
         self.sigma.iter_mut().for_each(|s| *s = 0);
         self.distances.iter_mut().for_each(|d| *d = -1);
@@ -301,7 +299,7 @@ mod tests {
         // Nodes 1 and 2 should have equal centrality (symmetric)
         assert!((result.centralities[1] - result.centralities[2]).abs() < 1e-10,
                 "Nodes 1 and 2 should have same centrality");
-        
+
         // All centralities should be non-negative
         for i in 0..4 {
             assert!(result.centralities[i] >= 0.0,

@@ -40,6 +40,7 @@ pub struct SumAlgorithmSpec {
     /// Name of the graph to load
     graph_name: String,
     /// Configuration for this execution
+    #[allow(dead_code)]
     config: SumConfig,
 }
 

@@ -6,8 +6,10 @@ use super::Metric;
 /// This is a 1:1 translation of ModelSpecificMetricsHandler from Java GDS.
 pub struct ModelSpecificMetricsHandler {
     metrics: Vec<String>,
-    metric_consumer: Box<dyn Fn(&str, f64) + Send + Sync>,
+    metric_consumer: MetricConsumer,
 }
+
+type MetricConsumer = Box<dyn Fn(&str, f64) + Send + Sync>;
 
 impl ModelSpecificMetricsHandler {
     /// Creates a no-op handler that does nothing

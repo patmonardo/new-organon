@@ -133,7 +133,7 @@ pub fn read_parallel<F>(
         let total_work = end - start;
         let batch_size = batch_size.value().min(total_work);
 
-        let num_batches = (total_work + batch_size - 1) / batch_size;
+        let num_batches = total_work.div_ceil(batch_size);
 
         (0..num_batches)
             .into_par_iter()

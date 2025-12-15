@@ -1,5 +1,6 @@
 //! Harmonic Storage Runtime
 pub struct HarmonicStorageRuntime {
+    #[allow(dead_code)]
     concurrency: usize,
 }
 

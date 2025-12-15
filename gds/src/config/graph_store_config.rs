@@ -9,6 +9,7 @@ use super::validation::ConfigValidation;
 use crate::define_config;
 
 define_config!(
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     pub struct GraphStoreMemoryConfig {
         validate = |cfg: &GraphStoreMemoryConfig| {
             ConfigValidation::validate_positive(cfg.max_memory_bytes as f64, "maxMemoryBytes")?;
@@ -27,6 +28,7 @@ define_config!(
 );
 
 define_config!(
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     pub struct GraphStoreCacheConfig {
         validate = |cfg: &GraphStoreCacheConfig| {
             if cfg.enable_node_cache {
@@ -71,6 +73,7 @@ pub enum CacheEvictionStrategy {
 }
 
 define_config!(
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     pub struct GraphStoreComputeConfig {
         validate = |cfg: &GraphStoreComputeConfig| {
             ConfigValidation::validate_positive(cfg.concurrency as f64, "concurrency")?;
@@ -96,6 +99,7 @@ impl ConcurrencyConfig for GraphStoreComputeConfig {
 }
 
 define_config!(
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     /// Properties configuration for Collections-backed property storage
     ///
     /// This config drives the selection of Collections backends for different property levels.
@@ -123,6 +127,7 @@ define_config!(
 );
 
 define_config!(
+    #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
     pub struct GraphStoreConfig {
         validate = |cfg: &GraphStoreConfig| {
             cfg.memory.validate()?;

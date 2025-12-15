@@ -1,4 +1,5 @@
 pub struct TriangleCountStorageRuntime {
+    #[allow(dead_code)]
     concurrency: usize,
 }
 

@@ -4,8 +4,6 @@
 //! and the universal adapter system. All adapters are generic over Collections
 //! backends (Vec, Huge, Arrow), enabling runtime backend selection.
 
-use crate::types::properties::PropertyValues;
-
 // Import the macros from the crate root
 use crate::generate_all_relationship_adapters;
 

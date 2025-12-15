@@ -250,10 +250,10 @@ impl<W: CumulativeWeightSupplier> RandomWalkSampler<W> {
         // Use stream_relationships for cursor-based iteration
         for cursor in self.graph.stream_relationships(node as i64, 1.0) {
             let weight = cursor.property();
-            current_weight += weight as f64;
+            current_weight += weight;
 
             if random_weight <= current_weight {
-                selected_neighbor = cursor.target_id() as i64;
+                selected_neighbor = cursor.target_id();
                 break;
             }
         }

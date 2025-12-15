@@ -2,7 +2,6 @@
 
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::GraphStore;
-use crate::types::graph::Degrees;
 
 /// Storage Runtime for Local Clustering Coefficient
 ///
@@ -26,7 +25,7 @@ impl<'a, G: GraphStore> LocalClusteringCoefficientStorageRuntime<'a, G> {
 
     /// Get node count
     pub fn node_count(&self) -> usize {
-        self.graph_store.node_count() as usize
+        self.graph_store.node_count()
     }
 
     /// Get degree of a node

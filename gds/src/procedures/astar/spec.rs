@@ -7,7 +7,6 @@
 use crate::define_algorithm_spec;
 use crate::projection::relationship_type::RelationshipType;
 use std::collections::HashSet;
-use crate::types::prelude::GraphStore as _; // bring trait methods into scope
 use crate::projection::orientation::Orientation;
 use serde::{Deserialize, Serialize};
 // use serde_json::json; // not needed here
@@ -19,7 +18,7 @@ use serde::{Deserialize, Serialize};
 pub struct AStarConfig {
     /// Source node ID
     pub source_node: usize,
-    /// Target node ID  
+    /// Target node ID
     pub target_node: usize,
     /// Latitude property name
     pub latitude_property: String,
@@ -31,7 +30,7 @@ pub struct AStarConfig {
     #[serde(default)]
     pub relationship_types: Vec<String>,
     /// Direction for traversal ("outgoing" or "incoming")
-    #[serde(default = "AStarDirection::default_as_str")] 
+    #[serde(default = "AStarDirection::default_as_str")]
     pub direction: String,
 }
 
@@ -77,19 +76,19 @@ impl AStarConfig {
                 value: 0.0,
             });
         }
-        
+
         if self.latitude_property.is_empty() {
             return Err(crate::config::validation::ConfigError::RequiredParameter {
                 name: "latitude_property".to_string(),
             });
         }
-        
+
         if self.longitude_property.is_empty() {
             return Err(crate::config::validation::ConfigError::RequiredParameter {
                 name: "longitude_property".to_string(),
             });
         }
-        
+
         Ok(())
     }
 }
@@ -124,12 +123,12 @@ impl AStarResult {
             nodes_explored,
         }
     }
-    
+
     /// Check if a path was found
     pub fn has_path(&self) -> bool {
         self.path.is_some()
     }
-    
+
     /// Get path length (number of nodes)
     pub fn path_length(&self) -> usize {
         self.path.as_ref().map_or(0, |p| p.len())
@@ -142,21 +141,21 @@ define_algorithm_spec! {
     output_type: AStarResult,
     projection_hint: Dense,
     modes: [Stream, WriteNodeProperty],
-    
+
     execute: |_self, graph_store, config, _context| {
         use super::storage::AStarStorageRuntime;
         use super::computation::AStarComputationRuntime;
-        
+
         let start_time = std::time::Instant::now();
-        
+
         // Parse config
         let parsed_config: AStarConfig = serde_json::from_value(config.clone())
             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
-        
+
         // Validate config
         parsed_config.validate()
             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
-        
+
         // Build filtered/oriented graph view via overloads
         let rel_types: HashSet<RelationshipType> = if !parsed_config.relationship_types.is_empty() {
             RelationshipType::list_of(parsed_config.relationship_types.clone()).into_iter().collect()
@@ -188,17 +187,17 @@ define_algorithm_spec! {
                 parsed_config.longitude_property.clone(),
             ),
         };
-        
+
         // Create computation runtime for A* algorithm
         let mut computation = AStarComputationRuntime::new();
-        
+
         // Execute A* algorithm
         let direction = AStarDirection::from_str(&parsed_config.direction);
         let result = storage.compute_astar_path(&mut computation, Some(graph.as_ref()), direction as u8)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Execution(e))?;
-        
+            .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+
         let execution_time = start_time.elapsed().as_millis() as u64;
-        
+
         Ok(AStarResult::new(
             result.path,
             result.total_cost,
@@ -227,19 +226,19 @@ mod tests {
     #[test]
     fn test_astar_config_validation() {
         let mut config = AStarConfig::default();
-        
+
         // Valid config
         assert!(config.validate().is_ok());
-        
+
         // Invalid concurrency
         config.concurrency = 0;
         assert!(config.validate().is_err());
-        
+
         // Invalid latitude property
         config.concurrency = 4;
         config.latitude_property = String::new();
         assert!(config.validate().is_err());
-        
+
         // Invalid longitude property
         config.latitude_property = "lat".to_string();
         config.longitude_property = String::new();
@@ -250,13 +249,13 @@ mod tests {
     fn test_astar_result() {
         let path = Some(vec![0, 1, 2]);
         let result = AStarResult::new(path.clone(), 10.5, 100, 5);
-        
+
         assert!(result.has_path());
         assert_eq!(result.path_length(), 3);
         assert_eq!(result.total_cost, 10.5);
         assert_eq!(result.execution_time_ms, 100);
         assert_eq!(result.nodes_explored, 5);
-        
+
         let no_path_result = AStarResult::new(None, f64::INFINITY, 50, 3);
         assert!(!no_path_result.has_path());
         assert_eq!(no_path_result.path_length(), 0);
@@ -272,7 +271,7 @@ mod tests {
     #[test]
     fn test_astar_execution_modes() {
         let spec = ASTARAlgorithmSpec::new("test_graph".to_string());
-        
+
         // Test that the spec can be created
         assert_eq!(spec.name(), "astar");
         assert_eq!(spec.graph_name(), "test_graph");
@@ -287,7 +286,7 @@ mod tests {
             "longitude_property": "lon",
             "concurrency": 4
         }"#;
-        
+
         let config: AStarConfig = serde_json::from_str(config_input).unwrap();
         assert!(config.validate().is_ok());
     }
@@ -296,11 +295,11 @@ mod tests {
     fn test_astar_focused_macro_integration() {
         let spec = ASTARAlgorithmSpec::new("test_graph".to_string());
         let config = AStarConfig::default();
-        
+
         // Test that the macro-generated spec works
         assert_eq!(spec.name(), "astar");
         assert_eq!(spec.graph_name(), "test_graph");
-        
+
         // Test config validation through spec
         let validation_config = spec.validation_config(&crate::projection::eval::procedure::ExecutionContext::new("test"));
         assert!(validation_config.validate_before_load(&json!({})).is_ok());

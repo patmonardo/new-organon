@@ -19,7 +19,7 @@ use super::consecutive_values::ConsecutiveLongNodePropertyValues;
 ///         boolean consecutiveIds,
 ///         LongNodePropertyValues nodeProperties
 ///     ) { /* ... */ }
-///     
+///
 ///     public static NodePropertyValues nodePropertyValues(
 ///         boolean incremental,
 ///         String resultProperty,
@@ -83,11 +83,11 @@ impl CommunityCompanion {
         consecutive_ids: bool,
         node_properties: Box<dyn LongNodePropertyValues>,
         min_community_size: Option<usize>,
-        concurrency: usize,
+        _concurrency: usize,
     ) -> Box<dyn LongNodePropertyValues> {
         // Apply minimum community size filter if specified
         // Translation of: applySizeFilter() (lines 86-88)
-        let filtered = if let Some(min_size) = min_community_size {
+        let filtered = if let Some(_min_size) = min_community_size {
             // TODO: Implement CommunitySizeFilter when we have HugeSparseLongArray
             // For now, return original properties
             node_properties
@@ -127,9 +127,9 @@ impl CommunityCompanion {
         consecutive_ids: bool,
         node_properties: Box<dyn LongNodePropertyValues>,
         min_community_size: Option<usize>,
-        concurrency: usize,
+        _concurrency: usize,
     ) -> Box<dyn LongNodePropertyValues> {
-        let filtered = if let Some(min_size) = min_community_size {
+        let filtered = if let Some(_min_size) = min_community_size {
             // TODO: Implement CommunitySizeFilter when we have HugeSparseLongArray
             // For now, return original properties
             node_properties
@@ -220,7 +220,7 @@ mod tests {
         // Test with consecutive IDs
         let result = CommunityCompanion::node_property_values(true, props);
         assert_eq!(result.node_count(), 5);
-        
+
         // Should remap 10->0, 20->1, 30->2
         assert_eq!(result.long_value(0), 0); // 10 -> 0
         assert_eq!(result.long_value(1), 1); // 20 -> 1

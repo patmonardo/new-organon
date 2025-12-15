@@ -6,7 +6,6 @@
 
 use crate::define_algorithm_spec;
 use crate::projection::codegen::config::validation::ConfigError;
-use crate::projection::eval::procedure::AlgorithmSpec;
 use crate::projection::eval::procedure::AlgorithmError;
 use super::storage::YensStorageRuntime;
 use super::computation::YensComputationRuntime;
@@ -46,21 +45,21 @@ impl YensConfig {
     /// Validate configuration parameters
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.concurrency == 0 {
-            return Err(ConfigError::FieldValidation { 
-                field: "concurrency".to_string(), 
-                message: "must be > 0".to_string() 
+            return Err(ConfigError::FieldValidation {
+                field: "concurrency".to_string(),
+                message: "must be > 0".to_string()
             });
         }
         if self.k == 0 {
-            return Err(ConfigError::FieldValidation { 
-                field: "k".to_string(), 
-                message: "must be > 0".to_string() 
+            return Err(ConfigError::FieldValidation {
+                field: "k".to_string(),
+                message: "must be > 0".to_string()
             });
         }
         if self.source_node == self.target_node {
-            return Err(ConfigError::FieldValidation { 
-                field: "source_node".to_string(), 
-                message: "source and target nodes must be different".to_string() 
+            return Err(ConfigError::FieldValidation {
+                field: "source_node".to_string(),
+                message: "source and target nodes must be different".to_string()
             });
         }
         Ok(())
@@ -110,7 +109,7 @@ define_algorithm_spec! {
         // Parse and validate configuration
         let parsed_config: YensConfig = serde_json::from_value(config_input.clone())
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to parse config: {}", e)))?;
-        
+
         parsed_config.validate()
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Config validation failed: {}", e)))?;
 
@@ -133,7 +132,7 @@ define_algorithm_spec! {
 
         // Execute Yen's algorithm
         let result = storage.compute_yens(&mut computation)?;
-        
+
         Ok(result)
     }
 }
@@ -248,7 +247,7 @@ mod tests {
         let spec = YENSAlgorithmSpec::new("test_graph".to_string());
         assert_eq!(spec.name(), "yens");
         assert_eq!(spec.graph_name(), "test_graph");
-        
+
         // Test that the algorithm can be created
         assert_eq!(spec.graph_name(), "test_graph");
     }

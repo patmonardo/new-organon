@@ -10,7 +10,6 @@ use super::spec::{BfsResult, BfsPathResult};
 use crate::procedures::traversal::{ExitPredicate, Aggregator, FollowExitPredicate, TargetExitPredicate, OneHopAggregator};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::Graph;
-use crate::types::properties::relationship::traits::RelationshipIterator as _;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// BFS Storage Runtime - handles persistent data access and algorithm orchestration
@@ -51,7 +50,7 @@ impl BfsStorageRuntime {
         } else {
             Box::new(TargetExitPredicate::new(target_nodes.clone())) as Box<dyn ExitPredicate>
         };
-        
+
         Self {
             source_node,
             target_nodes,
@@ -65,6 +64,7 @@ impl BfsStorageRuntime {
     }
 
     /// Create new BFS storage runtime with custom predicates
+    #[allow(clippy::too_many_arguments)]
     pub fn with_predicates(
         source_node: u32,
         target_nodes: Vec<u32>,
@@ -93,7 +93,7 @@ impl BfsStorageRuntime {
     /// This orchestrates the main BFS algorithm loop using Java GDS parallel architecture
     pub fn compute_bfs(&self, computation: &mut BfsComputationRuntime, graph: Option<&dyn Graph>) -> Result<BfsResult, AlgorithmError> {
         let start_time = std::time::Instant::now();
-        
+
         // Initialize computation runtime
         computation.initialize(self.source_node, self.max_depth);
 
@@ -102,7 +102,7 @@ impl BfsStorageRuntime {
         let mut traversed_nodes = vec![0u32; node_count];
         let mut weights = vec![0.0f64; node_count];
         let mut visited = vec![false; node_count];
-        
+
         // Atomic counters for parallel processing
         let traversed_nodes_index = AtomicUsize::new(0);
         let traversed_nodes_length = AtomicUsize::new(1);
@@ -116,16 +116,16 @@ impl BfsStorageRuntime {
         // Main BFS loop with depth control
         let mut current_depth = 0;
         let max_depth = self.max_depth.unwrap_or(u32::MAX);
-        
+
         while current_depth < max_depth {
             // Process current level in parallel chunks
             let start_index = traversed_nodes_index.load(Ordering::SeqCst);
             let end_index = traversed_nodes_length.load(Ordering::SeqCst);
-            
+
             // Process nodes in chunks of delta size
             for chunk_start in (start_index..end_index).step_by(self.delta) {
                 let chunk_end = (chunk_start + self.delta).min(end_index);
-                
+
                 for idx in chunk_start..chunk_end {
                     let node_id = traversed_nodes[idx];
                     let source_id = if node_id == self.source_node {
@@ -134,18 +134,18 @@ impl BfsStorageRuntime {
                         // Find source for this node (simplified)
                         self.source_node
                     };
-                    
+
                     let weight = self.aggregator.apply(source_id, node_id, weights[idx]);
                     weights[idx] = weight;
-                    
+
                     // Apply exit predicate
                     let exit_result = self.exit_predicate.test(source_id, node_id, weight);
-                    
+
                     if exit_result == crate::procedures::traversal::ExitPredicateResult::Break {
                         target_found_index.store(idx, Ordering::SeqCst);
                         break;
                     }
-                    
+
                     if exit_result == crate::procedures::traversal::ExitPredicateResult::Follow {
                         // Relax node - get neighbors and add to next level
                         let neighbors = self.get_neighbors(graph, node_id);
@@ -160,24 +160,23 @@ impl BfsStorageRuntime {
                             }
                         }
                     }
-                    
+
                     // Update computation runtime
                     computation.add_visited_node(node_id, current_depth);
                 }
             }
-            
+
             // Check if we found targets
             if target_found_index.load(Ordering::SeqCst) != usize::MAX {
                 break;
             }
-            
+
             // Update indices for next level: move start to the previous end_index
             let old_index = traversed_nodes_index.load(Ordering::SeqCst);
-            let end_index = end_index; // from this level's snapshot
             let new_length = traversed_nodes_length.load(Ordering::SeqCst);
             traversed_nodes_index.store(end_index, Ordering::SeqCst);
             current_depth += 1;
-            
+
             // Check if no new nodes were added (compare old length with new length)
             if old_index == new_length {
                 break;
@@ -214,7 +213,7 @@ impl BfsStorageRuntime {
     /// Build paths from traversed nodes
     fn build_paths(&self, traversed_nodes: &[u32]) -> Vec<BfsPathResult> {
         let mut paths = Vec::new();
-        
+
         // For each target node, find its position and build path
         for &target in &self.target_nodes {
             if let Some(target_index) = traversed_nodes.iter().position(|&node| node == target) {
@@ -227,7 +226,7 @@ impl BfsStorageRuntime {
                 });
             }
         }
-        
+
         paths
     }
 
@@ -268,9 +267,9 @@ mod tests {
     fn test_bfs_path_computation() {
         let storage = BfsStorageRuntime::new(0, vec![3], None, true, 1, 64);
         let mut computation = BfsComputationRuntime::new(0, true, 1);
-        
+
         let result = storage.compute_bfs(&mut computation, None).unwrap();
-        
+
         assert!(result.nodes_visited > 0);
         assert!(result.computation_time_ms >= 0);
     }
@@ -279,9 +278,9 @@ mod tests {
     fn test_bfs_path_same_source_target() {
         let storage = BfsStorageRuntime::new(0, vec![0], None, true, 1, 64);
         let mut computation = BfsComputationRuntime::new(0, true, 1);
-        
+
         let result = storage.compute_bfs(&mut computation, None).unwrap();
-        
+
         assert!(result.nodes_visited >= 1);
         assert!(result.computation_time_ms >= 0);
     }
@@ -290,9 +289,9 @@ mod tests {
     fn test_bfs_max_depth_constraint() {
         let storage = BfsStorageRuntime::new(0, vec![], Some(1), false, 1, 64);
         let mut computation = BfsComputationRuntime::new(0, false, 1);
-        
+
         let result = storage.compute_bfs(&mut computation, None).unwrap();
-        
+
         // With max_depth=1, we should only visit nodes at distance 0 and 1
         assert!(result.nodes_visited <= 3); // Source + immediate neighbors
         assert!(result.computation_time_ms >= 0);

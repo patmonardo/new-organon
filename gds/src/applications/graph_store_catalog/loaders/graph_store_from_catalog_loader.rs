@@ -11,9 +11,11 @@ use rand::SeedableRng;
 /// Loads graph stores from the catalog rather than from database.
 pub struct GraphStoreFromCatalogLoader {
     graph_name: String,
+    #[allow(dead_code)]
     config: Box<dyn AlgoBaseConfig>,
     username: String,
     database_id: DatabaseId,
+    #[allow(dead_code)]
     is_gds_admin: bool,
 }
 

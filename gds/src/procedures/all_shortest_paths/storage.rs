@@ -47,7 +47,7 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
         // For now, default to Unweighted
         let algorithm_type = AlgorithmType::Unweighted;
 
-        Ok(Self { 
+        Ok(Self {
             graph_store,
             algorithm_type,
             concurrency: num_cpus::get(),
@@ -56,11 +56,11 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
 
     /// Create with specific settings
     pub fn with_settings(
-        graph_store: &'a G, 
+        graph_store: &'a G,
         algorithm_type: AlgorithmType,
         concurrency: usize,
     ) -> Result<Self, AlgorithmError> {
-        Ok(Self { 
+        Ok(Self {
             graph_store,
             algorithm_type,
             concurrency,
@@ -95,19 +95,19 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
         let node_count = self.graph_store.node_count();
         let mut distances = vec![f64::INFINITY; node_count];
         let mut queue = std::collections::VecDeque::new();
-        
+
         // Initialize BFS
         distances[source_node as usize] = 0.0;
         queue.push_back(source_node);
-        
+
         // BFS traversal
         while let Some(current_node) = queue.pop_front() {
             let current_distance = distances[current_node as usize];
-            
+
             // TODO: Replace with actual GraphStore API call
             // This simulates the Java MSBFS logic
             let neighbors = self.get_neighbors_mock(current_node);
-            
+
             for neighbor in neighbors {
                 if distances[neighbor as usize] == f64::INFINITY {
                     distances[neighbor as usize] = current_distance + 1.0;
@@ -115,7 +115,7 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
                 }
             }
         }
-        
+
         // Convert to results
         let results = distances
             .into_iter()
@@ -126,7 +126,7 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
                 distance,
             })
             .collect();
-            
+
         Ok(results)
     }
 
@@ -135,30 +135,30 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
         let node_count = self.graph_store.node_count();
         let mut distances = vec![f64::INFINITY; node_count];
         let mut visited = vec![false; node_count];
-        
+
         // Initialize Dijkstra
         distances[source_node as usize] = 0.0;
-        
+
         // Simple Dijkstra implementation (without priority queue for now)
         for _ in 0..node_count {
             // Find unvisited node with minimum distance
             let mut min_node = None;
             let mut min_distance = f64::INFINITY;
-            
+
             for (node, &distance) in distances.iter().enumerate() {
                 if !visited[node] && distance < min_distance {
                     min_distance = distance;
                     min_node = Some(node);
                 }
             }
-            
+
             if let Some(current_node) = min_node {
                 visited[current_node] = true;
-                
+
                 // TODO: Replace with actual GraphStore API call
                 // This simulates the Java WeightedAllShortestPaths logic
                 let neighbors_with_weights = self.get_neighbors_with_weights_mock(current_node as u32);
-                
+
                 for (neighbor, weight) in neighbors_with_weights {
                     let new_distance = distances[current_node] + weight;
                     if new_distance < distances[neighbor as usize] {
@@ -169,7 +169,7 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
                 break;
             }
         }
-        
+
         // Convert to results
         let results = distances
             .into_iter()
@@ -180,12 +180,12 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
                 distance,
             })
             .collect();
-            
+
         Ok(results)
     }
 
     /// Get neighbors (unweighted) using real graph data
-    fn get_neighbors_mock(&self, node: u32) -> Vec<u32> {
+    fn get_neighbors_mock(&self, _node: u32) -> Vec<u32> {
         // TODO: Access graph from graph_store for real implementation
         // For now, return empty vector as placeholder
         // This requires either:
@@ -195,7 +195,7 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
     }
 
     /// Get neighbors with weights using real graph data
-    fn get_neighbors_with_weights_mock(&self, node: u32) -> Vec<(u32, f64)> {
+    fn get_neighbors_with_weights_mock(&self, _node: u32) -> Vec<(u32, f64)> {
         // TODO: Access graph from graph_store for real implementation
         // For now, return empty vector as placeholder
         // This requires either:
@@ -208,14 +208,14 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
     ///
     /// This implements the multi-source parallelization from Java GDS.
     /// Results are streamed to avoid O(V²) memory usage.
-    /// 
+    ///
     /// Note: This is a simplified version that doesn't use threading
     /// to avoid lifetime issues. In a real implementation, we would
     /// need to handle the GraphStore lifetime properly.
     pub fn compute_all_shortest_paths_streaming(&self) -> Result<mpsc::Receiver<ShortestPathResult>, AlgorithmError> {
         let (sender, receiver) = mpsc::channel();
         let node_count = self.graph_store.node_count();
-        
+
         // For now, process sequentially to avoid lifetime issues
         // TODO: Implement proper parallel processing with lifetime management
         for source_node in 0..node_count as u32 {
@@ -237,7 +237,7 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
                     }]
                 }
             };
-            
+
             // Send results to stream
             for result in results {
                 if sender.send(result).is_err() {
@@ -246,10 +246,10 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
                 }
             }
         }
-        
+
         // Drop the sender to signal completion
         drop(sender);
-        
+
         Ok(receiver)
     }
 
@@ -274,7 +274,7 @@ impl<'a, G: GraphStore> AllShortestPathsStorageRuntime<'a, G> {
 pub struct ShortestPathResult {
     /// Source node ID
     pub source: u32,
-    /// Target node ID  
+    /// Target node ID
     pub target: u32,
     /// Shortest path distance
     pub distance: f64,

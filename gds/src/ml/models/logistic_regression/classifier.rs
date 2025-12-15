@@ -9,7 +9,7 @@ use crate::ml::{
             softmax::Softmax,
         },
         tensor::Matrix,
-        variable::{Variable, VariableRef},
+        variable::VariableRef,
         ComputationContext,
     },
     models::{Classifier, Features},
@@ -97,14 +97,12 @@ impl LogisticRegressionClassifier {
         let cols = features.feature_dimension();
         let mut batch_features = Matrix::zeros(rows, cols);
         let batch_iterator = batch.element_ids();
-        let mut current_row = 0;
 
-        for element_id in batch_iterator {
+        for (current_row, element_id) in batch_iterator.enumerate() {
             let feature_vec = features.get(element_id as usize);
             for col in 0..cols {
                 batch_features[(current_row, col)] = feature_vec[col];
             }
-            current_row += 1;
         }
 
         Constant::new(Box::new(batch_features))

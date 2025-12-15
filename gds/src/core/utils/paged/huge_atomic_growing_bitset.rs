@@ -269,13 +269,11 @@ impl HugeAtomicGrowingBitSet {
             let pages = self.pages.read().expect("pages lock poisoned");
             pages.pages.clone()
         };
-        let page_count = pages_snapshot.len();
         let page_size = self.page_size;
 
         let mut set_bit_count = 0;
 
-        for page_index in 0..page_count {
-            let page = &pages_snapshot[page_index];
+        for page in &pages_snapshot {
             for word_index in 0..page_size {
                 set_bit_count += page.get(word_index).count_ones() as usize;
             }
@@ -301,13 +299,11 @@ impl HugeAtomicGrowingBitSet {
             let pages = self.pages.read().expect("pages lock poisoned");
             pages.pages.clone()
         };
-        let page_count = pages_snapshot.len();
         let page_size = self.page_size;
 
         let mut base = 0;
 
-        for page_index in 0..page_count {
-            let page = &pages_snapshot[page_index];
+        for page in &pages_snapshot {
             for word_index in 0..page_size {
                 let mut word = page.get(word_index);
 

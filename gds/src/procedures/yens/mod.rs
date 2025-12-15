@@ -8,6 +8,7 @@
 pub mod spec;
 pub mod storage;
 pub mod computation;
+#[cfg(test)]
 pub mod integration_tests;
 pub mod mutable_path_result;
 pub mod candidate_queue;

@@ -43,7 +43,7 @@ impl DegreeCentralityComputationRuntime {
     /// Degrees coming from GraphStore (Gross) are accumulated here.
     pub fn add_node_degree(&mut self, _node_id: u32, degree: f64) {
         self.scores.push(degree);
-        
+
         // Update min/max tracking
         if self.max_degree < degree {
             self.max_degree = degree;
@@ -51,7 +51,7 @@ impl DegreeCentralityComputationRuntime {
         if self.min_degree > degree || self.min_degree == 0.0 {
             self.min_degree = degree;
         }
-        
+
         self.node_count += 1;
     }
 
@@ -60,10 +60,10 @@ impl DegreeCentralityComputationRuntime {
         if self.max_degree > 0.0 {
             let scale_factor = self.max_degree;
             for score in &mut self.scores {
-                *score = *score / scale_factor;
+                *score /= scale_factor;
             }
             self.max_degree = 1.0;
-            self.min_degree = self.min_degree / scale_factor;
+            self.min_degree /= scale_factor;
         }
     }
 

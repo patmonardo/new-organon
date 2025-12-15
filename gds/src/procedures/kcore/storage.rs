@@ -1,4 +1,5 @@
 pub struct KCoreStorageRuntime {
+    #[allow(dead_code)]
     concurrency: usize,
 }
 

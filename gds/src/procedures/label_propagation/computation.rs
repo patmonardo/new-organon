@@ -82,13 +82,11 @@ impl LabelPropComputationRuntime {
     fn init_labels(
         &mut self,
         node_count: usize,
-        get_neighbors: &impl Fn(usize) -> Vec<(usize, f64)>,
+        _get_neighbors: &impl Fn(usize) -> Vec<(usize, f64)>,
     ) {
         if let Some(ref seeds) = self.seed_labels {
             // Use provided seed labels
-            for i in 0..node_count {
-                self.labels[i] = seeds[i];
-            }
+            self.labels[..node_count].copy_from_slice(&seeds[..node_count]);
         } else {
             // Initialize with node IDs
             for i in 0..node_count {

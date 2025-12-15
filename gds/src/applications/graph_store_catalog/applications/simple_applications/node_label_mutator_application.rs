@@ -49,6 +49,12 @@ impl NodeLabelMutatorApplication {
     }
 }
 
+impl Default for NodeLabelMutatorApplication {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Placeholder for Expression type.
 /// In real implementation, this would be the actual expression evaluation type.
 #[derive(Clone, Debug)]

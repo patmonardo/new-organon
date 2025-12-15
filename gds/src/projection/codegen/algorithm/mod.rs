@@ -25,6 +25,7 @@
 // Import the macros
 #[macro_use]
 mod define_algorithm;
+#[cfg(test)]
 #[macro_use]
 mod test_algorithm;
 #[macro_use]

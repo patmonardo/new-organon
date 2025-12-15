@@ -4,7 +4,7 @@
 //! between all pairs of nodes in a graph.
 //!
 //! **Translation Source**: `org.neo4j.gds.allshortestpaths.*`
-//! **Algorithm Types**: 
+//! **Algorithm Types**:
 //! - Unweighted: Multi-Source BFS (MSBFS)
 //! - Weighted: Multi-Source Dijkstra with Priority Queue
 //!
@@ -17,6 +17,7 @@
 pub mod spec;
 pub mod storage;
 pub mod computation;
+#[cfg(test)]
 pub mod integration_tests;
 
 // Re-exports for public API

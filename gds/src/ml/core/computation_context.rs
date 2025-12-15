@@ -167,6 +167,7 @@ impl ComputationContext {
 
     /// Collect all variables in topological order (children before parents).
     /// This ensures that when we process in reverse order, parents are processed before children.
+    #[allow(clippy::only_used_in_recursion)]
     fn collect_variables_topological<'a>(
         &self,
         variable: VariableNode<'a>,

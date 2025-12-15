@@ -1,6 +1,5 @@
 use napi_derive::napi;
 use once_cell::sync::Lazy;
-use std::sync::Arc;
 
 use crate::types::catalog::{CatalogError, GraphCatalog, InMemoryGraphCatalog};
 
@@ -134,6 +133,7 @@ pub fn version() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
 
     use crate::types::graph_store::{DefaultGraphStore, GraphStore};
     use crate::types::random::{RandomGraphConfig, Randomizable};

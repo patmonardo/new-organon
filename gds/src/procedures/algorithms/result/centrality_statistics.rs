@@ -25,7 +25,7 @@ where
     for id in 0..node_count { values.push(centrality_fn(id)); }
     let elapsed = start.elapsed().as_millis();
     // Touch summary to validate; if NaN causes issues, mark failure
-    let success = centrality_summary(&values).len() > 0 || !values.is_empty();
+    let success = !centrality_summary(&values).is_empty();
     CentralityStats { histogram: Some(values), compute_milliseconds: elapsed, success }
 }
 

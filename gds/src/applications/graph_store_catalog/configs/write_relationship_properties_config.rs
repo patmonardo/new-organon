@@ -1,5 +1,5 @@
 /// Configuration for writing relationship properties to the database.
-/// 
+///
 /// Mirrors Java WriteRelationshipPropertiesConfig interface.
 /// Extends BaseConfig + multiple trait bounds (ConcurrencyConfig, WriteConfig, JobIdConfig).
 /// For now, we'll define it as a simple trait that can be extended later.
@@ -10,7 +10,7 @@ pub trait WriteRelationshipPropertiesConfig {
 }
 
 /// Builder for creating WriteRelationshipPropertiesConfig implementations.
-/// 
+///
 /// In Java, this uses CypherMapWrapper for configuration parsing.
 /// For now, this is a simple struct that can be extended as needed.
 #[derive(Clone, Debug)]
@@ -23,6 +23,12 @@ impl WriteRelationshipPropertiesConfigImpl {
     /// Creates a new WriteRelationshipPropertiesConfig.
     pub fn new() -> Self {
         Self {}
+    }
+}
+
+impl Default for WriteRelationshipPropertiesConfigImpl {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

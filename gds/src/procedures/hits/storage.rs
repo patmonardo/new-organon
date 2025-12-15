@@ -25,6 +25,6 @@ impl<'a, G: GraphStore> HitsStorageRuntime<'a, G> {
 
     /// Get node count
     pub fn node_count(&self) -> usize {
-        self.graph_store.node_count() as usize
+        self.graph_store.node_count()
     }
 }

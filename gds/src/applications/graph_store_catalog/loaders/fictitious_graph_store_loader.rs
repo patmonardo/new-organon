@@ -12,6 +12,7 @@ use rand::SeedableRng;
 /// Implementation for testing that doesn't actually load real data.
 pub struct FictitiousGraphStoreLoader {
     graph_project_config: Box<dyn GraphProjectConfig>,
+    #[allow(dead_code)]
     result_store: Box<dyn ResultStore>,
 }
 
@@ -59,8 +60,8 @@ impl GraphStoreLoader for FictitiousGraphStoreLoader {
     fn graph_dimensions(&self) -> Box<dyn GraphDimensions> {
         let store = self.generate_store();
         Box::new(ConcreteGraphDimensions::new(
-            store.node_count() as usize,
-            store.relationship_count() as usize,
+            store.node_count(),
+            store.relationship_count(),
         ))
     }
 }

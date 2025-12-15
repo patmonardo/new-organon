@@ -1,6 +1,6 @@
 //! PageRank Distribution Computation
 //!
-//! **Translation Source**: 
+//! **Translation Source**:
 //! - `org.neo4j.gds.algorithms.centrality.PageRankDistribution`
 //! - `org.neo4j.gds.algorithms.centrality.PageRankDistributionComputer`
 //!
@@ -98,7 +98,7 @@ impl PageRankDistributionComputer {
             centrality_summary.insert("Error".to_string(), f64::NAN);
         } else {
                 let start = std::time::Instant::now();
-                
+
                 // Compute statistics using our enhanced core
                 // Translation of: CentralityStatistics.centralityStatistics() (lines 54-60)
                 let config = StatisticsConfig {
@@ -106,13 +106,13 @@ impl PageRankDistributionComputer {
                     concurrency,
                     ..Default::default()
                 };
-                
+
                 let score_fn = result.centrality_score_provider();
                 let node_count = result.node_property_values().node_count();
-                
+
                 // Create a thread-safe closure by cloning the scores
-                let scores: Vec<f64> = (0..node_count).map(|i| score_fn(i)).collect();
-                
+                let scores: Vec<f64> = (0..node_count).map(score_fn).collect();
+
                 if let Ok((summary, _histogram)) = StatisticsEngine::compute_statistics(
                     node_count,
                     move |node_id| scores[node_id],
@@ -130,7 +130,7 @@ impl PageRankDistributionComputer {
                     centrality_summary.insert("p99".to_string(), summary.percentiles.p99);
                     centrality_summary.insert("p999".to_string(), summary.percentiles.p999);
                 }
-                
+
                 post_processing_millis = start.elapsed().as_millis() as u64;
             }
         }
@@ -165,7 +165,7 @@ mod tests {
         fn node_property_values(&self) -> &dyn NodePropertyValues {
             self
         }
-        
+
         fn centrality_score_provider(&self) -> Box<dyn Fn(usize) -> f64> {
             let scores = self.scores.clone();
             Box::new(move |node_id| scores[node_id])

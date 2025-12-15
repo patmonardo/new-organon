@@ -19,6 +19,12 @@ pub struct ArrowIntArray {
     default_value: i32,
 }
 
+impl Default for ArrowIntArray {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ArrowIntArray {
     pub fn new() -> Self {
         Self::with_defaults(0, DEFAULT_INT_VALUE)
@@ -41,6 +47,10 @@ impl ArrowIntArray {
 
     pub fn len(&self) -> usize {
         self.array.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn values(&self) -> &[i32] {
@@ -201,7 +211,7 @@ impl Collections<i32> for ArrowIntArray {
             return None;
         }
         let mid = values.len() / 2;
-        if values.len() % 2 == 0 {
+        if values.len().is_multiple_of(2) {
             Some((values[mid - 1] + values[mid]) / 2)
         } else {
             Some(values[mid])

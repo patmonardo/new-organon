@@ -116,9 +116,7 @@ impl GraphStoreCatalogService for DefaultGraphStoreCatalogService {
         };
 
         let mut rng = StdRng::seed_from_u64(0);
-        let store = DefaultGraphStore::random_with_rng(&config, &mut rng)
-            .expect("default graph store generation should succeed");
-
-        store
+        DefaultGraphStore::random_with_rng(&config, &mut rng)
+            .expect("default graph store generation should succeed")
     }
 }

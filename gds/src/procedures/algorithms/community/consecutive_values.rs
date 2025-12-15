@@ -17,9 +17,9 @@ use std::collections::HashMap;
 /// public class ConsecutiveLongNodePropertyValues implements LongNodePropertyValues, FilteredNodePropertyValuesMarker {
 ///     private static final long MAPPING_SIZE_QUOTIENT = 10L;
 ///     private static final long NO_VALUE = -1L;
-///     
+///
 ///     private final HugeLongArray communities;
-///     
+///
 ///     public ConsecutiveLongNodePropertyValues(LongNodePropertyValues inputProperties) {
 ///         // Build mapping from original IDs to consecutive IDs
 ///         // Store remapped values in communities array
@@ -39,10 +39,10 @@ use std::collections::HashMap;
 ///
 /// let original_props = /* community results with IDs [10, 20, 10, 30, 20] */;
 /// let consecutive = ConsecutiveLongNodePropertyValues::new(original_props);
-/// 
+///
 /// // Now consecutive.long_value(0) = 0, consecutive.long_value(1) = 1, etc.
 /// // Original ID 10 -> consecutive ID 0
-/// // Original ID 20 -> consecutive ID 1  
+/// // Original ID 20 -> consecutive ID 1
 /// // Original ID 30 -> consecutive ID 2
 /// ```
 pub struct ConsecutiveLongNodePropertyValues {
@@ -78,16 +78,14 @@ impl ConsecutiveLongNodePropertyValues {
 
         // Build mapping from original community IDs to consecutive IDs
         // Translation of: lines 46-58
-        for node_id in 0..node_count {
+        for (node_id, community) in communities.iter_mut().enumerate() {
             if input_properties.has_value(node_id) {
                 let set_id = input_properties.long_value(node_id);
-                let community_id = *set_id_to_consecutive_id
-                    .entry(set_id)
-                    .or_insert_with(|| {
-                        next_consecutive_id += 1;
-                        next_consecutive_id
-                    });
-                communities[node_id] = community_id;
+                let community_id = *set_id_to_consecutive_id.entry(set_id).or_insert_with(|| {
+                    next_consecutive_id += 1;
+                    next_consecutive_id
+                });
+                *community = community_id;
             }
         }
 
