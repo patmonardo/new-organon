@@ -154,7 +154,7 @@ impl CommunityAlgorithmsStatsModeBusinessFacade {
         &self,
         _graph_name: GraphName,
         _config: C,
-        _result_builder: impl StatsResultBuilder<crate::k_means::KMeansResult, RESULT>,
+        _result_builder: impl StatsResultBuilder<crate::kmeans::KMeansResult, RESULT>,
     ) -> RESULT {
         todo!("Implement K-Means stats mode")
     }

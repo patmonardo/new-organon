@@ -1,17 +1,14 @@
 //! SCC Computation Runtime
 //!
-//! **Translation Source**: `org.neo4j.gds.scc.Scc`
+//! This module implements a correct Strongly Connected Components (SCC)
+//! computation using an iterative Kosaraju algorithm.
 //!
-//! This module implements the computation runtime for SCC algorithm - the "Subtle pole" for ephemeral computation.
+//! Notes:
+//! - We intentionally implement the algorithm directly (no recursive DFS) to
+//!   avoid stack overflows on large graphs.
+//! - We do not copy Neo4j's Java source; we align behavior/semantics.
 
-use crate::collections::{HugeLongArray, HugeObjectArray, BitSet};
-use crate::core::utils::paged::HugeLongArrayStack;
-use crate::types::graph::Graph;
-use crate::types::properties::relationship::traits::RelationshipIterator;
-use crate::types::properties::relationship::RelationshipProperties;
-use crate::core::utils::progress::ProgressTracker;
 use crate::concurrency::TerminationFlag;
-use super::spec::SccResult;
 
 /// SCC computation result
 #[derive(Debug, Clone)]
@@ -35,237 +32,104 @@ impl SccComputationResult {
     }
 }
 
-/// Stack event for iterative DFS
+/// SCC computation runtime.
 ///
-/// Translation of: The todo stack logic in `Scc.computePerNode()` (lines 89-110)
-#[derive(Debug, Clone, Default)]
-pub struct StackEvent {
-    node_id: u64,
-    is_node_visit: bool, // true for node visit, false for edge visit
-}
-
-impl StackEvent {
-    /// Create a node visit event
-    pub fn node_visit(node_id: u64) -> Self {
-        Self {
-            node_id,
-            is_node_visit: true,
-        }
-    }
-    
-    /// Create an edge visit event
-    pub fn edge_visit(node_id: u64) -> Self {
-        Self {
-            node_id,
-            is_node_visit: false,
-        }
-    }
-    
-    /// Get the node ID
-    pub fn node_id(&self) -> u64 {
-        self.node_id
-    }
-    
-    /// Check if this is a node visit
-    pub fn is_node_visit(&self) -> bool {
-        self.is_node_visit
-    }
-}
-
-/// SCC computation runtime for ephemeral computation
-///
-/// Translation of: `org.neo4j.gds.scc.Scc` data structures and algorithm logic
-pub struct SccComputationRuntime {
-    /// Boundaries stack for tracking component boundaries
-    boundaries: HugeLongArrayStack,
-    /// Connected components result
-    connected_components: HugeLongArray,
-    /// Index array for DFS numbering
-    index: HugeLongArray,
-    /// DFS stack
-    stack: HugeLongArrayStack,
-    /// Todo stack for iterative DFS
-    todo: HugeObjectArray<StackEvent>,
-    /// Visited nodes
-    visited: BitSet,
-    /// Progress tracker
-    progress_tracker: Option<ProgressTracker>,
-    /// Termination flag
-    termination_flag: Option<TerminationFlag>,
-}
-
-const UNORDERED: i64 = -1;
+/// The runtime is currently stateless; it exists to mirror the
+/// storage/computation split used across procedures.
+#[derive(Debug, Default, Clone)]
+pub struct SccComputationRuntime;
 
 impl SccComputationRuntime {
-    /// Create a new SCC computation runtime
     pub fn new() -> Self {
-        Self {
-            boundaries: HugeLongArrayStack::new(0),
-            connected_components: HugeLongArray::new(0),
-            index: HugeLongArray::new(0),
-            stack: HugeLongArrayStack::new(0),
-            todo: HugeObjectArray::new(0),
-            visited: BitSet::new(0),
-            progress_tracker: None,
-            termination_flag: None,
+        Self
+    }
+
+    /// Compute SCCs given both outgoing and incoming adjacency lists.
+    ///
+    /// Returns a vector mapping node index → component id, and the number of components.
+    pub fn compute(
+        &mut self,
+        outgoing: &[Vec<usize>],
+        incoming: &[Vec<usize>],
+        termination_flag: &TerminationFlag,
+    ) -> Result<(Vec<u64>, usize), String> {
+        let node_count = outgoing.len();
+        if incoming.len() != node_count {
+            return Err("incoming adjacency size mismatch".to_string());
         }
-    }
-    /// Initialize the computation runtime
-    ///
-    /// Translation of: `Scc` constructor (lines 47-65)
-    pub fn initialize(
-        &mut self,
-        node_count: usize,
-        progress_tracker: ProgressTracker,
-        termination_flag: TerminationFlag,
-    ) {
-        self.boundaries = HugeLongArrayStack::new(node_count);
-        self.connected_components = HugeLongArray::new(node_count);
-        self.index = HugeLongArray::new(node_count);
-        self.stack = HugeLongArrayStack::new(node_count);
-        self.todo = HugeObjectArray::new(node_count * 2); // Can be as high as relationship count
-        self.visited = BitSet::new(node_count);
-        
-        self.progress_tracker = Some(progress_tracker);
-        self.termination_flag = Some(termination_flag);
-        
-        // Initialize arrays
-        self.index.set_all(|_| UNORDERED);
-        self.connected_components.set_all(|_| UNORDERED);
-    }
-    
-    /// Check if a node is unordered (not yet processed)
-    pub fn is_node_unordered(&self, node_id: usize) -> bool {
-        self.index.get(node_id) == UNORDERED
-    }
-    
-    /// Compute SCC for a single node using iterative DFS
-    ///
-    /// Translation of: `Scc.computePerNode()` (lines 80-110)
-    pub fn compute_per_node(
-        &mut self,
-        node_id: usize,
-        component_id: usize,
-        graph: &dyn Graph,
-    ) -> Result<(), String> {
-        // Push node visit to todo stack
-        self.todo.set(0, StackEvent::node_visit(node_id as u64));
-        let mut todo_index = 0;
-        
-        while todo_index >= 0 {
-            if let Some(termination_flag) = &self.termination_flag {
+
+        // First pass: compute finishing order on the original graph.
+        let mut visited = vec![false; node_count];
+        let mut order: Vec<usize> = Vec::with_capacity(node_count);
+
+        for start in 0..node_count {
+            if !termination_flag.running() {
+                return Err("Algorithm terminated by user".to_string());
+            }
+            if visited[start] {
+                continue;
+            }
+
+            // Iterative DFS with explicit neighbor index.
+            let mut stack: Vec<(usize, usize)> = Vec::new();
+            visited[start] = true;
+            stack.push((start, 0));
+
+            while let Some((node, next_idx)) = stack.pop() {
                 if !termination_flag.running() {
                     return Err("Algorithm terminated by user".to_string());
                 }
-            }
-            
-            let event = self.todo.get(todo_index).clone();
-            todo_index -= 1;
-            
-            if event.is_node_visit() {
-                self.distinguish_node_visit_type(event.node_id() as usize, component_id, graph)?;
-            } else {
-                self.visit_edge(event.node_id() as usize, component_id)?;
-            }
-        }
-        
-        Ok(())
-    }
-    
-    /// Distinguish between first and last visit to a node
-    ///
-    /// Translation of: `Scc.distinguishNodeVisitType()` (lines 112-118)
-    fn distinguish_node_visit_type(
-        &mut self,
-        node_id: usize,
-        component_id: usize,
-        graph: &dyn Graph,
-    ) -> Result<(), String> {
-        if self.index.get(node_id) != UNORDERED {
-            // Last visit
-            self.post_visit_node(node_id, component_id)?;
-        } else {
-            // First visit
-            self.visit_node(node_id, component_id, graph)?;
-        }
-        Ok(())
-    }
-    
-    /// Visit a node for the first time
-    ///
-    /// Translation of: `Scc.visitNode()` (lines 120-130)
-    fn visit_node(
-        &mut self,
-        node_id: usize,
-        _component_id: usize,
-        graph: &dyn Graph,
-    ) -> Result<(), String> {
-        let stack_size = self.stack.size();
-        self.index.set(node_id, stack_size as i64);
-        self.stack.push(node_id as i64);
-        self.boundaries.push(stack_size as i64);
-        
-        // Push node visit to todo stack
-        self.todo.set(0, StackEvent::node_visit(node_id as u64));
-        
-        // Process all outgoing relationships
-        let relationships = graph.stream_relationships(node_id as u64, graph.default_property_value());
-        for relationship in relationships {
-            let target_id = relationship.target_id();
-            self.todo.set(0, StackEvent::edge_visit(target_id));
-        }
-        
-        Ok(())
-    }
-    
-    /// Visit an edge
-    ///
-    /// Translation of: `Scc.visitEdge()` (lines 132-140)
-    fn visit_edge(&mut self, node_id: usize, component_id: usize) -> Result<(), String> {
-        if self.index.get(node_id) == UNORDERED {
-            // Organize a first visit to node_id
-            self.todo.set(0, StackEvent::node_visit(node_id as u64));
-        } else if !self.visited.get(node_id) {
-            // Skip nodes already in a component
-            while self.index.get(node_id) < self.boundaries.peek() {
-                self.boundaries.pop();
-            }
-        }
-        Ok(())
-    }
-    
-    /// Post-visit a node
-    ///
-    /// Translation of: `Scc.postVisitNode()` (lines 142-153)
-    fn post_visit_node(&mut self, node_id: usize, component_id: usize) -> Result<(), String> {
-        if self.boundaries.peek() == self.index.get(node_id) {
-            self.boundaries.pop();
-            let mut element;
-            loop {
-                element = self.stack.pop();
-                self.connected_components.set(element as usize, component_id as i64);
-                self.visited.set(element as usize);
-                if element == node_id as i64 {
-                    break;
+
+                if next_idx < outgoing[node].len() {
+                    // Re-push current frame with advanced cursor.
+                    stack.push((node, next_idx + 1));
+
+                    let neighbor = outgoing[node][next_idx];
+                    if neighbor < node_count && !visited[neighbor] {
+                        visited[neighbor] = true;
+                        stack.push((neighbor, 0));
+                    }
+                } else {
+                    // All neighbors processed.
+                    order.push(node);
                 }
             }
         }
-        
-        if let Some(_progress_tracker) = &self.progress_tracker {
-            // TODO: Implement progress logging when ProgressTracker is fully implemented
+
+        // Second pass: traverse the reversed graph in reverse finishing order.
+        let mut assigned = vec![false; node_count];
+        let mut components: Vec<u64> = vec![u64::MAX; node_count];
+        let mut component_id: u64 = 0;
+
+        for &start in order.iter().rev() {
+            if !termination_flag.running() {
+                return Err("Algorithm terminated by user".to_string());
+            }
+            if assigned[start] {
+                continue;
+            }
+
+            let mut stack: Vec<usize> = vec![start];
+            assigned[start] = true;
+            components[start] = component_id;
+
+            while let Some(node) = stack.pop() {
+                if !termination_flag.running() {
+                    return Err("Algorithm terminated by user".to_string());
+                }
+
+                for &neighbor in &incoming[node] {
+                    if neighbor < node_count && !assigned[neighbor] {
+                        assigned[neighbor] = true;
+                        components[neighbor] = component_id;
+                        stack.push(neighbor);
+                    }
+                }
+            }
+
+            component_id += 1;
         }
-        
-        Ok(())
-    }
-    
-    /// Finalize the computation result
-    pub fn finalize_result(&self, computation_time_ms: u64) -> SccComputationResult {
-        let components: Vec<u64> = (0..self.connected_components.size())
-            .map(|i| self.connected_components.get(i) as u64)
-            .collect();
-        
-        let component_count = components.iter().max().map_or(0, |&max| max as usize + 1);
-        
-        SccComputationResult::new(components, component_count, computation_time_ms)
+
+        Ok((components, component_id as usize))
     }
 }

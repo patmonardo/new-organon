@@ -1,154 +1,119 @@
 //! SCC Integration Tests
 //!
-//! **Translation Source**: Integration tests for `org.neo4j.gds.scc.Scc`
-//!
-//! This module provides integration tests for the SCC algorithm.
-
-use super::spec::{SCCAlgorithmSpec, SccConfig, SccResult};
-use super::storage::SccStorageRuntime;
-use super::computation::SccComputationRuntime;
-use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor};
-use crate::projection::eval::procedure::AlgorithmSpec;
-use serde_json::json;
+//! These tests validate SCC behavior using the current in-memory graph store
+//! construction APIs.
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::types::graph_store::default_graph_store::DefaultGraphStore;
-    use crate::core::utils::progress::ProgressTracker;
-    use crate::concurrency::TerminationFlag;
+    use std::collections::HashMap;
+    use std::sync::Arc;
 
-    #[test]
-    fn test_scc_simple_cycle() {
-        // Create a simple cycle: 0 -> 1 -> 2 -> 0
-        // All nodes should be in the same component
-        let mut graph_store = DefaultGraphStore::new();
-        
-        // Add nodes
-        for i in 0..3 {
-            graph_store.add_node(i, vec!["Node".to_string()]);
+    use crate::procedures::facades::Graph;
+    use crate::projection::RelationshipType;
+    use crate::types::graph::RelationshipTopology;
+    use crate::types::graph::SimpleIdMap;
+    use crate::types::graph_store::{
+        Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
+    };
+    use crate::types::schema::{Direction, MutableGraphSchema};
+
+    fn store_from_outgoing(outgoing: Vec<Vec<i64>>) -> DefaultGraphStore {
+        let node_count = outgoing.len();
+
+        let mut incoming: Vec<Vec<i64>> = vec![Vec::new(); node_count];
+        for (source, targets) in outgoing.iter().enumerate() {
+            for &target in targets {
+                if target >= 0 {
+                    let t = target as usize;
+                    if t < node_count {
+                        incoming[t].push(source as i64);
+                    }
+                }
+            }
         }
-        
-        // Add edges to create a cycle
-        graph_store.add_relationship(0, 1, "REL".to_string());
-        graph_store.add_relationship(1, 2, "REL".to_string());
-        graph_store.add_relationship(2, 0, "REL".to_string());
-        
-        // Create graph from store
-        let graph = graph_store.get_graph("default").unwrap();
-        let progress_tracker = ProgressTracker::new();
-        let termination_flag = TerminationFlag::new();
-        
-        let storage_runtime = SccStorageRuntime::new(4);
-        let mut computation_runtime = SccComputationRuntime::new();
-        
-        let result = storage_runtime.compute_scc(
-            &mut computation_runtime,
-            &graph,
-            &progress_tracker,
-            &termination_flag,
-        ).unwrap();
-        
-        // All nodes should be in the same component (component 0)
-        assert_eq!(result.component_count, 1);
-        assert_eq!(result.components[0], 0);
-        assert_eq!(result.components[1], 0);
-        assert_eq!(result.components[2], 0);
+
+        let rel_type = RelationshipType::of("REL");
+
+        let mut schema_builder = MutableGraphSchema::empty();
+        schema_builder
+            .relationship_schema_mut()
+            .add_relationship_type(rel_type.clone(), Direction::Directed);
+        let schema = schema_builder.build();
+
+        let mut relationship_topologies = HashMap::new();
+        relationship_topologies.insert(
+            rel_type,
+            RelationshipTopology::new(outgoing, Some(incoming)),
+        );
+
+        let original_ids: Vec<i64> = (0..node_count as i64).collect();
+        let id_map = SimpleIdMap::from_original_ids(original_ids);
+
+        DefaultGraphStore::new(
+            crate::config::GraphStoreConfig::default(),
+            GraphName::new("g"),
+            DatabaseInfo::new(
+                DatabaseId::new("db"),
+                DatabaseLocation::remote("localhost", 7687, None, None),
+            ),
+            schema,
+            Capabilities::default(),
+            id_map,
+            relationship_topologies,
+        )
     }
 
     #[test]
-    fn test_scc_multiple_components() {
-        // Create two separate cycles: 0->1->0 and 2->3->2
-        // Should have two components
-        let mut graph_store = DefaultGraphStore::new();
-        
-        // Add nodes
-        for i in 0..4 {
-            graph_store.add_node(i, vec!["Node".to_string()]);
-        }
-        
-        // Add edges to create two separate cycles
-        graph_store.add_relationship(0, 1, "REL".to_string());
-        graph_store.add_relationship(1, 0, "REL".to_string());
-        graph_store.add_relationship(2, 3, "REL".to_string());
-        graph_store.add_relationship(3, 2, "REL".to_string());
-        
-        // Create graph from store
-        let graph = graph_store.get_graph("default").unwrap();
-        let progress_tracker = ProgressTracker::new();
-        let termination_flag = TerminationFlag::new();
-        
-        let storage_runtime = SccStorageRuntime::new(4);
-        let mut computation_runtime = SccComputationRuntime::new();
-        
-        let result = storage_runtime.compute_scc(
-            &mut computation_runtime,
-            &graph,
-            &progress_tracker,
-            &termination_flag,
-        ).unwrap();
-        
-        // Should have two components
+    fn scc_simple_cycle_is_single_component() {
+        // 0 -> 1 -> 2 -> 0
+        let store = store_from_outgoing(vec![vec![1], vec![2], vec![0]]);
+        let graph = Graph::new(Arc::new(store));
+
+        let result = graph.scc().run().unwrap();
+        assert_eq!(result.component_count, 1);
+        assert_eq!(result.components.len(), 3);
+        assert_eq!(result.components[0], result.components[1]);
+        assert_eq!(result.components[1], result.components[2]);
+    }
+
+    #[test]
+    fn scc_two_disjoint_cycles_are_two_components() {
+        // 0 <-> 1 and 2 <-> 3
+        let store = store_from_outgoing(vec![vec![1], vec![0], vec![3], vec![2]]);
+        let graph = Graph::new(Arc::new(store));
+
+        let result = graph.scc().run().unwrap();
         assert_eq!(result.component_count, 2);
-        
-        // First cycle should be in component 0
-        assert_eq!(result.components[0], 0);
-        assert_eq!(result.components[1], 0);
-        
-        // Second cycle should be in component 1
-        assert_eq!(result.components[2], 1);
-        assert_eq!(result.components[3], 1);
+        assert_eq!(result.components.len(), 4);
+
+        // Same-SCC pairs
+        assert_eq!(result.components[0], result.components[1]);
+        assert_eq!(result.components[2], result.components[3]);
+
+        // Different-SCC across cycles
+        assert_ne!(result.components[0], result.components[2]);
     }
 
     #[test]
-    fn test_scc_single_node() {
-        // Single node should be its own component
-        let mut graph_store = DefaultGraphStore::new();
-        
-        // Add single node
-        graph_store.add_node(0, vec!["Node".to_string()]);
-        
-        // Create graph from store
-        let graph = graph_store.get_graph("default").unwrap();
-        let progress_tracker = ProgressTracker::new();
-        let termination_flag = TerminationFlag::new();
-        
-        let storage_runtime = SccStorageRuntime::new(4);
-        let mut computation_runtime = SccComputationRuntime::new();
-        
-        let result = storage_runtime.compute_scc(
-            &mut computation_runtime,
-            &graph,
-            &progress_tracker,
-            &termination_flag,
-        ).unwrap();
-        
-        // Single node should be in component 0
-        assert_eq!(result.component_count, 1);
-        assert_eq!(result.components[0], 0);
+    fn scc_isolated_nodes_each_form_component() {
+        // No edges: each node is its own SCC.
+        let store = store_from_outgoing(vec![vec![], vec![], vec![]]);
+        let graph = Graph::new(Arc::new(store));
+
+        let result = graph.scc().run().unwrap();
+        assert_eq!(result.component_count, 3);
+        assert_eq!(result.components.len(), 3);
+        assert_ne!(result.components[0], result.components[1]);
+        assert_ne!(result.components[1], result.components[2]);
+        assert_ne!(result.components[0], result.components[2]);
     }
 
     #[test]
-    fn test_scc_empty_graph() {
-        // Empty graph should have no components
-        let mut graph_store = DefaultGraphStore::new();
-        
-        // Create empty graph from store
-        let graph = graph_store.get_graph("default").unwrap();
-        let progress_tracker = ProgressTracker::new();
-        let termination_flag = TerminationFlag::new();
-        
-        let storage_runtime = SccStorageRuntime::new(4);
-        let mut computation_runtime = SccComputationRuntime::new();
-        
-        let result = storage_runtime.compute_scc(
-            &mut computation_runtime,
-            &graph,
-            &progress_tracker,
-            &termination_flag,
-        ).unwrap();
-        
-        // Empty graph should have no components
+    fn scc_empty_graph_has_no_components() {
+        let store = store_from_outgoing(vec![]);
+        let graph = Graph::new(Arc::new(store));
+
+        let result = graph.scc().run().unwrap();
         assert_eq!(result.component_count, 0);
         assert!(result.components.is_empty());
     }

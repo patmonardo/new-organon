@@ -1,163 +1,140 @@
 //! Label Propagation Integration Tests
+//!
+//! These tests validate label propagation behavior through the facade layer.
 
 #[cfg(test)]
 mod tests {
-    use crate::procedures::label_propagation::computation::LabelPropComputationRuntime;
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashMap;
+    use std::sync::Arc;
 
-    fn create_weighted_graph(
-        edges: Vec<(usize, usize, f64)>,
-        node_count: usize,
-    ) -> HashMap<usize, Vec<(usize, f64)>> {
-        let mut graph = HashMap::new();
-        for i in 0..node_count {
-            graph.insert(i, Vec::new());
-        }
-        for (from, to, weight) in edges {
-            graph.entry(from).or_insert_with(Vec::new).push((to, weight));
-            if from != to {
-                graph.entry(to).or_insert_with(Vec::new).push((from, weight));
+    use crate::procedures::facades::Graph;
+    use crate::projection::RelationshipType;
+    use crate::types::graph::RelationshipTopology;
+    use crate::types::graph::SimpleIdMap;
+    use crate::types::graph_store::{
+        Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
+    };
+    use crate::types::schema::{Direction, MutableGraphSchema};
+
+    fn store_from_undirected_edges(node_count: usize, edges: &[(usize, usize)]) -> DefaultGraphStore {
+        let mut outgoing: Vec<Vec<i64>> = vec![Vec::new(); node_count];
+        for &(u, v) in edges {
+            outgoing[u].push(v as i64);
+            if u != v {
+                outgoing[v].push(u as i64);
             }
         }
-        graph
-    }
 
-    fn get_unique_labels(labels: &[u64]) -> usize {
-        labels.iter().collect::<HashSet<_>>().len()
+        let rel_type = RelationshipType::of("REL");
+
+        let mut schema_builder = MutableGraphSchema::empty();
+        schema_builder
+            .relationship_schema_mut()
+            .add_relationship_type(rel_type.clone(), Direction::Undirected);
+        let schema = schema_builder.build();
+
+        let mut relationship_topologies = HashMap::new();
+        relationship_topologies.insert(rel_type, RelationshipTopology::new(outgoing, None));
+
+        let original_ids: Vec<i64> = (0..node_count as i64).collect();
+        let id_map = SimpleIdMap::from_original_ids(original_ids);
+
+        DefaultGraphStore::new(
+            crate::config::GraphStoreConfig::default(),
+            GraphName::new("g"),
+            DatabaseInfo::new(
+                DatabaseId::new("db"),
+                DatabaseLocation::remote("localhost", 7687, None, None),
+            ),
+            schema,
+            Capabilities::default(),
+            id_map,
+            relationship_topologies,
+        )
     }
 
     #[test]
-    fn test_single_node() {
-        let graph = create_weighted_graph(vec![], 1);
-        let mut runtime = LabelPropComputationRuntime::new(1, 10);
-        let result = runtime.compute(1, |node| graph.get(&node).cloned().unwrap_or_default());
+    fn label_prop_empty_graph_is_ok() {
+        let store = store_from_undirected_edges(0, &[]);
+        let graph = Graph::new(Arc::new(store));
 
-        assert_eq!(result.labels.len(), 1);
-        assert_eq!(result.labels[0], 0); // Node 0 keeps label 0
+        let stats = graph.label_propagation().stats().unwrap();
+        assert!(stats.did_converge);
+        assert_eq!(stats.ran_iterations, 0);
+        assert_eq!(stats.community_count, 0);
+    }
+
+    #[test]
+    fn label_prop_single_node_converges_immediately() {
+        let store = store_from_undirected_edges(1, &[]);
+        let graph = Graph::new(Arc::new(store));
+
+        let result = graph.label_propagation().run().unwrap();
+        assert_eq!(result.labels, vec![0]);
         assert!(result.did_converge);
+        assert_eq!(result.ran_iterations, 1);
     }
 
     #[test]
-    fn test_two_nodes_connected() {
-        // Two connected nodes - may oscillate in label propagation
-        // So we just test it computes without error
-        let graph = create_weighted_graph(vec![(0, 1, 1.0)], 2);
-        let mut runtime = LabelPropComputationRuntime::new(2, 10);
-        let result = runtime.compute(2, |node| graph.get(&node).cloned().unwrap_or_default());
+    fn label_prop_seed_property_sets_initial_labels() {
+        let mut store = store_from_undirected_edges(4, &[(0, 1), (2, 3)]);
+        store
+            .add_node_property_i64("seed".to_string(), vec![100, 100, 200, 200])
+            .unwrap();
 
-        // Should compute without error
-        assert_eq!(result.labels.len(), 2);
-    }
+        let graph = Graph::new(Arc::new(store));
+        let result = graph
+            .label_propagation()
+            .seed_property("seed")
+            .run()
+            .unwrap();
 
-    #[test]
-    fn test_two_separate_components() {
-        // No edges - nodes stay with their original labels
-        let graph = create_weighted_graph(vec![], 2);
-        let mut runtime = LabelPropComputationRuntime::new(2, 10);
-        let result = runtime.compute(2, |node| graph.get(&node).cloned().unwrap_or_default());
-
-        // Should have 2 different labels (original node IDs)
-        assert_eq!(get_unique_labels(&result.labels), 2);
-        assert!(result.did_converge);
-    }
-
-    #[test]
-    fn test_triangle() {
-        // Complete graph K3
-        let edges = vec![(0, 1, 1.0), (1, 2, 1.0), (0, 2, 1.0)];
-        let graph = create_weighted_graph(edges, 3);
-        let mut runtime = LabelPropComputationRuntime::new(3, 20); // More iterations
-        let result = runtime.compute(3, |node| graph.get(&node).cloned().unwrap_or_default());
-
-        // All nodes in same community should have same label
         assert_eq!(result.labels[0], result.labels[1]);
-        assert_eq!(result.labels[1], result.labels[2]);
-    }
-
-    #[test]
-    fn test_two_triangles_connected() {
-        // Two triangles connected by one edge
-        // Triangle 1: 0-1-2-0
-        // Triangle 2: 3-4-5-3
-        // Connection: 2-3
-        let edges = vec![
-            (0, 1, 1.0), (1, 2, 1.0), (0, 2, 1.0), // Triangle 1
-            (3, 4, 1.0), (4, 5, 1.0), (3, 5, 1.0), // Triangle 2
-            (2, 3, 1.0),                            // Connection
-        ];
-        let graph = create_weighted_graph(edges, 6);
-        let mut runtime = LabelPropComputationRuntime::new(6, 30);
-        let result = runtime.compute(6, |node| graph.get(&node).cloned().unwrap_or_default());
-
-        // Should process without error
-        assert_eq!(result.labels.len(), 6);
-    }
-
-    #[test]
-    fn test_star_graph() {
-        // Center node (0) connected to leaves (1,2,3,4)
-        let edges = vec![(0, 1, 1.0), (0, 2, 1.0), (0, 3, 1.0), (0, 4, 1.0)];
-        let graph = create_weighted_graph(edges, 5);
-        let mut runtime = LabelPropComputationRuntime::new(5, 20); // More iterations
-        let result = runtime.compute(5, |node| graph.get(&node).cloned().unwrap_or_default());
-
-        // All should eventually have same label (center dominates)
-        let unique = get_unique_labels(&result.labels);
-        assert!(unique <= 2); // Allow up to 2 labels (in case it doesn't fully converge)
-    }
-
-    #[test]
-    fn test_with_seed_labels() {
-        // Two separate communities with different seed labels
-        let graph = create_weighted_graph(vec![(0, 1, 1.0), (2, 3, 1.0)], 4);
-        let seeds = vec![100u64, 100, 200, 200];
-        let mut runtime = LabelPropComputationRuntime::new(4, 20)
-            .with_seeds(seeds);
-        let result = runtime.compute(4, |node| graph.get(&node).cloned().unwrap_or_default());
-
-        // Community 1: nodes 0,1 should have same label
-        assert_eq!(result.labels[0], result.labels[1]);
-        // Community 2: nodes 2,3 should have same label
         assert_eq!(result.labels[2], result.labels[3]);
-        // Two communities should be different
         assert_ne!(result.labels[0], result.labels[2]);
     }
 
     #[test]
-    fn test_path_graph() {
-        // Linear path: 0-1-2-3-4
-        let edges = vec![
-            (0, 1, 1.0), (1, 2, 1.0), (2, 3, 1.0), (3, 4, 1.0)
-        ];
-        let graph = create_weighted_graph(edges, 5);
-        let mut runtime = LabelPropComputationRuntime::new(5, 30); // More iterations for path
-        let result = runtime.compute(5, |node| graph.get(&node).cloned().unwrap_or_default());
+    fn label_prop_tie_breaks_to_smallest_label() {
+        // Node 0 connected to 1 and 2, both neighbors vote with equal weight.
+        // Labels: node1=20, node2=10 => node0 should pick 10.
+        let mut store = store_from_undirected_edges(3, &[(0, 1), (0, 2)]);
+        store
+            .add_node_property_i64("seed".to_string(), vec![0, 20, 10])
+            .unwrap();
+        let graph = Graph::new(Arc::new(store));
 
-        // All nodes should eventually have the same label
-        let unique = get_unique_labels(&result.labels);
-        assert!(unique <= 2); // Allow some tolerance
+        let result = graph
+            .label_propagation()
+            .seed_property("seed")
+            .max_iterations(1)
+            .run()
+            .unwrap();
+
+        assert_eq!(result.labels[0], 10);
     }
 
     #[test]
-    fn test_weighted_edges() {
-        // Test that edge weights affect voting
-        let graph = create_weighted_graph(vec![(0, 1, 10.0), (1, 2, 0.1)], 3);
-        let mut runtime = LabelPropComputationRuntime::new(3, 20);
-        let result = runtime.compute(3, |node| graph.get(&node).cloned().unwrap_or_default());
+    fn label_prop_node_weight_property_biases_votes() {
+        // Node 0 connected to 1 and 2.
+        // Labels: 1->100, 2->200. Weights: node1=10.0, node2=1.0 => node0 should pick 100.
+        let mut store = store_from_undirected_edges(3, &[(0, 1), (0, 2)]);
+        store
+            .add_node_property_i64("seed".to_string(), vec![0, 100, 200])
+            .unwrap();
+        store
+            .add_node_property_f64("w".to_string(), vec![1.0, 10.0, 1.0])
+            .unwrap();
 
-        // Should process without error (strong edge should dominate)
-        assert_eq!(result.labels.len(), 3);
-    }
+        let graph = Graph::new(Arc::new(store));
+        let result = graph
+            .label_propagation()
+            .seed_property("seed")
+            .node_weight_property("w")
+            .max_iterations(1)
+            .run()
+            .unwrap();
 
-    #[test]
-    fn test_max_iterations() {
-        // A case that may not converge quickly
-        let edges = vec![(0, 1, 1.0), (1, 2, 1.0), (2, 3, 1.0), (3, 0, 1.0)]; // Cycle
-        let graph = create_weighted_graph(edges, 4);
-        let mut runtime = LabelPropComputationRuntime::new(4, 3); // Limited iterations
-        let result = runtime.compute(4, |node| graph.get(&node).cloned().unwrap_or_default());
-
-        // Should stop after 3 iterations
-        assert_eq!(result.ran_iterations, 3);
+        assert_eq!(result.labels[0], 100);
     }
 }

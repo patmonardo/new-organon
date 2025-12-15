@@ -109,7 +109,7 @@ pub mod spanning_tree;
 pub mod sum;
 pub mod traversal;
 pub mod yens;
-// pub mod scc;  // TODO: Fix trait bounds and private module issues
+pub mod scc;
 pub mod articulation_points;
 pub mod betweenness;
 pub mod bridges;
@@ -118,6 +118,7 @@ pub mod harmonic;
 pub mod hits;
 pub mod k1coloring;
 pub mod kcore;
+pub mod kmeans;
 pub mod kspanningtree;
 pub mod label_propagation;
 pub mod local_clustering_coefficient;
@@ -173,7 +174,7 @@ pub use yens::{
     CandidatePathsPriorityQueue, MutablePathResult, RelationshipFilterer, YENSAlgorithmSpec,
     YensComputationRuntime, YensConfig, YensResult, YensStorageRuntime,
 };
-// pub use scc::{SCCAlgorithmSpec, SccConfig, SccResult, SccStorageRuntime, SccComputationRuntime};
+pub use scc::{SCCAlgorithmSpec, SccConfig, SccResult, SccStorageRuntime, SccComputationRuntime};
 pub use articulation_points::{
     ArticulationPointsAlgorithmSpec, ArticulationPointsComputationRuntime,
     ArticulationPointsConfig, ArticulationPointsResult, ArticulationPointsStorageRuntime,
@@ -195,14 +196,17 @@ pub use harmonic::{
     HarmonicStorageRuntime,
 };
 pub use hits::{
-    HITSAlgorithmSpec, HitsComputationRuntime, HitsConfig, HitsResult, HitsStorageRuntime,
+    HITSAlgorithmSpec, HitsComputationResult, HitsComputationRuntime, HitsConfig, HitsResult,
+    HitsState, HitsStorageRuntime,
 };
+pub use kmeans::{KMeansComputationRuntime, KMeansConfig, KMeansResult, KMeansSamplerType};
 pub use k1coloring::{
     K1ColoringAlgorithmSpec, K1ColoringComputationRuntime, K1ColoringConfig, K1ColoringResult,
     K1ColoringStorageRuntime,
 };
 pub use kcore::{
-    KCoreAlgorithmSpec, KCoreConfig, KCoreDecompositionRuntime, KCoreResult, KCoreStorageRuntime,
+    KCoreAlgorithmSpec, KCoreComputationResult, KCoreComputationRuntime, KCoreConfig, KCoreResult,
+    KCoreStorageRuntime,
 };
 pub use kspanningtree::{
     KSpanningTreeAlgorithmSpec, KSpanningTreeComputationRuntime, KSpanningTreeConfig,

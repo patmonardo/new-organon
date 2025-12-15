@@ -127,7 +127,7 @@ impl CommunityAlgorithms {
         &self,
         _graph: &Graph,
         _config: &C,
-    ) -> crate::k_means::KMeansResult {
+    ) -> crate::kmeans::KMeansResult {
         todo!("Implement K-Means algorithm")
     }
 }

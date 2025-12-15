@@ -179,7 +179,7 @@ impl CommunityAlgorithmsWriteModeBusinessFacade {
         &self,
         _graph_name: GraphName,
         _config: C,
-        _result_builder: impl ResultBuilder<C, crate::k_means::KMeansResult, RESULT, NodePropertiesWritten>,
+        _result_builder: impl ResultBuilder<C, crate::kmeans::KMeansResult, RESULT, NodePropertiesWritten>,
     ) -> RESULT {
         todo!("Implement K-Means write mode")
     }

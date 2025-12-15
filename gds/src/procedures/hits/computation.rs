@@ -1,216 +1,190 @@
-//! HITS Computation Runtime
-//!
-//! Implements the core HITS (Hyperlink-Induced Topic Search) algorithm:
-//! - Authority score: sum of hub scores of incoming neighbors
-//! - Hub score: sum of authority scores of outgoing neighbors
-//! - Both normalized by L2 norm each iteration
+//! HITS Computation Runtime - Simplified single-threaded implementation
 
-/// Computation Runtime for HITS
-///
-/// This is the **Subtle pole** - ephemeral computation state.
-/// It manages the hub and authority scores for each node.
+use crate::projection::Orientation;
+use crate::types::graph::Graph;
+use std::sync::Arc;
+
+/// State machine for HITS algorithm phases
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HitsState {
+    Init,
+    CalculateAuths,
+    NormalizeAuths,
+    CalculateHubs,
+    NormalizeHubs,
+}
+
+impl HitsState {
+    pub fn advance(self) -> Self {
+        match self {
+            HitsState::Init => HitsState::NormalizeAuths,
+            HitsState::CalculateAuths => HitsState::NormalizeAuths,
+            HitsState::NormalizeAuths => HitsState::CalculateHubs,
+            HitsState::CalculateHubs => HitsState::NormalizeHubs,
+            HitsState::NormalizeHubs => HitsState::CalculateAuths,
+        }
+    }
+}
+
+/// Result of HITS computation
 #[derive(Debug, Clone)]
-pub struct HitsComputationRuntime {
+pub struct HitsComputationResult {
     /// Hub scores for each node
     pub hub_scores: Vec<f64>,
     /// Authority scores for each node
     pub authority_scores: Vec<f64>,
-    /// New hub scores (temporary during update)
-    pub hub_scores_new: Vec<f64>,
-    /// New authority scores (temporary during update)
-    pub authority_scores_new: Vec<f64>,
-    /// Number of nodes
-    pub node_count: usize,
-    /// Current iteration count
+    /// Number of iterations run
     pub iterations: usize,
-    /// Whether algorithm has converged
+    /// Whether the algorithm converged
     pub converged: bool,
 }
 
+/// Computation Runtime for HITS
+pub struct HitsComputationRuntime {
+    max_iterations: usize,
+    tolerance: f64,
+}
+
 impl HitsComputationRuntime {
-    /// Create a new HITS computation runtime
-    pub fn new(node_count: usize) -> Self {
+    pub fn new(max_iterations: usize, tolerance: f64) -> Self {
         Self {
-            hub_scores: vec![1.0; node_count],
-            authority_scores: vec![1.0; node_count],
-            hub_scores_new: vec![0.0; node_count],
-            authority_scores_new: vec![0.0; node_count],
-            node_count,
-            iterations: 0,
-            converged: false,
+            max_iterations,
+            tolerance,
         }
     }
 
-    /// Initialize all nodes with hub = 1.0, authority = 1.0
-    pub fn initialize(&mut self) {
-        self.hub_scores = vec![1.0; self.node_count];
-        self.authority_scores = vec![1.0; self.node_count];
-        self.iterations = 0;
-        self.converged = false;
-    }
+    pub fn compute(&self, graph: Arc<dyn Graph>) -> HitsComputationResult {
+        let node_count = graph.node_count();
 
-    /// Calculate authority scores from incoming hub scores
-    /// Authority(v) = sum of hub scores of nodes that point to v
-    pub fn calculate_authorities(&mut self) {
-        // In a real implementation, we'd iterate over the graph structure
-        // For now, placeholder: authority stays same
-        self.authority_scores_new = self.authority_scores.clone();
-    }
+        if node_count == 0 {
+            return HitsComputationResult {
+                hub_scores: vec![],
+                authority_scores: vec![],
+                iterations: 0,
+                converged: true,
+            };
+        }
 
-    /// Normalize authority scores using L2 norm
-    pub fn normalize_authorities(&mut self) {
-        let norm: f64 = self.authority_scores_new.iter().map(|x| x * x).sum::<f64>().sqrt();
-        if norm > 0.0 {
-            for score in &mut self.authority_scores_new {
-                *score /= norm;
+        let mut hub_scores = vec![1.0; node_count];
+        let mut auth_scores = vec![1.0; node_count];
+        let mut hub_scores_new = vec![0.0; node_count];
+        let mut auth_scores_new = vec![0.0; node_count];
+
+        let mut state = HitsState::Init;
+        let mut global_norm: f64 = 0.0;
+        let mut iteration = 0;
+        let mut converged = false;
+
+        let fallback = graph.default_property_value();
+
+        // Build incoming neighbor lists (for reverse/authority calculation)
+        let mut incoming: Vec<Vec<usize>> = vec![Vec::new(); node_count];
+        for node_id in 0..node_count {
+            let neighbors = graph
+                .stream_relationships(node_id as i64, fallback)
+                .map(|cursor| cursor.target_id())
+                .filter(|target| *target >= 0 && (*target as usize) < node_count)
+                .map(|target| target as usize)
+                .collect::<Vec<_>>();
+            for &neighbor in &neighbors {
+                incoming[neighbor].push(node_id);
             }
         }
-        self.authority_scores = self.authority_scores_new.clone();
-    }
 
-    /// Calculate hub scores from outgoing authority scores
-    /// Hub(v) = sum of authority scores of nodes that v points to
-    pub fn calculate_hubs(&mut self) {
-        // In a real implementation, we'd iterate over the graph structure
-        // For now, placeholder: hub stays same
-        self.hub_scores_new = self.hub_scores.clone();
-    }
+        // Main iteration loop
+        for _ in 0..self.max_iterations * 5 {
+            // 5 states per iteration
+            match state {
+                HitsState::Init => {
+                    // Initialize auth scores with in-degree
+                    global_norm = 0.0;
+                    for node_id in 0..node_count {
+                        let degree = incoming[node_id].len() as f64;
+                        auth_scores[node_id] = degree;
+                        global_norm += degree * degree;
+                    }
+                }
+                HitsState::CalculateAuths => {
+                    // Authority = sum of hub scores of incoming neighbors
+                    global_norm = 0.0;
+                    for node_id in 0..node_count {
+                        let mut auth = 0.0;
+                        for &neighbor in &incoming[node_id] {
+                            auth += hub_scores[neighbor];
+                        }
+                        auth_scores_new[node_id] = auth;
+                        global_norm += auth * auth;
+                    }
+                }
+                HitsState::NormalizeAuths => {
+                    // Normalize authority scores
+                    let norm = global_norm.sqrt();
+                    if norm > 0.0 {
+                        for node_id in 0..node_count {
+                            auth_scores[node_id] = auth_scores_new[node_id] / norm;
+                        }
+                    }
+                    global_norm = 0.0;
+                }
+                HitsState::CalculateHubs => {
+                    // Hub = sum of authority scores of outgoing neighbors
+                    global_norm = 0.0;
+                    for node_id in 0..node_count {
+                        let mut hub = 0.0;
+                        let neighbors = graph
+                            .stream_relationships(node_id as i64, fallback)
+                            .map(|cursor| cursor.target_id())
+                            .filter(|target| *target >= 0 && (*target as usize) < node_count)
+                            .map(|target| target as usize);
+                        for neighbor in neighbors {
+                            hub += auth_scores[neighbor];
+                        }
+                        hub_scores_new[node_id] = hub;
+                        global_norm += hub * hub;
+                    }
+                }
+                HitsState::NormalizeHubs => {
+                    // Normalize hub scores
+                    let norm = global_norm.sqrt();
+                    if norm > 0.0 {
+                        for node_id in 0..node_count {
+                            hub_scores[node_id] = hub_scores_new[node_id] / norm;
+                        }
+                    }
+                    iteration += 1;
 
-    /// Normalize hub scores using L2 norm
-    pub fn normalize_hubs(&mut self) {
-        let norm: f64 = self.hub_scores_new.iter().map(|x| x * x).sum::<f64>().sqrt();
-        if norm > 0.0 {
-            for score in &mut self.hub_scores_new {
-                *score /= norm;
+                    // Check convergence
+                    if iteration > 1 {
+                        let max_diff = (0..node_count)
+                            .map(|i| {
+                                let hub_diff = (hub_scores[i] - hub_scores_new[i] / norm).abs();
+                                let auth_diff = (auth_scores[i] - auth_scores_new[i] / norm).abs();
+                                hub_diff.max(auth_diff)
+                            })
+                            .fold(0.0, f64::max);
+
+                        if max_diff < self.tolerance {
+                            converged = true;
+                            break;
+                        }
+                    }
+
+                    if iteration >= self.max_iterations {
+                        break;
+                    }
+
+                    global_norm = 0.0;
+                }
             }
+
+            state = state.advance();
         }
-        self.hub_scores = self.hub_scores_new.clone();
-        self.iterations += 1;
-    }
 
-    /// Check for convergence based on tolerance
-    pub fn has_converged(&mut self, tolerance: f64) -> bool {
-        // Calculate max delta between consecutive iterations
-        let hub_delta = self.hub_scores.iter()
-            .zip(self.hub_scores_new.iter())
-            .map(|(a, b)| (a - b).abs())
-            .fold(0.0, f64::max);
-        
-        let auth_delta = self.authority_scores.iter()
-            .zip(self.authority_scores_new.iter())
-            .map(|(a, b)| (a - b).abs())
-            .fold(0.0, f64::max);
-
-        let max_delta = hub_delta.max(auth_delta);
-        self.converged = max_delta < tolerance;
-        self.converged
-    }
-
-    /// Get hub scores
-    pub fn get_hub_scores(&self) -> &Vec<f64> {
-        &self.hub_scores
-    }
-
-    /// Get authority scores
-    pub fn get_authority_scores(&self) -> &Vec<f64> {
-        &self.authority_scores
-    }
-
-    /// Get iteration count
-    pub fn get_iterations(&self) -> usize {
-        self.iterations
-    }
-
-    /// Check if converged
-    pub fn did_converge(&self) -> bool {
-        self.converged
-    }
-}
-
-impl Default for HitsComputationRuntime {
-    fn default() -> Self {
-        Self::new(0)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_hits_initialization() {
-        let runtime = HitsComputationRuntime::new(3);
-        assert_eq!(runtime.hub_scores, vec![1.0, 1.0, 1.0]);
-        assert_eq!(runtime.authority_scores, vec![1.0, 1.0, 1.0]);
-        assert_eq!(runtime.iterations, 0);
-        assert!(!runtime.converged);
-    }
-
-    #[test]
-    fn test_l2_normalization() {
-        let mut runtime = HitsComputationRuntime::new(3);
-        runtime.authority_scores_new = vec![3.0, 4.0, 0.0];
-        runtime.normalize_authorities();
-        
-        // L2 norm of [3, 4, 0] = sqrt(9 + 16) = 5
-        // Normalized: [0.6, 0.8, 0.0]
-        assert!((runtime.authority_scores[0] - 0.6).abs() < 0.001);
-        assert!((runtime.authority_scores[1] - 0.8).abs() < 0.001);
-        assert!((runtime.authority_scores[2] - 0.0).abs() < 0.001);
-    }
-
-    #[test]
-    fn test_no_convergence() {
-        let mut runtime = HitsComputationRuntime::new(2);
-        runtime.hub_scores = vec![1.0, 1.0];
-        runtime.hub_scores_new = vec![2.0, 2.0];
-        
-        assert!(!runtime.has_converged(0.01)); // Should NOT converge (delta 1.0 > 0.01)
-        assert!(!runtime.converged);
-    }
-
-    #[test]
-    fn test_multiple_iterations() {
-        let mut runtime = HitsComputationRuntime::new(4);
-        
-        for _ in 0..5 {
-            runtime.hub_scores_new = runtime.hub_scores.clone();
-            runtime.normalize_hubs();
+        HitsComputationResult {
+            hub_scores,
+            authority_scores: auth_scores,
+            iterations: iteration,
+            converged,
         }
-        
-        assert_eq!(runtime.iterations, 5);
-    }
-
-    #[test]
-    fn test_zero_normalization() {
-        let mut runtime = HitsComputationRuntime::new(2);
-        runtime.authority_scores_new = vec![0.0, 0.0];
-        runtime.normalize_authorities();
-        
-        // Should handle zero norm gracefully
-        assert_eq!(runtime.authority_scores, vec![0.0, 0.0]);
-    }
-
-    #[test]
-    fn test_single_node() {
-        let mut runtime = HitsComputationRuntime::new(1);
-        runtime.authority_scores_new = vec![5.0];
-        runtime.normalize_authorities();
-        
-        // Single value [5.0] normalized = [1.0]
-        assert_eq!(runtime.authority_scores[0], 1.0);
-    }
-
-    #[test]
-    fn test_hub_authority_independence() {
-        let mut runtime = HitsComputationRuntime::new(3);
-        runtime.hub_scores = vec![1.0, 2.0, 3.0];
-        runtime.authority_scores = vec![4.0, 5.0, 6.0];
-        
-        runtime.hub_scores_new = runtime.hub_scores.clone();
-        runtime.normalize_hubs();
-        
-        // Hub normalization should not affect authority scores
-        assert_eq!(runtime.authority_scores, vec![4.0, 5.0, 6.0]);
     }
 }

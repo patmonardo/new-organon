@@ -5,13 +5,12 @@
 //! This module defines the SCC algorithm specification using focused macros.
 
 use crate::define_algorithm_spec;
-use crate::projection::eval::procedure::{ExecutionMode, AlgorithmSpec, LogLevel, AlgorithmError};
-use crate::core::utils::progress::ProgressTracker;
-use crate::concurrency::{TerminationFlag, TerminationMonitor};
+use crate::projection::eval::procedure::{AlgorithmError, LogLevel};
+use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::concurrency::TerminationFlag;
 use super::storage::SccStorageRuntime;
 use super::computation::SccComputationRuntime;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 /// SCC algorithm configuration
 ///
@@ -39,7 +38,7 @@ impl SccConfig {
                 value: 0.0,
             });
         }
-        
+
         Ok(())
     }
 }
@@ -66,12 +65,12 @@ impl SccResult {
             computation_time_ms,
         }
     }
-    
+
     /// Get the component ID for a given node
     pub fn get_component(&self, node_id: usize) -> Option<u64> {
         self.components.get(node_id).copied()
     }
-    
+
     /// Get all nodes in a specific component
     pub fn get_nodes_in_component(&self, component_id: u64) -> Vec<usize> {
         self.components
@@ -94,14 +93,15 @@ define_algorithm_spec! {
     output_type: SccResult,
     projection_hint: Dense,
     modes: [Stream, Stats],
-    
+
     execute: |self, graph_store, config, context| {
+        let start = std::time::Instant::now();
         // Extract configuration
         let parsed_config: SccConfig = serde_json::from_value(config.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {}", e)))?;
-        
+
         let concurrency = parsed_config.concurrency;
-        
+
         context.log(
             LogLevel::Info,
             &format!(
@@ -113,24 +113,25 @@ define_algorithm_spec! {
 
         // Create storage runtime (Gross pole - knows GraphStore)
         let storage = SccStorageRuntime::new(concurrency);
-        
+
         // Create computation runtime (Subtle pole - ephemeral computation)
         let mut computation = SccComputationRuntime::new();
-        
+
         // Create progress tracker and termination flag
-        let progress_tracker = ProgressTracker::new(crate::core::utils::progress::Tasks::new("SCC"));
-        let termination_flag = TerminationFlag::new(TerminationMonitor::new());
-        
+        let progress_tracker = ProgressTracker::new(Tasks::Leaf("SCC".to_string(), graph_store.node_count() as usize));
+        let termination_flag = TerminationFlag::default();
+
         // Execute SCC algorithm directly on graph_store
-        let result = storage.compute_scc(&mut computation, graph_store, &progress_tracker, &termination_flag)
+        let result = storage
+            .compute_scc(&mut computation, graph_store, &progress_tracker, &termination_flag)
             .map_err(|e| AlgorithmError::Execution(e))?;
-        
-        let execution_time = std::time::Instant::now().elapsed().as_millis() as u64;
-        
+
+        let execution_time = start.elapsed().as_millis() as u64;
+
         Ok(SccResult::new(
             result.components,
             result.component_count,
-            execution_time,
+            result.computation_time_ms.max(execution_time),
         ))
     }
 }

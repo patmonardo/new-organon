@@ -1,7 +1,4 @@
-#[derive(Clone)]
-pub struct LouvainResult {
-    pub data: Vec<u64>,
-}
+use super::spec::LouvainResult;
 
 pub struct LouvainComputationRuntime {
 }

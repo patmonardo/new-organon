@@ -9,7 +9,19 @@ use super::pathfinding::{
 
 use super::centrality::{
     BetweennessCentralityFacade, ClosenessCentralityFacade, DegreeCentralityFacade,
-    HarmonicCentralityFacade, PageRankBuilder,
+    HarmonicCentralityFacade, HitsBuilder, PageRankBuilder,
+};
+
+use super::community::{
+    K1ColoringBuilder,
+    KCoreBuilder,
+    KMeansBuilder,
+    LabelPropagationBuilder,
+    LouvainBuilder,
+    LocalClusteringCoefficientBuilder,
+    SccBuilder,
+    TriangleCountBuilder,
+    WccBuilder,
 };
 
 /// User-facing graph handle for running algorithms against a live `DefaultGraphStore`.
@@ -101,8 +113,58 @@ impl Graph {
         PageRankBuilder::new(Arc::clone(&self.store))
     }
 
+    /// HITS (Hyperlink-Induced Topic Search) - Hub and authority scores.
+    pub fn hits(&self) -> HitsBuilder {
+        HitsBuilder::new(Arc::clone(&self.store))
+    }
+
     /// Node Similarity (Jaccard, Cosine, Overlap).
     pub fn node_similarity(&self) -> crate::procedures::facades::similarity::SimilarityBuilder {
         crate::procedures::facades::similarity::SimilarityBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// Triangle Count (per-node triangles + global triangle count).
+    pub fn triangle_count(&self) -> TriangleCountBuilder {
+        TriangleCountBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// Local Clustering Coefficient (per-node coefficient + average).
+    pub fn local_clustering_coefficient(&self) -> LocalClusteringCoefficientBuilder {
+        LocalClusteringCoefficientBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// Strongly Connected Components (directed graph SCCs).
+    pub fn scc(&self) -> SccBuilder {
+        SccBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// Label Propagation (community detection via label voting).
+    pub fn label_propagation(&self) -> LabelPropagationBuilder {
+        LabelPropagationBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// Weakly Connected Components (undirected connectivity).
+    pub fn wcc(&self) -> WccBuilder {
+        WccBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// Louvain community detection (modularity optimization).
+    pub fn louvain(&self) -> LouvainBuilder {
+        LouvainBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// K-Means clustering (community detection on feature vectors).
+    pub fn kmeans(&self) -> KMeansBuilder {
+        KMeansBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// K1-Coloring (greedy graph coloring).
+    pub fn k1coloring(&self) -> K1ColoringBuilder {
+        K1ColoringBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// K-Core Decomposition (core values).
+    pub fn kcore(&self) -> KCoreBuilder {
+        KCoreBuilder::new(Arc::clone(&self.store))
     }
 }

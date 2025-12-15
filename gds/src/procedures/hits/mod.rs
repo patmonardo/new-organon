@@ -39,4 +39,4 @@ pub use spec::{
     HitsResult,
 };
 pub use storage::HitsStorageRuntime;
-pub use computation::HitsComputationRuntime;
+pub use computation::{HitsComputationResult, HitsComputationRuntime, HitsState};

@@ -29,10 +29,12 @@ pub struct K1ColoringComputationRuntime {
     ran_iterations: u64,
     /// Forbidden colors for current node being colored
     forbidden_colors: BitSet,
+    /// Scratch list of forbidden color indices to clear (sparse reset)
+    forbidden_touched: Vec<usize>,
 }
 
-const INITIAL_COLOR: u64 = 1000;
-const INITIAL_FORBIDDEN_COLORS: usize = 1000;
+pub const INITIAL_FORBIDDEN_COLORS: usize = 1000;
+const INITIAL_COLOR: u64 = INITIAL_FORBIDDEN_COLORS as u64;
 
 impl K1ColoringComputationRuntime {
     pub fn new(node_count: usize, max_iterations: u64) -> Self {
@@ -43,6 +45,7 @@ impl K1ColoringComputationRuntime {
             max_iterations,
             ran_iterations: 0,
             forbidden_colors: BitSet::new(INITIAL_FORBIDDEN_COLORS),
+            forbidden_touched: Vec::new(),
         }
     }
 
@@ -52,14 +55,28 @@ impl K1ColoringComputationRuntime {
         node_count: usize,
         get_neighbors: impl Fn(usize) -> Vec<usize>,
     ) -> K1ColoringComputationResult {
-        // Initialize: all nodes need coloring
+        // (Re)initialize state for this run.
+        if self.colors.len() != node_count {
+            self.colors = vec![INITIAL_COLOR; node_count];
+            self.nodes_to_color_current = BitSet::new(node_count);
+            self.nodes_to_color_next = BitSet::new(node_count);
+        } else {
+            self.colors.fill(INITIAL_COLOR);
+            self.nodes_to_color_current.clear_all();
+            self.nodes_to_color_next.clear_all();
+        }
+        self.ran_iterations = 0;
+        self.forbidden_colors.clear_all();
+        self.forbidden_touched.clear();
+
+        // Initialize: all nodes need coloring.
         for i in 0..node_count {
             self.nodes_to_color_current.set(i);
         }
 
         // Iterative coloring and validation
         while self.ran_iterations < self.max_iterations
-            && !self.nodes_to_color_current.is_empty()
+            && self.nodes_to_color_current.cardinality() > 0
         {
             // Phase 1: Color all nodes in current set
             self.coloring_phase(node_count, &get_neighbors);
@@ -67,13 +84,13 @@ impl K1ColoringComputationRuntime {
             // Phase 2: Validate and mark conflicts for next iteration
             self.validation_phase(node_count, &get_neighbors);
 
+            self.ran_iterations += 1;
+
             // Swap for next iteration
             std::mem::swap(
                 &mut self.nodes_to_color_current,
                 &mut self.nodes_to_color_next,
             );
-
-            self.ran_iterations += 1;
         }
 
         let did_converge = self.ran_iterations < self.max_iterations;
@@ -87,34 +104,33 @@ impl K1ColoringComputationRuntime {
 
     /// Phase 1: Assign colors to all nodes in current set
     fn coloring_phase(&mut self, node_count: usize, get_neighbors: &impl Fn(usize) -> Vec<usize>) {
-        for node_id in 0..node_count {
-            if !self.nodes_to_color_current.get(node_id) {
-                continue;
-            }
-
-            // Reset forbidden colors for this node
-            self.forbidden_colors.clear_all();
-
-            // Mark colors of all neighbors as forbidden
+        let mut maybe = self.nodes_to_color_current.next_set_bit(0);
+        while let Some(node_id) = maybe {
+            // Mark neighbor colors as forbidden (sparse reset).
             let neighbors = get_neighbors(node_id);
             for &neighbor in &neighbors {
-                if neighbor != node_id {
-                    let neighbor_color = self.colors[neighbor];
-                    if (neighbor_color as usize) < INITIAL_FORBIDDEN_COLORS {
-                        self.forbidden_colors.set(neighbor_color as usize);
-                    }
+                if neighbor == node_id || neighbor >= node_count {
+                    continue;
+                }
+                let color_idx = self.colors[neighbor] as usize;
+                if !self.forbidden_colors.get(color_idx) {
+                    self.forbidden_colors.set(color_idx);
+                    self.forbidden_touched.push(color_idx);
                 }
             }
 
-            // Find first available color
-            let mut next_color = 0u64;
-            while (next_color as usize) < INITIAL_FORBIDDEN_COLORS
-                && self.forbidden_colors.get(next_color as usize)
-            {
+            let mut next_color: usize = 0;
+            while self.forbidden_colors.get(next_color) {
                 next_color += 1;
             }
+            self.colors[node_id] = next_color as u64;
 
-            self.colors[node_id] = next_color;
+            for &idx in &self.forbidden_touched {
+                self.forbidden_colors.clear(idx);
+            }
+            self.forbidden_touched.clear();
+
+            maybe = self.nodes_to_color_current.next_set_bit(node_id + 1);
         }
     }
 
@@ -124,62 +140,27 @@ impl K1ColoringComputationRuntime {
         node_count: usize,
         get_neighbors: &impl Fn(usize) -> Vec<usize>,
     ) {
-        // Clear next iteration's nodes to color
         self.nodes_to_color_next.clear_all();
 
-        // Check each colored node for conflicts with neighbors
-        for node_id in 0..node_count {
-            if !self.nodes_to_color_current.get(node_id) {
-                continue;
-            }
-
+        let mut maybe = self.nodes_to_color_current.next_set_bit(0);
+        while let Some(node_id) = maybe {
             let node_color = self.colors[node_id];
             let neighbors = get_neighbors(node_id);
 
             for &neighbor in &neighbors {
-                if neighbor != node_id {
-                    let neighbor_color = self.colors[neighbor];
+                if neighbor == node_id || neighbor >= node_count {
+                    continue;
+                }
 
-                    // Conflict: both have same color and neighbor needs recoloring
-                    if node_color == neighbor_color && !self.nodes_to_color_next.get(neighbor) {
-                        self.nodes_to_color_next.set(neighbor);
-                    }
+                // Mirrors Java:
+                // if colors[source]==colors[target] && !nextNodesToColor.get(target) { nextNodesToColor.set(source); break; }
+                if node_color == self.colors[neighbor] && !self.nodes_to_color_next.get(neighbor) {
+                    self.nodes_to_color_next.set(node_id);
+                    break;
                 }
             }
+
+            maybe = self.nodes_to_color_current.next_set_bit(node_id + 1);
         }
-    }
-}
-
-/// Helper trait for BitSet operations
-trait BitSetExt {
-    #[allow(dead_code)]
-    fn clear_all(&mut self);
-    fn is_empty(&self) -> bool;
-}
-
-impl BitSetExt for BitSet {
-    fn clear_all(&mut self) {
-        // Clear all bits
-        for i in 0..self.size() {
-            self.clear(i);
-        }
-    }
-
-    fn is_empty(&self) -> bool {
-        // Check if any bit is set
-        for i in 0..self.size() {
-            if self.get(i) {
-                return false;
-            }
-        }
-        true
-    }
-}
-
-impl BitSet {
-    fn size(&self) -> usize {
-        // BitSet needs size tracking - this is a limitation we need to work around
-        // For now, return a conservative estimate
-        INITIAL_FORBIDDEN_COLORS
     }
 }

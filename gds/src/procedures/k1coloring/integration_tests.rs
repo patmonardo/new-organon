@@ -2,178 +2,118 @@
 
 #[cfg(test)]
 mod tests {
-    use crate::procedures::k1coloring::computation::K1ColoringComputationRuntime;
-    use std::collections::HashMap;
+    use std::collections::{HashMap, HashSet};
+    use std::sync::Arc;
 
-    fn create_graph(edges: Vec<(usize, usize)>, node_count: usize) -> HashMap<usize, Vec<usize>> {
-        let mut graph = HashMap::new();
-        for i in 0..node_count {
-            graph.insert(i, Vec::new());
-        }
-        for (from, to) in edges {
-            graph.entry(from).or_insert_with(Vec::new).push(to);
-            if from != to {
-                graph.entry(to).or_insert_with(Vec::new).push(from);
-            }
-        }
-        // Sort for consistency
-        for neighbors in graph.values_mut() {
-            neighbors.sort_unstable();
-            neighbors.dedup();
-        }
-        graph
-    }
+    use crate::procedures::facades::Graph;
+    use crate::projection::RelationshipType;
+    use crate::types::graph::{RelationshipTopology, SimpleIdMap};
+    use crate::types::graph_store::{
+        Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
+    };
+    use crate::types::schema::{Direction, MutableGraphSchema};
 
-    fn is_valid_coloring(
-        colors: &[u64],
-        graph: &HashMap<usize, Vec<usize>>,
-    ) -> bool {
-        // Check that no adjacent nodes have the same color
-        for (node_id, neighbors) in graph {
-            let node_color = colors[*node_id];
-            for &neighbor in neighbors {
-                if *node_id != neighbor && colors[neighbor] == node_color {
-                    return false;
+    fn store_from_outgoing(outgoing: Vec<Vec<i64>>) -> DefaultGraphStore {
+        let node_count = outgoing.len();
+
+        let mut incoming: Vec<Vec<i64>> = vec![Vec::new(); node_count];
+        for (source, targets) in outgoing.iter().enumerate() {
+            for &target in targets {
+                if target >= 0 {
+                    let t = target as usize;
+                    if t < node_count {
+                        incoming[t].push(source as i64);
+                    }
                 }
             }
         }
-        true
+
+        let rel_type = RelationshipType::of("REL");
+
+        let mut schema_builder = MutableGraphSchema::empty();
+        schema_builder
+            .relationship_schema_mut()
+            .add_relationship_type(rel_type.clone(), Direction::Directed);
+        let schema = schema_builder.build();
+
+        let mut relationship_topologies = HashMap::new();
+        relationship_topologies.insert(
+            rel_type,
+            RelationshipTopology::new(outgoing, Some(incoming)),
+        );
+
+        let original_ids: Vec<i64> = (0..node_count as i64).collect();
+        let id_map = SimpleIdMap::from_original_ids(original_ids);
+
+        DefaultGraphStore::new(
+            crate::config::GraphStoreConfig::default(),
+            GraphName::new("g"),
+            DatabaseInfo::new(
+                DatabaseId::new("db"),
+                DatabaseLocation::remote("localhost", 7687, None, None),
+            ),
+            schema,
+            Capabilities::default(),
+            id_map,
+            relationship_topologies,
+        )
+    }
+
+    fn assert_no_adjacent_equal(colors: &[u64], outgoing: &[Vec<i64>]) {
+        for (u, targets) in outgoing.iter().enumerate() {
+            for &v in targets {
+                if v < 0 {
+                    continue;
+                }
+                let v = v as usize;
+                if u == v {
+                    continue;
+                }
+                assert_ne!(colors[u], colors[v], "edge ({u},{v}) has same color");
+            }
+        }
     }
 
     #[test]
-    fn test_single_node() {
-        let graph = create_graph(vec![], 1);
-        let mut runtime = K1ColoringComputationRuntime::new(1, 10);
-        let result = runtime.compute(1, |node| graph.get(&node).cloned().unwrap_or_default());
+    fn k1_coloring_triangle_is_valid() {
+        // Undirected triangle: 0-1-2-0
+        let outgoing = vec![vec![1, 2], vec![0, 2], vec![0, 1]];
+        let store = store_from_outgoing(outgoing.clone());
+        let graph = Graph::new(Arc::new(store));
 
-        assert!(is_valid_coloring(&result.colors, &graph));
+        let result = graph.k1coloring().max_iterations(10).run().unwrap();
+        assert_eq!(result.colors.len(), 3);
         assert!(result.did_converge);
+        assert_no_adjacent_equal(&result.colors, &outgoing);
+
+        let unique: HashSet<u64> = result.colors.iter().copied().collect();
+        assert!(unique.len() >= 3);
     }
 
     #[test]
-    fn test_two_nodes_no_edge() {
-        let graph = create_graph(vec![], 2);
-        let mut runtime = K1ColoringComputationRuntime::new(2, 10);
-        let result = runtime.compute(2, |node| graph.get(&node).cloned().unwrap_or_default());
+    fn k1_coloring_square_uses_two_colors() {
+        // 0-1-2-3-0 (bipartite)
+        let outgoing = vec![vec![1, 3], vec![0, 2], vec![1, 3], vec![0, 2]];
+        let store = store_from_outgoing(outgoing.clone());
+        let graph = Graph::new(Arc::new(store));
 
-        assert!(is_valid_coloring(&result.colors, &graph));
+        let result = graph.k1coloring().max_iterations(10).run().unwrap();
+        assert_eq!(result.colors.len(), 4);
         assert!(result.did_converge);
+        assert_no_adjacent_equal(&result.colors, &outgoing);
+
+        let unique: HashSet<u64> = result.colors.iter().copied().collect();
+        assert!(unique.len() <= 2);
     }
 
     #[test]
-    fn test_two_nodes_with_edge() {
-        // Two nodes connected: need different colors
-        let graph = create_graph(vec![(0, 1)], 2);
-        let mut runtime = K1ColoringComputationRuntime::new(2, 10);
-        let result = runtime.compute(2, |node| graph.get(&node).cloned().unwrap_or_default());
+    fn k1_coloring_empty_graph() {
+        let store = store_from_outgoing(vec![]);
+        let graph = Graph::new(Arc::new(store));
 
-        assert!(is_valid_coloring(&result.colors, &graph));
-        assert_ne!(result.colors[0], result.colors[1]);
+        let result = graph.k1coloring().max_iterations(10).run().unwrap();
+        assert!(result.colors.is_empty());
+        assert_eq!(result.ran_iterations, 0);
         assert!(result.did_converge);
-    }
-
-    #[test]
-    fn test_path_graph() {
-        // Linear path: 0-1-2-3
-        let edges = vec![(0, 1), (1, 2), (2, 3)];
-        let graph = create_graph(edges, 4);
-        let mut runtime = K1ColoringComputationRuntime::new(4, 10);
-        let result = runtime.compute(4, |node| graph.get(&node).cloned().unwrap_or_default());
-
-        assert!(is_valid_coloring(&result.colors, &graph));
-        // Path graph needs at most 2 colors
-        let unique_colors: std::collections::HashSet<_> = result.colors.iter().collect();
-        assert!(unique_colors.len() <= 3); // Allow some margin for greedy algorithm
-    }
-
-    #[test]
-    fn test_triangle() {
-        // Triangle: 0-1-2-0
-        let edges = vec![(0, 1), (1, 2), (2, 0)];
-        let graph = create_graph(edges, 3);
-        let mut runtime = K1ColoringComputationRuntime::new(3, 10);
-        let result = runtime.compute(3, |node| graph.get(&node).cloned().unwrap_or_default());
-
-        assert!(is_valid_coloring(&result.colors, &graph));
-        // Triangle needs exactly 3 colors
-        let unique_colors: std::collections::HashSet<_> = result.colors.iter().collect();
-        assert!(unique_colors.len() >= 3);
-    }
-
-    #[test]
-    fn test_square() {
-        // Square: 0-1-2-3-0
-        let edges = vec![(0, 1), (1, 2), (2, 3), (3, 0)];
-        let graph = create_graph(edges, 4);
-        let mut runtime = K1ColoringComputationRuntime::new(4, 10);
-        let result = runtime.compute(4, |node| graph.get(&node).cloned().unwrap_or_default());
-
-        assert!(is_valid_coloring(&result.colors, &graph));
-        // Square (bipartite) needs exactly 2 colors
-        let unique_colors: std::collections::HashSet<_> = result.colors.iter().collect();
-        assert!(unique_colors.len() <= 3); // Allow margin for greedy
-    }
-
-    #[test]
-    fn test_star_graph() {
-        // Star: center node 0 connected to 1,2,3,4
-        let edges = vec![(0, 1), (0, 2), (0, 3), (0, 4)];
-        let graph = create_graph(edges, 5);
-        let mut runtime = K1ColoringComputationRuntime::new(5, 10);
-        let result = runtime.compute(5, |node| graph.get(&node).cloned().unwrap_or_default());
-
-        assert!(is_valid_coloring(&result.colors, &graph));
-        // Star needs exactly 2 colors (center + one for leaves)
-        let unique_colors: std::collections::HashSet<_> = result.colors.iter().collect();
-        assert!(unique_colors.len() >= 2);
-    }
-
-    #[test]
-    fn test_complete_graph_k4() {
-        // Complete graph: all nodes connected to all others
-        let edges = vec![
-            (0, 1), (0, 2), (0, 3),
-            (1, 2), (1, 3),
-            (2, 3),
-        ];
-        let graph = create_graph(edges, 4);
-        let mut runtime = K1ColoringComputationRuntime::new(4, 20);
-        let result = runtime.compute(4, |node| graph.get(&node).cloned().unwrap_or_default());
-
-        assert!(is_valid_coloring(&result.colors, &graph));
-        // K4 needs exactly 4 colors
-        let unique_colors: std::collections::HashSet<_> = result.colors.iter().collect();
-        assert!(unique_colors.len() >= 4);
-    }
-
-    #[test]
-    fn test_disconnected_components() {
-        // Two disconnected triangles
-        let edges = vec![
-            (0, 1), (1, 2), (2, 0),
-            (3, 4), (4, 5), (5, 3),
-        ];
-        let graph = create_graph(edges, 6);
-        let mut runtime = K1ColoringComputationRuntime::new(6, 10);
-        let result = runtime.compute(6, |node| graph.get(&node).cloned().unwrap_or_default());
-
-        assert!(is_valid_coloring(&result.colors, &graph));
-    }
-
-    #[test]
-    fn test_bipartite_graph() {
-        // Bipartite graph: two groups with all edges between groups
-        let edges = vec![
-            (0, 2), (0, 3),
-            (1, 2), (1, 3),
-        ];
-        let graph = create_graph(edges, 4);
-        let mut runtime = K1ColoringComputationRuntime::new(4, 10);
-        let result = runtime.compute(4, |node| graph.get(&node).cloned().unwrap_or_default());
-
-        assert!(is_valid_coloring(&result.colors, &graph));
-        // Bipartite graph needs exactly 2 colors
-        let unique_colors: std::collections::HashSet<_> = result.colors.iter().collect();
-        assert!(unique_colors.len() <= 2);
     }
 }

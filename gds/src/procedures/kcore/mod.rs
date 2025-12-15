@@ -5,6 +5,7 @@ pub mod computation;
 #[cfg(test)]
 mod integration_tests;
 
-pub use computation::KCoreDecompositionRuntime;
+pub use computation::{KCoreComputationRuntime, KCoreComputationResult};
 pub use spec::{KCoreConfig, KCoreResult, KCoreAlgorithmSpec};
 pub use storage::KCoreStorageRuntime;
+
