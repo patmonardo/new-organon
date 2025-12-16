@@ -62,7 +62,7 @@ impl SccBuilder {
 
         let progress_tracker = ProgressTracker::new(Tasks::Leaf(
             "SCC".to_string(),
-            self.graph_store.node_count() as usize,
+            self.graph_store.node_count(),
         ));
         let termination_flag = TerminationFlag::default();
 

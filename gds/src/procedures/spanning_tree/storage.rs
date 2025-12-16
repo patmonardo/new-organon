@@ -146,26 +146,22 @@ impl SpanningTreeStorageRuntime {
         match direction {
             1 => graph
                 .stream_inverse_relationships_weighted(node_id as i64, fallback)
-                .into_iter()
                 .map(|cursor| (cursor.target_id() as u32, cursor.weight()))
                 .collect(),
             2 => {
                 let mut out: Vec<(u32, f64)> = graph
                     .stream_relationships_weighted(node_id as i64, fallback)
-                    .into_iter()
                     .map(|cursor| (cursor.target_id() as u32, cursor.weight()))
                     .collect();
                 out.extend(
                     graph
                         .stream_inverse_relationships_weighted(node_id as i64, fallback)
-                        .into_iter()
                         .map(|cursor| (cursor.target_id() as u32, cursor.weight())),
                 );
                 out
             }
             _ => graph
                 .stream_relationships_weighted(node_id as i64, fallback)
-                .into_iter()
                 .map(|cursor| (cursor.target_id() as u32, cursor.weight()))
                 .collect(),
         }

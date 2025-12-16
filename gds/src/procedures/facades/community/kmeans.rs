@@ -245,7 +245,7 @@ impl KMeansBuilder {
         let iter = result
             .communities
             .into_iter()
-            .zip(result.distance_from_center.into_iter())
+            .zip(result.distance_from_center)
             .enumerate()
             .map(|(node_id, (community_id, distance_from_center))| KMeansRow {
                 node_id: node_id as u64,

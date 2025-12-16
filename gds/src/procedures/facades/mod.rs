@@ -65,7 +65,6 @@ pub mod centrality;
 pub mod community;
 pub mod pathfinding;
 pub mod similarity;
-pub mod utilities;
 
 // Re-export commonly used types
 pub use builder_base::{ExecutionContext, MutationResult, WriteResult};

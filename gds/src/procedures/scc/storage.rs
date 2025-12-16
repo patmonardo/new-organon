@@ -51,7 +51,7 @@ impl SccStorageRuntime {
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
             .map_err(|e| format!("Failed to obtain graph view: {}", e))?;
 
-        let node_count = graph_view.node_count() as usize;
+        let node_count = graph_view.node_count();
         if node_count == 0 {
             return Ok(SccComputationResult::new(Vec::new(), 0, 0));
         }

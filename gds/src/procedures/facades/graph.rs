@@ -3,22 +3,27 @@ use std::sync::Arc;
 use crate::types::prelude::DefaultGraphStore;
 
 use super::pathfinding::{
-    AStarBuilder, AllShortestPathsBuilder, BellmanFordBuilder, BfsBuilder, DeltaSteppingBuilder,
-    DfsBuilder, DijkstraBuilder, SpanningTreeBuilder, YensBuilder,
+    AStarBuilder, AllShortestPathsBuilder, BellmanFordBuilder, BfsBuilder, DagLongestPathBuilder,
+    DeltaSteppingBuilder, DfsBuilder, DijkstraBuilder, KSpanningTreeBuilder, RandomWalkBuilder,
+    SpanningTreeBuilder, TopologicalSortBuilder, YensBuilder,
 };
 
 use super::centrality::{
-    BetweennessCentralityFacade, ClosenessCentralityFacade, DegreeCentralityFacade,
-    HarmonicCentralityFacade, HitsPregelBuilder, PageRankBuilder,
+    ArticulationPointsFacade, BetweennessCentralityFacade, BridgesFacade, CELFFacade,
+    ClosenessCentralityFacade, DegreeCentralityFacade, HarmonicCentralityFacade,
+    HitsPregelBuilder, PageRankBuilder,
 };
 
 use super::community::{
+    ApproxMaxKCutBuilder,
+    ConductanceBuilder,
     K1ColoringBuilder,
     KCoreBuilder,
     KMeansBuilder,
     LabelPropagationBuilder,
     LouvainBuilder,
     LocalClusteringCoefficientBuilder,
+    ModularityBuilder,
     SccBuilder,
     TriangleCountBuilder,
     WccBuilder,
@@ -88,6 +93,25 @@ impl Graph {
         SpanningTreeBuilder::new(Arc::clone(&self.store))
     }
 
+    /// K-spanning tree (prune MST to exactly k nodes).
+    pub fn kspanning_tree(&self) -> KSpanningTreeBuilder {
+        KSpanningTreeBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// Topological sort for directed acyclic graphs (DAG).
+    pub fn topological_sort(&self) -> TopologicalSortBuilder {
+        TopologicalSortBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// Longest path in directed acyclic graphs (DAG).
+    pub fn dag_longest_path(&self) -> DagLongestPathBuilder {
+        DagLongestPathBuilder::new(Arc::clone(&self.store))
+    }
+
+    pub fn random_walk(&self) -> RandomWalkBuilder {
+        RandomWalkBuilder::new(Arc::clone(&self.store))
+    }
+
     /// Degree centrality (counts connections per node).
     pub fn degree_centrality(&self) -> DegreeCentralityFacade {
         DegreeCentralityFacade::new(Arc::clone(&self.store))
@@ -118,6 +142,21 @@ impl Graph {
     /// Demonstrates bidirectional Pregel: authority from incoming neighbors, hubs from outgoing.
     pub fn hits_pregel(&self) -> HitsPregelBuilder {
         HitsPregelBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// Articulation Points (cut vertices) for undirected connectivity.
+    pub fn articulation_points(&self) -> ArticulationPointsFacade {
+        ArticulationPointsFacade::new(Arc::clone(&self.store))
+    }
+
+    /// Bridges (cut edges) for undirected graphs.
+    pub fn bridges(&self) -> BridgesFacade {
+        BridgesFacade::new(Arc::clone(&self.store))
+    }
+
+    /// CELF (Cost-Effective Lazy Forward) influence maximization.
+    pub fn celf(&self) -> CELFFacade {
+        CELFFacade::new(Arc::clone(&self.store))
     }
 
     /// Node Similarity (Jaccard, Cosine, Overlap).
@@ -168,5 +207,20 @@ impl Graph {
     /// K-Core Decomposition (core values).
     pub fn kcore(&self) -> KCoreBuilder {
         KCoreBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// Conductance community quality metric.
+    pub fn conductance(&self, community_property: String) -> ConductanceBuilder {
+        ConductanceBuilder::new(Arc::clone(&self.store), community_property)
+    }
+
+    /// Approximate maximum k-cut partitioning.
+    pub fn approx_max_k_cut(&self) -> ApproxMaxKCutBuilder {
+        ApproxMaxKCutBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// Modularity community quality metric.
+    pub fn modularity(&self, community_property: String) -> ModularityBuilder {
+        ModularityBuilder::new(Arc::clone(&self.store), community_property)
     }
 }

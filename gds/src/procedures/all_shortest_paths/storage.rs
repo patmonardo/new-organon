@@ -230,20 +230,17 @@ impl AllShortestPathsStorageRuntime {
             1 => self
                 .graph
                 .stream_inverse_relationships(node_id, fallback)
-                .into_iter()
                 .map(|cursor| cursor.target_id())
                 .collect(),
             2 => {
                 let mut out: Vec<NodeId> = self
                     .graph
                     .stream_relationships(node_id, fallback)
-                    .into_iter()
                     .map(|cursor| cursor.target_id())
                     .collect();
                 out.extend(
                     self.graph
                         .stream_inverse_relationships(node_id, fallback)
-                        .into_iter()
                         .map(|cursor| cursor.target_id()),
                 );
                 out
@@ -251,7 +248,6 @@ impl AllShortestPathsStorageRuntime {
             _ => self
                 .graph
                 .stream_relationships(node_id, fallback)
-                .into_iter()
                 .map(|cursor| cursor.target_id())
                 .collect(),
         }
@@ -263,20 +259,17 @@ impl AllShortestPathsStorageRuntime {
             1 => self
                 .graph
                 .stream_inverse_relationships_weighted(node_id, fallback)
-                .into_iter()
                 .map(|cursor| (cursor.target_id(), cursor.weight()))
                 .collect(),
             2 => {
                 let mut out: Vec<(NodeId, f64)> = self
                     .graph
                     .stream_relationships_weighted(node_id, fallback)
-                    .into_iter()
                     .map(|cursor| (cursor.target_id(), cursor.weight()))
                     .collect();
                 out.extend(
                     self.graph
                         .stream_inverse_relationships_weighted(node_id, fallback)
-                        .into_iter()
                         .map(|cursor| (cursor.target_id(), cursor.weight())),
                 );
                 out
@@ -284,7 +277,6 @@ impl AllShortestPathsStorageRuntime {
             _ => self
                 .graph
                 .stream_relationships_weighted(node_id, fallback)
-                .into_iter()
                 .map(|cursor| (cursor.target_id(), cursor.weight()))
                 .collect(),
         }

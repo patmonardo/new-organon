@@ -13,16 +13,30 @@ pub struct NodeSimilarityComputationResult {
 pub struct NodeSimilarityComputationRuntime {}
 
 // Helper struct for TopK heap
-#[derive(PartialEq, PartialOrd)]
+// Note: Using custom Ord/PartialOrd since f64 doesn't implement Ord (NaN handling)
+#[derive(PartialEq)]
 struct ScoredNode(f64, u64);
 
 impl Eq for ScoredNode {}
+
+impl PartialOrd for ScoredNode {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl Ord for ScoredNode {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.0
             .partial_cmp(&other.0)
             .unwrap_or(std::cmp::Ordering::Equal)
             .then_with(|| self.1.cmp(&other.1))
+    }
+}
+
+impl Default for NodeSimilarityComputationRuntime {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

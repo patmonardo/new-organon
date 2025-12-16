@@ -112,7 +112,7 @@ impl HarmonicCentralityFacade {
                 source_offset,
                 source_len,
                 false,
-                &get_neighbors,
+                get_neighbors,
                 |node_id, depth, sources_mask| {
                     if depth == 0 {
                         return;

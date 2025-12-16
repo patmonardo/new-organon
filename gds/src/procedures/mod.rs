@@ -106,14 +106,15 @@ pub mod dfs;
 pub mod dijkstra;
 pub mod pagerank;
 pub mod spanning_tree;
-pub mod sum;
 pub mod traversal;
 pub mod yens;
 pub mod scc;
 pub mod articulation_points;
 pub mod betweenness;
 pub mod bridges;
+pub mod celf;
 pub mod closeness;
+pub mod dag_longest_path;
 pub mod harmonic;
 pub mod hits;
 pub mod k1coloring;
@@ -121,11 +122,19 @@ pub mod kcore;
 pub mod kmeans;
 pub mod kspanningtree;
 pub mod label_propagation;
+pub mod leiden;
 pub mod local_clustering_coefficient;
 pub mod louvain;
 pub mod msbfs;
 pub mod similarity;
+pub mod topological_sort;
+pub mod random_walk;
 pub mod triangle_count;
+pub mod conductance;
+pub mod approx_max_k_cut;
+pub mod modularity;
+pub mod steiner_tree;
+pub mod prize_collecting_steiner_tree;
 pub mod wcc;
 
 // Future modules (to be implemented)
@@ -165,7 +174,6 @@ pub use spanning_tree::{
     SPANNING_TREEAlgorithmSpec, SpanningGraph, SpanningTree, SpanningTreeComputationRuntime,
     SpanningTreeConfig, SpanningTreeResult, SpanningTreeStorageRuntime,
 };
-pub use sum::{SumAlgorithmSpec, SumComputationRuntime, SumConfig, SumStorageRuntime};
 pub use traversal::{
     Aggregator, ExitPredicate, ExitPredicateResult, FollowExitPredicate, OneHopAggregator,
     TargetExitPredicate,
@@ -186,6 +194,9 @@ pub use betweenness::{
 pub use bridges::{
     BridgesAlgorithmSpec, BridgesComputationRuntime, BridgesConfig, BridgesResult,
     BridgesStorageRuntime,
+};
+pub use celf::{
+    CELFAlgorithmSpec, CELFComputationRuntime, CELFConfig, CELFResult,
 };
 pub use closeness::{
     ClosenessCentralityAlgorithmSpec, ClosenessCentralityComputationRuntime,

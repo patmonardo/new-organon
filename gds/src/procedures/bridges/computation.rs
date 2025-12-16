@@ -5,18 +5,17 @@
 //! This module implements Tarjan's algorithm for finding bridges using iterative DFS.
 
 use crate::collections::{HugeLongArray, BitSet};
-use crate::core::utils::paged::HugeLongArrayStack;
 
 /// Stack event for iterative DFS
 #[derive(Debug, Clone, Copy)]
 pub struct StackEvent {
-    pub event_node: i32,
-    pub trigger_node: i32,
+    pub event_node: usize,
+    pub trigger_node: Option<usize>,
     pub last_visit: bool,
 }
 
 impl StackEvent {
-    pub fn upcoming_visit(node: i32, trigger_node: i32) -> Self {
+    pub fn upcoming_visit(node: usize, trigger_node: Option<usize>) -> Self {
         Self {
             event_node: node,
             trigger_node,
@@ -24,17 +23,17 @@ impl StackEvent {
         }
     }
 
-    pub fn last_visit(node: i32, trigger_node: i32) -> Self {
+    pub fn last_visit(node: usize, trigger_node: usize) -> Self {
         Self {
             event_node: node,
-            trigger_node,
+            trigger_node: Some(trigger_node),
             last_visit: true,
         }
     }
 }
 
 /// Bridge edge
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Bridge {
     pub from: u64,
     pub to: u64,
@@ -67,14 +66,19 @@ impl BridgesComputationRuntime {
     }
 
     /// Compute bridges for a graph
-    pub fn compute(
+    pub fn compute<F>(
         &mut self,
         node_count: usize,
-        get_neighbors: impl Fn(usize) -> Vec<usize>,
-    ) -> BridgesComputationResult {
+        get_neighbors: F,
+    ) -> BridgesComputationResult
+    where
+        F: Fn(usize) -> Vec<usize>,
+    {
+        // Clear state
         self.timer = 0;
         self.bridges.clear();
-        
+        self.visited.clear_all();
+
         // Initialize tin and low to -1
         for i in 0..node_count {
             self.tin.set(i, -1);
@@ -84,7 +88,7 @@ impl BridgesComputationRuntime {
         // Process each unvisited node
         for i in 0..node_count {
             if !self.visited.get(i) {
-                self.dfs(i as i32, -1, &get_neighbors);
+                self.dfs(i, &get_neighbors);
             }
         }
 
@@ -93,27 +97,26 @@ impl BridgesComputationRuntime {
         }
     }
 
-    fn dfs(&mut self, start_node: i32, parent: i32, get_neighbors: &impl Fn(usize) -> Vec<usize>) {
-        // Use HugeLongArrayStack to store events
-        let mut stack = HugeLongArrayStack::new(100000);
-        
+    fn dfs<F>(&mut self, start_node: usize, get_neighbors: &F)
+    where
+        F: Fn(usize) -> Vec<usize>,
+    {
+        let mut stack: Vec<StackEvent> = Vec::new();
+
         // Push initial event
-        stack.push(encode_event(StackEvent::upcoming_visit(start_node, parent)));
+        stack.push(StackEvent::upcoming_visit(start_node, None));
 
-        while !stack.is_empty() {
-            let encoded = stack.pop();
-            let event = decode_event(encoded);
-
+        while let Some(event) = stack.pop() {
             if event.last_visit {
                 // Last visit - process backtracking
-                let v = event.trigger_node;
+                let v = event.trigger_node.unwrap();
                 let to = event.event_node;
-                
-                let low_v = self.low.get(v as usize);
-                let low_to = self.low.get(to as usize);
-                self.low.set(v as usize, std::cmp::min(low_v, low_to));
-                
-                let tin_v = self.tin.get(v as usize);
+
+                let low_v = self.low.get(v);
+                let low_to = self.low.get(to);
+                self.low.set(v, std::cmp::min(low_v, low_to));
+
+                let tin_v = self.tin.get(v);
                 if low_to > tin_v {
                     // This is a bridge
                     self.bridges.push(Bridge {
@@ -125,66 +128,36 @@ impl BridgesComputationRuntime {
                 // First visit - process node
                 let v = event.event_node;
                 let p = event.trigger_node;
-                
-                if !self.visited.get(v as usize) {
-                    self.visited.set(v as usize);
-                    self.tin.set(v as usize, self.timer);
-                    self.low.set(v as usize, self.timer);
+
+                if !self.visited.get(v) {
+                    self.visited.set(v);
+                    self.tin.set(v, self.timer);
+                    self.low.set(v, self.timer);
                     self.timer += 1;
 
                     // Push post-visit event if not root
-                    if p != -1 {
-                        stack.push(encode_event(StackEvent::last_visit(v, p)));
+                    if let Some(parent) = p {
+                        stack.push(StackEvent::last_visit(v, parent));
                     }
 
-                    // Process neighbors
-                    let neighbors = get_neighbors(v as usize);
+                    // Process neighbors (skip parent edge once)
+                    let neighbors = get_neighbors(v);
+                    let mut parent_skipped = false;
+
                     for to in neighbors {
-                        let to_i32 = to as i32;
-                        if to_i32 == p {
+                        if Some(to) == p && !parent_skipped {
+                            parent_skipped = true;
                             continue;
                         }
-                        stack.push(encode_event(StackEvent::upcoming_visit(to_i32, v)));
+                        stack.push(StackEvent::upcoming_visit(to, Some(v)));
                     }
-                } else if p != -1 {
+                } else if let Some(parent) = p {
                     // Back edge - update low value
-                    let low_v = self.low.get(p as usize);
-                    let tin_v = self.tin.get(v as usize);
-                    self.low.set(p as usize, std::cmp::min(low_v, tin_v));
+                    let low_p = self.low.get(parent);
+                    let tin_v = self.tin.get(v);
+                    self.low.set(parent, std::cmp::min(low_p, tin_v));
                 }
             }
         }
-    }
-}
-
-/// Encode StackEvent into i64 for storage in HugeLongArrayStack
-fn encode_event(event: StackEvent) -> i64 {
-    let mut encoded: u64 = 0;
-    // Use bottom 16 bits for event_node
-    encoded |= ((event.event_node as u32) & 0xFFFF) as u64;
-    // Use next 16 bits for trigger_node
-    encoded |= (((event.trigger_node as u32) & 0xFFFF) as u64) << 16;
-    // Use next bit for last_visit flag
-    if event.last_visit {
-        encoded |= 1u64 << 32;
-    }
-    encoded as i64
-}
-
-/// Decode i64 back into StackEvent
-fn decode_event(encoded: i64) -> StackEvent {
-    let encoded_u64 = encoded as u64;
-    let event_node_bits = (encoded_u64 & 0xFFFF) as u16;
-    let trigger_node_bits = ((encoded_u64 >> 16) & 0xFFFF) as u16;
-    let last_visit = (encoded_u64 >> 32) & 1 != 0;
-    
-    // Sign extend from u16 to i32
-    let event_node = (event_node_bits as i16) as i32;
-    let trigger_node = (trigger_node_bits as i16) as i32;
-    
-    StackEvent {
-        event_node,
-        trigger_node,
-        last_visit,
     }
 }
