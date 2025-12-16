@@ -117,8 +117,6 @@ pub fn average_degree(graph: &Arc<dyn Graph>) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // Note: Full tests would require a mock Graph. These are compile-time sanity checks.
     // The constructors are verified to compile - actual graph instantiation happens
     // at runtime with real graph stores.

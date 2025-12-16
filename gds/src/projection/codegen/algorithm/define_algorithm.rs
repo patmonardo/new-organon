@@ -9,7 +9,7 @@
 //! define_algorithm! {
 //!     name: "pagerank",
 //!     category: Centrality,
-//!     
+//!
 //!     config: {
 //!         damping_factor: f64 = 0.85 { range: 0.0..1.0 },
 //!         tolerance: f64 = 1e-6 { validate: |v| v > 0.0 },
@@ -17,17 +17,17 @@
 //!         source_nodes: Option<Vec<u64>> = None,
 //!         weight_property: Option<String> = None,
 //!     },
-//!     
+//!
 //!     result: PageRankResult {
 //!         scores: Vec<f64>,
 //!         iterations: usize,
 //!         converged: bool,
 //!         execution_time: Duration,
 //!     },
-//!     
+//!
 //!     projection_hint: Dense,
 //!     modes: [Stream, Stats],
-//!     
+//!
 //!     // Developer writes ONLY this
 //!     execute: |graph_store, config, context| {
 //!         // Actual algorithm logic
@@ -41,34 +41,34 @@ macro_rules! define_algorithm {
     (
         name: $name:literal,
         category: $category:ident,
-        
+
         config: {
             $(
                 $field:ident : $ty:ty = $default:expr $(,)?
             )*
         },
-        
+
         result: $result_name:ident {
             $(
                 $result_field:ident : $result_ty:ty $(,)?
             )*
         },
-        
+
         projection_hint: $hint:ident,
         modes: [$($mode:ident),*],
-        
+
         execute: $execute_fn:block
     ) => {
-        define_algorithm!(@generate 
-            $name, $category, 
+        define_algorithm!(@generate
+            $name, $category,
             { $($field : $ty = $default;)* },
             $result_name { $($result_field : $result_ty;)* },
             $hint, [$($mode),*],
             $execute_fn
         );
     };
-    
-    (@generate 
+
+    (@generate
         $name:literal, $category:ident,
         { $($field:ident : $ty:ty = $default:expr;)* },
         $result_name:ident { $($result_field:ident : $result_ty:ty;)* },
@@ -116,6 +116,7 @@ macro_rules! define_algorithm {
         paste::paste! {
             pub struct [<$name:upper AlgorithmSpec>] {
                 graph_name: String,
+                #[allow(dead_code)]
                 config: [<$name:upper Config>],
             }
 
@@ -146,13 +147,13 @@ macro_rules! define_algorithm {
                             param: "config".to_string(),
                             message: format!("JSON parsing failed: {}", e),
                         })?;
-                    
+
                     config.validate()
                         .map_err(|e| $crate::projection::eval::procedure::ConfigError::InvalidValue {
                             param: "config".to_string(),
                             message: format!("Validation failed: {}", e),
                         })?;
-                    
+
                     Ok(serde_json::to_value(config).unwrap())
                 }
 
@@ -168,12 +169,12 @@ macro_rules! define_algorithm {
                 ) -> Result<$crate::projection::eval::procedure::ComputationResult<Self::Output>, $crate::projection::eval::procedure::AlgorithmError> {
                     let _parsed_config: [<$name:upper Config>] = serde_json::from_value(config.clone())
                         .map_err(|e| $crate::projection::eval::procedure::AlgorithmError::Execution(format!("Config parsing failed: {}", e)))?;
-                    
+
                     let timer = std::time::Instant::now();
-                    
+
                     // Call the developer-provided execute block
                     let result = $execute_fn?;
-                    
+
                     let elapsed = timer.elapsed();
                     Ok($crate::projection::eval::procedure::ComputationResult::new(result, elapsed))
                 }
@@ -198,11 +199,6 @@ macro_rules! define_algorithm {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::projection::eval::procedure::*;
-    use crate::types::prelude::GraphStore;
-    use std::time::Duration;
-
     #[test]
     fn test_macro_compilation() {
         // Just test that the macro compiles without errors

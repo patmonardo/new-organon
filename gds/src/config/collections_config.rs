@@ -104,30 +104,31 @@ pub struct DatasetConfig {
 
 /// Collections backend enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum CollectionsBackend {
     // Core backends
     Vec,        // Standard library vectors
     Huge,       // Paged arrays
     Arrow,      // Apache Arrow
     Std,        // Standard library arrays
-    
+
     // Extension backends
     Ndarray,    // ndarray integration
     Gpu,        // GPU acceleration
     Distributed, // Distributed processing
     Compression, // Compression support
     Encryption,  // Encryption support
-    
+
     // ML backends
     Tensor,     // Tensor collections
     Matrix,     // Matrix collections
     Vector,     // Vector collections
-    
+
     // Composition backends
     Hybrid,     // Hybrid backends
     Layered,    // Layered collections
     Adaptive,   // Adaptive collections
-    
+
     // Magic backends
     Auto,       // Auto-optimization
     Ai,         // AI-powered
@@ -142,17 +143,17 @@ pub enum Feature {
     Nullability,    // Null value support
     Compression,    // Data compression
     Encryption,     // Data encryption
-    
+
     // Performance features
     Caching,        // Caching support
     Parallelization, // Parallel processing
     Optimization,   // Performance optimization
-    
+
     // ML features
     TensorOps,      // Tensor operations
     MatrixOps,      // Matrix operations
     VectorOps,      // Vector operations
-    
+
     // Advanced features
     AutoOptimize,   // Auto-optimization
     AiPowered,      // AI-powered features
@@ -174,17 +175,17 @@ pub enum Extension {
     Metrics,        // Performance metrics
     Random,         // Random generation and shuffling
     Partitioning,   // Parallel partitioning support
-    
+
     // Performance extensions
     Caching,        // Caching support
     Parallelization, // Parallel processing
     Optimization,   // Performance optimization
-    
+
     // ML extensions
     TensorOps,      // Tensor operations
     MatrixOps,      // Matrix operations
     VectorOps,      // Vector operations
-    
+
     // Advanced extensions
     AutoOptimize,   // Auto-optimization
     AiPowered,      // AI-powered features
@@ -199,13 +200,13 @@ pub enum DatasetType {
     TimeSeries,     // Time series data
     Graph,          // Graph data
     Text,           // Text data
-    
+
     // ML datasets
     Image,          // Image data
     Audio,          // Audio data
     Video,          // Video data
     Sensor,         // Sensor data
-    
+
     // Specialized datasets
     Financial,      // Financial data
     Scientific,     // Scientific data

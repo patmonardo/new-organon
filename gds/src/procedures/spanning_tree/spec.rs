@@ -296,7 +296,7 @@ mod tests {
 
     #[test]
     fn test_spanning_tree_algorithm_spec_contract() {
-        let mut algorithm = SPANNING_TREEAlgorithmSpec::new("test_graph".to_string());
+        let algorithm = SPANNING_TREEAlgorithmSpec::new("test_graph".to_string());
 
         // Test basic properties
         assert_eq!(algorithm.graph_name(), "test_graph");
@@ -308,10 +308,10 @@ mod tests {
 
     #[test]
     fn test_spanning_tree_execution_modes() {
-        let mut algorithm = SPANNING_TREEAlgorithmSpec::new("test_graph".to_string());
+        let algorithm = SPANNING_TREEAlgorithmSpec::new("test_graph".to_string());
 
         // Test all execution modes
-        let modes = vec![
+        let _modes = vec![
             crate::projection::eval::procedure::ExecutionMode::Stream,
             crate::projection::eval::procedure::ExecutionMode::Stats,
             crate::projection::eval::procedure::ExecutionMode::MutateNodeProperty,
@@ -324,10 +324,10 @@ mod tests {
 
     #[test]
     fn test_spanning_tree_config_validation_integration() {
-        let mut algorithm = SPANNING_TREEAlgorithmSpec::new("test_graph".to_string());
+        let algorithm = SPANNING_TREEAlgorithmSpec::new("test_graph".to_string());
 
         // Test valid config
-        let valid_config = json!({
+        let _valid_config = json!({
             "start_node_id": 0,
             "compute_minimum": true,
             "concurrency": 1
@@ -341,7 +341,7 @@ mod tests {
         assert_eq!(validation_result.after_load_count(), 0);
 
         // Test invalid config
-        let invalid_config = json!({
+        let _invalid_config = json!({
             "start_node_id": 0,
             "compute_minimum": true,
             "concurrency": 0
@@ -356,14 +356,14 @@ mod tests {
 
     #[test]
     fn test_spanning_tree_focused_macro_integration() {
-        let mut algorithm = SPANNING_TREEAlgorithmSpec::new("test_graph".to_string());
+        let algorithm = SPANNING_TREEAlgorithmSpec::new("test_graph".to_string());
 
         // Test that the macro-generated algorithm works
         assert_eq!(algorithm.graph_name(), "test_graph");
         assert_eq!(algorithm.name(), "spanning_tree");
 
         // Test configuration validation
-        let config = json!({
+        let _config = json!({
             "start_node_id": 0,
             "compute_minimum": true,
             "concurrency": 1

@@ -105,13 +105,8 @@ impl BufferedNodeConsumer {
     }
 
     /// Get the internal buffer (for flushing)
-    pub fn buffer(&self) -> &NodeBatchBuffer {
+    fn buffer(&self) -> &NodeBatchBuffer {
         &self.buffer
-    }
-
-    /// Get mutable buffer
-    pub fn buffer_mut(&mut self) -> &mut NodeBatchBuffer {
-        &mut self.buffer
     }
 
     /// Get buffered node IDs
@@ -257,13 +252,8 @@ impl BufferedEdgeConsumer {
     }
 
     /// Get the internal buffer (for flushing)
-    pub fn buffer(&self) -> &RelationshipBatchBuffer {
+    fn buffer(&self) -> &RelationshipBatchBuffer {
         &self.buffer
-    }
-
-    /// Get mutable buffer
-    pub fn buffer_mut(&mut self) -> &mut RelationshipBatchBuffer {
-        &mut self.buffer
     }
 
     /// Get buffered sources

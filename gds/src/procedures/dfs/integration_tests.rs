@@ -16,7 +16,7 @@ fn test_dfs_algorithm_spec_contract() {
     let spec = DFSAlgorithmSpec::new("test_graph".to_string());
     assert_eq!(spec.name(), "dfs");
     assert_eq!(spec.graph_name(), "test_graph");
-    
+
     // Test that the algorithm can be created
     assert_eq!(spec.graph_name(), "test_graph");
 }
@@ -30,9 +30,9 @@ fn test_dfs_config_validation() {
         track_paths: true,
         concurrency: 4,
     };
-    
+
     assert!(config.validate().is_ok());
-    
+
     let invalid_config = DfsConfig {
         concurrency: 0,
         ..config
@@ -54,7 +54,7 @@ fn test_dfs_storage_runtime() {
 fn test_dfs_computation_runtime() {
     let mut computation = DfsComputationRuntime::new(0, true, 4);
     computation.initialize(0, Some(5));
-    
+
     assert_eq!(computation.source_node, 0);
     assert!(computation.check_max_depth(5));
     assert_eq!(computation.visited_count(), 1);
@@ -66,7 +66,7 @@ fn test_dfs_focused_macro_integration() {
     let spec = DFSAlgorithmSpec::new("test_graph".to_string());
     assert_eq!(spec.name(), "dfs");
     assert_eq!(spec.graph_name(), "test_graph");
-    
+
     // Test that the algorithm can be created
     assert_eq!(spec.graph_name(), "test_graph");
 }
@@ -75,13 +75,12 @@ fn test_dfs_focused_macro_integration() {
 fn test_dfs_storage_computation_integration() {
     let storage = DfsStorageRuntime::new(0, vec![3], None, true, 1);
     let mut computation = DfsComputationRuntime::new(0, true, 1);
-    
+
     let dfs_result = storage.compute_dfs(&mut computation, None).unwrap();
-    
+
     assert!(dfs_result.nodes_visited > 0);
     assert!(!dfs_result.paths.is_empty());
-    assert!(dfs_result.computation_time_ms >= 0);
-    
+
     // Verify path structure
     for path in &dfs_result.paths {
         assert_eq!(path.source_node, 0);
@@ -106,13 +105,13 @@ fn test_dfs_result_serialization() {
         nodes_visited: 4,
         computation_time_ms: 5,
     };
-    
+
     // Test serialization
     let json = serde_json::to_string(&result).unwrap();
     assert!(json.contains("visited_nodes"));
     assert!(json.contains("paths"));
     assert!(json.contains("nodes_visited"));
-    
+
     // Test deserialization
     let deserialized: DfsResult = serde_json::from_str(&json).unwrap();
     assert_eq!(deserialized.nodes_visited, 4);
@@ -125,7 +124,7 @@ fn test_dfs_with_executor() {
     let context = ExecutionContext::new("test_user");
     let mut executor = ProcedureExecutor::new(context, ExecutionMode::Stream);
     let mut algorithm = DFSAlgorithmSpec::new("test_graph".to_string());
-    
+
     let config_input = json!({
         "source_node": 0,
         "target_nodes": [3],
@@ -133,9 +132,9 @@ fn test_dfs_with_executor() {
         "track_paths": true,
         "concurrency": 4
     });
-    
+
     let result = executor.compute(&mut algorithm, &config_input);
-    
+
     // Should fail with GraphNotFound since we don't have a real graph store
     assert!(result.is_err());
     let error = result.unwrap_err();

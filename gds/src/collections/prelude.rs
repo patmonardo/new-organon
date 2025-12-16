@@ -46,14 +46,15 @@ pub use super::backends::vec::{
     VecInt,
     VecLong,
     VecLongArray,
+    VecFloatArray,
     VecShort,
 };
 
 // Arrow backend - Apache Arrow arrays
 #[cfg(feature = "arrow")]
 pub use super::backends::arrow::{
-    ArrowIntArray,
-    ArrowArray,
+    ArrowArrayBehavior, ArrowDoubleArray, ArrowFloatArray, ArrowIntArray, ArrowLongArray,
+    ArrowPrimitiveArray,
 };
 
 // Universal adapter - trait-based abstraction

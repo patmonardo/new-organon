@@ -145,7 +145,7 @@ mod tests {
     fn test_closeness_wasserman_faust_normalization() {
         let graph = build_graph(vec![(0, 1), (1, 2)], 3);
         let mut runtime = ClosenessCentralityComputationRuntime::new(3);
-        
+
         // Wasserman-Faust normalized
         let result_wf = runtime.compute(3, true, |node| {
             graph.get(&node).cloned().unwrap_or_default()
@@ -153,7 +153,7 @@ mod tests {
 
         // Without normalization
         let mut runtime2 = ClosenessCentralityComputationRuntime::new(3);
-        let result_default = runtime2.compute(3, false, |node| {
+        let _result_default = runtime2.compute(3, false, |node| {
             graph.get(&node).cloned().unwrap_or_default()
         });
 

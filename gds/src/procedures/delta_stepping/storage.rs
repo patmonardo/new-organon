@@ -268,8 +268,7 @@ mod tests {
         let result = storage.compute_delta_stepping(&mut computation, None, 0);
         assert!(result.is_ok());
 
-        let delta_stepping_result = result.unwrap();
-        assert!(delta_stepping_result.computation_time_ms >= 0); // Allow 0 for very fast execution
+        let _ = result.unwrap();
     }
 
     #[test]
@@ -281,8 +280,7 @@ mod tests {
         let result = storage.compute_delta_stepping(&mut computation, None, 0);
         assert!(result.is_ok());
 
-        let delta_stepping_result = result.unwrap();
-        assert!(delta_stepping_result.computation_time_ms >= 0); // Allow 0 for very fast execution
+        let _ = result.unwrap();
     }
 
     #[test]

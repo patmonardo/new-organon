@@ -284,7 +284,7 @@ mod tests {
 
     #[test]
     fn test_facade_creation() {
-        let facade = DegreeCentralityFacade::new(store());
+        let _facade = DegreeCentralityFacade::new(store());
         // Smoke test - just verify it creates without panic
         assert!(true);
     }

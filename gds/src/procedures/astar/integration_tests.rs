@@ -10,14 +10,14 @@ use serde_json::json;
 
 #[test]
 fn test_astar_algorithm_spec_contract() {
-    let mut spec = ASTARAlgorithmSpec::new("test_graph".to_string());
+    let spec = ASTARAlgorithmSpec::new("test_graph".to_string());
     assert_eq!(spec.graph_name(), "test_graph");
     assert_eq!(spec.name(), "astar");
 }
 
     #[test]
     fn test_astar_execution_modes() {
-        let mut spec = ASTARAlgorithmSpec::new("test_graph".to_string());
+        let spec = ASTARAlgorithmSpec::new("test_graph".to_string());
 
         // Test that the spec can be created
         assert_eq!(spec.name(), "astar");
@@ -52,8 +52,8 @@ fn test_astar_config_validation() {
 
 #[test]
 fn test_astar_focused_macro_integration() {
-    let mut spec = ASTARAlgorithmSpec::new("test_graph".to_string());
-    let config = AStarConfig::default();
+    let spec = ASTARAlgorithmSpec::new("test_graph".to_string());
+    let _config = AStarConfig::default();
 
     // Test that the macro-generated spec works
     assert_eq!(spec.name(), "astar");

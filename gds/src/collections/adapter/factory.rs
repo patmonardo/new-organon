@@ -223,7 +223,6 @@ impl CollectionFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::collections::traits::Collections;
 
     fn arrow_config<T>() -> CollectionsConfig<T> {
         let mut config = CollectionsConfig::default();

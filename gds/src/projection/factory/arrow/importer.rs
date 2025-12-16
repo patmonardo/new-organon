@@ -34,7 +34,7 @@ use crate::types::graph::{
 };
 use crate::types::properties::node::{
     DefaultDoubleArrayNodePropertyValues, DefaultDoubleNodePropertyValues,
-    DefaultLongArrayNodePropertyValues, DefaultLongNodePropertyValues,
+    DefaultFloatArrayNodePropertyValues, DefaultLongArrayNodePropertyValues, DefaultLongNodePropertyValues,
 };
 use crate::types::properties::PropertyValues;
 use crate::types::{DefaultValue, ValueType};
@@ -117,7 +117,7 @@ impl PropertyAccumulator {
     }
 
     /// Adds or updates a property value for an entity.
-    pub fn set(&mut self, entity_id: OriginalNodeId, value: PropertyValue) {
+    fn set(&mut self, entity_id: OriginalNodeId, value: PropertyValue) {
         self.values.insert(entity_id, value);
     }
 
@@ -203,11 +203,19 @@ impl PropertyAccumulator {
                 )))
             }
             ValueType::FloatArray => {
-                // FloatArray backend (VecFloatArray) is not implemented yet
-                Err(ImporterError::UnsupportedPropertyType {
-                    property_key: self.config.key.clone(),
-                    value_type: self.config.value_type,
-                })
+                let mut dense = vec![None; node_count];
+
+                for (original_id, value) in self.values {
+                    if let Some(mapped_id) = id_map.safe_to_mapped_node_id(original_id) {
+                        if let PropertyValue::FloatArray(v) = value {
+                            dense[mapped_id as usize] = Some(v);
+                        }
+                    }
+                }
+
+                Ok(Box::new(DefaultFloatArrayNodePropertyValues::from_collection(
+                    crate::collections::backends::vec::VecFloatArray::from(dense), node_count,
+                )))
             }
             _ => Err(ImporterError::UnsupportedPropertyType {
                 property_key: self.config.key.clone(),
@@ -288,7 +296,7 @@ impl NodeAccumulator {
     ///
     /// # Returns
     /// The insertion index (will become mapped node ID)
-    pub fn add_node_with_properties(
+    fn add_node_with_properties(
         &mut self,
         original_id: OriginalNodeId,
         labels: Vec<NodeLabel>,
@@ -536,6 +544,7 @@ impl ImportTask for NodeImportTask {
 ///
 /// Handles type conversion from Arrow types to PropertyValue and applies
 /// default values when the cell is null.
+#[allow(dead_code)]
 fn extract_property_value(
     batch: &ArrowBatchReference,
     config: &PropertyConfig,
@@ -613,6 +622,7 @@ fn extract_property_value(
 }
 
 /// Extracts a list/array property value from an Arrow List column.
+#[allow(dead_code)]
 fn extract_list_property(
     column: &dyn Array,
     config: &PropertyConfig,

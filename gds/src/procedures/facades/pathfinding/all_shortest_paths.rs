@@ -284,6 +284,5 @@ mod tests {
 
         assert!(stats.node_count > 0);
         assert!(stats.result_count > 0);
-        assert!(stats.execution_time_ms >= 0);
     }
 }

@@ -92,8 +92,7 @@ mod tests {
             .compute_yens(&mut computation, Some(graph.as_ref()), 0)
             .unwrap();
 
-        assert!(result.path_count >= 0);
-        assert!(result.computation_time_ms >= 0);
+        assert!(result.path_count <= 3);
     }
 
     #[test]

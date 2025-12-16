@@ -301,7 +301,6 @@ mod tests {
         let result = storage.compute_yens(&mut computation, Some(graph.as_ref()), 0).unwrap();
 
         assert!(result.path_count <= 3);
-        assert!(result.computation_time_ms >= 0);
 
         // Paths should be unique.
         let unique: std::collections::HashSet<Vec<NodeId>> =

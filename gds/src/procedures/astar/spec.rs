@@ -295,7 +295,7 @@ mod tests {
     #[test]
     fn test_astar_focused_macro_integration() {
         let spec = ASTARAlgorithmSpec::new("test_graph".to_string());
-        let config = AStarConfig::default();
+        let _config = AStarConfig::default();
 
         // Test that the macro-generated spec works
         assert_eq!(spec.name(), "astar");

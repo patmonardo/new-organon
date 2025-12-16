@@ -34,4 +34,5 @@ pub use procedures::facades::Graph;
 
 // Re-export procedure macros for procedures module
 #[cfg(feature = "procedures")]
+#[allow(unused_imports)]
 pub use projection::codegen::algorithm::*;

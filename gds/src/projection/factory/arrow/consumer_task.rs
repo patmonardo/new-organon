@@ -320,6 +320,7 @@ impl TaskFactory for ConsumerEdgeImportTaskFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::projection::factory::arrow::{NodeRecord, RelationshipRecord};
     use crate::projection::NodeLabel;
     use crate::types::graph::id_map::IdMap;
 

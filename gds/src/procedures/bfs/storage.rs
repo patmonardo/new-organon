@@ -298,7 +298,6 @@ mod tests {
         let result = storage.compute_bfs(&mut computation, None).unwrap();
 
         assert!(result.nodes_visited > 0);
-        assert!(result.computation_time_ms >= 0);
     }
 
     #[test]
@@ -309,7 +308,6 @@ mod tests {
         let result = storage.compute_bfs(&mut computation, None).unwrap();
 
         assert!(result.nodes_visited >= 1);
-        assert!(result.computation_time_ms >= 0);
     }
 
     #[test]
@@ -321,6 +319,5 @@ mod tests {
 
         // With max_depth=1, we should only visit nodes at distance 0 and 1
         assert!(result.nodes_visited <= 3); // Source + immediate neighbors
-        assert!(result.computation_time_ms >= 0);
     }
 }

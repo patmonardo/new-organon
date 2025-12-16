@@ -22,6 +22,7 @@ pub mod vec_char;
 // Array Vec types
 pub mod vec_long_array;
 pub mod vec_double_array;
+pub mod vec_float_array;
 
 // Re-export generated types
 pub use vec_int::VecInt;
@@ -36,6 +37,7 @@ pub use vec_char::VecChar;
 // Re-export array types
 pub use vec_long_array::VecLongArray;
 pub use vec_double_array::VecDoubleArray;
+pub use vec_float_array::VecFloatArray;
 
 // Vec-specific utilities
 pub mod utils {

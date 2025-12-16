@@ -253,6 +253,5 @@ mod tests {
             .unwrap();
 
         assert!(stats.effective_node_count > 0);
-        assert!(stats.computation_time_ms >= 0);
     }
 }

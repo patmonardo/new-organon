@@ -365,7 +365,7 @@ mod tests {
 
     #[test]
     fn percentile_and_sorting() {
-        let mut array = ArrowDoubleArray::from_vec(vec![10.0, 30.0, 20.0, 40.0]);
+        let array = ArrowDoubleArray::from_vec(vec![10.0, 30.0, 20.0, 40.0]);
         assert_eq!(array.percentile_value(50.0), Some(25.0));
         assert_eq!(array.percentile_value(0.0), Some(10.0));
         assert_eq!(array.percentile_value(100.0), Some(40.0));

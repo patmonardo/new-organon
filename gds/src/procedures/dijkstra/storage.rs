@@ -310,8 +310,7 @@ mod tests {
         let result = storage.compute_dijkstra(&mut computation, targets, None, 0);
         assert!(result.is_ok());
 
-        let dijkstra_result = result.unwrap();
-        assert!(dijkstra_result.computation_time_ms >= 0); // Allow 0 for very fast execution
+        let _ = result.unwrap();
     }
 
     #[test]
@@ -324,8 +323,7 @@ mod tests {
         let result = storage.compute_dijkstra(&mut computation, targets, None, 0);
         assert!(result.is_ok());
 
-        let dijkstra_result = result.unwrap();
-        assert!(dijkstra_result.computation_time_ms >= 0); // Allow 0 for very fast execution
+        let _ = result.unwrap();
     }
 
     #[test]
@@ -338,8 +336,7 @@ mod tests {
         let result = storage.compute_dijkstra(&mut computation, targets, None, 0);
         assert!(result.is_ok());
 
-        let dijkstra_result = result.unwrap();
-        assert!(dijkstra_result.computation_time_ms >= 0); // Allow 0 for very fast execution
+        let _ = result.unwrap();
     }
 
     #[test]
