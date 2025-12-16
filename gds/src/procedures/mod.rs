@@ -196,8 +196,7 @@ pub use harmonic::{
     HarmonicStorageRuntime,
 };
 pub use hits::{
-    HITSAlgorithmSpec, HitsComputationResult, HitsComputationRuntime, HitsConfig, HitsResult,
-    HitsState, HitsStorageRuntime,
+    HITSAlgorithmSpec, HitsComputationRuntime, HitsConfig, HitsResult, HitsStorageRuntime,
 };
 pub use kmeans::{KMeansComputationRuntime, KMeansConfig, KMeansResult, KMeansSamplerType};
 pub use k1coloring::{

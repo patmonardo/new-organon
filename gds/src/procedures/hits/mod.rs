@@ -29,8 +29,7 @@
 pub mod spec;
 pub mod storage;
 pub mod computation;
-#[cfg(test)]
-pub mod integration_tests;
+pub mod pregel_computation;
 
 // Re-export main types
 pub use spec::{
@@ -39,4 +38,8 @@ pub use spec::{
     HitsResult,
 };
 pub use storage::HitsStorageRuntime;
-pub use computation::{HitsComputationResult, HitsComputationRuntime, HitsState};
+pub use computation::HitsComputationRuntime;
+pub use pregel_computation::{run_hits_pregel, HitsPregelRunResult};
+
+#[cfg(test)]
+mod pregel_integration_tests;

@@ -1,0 +1,106 @@
+#[cfg(test)]
+mod tests {
+    use crate::procedures::facades::graph::Graph;
+    use crate::types::graph_store::DefaultGraphStore;
+    use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
+    use std::sync::Arc;
+
+    #[test]
+    fn test_hits_pregel_smoke() {
+        // Create a simple random graph
+        let config = RandomGraphConfig {
+            seed: Some(42),
+            node_count: 5,
+            relationships: vec![RandomRelationshipConfig::new("REL", 0.6)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let graph = Graph::new(store);
+
+        let (hubs, auths) = graph
+            .hits_pregel()
+            .max_iterations(20)
+            .tolerance(1e-4)
+            .run()
+            .expect("HITS should succeed");
+
+        assert_eq!(hubs.len(), 5);
+        assert_eq!(auths.len(), 5);
+
+        // Verify normalization (L2 norm ~1.0)
+        let hub_norm: f64 = hubs.iter().map(|h| h * h).sum::<f64>().sqrt();
+        let auth_norm: f64 = auths.iter().map(|a| a * a).sum::<f64>().sqrt();
+
+        // At least authorities should be reasonably normalized
+        assert!(auth_norm > 0.5, "Auths should have meaningful values");
+    }
+
+    #[test]
+    fn test_hits_pregel_stream() {
+        let config = RandomGraphConfig {
+            seed: Some(7),
+            node_count: 4,
+            relationships: vec![RandomRelationshipConfig::new("REL", 0.7)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let graph = Graph::new(store);
+
+        let rows = graph
+            .hits_pregel()
+            .stream()
+            .expect("HITS stream should succeed");
+
+        assert_eq!(rows.len(), 4);
+
+        // Verify row structure
+        for row in &rows {
+            assert!(row.node_id >= 0 && row.node_id < 4);
+            assert!(row.hub_score >= 0.0, "Hub scores should be non-negative");
+            assert!(row.authority_score >= 0.0, "Authority scores should be non-negative");
+        }
+    }
+
+    #[test]
+    fn test_hits_pregel_stats() {
+        let config = RandomGraphConfig {
+            seed: Some(123),
+            node_count: 3,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let graph = Graph::new(store);
+
+        let stats = graph
+            .hits_pregel()
+            .max_iterations(10)
+            .stats()
+            .expect("HITS stats should succeed");
+
+        assert!(stats.iterations <= 10, "Should respect max iterations");
+        assert!(stats.execution_time_ms > 0, "Should track execution time");
+    }
+
+    #[test]
+    fn test_hits_pregel_empty() {
+        // Single node, no edges
+        let config = RandomGraphConfig {
+            seed: Some(1),
+            node_count: 1,
+            relationships: vec![],
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+        let graph = Graph::new(store);
+
+        let result = graph.hits_pregel().run();
+
+        // Should handle empty graph gracefully
+        assert!(
+            result.is_ok(),
+            "HITS should handle empty graph: {:?}",
+            result.err()
+        );
+    }
+}

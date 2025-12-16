@@ -178,7 +178,7 @@ impl<C: PregelRuntimeConfig, I: crate::pregel::MessageIterator> ComputeContext<C
         self.base.for_each_neighbor(consumer);
     }
 
-    /// Send a message to all neighbors of the current node.
+    /// Send a message to all neighbors of the current node (outgoing edges).
     ///
     /// # Java equivalent
     ///
@@ -198,6 +198,42 @@ impl<C: PregelRuntimeConfig, I: crate::pregel::MessageIterator> ComputeContext<C
             self.has_sent_message
                 .store(true, std::sync::atomic::Ordering::Relaxed);
         }
+    }
+
+    /// Send a message to all incoming neighbors (reverse edges).
+    ///
+    /// This is used by bidirectional algorithms like HITS that need to
+    /// send messages along reverse edges.
+    ///
+    /// # Java equivalent
+    ///
+    /// ```java
+    /// void sendToIncomingNeighbors(double message)
+    /// ```
+    pub fn send_to_incoming_neighbors(&self, message: f64) {
+        let source = self.base.node_id();
+        let mut sent_any = false;
+
+        self.base.for_each_incoming_neighbor(|target| {
+            self.messenger.send_to(source, target, message);
+            sent_any = true;
+        });
+
+        if sent_any {
+            self.has_sent_message
+                .store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+
+    /// Returns the incoming degree (number of incoming edges) of the current node.
+    ///
+    /// # Java equivalent
+    ///
+    /// ```java
+    /// int incomingDegree()
+    /// ```
+    pub fn incoming_degree(&self) -> usize {
+        self.base.incoming_degree()
     }
 
     /// Send a message to a specific node.
