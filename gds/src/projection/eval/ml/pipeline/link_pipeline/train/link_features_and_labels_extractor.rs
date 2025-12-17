@@ -333,12 +333,13 @@ mod tests {
         let result = extract_features_and_labels(PhantomData, vec![], 4, PhantomData, PhantomData);
 
         assert!(result.is_err(), "Should return error in Pre-Prim");
+        let err = result.unwrap_err();
         assert!(
-            result.unwrap_err().contains("Pre-Prim 0.0.x"),
+            err.contains("Pre-Prim 0.0.x"),
             "Error should mention Pre-Prim state"
         );
         assert!(
-            result.unwrap_err().contains("Bija"),
+            err.contains("Bija"),
             "Error should mention Bija (seed)"
         );
     }

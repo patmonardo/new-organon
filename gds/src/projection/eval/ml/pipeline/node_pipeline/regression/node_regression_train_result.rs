@@ -120,6 +120,7 @@ impl NodeRegressionTrainPipelineResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::projection::eval::ml::pipeline::node_pipeline::NodePropertyPipelineBaseTrainConfig;
 
     #[test]
     fn test_train_result_new() {

@@ -67,6 +67,10 @@ impl NodePropertyPredictPipeline {
             .flat_map(|step| step.input_node_properties().iter().cloned())
             .collect()
     }
+
+    pub fn add_feature_step(&mut self, step: NodeFeatureStep) {
+        self.feature_steps.push(step);
+    }
 }
 
 impl Pipeline for NodePropertyPredictPipeline {
@@ -159,7 +163,13 @@ mod tests {
         let map = pipeline.to_map();
         assert!(map.contains_key("nodePropertySteps"));
         assert!(map.contains_key("featureProperties"));
-        assert_eq!(map.get("featureProperties").unwrap().len(), 1);
+        assert_eq!(
+            map.get("featureProperties")
+                .and_then(|v| v.as_array())
+                .unwrap()
+                .len(),
+            1
+        );
     }
 
     #[test]
@@ -173,13 +183,16 @@ mod tests {
 
     #[test]
     fn test_specific_validate_before_execution() {
+        use crate::types::graph_store::DefaultGraphStore;
         use crate::types::random::RandomGraphConfig;
 
         let pipeline = NodePropertyPredictPipeline::empty();
-        let graph_store = RandomGraphConfig::seeded(42)
-            .node_count(100)
-            .average_degree(5.0)
-            .generate();
+        let config = RandomGraphConfig {
+            seed: Some(42),
+            node_count: 100,
+            ..RandomGraphConfig::default()
+        };
+        let graph_store = DefaultGraphStore::random(&config).expect("random graph");
 
         assert!(pipeline
             .specific_validate_before_execution(&graph_store)

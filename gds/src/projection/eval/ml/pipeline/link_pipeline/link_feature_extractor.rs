@@ -215,8 +215,12 @@ mod tests {
     use crate::projection::eval::ml::pipeline::link_pipeline::linkfunctions::{
         CosineFeatureStep, HadamardFeatureStep,
     };
-    use crate::types::config::RandomGraphConfig;
-    use crate::types::random_graph_store;
+    use crate::types::graph_store::DefaultGraphStore;
+    use crate::types::random::RandomGraphConfig;
+
+    fn random_graph_store(config: &RandomGraphConfig) -> DefaultGraphStore {
+        DefaultGraphStore::random(config).expect("random graph")
+    }
 
     #[test]
     fn test_extractor_creation() {

@@ -91,6 +91,10 @@ impl LocalIdMap {
         &self.original_ids
     }
 
+    pub fn original_ids_list(&self) -> &[u64] {
+        self.original_ids()
+    }
+
     /// Get a vector copy of all original IDs.
     pub fn original_ids_vec(&self) -> Vec<u64> {
         self.original_ids.clone()

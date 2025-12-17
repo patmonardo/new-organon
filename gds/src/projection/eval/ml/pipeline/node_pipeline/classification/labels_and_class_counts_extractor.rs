@@ -80,8 +80,10 @@ impl LabelsAndClassCountsExtractor {
         // LabelsAndClassCounts::new(labels, class_counts)
 
         // Placeholder implementation
+        // - all labels map to class 0
+        // - class_counts indicates all nodes are in class 0
         let labels = vec![0; node_count as usize];
-        let class_counts = HashMap::new();
+        let class_counts = Self::extract_class_counts(_target_node_property, node_count);
         LabelsAndClassCounts::new(labels, class_counts)
     }
 

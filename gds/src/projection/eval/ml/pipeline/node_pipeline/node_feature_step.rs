@@ -18,6 +18,7 @@
 
 use crate::projection::eval::ml::pipeline::FeatureStep;
 use serde_json::Value;
+use std::hash::{Hash, Hasher};
 use std::collections::HashMap;
 
 /// A concrete implementation of FeatureStep for node properties.
@@ -30,6 +31,20 @@ pub struct NodeFeatureStep {
     // Cache for trait methods that need references
     input_properties: Vec<String>,
     configuration: HashMap<String, Value>,
+}
+
+impl PartialEq for NodeFeatureStep {
+    fn eq(&self, other: &Self) -> bool {
+        self.node_property == other.node_property
+    }
+}
+
+impl Eq for NodeFeatureStep {}
+
+impl Hash for NodeFeatureStep {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.node_property.hash(state);
+    }
 }
 impl NodeFeatureStep {
     /// Factory method to create a new NodeFeatureStep.
@@ -102,14 +117,14 @@ mod tests {
     fn test_configuration() {
         let step = NodeFeatureStep::of("age");
         let config = step.configuration();
-        assert_eq!(config.get("nodeProperty"), Some(&"age".to_string()));
+        assert_eq!(config.get("nodeProperty"), Some(&Value::String("age".to_string())));
     }
 
     #[test]
     fn test_to_map() {
         let step = NodeFeatureStep::of("age");
         let map = step.to_map();
-        assert_eq!(map.get("feature"), Some(&"age".to_string()));
+        assert_eq!(map.get("feature"), Some(&Value::String("age".to_string())));
     }
 
     #[test]

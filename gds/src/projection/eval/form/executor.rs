@@ -1,302 +1,228 @@
-//! FormExecutor - The Form Executor
+//! Form Processor - Apodictic ResultStore projector.
 //!
-//! This module implements the **FormExecutor** as a **fixed singularity** that executes
-//! the **Form infrastructure** through the **triadic cycle**.
-//!
-//! ## Architecture
-//!
-//! The FormExecutor is similar to ProcedureExecutor but executes **FormSpec** implementations
-//! through the **Thesis-Antithesis-Synthesis** cycle.
+//! The processor is intentionally small: it loads the base graph from the existing
+//! procedure `ExecutionContext` catalog, selects a Form operator via the FormShape's
+//! `morph.patterns[0]`, and returns an `Arc<DefaultGraphStore>`.
 
-use std::time::{Duration, Instant};
-use super::form_spec::*;
-use super::triadic_cycle::{TriadicCycle, TriadicCycleResult};
+use std::collections::HashMap;
 
-/// FormExecutor - The main executor for forms
-///
-/// This struct is the **fixed singularity** that executes **FormSpec** implementations
-/// through the **triadic cycle**.
-#[derive(Debug)]
-pub struct FormExecutor<F: FormStore> {
-    /// The form store
-    form_store: F,
-    /// Execution context
-    execution_context: ExecutionContext,
-    /// Executor configuration
-    config: ExecutorConfig,
+use crate::projection::eval::procedure::ExecutionContext;
+use crate::types::graph_store::DefaultGraphStore;
+
+use super::form_spec::{
+    time_form_eval, CommitSubgraphOperator, FormError, FormInput, FormOperator, FormOperatorOutput,
+    FormRequest, FormResult, MaterializeNodePropertiesOperator, PassThroughFormOperator,
+};
+
+/// A registry of Form operators.
+#[derive(Default)]
+pub struct FormCatalog {
+    ops: HashMap<String, Box<dyn FormOperator>>,
 }
 
-impl<F: FormStore> FormExecutor<F> {
-    /// Create a new FormExecutor
-    pub fn new(form_store: F, execution_context: ExecutionContext, config: ExecutorConfig) -> Self {
-        Self {
-            form_store,
-            execution_context,
-            config,
-        }
-    }
-
-    /// Execute a FormSpec through the triadic cycle
-    pub fn execute<S: FormSpec>(
-        &self,
-        form_spec: &S,
-        config: &FormConfig,
-    ) -> Result<FormResult<S::Output>, FormError> {
-        let start = Instant::now();
-
-        // Validate the form specification
-        self.validate_form_spec(form_spec, config)?;
-
-        // Create the triadic cycle
-        let triadic_cycle = TriadicCycle::new(
-            form_spec.thesis().clone(),
-            form_spec.antithesis().clone(),
-            form_spec.synthesis().clone(),
-            config.cycle_config.clone(),
-        );
-
-        // Execute the triadic cycle
-        let cycle_result = triadic_cycle.execute(&self.execution_context)?;
-
-        // Create the form result
-        let execution_time = start.elapsed();
-        let cycle_metadata = TriadicCycleMetadata {
-            cycles_executed: cycle_result.cycles_executed,
-            thesis_time: cycle_result.thesis_time,
-            antithesis_time: cycle_result.antithesis_time,
-            synthesis_time: cycle_result.synthesis_time,
-        };
-
-        // For now, we'll return a simple output
-        // In a real implementation, this would be the actual form result
-        let output = self.create_form_output(form_spec, &cycle_result)?;
-
-        Ok(FormResult::new(output, execution_time, cycle_metadata))
-    }
-
-    /// Validate a form specification
-    fn validate_form_spec<S: FormSpec>(
-        &self,
-        form_spec: &S,
-        config: &FormConfig,
-    ) -> Result<(), FormError> {
-        // Validate form name
-        if form_spec.name().is_empty() {
-            return Err(FormError::ConfigError {
-                message: "Form name cannot be empty".to_string(),
-            });
-        }
-
-        // Validate configuration
-        if config.form_name.is_empty() {
-            return Err(FormError::ConfigError {
-                message: "Configuration form name cannot be empty".to_string(),
-            });
-        }
-
-        // Validate cycle configuration
-        if config.cycle_config.max_cycles == 0 {
-            return Err(FormError::ConfigError {
-                message: "Maximum cycles must be greater than 0".to_string(),
-            });
-        }
-
-        Ok(())
-    }
-
-    /// Create the form output
-    fn create_form_output<S: FormSpec>(
-        &self,
-        _form_spec: &S,
-        _cycle_result: &TriadicCycleResult,
-    ) -> Result<S::Output, FormError> {
-        // For now, we'll create a simple output
-        // In a real implementation, this would be the actual form result
-        // This is a placeholder that will need to be implemented based on the actual FormSpec
-        
-        // We need to return something that matches S::Output
-        // Since we don't know what S::Output is, we'll need to use a different approach
-        // For now, we'll return an error indicating this needs to be implemented
-        Err(FormError::ExecutionError {
-            message: "Form output creation not yet implemented".to_string(),
-        })
-    }
-
-    /// Get the form store
-    pub fn form_store(&self) -> &F {
-        &self.form_store
-    }
-
-    /// Get the execution context
-    pub fn execution_context(&self) -> &ExecutionContext {
-        &self.execution_context
-    }
-
-    /// Get the executor configuration
-    pub fn config(&self) -> &ExecutorConfig {
-        &self.config
-    }
-}
-
-/// ExecutorConfig - Configuration for the FormExecutor
-#[derive(Debug, Clone)]
-pub struct ExecutorConfig {
-    /// Maximum execution time
-    pub max_execution_time: Duration,
-    /// Enable validation
-    pub enable_validation: bool,
-    /// Enable logging
-    pub enable_logging: bool,
-    /// Log level
-    pub log_level: LogLevel,
-}
-
-/// LogLevel - Logging level
-#[derive(Debug, Clone)]
-pub enum LogLevel {
-    /// Debug level
-    Debug,
-    /// Info level
-    Info,
-    /// Warning level
-    Warning,
-    /// Error level
-    Error,
-}
-
-impl Default for ExecutorConfig {
-    fn default() -> Self {
-        Self {
-            max_execution_time: Duration::from_secs(60),
-            enable_validation: true,
-            enable_logging: true,
-            log_level: LogLevel::Info,
-        }
-    }
-}
-
-/// FormExecutorBuilder - Builder for FormExecutor
-#[derive(Debug)]
-pub struct FormExecutorBuilder<F: FormStore> {
-    form_store: Option<F>,
-    execution_context: Option<ExecutionContext>,
-    config: Option<ExecutorConfig>,
-}
-
-impl<F: FormStore> FormExecutorBuilder<F> {
-    /// Create a new FormExecutorBuilder
+impl FormCatalog {
     pub fn new() -> Self {
-        Self {
-            form_store: None,
-            execution_context: None,
-            config: None,
+        Self { ops: HashMap::new() }
+    }
+
+    pub fn insert(&mut self, op: impl FormOperator + 'static) {
+        self.ops.insert(op.name().to_string(), Box::new(op));
+    }
+
+    pub fn get(&self, name: &str) -> Option<&dyn FormOperator> {
+        self.ops.get(name).map(|b| b.as_ref())
+    }
+}
+
+/// Executes Form evaluation and returns a ResultStore (GraphStore).
+pub struct FormProcessor {
+    catalog: FormCatalog,
+    context: ExecutionContext,
+}
+
+impl FormProcessor {
+    pub fn new(context: ExecutionContext) -> Self {
+        let mut catalog = FormCatalog::new();
+        catalog.insert(PassThroughFormOperator::default());
+        catalog.insert(CommitSubgraphOperator::default());
+        catalog.insert(MaterializeNodePropertiesOperator::default());
+        Self { catalog, context }
+    }
+
+    pub fn context(&self) -> &ExecutionContext {
+        &self.context
+    }
+
+    pub fn context_mut(&mut self) -> &mut ExecutionContext {
+        &mut self.context
+    }
+
+    pub fn catalog_mut(&mut self) -> &mut FormCatalog {
+        &mut self.catalog
+    }
+
+    pub fn evaluate(&mut self, request: &FormRequest) -> Result<FormResult, FormError> {
+        let base_graph = self
+            .context
+            .load_graph(&request.graph_name)
+            .map_err(|e| FormError::Context(e.to_string()))?;
+
+        let patterns = &request.program.morph.patterns;
+        if patterns.is_empty() {
+            return Err(FormError::Config(
+                "FormShape.morph.patterns must be non-empty".to_string(),
+            ));
         }
-    }
 
-    /// Set the form store
-    pub fn with_form_store(mut self, form_store: F) -> Self {
-        self.form_store = Some(form_store);
-        self
-    }
+        let mut current_graph = base_graph;
+        let mut step_proofs: Vec<serde_json::Value> = Vec::with_capacity(patterns.len());
+        let mut operator_names: Vec<String> = Vec::with_capacity(patterns.len());
 
-    /// Set the execution context
-    pub fn with_execution_context(mut self, execution_context: ExecutionContext) -> Self {
-        self.execution_context = Some(execution_context);
-        self
-    }
+        let ((final_graph, final_proof), elapsed) = time_form_eval(|| {
+            let mut last_proof = serde_json::json!(null);
+            for op_name in patterns {
+                let op = self
+                    .catalog
+                    .get(op_name)
+                    .ok_or_else(|| FormError::UnknownOperator(op_name.to_string()))?;
 
-    /// Set the executor configuration
-    pub fn with_config(mut self, config: ExecutorConfig) -> Self {
-        self.config = Some(config);
-        self
-    }
+                let (FormOperatorOutput { graph, proof }, step_elapsed) = time_form_eval(|| {
+                    op.evaluate(
+                        FormInput {
+                            base_graph: current_graph,
+                            program: &request.program,
+                            artifacts: &request.artifacts,
+                        },
+                        &mut self.context,
+                    )
+                })?;
 
-    /// Build the FormExecutor
-    pub fn build(self) -> Result<FormExecutor<F>, FormError> {
-        let form_store = self.form_store.ok_or_else(|| FormError::ConfigError {
-            message: "Form store is required".to_string(),
+                operator_names.push(op_name.to_string());
+                step_proofs.push(serde_json::json!({
+                    "operator": op_name,
+                    "execution_time_ms": step_elapsed.as_millis(),
+                    "proof": proof,
+                }));
+
+                current_graph = graph;
+                last_proof = step_proofs
+                    .last()
+                    .cloned()
+                    .unwrap_or_else(|| serde_json::json!(null));
+            }
+
+            Ok((current_graph, last_proof))
         })?;
 
-        let execution_context = self.execution_context.ok_or_else(|| FormError::ConfigError {
-            message: "Execution context is required".to_string(),
-        })?;
+        let graph = final_graph;
 
-        let config = self.config.unwrap_or_default();
+        if let Some(name) = &request.output_graph_name {
+            self.context.add_graph(name.clone(), graph.clone());
+        }
 
-        Ok(FormExecutor::new(form_store, execution_context, config))
+        let meta = serde_json::json!({
+            "operators": operator_names,
+            "base_graph": request.graph_name,
+            "output_graph": request.output_graph_name,
+            "execution_time_ms": elapsed.as_millis(),
+        });
+
+        let proof = serde_json::json!({
+            "meta": meta,
+            "steps": step_proofs,
+            "final": final_proof,
+        });
+
+        let operator = patterns.join(" -> ");
+
+        Ok(FormResult {
+            graph,
+            execution_time: elapsed,
+            operator,
+            proof,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::form::core::FormShape;
+    use crate::form::core::{Context, FormShape, Shape};
+    use crate::form::core::shape::Morph;
+    use crate::types::random::random_graph::RandomGraphConfig;
+    use crate::types::graph_store::GraphStore;
+    use crate::types::ValueType;
+    use std::sync::Arc;
 
-    #[derive(Debug)]
-    struct TestFormStore {
-        forms: std::collections::HashMap<String, FormShape>,
-    }
+    #[test]
+    fn passthrough_projects_base_graph() {
+        let graph = Arc::new(DefaultGraphStore::random(&RandomGraphConfig::seeded(7)).unwrap());
+        let mut ctx = ExecutionContext::new("user");
+        ctx.add_graph("g", graph.clone());
 
-    impl TestFormStore {
-        fn new() -> Self {
-            Self {
-                forms: std::collections::HashMap::new(),
-            }
-        }
-    }
+        let shape = Shape::new(vec![], vec![], HashMap::new(), HashMap::new());
+        let fctx = Context::new(vec![], vec![], "strategy".to_string(), vec![]);
+        let morph = Morph::new(vec![], vec!["passThrough".to_string()], vec![], vec![]);
+        let program = FormShape::new(shape, fctx, morph);
 
-    impl FormStore for TestFormStore {
-        fn form_count(&self) -> usize {
-            self.forms.len()
-        }
+        let request = FormRequest::new("g", program);
+        let mut processor = FormProcessor::new(ctx);
+        let result = processor.evaluate(&request).unwrap();
 
-        fn get_form(&self, name: &str) -> Option<&FormShape> {
-            self.forms.get(name)
-        }
-
-        fn add_form(&mut self, form: FormShape) -> Result<(), FormError> {
-            self.forms.insert("test_form".to_string(), form);
-            Ok(())
-        }
-
-        fn remove_form(&mut self, name: &str) -> Result<Option<FormShape>, FormError> {
-            Ok(self.forms.remove(name))
-        }
+        assert_eq!(result.operator, "passThrough");
+        assert_eq!(result.graph.node_count(), graph.node_count());
+        assert_eq!(result.graph.relationship_count(), graph.relationship_count());
     }
 
     #[test]
-    fn test_form_executor_creation() {
-        let form_store = TestFormStore::new();
-        let execution_context = ExecutionContext::new("exec_1".to_string(), "user_1".to_string());
-        let config = ExecutorConfig::default();
+    fn commit_then_materialize_node_properties() {
+        let graph = Arc::new(DefaultGraphStore::random(&RandomGraphConfig::seeded(9)).unwrap());
+        let mut ctx = ExecutionContext::new("user");
+        ctx.add_graph("g", graph);
 
-        let executor = FormExecutor::new(form_store, execution_context, config);
-        assert_eq!(executor.execution_context().execution_id, "exec_1");
-        assert_eq!(executor.execution_context().user, "user_1");
-    }
+        let shape = Shape::new(vec![], vec![], HashMap::new(), HashMap::new());
+        let fctx = Context::new(vec![], vec![], "strategy".to_string(), vec![]);
+        let morph = Morph::new(
+            vec![],
+            vec![
+                "commitSubgraph".to_string(),
+                "materializeNodeProperties".to_string(),
+            ],
+            vec![],
+            vec![],
+        );
+        let program = FormShape::new(shape, fctx, morph);
 
-    #[test]
-    fn test_form_executor_builder() {
-        let form_store = TestFormStore::new();
-        let execution_context = ExecutionContext::new("exec_1".to_string(), "user_1".to_string());
-        let config = ExecutorConfig::default();
+        let mut request = FormRequest::new("g", program);
+        request.artifacts.insert(
+            "selection".to_string(),
+            serde_json::json!({"node_ids": [0, 1, 2]}),
+        );
+        request.artifacts.insert(
+            "node_properties".to_string(),
+            serde_json::json!({
+                "score": {
+                    "values_by_original_node_id": {"0": 1.0, "1": 2.0, "2": 3.0},
+                    "value_type": "double"
+                }
+            }),
+        );
 
-        let executor = FormExecutorBuilder::new()
-            .with_form_store(form_store)
-            .with_execution_context(execution_context)
-            .with_config(config)
-            .build()
-            .unwrap();
+        let mut processor = FormProcessor::new(ctx);
+        let result = processor.evaluate(&request).unwrap();
 
-        assert_eq!(executor.execution_context().execution_id, "exec_1");
-        assert_eq!(executor.execution_context().user, "user_1");
-    }
+        assert_eq!(result.operator, "commitSubgraph -> materializeNodeProperties");
+        assert_eq!(result.graph.node_count(), 3);
 
-    #[test]
-    fn test_executor_config_default() {
-        let config = ExecutorConfig::default();
-        assert_eq!(config.max_execution_time, Duration::from_secs(60));
-        assert!(config.enable_validation);
-        assert!(config.enable_logging);
+        let values = result
+            .graph
+            .node_property_values("score")
+            .expect("score property exists");
+        assert_eq!(values.value_type(), ValueType::Double);
+
+        // The committed IdMap preserves selection order [0,1,2] as mapped ids [0,1,2].
+        assert_eq!(values.double_value(0).unwrap(), 1.0);
+        assert_eq!(values.double_value(1).unwrap(), 2.0);
+        assert_eq!(values.double_value(2).unwrap(), 3.0);
     }
 }

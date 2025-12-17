@@ -17,8 +17,8 @@
 //!
 //! ## Module Separation
 //!
-//! - **factory** = CAR (given data) - Ingestion of external data into GraphStore
-//! - **eval** = CDR (derived computations) - Execution of computations on GraphStore
+//! - **factory** = Concealing power (CAR / given data) - external/native data → GraphStore (Image)
+//! - **eval** = Revealing power (CDR / derived computations) - computations on GraphStore → results
 //! - **codegen** = Utilities for generating execution code
 
 // ------------------------------------------------------------------------
@@ -27,14 +27,18 @@
 pub mod impls;
 pub mod node_label;
 pub mod orientation;
+pub mod power;
 pub mod relationship_type;
+pub mod trace;
 pub mod traits;
 
 // Re-export the stable projection surface
 pub use impls::*;
 pub use node_label::*;
 pub use orientation::*;
+pub use power::*;
 pub use relationship_type::*;
+pub use trace::*;
 pub use traits::*;
 
 // ------------------------------------------------------------------------

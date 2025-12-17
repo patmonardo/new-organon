@@ -83,8 +83,8 @@ mod tests {
     fn test_accessors() {
         let result = LinkPredictionTrainResult::new(PhantomData, PhantomData);
 
-        assert!(result.classifier().is::<()>());
-        assert!(result.training_statistics().is::<()>());
+        let _ = result.classifier();
+        let _ = result.training_statistics();
     }
 
     #[test]

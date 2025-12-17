@@ -226,14 +226,14 @@ mod tests {
     #[test]
     fn test_validate_insufficient_test_nodes() {
         let config = NodePropertyPredictionSplitConfig::new(0.01, 3).unwrap();
-        // With 100 nodes, test set would be 1 node (< MIN_SET_SIZE)
-        assert!(config.validate_min_num_nodes_in_split_sets(100).is_err());
+        // With 50 nodes, test set would be 0 nodes (< MIN_SET_SIZE == 1)
+        assert!(config.validate_min_num_nodes_in_split_sets(50).is_err());
     }
 
     #[test]
     fn test_validate_insufficient_train_nodes() {
-        let config = NodePropertyPredictionSplitConfig::new(0.95, 3).unwrap();
-        // With 100 nodes, train set would be 5 nodes (< MIN_TRAIN_SET_SIZE)
+        let config = NodePropertyPredictionSplitConfig::new(0.99, 3).unwrap();
+        // With 100 nodes, train set would be 1 node (< MIN_TRAIN_SET_SIZE == 2)
         assert!(config.validate_min_num_nodes_in_split_sets(100).is_err());
     }
 }

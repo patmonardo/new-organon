@@ -134,11 +134,17 @@ mod tests {
 
     #[test]
     fn test_algorithm_new() {
+        use crate::types::graph_store::DefaultGraphStore;
         use crate::types::random::random_graph::RandomGraphConfig;
 
         let pipeline = NodeRegressionTrainingPipeline::new();
         let config = NodeRegressionPipelineTrainConfig::default();
-        let graph_store = Arc::new(RandomGraphConfig::new(10, 20).build());
+        let random_config = RandomGraphConfig {
+            node_count: 10,
+            seed: Some(42),
+            ..RandomGraphConfig::default()
+        };
+        let graph_store = Arc::new(DefaultGraphStore::random(&random_config).expect("random graph"));
 
         let _algorithm = NodeRegressionTrainAlgorithm::new(
             std::marker::PhantomData, // pipeline_trainer
@@ -151,11 +157,17 @@ mod tests {
 
     #[test]
     fn test_algorithm_accessors() {
+        use crate::types::graph_store::DefaultGraphStore;
         use crate::types::random::random_graph::RandomGraphConfig;
 
         let pipeline = NodeRegressionTrainingPipeline::new();
         let config = NodeRegressionPipelineTrainConfig::default();
-        let graph_store = Arc::new(RandomGraphConfig::new(10, 20).build());
+        let random_config = RandomGraphConfig {
+            node_count: 10,
+            seed: Some(42),
+            ..RandomGraphConfig::default()
+        };
+        let graph_store = Arc::new(DefaultGraphStore::random(&random_config).expect("random graph"));
 
         let algorithm = NodeRegressionTrainAlgorithm::new(
             std::marker::PhantomData,

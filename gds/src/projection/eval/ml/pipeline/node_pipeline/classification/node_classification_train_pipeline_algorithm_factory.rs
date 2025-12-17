@@ -219,7 +219,7 @@ mod tests {
             ..RandomGraphConfig::default()
         };
         let graph_store =
-            Arc::new(DefaultGraphStore::random(&config).expect("Failed to generate random graph"));
+            DefaultGraphStore::random(&config).expect("Failed to generate random graph");
         let factory = NodeClassificationTrainPipelineAlgorithmFactory::new((), "2.5.0".to_string());
         let train_config = NodeClassificationPipelineTrainConfig::default();
 
@@ -236,7 +236,7 @@ mod tests {
             ..RandomGraphConfig::default()
         };
         let graph_store =
-            Arc::new(DefaultGraphStore::random(&config).expect("Failed to generate random graph"));
+            DefaultGraphStore::random(&config).expect("Failed to generate random graph");
         let train_config = NodeClassificationPipelineTrainConfig::default();
 
         // Should return placeholder for now
@@ -251,7 +251,7 @@ mod tests {
             ..RandomGraphConfig::default()
         };
         let graph_store =
-            Arc::new(DefaultGraphStore::random(&config).expect("Failed to generate random graph"));
+            DefaultGraphStore::random(&config).expect("Failed to generate random graph");
         let pipeline = NodeClassificationTrainingPipeline::new();
 
         // Should return placeholder for now
@@ -270,37 +270,5 @@ mod tests {
         let _estimation = factory.memory_estimation(&config);
     }
 
-    #[test]
-    fn test_progress_task() {
-        let factory = NodeClassificationTrainPipelineAlgorithmFactory::new((), "2.5.0".to_string());
-        let config = RandomGraphConfig {
-            node_count: 10,
-            seed: Some(42),
-            ..RandomGraphConfig::default()
-        };
-        let graph_store =
-            DefaultGraphStore::random(&config).expect("Failed to generate random graph");
-        let config = NodeClassificationPipelineTrainConfig::default();
-
-        // Should return placeholder for now
-        let _task = factory.progress_task(&graph_store, &config);
-    }
-
-    #[test]
-    fn test_progress_task_with_pipeline() {
-        let config = RandomGraphConfig {
-            node_count: 10,
-            seed: Some(42),
-            ..RandomGraphConfig::default()
-        };
-        let graph_store =
-            DefaultGraphStore::random(&config).expect("Failed to generate random graph");
-        let pipeline = NodeClassificationTrainingPipeline::new();
-
-        // Should return placeholder for now
-        let _task = NodeClassificationTrainPipelineAlgorithmFactory::progress_task_with_pipeline(
-            &graph_store,
-            &pipeline,
-        );
-    }
+    // Note: duplicated progress-task tests removed.
 }

@@ -9,6 +9,11 @@ This note is a lightweight map of what the current `projection/factory/` layer d
 
 ## Quick mental model
 
+See also: [gds/doc/PROJECTION-CONCEAL-REVEAL.md](PROJECTION-CONCEAL-REVEAL.md) for the canonical framing:
+
+- **Projection/Factory** = **Concealing power** (Source → Image)
+- **Projection/Eval** = **Revealing power** (Image → Derived result)
+
 - **Projection** owns: turning an external/native representation (Arrow tables, etc.) into:
   - graph topology (nodes/edges)
   - id mapping (original IDs → mapped/internal IDs)

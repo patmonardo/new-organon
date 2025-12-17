@@ -74,29 +74,33 @@ pub trait NodePropertyTrainingPipeline: TrainingPipeline {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ml::training_method::TrainingMethod;
     use crate::projection::eval::ml::pipeline::auto_tuning_config::AutoTuningConfig;
     use crate::projection::eval::ml::pipeline::training_pipeline::TunableTrainerConfig;
-    use crate::projection::eval::ml::pipeline::{ExecutableNodePropertyStep, FeatureStep};
-    use std::sync::Arc;
+    use crate::projection::eval::ml::pipeline::{
+        ExecutableNodePropertyStep, FeatureStep, Pipeline, TrainingMethod,
+    };
+    use serde_json::Value;
 
     // Mock feature step for testing
     #[derive(Clone, Debug)]
-    struct MockFeatureStep;
+    struct MockFeatureStep {
+        input_properties: Vec<String>,
+        configuration: HashMap<String, Value>,
+    }
 
     impl FeatureStep for MockFeatureStep {
-        fn input_node_properties(&self) -> Vec<String> {
-            vec!["age".to_string()]
+        fn input_node_properties(&self) -> &[String] {
+            &self.input_properties
         }
         fn name(&self) -> &str {
             "mock"
         }
-        fn configuration(&self) -> HashMap<String, String> {
-            HashMap::new()
+        fn configuration(&self) -> &HashMap<String, Value> {
+            &self.configuration
         }
-        fn to_map(&self) -> HashMap<String, String> {
+        fn to_map(&self) -> HashMap<String, Value> {
             let mut map = HashMap::new();
-            map.insert("type".to_string(), "mock".to_string());
+            map.insert("type".to_string(), Value::String("mock".to_string()));
             map
         }
     }
@@ -104,33 +108,58 @@ mod tests {
     // Mock training pipeline for testing
     struct MockNodeTrainingPipeline {
         split_config: NodePropertyPredictionSplitConfig,
-        node_property_steps: Vec<Arc<ExecutableNodePropertyStep>>,
+        node_property_steps: Vec<Box<dyn ExecutableNodePropertyStep>>,
         feature_steps: Vec<MockFeatureStep>,
+        training_parameter_space: HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>>,
+        auto_tuning_config: AutoTuningConfig,
+    }
+
+    impl Pipeline for MockNodeTrainingPipeline {
+        type FeatureStep = MockFeatureStep;
+
+        fn to_map(&self) -> HashMap<String, Value> {
+            HashMap::new()
+        }
+
+        fn node_property_steps(&self) -> &[Box<dyn ExecutableNodePropertyStep>] {
+            &self.node_property_steps
+        }
+
+        fn feature_steps(&self) -> &[Self::FeatureStep] {
+            &self.feature_steps
+        }
+
+        fn specific_validate_before_execution(
+            &self,
+            _graph_store: &crate::types::graph_store::DefaultGraphStore,
+        ) -> Result<(), crate::projection::eval::ml::pipeline::PipelineValidationError> {
+            Ok(())
+        }
     }
 
     impl TrainingPipeline for MockNodeTrainingPipeline {
+        fn pipeline_type(&self) -> &str {
+            "mock-node-training-pipeline"
+        }
+
         fn training_parameter_space(
             &self,
         ) -> &HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>> {
-            unimplemented!()
+            &self.training_parameter_space
         }
+
+        fn training_parameter_space_mut(
+            &mut self,
+        ) -> &mut HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>> {
+            &mut self.training_parameter_space
+        }
+
         fn auto_tuning_config(&self) -> &AutoTuningConfig {
-            unimplemented!()
+            &self.auto_tuning_config
         }
-        fn number_of_model_selection_trials(&self) -> usize {
-            5
-        }
-        fn node_property_steps(&self) -> &[Arc<ExecutableNodePropertyStep>] {
-            &self.node_property_steps
-        }
-        fn add_node_property_step(&mut self, _step: ExecutableNodePropertyStep) {
-            unimplemented!()
-        }
-        fn feature_steps(&self) -> Vec<MockFeatureStep> {
-            self.feature_steps.clone()
-        }
-        fn add_feature_step(&mut self, _step: MockFeatureStep) {
-            unimplemented!()
+
+        fn set_auto_tuning_config(&mut self, config: AutoTuningConfig) {
+            self.auto_tuning_config = config;
         }
     }
 
@@ -154,6 +183,8 @@ mod tests {
             split_config: NodePropertyPredictionSplitConfig::default(),
             node_property_steps: vec![],
             feature_steps: vec![],
+            training_parameter_space: HashMap::new(),
+            auto_tuning_config: AutoTuningConfig::default(),
         };
 
         assert_eq!(pipeline.split_config().test_fraction(), 0.3);
@@ -172,6 +203,8 @@ mod tests {
             split_config: NodePropertyPredictionSplitConfig::default(),
             node_property_steps: vec![],
             feature_steps: vec![],
+            training_parameter_space: HashMap::new(),
+            auto_tuning_config: AutoTuningConfig::default(),
         };
 
         assert_eq!(pipeline.require_eager_features(), false);
@@ -182,7 +215,12 @@ mod tests {
         let pipeline = MockNodeTrainingPipeline {
             split_config: NodePropertyPredictionSplitConfig::default(),
             node_property_steps: vec![],
-            feature_steps: vec![MockFeatureStep],
+            feature_steps: vec![MockFeatureStep {
+                input_properties: vec!["age".to_string()],
+                configuration: HashMap::new(),
+            }],
+            training_parameter_space: HashMap::new(),
+            auto_tuning_config: AutoTuningConfig::default(),
         };
 
         let desc = pipeline.feature_pipeline_description();
@@ -197,6 +235,8 @@ mod tests {
             split_config: NodePropertyPredictionSplitConfig::new(0.25, 4).unwrap(),
             node_property_steps: vec![],
             feature_steps: vec![],
+            training_parameter_space: HashMap::new(),
+            auto_tuning_config: AutoTuningConfig::default(),
         };
 
         let entries = pipeline.additional_entries();

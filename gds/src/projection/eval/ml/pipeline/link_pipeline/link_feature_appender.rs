@@ -28,7 +28,7 @@ pub trait LinkFeatureAppender: Send + Sync {
     /// # Arguments
     ///
     /// * `source` - Source node ID
-    /// * `target` - Target node ID  
+    /// * `target` - Target node ID
     /// * `link_features` - Feature array to append to
     /// * `offset` - Starting position in link_features where features should be written
     ///
@@ -76,8 +76,8 @@ mod tests {
     impl LinkFeatureAppender for TestAppender {
         fn append_features(
             &self,
-            source: NodeId,
-            target: NodeId,
+            source: u64,
+            target: u64,
             link_features: &mut [f64],
             offset: usize,
         ) {

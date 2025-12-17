@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-use crate::ml::training_method::TrainingMethod;
+use crate::projection::eval::ml::pipeline::TrainingMethod;
 use std::collections::HashMap;
 
 // Placeholder types until ml-metrics, ml-training, and pipeline packages are complete

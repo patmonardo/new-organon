@@ -138,7 +138,7 @@ mod tests {
             properties: vec!["features".to_string()],
         };
 
-        let _appender = step.link_feature_appender(&graph);
+        let _appender = step.link_feature_appender(graph.as_ref());
         // Appender creation succeeds (placeholder for now)
     }
 }

@@ -106,12 +106,12 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
     ///     ProgressTracker progressTracker
     /// ) {
     ///     validateMainMetric(pipeline, configuration.metrics().get(0).toString());
-    ///     
+    ///
     ///     var nodeFeatureProducer = NodeFeatureProducer.create(
     ///         graphStore, configuration, executionContext, progressTracker
     ///     );
     ///     nodeFeatureProducer.validateNodePropertyStepsContextConfigs(pipeline.nodePropertySteps());
-    ///     
+    ///
     ///     return new NodeRegressionTrainAlgorithm(
     ///         NodeRegressionTrain.create(graphStore, pipeline, configuration, nodeFeatureProducer, progressTracker),
     ///         pipeline,
@@ -234,12 +234,18 @@ mod tests {
 
     #[test]
     fn test_build_with_pipeline() {
+        use crate::types::graph_store::DefaultGraphStore;
         use crate::types::random::random_graph::RandomGraphConfig;
 
         let factory = NodeRegressionTrainPipelineAlgorithmFactory::new(());
         let pipeline = NodeRegressionTrainingPipeline::new();
         let config = NodeRegressionPipelineTrainConfig::default();
-        let graph_store = Arc::new(RandomGraphConfig::new(10, 20).build());
+        let random_config = RandomGraphConfig {
+            node_count: 10,
+            seed: Some(42),
+            ..RandomGraphConfig::default()
+        };
+        let graph_store = Arc::new(DefaultGraphStore::random(&random_config).expect("random graph"));
 
         let _algorithm = factory.build_with_pipeline(
             graph_store,

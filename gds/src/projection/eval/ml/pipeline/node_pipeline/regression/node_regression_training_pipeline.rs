@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-use crate::ml::training_method::TrainingMethod;
+use crate::projection::eval::ml::pipeline::TrainingMethod;
 use crate::projection::eval::ml::pipeline::TrainingType;
 use crate::types::graph_store::DefaultGraphStore;
 use std::sync::Arc;

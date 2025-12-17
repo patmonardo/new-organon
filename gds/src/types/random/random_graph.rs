@@ -74,6 +74,10 @@ impl RandomGraphConfig {
         self.seed = Some(seed);
         self
     }
+
+    pub fn seeded(seed: u64) -> Self {
+        Self::default().with_seed(seed)
+    }
 }
 
 /// Errors that can occur while generating random graph structures.

@@ -259,9 +259,8 @@ mod tests {
 
         let pipeline = LinkPredictionPredictPipeline::from_steps(PhantomData, feature_steps);
 
-        // Test Pipeline trait method
-        let steps: &[Box<dyn LinkFeatureStep>] = Pipeline::feature_steps(&pipeline);
-        assert_eq!(steps.len(), 1);
+        // LinkPredictionPredictPipeline does not implement the node Pipeline trait.
+        assert_eq!(pipeline.feature_steps().len(), 1);
     }
 
     #[test]

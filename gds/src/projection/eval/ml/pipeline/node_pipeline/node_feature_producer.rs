@@ -112,7 +112,7 @@ impl<C: NodePropertyPipelineBaseTrainConfig> NodeFeatureProducer<C> {
     ///         stepExecutor.executeNodePropertySteps(pipeline.nodePropertySteps());
     ///         Collection<NodeLabel> targetNodeLabels = trainConfig.nodeLabelIdentifiers(graphStore);
     ///         pipeline.validateFeatureProperties(graphStore, targetNodeLabels);
-    ///         
+    ///
     ///         var targetNodeLabelGraph = graphStore.getGraph(targetNodeLabels);
     ///         if (pipeline.requireEagerFeatures()) {
     ///             return FeaturesFactory.extractEagerFeatures(targetNodeLabelGraph, pipeline.featureProperties());
@@ -262,6 +262,7 @@ mod tests {
     use super::*;
     use crate::types::random::RandomGraphConfig;
     use std::collections::HashSet;
+    use std::sync::Arc;
 
     // Mock config for testing
     struct MockTrainConfig {
@@ -290,10 +291,12 @@ mod tests {
 
     #[test]
     fn test_create_node_feature_producer() {
-        let graph_store = RandomGraphConfig::seeded(42)
-            .node_count(100)
-            .average_degree(5.0)
-            .generate();
+        let config = RandomGraphConfig {
+            seed: Some(42),
+            node_count: 100,
+            ..RandomGraphConfig::default()
+        };
+        let graph_store = Arc::new(DefaultGraphStore::random(&config).expect("random graph"));
 
         let config = MockTrainConfig {
             pipeline_name: "test-pipeline".to_string(),
@@ -307,10 +310,12 @@ mod tests {
 
     #[test]
     fn test_create_with_wildcard_labels() {
-        let graph_store = RandomGraphConfig::seeded(42)
-            .node_count(100)
-            .average_degree(5.0)
-            .generate();
+        let config = RandomGraphConfig {
+            seed: Some(42),
+            node_count: 100,
+            ..RandomGraphConfig::default()
+        };
+        let graph_store = Arc::new(DefaultGraphStore::random(&config).expect("random graph"));
 
         let config = MockTrainConfig {
             pipeline_name: "test-pipeline".to_string(),
@@ -324,10 +329,12 @@ mod tests {
 
     #[test]
     fn test_validate_steps_context_configs() {
-        let graph_store = RandomGraphConfig::seeded(42)
-            .node_count(100)
-            .average_degree(5.0)
-            .generate();
+        let config = RandomGraphConfig {
+            seed: Some(42),
+            node_count: 100,
+            ..RandomGraphConfig::default()
+        };
+        let graph_store = Arc::new(DefaultGraphStore::random(&config).expect("random graph"));
 
         let config = MockTrainConfig {
             pipeline_name: "test-pipeline".to_string(),

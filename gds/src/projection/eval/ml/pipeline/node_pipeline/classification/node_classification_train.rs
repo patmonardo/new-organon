@@ -520,7 +520,7 @@ mod tests {
 
     #[test]
     #[ignore = "Placeholder test - waiting for full implementation"]
-    fn test_run() {
+    fn test_run_placeholder() {
         let config = RandomGraphConfig {
             node_count: 10,
             seed: Some(42),
@@ -554,10 +554,10 @@ mod tests {
             ..RandomGraphConfig::default()
         };
         let graph_store =
-            DefaultGraphStore::random(&config).expect("Failed to generate random graph");
+            Arc::new(DefaultGraphStore::random(&config).expect("Failed to generate random graph"));
         let pipeline = NodeClassificationTrainingPipeline::new();
         let config = NodeClassificationPipelineTrainConfig::default();
-        let node_feature_producer = NodeFeatureProducer::placeholder();
+        let node_feature_producer = NodeFeatureProducer::create(graph_store.clone(), config.clone());
         let progress_tracker = ();
 
         let mut trainer = NodeClassificationTrain::create(

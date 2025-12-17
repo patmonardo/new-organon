@@ -104,6 +104,6 @@ mod tests {
         );
 
         // Verify accessors return correct references
-        assert_eq!(result.class_id_map().original_ids_list(), &vec![10, 20, 30]);
+        assert_eq!(result.class_id_map().original_ids_list(), &[10, 20, 30]);
     }
 }

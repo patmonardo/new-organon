@@ -117,7 +117,7 @@ mod tests {
             (),
             (),
             LocalIdMap::of(&[0, 1, 2]),
-            LongMultiSet::new(),
+            std::collections::HashMap::new(),
         );
         let schema = ();
 
