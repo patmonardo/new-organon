@@ -1,11 +1,11 @@
-# PCI Adapter Pattern
+# PCI Adapter Pattern (RealityPipe)
 
 ## The Pattern
 
-The `@model` package follows the **PCI Adapter pattern**—a proven hardware design technique applied to software:
+The `@model` package follows a **PCI Adapter pattern**—a hardware analogy applied to software:
 
 ```
-Universal Bus (Server)
+Universal Substrate (Server)
     ↓
 MVC (Standard Adapter Device)
     ↓
@@ -56,7 +56,7 @@ Runtime Adapters
 
 | PCI Hardware | MVC Software |
 |--------------|--------------|
-| PCI Bus | Universal Bus (Server) |
+| PCI Bus | Universal substrate |
 | PCI Slot | MVC Interface |
 | Adapter Card | @model Extension |
 | Device Driver | Runtime Adapter |
@@ -135,5 +135,5 @@ Runtime Adapter (PCI-style)
 Runtime UI
 ```
 
-This is basic computer component design technique—ancient stuff, but proven and powerful!
+This is a hardware-inspired modularity pattern applied to the Model substrate.
 

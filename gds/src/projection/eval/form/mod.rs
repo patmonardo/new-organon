@@ -2,27 +2,19 @@
 //!
 //! The Form ISA is the third evaluator under `projection/eval/`.
 //!
-//! In the repo’s two-stage meaning of “Projection”, Eval is the **Revealing power**:
-//! it takes a **base** `GraphStore` (the Image laid down by Factory) and produces a
-//! **derived** `GraphStore` (the ResultStore).
+//! It consumes a base graph plus artifacts produced by earlier stages and returns
+//! a derived graph (a ResultStore) by running a chain of `FormOperator`s.
 //!
-//! The Form ISA is where the system starts to encode the “origin of certainty”:
-//! Procedure and ML can emit artifacts (assertions / problematics), but **Form projects
-//! the returned graph** (apodictic/singular) by selecting a `FormOperator` from a `FormShape`
-//! program and executing it against a base graph.
-//!
-//! ## The Three ISA
-//!
-//! ```
-//! eval/procedure (Computation ISA)  ← AlgorithmSpec implementations
-//! eval/ml (Pipeline ISA)           ← Pipeline implementations
-//! eval/form (Form ISA)             ← FormProcessor + FormOperator
+//! ```text
+//! eval/procedure  ← algorithms
+//! eval/ml         ← optional pipeline
+//! eval/form       ← FormProcessor + FormOperator
 //! ```
 
 pub mod form_spec;
 pub mod executor;
-pub mod triadic_cycle;
+pub mod pure_executor;
 
 pub use executor::*;
+pub use pure_executor::*;
 pub use form_spec::*;
-pub use triadic_cycle::*;

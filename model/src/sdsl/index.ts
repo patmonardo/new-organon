@@ -1,7 +1,7 @@
 /**
  * @model/sdsl - SDSL Core (Species DSL)
  *
- * Root SDSL Substrate - The System Bus and FCI (Formal Concept Integration)
+ * Root SDSL Substrate - RealityPipe/RealityFabric (reality-facing substrate)
  *
  * This is the foundational layer where:
  * - Agent-MVC is the Root Synthesis (Universal Speaker of GDSL + Every SDSL)
@@ -9,7 +9,7 @@
  * - All UI SDSLs (React, Radix, Malloy) are particular implementations
  *
  * The Agent alone speaks both GDSL (Genera DSL) and Every SDSL (Sarvadharma).
- * The root sdsl/ folder is the System Bus - the integration point for all SDSLs.
+ * The root sdsl/ folder is the integration point for all SDSLs.
  *
  * Standalone BI package - zero dependencies on GDS/GDSL/Logic/Task.
  */
@@ -73,8 +73,8 @@ export * from './kernel-port';
 // Kernel → FactTrace helpers (closing the loop)
 export * from './kernel-trace';
 
-// System Bus primitives (FCI: internal middleware)
-export * from './fci-bus';
+// RealityPipe primitives (internal middleware)
+export * from './reality-pipe';
 
 // Terminology (transcendentally located)
 export * from './terminology';

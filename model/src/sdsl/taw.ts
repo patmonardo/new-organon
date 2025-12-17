@@ -4,11 +4,11 @@
  * Canonical internal message vocabulary for Task/Agent/Workflow binding.
  *
  * This is intentionally transport-agnostic and in-process:
- * - built on the FCI bus envelope
+ * - built on the RealityPipe envelope
  * - expresses the Concept as event kinds + payloads
  */
 
-import type { FciBus, FciEnvelope, FciId } from './fci-bus';
+import type { RealityPipe, RealityPipeEnvelope, RealityPipeId } from './reality-pipe';
 import type { EventMeta } from './terminology';
 
 import { TAW_KINDS, type TawKind, type TawPayload } from '@organon/task';
@@ -16,19 +16,19 @@ import { TAW_KINDS, type TawKind, type TawPayload } from '@organon/task';
 export { TAW_KINDS };
 export type { TawKind, TawPayload };
 
-export type TawEnvelope = FciEnvelope<TawKind, TawPayload, EventMeta>;
+export type TawEnvelope = RealityPipeEnvelope<TawKind, TawPayload, EventMeta>;
 
 export function isTawKind(kind: string): kind is TawKind {
   return (TAW_KINDS as readonly string[]).includes(kind);
 }
 
 export function publishTaw(
-  bus: FciBus<TawKind, TawPayload, EventMeta>,
+  bus: RealityPipe<TawKind, TawPayload, EventMeta>,
   input: {
     kind: TawKind;
     payload: TawPayload;
     meta?: EventMeta;
-    correlationId?: FciId;
+    correlationId?: RealityPipeId;
     source?: string;
   },
 ): TawEnvelope {
@@ -36,7 +36,7 @@ export function publishTaw(
 }
 
 export function subscribeTaw(
-  bus: FciBus<TawKind, TawPayload, EventMeta>,
+  bus: RealityPipe<TawKind, TawPayload, EventMeta>,
   handler: (envelope: TawEnvelope) => void,
   opts?: { kind?: TawKind | readonly TawKind[] },
 ): () => void {

@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { InMemoryFciBus } from '../src/sdsl/fci-bus';
+import { InMemoryRealityPipe } from '../src/sdsl/reality-pipe';
 
-describe('FCI bus', () => {
+describe('RealityPipe', () => {
   it('publishes envelopes and supports kind filtering', () => {
-    const bus = new InMemoryFciBus<'a' | 'b', { n: number }>();
+    const bus = new InMemoryRealityPipe<'a' | 'b', { n: number }>();
 
     const seen: Array<{ kind: 'a' | 'b'; n: number }> = [];
 
@@ -18,7 +18,7 @@ describe('FCI bus', () => {
   });
 
   it('returns a normalized envelope with id/ts', () => {
-    const bus = new InMemoryFciBus<'x', { ok: true }>();
+    const bus = new InMemoryRealityPipe<'x', { ok: true }>();
     const spy = vi.fn();
     bus.subscribe(spy);
 

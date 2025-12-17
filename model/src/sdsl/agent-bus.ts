@@ -9,8 +9,8 @@
  */
 
 import type { FactTraceEvent } from './fact-trace';
-import type { FciBus, FciEnvelope } from './fci-bus';
-import { InMemoryFciBus } from './fci-bus';
+import type { RealityPipe, RealityPipeEnvelope } from './reality-pipe';
+import { InMemoryRealityPipe } from './reality-pipe';
 
 export type AgentBusEvent = FactTraceEvent;
 
@@ -22,10 +22,10 @@ export interface AgentBus {
 }
 
 export class InMemoryAgentBus implements AgentBus {
-  private readonly bus: FciBus<'agent.fact', AgentBusEvent>;
+  private readonly bus: RealityPipe<'agent.fact', AgentBusEvent>;
 
-  constructor(opts: { bus?: FciBus<'agent.fact', AgentBusEvent> } = {}) {
-    this.bus = opts.bus ?? new InMemoryFciBus<'agent.fact', AgentBusEvent>();
+  constructor(opts: { bus?: RealityPipe<'agent.fact', AgentBusEvent> } = {}) {
+    this.bus = opts.bus ?? new InMemoryRealityPipe<'agent.fact', AgentBusEvent>();
   }
 
   publish(event: AgentBusEvent): void {
@@ -33,7 +33,7 @@ export class InMemoryAgentBus implements AgentBus {
   }
 
   subscribe(handler: AgentBusHandler): () => void {
-    return this.bus.subscribe((envelope: FciEnvelope<'agent.fact', AgentBusEvent>) => {
+    return this.bus.subscribe((envelope: RealityPipeEnvelope<'agent.fact', AgentBusEvent>) => {
       handler(envelope.payload);
     });
   }

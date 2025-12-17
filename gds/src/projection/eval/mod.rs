@@ -14,6 +14,15 @@
 // Form (Form ISA) - Apodictic/Singular (ResultStore synthesis)
 pub mod form;
 
+// Runner - thin orchestration seam above the Three ISA
+pub mod runner;
+
+// Storage Processor - enterprise/storage boundary seam
+pub mod storage_processor;
+
+// Compute Processor - enterprise/runtime resource boundary seam
+pub mod compute_processor;
+
 // ML Pipeline - Java GDS translation (active)
 #[cfg(feature = "ml")]
 pub mod ml;
@@ -23,6 +32,9 @@ pub mod ml;
 pub mod procedure;
 
 pub use form::*;
+pub use runner::*;
+pub use storage_processor::*;
+pub use compute_processor::*;
 
 // pub use form::*;
 // pub use form_processor::*;

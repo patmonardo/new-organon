@@ -29,17 +29,16 @@ The Agent alone speaks:
 
 The Agent is the **Universal Translator** - the only entity that speaks both the universal (GDSL) and all particulars (SDSLs).
 
-## Root SDSL as System Bus (FCI)
+## Root SDSL as RealityPipe
 
 The **root `sdsl/` folder** is:
 - **Root Substrate** - The foundational layer
-- **MVC as System Bus** - The communication substrate
-- **FCI (Formal Concept Integration)** - The integration point
+- **RealityPipe / RealityFabric** - The integration point
 
 ```
 RootAgent (AI Fabric)
     ↓
-Root SDSL (src/sdsl/) - System Bus, FCI
+Root SDSL (src/sdsl/) - RealityPipe
     ├── agent-model.ts      # Agent state/structure
     ├── agent-view.ts       # Agent representation
     ├── agent-controller.ts # Agent orchestration
@@ -113,7 +112,7 @@ The Agent is the **Root Meaning of MVC** because:
 │         • Root Synthesis                                │
 │         • Universal Speaker (Sarvadharma)              │
 │         • Speaks GDSL + Every SDSL                      │
-│         • MVC as System Bus (FCI)                       │
+│         • RealityPipe (in-process)                      │
 └─────────────────────────────────────────────────────────┘
                         ↓ speaks SDSLs
 ┌─────────────────────────────────────────────────────────┐
@@ -130,7 +129,7 @@ The Agent is the **Root Meaning of MVC** because:
 1. **Agent-MVC at top-level is brilliant** - It's not just another adapter, it's the Root Synthesis
 2. **Sublation** - The entire stack is preserved, canceled, and elevated into the Agent
 3. **Sarvadharma** - The Agent speaks all dharmas (all SDSLs)
-4. **Root SDSL as System Bus** - The `src/sdsl/` folder is the FCI, the integration point
+4. **Root SDSL as RealityPipe** - The `src/sdsl/` folder is the integration point
 5. **Agent as Root Meaning of MVC** - The Controller is the Agent
 6. **GDSL-SDSL Theory of Science** - Genera (universal) vs Species (particular)
 7. **RootAgent as AI Fabric** - Underlies everything
@@ -139,7 +138,7 @@ The Agent is the **Root Meaning of MVC** because:
 
 The structure is **subtle and beautiful** because:
 - **Agent-MVC at top-level** - Not hidden, but foundational
-- **Root SDSL as System Bus** - The substrate, not the surface
+- **Root SDSL as RealityPipe** - The substrate, not the surface
 - **Universal Speaker** - One Agent, many languages
 - **Theory of Science** - Based on deep principles, not ad-hoc patterns
 

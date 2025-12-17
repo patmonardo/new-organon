@@ -29,7 +29,7 @@ describe('@organon/gdsl smoke', () => {
 
 	it('parses a minimal run request and computes algorithm operation id', () => {
 		const json = readFileSync(
-			resolve(import.meta.dirname, '../../fixtures/gdsl/run.pagerank.stream.json'),
+			resolve(import.meta.dirname, '../../tools/fixtures/gdsl/run.pagerank.stream.json'),
 			'utf8',
 		);
 		const run = GdslRunRequestSchema.parse(JSON.parse(json));

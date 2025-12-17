@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { InMemoryFciBus } from '../src/sdsl/fci-bus';
+import { InMemoryRealityPipe } from '../src/sdsl/reality-pipe';
 import { publishTaw, subscribeTaw, type TawKind, isTawKind } from '../src/sdsl/taw';
 
 describe('TAW concept surface', () => {
   it('publishes intent and delivers to kind-filtered subscribers', () => {
-    const bus = new InMemoryFciBus<TawKind, any, any>();
+    const bus = new InMemoryRealityPipe<TawKind, any, any>();
 
     const seen = vi.fn();
     subscribeTaw(bus, seen, { kind: 'taw.intent' });
@@ -37,3 +37,4 @@ describe('TAW concept surface', () => {
     expect(isTawKind('nope')).toBe(false);
   });
 });
+

@@ -15,6 +15,7 @@ use crate::types::graph::{
     id_map::{IdMap, SimpleIdMap},
     DefaultGraph, Graph, GraphCharacteristics, GraphCharacteristicsBuilder, RelationshipTopology,
 };
+use crate::types::graph::id_map::{MappedNodeId, OriginalNodeId};
 use crate::types::properties::graph::impls::default_graph_property_values::{
     DefaultDoubleGraphPropertyValues, DefaultLongGraphPropertyValues,
 };
@@ -132,6 +133,132 @@ impl DefaultGraphStore {
             self.relationship_property_stores.clone(),
             HashMap::new(),
         ))
+    }
+
+    /// Projects an induced subgraph into a new [`DefaultGraphStore`].
+    ///
+    /// - `selected_original_node_ids` are original (external) node ids.
+    /// - The returned store reuses this store's config/schema/capabilities.
+    /// - Properties are not copied; this is a topology-only projection.
+    ///
+    /// Returns the new store, an `old_mapped_id -> new_mapped_id` map, and per-type relationship counts kept.
+    pub fn commit_induced_subgraph_by_original_node_ids(
+        &self,
+        graph_name: GraphName,
+        selected_original_node_ids: &[OriginalNodeId],
+    ) -> GraphStoreResult<(
+        DefaultGraphStore,
+        HashMap<MappedNodeId, MappedNodeId>,
+        HashMap<RelationshipType, usize>,
+    )> {
+        use std::collections::HashSet;
+
+        if selected_original_node_ids.is_empty() {
+            return Err(GraphStoreError::InvalidOperation(
+                "Selection must be non-empty".to_string(),
+            ));
+        }
+
+        // Validate selection (no unknown ids, no duplicates), and build old->new mapping.
+        let mut seen_original = HashSet::new();
+        let mut selected_ordered_old_mapped: Vec<MappedNodeId> =
+            Vec::with_capacity(selected_original_node_ids.len());
+        let mut old_mapped_to_new: HashMap<MappedNodeId, MappedNodeId> = HashMap::new();
+
+        for (index, &original_id) in selected_original_node_ids.iter().enumerate() {
+            if !seen_original.insert(original_id) {
+                return Err(GraphStoreError::InvalidOperation(format!(
+                    "Duplicate node id in selection: {original_id}"
+                )));
+            }
+            let old_mapped = self
+                .id_map
+                .safe_to_mapped_node_id(original_id)
+                .ok_or_else(|| {
+                    GraphStoreError::InvalidOperation(format!(
+                        "Unknown node id in selection: {original_id}"
+                    ))
+                })?;
+            let new_mapped: MappedNodeId = index as MappedNodeId;
+            selected_ordered_old_mapped.push(old_mapped);
+            old_mapped_to_new.insert(old_mapped, new_mapped);
+        }
+
+        // Build new IdMap, preserving labels.
+        let mut new_id_map =
+            SimpleIdMap::from_original_ids(selected_original_node_ids.iter().copied());
+        for (new_mapped, &original_id) in selected_original_node_ids.iter().enumerate() {
+            let new_mapped = new_mapped as MappedNodeId;
+            let old_mapped = self
+                .id_map
+                .safe_to_mapped_node_id(original_id)
+                .ok_or_else(|| {
+                    GraphStoreError::InvalidOperation(format!(
+                        "Unknown node id in selection: {original_id}"
+                    ))
+                })?;
+            for label in self.id_map.node_labels(old_mapped) {
+                new_id_map.add_node_label(label.clone());
+                new_id_map.add_node_id_to_label(new_mapped, label);
+            }
+        }
+
+        // Induce relationship topologies by type.
+        let n = selected_original_node_ids.len();
+        let mut relationship_topologies: HashMap<RelationshipType, RelationshipTopology> =
+            HashMap::new();
+        let mut kept_by_type: HashMap<RelationshipType, usize> = HashMap::new();
+
+        for (rel_type, topology) in &self.relationship_topologies {
+            let mut outgoing: Vec<Vec<MappedNodeId>> = vec![Vec::new(); n];
+
+            for (new_source_index, &old_source) in selected_ordered_old_mapped.iter().enumerate() {
+                let neighbors = match topology.outgoing(old_source) {
+                    Some(neighbors) => neighbors,
+                    None => continue,
+                };
+                for &old_target in neighbors {
+                    if let Some(&new_target) = old_mapped_to_new.get(&old_target) {
+                        outgoing[new_source_index].push(new_target);
+                    }
+                }
+            }
+
+            let incoming = if topology.is_inverse_indexed() {
+                let mut incoming: Vec<Vec<MappedNodeId>> = vec![Vec::new(); n];
+                for (source, neighbors) in outgoing.iter().enumerate() {
+                    let source_id = source as MappedNodeId;
+                    for &target in neighbors {
+                        let idx = target as usize;
+                        if idx < incoming.len() {
+                            incoming[idx].push(source_id);
+                        }
+                    }
+                }
+                Some(incoming)
+            } else {
+                None
+            };
+
+            let induced = RelationshipTopology::new(outgoing, incoming);
+            let kept = induced.relationship_count();
+            if kept > 0 {
+                kept_by_type.insert(rel_type.clone(), kept);
+                relationship_topologies.insert(rel_type.clone(), induced);
+            }
+        }
+
+        let store = DefaultGraphStore::new(
+            self.config.as_ref().clone(),
+            graph_name,
+            self.database_info.clone(),
+            self.schema.as_ref().clone(),
+            self.capabilities.clone(),
+            new_id_map,
+            relationship_topologies,
+        );
+
+        Ok((store, old_mapped_to_new, kept_by_type))
     }
 
     fn set_modified(&mut self) {

@@ -38,6 +38,15 @@ The ceremony largely comes from expressing each noun as a service graph plus bui
 - Multi-layer services that exist only to move data between “catalog → builder → store”.
 - Type parameter explosions where a single enum/trait object is sufficient.
 
+## Naming in this repo (important)
+This repo already has a substantial Rust module at `gds/src/core/` (a Java-faithful translation layer) and it already contains `core/utils`.
+
+For the *new* Core substrate described in this note, prefer a separate top-level module name such as:
+- `gds/src/substrate/` (recommended)
+- or `gds/src/kernel/`
+
+Hard rule: do **not** introduce a new `*/utils` mega-module inside the new substrate. Keep helpers private to the module that owns them, or promote them to a named type/trait.
+
 ## Proposed Rust Core surface (minimal and future-proof)
 ### 1) Substrate
 - `CoreGraphStore` (product struct)
@@ -125,9 +134,9 @@ This is the real “Enterprise” substrate, not export code.
   - Start with a plain function/module that returns a store.
 
 ## Next concrete step (if you want)
-Create a tiny Rust `core/` module with:
-- `core/store.rs`: `CoreGraphStore` skeleton (schema/idmap/topologies)
-- `core/graph.rs`: `CoreGraph` view trait + one CSR-backed impl
-- `core/lifecycle.rs`: `Import/Serve/Export` traits (no implementations yet)
+Create a tiny Rust `substrate/` module with:
+- `substrate/store.rs`: `CoreGraphStore` skeleton (schema/idmap/topologies)
+- `substrate/graph.rs`: `CoreGraph` view trait + one CSR-backed impl
+- `substrate/lifecycle.rs`: `Import/Serve/Export` traits (no implementations yet)
 
 Then wire one evaluator path (Procedure or Form commit) to accept either `DefaultGraphStore` or `CoreGraphStore` through a shared trait.

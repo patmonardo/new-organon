@@ -1,4 +1,4 @@
-# FPU and FCI Architecture
+# FPU and RealityPipe Architecture
 
 ## The Core Insight
 
@@ -9,7 +9,7 @@ The `@logic:@model` dyad is exactly what **Reflective Agents** need—they creat
 | Concept | Name | Analogy |
 |---------|------|---------|
 | **FPU** | Form Processor Unit | CPU:GPU (sublated) |
-| **FCI** | Form Component Interface | PCI bus |
+| **RealityPipe** | Reality Pipe | in-process pipe |
 
 ## FPU: Form Processor Unit
 
@@ -41,17 +41,17 @@ The **FPU** sublates the CPU:GPU dyad:
                            ▼
 ```
 
-## FCI: Form Component Interface
+## RealityPipe: Adapter Pipe
 
-The **FCI** is the bus + adapter interface:
+The **RealityPipe** is the in-process pipe + adapter interface:
 
 ```
                            │
                            ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│                     FCI (Form Component Interface)                      │
+│                         RealityPipe (in-process)                         │
 │                                                                         │
-│  FormBus + form-{model,view,controller} = Universal Adapter Interface   │
+│  RealityPipe + form-{model,view,controller} = Universal Adapter Interface│
 └────────┬─────────────────┬─────────────────┬─────────────────┬─────────┘
          │                 │                 │                 │
          ▼                 ▼                 ▼                 ▼
@@ -65,18 +65,18 @@ The **FCI** is the bus + adapter interface:
       React UI         Radix UI         Agent Task        Agent Task
 ```
 
-## The FCI Components
+## The RealityPipe Components
 
-The **FCI** (Form Component Interface) consists of:
+The **RealityPipe** consists of:
 
-1. **FormBus** — The communication channel
+1. **RealityPipe** — The communication channel
 2. **form-{model,view,controller}** — The adapter interface
-3. **Adapters** — Components that plug into the FCI
+3. **Adapters** — Components that plug into the pipe
 
-### What the FCI Provides
+### What the Pipe Provides
 
 ```typescript
-// FCI = FormBus + form-{model,view,controller}
+// RealityPipe = RealityPipe (event envelope) + form-{model,view,controller}
 // The adapter interface that handles access to the FPU
 
 FormModel      → State : Structure           (holds data, validates)
@@ -88,10 +88,10 @@ FormController → Action : Rule               (orchestrates, handles actions)
 
 Just like people pay $$$ for PCI adapter chips, this is what's happening:
 
-| PCI World | FCI World |
+| PCI World | RealityPipe World |
 |-----------|-----------|
-| PCI Bus | FormBus |
-| PCI Interface Spec | FCI (Form Component Interface) |
+| PCI Bus | RealityPipe |
+| PCI Interface Spec | RealityPipe (Adapter Pipe) |
 | Adapter Chip | form-{model,view,controller} |
 | Graphics Card | React Adapter |
 | Network Card | Radix Adapter |
@@ -100,20 +100,20 @@ Just like people pay $$$ for PCI adapter chips, this is what's happening:
 
 ## Chain of Adapters
 
-An App can deploy a **chain of Adapters** on the FCI:
+An App can deploy a **chain of Adapters** on the RealityPipe:
 
 ```
 FPU (Form Processor Unit)
       │
       │ FormShape
       ▼
-   FCI (Form Component Interface)
+  RealityPipe (in-process)
       │
       ├─→ React Adapter → React UI (User sees dashboard)
       │
       ├─→ Agent Adapter A → Reasoning Task → 
       │         │
-      │         └─→ Produces new FormShape → Back to FCI
+      │         └─→ Produces new FormShape → Back to RealityPipe
       │
       └─→ Agent Adapter B → Analysis Task →
                 │
@@ -123,7 +123,7 @@ FPU (Form Processor Unit)
 **Results from the FPU can feed into:**
 1. React Clients (immediate display)
 2. Chain of Agents (reasoning, analysis, transformation)
-3. Back to FCI (agents produce new FormShapes)
+3. Back to RealityPipe (agents produce new FormShapes)
 
 ## The Logic:Model Dyad for Agents
 
@@ -139,29 +139,29 @@ Agent Task
     │ provides schemas, reflection, 6 Pillars
     │ CPU: Qualitative | GPU: Quantitative
     ▼
-@model (FCI - Form Component Interface)
+@model (RealityPipe)
     │
-    │ provides FormBus, adapters, DisplayDocument
+    │ provides RealityPipe, adapters, DisplayDocument
     ▼
 Agent creates Logical Model
     │
-    │ FormShape flows back to FCI
+    │ FormShape flows back to RealityPipe
     ▼
 Other adapters consume the result
 ```
 
 ## Implementation
 
-### FCI Interface
+### RealityPipe Interface
 
 ```typescript
-// The FCI (Form Component Interface)
+// The RealityPipe (in-process)
 export interface FormComponentInterface {
-  // FormBus for communication
-  bus: FormBus;
+  // RealityPipe for communication
+  pipe: RealityPipe;
   
   // Adapter registration
-  registerAdapter(adapter: FCIAdapter): void;
+  registerAdapter(adapter: Adapter): void;
   
   // FormShape distribution
   publish(shape: FormShape): void;
@@ -174,13 +174,13 @@ export interface FormComponentInterface {
 ### Adapter Interface
 
 ```typescript
-export interface FCIAdapter {
+export interface Adapter {
   name: string;
   
-  // Receive FormShape from FCI
-  receive(shape: FormShape, context: FCIContext): Promise<AdapterResult>;
+  // Receive FormShape from the pipe
+  receive(shape: FormShape, context: AdapterContext): Promise<AdapterResult>;
   
-  // Publish result back to FCI (for chaining)
+  // Publish result back to the pipe (for chaining)
   publish?(result: AdapterResult): FormShape;
 }
 ```
@@ -188,11 +188,11 @@ export interface FCIAdapter {
 ### Agent as Adapter
 
 ```typescript
-// Agent is just another adapter on the FCI
-export class AgentAdapter implements FCIAdapter {
+// Agent is just another adapter on the pipe
+export class AgentAdapter implements Adapter {
   name = 'agent';
   
-  async receive(shape: FormShape, context: FCIContext): Promise<AdapterResult> {
+  async receive(shape: FormShape, context: AdapterContext): Promise<AdapterResult> {
     // Agent receives FormShape
     // Reasons about it using @logic schemas (FPU)
     // Creates new Logical Models
@@ -208,9 +208,9 @@ export class AgentAdapter implements FCIAdapter {
 ## The Chain Pattern
 
 ```typescript
-// App deploys chain of adapters on FCI
+// App deploys chain of adapters on the pipe
 const app = createFormApp({
-  fci: new FormComponentInterface(),
+  pipe: new FormComponentInterface(),
   chain: [
     'react',      // Display initial state
     'agent-a',    // Reason about state
@@ -228,20 +228,19 @@ await app.process(initialFormShape);
 | Term | Full Name | Role |
 |------|-----------|------|
 | **FPU** | Form Processor Unit | CPU:GPU sublation, processes forms |
-| **FCI** | Form Component Interface | Bus + adapter interface |
-| **FormBus** | Form Bus | Communication channel within FCI |
+| **RealityPipe** | Reality Pipe | Pipe + adapter interface |
 
-The **FCI** unifies:
+The **RealityPipe** unifies:
 
 1. **UI Adapters** (React, Radix) — Display FormShapes to users
 2. **Agent Adapters** — Reason about FormShapes, create Logical Models
 3. **Chain Execution** — Results from one adapter feed the next
 
-Both UI components and Agents are just different adapters on the same FCI. The dyad (`@logic:@model` = `FPU:FCI`) serves them equally—agents create Logical Models the same way UI creates displays.
+Both UI components and Agents are just different adapters on the same RealityPipe. The dyad (`@logic:@model` = `FPU:RealityPipe`) serves them equally—agents create Logical Models the same way UI creates displays.
 
 ---
 
 > "An App can deploy a chain of Adapters on the Bus. Results from the FPU can feed into React Clients and to a chain of Agents."
 
-This is the **FPU:FCI Architecture**.
+This is the **FPU:RealityPipe Architecture**.
 

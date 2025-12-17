@@ -1,5 +1,5 @@
 import {
-  InMemoryFciBus,
+  InMemoryRealityPipe,
   publishTaw,
   defineModel,
   sum,
@@ -91,7 +91,7 @@ async function main() {
   console.log(`\n=== Plan prompt text ===\n${seed.planPromptText}\n`);
 
   // 2) Create a bus and publish the events (this is the “machine motion”)
-  const bus = new InMemoryFciBus<TawKind, TawPayload, EventMeta>();
+  const bus = new InMemoryRealityPipe<TawKind, TawPayload, EventMeta>();
   bus.subscribe((env) => {
     // eslint-disable-next-line no-console
     console.log(`[bus] ${env.kind} id=${env.id} corr=${env.correlationId ?? '-'} source=${env.source ?? '-'}`);

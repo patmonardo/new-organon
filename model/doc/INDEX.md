@@ -165,12 +165,12 @@ Test coverage:
 
 ---
 
-## FPU:FCI Architecture
+## FPU:RealityPipe Architecture
 
 | Term | Full Name | Role |
 |------|-----------|------|
 | **FPU** | Form Processor Unit | CPU:GPU sublation (Qualitative:Quantitative) |
-| **FCI** | Form Component Interface | FormBus + form-{model,view,controller} |
+| **RealityPipe** | Reality Pipe | In-process envelope + adapter interface |
 
 ```
 FPU (Form Processor Unit)
@@ -179,7 +179,7 @@ FPU (Form Processor Unit)
       │
       │ FormShape
       ▼
-FCI (Form Component Interface)
+RealityPipe (in-process)
       │
       ├─→ React Adapter → UI
       ├─→ Radix Adapter → Rich UI
@@ -187,7 +187,7 @@ FCI (Form Component Interface)
       └─→ Chain... → Results flow through
 ```
 
-Both UI components and Agents are adapters on the same FCI. The `@logic:@model` dyad (`FPU:FCI`) serves them equally—agents create Logical Models the same way UI creates displays.
+Both UI components and Agents are adapters on the same RealityPipe. The `@logic:@model` dyad (`FPU:RealityPipe`) serves them equally—agents create Logical Models the same way UI creates displays.
 
 See: `doc/fpu-fci-architecture.md`
 

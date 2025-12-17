@@ -57,6 +57,38 @@ Neo4j treats “projection” primarily as stage (1). This repo treats stage (2)
 - **Backend swappability**: storage backend choice is an internal strategy (preferably injected via Collections factories), not a semantic part of Projection.
 - **Determinacy**: Revealing must be explainable as a transformation of the Image, not magic (this is where progress/trace belongs).
 
+## RealityFabric: the five-fold “fat pipe”
+
+In this repo, **Fabric** names the universal interconnect between the kernel
+(Projection Factory/Eval) and the substrate/reality. It is the thing that
+“plugs into Reality” (i.e. the non-negotiable conditions under which computation
+becomes real: policy, time, accountability).
+
+Wheel framing (brahmachakra): Reality is modeled as a **Wheel** — a **4-fold rim**
+(quadrants) plus the **center conjunction**.
+
+- **Rim (four-fold)**: Storage, Compute, Control, Time
+- **Center (conjunction)**: Witness
+
+Operationally, the RealityFabric is still **five-fold**:
+
+1) **Storage** — persistence/materialization surfaces
+2) **Compute** — CPU/GPU allocation/execution surfaces
+3) **Control** — identity/tenancy/policy labels
+4) **Time** — budgets/leases/deadlines
+5) **Witness** — trace/audit/proof sinks
+
+Concrete anchors in code today:
+
+- Storage surface for Form: `FormStoreSurface` in `gds/src/substrate/surface.rs`
+- Compute surface for suites: `ComputeSurface` in `gds/src/substrate/compute_surface.rs`
+- Control/Time envelopes exist as the enterprise seams (`StorageMeta` / `ComputeMeta`)
+- Witness exists as Form proof JSON, and will grow a sink boundary
+
+The long-term intent is that Reality-facing proc-macros codegen bindings against
+this fabric: Collections factories, config surfaces, and the Value/ValueType +
+property-type plumbing that makes projections executable.
+
 ## Relation to the Logic package
 
 The Logic package already defines Projection as **revealing/concealing** at the concept level:

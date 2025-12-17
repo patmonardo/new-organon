@@ -117,6 +117,10 @@ pub mod csr_huge;
 pub mod relationships_builder;
 pub use relationships_builder::RelationshipsBuilder;
 
+// Compute suite projection (GPU/CPU) - resource projection seam
+pub mod compute_suite;
+pub use compute_suite::*;
+
 // Future: Polars-native factory
 // #[cfg(feature = "polars")]
 // pub mod polars;

@@ -12,14 +12,11 @@ use std::time::{Duration, Instant};
 
 use serde_json::Value as JsonValue;
 
-use crate::config::GraphStoreConfig;
+use crate::substrate::FormStoreSurface;
 use crate::projection::eval::procedure::ExecutionContext;
-use crate::projection::NodeLabel;
-use crate::projection::RelationshipType;
-use crate::types::graph::id_map::{IdMap, OriginalNodeId, SimpleIdMap};
+use crate::types::graph::id_map::{MappedNodeId, OriginalNodeId};
 use crate::types::graph_store::DefaultGraphStore;
-use crate::types::graph_store::{GraphName, GraphStore};
-use crate::types::graph::RelationshipTopology;
+use crate::types::graph_store::GraphName;
 
 /// Artifacts passed into Form evaluation.
 ///
@@ -44,16 +41,16 @@ pub enum FormError {
 
 /// Input to a concrete Form operator.
 #[derive(Debug)]
-pub struct FormInput<'a> {
-    pub base_graph: Arc<DefaultGraphStore>,
-    pub program: &'a crate::form::core::FormShape,
+pub struct FormInput<'a, S = DefaultGraphStore> {
+    pub base_graph: Arc<S>,
+    pub program: &'a crate::form::FormShape,
     pub artifacts: &'a FormArtifacts,
 }
 
 /// The apodictic result of Form evaluation.
 #[derive(Debug, Clone)]
-pub struct FormResult {
-    pub graph: Arc<DefaultGraphStore>,
+pub struct FormResult<S = DefaultGraphStore> {
+    pub graph: Arc<S>,
     pub execution_time: Duration,
     pub operator: String,
     /// A structured trace/proof describing how the ResultStore was projected.
@@ -62,20 +59,20 @@ pub struct FormResult {
 
 /// Output produced by a concrete Form operator.
 #[derive(Debug, Clone)]
-pub struct FormOperatorOutput {
-    pub graph: Arc<DefaultGraphStore>,
+pub struct FormOperatorOutput<S = DefaultGraphStore> {
+    pub graph: Arc<S>,
     pub proof: JsonValue,
 }
 
 /// A Form operator projects a ResultStore (GraphStore) from a base graph and artifacts.
-pub trait FormOperator: Send + Sync {
+pub trait FormOperator<S = DefaultGraphStore>: Send + Sync {
     fn name(&self) -> &str;
 
     fn evaluate(
         &self,
-        input: FormInput<'_>,
+        input: FormInput<'_, S>,
         context: &mut ExecutionContext,
-    ) -> Result<FormOperatorOutput, FormError>;
+    ) -> Result<FormOperatorOutput<S>, FormError>;
 }
 
 /// A complete Form evaluation request.
@@ -85,7 +82,7 @@ pub struct FormRequest {
     pub graph_name: String,
 
     /// The Form program (Shape + Context + Morph).
-    pub program: crate::form::core::FormShape,
+    pub program: crate::form::FormShape,
 
     /// Cross-stage artifacts (Procedure/ML outputs, configs, model handles).
     pub artifacts: FormArtifacts,
@@ -95,7 +92,7 @@ pub struct FormRequest {
 }
 
 impl FormRequest {
-    pub fn new(graph_name: impl Into<String>, program: crate::form::core::FormShape) -> Self {
+    pub fn new(graph_name: impl Into<String>, program: crate::form::FormShape) -> Self {
         Self {
             graph_name: graph_name.into(),
             program,
@@ -108,7 +105,7 @@ impl FormRequest {
 /// Resolve the operator name from a FormShape.
 ///
 /// Convention: the first entry in `morph.patterns` selects the operator.
-pub fn operator_name_from_form_shape(shape: &crate::form::core::FormShape) -> Option<&str> {
+pub fn operator_name_from_form_shape(shape: &crate::form::FormShape) -> Option<&str> {
     shape.morph.patterns.first().map(|s| s.as_str())
 }
 
@@ -116,16 +113,19 @@ pub fn operator_name_from_form_shape(shape: &crate::form::core::FormShape) -> Op
 #[derive(Debug, Default)]
 pub struct PassThroughFormOperator;
 
-impl FormOperator for PassThroughFormOperator {
+impl<S> FormOperator<S> for PassThroughFormOperator
+where
+    S: Send + Sync + 'static,
+{
     fn name(&self) -> &str {
         "passThrough"
     }
 
     fn evaluate(
         &self,
-        input: FormInput<'_>,
+        input: FormInput<'_, S>,
         _context: &mut ExecutionContext,
-    ) -> Result<FormOperatorOutput, FormError> {
+    ) -> Result<FormOperatorOutput<S>, FormError> {
         Ok(FormOperatorOutput {
             graph: input.base_graph,
             proof: serde_json::json!({ "kind": "passThrough" }),
@@ -178,129 +178,41 @@ impl CommitSubgraphOperator {
             "Missing selection artifact. Expected selection.node_ids or node_ids".to_string(),
         ))
     }
-
-    fn induced_topology_for_type(
-        base_graph: &DefaultGraphStore,
-        relationship_type: &RelationshipType,
-        selected_mapped_ids: &HashMap<i64, i64>,
-        selected_ordered_old_mapped: &[i64],
-        include_incoming: bool,
-    ) -> Result<RelationshipTopology, FormError> {
-        use std::collections::HashSet;
-
-        let mut types = HashSet::new();
-        types.insert(relationship_type.clone());
-        let view = base_graph
-            .get_graph_with_types(&types)
-            .map_err(|e| FormError::Execution(e.to_string()))?;
-
-        let n = selected_ordered_old_mapped.len();
-        let mut outgoing: Vec<Vec<i64>> = vec![Vec::new(); n];
-
-        for (new_source_index, &old_source) in selected_ordered_old_mapped.iter().enumerate() {
-            let stream = view.stream_relationships(old_source, view.default_property_value());
-            for cursor in stream {
-                let old_target = cursor.target_id();
-                if let Some(&new_target) = selected_mapped_ids.get(&old_target) {
-                    outgoing[new_source_index].push(new_target);
-                }
-            }
-        }
-
-        let incoming = if include_incoming {
-            let mut incoming: Vec<Vec<i64>> = vec![Vec::new(); n];
-            for (source, neighbors) in outgoing.iter().enumerate() {
-                let source_id = source as i64;
-                for &target in neighbors {
-                    let idx = target as usize;
-                    if idx < incoming.len() {
-                        incoming[idx].push(source_id);
-                    }
-                }
-            }
-            Some(incoming)
-        } else {
-            None
-        };
-
-        Ok(RelationshipTopology::new(outgoing, incoming))
-    }
 }
 
-impl FormOperator for CommitSubgraphOperator {
+impl<S> FormOperator<S> for CommitSubgraphOperator
+where
+    S: FormStoreSurface<Store = S> + Send + Sync + 'static,
+{
     fn name(&self) -> &str {
         "commitSubgraph"
     }
 
     fn evaluate(
         &self,
-        input: FormInput<'_>,
+        input: FormInput<'_, S>,
         _context: &mut ExecutionContext,
-    ) -> Result<FormOperatorOutput, FormError> {
-        use std::collections::HashMap as StdHashMap;
-
+    ) -> Result<FormOperatorOutput<S>, FormError> {
         let selected_original_ids = Self::parse_selected_original_node_ids(input.artifacts)?;
-        if selected_original_ids.is_empty() {
-            return Err(FormError::Config("Selection must be non-empty".to_string()));
-        }
-
-        let base_nodes = input.base_graph.nodes();
-
-        let mut selected_ordered_old_mapped: Vec<i64> = Vec::with_capacity(selected_original_ids.len());
-        let mut selected_old_to_new: StdHashMap<i64, i64> = StdHashMap::new();
-
-        for (index, original_id) in selected_original_ids.iter().copied().enumerate() {
-            let old_mapped = base_nodes
-                .safe_to_mapped_node_id(original_id)
-                .ok_or_else(|| FormError::Execution(format!("Unknown node id in selection: {original_id}")))?;
-            let new_mapped = index as i64;
-            selected_ordered_old_mapped.push(old_mapped);
-            selected_old_to_new.insert(old_mapped, new_mapped);
-        }
-
-        // Build new IdMap with preserved labels.
-        let mut new_id_map = SimpleIdMap::from_original_ids(selected_original_ids.iter().copied());
-        for (new_mapped, original_id) in selected_original_ids.iter().copied().enumerate() {
-            let new_mapped = new_mapped as i64;
-            let old_mapped = base_nodes
-                .safe_to_mapped_node_id(original_id)
-                .ok_or_else(|| FormError::Execution(format!("Unknown node id in selection: {original_id}")))?;
-            for label in base_nodes.node_labels(old_mapped) {
-                new_id_map.add_node_label(label.clone());
-                new_id_map.add_node_id_to_label(new_mapped, label);
-            }
-        }
-
-        // Build per-type induced relationship topologies.
-        let rel_types = input.base_graph.relationship_types();
         let inverse_indexed = input.base_graph.inverse_indexed_relationship_types();
-        let mut relationship_topologies = StdHashMap::new();
-
-        for rel_type in rel_types {
-            let topology = Self::induced_topology_for_type(
-                &input.base_graph,
-                &rel_type,
-                &selected_old_to_new,
-                &selected_ordered_old_mapped,
-                inverse_indexed.contains(&rel_type),
-            )?;
-
-            if topology.relationship_count() > 0 {
-                relationship_topologies.insert(rel_type, topology);
-            }
-        }
+        let (store, old_mapped_to_new, kept_by_type) = input
+            .base_graph
+            .commit_induced_subgraph_by_original_node_ids(
+                GraphName::new("form.commitSubgraph"),
+                &selected_original_ids,
+            )
+            .map_err(|e| FormError::Execution(e.to_string()))?;
 
         // Proof (C): a minimal trace of the apodictic commitment.
-        let mut old_mapped_to_new = serde_json::Map::new();
-        for (old, new) in selected_old_to_new.iter() {
-            old_mapped_to_new.insert(old.to_string(), serde_json::json!(new));
+        let mut old_mapped_to_new_json = serde_json::Map::new();
+        for (old, new) in old_mapped_to_new.iter() {
+            old_mapped_to_new_json.insert(old.to_string(), serde_json::json!(new));
         }
 
         let mut by_type = serde_json::Map::new();
         let mut kept_total: usize = 0;
-        for (rel_type, topo) in relationship_topologies.iter() {
-            let kept = topo.relationship_count();
-            kept_total += kept;
+        for (rel_type, kept) in kept_by_type.iter() {
+            kept_total += *kept;
             by_type.insert(
                 rel_type.to_string(),
                 serde_json::json!({
@@ -317,25 +229,13 @@ impl FormOperator for CommitSubgraphOperator {
                 "count": selected_original_ids.len()
             },
             "id_map": {
-                "old_mapped_to_new": old_mapped_to_new
+                "old_mapped_to_new": old_mapped_to_new_json
             },
             "relationships": {
                 "total_kept": kept_total,
                 "by_type": by_type
             }
         });
-
-        // NOTE: For now, this operator projects topology only. Property materialization is handled
-        // by later operators (A).
-        let store = DefaultGraphStore::new(
-            GraphStoreConfig::default(),
-            GraphName::new("form.commitSubgraph"),
-            input.base_graph.database_info().clone(),
-            input.base_graph.schema().clone(),
-            input.base_graph.capabilities().clone(),
-            new_id_map,
-            relationship_topologies,
-        );
 
         Ok(FormOperatorOutput {
             graph: Arc::new(store),
@@ -374,15 +274,6 @@ impl FormOperator for CommitSubgraphOperator {
 pub struct MaterializeNodePropertiesOperator;
 
 impl MaterializeNodePropertiesOperator {
-    fn node_labels_for_store(store: &DefaultGraphStore) -> std::collections::HashSet<NodeLabel> {
-        store
-            .nodes()
-            .available_node_labels()
-            .into_iter()
-            .map(|label| NodeLabel::of(label.name()))
-            .collect()
-    }
-
     fn infer_numeric_type(values: &[JsonValue]) -> Result<&'static str, FormError> {
         for v in values {
             if v.is_null() {
@@ -431,7 +322,7 @@ impl MaterializeNodePropertiesOperator {
     }
 
     fn materialize_one_property(
-        store: &mut DefaultGraphStore,
+        store: &mut impl FormStoreSurface,
         key: &str,
         spec: &serde_json::Map<String, JsonValue>,
     ) -> Result<JsonValue, FormError> {
@@ -471,9 +362,10 @@ impl MaterializeNodePropertiesOperator {
                 {
                     for mapped in 0..node_count {
                         let original = store
-                            .nodes()
-                            .to_original_node_id(mapped as i64)
-                            .ok_or_else(|| FormError::Execution("IdMap missing original id".to_string()))?;
+                            .to_original_node_id(mapped as MappedNodeId)
+                            .ok_or_else(|| {
+                                FormError::Execution("IdMap missing original id".to_string())
+                            })?;
                         let k = original.to_string();
                         let v = map.get(&k).cloned().unwrap_or(JsonValue::Null);
                         if let Some(n) = v.as_f64().or_else(|| v.as_i64().map(|n| n as f64)) {
@@ -491,6 +383,9 @@ impl MaterializeNodePropertiesOperator {
 
                 store
                     .add_node_property_f64(key.to_string(), out)
+                    .map_err(|e| FormError::Execution(e.to_string()))?;
+                store
+                    .ensure_node_property_discoverable(key)
                     .map_err(|e| FormError::Execution(e.to_string()))?;
             }
             "long" => {
@@ -521,9 +416,10 @@ impl MaterializeNodePropertiesOperator {
                 {
                     for mapped in 0..node_count {
                         let original = store
-                            .nodes()
-                            .to_original_node_id(mapped as i64)
-                            .ok_or_else(|| FormError::Execution("IdMap missing original id".to_string()))?;
+                            .to_original_node_id(mapped as MappedNodeId)
+                            .ok_or_else(|| {
+                                FormError::Execution("IdMap missing original id".to_string())
+                            })?;
                         let k = original.to_string();
                         let v = map.get(&k).cloned().unwrap_or(JsonValue::Null);
                         if let Some(n) = v.as_i64().or_else(|| v.as_u64().map(|n| n as i64)) {
@@ -542,6 +438,9 @@ impl MaterializeNodePropertiesOperator {
                 store
                     .add_node_property_i64(key.to_string(), out)
                     .map_err(|e| FormError::Execution(e.to_string()))?;
+                store
+                    .ensure_node_property_discoverable(key)
+                    .map_err(|e| FormError::Execution(e.to_string()))?;
             }
             other => {
                 return Err(FormError::Config(format!(
@@ -557,16 +456,19 @@ impl MaterializeNodePropertiesOperator {
     }
 }
 
-impl FormOperator for MaterializeNodePropertiesOperator {
+impl<S> FormOperator<S> for MaterializeNodePropertiesOperator
+where
+    S: FormStoreSurface<Store = S> + Clone + Send + Sync + 'static,
+{
     fn name(&self) -> &str {
         "materializeNodeProperties"
     }
 
     fn evaluate(
         &self,
-        input: FormInput<'_>,
+        input: FormInput<'_, S>,
         _context: &mut ExecutionContext,
-    ) -> Result<FormOperatorOutput, FormError> {
+    ) -> Result<FormOperatorOutput<S>, FormError> {
         let node_props = input
             .artifacts
             .get("node_properties")
@@ -579,12 +481,6 @@ impl FormOperator for MaterializeNodePropertiesOperator {
 
         let mut store = (*input.base_graph).clone();
 
-        // Ensure the property is discoverable under all store labels.
-        let label_set = Self::node_labels_for_store(&store);
-        if label_set.is_empty() {
-            // still ok; properties become globally discoverable via `node_property_keys()`.
-        }
-
         let mut materialized = serde_json::Map::new();
         for (key, spec_val) in node_props.iter() {
             let spec = spec_val.as_object().ok_or_else(|| {
@@ -594,21 +490,315 @@ impl FormOperator for MaterializeNodePropertiesOperator {
             // Materialize via store helpers, then record proof.
             let proof = Self::materialize_one_property(&mut store, key, spec)?;
             materialized.insert(key.clone(), proof);
-
-            // If the store has labels, link the property key to them for label-scoped discovery.
-            // (DefaultGraphStore's config-based helpers bypass the label index.)
-            if !label_set.is_empty() {
-                let values = store
-                    .node_property_values(key)
-                    .map_err(|e| FormError::Execution(e.to_string()))?;
-                store
-                    .add_node_property(label_set.clone(), key.clone(), values)
-                    .map_err(|e| FormError::Execution(e.to_string()))?;
-            }
         }
 
         let proof = serde_json::json!({
             "kind": "materializeNodeProperties",
+            "properties": materialized,
+        });
+
+        Ok(FormOperatorOutput {
+            graph: Arc::new(store),
+            proof,
+        })
+    }
+}
+
+/// Materializes numeric relationship properties (f64) onto a new graph store.
+///
+/// This is an extension of (A) into the relational domain: it writes determinations
+/// about relationships as explicit typed property vectors.
+///
+/// Artifacts contract (JSON):
+///
+/// ```json
+/// {
+///   "relationship_properties": {
+///     "R": {
+///       "weight": {
+///         "values": [0.5, 1.2, 3.0],
+///         "value_type": "double"
+///       }
+///     }
+///   }
+/// }
+/// ```
+///
+/// Optionally, you may provide endpoint-addressed values:
+///
+/// ```json
+/// {
+///   "relationship_properties": {
+///     "R": {
+///       "weight": {
+///         "edges_by_original_node_id": [[10, 20], [10, 30]],
+///         "values": [0.5, 1.2],
+///         "default": 0.0,
+///         "value_type": "double"
+///       }
+///     }
+///   }
+/// }
+/// ```
+///
+/// - When `edges_by_original_node_id` is provided, `values` must have the same length.
+/// - Parallel edges are supported by consuming endpoint-specified values in order.
+#[derive(Debug, Default)]
+pub struct MaterializeRelationshipPropertiesOperator;
+
+impl MaterializeRelationshipPropertiesOperator {
+    fn parse_value_type(spec: &serde_json::Map<String, JsonValue>) -> Result<&'static str, FormError> {
+        if let Some(vt) = spec.get("value_type").and_then(|v| v.as_str()) {
+            match vt {
+                "double" | "float" | "f64" => return Ok("double"),
+                other => {
+                    return Err(FormError::Config(format!(
+                        "Unsupported relationship property value_type: {other}"
+                    )))
+                }
+            }
+        }
+        Ok("double")
+    }
+
+    fn parse_edges_by_original(
+        value: &JsonValue,
+    ) -> Result<Vec<(OriginalNodeId, OriginalNodeId)>, FormError> {
+        let arr = value.as_array().ok_or_else(|| {
+            FormError::Config("edges_by_original_node_id must be an array".to_string())
+        })?;
+
+        let mut out: Vec<(OriginalNodeId, OriginalNodeId)> = Vec::with_capacity(arr.len());
+        for (i, pair) in arr.iter().enumerate() {
+            let pair_arr = pair.as_array().ok_or_else(|| {
+                FormError::Config(format!(
+                    "edges_by_original_node_id[{i}] must be [src, dst]"
+                ))
+            })?;
+            if pair_arr.len() != 2 {
+                return Err(FormError::Config(format!(
+                    "edges_by_original_node_id[{i}] must have length 2"
+                )));
+            }
+            let src = pair_arr[0].as_i64().ok_or_else(|| {
+                FormError::Config(format!(
+                    "edges_by_original_node_id[{i}][0] must be i64"
+                ))
+            })? as OriginalNodeId;
+            let dst = pair_arr[1].as_i64().ok_or_else(|| {
+                FormError::Config(format!(
+                    "edges_by_original_node_id[{i}][1] must be i64"
+                ))
+            })? as OriginalNodeId;
+            out.push((src, dst));
+        }
+        Ok(out)
+    }
+
+    fn materialize_one_property(
+        store: &mut impl FormStoreSurface,
+        relationship_type: &crate::projection::RelationshipType,
+        key: &str,
+        spec: &serde_json::Map<String, JsonValue>,
+    ) -> Result<JsonValue, FormError> {
+        let value_type = Self::parse_value_type(spec)?;
+        if value_type != "double" {
+            return Err(FormError::Config(
+                "Only double relationship properties are supported".to_string(),
+            ));
+        }
+
+        let default_value = spec
+            .get("default")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0);
+
+        let mut missing: usize = 0;
+        let mut unused: usize = 0;
+
+        // Case 1: direct store-order values
+        if spec.get("edges_by_original_node_id").is_none() {
+            let values = spec.get("values").and_then(|v| v.as_array()).ok_or_else(|| {
+                FormError::Config(format!(
+                    "relationship_properties.{relationship_type}.{key} must provide values"
+                ))
+            })?;
+
+            let expected = store.relationship_count_for_type(relationship_type);
+            if values.len() != expected {
+                return Err(FormError::Config(format!(
+                    "relationship_properties.{relationship_type}.{key}.values length ({}) must equal relationship_count_for_type ({expected})",
+                    values.len()
+                )));
+            }
+
+            let mut out: Vec<f64> = vec![default_value; expected];
+            for (i, v) in values.iter().enumerate() {
+                if let Some(n) = v.as_f64().or_else(|| v.as_i64().map(|n| n as f64)) {
+                    out[i] = n;
+                } else if v.is_null() {
+                    missing += 1;
+                    out[i] = default_value;
+                } else {
+                    return Err(FormError::Config(format!(
+                        "relationship_properties.{relationship_type}.{key}.values[{i}] must be numeric"
+                    )));
+                }
+            }
+
+            store
+                .add_relationship_property_f64(relationship_type.clone(), key.to_string(), out)
+                .map_err(|e| FormError::Execution(e.to_string()))?;
+
+            return Ok(serde_json::json!({
+                "value_type": value_type,
+                "missing": missing,
+                "unused": unused,
+            }));
+        }
+
+        // Case 2: endpoint-addressed values (original node ids)
+        let edges_by_original = Self::parse_edges_by_original(
+            spec.get("edges_by_original_node_id").unwrap(),
+        )?;
+        let values = spec.get("values").and_then(|v| v.as_array()).ok_or_else(|| {
+            FormError::Config(format!(
+                "relationship_properties.{relationship_type}.{key} must provide values"
+            ))
+        })?;
+        if values.len() != edges_by_original.len() {
+            return Err(FormError::Config(format!(
+                "relationship_properties.{relationship_type}.{key}.values length ({}) must equal edges_by_original_node_id length ({})",
+                values.len(),
+                edges_by_original.len()
+            )));
+        }
+
+        // Build original->mapped lookup using the store's IdMap.
+        let mut mapped_by_original: HashMap<OriginalNodeId, MappedNodeId> =
+            HashMap::with_capacity(store.node_count());
+        for mapped in 0..store.node_count() {
+            let original = store
+                .to_original_node_id(mapped as MappedNodeId)
+                .ok_or_else(|| FormError::Execution("IdMap missing original id".to_string()))?;
+            mapped_by_original.insert(original, mapped as MappedNodeId);
+        }
+
+        // Map endpoints -> queue of values (supports parallel edges)
+        let mut queue_by_edge: HashMap<(MappedNodeId, MappedNodeId), Vec<f64>> = HashMap::new();
+        for (i, (src_o, dst_o)) in edges_by_original.into_iter().enumerate() {
+            let src = *mapped_by_original.get(&src_o).ok_or_else(|| {
+                FormError::Config(
+                    "edges_by_original_node_id contains unknown source original id".to_string(),
+                )
+            })?;
+            let dst = *mapped_by_original.get(&dst_o).ok_or_else(|| {
+                FormError::Config(
+                    "edges_by_original_node_id contains unknown target original id".to_string(),
+                )
+            })?;
+
+            let v = &values[i];
+            let n = v
+                .as_f64()
+                .or_else(|| v.as_i64().map(|n| n as f64))
+                .unwrap_or(default_value);
+            if v.is_null() {
+                missing += 1;
+            }
+            queue_by_edge.entry((src, dst)).or_default().push(n);
+        }
+
+        let edges_in_order = store
+            .relationship_edges_in_store_order(relationship_type)
+            .map_err(|e| FormError::Execution(e.to_string()))?;
+        let expected = store.relationship_count_for_type(relationship_type);
+        if edges_in_order.len() != expected {
+            return Err(FormError::Execution(
+                "relationship_edges_in_store_order length mismatch".to_string(),
+            ));
+        }
+
+        let mut out: Vec<f64> = vec![default_value; expected];
+        for (i, (src, dst)) in edges_in_order.into_iter().enumerate() {
+            if let Some(q) = queue_by_edge.get_mut(&(src, dst)) {
+                if !q.is_empty() {
+                    out[i] = q.remove(0);
+                    continue;
+                }
+            }
+
+            missing += 1;
+            out[i] = default_value;
+        }
+
+        for (_edge, remaining) in queue_by_edge.into_iter() {
+            unused += remaining.len();
+        }
+
+        store
+            .add_relationship_property_f64(relationship_type.clone(), key.to_string(), out)
+            .map_err(|e| FormError::Execution(e.to_string()))?;
+
+        Ok(serde_json::json!({
+            "value_type": value_type,
+            "missing": missing,
+            "unused": unused,
+        }))
+    }
+}
+
+impl<S> FormOperator<S> for MaterializeRelationshipPropertiesOperator
+where
+    S: FormStoreSurface<Store = S> + Clone + Send + Sync + 'static,
+{
+    fn name(&self) -> &str {
+        "materializeRelationshipProperties"
+    }
+
+    fn evaluate(
+        &self,
+        input: FormInput<'_, S>,
+        _context: &mut ExecutionContext,
+    ) -> Result<FormOperatorOutput<S>, FormError> {
+        let rel_props = input
+            .artifacts
+            .get("relationship_properties")
+            .and_then(|v| v.as_object())
+            .ok_or_else(|| {
+                FormError::Config(
+                    "Missing relationship_properties artifact (expected object)".to_string(),
+                )
+            })?;
+
+        let mut store = (*input.base_graph).clone();
+        let mut materialized = serde_json::Map::new();
+
+        for (rel_type_str, by_key_val) in rel_props.iter() {
+            let by_key = by_key_val.as_object().ok_or_else(|| {
+                FormError::Config(format!(
+                    "relationship_properties.{rel_type_str} must be an object"
+                ))
+            })?;
+            let rel_type = crate::projection::RelationshipType::of(rel_type_str);
+
+            let mut key_map = serde_json::Map::new();
+            for (key, spec_val) in by_key.iter() {
+                let spec = spec_val.as_object().ok_or_else(|| {
+                    FormError::Config(format!(
+                        "relationship_properties.{rel_type_str}.{key} must be an object"
+                    ))
+                })?;
+
+                let proof = Self::materialize_one_property(&mut store, &rel_type, key, spec)?;
+                key_map.insert(key.clone(), proof);
+            }
+
+            materialized.insert(rel_type_str.clone(), JsonValue::Object(key_map));
+        }
+
+        let proof = serde_json::json!({
+            "kind": "materializeRelationshipProperties",
             "properties": materialized,
         });
 
@@ -629,8 +819,7 @@ pub fn time_form_eval<T>(f: impl FnOnce() -> Result<T, FormError>) -> Result<(T,
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::form::core::{Context, FormShape, Shape};
-    use crate::form::core::shape::Morph;
+    use crate::form::{Context, FormShape, Morph, Shape};
     use crate::types::random::random_graph::RandomGraphConfig;
     use crate::types::graph_store::GraphStore;
     use std::sync::Arc;
@@ -639,7 +828,7 @@ mod tests {
     fn operator_name_uses_first_pattern() {
         let shape = Shape::new(vec![], vec![], HashMap::new(), HashMap::new());
         let ctx = Context::new(vec![], vec![], "strategy".to_string(), vec![]);
-        let morph = Morph::new(vec![], vec!["passThrough".to_string()], vec![], vec![]);
+        let morph = Morph::new(vec!["passThrough".to_string()]);
         let form = FormShape::new(shape, ctx, morph);
 
         assert_eq!(operator_name_from_form_shape(&form), Some("passThrough"));
@@ -651,7 +840,7 @@ mod tests {
 
         let shape = Shape::new(vec![], vec![], HashMap::new(), HashMap::new());
         let ctx = Context::new(vec![], vec![], "strategy".to_string(), vec![]);
-        let morph = Morph::new(vec![], vec!["commitSubgraph".to_string()], vec![], vec![]);
+        let morph = Morph::new(vec!["commitSubgraph".to_string()]);
         let program = FormShape::new(shape, ctx, morph);
 
         let mut artifacts = FormArtifacts::new();
@@ -681,7 +870,7 @@ mod tests {
             Some(3)
         );
 
-        assert_eq!(result.node_count(), 3);
+        assert_eq!(crate::types::graph_store::GraphStore::node_count(result.as_ref()), 3);
 
         // The projected graph must not reference nodes outside the committed set.
         let g = result.get_graph();
