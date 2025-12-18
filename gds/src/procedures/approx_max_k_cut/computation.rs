@@ -20,11 +20,7 @@ impl ApproxMaxKCutComputationRuntime {
     /// # Arguments
     /// * `node_count` - Total number of nodes in the graph
     /// * `get_neighbors` - Closure that returns (target, weight) pairs for a node's neighbors
-    pub fn compute<G>(
-        &self,
-        node_count: usize,
-        get_neighbors: G,
-    ) -> ApproxMaxKCutResult
+    pub fn compute<G>(&self, node_count: usize, get_neighbors: G) -> ApproxMaxKCutResult
     where
         G: Fn(usize) -> Vec<(usize, f64)> + Sync,
     {

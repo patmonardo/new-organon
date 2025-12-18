@@ -7,7 +7,7 @@ use std::time::Duration;
 define_algorithm! {
     name: "pagerank",
     category: Centrality,
-    
+
     config: {
         damping_factor: f64 = 0.85,
         tolerance: f64 = 1e-6,
@@ -15,17 +15,17 @@ define_algorithm! {
         source_nodes: Option<Vec<u64>> = None,
         weight_property: Option<String> = None,
     },
-    
+
     result: PageRankResult {
         scores: Vec<f64>,
         iterations: usize,
         converged: bool,
         execution_time: Duration,
     },
-    
+
     projection_hint: Dense,
     modes: [Stream, Stats],
-    
+
     execute: {
         // Simple placeholder implementation
         Ok(PageRankResult {
@@ -55,10 +55,13 @@ mod tests {
     fn test_pagerank_config_validation() {
         let mut config = PAGERANKConfig::default();
         config.damping_factor = 1.5; // Invalid! (but validation not implemented yet)
-        
+
         let result = config.validate();
         // TODO: Implement actual validation logic
-        assert!(result.is_ok(), "Validation currently passes - needs implementation");
+        assert!(
+            result.is_ok(),
+            "Validation currently passes - needs implementation"
+        );
     }
 
     #[test]
@@ -79,7 +82,7 @@ mod tests {
             "source_nodes": [1, 2, 3],
             "weight_property": "weight"
         });
-        
+
         let config: PAGERANKConfig = serde_json::from_value(json).unwrap();
         assert_eq!(config.damping_factor, 0.9);
         assert_eq!(config.tolerance, 1e-5);
@@ -96,10 +99,10 @@ mod tests {
             converged: true,
             execution_time: Duration::from_millis(50),
         };
-        
+
         let json = serde_json::to_value(&result).unwrap();
         let deserialized: PageRankResult = serde_json::from_value(json).unwrap();
-        
+
         assert_eq!(result.scores, deserialized.scores);
         assert_eq!(result.iterations, deserialized.iterations);
         assert_eq!(result.converged, deserialized.converged);

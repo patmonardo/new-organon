@@ -27,4 +27,3 @@ impl DropRelationshipsApplication {
         DeletionResult::new(GraphName::new("fictitious"))
     }
 }
-

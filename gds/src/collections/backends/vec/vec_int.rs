@@ -15,9 +15,7 @@ impl Default for VecInt {
 
 impl VecInt {
     pub fn new() -> Self {
-        Self {
-            data: Vec::new(),
-        }
+        Self { data: Vec::new() }
     }
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
@@ -36,9 +34,16 @@ impl From<Vec<i32>> for VecInt {
         Self { data }
     }
 }
-use crate::vec_collections;
 use crate::types::ValueType;
-vec_collections!(VecInt, i32, ValueType::Int, 0i32, to_f64 = |x: i32| x as f64, kind = Ord);
+use crate::vec_collections;
+vec_collections!(
+    VecInt,
+    i32,
+    ValueType::Int,
+    0i32,
+    to_f64 = |x: i32| x as f64,
+    kind = Ord
+);
 
 use crate::collections::traits::PropertyValuesAdapter;
 

@@ -13,10 +13,10 @@
 pub enum TraversalState {
     /// Emit a path result and stop the algorithm
     EmitAndStop,
-    
+
     /// Emit a path result and continue the algorithm
     EmitAndContinue,
-    
+
     /// Continue the algorithm without emitting a result
     Continue,
 }
@@ -24,17 +24,23 @@ pub enum TraversalState {
 impl TraversalState {
     /// Check if the algorithm should emit a result
     pub fn should_emit(&self) -> bool {
-        matches!(self, TraversalState::EmitAndStop | TraversalState::EmitAndContinue)
+        matches!(
+            self,
+            TraversalState::EmitAndStop | TraversalState::EmitAndContinue
+        )
     }
-    
+
     /// Check if the algorithm should stop
     pub fn should_stop(&self) -> bool {
         matches!(self, TraversalState::EmitAndStop)
     }
-    
+
     /// Check if the algorithm should continue
     pub fn should_continue(&self) -> bool {
-        matches!(self, TraversalState::EmitAndContinue | TraversalState::Continue)
+        matches!(
+            self,
+            TraversalState::EmitAndContinue | TraversalState::Continue
+        )
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::procedures::prize_collecting_steiner_tree::spec::{PRUNED, PCSTreeResult};
+use crate::procedures::prize_collecting_steiner_tree::spec::{PCSTreeResult, PRUNED};
 
 /// Storage for Prize-Collecting Steiner Tree computation
 #[derive(Debug)]

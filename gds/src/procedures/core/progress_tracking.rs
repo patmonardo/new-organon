@@ -83,7 +83,10 @@ impl ProgressTracker {
 
     /// Update progress by adding completed work
     pub fn update_progress(&self, work_completed: u64) {
-        let new_completed = self.completed_work.fetch_add(work_completed, Ordering::Relaxed) + work_completed;
+        let new_completed = self
+            .completed_work
+            .fetch_add(work_completed, Ordering::Relaxed)
+            + work_completed;
 
         if self.config.enable_logging {
             self.maybe_log_progress(new_completed);
@@ -202,7 +205,10 @@ pub struct ThreadSafeProgressTracker {
 impl ThreadSafeProgressTracker {
     /// Update progress from a parallel thread
     pub fn update_progress(&self, work_completed: u64) {
-        let new_completed = self.completed_work.fetch_add(work_completed, Ordering::Relaxed) + work_completed;
+        let new_completed = self
+            .completed_work
+            .fetch_add(work_completed, Ordering::Relaxed)
+            + work_completed;
 
         if self.config.enable_logging {
             self.maybe_log_progress(new_completed);

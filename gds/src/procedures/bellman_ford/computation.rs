@@ -5,8 +5,8 @@
 //! This module implements the "Subtle pole" of the Bellman-Ford algorithm,
 //! handling ephemeral computation state and distance tracking.
 
-use std::collections::HashMap;
 use crate::types::graph::id_map::NodeId;
+use std::collections::HashMap;
 
 /// Bellman-Ford Computation Runtime
 ///
@@ -94,7 +94,10 @@ impl BellmanFordComputationRuntime {
     ///
     /// Translation of: `distance()` method (lines 83-85)
     pub fn distance(&self, node_id: NodeId) -> f64 {
-        self.distances.get(&node_id).copied().unwrap_or(f64::INFINITY)
+        self.distances
+            .get(&node_id)
+            .copied()
+            .unwrap_or(f64::INFINITY)
     }
 
     /// Set distance to a node
@@ -176,7 +179,11 @@ impl BellmanFordComputationRuntime {
             expected_distance
         } else {
             // Signal unsuccessful update
-            if expected_distance == 0.0 { -1.0 } else { -expected_distance }
+            if expected_distance == 0.0 {
+                -1.0
+            } else {
+                -expected_distance
+            }
         }
     }
 

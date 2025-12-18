@@ -86,7 +86,7 @@ Validation logic is split:
 - `validate_feature_properties(graph_store, node_labels)`
   - intended to run after node property steps
 
-Note: `feature_properties_missing_from_graph()` is currently TODO’d until the graph store exposes `node_property_keys` by label.
+Note: `feature_properties_missing_from_graph()` is now implemented via `GraphStore::node_property_keys_for_labels()`.
 
 ## The node property step: `ExecutableNodePropertyStep`
 

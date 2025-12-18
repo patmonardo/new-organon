@@ -1,6 +1,6 @@
-use crate::types::graph_store::GraphStore;
 use super::super::super::results::MutateLabelResult;
 use crate::applications::graph_store_catalog::configs::MutateLabelConfig;
+use crate::types::graph_store::GraphStore;
 
 /// Application for mutating node labels in graphs.
 ///
@@ -37,13 +37,22 @@ impl NodeLabelMutatorApplication {
     }
 
     /// Applies the node filter to get the set of nodes to mutate.
-    fn apply_node_filter(&self, _graph_store: &impl GraphStore, _node_filter: &Expression) -> Vec<u64> {
+    fn apply_node_filter(
+        &self,
+        _graph_store: &impl GraphStore,
+        _node_filter: &Expression,
+    ) -> Vec<u64> {
         // Placeholder implementation - in real implementation would evaluate Expression
         vec![1, 2, 3, 4, 5] // Assume 5 nodes match the filter
     }
 
     /// Mutates labels for the specified nodes.
-    fn mutate_labels(&self, _graph_store: &impl GraphStore, nodes: &[u64], _node_label: &str) -> u64 {
+    fn mutate_labels(
+        &self,
+        _graph_store: &impl GraphStore,
+        nodes: &[u64],
+        _node_label: &str,
+    ) -> u64 {
         // Placeholder implementation - in real implementation would call GraphStore.mutateNodeLabel()
         nodes.len() as u64
     }
@@ -71,4 +80,3 @@ impl Expression {
         &self.expression
     }
 }
-

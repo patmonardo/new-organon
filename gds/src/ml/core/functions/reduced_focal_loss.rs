@@ -3,10 +3,10 @@
 //! Translated from Java GDS ml-core functions ReducedFocalLoss.java.
 //! This is a literal 1:1 translation following repository translation policy.
 
+use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
@@ -111,8 +111,6 @@ impl ReducedFocalLoss {
         let predicted_probability_for_wrong_classes = 1.0 - predicted_probability_for_true_class;
         let chain_rule_gradient =
             predicted_probability_for_wrong_classes.powf(self.focus_weight - 1.0);
-
-
 
         self.class_weights[true_class]
             * (self.focus_weight * chain_rule_gradient * predicted_probability_for_true_class.ln()

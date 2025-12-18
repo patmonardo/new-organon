@@ -22,7 +22,7 @@ pub trait AlgorithmRunner {
 }
 
 /// Trait for algorithms that support streaming results
-/// 
+///
 /// Stream mode returns individual results for each node/component,
 /// allowing processing of results as they complete or are ready.
 pub trait StreamResults<T> {

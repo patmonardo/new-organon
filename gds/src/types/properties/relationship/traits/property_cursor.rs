@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 /// PropertyValue type for relationship properties
-/// 
+///
 /// Cursor iterating over the values of relationship properties.
 ///
 /// This trait mirrors the TypeScript `PropertyCursor` API that powers the

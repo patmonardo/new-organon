@@ -7,9 +7,7 @@
 //! This module provides distribution computation for PageRank and other centrality algorithms.
 
 use super::result::CentralityAlgorithmResult;
-use crate::procedures::core::statistics::{
-    StatisticsEngine, StatisticsConfig
-};
+use crate::procedures::core::statistics::{StatisticsConfig, StatisticsEngine};
 use std::collections::HashMap;
 
 /// PageRank distribution result
@@ -103,7 +101,8 @@ impl PageRankDistributionComputer {
                 // LOG scaler prevents histogram computation
                 // Java stores a String in the summary map; we keep summary numeric
                 // and carry the message separately.
-                error = Some("Unable to create histogram when using scaler of type LOG".to_string());
+                error =
+                    Some("Unable to create histogram when using scaler of type LOG".to_string());
             } else {
                 let start = std::time::Instant::now();
 
@@ -151,8 +150,8 @@ impl PageRankDistributionComputer {
 mod tests {
     use super::*;
     use crate::procedures::algorithms::centrality::result::CentralityAlgorithmResult;
-    use crate::types::properties::{PropertyValues, PropertyValuesError, PropertyValuesResult};
     use crate::types::properties::node::NodePropertyValues;
+    use crate::types::properties::{PropertyValues, PropertyValuesError, PropertyValuesResult};
     use crate::types::ValueType;
     use std::fmt;
 
@@ -259,8 +258,7 @@ mod tests {
         };
 
         let distribution = PageRankDistributionComputer::compute_distribution(
-            &result,
-            false, // use_log_scaler
+            &result, false, // use_log_scaler
             true,  // should_compute_distribution
             1,     // concurrency
         );
@@ -291,10 +289,9 @@ mod tests {
         };
 
         let distribution = PageRankDistributionComputer::compute_distribution(
-            &result,
-            true,  // use_log_scaler
-            true,  // should_compute_distribution
-            1,     // concurrency
+            &result, true, // use_log_scaler
+            true, // should_compute_distribution
+            1,    // concurrency
         );
 
         // Should have error message instead of statistics
@@ -310,8 +307,7 @@ mod tests {
         };
 
         let distribution = PageRankDistributionComputer::compute_distribution(
-            &result,
-            false, // use_log_scaler
+            &result, false, // use_log_scaler
             false, // should_compute_distribution
             1,     // concurrency
         );

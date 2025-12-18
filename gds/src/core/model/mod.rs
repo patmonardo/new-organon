@@ -1,16 +1,16 @@
 #![allow(clippy::module_inception)]
 
 mod catalog;
-mod types;
-mod user_catalog;
 mod model;
 mod model_metadata;
+mod types;
+mod user_catalog;
 
 pub use catalog::{EmptyModelCatalog, ModelCatalog, ModelCatalogListener};
-pub use types::{CustomInfo as ModelCatalogCustomInfo, ModelConfig, ModelData};
-pub use user_catalog::UserCatalog;
 pub use model::Model as MLModel;
 pub use model_metadata::ModelMetaData;
+pub use types::{CustomInfo as ModelCatalogCustomInfo, ModelConfig, ModelData};
+pub use user_catalog::UserCatalog;
 
 // Constants
 pub const MODEL_NAME_KEY: &str = "modelName";

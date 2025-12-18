@@ -38,8 +38,8 @@ generate_all_node_array_adapters!();
 
 // Re-export the generated types with their full generic signatures
 pub use self::{
-    DefaultLongNodePropertyValues as GenericLongNodePropertyValues,
     DefaultDoubleNodePropertyValues as GenericDoubleNodePropertyValues,
+    DefaultLongNodePropertyValues as GenericLongNodePropertyValues,
 };
 
 // Note: The actual Default*NodePropertyValues types are now generic.
@@ -50,33 +50,33 @@ pub use self::{
 mod tests {
     use super::*;
     use crate::collections::backends::vec::VecLong;
-    use crate::types::ValueType;
     use crate::types::properties::node::{LongNodePropertyValues, NodePropertyValues};
     use crate::types::properties::PropertyValues;
+    use crate::types::ValueType;
 
     #[test]
     fn test_long_node_property_values_with_vec_backend() {
         // Create a VecLong backend with test data
         let backend = VecLong::from(vec![1i64, 2, 3, 4, 5]);
-        
+
         // Create the adapter
         let values = DefaultLongNodePropertyValues::from_collection(backend, 5);
-        
+
         // Test basic properties via PropertyValues trait
         assert_eq!(values.value_type(), ValueType::Long);
         assert_eq!(values.node_count(), 5);
-        
+
         // Test value access via LongNodePropertyValues trait
         assert_eq!(values.long_value(0).unwrap(), 1);
         assert_eq!(values.long_value(4).unwrap(), 5);
         assert_eq!(values.long_value_unchecked(2), 3);
-        
+
         // Test type conversion
         assert_eq!(values.double_value(2).unwrap(), 3.0);
-        
+
         // Test dimension
         assert_eq!(values.dimension(), Some(1));
-        
+
         // Test has_value
         assert!(values.has_value(0));
         assert!(!values.has_value(10));
@@ -86,16 +86,16 @@ mod tests {
     fn test_double_node_property_values_with_vec_backend() {
         use crate::collections::backends::vec::VecDouble;
         use crate::types::properties::node::DoubleNodePropertyValues;
-        
+
         let backend = VecDouble::from(vec![1.5, 2.5, 3.5]);
         let values = DefaultDoubleNodePropertyValues::from_collection(backend, 3);
-        
+
         assert_eq!(values.value_type(), ValueType::Double);
         assert_eq!(values.node_count(), 3);
-        
+
         assert_eq!(values.double_value(1).unwrap(), 2.5);
         assert_eq!(values.double_value_unchecked(2), 3.5);
-        
+
         // Test type conversion to long
         assert_eq!(values.long_value(0).unwrap(), 1);
     }

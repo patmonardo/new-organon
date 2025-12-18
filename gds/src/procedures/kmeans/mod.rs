@@ -8,11 +8,11 @@
 //! - iterative Lloyd updates
 //! - optional silhouette computation (naive O(n^2) in this Rust port)
 
-pub mod spec;
 pub mod computation;
+pub mod spec;
 
 #[cfg(test)]
 pub mod integration_tests;
 
-pub use spec::{KMeansConfig, KMeansResult, KMeansSamplerType};
 pub use computation::KMeansComputationRuntime;
+pub use spec::{KMeansConfig, KMeansResult, KMeansSamplerType};

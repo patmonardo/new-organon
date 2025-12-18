@@ -6,4 +6,6 @@ pub mod aggregator;
 pub mod exit_predicate;
 
 pub use aggregator::{Aggregator, NoAggregator, OneHopAggregator, WeightAggregator};
-pub use exit_predicate::{ExitPredicate, ExitPredicateResult, FollowExitPredicate, TargetExitPredicate};
+pub use exit_predicate::{
+    ExitPredicate, ExitPredicateResult, FollowExitPredicate, TargetExitPredicate,
+};

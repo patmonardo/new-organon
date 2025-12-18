@@ -268,7 +268,6 @@ impl ProgressLogger for BatchingProgressLogger {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

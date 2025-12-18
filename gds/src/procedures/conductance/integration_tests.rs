@@ -121,11 +121,7 @@ fn test_unweighted_ignores_weights() {
 #[test]
 fn test_nodes_without_community() {
     // Some nodes have no community assignment
-    let edges = vec![
-        vec![(1, 1.0)],
-        vec![(0, 1.0), (2, 1.0)],
-        vec![(1, 1.0)],
-    ];
+    let edges = vec![vec![(1, 1.0)], vec![(0, 1.0), (2, 1.0)], vec![(1, 1.0)]];
 
     // Node 1 has no community
     let communities = vec![Some(0), None, Some(1)];
@@ -133,11 +129,7 @@ fn test_nodes_without_community() {
     let config = ConductanceConfig::default();
     let runtime = ConductanceComputationRuntime::new(config);
 
-    let result = runtime.compute(
-        3,
-        |node| communities[node],
-        |node| edges[node].clone(),
-    );
+    let result = runtime.compute(3, |node| communities[node], |node| edges[node].clone());
 
     // Node 1 is skipped, so communities 0 and 1 have no valid edges
     // (edges to/from node 1 are ignored)

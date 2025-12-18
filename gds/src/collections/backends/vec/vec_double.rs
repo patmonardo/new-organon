@@ -16,9 +16,7 @@ impl Default for VecDouble {
 
 impl VecDouble {
     pub fn new() -> Self {
-        Self {
-            data: Vec::new(),
-        }
+        Self { data: Vec::new() }
     }
 
     pub fn with_capacity(capacity: usize) -> Self {
@@ -42,9 +40,9 @@ impl From<Vec<f64>> for VecDouble {
     }
 }
 
-use crate::vec_collections;
-use crate::types::ValueType;
 use crate::collections::traits::PropertyValuesAdapter;
+use crate::types::ValueType;
+use crate::vec_collections;
 
 vec_collections!(VecDouble, f64, ValueType::Double, 0.0f64, kind = Float);
 

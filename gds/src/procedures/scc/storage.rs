@@ -24,9 +24,7 @@ impl SccStorageRuntime {
     ///
     /// Translation of: `Scc(Graph graph, ProgressTracker progressTracker, TerminationFlag terminationFlag)`
     pub fn new(concurrency: usize) -> Self {
-        Self {
-            concurrency,
-        }
+        Self { concurrency }
     }
 
     /// Compute strongly connected components
@@ -46,7 +44,8 @@ impl SccStorageRuntime {
         let _ = progress_tracker;
 
         // Obtain a directed graph view (Natural orientation, all relationship types)
-        let rel_types: std::collections::HashSet<RelationshipType> = std::collections::HashSet::new();
+        let rel_types: std::collections::HashSet<RelationshipType> =
+            std::collections::HashSet::new();
         let graph_view = graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
             .map_err(|e| format!("Failed to obtain graph view: {}", e))?;
@@ -86,7 +85,8 @@ impl SccStorageRuntime {
             }
         }
 
-        let (components, component_count) = computation.compute(&outgoing, &incoming, termination_flag)?;
+        let (components, component_count) =
+            computation.compute(&outgoing, &incoming, termination_flag)?;
 
         let computation_time = start_time.elapsed().as_millis() as u64;
         Ok(SccComputationResult::new(

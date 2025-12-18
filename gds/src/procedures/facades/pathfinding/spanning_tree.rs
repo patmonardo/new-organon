@@ -61,9 +61,11 @@ impl SpanningTreeBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.concurrency == 0 {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "concurrency must be > 0".to_string(),
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "concurrency must be > 0".to_string(),
+                ),
+            );
         }
         ConfigValidator::non_empty_string(&self.direction, "direction")?;
         ConfigValidator::non_empty_string(&self.weight_property, "weight_property")?;
@@ -102,9 +104,12 @@ impl SpanningTreeBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
-        let storage = SpanningTreeStorageRuntime::new(start_node_id, self.compute_minimum, self.concurrency);
+        let storage =
+            SpanningTreeStorageRuntime::new(start_node_id, self.compute_minimum, self.concurrency);
 
         let start = std::time::Instant::now();
         let tree = storage.compute_spanning_tree_with_graph(graph_view.as_ref(), direction_byte)?;
@@ -112,7 +117,11 @@ impl SpanningTreeBuilder {
         let mut rows = Vec::with_capacity(tree.node_count as usize);
         for node_id in 0..tree.node_count {
             let parent = tree.parent(node_id);
-            let parent_u64 = if parent < 0 { None } else { Some(parent as u64) };
+            let parent_u64 = if parent < 0 {
+                None
+            } else {
+                Some(parent as u64)
+            };
             rows.push(SpanningTreeRow {
                 node: node_id as u64,
                 parent: parent_u64,
@@ -187,18 +196,22 @@ impl SpanningTreeBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "SpanningTree mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "SpanningTree mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "SpanningTree mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "SpanningTree mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 }
 

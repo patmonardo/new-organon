@@ -50,5 +50,3 @@ pub trait GraphCatalog: Send + Sync {
     /// Report rough memory usage
     fn size_of(&self, name: &str) -> Result<GraphMemoryUsage, CatalogError>;
 }
-
-

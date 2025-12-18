@@ -368,12 +368,12 @@ mod tests {
     #[test]
     fn test_single_element() {
         let mut node_ids = vec![42];
-        let mut weights = vec![3.14];
+        let mut weights = vec![3.0];
 
         sort_double_array_by_long_values(&mut node_ids, &mut weights, 1);
 
         assert_eq!(node_ids, vec![42]);
-        assert_eq!(weights, vec![3.14]);
+        assert_eq!(weights, vec![3.0]);
     }
 
     #[test]

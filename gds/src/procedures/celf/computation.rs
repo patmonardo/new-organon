@@ -5,8 +5,8 @@
 
 use super::spec::CELFConfig;
 use super::storage::{SeedSetBuilder, SpreadPriorityQueue};
-use crate::collections::HugeDoubleArray;
 use crate::collections::BitSet;
+use crate::collections::HugeDoubleArray;
 use crate::core::utils::paged::HugeLongArrayStack;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -34,8 +34,7 @@ impl CELFComputationRuntime {
         let seed_set_size = self.config.seed_set_size.min(self.node_count);
 
         // Phase 1: Greedy initialization - find first seed node
-        let (first_seed, mut spreads_queue, mut gain) =
-            self.greedy_init(&get_neighbors);
+        let (first_seed, mut spreads_queue, mut gain) = self.greedy_init(&get_neighbors);
 
         let mut seed_set = SeedSetBuilder::new();
         seed_set.add_seed(first_seed, gain);
@@ -103,10 +102,11 @@ impl CELFComputationRuntime {
 
                 for &neighbor in &neighbors {
                     if !active.get(neighbor)
-                        && rng.gen::<f64>() < self.config.propagation_probability {
-                            active.set(neighbor);
-                            stack.push(neighbor as i64);
-                        }
+                        && rng.gen::<f64>() < self.config.propagation_probability
+                    {
+                        active.set(neighbor);
+                        stack.push(neighbor as i64);
+                    }
                 }
             }
 
@@ -150,11 +150,8 @@ impl CELFComputationRuntime {
                 }
 
                 // Re-evaluate batch with current seed set
-                let candidate_spreads = self.compute_marginal_gains(
-                    &seed_nodes,
-                    &candidates,
-                    get_neighbors,
-                );
+                let candidate_spreads =
+                    self.compute_marginal_gains(&seed_nodes, &candidates, get_neighbors);
 
                 // Update queue with new marginal gains
                 for (i, &candidate) in candidates.iter().enumerate() {
@@ -216,14 +213,16 @@ impl CELFComputationRuntime {
                         for &neighbor in &neighbors {
                             if !seed_active.get(neighbor)
                                 && !candidate_active.get(neighbor)
-                                && rng.gen::<f64>() < self.config.propagation_probability {
-                                    candidate_active.set(neighbor);
-                                    cand_stack.push(neighbor as i64);
-                                }
+                                && rng.gen::<f64>() < self.config.propagation_probability
+                            {
+                                candidate_active.set(neighbor);
+                                cand_stack.push(neighbor as i64);
+                            }
                         }
                     }
 
-                    spreads[idx] += (seed_active.cardinality() + candidate_active.cardinality()) as f64;
+                    spreads[idx] +=
+                        (seed_active.cardinality() + candidate_active.cardinality()) as f64;
                 } else {
                     spreads[idx] += seed_active.cardinality() as f64;
                 }
@@ -253,11 +252,10 @@ impl CELFComputationRuntime {
             let neighbors = get_neighbors(current);
 
             for &neighbor in &neighbors {
-                if !active.get(neighbor)
-                    && rng.gen::<f64>() < self.config.propagation_probability {
-                        active.set(neighbor);
-                        stack.push(neighbor as i64);
-                    }
+                if !active.get(neighbor) && rng.gen::<f64>() < self.config.propagation_probability {
+                    active.set(neighbor);
+                    stack.push(neighbor as i64);
+                }
             }
         }
     }

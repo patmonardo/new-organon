@@ -520,11 +520,11 @@ mod tests {
     #[test]
     fn test_get_set() {
         let array = HugeAtomicDoubleArray::new(100);
-        array.set(0, 3.14);
+        array.set(0, 3.0);
         array.set(50, -100.5);
         array.set(99, 999.999);
 
-        assert_eq!(array.get(0), 3.14);
+        assert_eq!(array.get(0), 3.0);
         assert_eq!(array.get(50), -100.5);
         assert_eq!(array.get(99), 999.999);
     }
@@ -605,10 +605,10 @@ mod tests {
     #[test]
     fn test_set_all() {
         let array = HugeAtomicDoubleArray::new(100);
-        array.set_all(3.14);
+        array.set_all(3.0);
 
         for i in 0..100 {
-            assert_eq!(array.get(i), 3.14);
+            assert_eq!(array.get(i), 3.0);
         }
     }
 

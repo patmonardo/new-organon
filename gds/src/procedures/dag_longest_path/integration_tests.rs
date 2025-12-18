@@ -63,8 +63,7 @@ mod tests {
     #[test]
     fn test_disconnected_dag() {
         // 0 -> 1, 2 -> 3 (two separate chains)
-        let edges: Vec<Vec<(usize, f64)>> =
-            vec![vec![(1, 1.0)], vec![], vec![(3, 1.0)], vec![]];
+        let edges: Vec<Vec<(usize, f64)>> = vec![vec![(1, 1.0)], vec![], vec![(3, 1.0)], vec![]];
 
         let get_neighbors = |node: usize| edges[node].clone();
 

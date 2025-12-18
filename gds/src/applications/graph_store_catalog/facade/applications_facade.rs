@@ -27,8 +27,8 @@ impl ApplicationsFacade {
     /// Currently focused on GraphStore Catalog operations - the Storage ISA!
     pub fn create(log: Log) -> Self {
         // Create the main GraphStore Catalog applications using our builder
-        let graph_store_catalog_applications = DefaultGraphCatalogApplicationsBuilder::new(log.clone())
-            .build();
+        let graph_store_catalog_applications =
+            DefaultGraphCatalogApplicationsBuilder::new(log.clone()).build();
 
         // Create placeholder applications (to be implemented later)
         let graph_catalog_applications = GraphCatalogApplicationsStub::new();

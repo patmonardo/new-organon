@@ -24,7 +24,9 @@ pub struct FormCatalog {
 
 impl FormCatalog {
     pub fn new() -> Self {
-        Self { ops: HashMap::new() }
+        Self {
+            ops: HashMap::new(),
+        }
     }
 
     pub fn insert(&mut self, op: impl FormOperator + 'static) {
@@ -203,12 +205,11 @@ mod tests {
     use super::*;
     use crate::form::{Context, FormShape, Morph, Shape};
     use crate::substrate::FabricControl;
-    use crate::types::random::random_graph::RandomGraphConfig;
     use crate::types::graph_store::GraphStore;
+    use crate::types::random::random_graph::RandomGraphConfig;
     use crate::types::ValueType;
     use serde_json::Value as JsonValue;
     use std::sync::{Arc, Mutex};
-    use std::sync::Arc;
 
     #[derive(Clone, Default)]
     struct CollectWitness(Arc<Mutex<Vec<JsonValue>>>);
@@ -236,7 +237,10 @@ mod tests {
 
         assert_eq!(result.operator, "passThrough");
         assert_eq!(result.graph.node_count(), graph.node_count());
-        assert_eq!(result.graph.relationship_count(), graph.relationship_count());
+        assert_eq!(
+            result.graph.relationship_count(),
+            graph.relationship_count()
+        );
     }
 
     #[test]
@@ -271,7 +275,10 @@ mod tests {
         let mut processor = FormProcessor::new(ctx);
         let result = processor.evaluate(&request).unwrap();
 
-        assert_eq!(result.operator, "commitSubgraph -> materializeNodeProperties");
+        assert_eq!(
+            result.operator,
+            "commitSubgraph -> materializeNodeProperties"
+        );
         assert_eq!(result.graph.node_count(), 3);
 
         let values = result
@@ -319,10 +326,12 @@ mod tests {
         assert!(events.iter().any(|e| e["kind"] == "form.eval.start"));
         assert!(events.iter().any(|e| e["kind"] == "form.eval.step"));
         assert!(events.iter().any(|e| e["kind"] == "form.eval.end"));
-        assert!(events
-            .iter()
-            .filter(|e| e["trace_id"] == "t-form-1")
-            .count()
-            >= 2);
+        assert!(
+            events
+                .iter()
+                .filter(|e| e["trace_id"] == "t-form-1")
+                .count()
+                >= 2
+        );
     }
 }

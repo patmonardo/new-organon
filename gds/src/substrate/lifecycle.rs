@@ -5,7 +5,11 @@ pub trait Import {
     type Source;
     type Config;
 
-    fn import(&self, source: &Self::Source, config: &Self::Config) -> SubstrateResult<CoreGraphStore>;
+    fn import(
+        &self,
+        source: &Self::Source,
+        config: &Self::Config,
+    ) -> SubstrateResult<CoreGraphStore>;
 }
 
 /// Serve capability: provide stable read-only views/handles over a store.
@@ -22,5 +26,10 @@ pub trait Export {
     type Target;
     type Config;
 
-    fn export(&self, store: &CoreGraphStore, target: &Self::Target, config: &Self::Config) -> SubstrateResult<()>;
+    fn export(
+        &self,
+        store: &CoreGraphStore,
+        target: &Self::Target,
+        config: &Self::Config,
+    ) -> SubstrateResult<()>;
 }

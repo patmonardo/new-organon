@@ -317,7 +317,8 @@ mod tests {
         let dimensions = GraphDimensions::new(1000, 5000);
         let concurrency = ConcurrencyConfig::default();
 
-        let estimation = MemoryEstimationEngine::estimate_pagerank_memory(&dimensions, &concurrency);
+        let estimation =
+            MemoryEstimationEngine::estimate_pagerank_memory(&dimensions, &concurrency);
 
         assert!(estimation.estimated_bytes > 0);
         assert!(estimation.breakdown.contains_key("node_values"));
@@ -330,7 +331,8 @@ mod tests {
         let dimensions = GraphDimensions::new(1000, 5000);
         let concurrency = ConcurrencyConfig::default();
 
-        let estimation = MemoryEstimationEngine::estimate_degree_centrality_memory(&dimensions, &concurrency);
+        let estimation =
+            MemoryEstimationEngine::estimate_degree_centrality_memory(&dimensions, &concurrency);
 
         assert!(estimation.estimated_bytes > 0);
         assert!(estimation.breakdown.contains_key("degree_values"));
@@ -342,7 +344,8 @@ mod tests {
         let dimensions = GraphDimensions::new(100, 500); // Small graph
         let concurrency = ConcurrencyConfig::default();
 
-        let estimation = MemoryEstimationEngine::estimate_all_shortest_paths_memory(&dimensions, &concurrency);
+        let estimation =
+            MemoryEstimationEngine::estimate_all_shortest_paths_memory(&dimensions, &concurrency);
 
         assert!(estimation.estimated_bytes > 0);
         assert!(estimation.breakdown.contains_key("distance_matrix"));
@@ -357,23 +360,32 @@ mod tests {
     fn test_memory_formatting() {
         assert_eq!(MemoryEstimationEngine::format_memory_size(0), "0 B");
         assert_eq!(MemoryEstimationEngine::format_memory_size(1024), "1.0 KB");
-        assert_eq!(MemoryEstimationEngine::format_memory_size(1024 * 1024), "1.0 MB");
-        assert_eq!(MemoryEstimationEngine::format_memory_size(1024 * 1024 * 1024), "1.0 GB");
+        assert_eq!(
+            MemoryEstimationEngine::format_memory_size(1024 * 1024),
+            "1.0 MB"
+        );
+        assert_eq!(
+            MemoryEstimationEngine::format_memory_size(1024 * 1024 * 1024),
+            "1.0 GB"
+        );
     }
 
     #[test]
     fn test_feasibility_check() {
         let dimensions = GraphDimensions::new(1000, 5000);
         let concurrency = ConcurrencyConfig::default();
-        let estimation = MemoryEstimationEngine::estimate_pagerank_memory(&dimensions, &concurrency);
+        let estimation =
+            MemoryEstimationEngine::estimate_pagerank_memory(&dimensions, &concurrency);
 
         // Test with sufficient memory
-        let (feasible, message) = MemoryEstimationEngine::is_feasible(&estimation, estimation.estimated_bytes * 2, 1.0);
+        let (feasible, message) =
+            MemoryEstimationEngine::is_feasible(&estimation, estimation.estimated_bytes * 2, 1.0);
         assert!(feasible);
         assert!(message.contains("✅ Feasible"));
 
         // Test with insufficient memory
-        let (feasible, message) = MemoryEstimationEngine::is_feasible(&estimation, estimation.estimated_bytes / 2, 1.0);
+        let (feasible, message) =
+            MemoryEstimationEngine::is_feasible(&estimation, estimation.estimated_bytes / 2, 1.0);
         assert!(!feasible);
         assert!(message.contains("❌ Not feasible"));
     }

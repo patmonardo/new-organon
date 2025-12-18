@@ -3,13 +3,11 @@
 use std::collections::HashMap;
 
 /// Configuration for conductance computation
-#[derive(Clone, Debug)]
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct ConductanceConfig {
     /// Whether to use relationship weights (true) or treat all edges as weight 1.0 (false)
     pub has_relationship_weight_property: bool,
 }
-
 
 /// Result of conductance computation
 #[derive(Clone, Debug)]

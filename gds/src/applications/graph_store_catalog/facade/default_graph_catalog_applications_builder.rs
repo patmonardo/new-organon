@@ -46,8 +46,12 @@ impl DefaultGraphCatalogApplicationsBuilder {
         Self {
             log: log.clone(),
             graph_store_catalog_service: Box::new(DefaultGraphStoreCatalogService::new()),
-            graph_memory_usage_application: GraphMemoryUsageApplication::new(Box::new(DefaultGraphStoreCatalogService::new())),
-            drop_graph_application: DropGraphApplication::new(Box::new(DefaultGraphStoreCatalogService::new())),
+            graph_memory_usage_application: GraphMemoryUsageApplication::new(Box::new(
+                DefaultGraphStoreCatalogService::new(),
+            )),
+            drop_graph_application: DropGraphApplication::new(Box::new(
+                DefaultGraphStoreCatalogService::new(),
+            )),
             drop_node_properties_application: DropNodePropertiesApplication::new(log.clone()),
             drop_relationships_application: DropRelationshipsApplication::new(log.clone()),
             stream_node_properties_application: StreamNodePropertiesApplication,
@@ -69,7 +73,10 @@ impl DefaultGraphCatalogApplicationsBuilder {
     }
 
     /// Sets the graph store catalog service.
-    pub fn with_graph_store_catalog_service(mut self, service: Box<dyn GraphStoreCatalogService>) -> Self {
+    pub fn with_graph_store_catalog_service(
+        mut self,
+        service: Box<dyn GraphStoreCatalogService>,
+    ) -> Self {
         self.graph_store_catalog_service = service;
         self
     }

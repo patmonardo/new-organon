@@ -3,10 +3,10 @@
 //! Translated from Java GDS ml-core functions LogisticLoss.java.
 //! This is a literal 1:1 translation following repository translation policy.
 
+use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
@@ -27,7 +27,7 @@ use std::fmt;
 pub struct LogisticLoss {
     base: AbstractVariable,
     predictions: VariableRef, // NOT a parent - graph optimization
-    has_bias: bool,                 // Track if bias is included
+    has_bias: bool,           // Track if bias is included
 }
 
 impl LogisticLoss {
@@ -82,12 +82,8 @@ impl LogisticLoss {
         );
 
         // Parents: [weights, bias, features, targets] - NOT predictions (graph optimization)
-        let parents: Vec<VariableRef> = vec![
-            weights.into(),
-            bias.into(),
-            features.into(),
-            targets.into(),
-        ];
+        let parents: Vec<VariableRef> =
+            vec![weights.into(), bias.into(), features.into(), targets.into()];
         let base = AbstractVariable::with_gradient_requirement(parents, dimensions::scalar(), true);
 
         Self {

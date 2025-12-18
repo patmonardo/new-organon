@@ -5,10 +5,10 @@
 //! This module implements a thread-safe priority queue for candidate paths in Yen's algorithm.
 
 use super::mutable_path_result::MutablePathResult;
+use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
-use std::cmp::Ordering;
 
 /// Thread-safe priority queue for candidate paths
 ///
@@ -34,8 +34,8 @@ impl PathWrapper {
 
 impl PartialEq for PathWrapper {
     fn eq(&self, other: &Self) -> bool {
-        self.path.total_cost() == other.path.total_cost() &&
-        self.path.node_count() == other.path.node_count()
+        self.path.total_cost() == other.path.total_cost()
+            && self.path.node_count() == other.path.node_count()
     }
 }
 
@@ -62,7 +62,10 @@ impl Ord for PathWrapper {
         }
 
         // Tie-breaker: fewer nodes first (also reversed for BinaryHeap).
-        self.path.node_count().cmp(&other.path.node_count()).reverse()
+        self.path
+            .node_count()
+            .cmp(&other.path.node_count())
+            .reverse()
     }
 }
 
@@ -155,8 +158,16 @@ mod tests {
     fn test_candidate_queue_add_and_pop() {
         let queue = CandidatePathsPriorityQueue::new();
 
-        let path1 = MutablePathResult::new(0, 0, 3, vec![0, 1, 2, 3], vec![10, 11, 12], vec![0.0, 1.0, 2.0, 3.0]);
-        let path2 = MutablePathResult::new(0, 0, 3, vec![0, 1, 3], vec![10, 13], vec![0.0, 1.0, 2.0]);
+        let path1 = MutablePathResult::new(
+            0,
+            0,
+            3,
+            vec![0, 1, 2, 3],
+            vec![10, 11, 12],
+            vec![0.0, 1.0, 2.0, 3.0],
+        );
+        let path2 =
+            MutablePathResult::new(0, 0, 3, vec![0, 1, 3], vec![10, 13], vec![0.0, 1.0, 2.0]);
 
         queue.add_path(path1.clone());
         queue.add_path(path2.clone());
@@ -181,8 +192,16 @@ mod tests {
         let queue = CandidatePathsPriorityQueue::new();
 
         // Add paths in reverse order of priority
-        let path_long = MutablePathResult::new(0, 0, 4, vec![0, 1, 2, 3, 4], vec![10, 11, 12, 13], vec![0.0, 1.0, 2.0, 3.0, 4.0]);
-        let path_short = MutablePathResult::new(0, 0, 3, vec![0, 1, 3], vec![10, 13], vec![0.0, 1.0, 2.0]);
+        let path_long = MutablePathResult::new(
+            0,
+            0,
+            4,
+            vec![0, 1, 2, 3, 4],
+            vec![10, 11, 12, 13],
+            vec![0.0, 1.0, 2.0, 3.0, 4.0],
+        );
+        let path_short =
+            MutablePathResult::new(0, 0, 3, vec![0, 1, 3], vec![10, 13], vec![0.0, 1.0, 2.0]);
 
         queue.add_path(path_long);
         queue.add_path(path_short);

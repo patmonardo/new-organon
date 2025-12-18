@@ -25,10 +25,10 @@
 //! ctx.backward(&rmse);
 //! ```
 
+use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 

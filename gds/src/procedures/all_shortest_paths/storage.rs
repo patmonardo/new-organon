@@ -7,8 +7,8 @@
 //! **Key Features**: Multi-source parallelization, weighted/unweighted support, streaming results
 
 use crate::projection::eval::procedure::AlgorithmError;
-use crate::types::graph::Graph;
 use crate::types::graph::id_map::NodeId;
+use crate::types::graph::Graph;
 use std::sync::mpsc;
 use std::sync::Arc;
 
@@ -66,18 +66,29 @@ impl AllShortestPathsStorageRuntime {
     /// **Translation of Java logic**:
     /// - Unweighted: Multi-Source BFS using MSBFS
     /// - Weighted: Multi-Source Dijkstra with priority queue
-    pub fn compute_shortest_paths(&self, source_node: NodeId, direction: u8) -> Result<Vec<ShortestPathResult>, AlgorithmError> {
+    pub fn compute_shortest_paths(
+        &self,
+        source_node: NodeId,
+        direction: u8,
+    ) -> Result<Vec<ShortestPathResult>, AlgorithmError> {
         match self.algorithm_type {
-            AlgorithmType::Unweighted => self.compute_unweighted_shortest_paths(source_node, direction),
+            AlgorithmType::Unweighted => {
+                self.compute_unweighted_shortest_paths(source_node, direction)
+            }
             AlgorithmType::Weighted => self.compute_weighted_shortest_paths(source_node, direction),
         }
     }
 
     /// Compute unweighted shortest paths using BFS
-    fn compute_unweighted_shortest_paths(&self, source_node: NodeId, direction: u8) -> Result<Vec<ShortestPathResult>, AlgorithmError> {
+    fn compute_unweighted_shortest_paths(
+        &self,
+        source_node: NodeId,
+        direction: u8,
+    ) -> Result<Vec<ShortestPathResult>, AlgorithmError> {
         let node_count = self.graph.node_count();
-        let source_index = usize::try_from(source_node)
-            .map_err(|_| AlgorithmError::InvalidGraph(format!("Invalid source node id: {source_node}")))?;
+        let source_index = usize::try_from(source_node).map_err(|_| {
+            AlgorithmError::InvalidGraph(format!("Invalid source node id: {source_node}"))
+        })?;
         if source_index >= node_count {
             return Err(AlgorithmError::InvalidGraph(format!(
                 "Source node id out of range: {source_node} (node_count={node_count})"
@@ -92,13 +103,15 @@ impl AllShortestPathsStorageRuntime {
 
         // BFS traversal
         while let Some(current_node) = queue.pop_front() {
-            let current_index = usize::try_from(current_node)
-                .map_err(|_| AlgorithmError::InvalidGraph(format!("Invalid node id: {current_node}")))?;
+            let current_index = usize::try_from(current_node).map_err(|_| {
+                AlgorithmError::InvalidGraph(format!("Invalid node id: {current_node}"))
+            })?;
             let current_distance = distances[current_index];
 
             for neighbor in self.get_neighbors(current_node, direction) {
-                let neighbor_index = usize::try_from(neighbor)
-                    .map_err(|_| AlgorithmError::InvalidGraph(format!("Invalid neighbor id: {neighbor}")))?;
+                let neighbor_index = usize::try_from(neighbor).map_err(|_| {
+                    AlgorithmError::InvalidGraph(format!("Invalid neighbor id: {neighbor}"))
+                })?;
                 if neighbor_index >= node_count {
                     continue;
                 }
@@ -124,7 +137,11 @@ impl AllShortestPathsStorageRuntime {
     }
 
     /// Compute weighted shortest paths using Dijkstra
-    fn compute_weighted_shortest_paths(&self, source_node: NodeId, direction: u8) -> Result<Vec<ShortestPathResult>, AlgorithmError> {
+    fn compute_weighted_shortest_paths(
+        &self,
+        source_node: NodeId,
+        direction: u8,
+    ) -> Result<Vec<ShortestPathResult>, AlgorithmError> {
         use std::cmp::Ordering;
         use std::collections::BinaryHeap;
 
@@ -159,8 +176,9 @@ impl AllShortestPathsStorageRuntime {
         }
 
         let node_count = self.graph.node_count();
-        let source_index = usize::try_from(source_node)
-            .map_err(|_| AlgorithmError::InvalidGraph(format!("Invalid source node id: {source_node}")))?;
+        let source_index = usize::try_from(source_node).map_err(|_| {
+            AlgorithmError::InvalidGraph(format!("Invalid source node id: {source_node}"))
+        })?;
         if source_index >= node_count {
             return Err(AlgorithmError::InvalidGraph(format!(
                 "Source node id out of range: {source_node} (node_count={node_count})"
@@ -290,7 +308,10 @@ impl AllShortestPathsStorageRuntime {
     /// Note: This is a simplified version that doesn't use threading
     /// to avoid lifetime issues. In a real implementation, we would
     /// need to handle the GraphStore lifetime properly.
-    pub fn compute_all_shortest_paths_streaming(&self, direction: u8) -> Result<mpsc::Receiver<ShortestPathResult>, AlgorithmError> {
+    pub fn compute_all_shortest_paths_streaming(
+        &self,
+        direction: u8,
+    ) -> Result<mpsc::Receiver<ShortestPathResult>, AlgorithmError> {
         let (sender, receiver) = mpsc::channel();
         let node_count = self.graph.node_count();
 

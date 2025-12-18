@@ -797,8 +797,7 @@ mod tests {
 
         // Test with sqrt computation
         let size = 10_000;
-        let array =
-            HugeFloatArray::with_generator(size, Concurrency::of(4), |i| (i as f32).sqrt());
+        let array = HugeFloatArray::with_generator(size, Concurrency::of(4), |i| (i as f32).sqrt());
 
         assert_eq!(array.get(0), 0.0);
         assert_eq!(array.get(100), 10.0);
@@ -812,12 +811,9 @@ mod tests {
         // Test that different concurrency levels produce same results
         let size = 100_000;
 
-        let array1 =
-            HugeFloatArray::with_generator(size, Concurrency::of(1), |i| (i as f32) * 0.5);
-        let array2 =
-            HugeFloatArray::with_generator(size, Concurrency::of(4), |i| (i as f32) * 0.5);
-        let array8 =
-            HugeFloatArray::with_generator(size, Concurrency::of(8), |i| (i as f32) * 0.5);
+        let array1 = HugeFloatArray::with_generator(size, Concurrency::of(1), |i| (i as f32) * 0.5);
+        let array2 = HugeFloatArray::with_generator(size, Concurrency::of(4), |i| (i as f32) * 0.5);
+        let array8 = HugeFloatArray::with_generator(size, Concurrency::of(8), |i| (i as f32) * 0.5);
 
         // Spot check several indices
         for idx in [0, 1000, 50000, 99999] {
@@ -863,10 +859,10 @@ mod tests {
     fn test_with_generator_constant_values() {
         use crate::concurrency::Concurrency;
 
-        let array = HugeFloatArray::with_generator(1000, Concurrency::of(4), |_| 3.14159);
+        let array = HugeFloatArray::with_generator(1000, Concurrency::of(4), |_| 3.0);
 
         for i in 0..1000 {
-            assert_eq!(array.get(i), 3.14159);
+            assert_eq!(array.get(i), 3.0);
         }
     }
 

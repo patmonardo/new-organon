@@ -4,7 +4,7 @@
 //!
 //! This module implements Tarjan's algorithm for finding bridges using iterative DFS.
 
-use crate::collections::{HugeLongArray, BitSet};
+use crate::collections::{BitSet, HugeLongArray};
 
 /// Stack event for iterative DFS
 #[derive(Debug, Clone, Copy)]
@@ -66,11 +66,7 @@ impl BridgesComputationRuntime {
     }
 
     /// Compute bridges for a graph
-    pub fn compute<F>(
-        &mut self,
-        node_count: usize,
-        get_neighbors: F,
-    ) -> BridgesComputationResult
+    pub fn compute<F>(&mut self, node_count: usize, get_neighbors: F) -> BridgesComputationResult
     where
         F: Fn(usize) -> Vec<usize>,
     {

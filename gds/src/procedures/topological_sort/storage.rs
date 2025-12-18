@@ -20,7 +20,9 @@ impl TopologicalSortStorageRuntime {
     pub fn new(node_count: usize, compute_max_distance: bool) -> Self {
         Self {
             in_degrees: (0..node_count).map(|_| AtomicUsize::new(0)).collect(),
-            sorted_nodes: (0..node_count).map(|_| AtomicUsize::new(usize::MAX)).collect(),
+            sorted_nodes: (0..node_count)
+                .map(|_| AtomicUsize::new(usize::MAX))
+                .collect(),
             add_index: AtomicUsize::new(0),
             max_source_distances: if compute_max_distance {
                 Some((0..node_count).map(|_| AtomicUsize::new(0)).collect())

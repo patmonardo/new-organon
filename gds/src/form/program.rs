@@ -16,7 +16,11 @@ pub struct FormShape {
 
 impl FormShape {
     pub fn new(shape: Shape, context: Context, morph: Morph) -> Self {
-        Self { shape, context, morph }
+        Self {
+            shape,
+            context,
+            morph,
+        }
     }
 }
 

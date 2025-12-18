@@ -6,9 +6,9 @@
 //! handling ephemeral computation state including priority queue management,
 //! visited set tracking, and predecessor/relationship ID storage.
 
-use std::collections::{BinaryHeap, HashMap, HashSet};
-use std::cmp::Ordering;
 use crate::types::graph::id_map::NodeId;
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap, HashSet};
 
 /// Priority queue item for Dijkstra algorithm
 #[derive(Debug, Clone)]
@@ -177,7 +177,10 @@ impl DijkstraComputationRuntime {
         self.costs.insert(node_id, new_cost);
         // Note: In a real implementation, we'd need to update the priority queue
         // For now, we'll add a new item (the old one will be ignored when visited)
-        self.priority_queue.push(QueueItem { node_id, cost: new_cost });
+        self.priority_queue.push(QueueItem {
+            node_id,
+            cost: new_cost,
+        });
     }
 
     /// Mark a node as visited

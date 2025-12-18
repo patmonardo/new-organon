@@ -127,10 +127,7 @@ impl LeidenAlgorithm {
     }
 
     /// Run Leiden on a graph with adjacency list representation
-    pub fn run_on_adjacency_list(
-        self,
-        adjacency_list: &[Vec<(usize, f64)>],
-    ) -> LeidenResult {
+    pub fn run_on_adjacency_list(self, adjacency_list: &[Vec<(usize, f64)>]) -> LeidenResult {
         let node_count = adjacency_list.len();
         let get_neighbors = |node: usize| adjacency_list[node].clone();
         self.run(node_count, get_neighbors)
@@ -187,9 +184,7 @@ mod tests {
             (0, 2, 1.0),
         ];
 
-        let result = LeidenBuilder::new()
-            .build()
-            .run_on_edge_list(3, &edges);
+        let result = LeidenBuilder::new().build().run_on_edge_list(3, &edges);
 
         assert_eq!(result.communities.len(), 3);
         assert_eq!(result.community_count, 1); // Fully connected = 1 community

@@ -6,8 +6,8 @@ use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use std::time::Duration;
 
-use super::storage::HitsStorageRuntime;
 use super::computation::HitsComputationRuntime;
+use super::storage::HitsStorageRuntime;
 
 // ============================================================================
 // Configuration
@@ -59,12 +59,12 @@ define_algorithm_spec! {
     output_type: HitsResult,
     projection_hint: Dense,
     modes: [Stream, Stats],
-    
+
     execute: |self, graph_store, config, context| {
         // Parse configuration
         let _parsed_config: HitsConfig = serde_json::from_value(config.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {}", e)))?;
-        
+
         context.log(
             LogLevel::Info,
             &format!(
@@ -75,7 +75,7 @@ define_algorithm_spec! {
 
         // Create storage runtime
         let storage = HitsStorageRuntime::new(graph_store)?;
-        
+
         // Create computation runtime
         let node_count = storage.node_count();
         let mut computation = HitsComputationRuntime::new(node_count);
@@ -88,11 +88,11 @@ define_algorithm_spec! {
             // Calculate authorities from incoming hubs
             computation.calculate_authorities();
             computation.normalize_authorities();
-            
+
             // Calculate hubs from outgoing authorities
             computation.calculate_hubs();
             computation.normalize_hubs();
-            
+
             if computation.has_converged(1e-6) {
                 context.log(
                     LogLevel::Info,

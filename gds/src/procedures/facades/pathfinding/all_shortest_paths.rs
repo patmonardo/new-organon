@@ -74,17 +74,21 @@ impl AllShortestPathsBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.concurrency == 0 {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "concurrency must be > 0".to_string(),
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "concurrency must be > 0".to_string(),
+                ),
+            );
         }
         ConfigValidator::non_empty_string(&self.direction, "direction")?;
         ConfigValidator::non_empty_string(&self.weight_property, "weight_property")?;
         if let Some(max) = self.max_results {
             if max == 0 {
-                return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "max_results must be > 0".to_string(),
-                ));
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(
+                        "max_results must be > 0".to_string(),
+                    ),
+                );
             }
         }
         Ok(())
@@ -115,7 +119,9 @@ impl AllShortestPathsBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let storage = AllShortestPathsStorageRuntime::with_settings(
             Arc::clone(&graph_view),

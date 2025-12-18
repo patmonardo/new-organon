@@ -97,23 +97,29 @@ impl BellmanFordBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.source.is_none() {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "source node must be specified".to_string(),
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "source node must be specified".to_string(),
+                ),
+            );
         }
 
         if self.concurrency == 0 {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "concurrency must be > 0".to_string(),
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "concurrency must be > 0".to_string(),
+                ),
+            );
         }
 
         match self.direction.to_ascii_lowercase().as_str() {
             "outgoing" | "incoming" => {}
             other => {
-                return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                    format!("direction must be 'outgoing' or 'incoming' (got '{other}')"),
-                ));
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                        "direction must be 'outgoing' or 'incoming' (got '{other}')"
+                    )),
+                );
             }
         }
 
@@ -165,7 +171,9 @@ impl BellmanFordBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let mut storage = BellmanFordStorageRuntime::new(
             source_node,
@@ -196,7 +204,7 @@ impl BellmanFordBuilder {
                 .node_ids
                 .iter()
                 .copied()
-                .map(|node_id| Self::checked_u64(node_id, "path") )
+                .map(|node_id| Self::checked_u64(node_id, "path"))
                 .collect::<Result<Vec<_>>>()?;
 
             rows.push(PathResult {
@@ -231,17 +239,21 @@ impl BellmanFordBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "Bellman-Ford mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "Bellman-Ford mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "Bellman-Ford mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "Bellman-Ford mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 }

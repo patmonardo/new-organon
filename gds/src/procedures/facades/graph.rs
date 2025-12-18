@@ -10,23 +10,14 @@ use super::pathfinding::{
 
 use super::centrality::{
     ArticulationPointsFacade, BetweennessCentralityFacade, BridgesFacade, CELFFacade,
-    ClosenessCentralityFacade, DegreeCentralityFacade, HarmonicCentralityFacade,
-    HitsPregelBuilder, PageRankBuilder,
+    ClosenessCentralityFacade, DegreeCentralityFacade, HarmonicCentralityFacade, HitsPregelBuilder,
+    PageRankBuilder,
 };
 
 use super::community::{
-    ApproxMaxKCutBuilder,
-    ConductanceBuilder,
-    K1ColoringBuilder,
-    KCoreBuilder,
-    KMeansBuilder,
-    LabelPropagationBuilder,
-    LouvainBuilder,
-    LocalClusteringCoefficientBuilder,
-    ModularityBuilder,
-    SccBuilder,
-    TriangleCountBuilder,
-    WccBuilder,
+    ApproxMaxKCutBuilder, ConductanceBuilder, K1ColoringBuilder, KCoreBuilder, KMeansBuilder,
+    LabelPropagationBuilder, LocalClusteringCoefficientBuilder, LouvainBuilder, ModularityBuilder,
+    SccBuilder, TriangleCountBuilder, WccBuilder,
 };
 
 /// User-facing graph handle for running algorithms against a live `DefaultGraphStore`.

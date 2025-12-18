@@ -102,35 +102,45 @@ impl YensBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.source.is_none() {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "source node must be specified".to_string(),
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "source node must be specified".to_string(),
+                ),
+            );
         }
 
         if self.target.is_none() {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "target node must be specified".to_string(),
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "target node must be specified".to_string(),
+                ),
+            );
         }
 
         if self.k == 0 {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "k must be > 0".to_string(),
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "k must be > 0".to_string(),
+                ),
+            );
         }
 
         if self.concurrency == 0 {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "concurrency must be > 0".to_string(),
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "concurrency must be > 0".to_string(),
+                ),
+            );
         }
 
         match self.direction.to_ascii_lowercase().as_str() {
             "outgoing" | "incoming" => {}
             other => {
-                return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                    format!("direction must be 'outgoing' or 'incoming' (got '{other}')"),
-                ));
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                        "direction must be 'outgoing' or 'incoming' (got '{other}')"
+                    )),
+                );
             }
         }
 
@@ -184,7 +194,9 @@ impl YensBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let storage = YensStorageRuntime::new(
             source_node,
@@ -203,7 +215,8 @@ impl YensBuilder {
         );
 
         let start = std::time::Instant::now();
-        let result = storage.compute_yens(&mut computation, Some(graph_view.as_ref()), direction_byte)?;
+        let result =
+            storage.compute_yens(&mut computation, Some(graph_view.as_ref()), direction_byte)?;
 
         let rows: Vec<PathResult> = result
             .paths
@@ -249,18 +262,22 @@ impl YensBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "Yen's mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "Yen's mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "Yen's mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "Yen's mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 }
 
@@ -281,7 +298,10 @@ mod tests {
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
 
         assert!(YensBuilder::new(Arc::clone(&store)).validate().is_err());
-        assert!(YensBuilder::new(Arc::clone(&store)).source(0).validate().is_err());
+        assert!(YensBuilder::new(Arc::clone(&store))
+            .source(0)
+            .validate()
+            .is_err());
         assert!(YensBuilder::new(Arc::clone(&store))
             .source(0)
             .target(1)

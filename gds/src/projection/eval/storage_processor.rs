@@ -35,7 +35,7 @@ use serde_json::Value as JsonValue;
 /// - message bus consumer
 /// - “front-end NIP” that talks to a remote kernel
 pub trait StorageProcessor {
-	fn handle(&mut self, request: StorageRequest) -> Result<StorageResponse, StorageError>;
+    fn handle(&mut self, request: StorageRequest) -> Result<StorageResponse, StorageError>;
 }
 
 /// Metadata that rides alongside a request/response.
@@ -44,77 +44,76 @@ pub trait StorageProcessor {
 /// without threading ad-hoc parameters through every executor.
 #[derive(Debug, Clone, Default)]
 pub struct StorageMeta {
-	/// Stable correlation/idempotency key as seen by the caller.
-	pub request_id: Option<String>,
+    /// Stable correlation/idempotency key as seen by the caller.
+    pub request_id: Option<String>,
 
-	/// Optional tenant boundary.
-	pub tenant_id: Option<String>,
+    /// Optional tenant boundary.
+    pub tenant_id: Option<String>,
 
-	/// Optional subject identity (user/service principal).
-	pub subject: Option<String>,
+    /// Optional subject identity (user/service principal).
+    pub subject: Option<String>,
 
-	/// Optional trace correlation.
-	pub trace_id: Option<String>,
+    /// Optional trace correlation.
+    pub trace_id: Option<String>,
 
-	/// Optional free-form headers (protocol translation layer can preserve what it needs).
-	pub headers: HashMap<String, String>,
+    /// Optional free-form headers (protocol translation layer can preserve what it needs).
+    pub headers: HashMap<String, String>,
 
-	/// When the envelope was created at the boundary.
-	pub received_at: Option<SystemTime>,
+    /// When the envelope was created at the boundary.
+    pub received_at: Option<SystemTime>,
 }
 
 /// A generic request envelope.
 #[derive(Debug, Clone)]
 pub struct StorageRequest {
-	pub meta: StorageMeta,
+    pub meta: StorageMeta,
 
-	/// Route for dispatch inside the kernel.
-	pub route: StorageRoute,
+    /// Route for dispatch inside the kernel.
+    pub route: StorageRoute,
 
-	/// Payload is intentionally untyped at this boundary.
-	///
-	/// Protocol layers (HTTP/gRPC/etc.) can decode into structured types before
-	/// calling the kernel, but `JsonValue` keeps the seam stable.
-	pub payload: JsonValue,
+    /// Payload is intentionally untyped at this boundary.
+    ///
+    /// Protocol layers (HTTP/gRPC/etc.) can decode into structured types before
+    /// calling the kernel, but `JsonValue` keeps the seam stable.
+    pub payload: JsonValue,
 }
 
 /// A generic response envelope.
 #[derive(Debug, Clone)]
 pub struct StorageResponse {
-	pub meta: StorageMeta,
-	pub payload: JsonValue,
+    pub meta: StorageMeta,
+    pub payload: JsonValue,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StorageRoute {
-	/// Route to the Form ISA (most common for “FormShape → ResultStore”).
-	Form,
+    /// Route to the Form ISA (most common for “FormShape → ResultStore”).
+    Form,
 
-	/// Route to the Procedure ISA.
-	Procedure,
+    /// Route to the Procedure ISA.
+    Procedure,
 
-	/// Route to the ML ISA (feature-gated in this repo).
-	Ml,
+    /// Route to the ML ISA (feature-gated in this repo).
+    Ml,
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum StorageError {
-	#[error("unauthorized")]
-	Unauthorized,
+    #[error("unauthorized")]
+    Unauthorized,
 
-	#[error("forbidden")]
-	Forbidden,
+    #[error("forbidden")]
+    Forbidden,
 
-	#[error("bad request: {0}")]
-	BadRequest(String),
+    #[error("bad request: {0}")]
+    BadRequest(String),
 
-	#[error("timeout")]
-	Timeout,
+    #[error("timeout")]
+    Timeout,
 
-	#[error("over quota")]
-	OverQuota,
+    #[error("over quota")]
+    OverQuota,
 
-	#[error("internal error: {0}")]
-	Internal(String),
+    #[error("internal error: {0}")]
+    Internal(String),
 }
-

@@ -107,7 +107,6 @@ impl AllShortestPathsComputationRuntime {
             .collect()
     }
 
-
     /// Get maximum distance found
     pub fn max_distance(&self) -> f64 {
         self.max_distance
@@ -149,7 +148,8 @@ impl AllShortestPathsComputationRuntime {
 
     /// Get average distance (excluding infinite distances)
     pub fn average_distance(&self) -> f64 {
-        let finite_results: Vec<&ShortestPathResult> = self.results
+        let finite_results: Vec<&ShortestPathResult> = self
+            .results
             .iter()
             .filter(|result| result.distance != f64::INFINITY)
             .collect();

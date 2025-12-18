@@ -5,10 +5,12 @@
 //! This module contains integration tests for the Delta Stepping algorithm
 //! with the core executor runtime, demonstrating the three-layer architecture.
 
+use super::computation::DeltaSteppingComputationRuntime;
 use super::spec::{DELTA_STEPPINGAlgorithmSpec, DeltaSteppingConfig, DeltaSteppingResult};
 use super::storage::DeltaSteppingStorageRuntime;
-use super::computation::DeltaSteppingComputationRuntime;
-use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor, AlgorithmSpec};
+use crate::projection::eval::procedure::{
+    AlgorithmSpec, ExecutionContext, ExecutionMode, ProcedureExecutor,
+};
 use serde_json::json;
 
 #[test]
@@ -33,7 +35,9 @@ fn test_delta_stepping_config_validation() {
     });
 
     let validation_config = spec.validation_config(&ExecutionContext::new("test"));
-    assert!(validation_config.validate_before_load(&valid_config).is_ok());
+    assert!(validation_config
+        .validate_before_load(&valid_config)
+        .is_ok());
 
     // Test invalid configuration - the validation_config doesn't validate our custom fields
     // so we'll test the config validation directly instead

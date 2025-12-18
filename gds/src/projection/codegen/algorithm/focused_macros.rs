@@ -33,7 +33,7 @@ macro_rules! define_algorithm_spec {
         output_type: $output_type:ty,
         projection_hint: $hint:ident,
         modes: [$($mode:ident),*],
-        
+
         execute: |$self_param:ident, $graph_store_param:ident, $config_param:ident, $context_param:ident| $execute_fn:block
     ) => {
         paste::paste! {
@@ -85,12 +85,12 @@ macro_rules! define_algorithm_spec {
                     $context_param: &$crate::projection::eval::procedure::ExecutionContext,
                 ) -> Result<$crate::projection::eval::procedure::ComputationResult<Self::Output>, $crate::projection::eval::procedure::AlgorithmError> {
                     let timer = std::time::Instant::now();
-                    
+
                     // Call the manual execute implementation
                     let result = {
                         $execute_fn
                     }?;
-                    
+
                     let elapsed = timer.elapsed();
                     Ok($crate::projection::eval::procedure::ComputationResult::new(result, elapsed))
                 }
@@ -137,7 +137,7 @@ macro_rules! define_storage_runtime {
     (
         name: $name:ident,
         graph_store_type: $graph_store_type:ident,
-        
+
         impl_methods: {
             $($method:item)*
         }
@@ -199,7 +199,7 @@ macro_rules! define_computation_runtime {
         fields: {
             $($field:ident : $field_type:ty,)*
         },
-        
+
         impl_methods: {
             $($method:item)*
         }

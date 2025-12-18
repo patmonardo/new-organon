@@ -12,7 +12,9 @@ pub struct InMemoryGraphCatalog {
 
 impl InMemoryGraphCatalog {
     pub fn new() -> Self {
-        Self { entries: RwLock::new(HashMap::new()) }
+        Self {
+            entries: RwLock::new(HashMap::new()),
+        }
     }
 }
 
@@ -54,13 +56,20 @@ impl GraphCatalog for InMemoryGraphCatalog {
             name: name.clone(),
             node_count: GraphStore::node_count(store.as_ref()) as u64,
             relationship_count: GraphStore::relationship_count(store.as_ref()) as u64,
-            degree_distribution: if include_degree_dist { Some(simple_degree_histogram(store)) } else { None },
-        }).collect()
+            degree_distribution: if include_degree_dist {
+                Some(simple_degree_histogram(store))
+            } else {
+                None
+            },
+        })
+        .collect()
     }
 
     fn size_of(&self, name: &str) -> Result<GraphMemoryUsage, CatalogError> {
         let map = self.entries.read().expect("catalog poisoned");
-        let store = map.get(name).ok_or_else(|| CatalogError::NotFound(name.to_string()))?;
+        let store = map
+            .get(name)
+            .ok_or_else(|| CatalogError::NotFound(name.to_string()))?;
         // Placeholder memory accounting; can be replaced with real tracker later
         Ok(GraphMemoryUsage {
             bytes: 0,
@@ -80,5 +89,3 @@ fn simple_degree_histogram(store: &DefaultGraphStore) -> HashMap<u32, u64> {
     }
     hist
 }
-
-

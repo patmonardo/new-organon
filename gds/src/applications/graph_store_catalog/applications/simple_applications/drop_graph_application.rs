@@ -1,6 +1,6 @@
-use crate::core::User;
-use super::super::super::loaders::GraphStoreCatalogService;
 use super::super::super::facade::GraphStoreCatalogEntry;
+use super::super::super::loaders::GraphStoreCatalogService;
+use crate::core::User;
 
 /// Application for dropping graphs from the catalog.
 ///

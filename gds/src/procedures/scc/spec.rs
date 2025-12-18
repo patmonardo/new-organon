@@ -4,12 +4,12 @@
 //!
 //! This module defines the SCC algorithm specification using focused macros.
 
+use super::computation::SccComputationRuntime;
+use super::storage::SccStorageRuntime;
+use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::{AlgorithmError, LogLevel};
-use crate::core::utils::progress::{ProgressTracker, Tasks};
-use crate::concurrency::TerminationFlag;
-use super::storage::SccStorageRuntime;
-use super::computation::SccComputationRuntime;
 use serde::{Deserialize, Serialize};
 
 /// SCC algorithm configuration
@@ -23,9 +23,7 @@ pub struct SccConfig {
 
 impl Default for SccConfig {
     fn default() -> Self {
-        Self {
-            concurrency: 4,
-        }
+        Self { concurrency: 4 }
     }
 }
 

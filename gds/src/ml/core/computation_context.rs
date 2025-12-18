@@ -141,7 +141,11 @@ impl ComputationContext {
         // Collect all variables in topological order (children before parents)
         let mut execution_order = Vec::new();
         let mut visited = HashSet::new();
-        self.collect_variables_topological(VariableNode::Borrowed(function), &mut visited, &mut execution_order);
+        self.collect_variables_topological(
+            VariableNode::Borrowed(function),
+            &mut visited,
+            &mut execution_order,
+        );
 
         // Single reverse-topological pass:
         // - Each edge (variable -> parent) is visited once.

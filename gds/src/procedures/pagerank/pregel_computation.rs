@@ -15,8 +15,8 @@ use crate::pregel::{
     ComputeContext, ComputeFn, InitContext, InitFn, Messages, PregelBuilder, PregelSchema,
     SyncQueueMessageIterator, SyncQueueMessenger, Visibility,
 };
-use crate::types::ValueType;
 use crate::types::graph::Graph;
+use crate::types::ValueType;
 use std::collections::HashSet;
 use std::sync::Arc;
 

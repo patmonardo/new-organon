@@ -1,5 +1,5 @@
 /// Configuration for writing node labels to the database.
-/// 
+///
 /// Mirrors Java WriteLabelConfig interface.
 /// Extends BaseConfig + multiple trait bounds (ConcurrencyConfig, WriteConfig, JobIdConfig).
 /// For now, we'll define it as a simple trait that can be extended later.
@@ -10,7 +10,7 @@ pub trait WriteLabelConfig {
 }
 
 /// Builder for creating WriteLabelConfig implementations.
-/// 
+///
 /// In Java, this uses CypherMapWrapper for configuration parsing.
 /// For now, this is a simple struct that can be extended as needed.
 #[derive(Clone, Debug)]

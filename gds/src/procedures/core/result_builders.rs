@@ -6,7 +6,9 @@
 //! This module provides result building capabilities for different algorithm types,
 //! integrating with our statistics and progress tracking modules.
 
-use crate::procedures::core::statistics::{StatisticalSummary, Histogram, StatisticsEngine, StatisticsConfig};
+use crate::procedures::core::statistics::{
+    Histogram, StatisticalSummary, StatisticsConfig, StatisticsEngine,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
@@ -166,10 +168,8 @@ impl ResultBuilder<CentralityResult> for CentralityResultBuilder {
                 ..Default::default()
             };
 
-            let (stats, hist) = StatisticsEngine::compute_statistics_from_values(
-                self.scores.clone(),
-                config,
-            )?;
+            let (stats, hist) =
+                StatisticsEngine::compute_statistics_from_values(self.scores.clone(), config)?;
 
             statistics = Some(stats);
             if self.compute_histogram {
@@ -177,9 +177,9 @@ impl ResultBuilder<CentralityResult> for CentralityResultBuilder {
             }
         }
 
-        let metadata = self.metadata.unwrap_or_else(|| {
-            ExecutionMetadata::new(Duration::from_secs(0))
-        });
+        let metadata = self
+            .metadata
+            .unwrap_or_else(|| ExecutionMetadata::new(Duration::from_secs(0)));
 
         Ok(CentralityResult {
             scores: self.scores,
@@ -264,16 +264,17 @@ impl ResultBuilder<CommunityResult> for CommunityResultBuilder {
                 ..Default::default()
             };
 
-            let (stats, hist) = StatisticsEngine::compute_statistics_from_values(size_values, config)?;
+            let (stats, hist) =
+                StatisticsEngine::compute_statistics_from_values(size_values, config)?;
             size_statistics = Some(stats);
             if self.compute_histogram {
                 size_histogram = hist;
             }
         }
 
-        let metadata = self.metadata.unwrap_or_else(|| {
-            ExecutionMetadata::new(Duration::from_secs(0))
-        });
+        let metadata = self
+            .metadata
+            .unwrap_or_else(|| ExecutionMetadata::new(Duration::from_secs(0)));
 
         Ok(CommunityResult {
             communities: self.communities,
@@ -357,10 +358,8 @@ impl ResultBuilder<SimilarityResult> for SimilarityResultBuilder {
                 ..Default::default()
             };
 
-            let (stats, hist) = StatisticsEngine::compute_statistics_from_values(
-                self.scores.clone(),
-                config,
-            )?;
+            let (stats, hist) =
+                StatisticsEngine::compute_statistics_from_values(self.scores.clone(), config)?;
 
             statistics = Some(stats);
             if self.compute_histogram {
@@ -368,9 +367,9 @@ impl ResultBuilder<SimilarityResult> for SimilarityResultBuilder {
             }
         }
 
-        let metadata = self.metadata.unwrap_or_else(|| {
-            ExecutionMetadata::new(Duration::from_secs(0))
-        });
+        let metadata = self
+            .metadata
+            .unwrap_or_else(|| ExecutionMetadata::new(Duration::from_secs(0)));
 
         Ok(SimilarityResult {
             scores: self.scores,
@@ -489,6 +488,9 @@ mod tests {
         assert_eq!(metadata.execution_time, Duration::from_secs(5));
         assert_eq!(metadata.iterations, Some(100));
         assert_eq!(metadata.converged, Some(true));
-        assert_eq!(metadata.additional.get("algorithm"), Some(&"pagerank".to_string()));
+        assert_eq!(
+            metadata.additional.get("algorithm"),
+            Some(&"pagerank".to_string())
+        );
     }
 }

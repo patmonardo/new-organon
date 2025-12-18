@@ -27,12 +27,12 @@ impl SingleParentVariable {
     pub fn new(parent: Box<dyn Variable>, dimensions: Vec<usize>) -> Self {
         let parent: VariableRef = parent.into();
         let require_gradient = parent.require_gradient();
-        let base =
-            AbstractVariable::with_gradient_requirement(vec![parent.clone()], dimensions, require_gradient);
-        Self {
-            base,
-            parent,
-        }
+        let base = AbstractVariable::with_gradient_requirement(
+            vec![parent.clone()],
+            dimensions,
+            require_gradient,
+        );
+        Self { base, parent }
     }
 
     /// Get the parent variable.

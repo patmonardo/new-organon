@@ -4,8 +4,8 @@
 //!
 //! This module implements the "Subtle pole" for BFS algorithm - ephemeral computation state.
 
-use std::collections::HashMap;
 use crate::types::graph::id_map::NodeId;
+use std::collections::HashMap;
 
 /// BFS Computation Runtime - handles ephemeral computation state
 ///
@@ -86,7 +86,10 @@ impl BfsComputationRuntime {
     /// Translation of: `BFSComputation.getVisitedNodes()` (lines 171-185)
     /// This returns all visited nodes as a vector of (node, distance) pairs
     pub fn get_visited_nodes(&self) -> Vec<(NodeId, u32)> {
-        self.visited_nodes.iter().map(|(&node, &distance)| (node, distance)).collect()
+        self.visited_nodes
+            .iter()
+            .map(|(&node, &distance)| (node, distance))
+            .collect()
     }
 
     /// Check if max depth constraint is satisfied

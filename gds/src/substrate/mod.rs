@@ -5,21 +5,21 @@
 //!
 //! Hard rule: do not introduce a `substrate/utils` mega-module.
 
-pub mod graph;
 pub mod compute_surface;
 pub mod form_store;
+pub mod graph;
 pub mod lifecycle;
 pub mod reality_fabric;
-pub mod surface;
 pub mod store;
+pub mod surface;
 
-pub use graph::*;
 pub use compute_surface::*;
 pub use form_store::*;
+pub use graph::*;
 pub use lifecycle::*;
 pub use reality_fabric::*;
-pub use surface::*;
 pub use store::*;
+pub use surface::*;
 
 /// Internal contiguous node identifier for traversal.
 ///

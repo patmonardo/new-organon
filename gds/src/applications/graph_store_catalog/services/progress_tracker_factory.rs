@@ -14,7 +14,11 @@ pub struct ProgressTrackerFactory {
 
 impl ProgressTrackerFactory {
     /// Creates a new ProgressTrackerFactory.
-    pub fn new(log: Log, task_registry_factory: TaskRegistryFactory, user_log_registry_factory: UserLogRegistryFactory) -> Self {
+    pub fn new(
+        log: Log,
+        task_registry_factory: TaskRegistryFactory,
+        user_log_registry_factory: UserLogRegistryFactory,
+    ) -> Self {
         Self {
             log,
             task_registry_factory,
@@ -73,7 +77,11 @@ impl ProgressTracker {
     pub fn log_progress(&mut self) {
         self.current_work += 1;
         if self.current_work.is_multiple_of(1000) {
-            self.log.info(&format!("Progress: {}/{}", self.current_work, self.task.total_work()));
+            self.log.info(&format!(
+                "Progress: {}/{}",
+                self.current_work,
+                self.task.total_work()
+            ));
         }
     }
 

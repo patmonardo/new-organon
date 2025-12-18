@@ -20,17 +20,13 @@
 //! **Complexity**: O(V + E) - linear in nodes and edges
 //! **Use Case**: Identify highly connected nodes (hubs)
 
-pub mod spec;
-pub mod storage;
 pub mod computation;
 #[cfg(test)]
 pub mod integration_tests;
+pub mod spec;
+pub mod storage;
 
 // Re-export the main types
-pub use spec::{
-    DEGREE_CENTRALITYAlgorithmSpec,
-    DegreeCentralityConfig,
-    DegreeCentralityResult,
-};
-pub use storage::DegreeCentralityStorageRuntime;
 pub use computation::DegreeCentralityComputationRuntime;
+pub use spec::{DEGREE_CENTRALITYAlgorithmSpec, DegreeCentralityConfig, DegreeCentralityResult};
+pub use storage::DegreeCentralityStorageRuntime;

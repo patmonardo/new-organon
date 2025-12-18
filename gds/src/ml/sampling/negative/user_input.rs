@@ -155,11 +155,19 @@ impl NegativeSampler for UserInputNegativeSampler {
                         if Self::sample(&mut rng, prob) {
                             if test_relationships_to_add > 0 {
                                 test_relationships_to_add -= 1;
-                                test_set_builder.add_from_internal(root_s as u64, root_t as u64, NEGATIVE);
+                                test_set_builder.add_from_internal(
+                                    root_s as u64,
+                                    root_t as u64,
+                                    NEGATIVE,
+                                );
                             }
                         } else if train_relationships_to_add > 0 {
                             train_relationships_to_add -= 1;
-                            train_set_builder.add_from_internal(root_s as u64, root_t as u64, NEGATIVE);
+                            train_set_builder.add_from_internal(
+                                root_s as u64,
+                                root_t as u64,
+                                NEGATIVE,
+                            );
                         }
                     }
                 });

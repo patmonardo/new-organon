@@ -557,7 +557,8 @@ mod tests {
             Arc::new(DefaultGraphStore::random(&config).expect("Failed to generate random graph"));
         let pipeline = NodeClassificationTrainingPipeline::new();
         let config = NodeClassificationPipelineTrainConfig::default();
-        let node_feature_producer = NodeFeatureProducer::create(graph_store.clone(), config.clone());
+        let node_feature_producer =
+            NodeFeatureProducer::create(graph_store.clone(), config.clone());
         let progress_tracker = ();
 
         let mut trainer = NodeClassificationTrain::create(

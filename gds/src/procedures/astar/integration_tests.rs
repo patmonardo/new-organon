@@ -5,7 +5,9 @@
 //! This module contains integration tests for A* algorithm with the executor runtime.
 
 use super::*;
-use crate::projection::eval::procedure::{ProcedureExecutor, ExecutionMode, ExecutionContext, AlgorithmSpec};
+use crate::projection::eval::procedure::{
+    AlgorithmSpec, ExecutionContext, ExecutionMode, ProcedureExecutor,
+};
 use serde_json::json;
 
 #[test]
@@ -15,14 +17,14 @@ fn test_astar_algorithm_spec_contract() {
     assert_eq!(spec.name(), "astar");
 }
 
-    #[test]
-    fn test_astar_execution_modes() {
-        let spec = ASTARAlgorithmSpec::new("test_graph".to_string());
+#[test]
+fn test_astar_execution_modes() {
+    let spec = ASTARAlgorithmSpec::new("test_graph".to_string());
 
-        // Test that the spec can be created
-        assert_eq!(spec.name(), "astar");
-        assert_eq!(spec.graph_name(), "test_graph");
-    }
+    // Test that the spec can be created
+    assert_eq!(spec.name(), "astar");
+    assert_eq!(spec.graph_name(), "test_graph");
+}
 
 #[test]
 fn test_astar_config_validation() {
@@ -89,16 +91,14 @@ fn test_astar_with_executor() {
 
 #[test]
 fn test_astar_storage_computation_integration() {
-    let mut storage = AStarStorageRuntime::new(
-        0,
-        1,
-        "latitude".to_string(),
-        "longitude".to_string(),
-    );
+    let mut storage =
+        AStarStorageRuntime::new(0, 1, "latitude".to_string(), "longitude".to_string());
 
     let mut computation = AStarComputationRuntime::new();
 
-    let result = storage.compute_astar_path(&mut computation, None, 0).unwrap();
+    let result = storage
+        .compute_astar_path(&mut computation, None, 0)
+        .unwrap();
 
     assert!(result.has_path());
     assert_eq!(result.path_length(), 2);
@@ -108,12 +108,7 @@ fn test_astar_storage_computation_integration() {
 
 #[test]
 fn test_astar_haversine_integration() {
-    let mut storage = AStarStorageRuntime::new(
-        0,
-        1,
-        "lat".to_string(),
-        "lon".to_string(),
-    );
+    let mut storage = AStarStorageRuntime::new(0, 1, "lat".to_string(), "lon".to_string());
 
     // Test Haversine distance calculation
     let distance = storage.compute_haversine_distance(0, 1).unwrap();
@@ -126,12 +121,7 @@ fn test_astar_haversine_integration() {
 
 #[test]
 fn test_astar_coordinate_caching_integration() {
-    let mut storage = AStarStorageRuntime::new(
-        0,
-        1,
-        "lat".to_string(),
-        "lon".to_string(),
-    );
+    let mut storage = AStarStorageRuntime::new(0, 1, "lat".to_string(), "lon".to_string());
 
     // First call should populate cache
     let coords1 = storage.get_coordinates(5).unwrap();
@@ -199,7 +189,9 @@ fn test_astar_algorithm_completeness() {
     let mut computation = AStarComputationRuntime::new();
 
     // Test integration
-    let result = storage.compute_astar_path(&mut computation, None, 0).unwrap();
+    let result = storage
+        .compute_astar_path(&mut computation, None, 0)
+        .unwrap();
 
     assert!(result.has_path());
     assert_eq!(result.path_length(), 2);
@@ -209,12 +201,15 @@ fn test_astar_algorithm_completeness() {
     // Test executor integration (should fail gracefully)
     let context = ExecutionContext::new("test_user");
     let mut executor = ProcedureExecutor::new(context, ExecutionMode::Stream);
-    let exec_result = executor.compute(&mut spec, &json!({
-        "source_node": 0,
-        "target_node": 1,
-        "latitude_property": "latitude",
-        "longitude_property": "longitude",
-        "concurrency": 4
-    }));
+    let exec_result = executor.compute(
+        &mut spec,
+        &json!({
+            "source_node": 0,
+            "target_node": 1,
+            "latitude_property": "latitude",
+            "longitude_property": "longitude",
+            "concurrency": 4
+        }),
+    );
     assert!(exec_result.is_err()); // Expected due to missing graph
 }

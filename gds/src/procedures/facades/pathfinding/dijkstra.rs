@@ -27,10 +27,10 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
-use crate::procedures::facades::traits::{Result, PathResult};
-use crate::procedures::facades::builder_base::{MutationResult, WriteResult, ConfigValidator};
-use crate::procedures::dijkstra::{DijkstraComputationRuntime, DijkstraStorageRuntime};
 use crate::procedures::dijkstra::targets::create_targets;
+use crate::procedures::dijkstra::{DijkstraComputationRuntime, DijkstraStorageRuntime};
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::facades::traits::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -171,7 +171,9 @@ impl DijkstraBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, orientation)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let result = storage.compute_dijkstra(
             &mut computation,
@@ -275,32 +277,44 @@ impl DijkstraBuilder {
     /// Validate configuration before execution
     fn validate(&self) -> Result<()> {
         match self.source {
-            None => return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "source node must be specified".to_string()
-            )),
-            Some(id) if id == u64::MAX => return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "source node ID cannot be u64::MAX".to_string()
-            )),
+            None => {
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(
+                        "source node must be specified".to_string(),
+                    ),
+                )
+            }
+            Some(id) if id == u64::MAX => {
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(
+                        "source node ID cannot be u64::MAX".to_string(),
+                    ),
+                )
+            }
             _ => {}
         }
 
         if self.concurrency == 0 {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "concurrency must be > 0".to_string()
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "concurrency must be > 0".to_string(),
+                ),
+            );
         }
 
         if !["incoming", "outgoing", "both"].contains(&self.direction.as_str()) {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                format!("direction must be 'incoming', 'outgoing', or 'both', got '{}'", self.direction)
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "direction must be 'incoming', 'outgoing', or 'both', got '{}'",
+                    self.direction
+                )),
+            );
         }
 
         ConfigValidator::non_empty_string(&self.weight_property, "weight_property")?;
 
         Ok(())
     }
-
 
     /// Execute the algorithm and return iterator over path results
     ///
@@ -356,9 +370,11 @@ impl DijkstraBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "Dijkstra mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "Dijkstra mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 
     /// Write mode: Compute and persist to storage
@@ -377,9 +393,11 @@ impl DijkstraBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "Dijkstra mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "Dijkstra mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 }
 
@@ -465,7 +483,6 @@ mod tests {
             .direction("outgoing");
         assert!(builder.validate().is_ok());
     }
-
 
     #[test]
     fn test_stream_requires_validation() {

@@ -10,12 +10,12 @@ mod tests {
         let get_neighbors = |node: usize| edges[node].clone();
 
         let runtime = RandomWalkComputationRuntime::new(
-            1,    // walks_per_node
-            3,    // walk_length
-            1.0,  // return_factor
-            1.0,  // in_out_factor
+            1,       // walks_per_node
+            3,       // walk_length
+            1.0,     // return_factor
+            1.0,     // in_out_factor
             vec![0], // start from node 0
-            42,   // random_seed
+            42,      // random_seed
         );
 
         let result = runtime.compute(3, get_neighbors);
@@ -32,12 +32,12 @@ mod tests {
         let get_neighbors = |node: usize| edges[node].clone();
 
         let runtime = RandomWalkComputationRuntime::new(
-            3,    // walks_per_node
-            3,    // walk_length
-            1.0,  // return_factor
-            1.0,  // in_out_factor
+            3,       // walks_per_node
+            3,       // walk_length
+            1.0,     // return_factor
+            1.0,     // in_out_factor
             vec![0], // start from node 0
-            42,   // random_seed
+            42,      // random_seed
         );
 
         let result = runtime.compute(3, get_neighbors);
@@ -55,12 +55,12 @@ mod tests {
         let get_neighbors = |node: usize| edges[node].clone();
 
         let runtime = RandomWalkComputationRuntime::new(
-            5,    // walks_per_node (multiple to test randomness)
-            2,    // walk_length
-            1.0,  // return_factor
-            1.0,  // in_out_factor
+            5,       // walks_per_node (multiple to test randomness)
+            2,       // walk_length
+            1.0,     // return_factor
+            1.0,     // in_out_factor
             vec![0], // start from node 0
-            42,   // random_seed
+            42,      // random_seed
         );
 
         let result = runtime.compute(3, get_neighbors);
@@ -81,12 +81,12 @@ mod tests {
         let get_neighbors = |node: usize| edges[node].clone();
 
         let runtime = RandomWalkComputationRuntime::new(
-            1,     // walks_per_node
-            10,    // walk_length (longer than possible)
-            1.0,   // return_factor
-            1.0,   // in_out_factor
+            1,       // walks_per_node
+            10,      // walk_length (longer than possible)
+            1.0,     // return_factor
+            1.0,     // in_out_factor
             vec![0], // start from node 0
-            42,    // random_seed
+            42,      // random_seed
         );
 
         let result = runtime.compute(2, get_neighbors);
@@ -104,12 +104,12 @@ mod tests {
         let get_neighbors = |node: usize| edges[node].clone();
 
         let runtime = RandomWalkComputationRuntime::new(
-            1,    // walks_per_node
-            3,    // walk_length
-            1.0,  // return_factor
-            1.0,  // in_out_factor
+            1,      // walks_per_node
+            3,      // walk_length
+            1.0,    // return_factor
+            1.0,    // in_out_factor
             vec![], // empty = walk from all nodes
-            42,   // random_seed
+            42,     // random_seed
         );
 
         let result = runtime.compute(3, get_neighbors);

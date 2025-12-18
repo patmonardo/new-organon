@@ -34,7 +34,8 @@ use crate::types::graph::{
 };
 use crate::types::properties::node::{
     DefaultDoubleArrayNodePropertyValues, DefaultDoubleNodePropertyValues,
-    DefaultFloatArrayNodePropertyValues, DefaultLongArrayNodePropertyValues, DefaultLongNodePropertyValues,
+    DefaultFloatArrayNodePropertyValues, DefaultLongArrayNodePropertyValues,
+    DefaultLongNodePropertyValues,
 };
 use crate::types::properties::PropertyValues;
 use crate::types::{DefaultValue, ValueType};
@@ -153,7 +154,8 @@ impl PropertyAccumulator {
                 }
 
                 Ok(Box::new(DefaultLongNodePropertyValues::from_collection(
-                    crate::collections::backends::vec::VecLong::from(dense), node_count,
+                    crate::collections::backends::vec::VecLong::from(dense),
+                    node_count,
                 )))
             }
             ValueType::Double => {
@@ -169,7 +171,8 @@ impl PropertyAccumulator {
                 }
 
                 Ok(Box::new(DefaultDoubleNodePropertyValues::from_collection(
-                    crate::collections::backends::vec::VecDouble::from(dense), node_count,
+                    crate::collections::backends::vec::VecDouble::from(dense),
+                    node_count,
                 )))
             }
             ValueType::LongArray => {
@@ -183,9 +186,12 @@ impl PropertyAccumulator {
                     }
                 }
 
-                Ok(Box::new(DefaultLongArrayNodePropertyValues::from_collection(
-                    crate::collections::backends::vec::VecLongArray::from(dense), node_count,
-                )))
+                Ok(Box::new(
+                    DefaultLongArrayNodePropertyValues::from_collection(
+                        crate::collections::backends::vec::VecLongArray::from(dense),
+                        node_count,
+                    ),
+                ))
             }
             ValueType::DoubleArray => {
                 let mut dense = vec![None; node_count];
@@ -198,9 +204,12 @@ impl PropertyAccumulator {
                     }
                 }
 
-                Ok(Box::new(DefaultDoubleArrayNodePropertyValues::from_collection(
-                    crate::collections::backends::vec::VecDoubleArray::from(dense), node_count,
-                )))
+                Ok(Box::new(
+                    DefaultDoubleArrayNodePropertyValues::from_collection(
+                        crate::collections::backends::vec::VecDoubleArray::from(dense),
+                        node_count,
+                    ),
+                ))
             }
             ValueType::FloatArray => {
                 let mut dense = vec![None; node_count];
@@ -213,9 +222,12 @@ impl PropertyAccumulator {
                     }
                 }
 
-                Ok(Box::new(DefaultFloatArrayNodePropertyValues::from_collection(
-                    crate::collections::backends::vec::VecFloatArray::from(dense), node_count,
-                )))
+                Ok(Box::new(
+                    DefaultFloatArrayNodePropertyValues::from_collection(
+                        crate::collections::backends::vec::VecFloatArray::from(dense),
+                        node_count,
+                    ),
+                ))
             }
             _ => Err(ImporterError::UnsupportedPropertyType {
                 property_key: self.config.key.clone(),

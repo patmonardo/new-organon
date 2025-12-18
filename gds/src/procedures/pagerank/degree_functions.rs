@@ -10,7 +10,7 @@
 
 use std::sync::Arc;
 
-use crate::types::graph::{Graph, id_map::NodeId};
+use crate::types::graph::{id_map::NodeId, Graph};
 
 /// A callable degree function compatible with PageRank/Eigenvector variants.
 ///
@@ -121,5 +121,3 @@ mod tests {
     // The constructors are verified to compile - actual graph instantiation happens
     // at runtime with real graph stores.
 }
-
-

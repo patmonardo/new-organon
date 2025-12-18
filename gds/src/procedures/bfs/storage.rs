@@ -6,11 +6,13 @@
 //! and algorithm orchestration using the Java GDS parallel BFS architecture.
 
 use super::computation::BfsComputationRuntime;
-use super::spec::{BfsResult, BfsPathResult};
-use crate::procedures::traversal::{ExitPredicate, Aggregator, FollowExitPredicate, TargetExitPredicate, OneHopAggregator};
+use super::spec::{BfsPathResult, BfsResult};
+use crate::procedures::traversal::{
+    Aggregator, ExitPredicate, FollowExitPredicate, OneHopAggregator, TargetExitPredicate,
+};
 use crate::projection::eval::procedure::AlgorithmError;
-use crate::types::graph::Graph;
 use crate::types::graph::id_map::NodeId;
+use crate::types::graph::Graph;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// BFS Storage Runtime - handles persistent data access and algorithm orchestration
@@ -92,7 +94,11 @@ impl BfsStorageRuntime {
     ///
     /// Translation of: `BFS.compute()` (lines 1.075-259)
     /// This orchestrates the main BFS algorithm loop using Java GDS parallel architecture
-    pub fn compute_bfs(&self, computation: &mut BfsComputationRuntime, graph: Option<&dyn Graph>) -> Result<BfsResult, AlgorithmError> {
+    pub fn compute_bfs(
+        &self,
+        computation: &mut BfsComputationRuntime,
+        graph: Option<&dyn Graph>,
+    ) -> Result<BfsResult, AlgorithmError> {
         let start_time = std::time::Instant::now();
 
         // Initialize computation runtime
@@ -175,7 +181,8 @@ impl BfsStorageRuntime {
 
                             if !visited[neighbor_index] {
                                 visited[neighbor_index] = true;
-                                let new_index = traversed_nodes_length.fetch_add(1, Ordering::SeqCst);
+                                let new_index =
+                                    traversed_nodes_length.fetch_add(1, Ordering::SeqCst);
                                 if new_index < node_count {
                                     traversed_nodes[new_index] = neighbor;
                                     weights[new_index] = weight;

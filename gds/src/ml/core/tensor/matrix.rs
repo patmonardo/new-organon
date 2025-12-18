@@ -3,9 +3,9 @@
 //! This directly mirrors Java's `Matrix extends Tensor<Matrix>` pattern.
 //! Contains data and dimensions directly, not wrapped in TensorData.
 
-use super::tensor::{Tensor, AsAny};
-use super::vector::Vector;
 use super::scalar::Scalar;
+use super::tensor::{AsAny, Tensor};
+use super::vector::Vector;
 use crate::ml::core::dimensions;
 use serde::{Deserialize, Serialize};
 use std::ops::{Index, IndexMut};
@@ -110,7 +110,8 @@ impl Matrix {
         if values.len() != self.cols {
             panic!(
                 "Input vector dimension {} is unequal to column count {}",
-                values.len(), self.cols
+                values.len(),
+                self.cols
             );
         }
         let start = row * self.cols;
@@ -231,7 +232,12 @@ impl Matrix {
 
     /// Copy a row from source matrix into this matrix.
     /// Java: `public void setRow(int rowIdx, Matrix input, int inputRowIdx)`
-    pub fn set_row_from_matrix(&mut self, target_row: usize, source: &Matrix, source_row_idx: usize) {
+    pub fn set_row_from_matrix(
+        &mut self,
+        target_row: usize,
+        source: &Matrix,
+        source_row_idx: usize,
+    ) {
         if source.cols != self.cols {
             panic!(
                 "Input matrix must have the same number of columns. Expected {}, but got {}.",
@@ -277,7 +283,8 @@ impl Tensor for Matrix {
             if self.dimensions != other_matrix.dimensions {
                 return false;
             }
-            self.data.iter()
+            self.data
+                .iter()
                 .zip(other_matrix.data.iter())
                 .all(|(a, b)| (a - b).abs() <= tolerance)
         } else {
@@ -363,7 +370,10 @@ impl Tensor for Matrix {
                 self.data[i] += scalar_value;
             }
         } else {
-            panic!("Cannot add tensor of type {} to Matrix", std::any::type_name_of_val(other));
+            panic!(
+                "Cannot add tensor of type {} to Matrix",
+                std::any::type_name_of_val(other)
+            );
         }
     }
 }

@@ -34,5 +34,5 @@ mod focused_macros;
 // Re-export the main macros
 pub use crate::define_algorithm;
 pub use crate::define_algorithm_spec;
-pub use crate::define_storage_runtime;
 pub use crate::define_computation_runtime;
+pub use crate::define_storage_runtime;

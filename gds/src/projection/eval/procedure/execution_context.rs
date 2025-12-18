@@ -32,7 +32,7 @@ pub struct ExecutionContext {
     graph_catalog: HashMap<String, Arc<DefaultGraphStore>>,
 
     /// Optional injected catalog handle (preferred for production)
-    catalog_handle: Option<Arc<dyn GraphCatalog>>, 
+    catalog_handle: Option<Arc<dyn GraphCatalog>>,
 
     /// Current user (for auditing)
     username: String,

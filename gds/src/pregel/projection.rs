@@ -213,7 +213,10 @@ mod tests {
     #[test]
     fn test_project_long_property() {
         // Create a simple PropertyValues column
-        let props = DefaultLongNodePropertyValues::from_collection(crate::collections::backends::vec::VecLong::from(vec![10, 20, 30]), 3);
+        let props = DefaultLongNodePropertyValues::from_collection(
+            crate::collections::backends::vec::VecLong::from(vec![10, 20, 30]),
+            3,
+        );
 
         // Project into Pregel DefaultValue
         let value = DefaultValue::from_property(&props, 0).unwrap();
@@ -226,7 +229,10 @@ mod tests {
 
     #[test]
     fn test_project_missing_property() {
-        let props = DefaultLongNodePropertyValues::from_collection(crate::collections::backends::vec::VecLong::from(vec![10, 20, 30]), 3);
+        let props = DefaultLongNodePropertyValues::from_collection(
+            crate::collections::backends::vec::VecLong::from(vec![10, 20, 30]),
+            3,
+        );
 
         // Out of bounds
         let value = DefaultValue::from_property(&props, 999);
@@ -238,7 +244,7 @@ mod tests {
         use crate::values::traits::FloatingPointValue;
 
         // Create DefaultValue
-        let original = DefaultValue::Double(3.14);
+        let original = DefaultValue::Double(3.0);
 
         // Convert to GdsValue
         let gds_value = default_value_to_gds(original.clone()).unwrap();
@@ -251,7 +257,7 @@ mod tests {
             .as_any()
             .downcast_ref::<crate::values::DefaultFloatingPointValue>()
         {
-            assert!((fp.double_value() - 3.14).abs() < 0.001);
+            assert!((fp.double_value() - 3.0).abs() < 0.001);
         } else {
             panic!("Failed to extract DefaultFloatingPointValue");
         }

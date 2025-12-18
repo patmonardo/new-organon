@@ -14,14 +14,14 @@
 //! - Weighted/unweighted graph support
 //! - Termination support
 
-pub mod spec;
-pub mod storage;
 pub mod computation;
 #[cfg(test)]
 pub mod integration_tests;
+pub mod spec;
+pub mod storage;
 
 // Re-exports for public API
-pub use spec::{ALL_SHORTEST_PATHSAlgorithmSpec, AllShortestPathsConfig, AllShortestPathsResult};
-pub use storage::{AllShortestPathsStorageRuntime, AlgorithmType};
 pub use computation::AllShortestPathsComputationRuntime;
+pub use spec::{ALL_SHORTEST_PATHSAlgorithmSpec, AllShortestPathsConfig, AllShortestPathsResult};
 pub use storage::ShortestPathResult;
+pub use storage::{AlgorithmType, AllShortestPathsStorageRuntime};

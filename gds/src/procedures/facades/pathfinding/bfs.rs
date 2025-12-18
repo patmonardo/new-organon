@@ -27,9 +27,9 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
-use crate::procedures::facades::traits::{Result, PathResult};
-use crate::procedures::facades::builder_base::{MutationResult, WriteResult, ConfigValidator};
 use crate::procedures::bfs::{BfsComputationRuntime, BfsStorageRuntime};
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::facades::traits::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -202,7 +202,7 @@ impl BfsBuilder {
         let target_nodes: Vec<NodeId> = self
             .targets
             .iter()
-            .map(|&value| Self::checked_node_id(value, "targets") )
+            .map(|&value| Self::checked_node_id(value, "targets"))
             .collect::<Result<Vec<_>>>()?;
 
         let storage = BfsStorageRuntime::new(
@@ -214,13 +214,16 @@ impl BfsBuilder {
             self.delta,
         );
 
-        let mut computation = BfsComputationRuntime::new(source_node, self.track_paths, self.concurrency);
+        let mut computation =
+            BfsComputationRuntime::new(source_node, self.track_paths, self.concurrency);
 
         let rel_types: HashSet<RelationshipType> = HashSet::new();
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let result = storage.compute_bfs(&mut computation, Some(graph_view.as_ref()))?;
 
@@ -258,7 +261,8 @@ impl BfsBuilder {
             degree_sum as f64 / visited_nodes.len() as f64
         };
 
-        let all_targets_reached = !target_nodes.is_empty() && targets_found == target_nodes.len() as u64;
+        let all_targets_reached =
+            !target_nodes.is_empty() && targets_found == target_nodes.len() as u64;
 
         let stats = BfsStats {
             nodes_visited: result.nodes_visited as u64,
@@ -290,26 +294,38 @@ impl BfsBuilder {
     /// Validate configuration before execution
     fn validate(&self) -> Result<()> {
         match self.source {
-            None => return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "source node must be specified".to_string()
-            )),
-            Some(id) if id == u64::MAX => return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "source node ID cannot be u64::MAX".to_string()
-            )),
+            None => {
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(
+                        "source node must be specified".to_string(),
+                    ),
+                )
+            }
+            Some(id) if id == u64::MAX => {
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(
+                        "source node ID cannot be u64::MAX".to_string(),
+                    ),
+                )
+            }
             _ => {}
         }
 
         if self.concurrency == 0 {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "concurrency must be > 0".to_string()
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "concurrency must be > 0".to_string(),
+                ),
+            );
         }
 
         if let Some(depth) = self.max_depth {
             if depth == 0 {
-                return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "max_depth must be > 0 or None".to_string()
-                ));
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(
+                        "max_depth must be > 0 or None".to_string(),
+                    ),
+                );
             }
         }
 
@@ -370,9 +386,11 @@ impl BfsBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "BFS mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "BFS mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 
     /// Write mode: Compute and persist to storage
@@ -391,9 +409,11 @@ impl BfsBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "BFS mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "BFS mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 }
 

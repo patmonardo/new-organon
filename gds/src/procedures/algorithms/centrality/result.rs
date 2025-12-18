@@ -161,7 +161,10 @@ mod tests {
         };
 
         assert_eq!(result.node_property_values().node_count(), 5);
-        assert_eq!(result.node_property_values().value_type(), ValueType::Double);
+        assert_eq!(
+            result.node_property_values().value_type(),
+            ValueType::Double
+        );
 
         let score_fn = result.centrality_score_provider();
         assert_eq!(score_fn(0), 0.1);

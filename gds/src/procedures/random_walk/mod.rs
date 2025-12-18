@@ -6,9 +6,9 @@
 //! algorithms like node2vec. Supports biased random walks with configurable
 //! return and in-out factors.
 
+pub mod computation;
 pub mod spec;
 pub mod storage;
-pub mod computation;
 
 #[cfg(test)]
 mod integration_tests;

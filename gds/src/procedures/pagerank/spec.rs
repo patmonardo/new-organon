@@ -3,12 +3,12 @@
 //! This module implements the `AlgorithmSpec` trait for PageRank.
 //! It is the **Species** manifestation of the abstract **Genus** (PageRank principle).
 
+use crate::config::PageRankConfig;
 use crate::projection::eval::procedure::{
     AlgorithmError, AlgorithmSpec, ComputationResult, ConfigError, ConsumerError, ExecutionContext,
     ExecutionMode, LogLevel, ProjectionHint, ValidationConfiguration,
 };
 use crate::types::prelude::GraphStore;
-use crate::config::PageRankConfig;
 use serde_json::{json, Value as JsonValue};
 use std::time::Instant;
 
@@ -269,9 +269,7 @@ impl AlgorithmSpec for PageRankAlgorithmSpec {
             LogLevel::Info,
             &format!(
                 "PageRank completed: {} iterations, converged={}, time={:?}",
-                run_result.ran_iterations,
-                run_result.did_converge,
-                elapsed
+                run_result.ran_iterations, run_result.did_converge, elapsed
             ),
         );
 
@@ -384,7 +382,10 @@ mod tests {
         let config = result.unwrap();
         // Config system defaults: dampingFactor=0.85, tolerance=0.0000001, maxIterations=20
         assert_eq!(config.get("dampingFactor").unwrap().as_f64().unwrap(), 0.85);
-        assert_eq!(config.get("tolerance").unwrap().as_f64().unwrap(), 0.0000001);
+        assert_eq!(
+            config.get("tolerance").unwrap().as_f64().unwrap(),
+            0.0000001
+        );
         assert_eq!(config.get("maxIterations").unwrap().as_u64().unwrap(), 20);
     }
 }

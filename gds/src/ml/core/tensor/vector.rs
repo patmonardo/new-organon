@@ -3,7 +3,7 @@
 //! This directly mirrors Java's `Vector extends Tensor<Vector>` pattern.
 //! Contains data and dimensions directly, not wrapped in TensorData.
 
-use super::tensor::{Tensor, AsAny};
+use super::tensor::{AsAny, Tensor};
 use crate::ml::core::dimensions;
 use serde::{Deserialize, Serialize};
 use std::ops::{Index, IndexMut};
@@ -121,11 +121,13 @@ impl Tensor for Vector {
     fn add(&self, other: &dyn Tensor) -> Box<dyn Tensor> {
         let other_vector = other.as_any().downcast_ref::<Vector>().unwrap();
         assert_eq!(
-            self.length(), other_vector.length(),
+            self.length(),
+            other_vector.length(),
             "Vector lengths must be equal, got {} + {} lengths",
-            self.length(), other_vector.length()
+            self.length(),
+            other_vector.length()
         );
-        
+
         let mut result = Vector::with_size(self.length());
         for i in 0..self.length() {
             result.data[i] = self.data[i] + other_vector.data[i];
@@ -174,7 +176,8 @@ impl Tensor for Vector {
             if self.length() != other_vector.length() {
                 return false;
             }
-            self.data.iter()
+            self.data
+                .iter()
                 .zip(other_vector.data.iter())
                 .all(|(a, b)| (a - b).abs() <= tolerance)
         } else {

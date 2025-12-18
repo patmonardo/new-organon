@@ -338,10 +338,7 @@ mod tests {
             err.contains("Pre-Prim 0.0.x"),
             "Error should mention Pre-Prim state"
         );
-        assert!(
-            err.contains("Bija"),
-            "Error should mention Bija (seed)"
-        );
+        assert!(err.contains("Bija"), "Error should mention Bija (seed)");
     }
 
     #[test]

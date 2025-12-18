@@ -7,16 +7,16 @@
 //!
 //! The `factory` module provides helpers for creating backends from configuration.
 
-pub mod huge;
-pub mod vec;
 pub mod arrow;
 pub mod factory;
+pub mod huge;
+pub mod vec;
 
-#[allow(ambiguous_glob_reexports)]
-pub use huge::*;
-#[allow(ambiguous_glob_reexports)]
-pub use vec::*;
 #[allow(ambiguous_glob_reexports)]
 pub use arrow::*;
 #[allow(ambiguous_glob_reexports)]
 pub use factory::*;
+#[allow(ambiguous_glob_reexports)]
+pub use huge::*;
+#[allow(ambiguous_glob_reexports)]
+pub use vec::*;

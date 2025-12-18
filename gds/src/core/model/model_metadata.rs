@@ -50,4 +50,3 @@ where
         self.shared_with().contains(&"ALL_USERS".to_string())
     }
 }
-

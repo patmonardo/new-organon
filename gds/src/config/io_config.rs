@@ -2,8 +2,8 @@
 
 use super::base_types::WriteConfig;
 use super::validation::ConfigValidation;
-use crate::projection::RelationshipType;
 use crate::define_config;
+use crate::projection::RelationshipType;
 
 define_config!(
     pub struct FileExporterConfig {

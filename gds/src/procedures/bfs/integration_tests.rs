@@ -4,11 +4,11 @@
 //!
 //! This module contains integration tests for BFS algorithm with the executor runtime.
 
+use super::computation::BfsComputationRuntime;
 use super::spec::{BFSAlgorithmSpec, BfsConfig, BfsResult};
 use super::storage::BfsStorageRuntime;
-use super::computation::BfsComputationRuntime;
-use crate::projection::eval::procedure::{ProcedureExecutor, ExecutionMode, ExecutionContext};
 use crate::projection::eval::procedure::AlgorithmSpec;
+use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor};
 use serde_json::json;
 
 #[test]
@@ -95,14 +95,12 @@ fn test_bfs_storage_computation_integration() {
 fn test_bfs_result_serialization() {
     let result = BfsResult {
         visited_nodes: vec![(0, 0), (1, 1), (2, 1), (3, 2)],
-        paths: vec![
-            super::spec::BfsPathResult {
-                source_node: 0,
-                target_node: 3,
-                node_ids: vec![0, 1, 3],
-                path_length: 2,
-            }
-        ],
+        paths: vec![super::spec::BfsPathResult {
+            source_node: 0,
+            target_node: 3,
+            node_ids: vec![0, 1, 3],
+            path_length: 2,
+        }],
         nodes_visited: 4,
         computation_time_ms: 5,
     };

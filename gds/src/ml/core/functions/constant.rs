@@ -11,11 +11,11 @@
 //! - Constant adds: data storage
 //! - Constant delegates Variable trait methods to inner AbstractVariable
 
+use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::abstract_variable::NotAFunctionException;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
 use crate::ml::core::variable::{Variable, VariableRef};
-use crate::ml::core::abstract_variable::AbstractVariable;
 use std::fmt;
 
 /// A constant tensor value that doesn't depend on any parents.

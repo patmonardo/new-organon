@@ -3,11 +3,11 @@
 //! The Executor provides a clean API for parallel execution with termination support,
 //! built on top of Rayon's work-stealing scheduler.
 
-use crate::concurrency::{BatchSize, Concurrency};
-use crate::concurrency::{TerminatedException, TerminationFlag};
 use crate::concurrency::install_with_concurrency;
 use crate::concurrency::pool::PoolSizes as _;
 use crate::concurrency::pool::PoolSizesService;
+use crate::concurrency::{BatchSize, Concurrency};
+use crate::concurrency::{TerminatedException, TerminationFlag};
 use rayon::prelude::*;
 
 const TERMINATION_POLL_EVERY: usize = 256;

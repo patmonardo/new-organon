@@ -5,12 +5,14 @@
 //! Measures node importance based on how often a node lies on shortest paths.
 //! Uses two-phase algorithm: forward BFS + backward dependency propagation.
 
-pub mod spec;
-pub mod storage;
 pub mod computation;
 #[cfg(test)]
 pub mod integration_tests;
+pub mod spec;
+pub mod storage;
 
-pub use spec::{BetweennessCentralityAlgorithmSpec, BetweennessCentralityConfig, BetweennessCentralityResult};
-pub use storage::BetweennessCentralityStorageRuntime;
 pub use computation::BetweennessCentralityComputationRuntime;
+pub use spec::{
+    BetweennessCentralityAlgorithmSpec, BetweennessCentralityConfig, BetweennessCentralityResult,
+};
+pub use storage::BetweennessCentralityStorageRuntime;

@@ -1,5 +1,5 @@
-use crate::types::graph_store::GraphStore;
 use super::Expression;
+use crate::types::graph_store::GraphStore;
 
 /// Utility for parsing and validating node filters.
 ///

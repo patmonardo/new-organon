@@ -863,10 +863,10 @@ mod tests {
     fn test_with_generator_constant_values() {
         use crate::concurrency::Concurrency;
 
-        let array = HugeDoubleArray::with_generator(1000, Concurrency::of(4), |_| 3.14159);
+        let array = HugeDoubleArray::with_generator(1000, Concurrency::of(4), |_| 3.0);
 
         for i in 0..1000 {
-            assert_eq!(array.get(i), 3.14159);
+            assert_eq!(array.get(i), 3.0);
         }
     }
 

@@ -69,11 +69,7 @@ impl ConductanceStorageRuntime {
             }
         }
 
-        let average = if count > 0 {
-            sum / count as f64
-        } else {
-            0.0
-        };
+        let average = if count > 0 { sum / count as f64 } else { 0.0 };
 
         (community_conductances, average)
     }

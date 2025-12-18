@@ -61,7 +61,8 @@ impl LogisticRegressionClassifier {
         );
 
         let bias_var: VariableRef = self.data.bias().clone();
-        let softmax_input: VariableRef = Arc::new(MatrixVectorSum::new_ref(weighted_features, bias_var));
+        let softmax_input: VariableRef =
+            Arc::new(MatrixVectorSum::new_ref(weighted_features, bias_var));
 
         if weights.borrow_matrix().rows() == self.data.number_of_classes() {
             Arc::new(Softmax::new_ref(softmax_input))

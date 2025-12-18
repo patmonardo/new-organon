@@ -66,15 +66,15 @@ pub mod adapter;
 
 // Re-export commonly used types
 #[allow(ambiguous_glob_reexports)]
-pub use traits::*;
+pub use adapter::*;
 #[allow(ambiguous_glob_reexports)]
 pub use backends::*;
 #[allow(ambiguous_glob_reexports)]
 pub use extensions::*;
 #[allow(ambiguous_glob_reexports)]
-pub use utils::*;
+pub use traits::*;
 #[allow(ambiguous_glob_reexports)]
-pub use adapter::*;
+pub use utils::*;
 
 // NOTE: Macros are now in projection::codegen::collections
 // Use: `use crate::{vec_collections, huge_collections};` instead
@@ -97,10 +97,10 @@ pub use huge_sparse_array::HugeSparseLongArray;
 // Backend selection
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CollectionsBackend {
-    Huge,   // Paged arrays
-    Vec,    // Enhanced vectors
-    Arrow,  // Apache Arrow
-    Std,    // Standard library
+    Huge,  // Paged arrays
+    Vec,   // Enhanced vectors
+    Arrow, // Apache Arrow
+    Std,   // Standard library
 }
 
 impl Default for CollectionsBackend {

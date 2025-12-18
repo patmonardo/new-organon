@@ -6,14 +6,14 @@
 //! Delta Stepping uses a sophisticated binning strategy to manage the frontier
 //! efficiently in parallel shortest path computation.
 
-use crate::define_algorithm_spec;
-use crate::projection::relationship_type::RelationshipType;
-use std::collections::HashSet;
-use serde::{Deserialize, Serialize};
-use super::storage::DeltaSteppingStorageRuntime;
 use super::computation::DeltaSteppingComputationRuntime;
+use super::storage::DeltaSteppingStorageRuntime;
+use crate::define_algorithm_spec;
 use crate::projection::orientation::Orientation;
+use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 /// Delta Stepping algorithm configuration
 ///
@@ -53,7 +53,10 @@ impl Default for DeltaSteppingConfig {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DeltaDirection { Outgoing, Incoming }
+enum DeltaDirection {
+    Outgoing,
+    Incoming,
+}
 
 impl DeltaDirection {
     fn from_str(s: &str) -> Self {
@@ -68,24 +71,32 @@ impl DeltaDirection {
             DeltaDirection::Incoming => "incoming",
         }
     }
-    fn default_as_str() -> String { Self::Outgoing.as_str().to_string() }
+    fn default_as_str() -> String {
+        Self::Outgoing.as_str().to_string()
+    }
 }
 
 impl DeltaSteppingConfig {
     /// Validate configuration parameters
-    pub fn validate(&self) -> Result<(), crate::projection::codegen::config::validation::ConfigError> {
+    pub fn validate(
+        &self,
+    ) -> Result<(), crate::projection::codegen::config::validation::ConfigError> {
         if self.concurrency == 0 {
-            return Err(crate::projection::codegen::config::validation::ConfigError::FieldValidation {
-                field: "concurrency".to_string(),
-                message: "Must be greater than 0".to_string(),
-            });
+            return Err(
+                crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+                    field: "concurrency".to_string(),
+                    message: "Must be greater than 0".to_string(),
+                },
+            );
         }
 
         if self.delta <= 0.0 {
-            return Err(crate::projection::codegen::config::validation::ConfigError::FieldValidation {
-                field: "delta".to_string(),
-                message: "Must be greater than 0.0".to_string(),
-            });
+            return Err(
+                crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+                    field: "delta".to_string(),
+                    message: "Must be greater than 0.0".to_string(),
+                },
+            );
         }
 
         Ok(())
@@ -198,7 +209,7 @@ define_algorithm_spec! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::projection::eval::procedure::{ExecutionContext, AlgorithmSpec};
+    use crate::projection::eval::procedure::{AlgorithmSpec, ExecutionContext};
     use serde_json::json;
 
     #[test]
@@ -291,7 +302,9 @@ mod tests {
         });
 
         let validation_config = spec.validation_config(&ExecutionContext::new("test"));
-        assert!(validation_config.validate_before_load(&valid_config).is_ok());
+        assert!(validation_config
+            .validate_before_load(&valid_config)
+            .is_ok());
 
         // Test invalid configuration - the validation_config doesn't validate our custom fields
         // so we'll test the config validation directly instead

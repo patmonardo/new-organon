@@ -1,7 +1,9 @@
-use crate::procedures::prize_collecting_steiner_tree::spec::{PCSTreeConfig, PCSTreeResult, PRUNED, ROOT_NODE};
+use crate::procedures::prize_collecting_steiner_tree::spec::{
+    PCSTreeConfig, PCSTreeResult, PRUNED, ROOT_NODE,
+};
 use crate::procedures::prize_collecting_steiner_tree::storage::PCSTreeStorage;
-use std::collections::BinaryHeap;
 use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 
 /// Priority queue entry for cluster growth
 #[derive(Debug, Clone)]
@@ -75,7 +77,8 @@ impl PCSTreeComputationRuntime {
 
     /// Find node with maximum prize to use as root
     fn find_max_prize_node(&self) -> usize {
-        self.config.prizes
+        self.config
+            .prizes
             .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(Ordering::Equal))
@@ -85,12 +88,7 @@ impl PCSTreeComputationRuntime {
 
     /// Grow tree from root using prize-aware Prim's algorithm
     /// Each node's effective cost is (edge_cost - prize)
-    fn grow_tree<F>(
-        &self,
-        node_count: usize,
-        root: usize,
-        get_neighbors: &F,
-    ) -> PCSTreeStorage
+    fn grow_tree<F>(&self, node_count: usize, root: usize, get_neighbors: &F) -> PCSTreeStorage
     where
         F: Fn(usize) -> Vec<(usize, f64)>,
     {
@@ -217,13 +215,8 @@ impl PCSTreeComputationRuntime {
 
         // Add children's subtree values (if positive)
         for &child in &children[node] {
-            let child_value = self.calculate_subtree_values(
-                child,
-                children,
-                parent,
-                parent_cost,
-                subtree_value,
-            );
+            let child_value =
+                self.calculate_subtree_values(child, children, parent, parent_cost, subtree_value);
             value += child_value.max(0.0);
         }
 

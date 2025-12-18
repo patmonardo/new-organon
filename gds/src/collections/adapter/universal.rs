@@ -6,13 +6,13 @@
 
 use crate::collections::traits::{Collections, PropertyValuesAdapter};
 use crate::config::{CollectionsBackend, Extension};
-use crate::types::ValueType;
 use crate::types::properties::property_values::PropertyValues;
+use crate::types::ValueType;
 
 /// Universal PropertyValues adapter that wraps any Collections implementation
 #[derive(Debug)]
-pub struct UniversalPropertyValues<T, C> 
-where 
+pub struct UniversalPropertyValues<T, C>
+where
     C: Collections<T> + PropertyValuesAdapter<T> + Send + Sync + std::fmt::Debug,
 {
     /// The underlying Collections implementation
@@ -25,8 +25,8 @@ where
     element_count: usize,
 }
 
-impl<T, C> UniversalPropertyValues<T, C> 
-where 
+impl<T, C> UniversalPropertyValues<T, C>
+where
     C: Collections<T> + PropertyValuesAdapter<T> + Send + Sync + std::fmt::Debug,
     T: Clone + Send + Sync + std::fmt::Debug,
 {
@@ -99,8 +99,8 @@ where
     }
 }
 
-impl<T, C> PropertyValues for UniversalPropertyValues<T, C> 
-where 
+impl<T, C> PropertyValues for UniversalPropertyValues<T, C>
+where
     C: Collections<T> + PropertyValuesAdapter<T> + Send + Sync + std::fmt::Debug,
     T: Clone + Send + Sync + std::fmt::Debug,
 {
@@ -113,8 +113,8 @@ where
     }
 }
 
-impl<T, C> Collections<T> for UniversalPropertyValues<T, C> 
-where 
+impl<T, C> Collections<T> for UniversalPropertyValues<T, C>
+where
     C: Collections<T> + PropertyValuesAdapter<T> + Send + Sync + std::fmt::Debug,
     T: Clone + Send + Sync + std::fmt::Debug,
 {
@@ -134,15 +134,24 @@ where
         self.collection.is_empty()
     }
 
-    fn sum(&self) -> Option<T> where T: Sum {
+    fn sum(&self) -> Option<T>
+    where
+        T: Sum,
+    {
         self.collection.sum()
     }
 
-    fn min(&self) -> Option<T> where T: Ord {
+    fn min(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.collection.min()
     }
 
-    fn max(&self) -> Option<T> where T: Ord {
+    fn max(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.collection.max()
     }
 
@@ -158,19 +167,31 @@ where
         self.collection.variance()
     }
 
-    fn median(&self) -> Option<T> where T: Ord {
+    fn median(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.collection.median()
     }
 
-    fn percentile(&self, p: f64) -> Option<T> where T: Ord {
+    fn percentile(&self, p: f64) -> Option<T>
+    where
+        T: Ord,
+    {
         self.collection.percentile(p)
     }
 
-    fn binary_search(&self, key: &T) -> Result<usize, usize> where T: Ord {
+    fn binary_search(&self, key: &T) -> Result<usize, usize>
+    where
+        T: Ord,
+    {
         self.collection.binary_search(key)
     }
 
-    fn sort(&mut self) where T: Ord {
+    fn sort(&mut self)
+    where
+        T: Ord,
+    {
         self.collection.sort();
     }
 
@@ -189,34 +210,40 @@ where
     fn null_count(&self) -> usize {
         self.collection.null_count()
     }
-    
+
     fn default_value(&self) -> T {
         self.default_value.clone()
     }
-    
+
     fn backend(&self) -> crate::config::CollectionsBackend {
         self.collection.backend()
     }
-    
+
     fn features(&self) -> &[crate::config::Extension] {
         self.collection.features()
     }
-    
+
     fn extensions(&self) -> &[crate::config::Extension] {
         self.collection.extensions()
     }
-    
+
     fn value_type(&self) -> crate::types::ValueType {
         self.value_type
     }
-    
-    fn with_capacity(_capacity: usize) -> Self where Self: Sized {
+
+    fn with_capacity(_capacity: usize) -> Self
+    where
+        Self: Sized,
+    {
         // This is tricky for UniversalPropertyValues since we need a collection
         // For now, create a default instance
         panic!("with_capacity not implemented for UniversalPropertyValues")
     }
-    
-    fn with_defaults(_count: usize, _default_value: T) -> Self where Self: Sized {
+
+    fn with_defaults(_count: usize, _default_value: T) -> Self
+    where
+        Self: Sized,
+    {
         // This is tricky for UniversalPropertyValues since we need a collection
         // For now, create a default instance
         panic!("with_defaults not implemented for UniversalPropertyValues")

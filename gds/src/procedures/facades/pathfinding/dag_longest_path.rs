@@ -59,7 +59,9 @@ impl DagLongestPathBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -182,11 +184,7 @@ mod tests {
         let store = store_from_directed_edges(3, &[(0, 1), (1, 2)]);
         let graph = Graph::new(Arc::new(store));
 
-        let rows: Vec<_> = graph
-            .dag_longest_path()
-            .stream()
-            .unwrap()
-            .collect();
+        let rows: Vec<_> = graph.dag_longest_path().stream().unwrap().collect();
 
         assert!(!rows.is_empty());
 
@@ -201,10 +199,7 @@ mod tests {
         let store = store_from_directed_edges(3, &[(0, 1), (1, 2)]);
         let graph = Graph::new(Arc::new(store));
 
-        let stats = graph
-            .dag_longest_path()
-            .stats()
-            .unwrap();
+        let stats = graph.dag_longest_path().stats().unwrap();
 
         assert!(stats.path_count > 0);
         assert!(stats.execution_time_ms < 1000);
@@ -217,11 +212,7 @@ mod tests {
         let store = store_from_directed_edges(4, &[(0, 1), (0, 2), (1, 3), (2, 3)]);
         let graph = Graph::new(Arc::new(store));
 
-        let rows: Vec<_> = graph
-            .dag_longest_path()
-            .stream()
-            .unwrap()
-            .collect();
+        let rows: Vec<_> = graph.dag_longest_path().stream().unwrap().collect();
 
         // Find path to node 3
         let path_to_3 = rows.iter().find(|r| r.target_node == 3).unwrap();

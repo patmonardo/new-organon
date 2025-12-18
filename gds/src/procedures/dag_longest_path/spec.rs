@@ -4,12 +4,10 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DagLongestPathConfig {
     // No specific configuration needed beyond base algorithm settings
 }
-
 
 /// Result row for longest path streaming
 #[derive(Debug, Clone, Serialize, Deserialize)]

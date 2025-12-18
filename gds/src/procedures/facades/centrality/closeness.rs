@@ -87,7 +87,9 @@ impl ClosenessCentralityFacade {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, self.orientation())
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -115,7 +117,8 @@ impl ClosenessCentralityFacade {
         };
 
         for source_offset in (0..node_count).step_by(crate::procedures::msbfs::OMEGA) {
-            let source_len = (source_offset + crate::procedures::msbfs::OMEGA).min(node_count) - source_offset;
+            let source_len =
+                (source_offset + crate::procedures::msbfs::OMEGA).min(node_count) - source_offset;
 
             msbfs.run(
                 source_offset,
@@ -204,8 +207,8 @@ impl ClosenessCentralityFacade {
         let stddev = var.sqrt();
 
         let percentile = |p: f64| -> f64 {
-            let idx = ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round()
-                as usize;
+            let idx =
+                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
             sorted[idx]
         };
 
@@ -223,12 +226,17 @@ impl ClosenessCentralityFacade {
     }
 
     /// Mutate mode is not implemented yet for closeness.
-    pub fn mutate(&self, property_name: &str) -> Result<crate::procedures::facades::builder_base::MutationResult> {
+    pub fn mutate(
+        &self,
+        property_name: &str,
+    ) -> Result<crate::procedures::facades::builder_base::MutationResult> {
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "ClosenessCentrality mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "ClosenessCentrality mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 }
 

@@ -64,7 +64,10 @@ impl HitsPregelBuilder {
         let rel_types: HashSet<RelationshipType> = HashSet::new();
         let graph = self
             .store
-            .get_graph_with_types_and_orientation(&rel_types, crate::projection::Orientation::Natural)
+            .get_graph_with_types_and_orientation(
+                &rel_types,
+                crate::projection::Orientation::Natural,
+            )
             .map_err(|e| format!("Failed to get graph: {}", e))?;
 
         let result = run_hits_pregel(graph, self.max_iterations, self.tolerance);
@@ -90,7 +93,10 @@ impl HitsPregelBuilder {
         let rel_types: HashSet<RelationshipType> = HashSet::new();
         let graph = self
             .store
-            .get_graph_with_types_and_orientation(&rel_types, crate::projection::Orientation::Natural)
+            .get_graph_with_types_and_orientation(
+                &rel_types,
+                crate::projection::Orientation::Natural,
+            )
             .map_err(|e| format!("Failed to get graph: {}", e))?;
 
         let result = run_hits_pregel(graph, self.max_iterations, self.tolerance);
@@ -108,7 +114,10 @@ impl HitsPregelBuilder {
         let rel_types: HashSet<RelationshipType> = HashSet::new();
         let graph = self
             .store
-            .get_graph_with_types_and_orientation(&rel_types, crate::projection::Orientation::Natural)
+            .get_graph_with_types_and_orientation(
+                &rel_types,
+                crate::projection::Orientation::Natural,
+            )
             .map_err(|e| format!("Failed to get graph: {}", e))?;
 
         let result = run_hits_pregel(graph, self.max_iterations, self.tolerance);

@@ -13,13 +13,13 @@ mod tests {
     use crate::projection::RelationshipType;
     use crate::types::graph::RelationshipTopology;
     use crate::types::graph::SimpleIdMap;
+    use crate::types::graph_store::GraphStore;
     use crate::types::graph_store::{
         Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
     };
     use crate::types::properties::node::DefaultDoubleArrayNodePropertyValues;
     use crate::types::properties::node::NodePropertyValues;
     use crate::types::schema::{Direction, MutableGraphSchema, NodeLabel};
-    use crate::types::graph_store::GraphStore;
 
     fn store_with_features(outgoing: Vec<Vec<i64>>, features: Vec<Vec<f64>>) -> DefaultGraphStore {
         let node_count = outgoing.len();

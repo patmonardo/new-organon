@@ -1,5 +1,5 @@
 /// Configuration for mutating node labels in the graph store.
-/// 
+///
 /// Mirrors Java MutateLabelConfig interface.
 /// Simple trait with a single method for specifying the node filter.
 pub trait MutateLabelConfig {
@@ -9,7 +9,7 @@ pub trait MutateLabelConfig {
 }
 
 /// Builder for creating MutateLabelConfig implementations.
-/// 
+///
 /// In Java, this uses CypherMapWrapper for configuration parsing.
 /// For now, this is a simple struct that can be extended as needed.
 #[derive(Clone, Debug)]

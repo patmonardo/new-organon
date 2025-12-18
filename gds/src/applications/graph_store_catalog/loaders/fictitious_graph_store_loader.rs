@@ -1,4 +1,6 @@
-use super::{GraphStoreCreator, GraphStoreLoader, GraphProjectConfig, MemoryEstimation, ResultStore};
+use super::{
+    GraphProjectConfig, GraphStoreCreator, GraphStoreLoader, MemoryEstimation, ResultStore,
+};
 use crate::core::{ConcreteGraphDimensions, GraphDimensions};
 use crate::types::graph_store::DefaultGraphStore;
 use crate::types::graph_store::GraphStore as _;
@@ -86,7 +88,10 @@ struct FictitiousGraphProjectConfig {
 
 impl FictitiousGraphProjectConfig {
     fn new(graph_name: String, username: String) -> Self {
-        Self { graph_name, username }
+        Self {
+            graph_name,
+            username,
+        }
     }
 }
 

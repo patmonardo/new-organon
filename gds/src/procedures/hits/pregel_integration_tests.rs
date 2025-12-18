@@ -57,7 +57,10 @@ mod tests {
         for row in &rows {
             assert!(row.node_id >= 0 && row.node_id < 4);
             assert!(row.hub_score >= 0.0, "Hub scores should be non-negative");
-            assert!(row.authority_score >= 0.0, "Authority scores should be non-negative");
+            assert!(
+                row.authority_score >= 0.0,
+                "Authority scores should be non-negative"
+            );
         }
     }
 

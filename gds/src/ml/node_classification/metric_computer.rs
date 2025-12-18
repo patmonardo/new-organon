@@ -62,7 +62,7 @@ impl ClassificationMetricComputer {
 }
 
 /// Simple parallel classifier stub (minimal implementation)
-/// 
+///
 /// Note: Currently processes nodes one-by-one for simplicity.
 /// The `_batch_size` field is reserved for future batch processing optimization.
 struct ParallelNodeClassifier {

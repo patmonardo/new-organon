@@ -5,31 +5,33 @@
 
 use crate::collections::traits::Collections;
 use crate::config::Extension;
-use crate::core::utils::queue::{
-    BoundedLongPriorityQueue, HugeLongPriorityQueue
-};
+use crate::core::utils::queue::{BoundedLongPriorityQueue, HugeLongPriorityQueue};
 use std::marker::PhantomData;
 
 /// Queue extension trait for Collections
 pub trait QueueSupport<T> {
     /// Enable priority queue functionality
-    fn enable_priority_queue(&mut self, capacity: usize, order: QueueOrder) -> Result<(), QueueError>;
-    
+    fn enable_priority_queue(
+        &mut self,
+        capacity: usize,
+        order: QueueOrder,
+    ) -> Result<(), QueueError>;
+
     /// Disable queue functionality
     fn disable_queue(&mut self);
-    
+
     /// Check if queue is enabled
     fn is_queue_enabled(&self) -> bool;
-    
+
     /// Get queue capacity
     fn queue_capacity(&self) -> Option<usize>;
-    
+
     /// Get queue size
     fn queue_size(&self) -> usize;
-    
+
     /// Check if queue is empty
     fn is_queue_empty(&self) -> bool;
-    
+
     /// Check if queue is full
     fn is_queue_full(&self) -> bool;
 }
@@ -66,7 +68,7 @@ impl Default for QueueConfig {
 }
 
 /// Queue-enabled collection wrapper
-pub struct QueueCollection<T, C> 
+pub struct QueueCollection<T, C>
 where
     C: Collections<T>,
 {
@@ -78,7 +80,7 @@ where
     _phantom: PhantomData<T>,
 }
 
-impl<T, C> QueueCollection<T, C> 
+impl<T, C> QueueCollection<T, C>
 where
     C: Collections<T>,
     T: Clone + Send + Sync,
@@ -93,7 +95,7 @@ where
             _phantom: PhantomData,
         }
     }
-    
+
     pub fn with_queue_config(inner: C, config: QueueConfig) -> Self {
         Self {
             inner,
@@ -114,101 +116,128 @@ where
     fn get(&self, index: usize) -> Option<T> {
         self.inner.get(index)
     }
-    
+
     fn set(&mut self, index: usize, value: T) {
         self.inner.set(index, value);
     }
-    
+
     fn len(&self) -> usize {
         self.inner.len()
     }
-    
+
     fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
-    
-    fn sum(&self) -> Option<T> where T: std::iter::Sum {
+
+    fn sum(&self) -> Option<T>
+    where
+        T: std::iter::Sum,
+    {
         self.inner.sum()
     }
-    
-    fn min(&self) -> Option<T> where T: Ord {
+
+    fn min(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.min()
     }
-    
-    fn max(&self) -> Option<T> where T: Ord {
+
+    fn max(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.max()
     }
-    
+
     fn mean(&self) -> Option<f64> {
         self.inner.mean()
     }
-    
+
     fn std_dev(&self) -> Option<f64> {
         self.inner.std_dev()
     }
-    
+
     fn variance(&self) -> Option<f64> {
         self.inner.variance()
     }
-    
-    fn median(&self) -> Option<T> where T: Ord {
+
+    fn median(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.median()
     }
-    
-    fn percentile(&self, p: f64) -> Option<T> where T: Ord {
+
+    fn percentile(&self, p: f64) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.percentile(p)
     }
-    
-    fn binary_search(&self, key: &T) -> Result<usize, usize> where T: Ord {
+
+    fn binary_search(&self, key: &T) -> Result<usize, usize>
+    where
+        T: Ord,
+    {
         self.inner.binary_search(key)
     }
-    
-    fn sort(&mut self) where T: Ord {
+
+    fn sort(&mut self)
+    where
+        T: Ord,
+    {
         self.inner.sort();
     }
-    
+
     fn to_vec(self) -> Vec<T> {
         self.inner.to_vec()
     }
-    
+
     fn as_slice(&self) -> &[T] {
         self.inner.as_slice()
     }
-    
+
     fn is_null(&self, index: usize) -> bool {
         self.inner.is_null(index)
     }
-    
+
     fn null_count(&self) -> usize {
         self.inner.null_count()
     }
-    
+
     fn default_value(&self) -> T {
         self.inner.default_value()
     }
-    
+
     fn backend(&self) -> crate::config::CollectionsBackend {
         self.inner.backend()
     }
-    
+
     fn features(&self) -> &[crate::config::Extension] {
         &[Extension::Queue]
     }
-    
+
     fn extensions(&self) -> &[crate::config::Extension] {
         &[Extension::Queue]
     }
-    
+
     fn value_type(&self) -> crate::types::ValueType {
         self.inner.value_type()
     }
-    
-    fn with_capacity(_capacity: usize) -> Self where Self: Sized {
+
+    fn with_capacity(_capacity: usize) -> Self
+    where
+        Self: Sized,
+    {
         // Implementation for queue collections
         todo!("Implement with_capacity for QueueCollection")
     }
-    
-    fn with_defaults(_count: usize, _default_value: T) -> Self where Self: Sized {
+
+    fn with_defaults(_count: usize, _default_value: T) -> Self
+    where
+        Self: Sized,
+    {
         // Implementation for queue collections
         todo!("Implement with_defaults for QueueCollection")
     }
@@ -219,7 +248,11 @@ where
     C: Collections<T>,
     T: Clone + Send + Sync,
 {
-    fn enable_priority_queue(&mut self, capacity: usize, order: QueueOrder) -> Result<(), QueueError> {
+    fn enable_priority_queue(
+        &mut self,
+        capacity: usize,
+        order: QueueOrder,
+    ) -> Result<(), QueueError> {
         let config = QueueConfig {
             capacity,
             order,
@@ -227,7 +260,7 @@ where
             enable_huge: capacity > 100_000, // Use huge queue for large capacities
             enable_priority: true,
         };
-        
+
         if config.enable_huge {
             let huge_queue = match order {
                 QueueOrder::Min => HugeLongPriorityQueue::min(capacity),
@@ -241,28 +274,28 @@ where
             };
             self.bounded_queue = Some(bounded_queue);
         }
-        
+
         self.queue_config = Some(config);
         self.is_queue_enabled = true;
-        
+
         Ok(())
     }
-    
+
     fn disable_queue(&mut self) {
         self.queue_config = None;
         self.is_queue_enabled = false;
         self.bounded_queue = None;
         self.huge_queue = None;
     }
-    
+
     fn is_queue_enabled(&self) -> bool {
         self.is_queue_enabled
     }
-    
+
     fn queue_capacity(&self) -> Option<usize> {
         self.queue_config.as_ref().map(|c| c.capacity)
     }
-    
+
     fn queue_size(&self) -> usize {
         if let Some(ref bounded) = self.bounded_queue {
             bounded.size()
@@ -272,7 +305,7 @@ where
             0
         }
     }
-    
+
     fn is_queue_empty(&self) -> bool {
         if let Some(ref bounded) = self.bounded_queue {
             bounded.size() == 0
@@ -282,7 +315,7 @@ where
             true
         }
     }
-    
+
     fn is_queue_full(&self) -> bool {
         if let Some(ref bounded) = self.bounded_queue {
             bounded.size() >= self.queue_capacity().unwrap_or(0)
@@ -322,7 +355,7 @@ impl QueueUtils {
             capacity * (std::mem::size_of::<i64>() + std::mem::size_of::<f64>())
         }
     }
-    
+
     /// Choose optimal queue type based on capacity
     pub fn choose_queue_type(capacity: usize) -> QueueConfig {
         QueueConfig {
@@ -333,7 +366,7 @@ impl QueueUtils {
             enable_priority: true,
         }
     }
-    
+
     /// Calculate optimal capacity for given data size
     pub fn optimal_capacity(data_size: usize) -> usize {
         // Use power of 2 capacities for optimal performance

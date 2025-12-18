@@ -5,9 +5,9 @@
 //! Finds longest paths in a directed acyclic graph (DAG) using topological
 //! ordering and dynamic programming.
 
+pub mod computation;
 pub mod spec;
 pub mod storage;
-pub mod computation;
 
 #[cfg(test)]
 mod integration_tests;

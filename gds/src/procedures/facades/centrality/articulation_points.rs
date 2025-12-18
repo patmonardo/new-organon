@@ -57,7 +57,9 @@ impl ArticulationPointsFacade {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -137,7 +139,10 @@ mod tests {
     use crate::types::schema::{Direction, MutableGraphSchema};
     use std::collections::HashMap;
 
-    fn store_from_undirected_edges(node_count: usize, edges: &[(usize, usize)]) -> DefaultGraphStore {
+    fn store_from_undirected_edges(
+        node_count: usize,
+        edges: &[(usize, usize)],
+    ) -> DefaultGraphStore {
         let mut outgoing: Vec<Vec<i64>> = vec![Vec::new(); node_count];
         let mut incoming: Vec<Vec<i64>> = vec![Vec::new(); node_count];
 

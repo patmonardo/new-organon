@@ -16,12 +16,7 @@ fn test_steiner_tree_simple_path() {
     // Linear graph: 0 -> 1 -> 2 -> 3
     // Source: 0, Terminals: [3]
     // Should find path 0 -> 1 -> 2 -> 3
-    let edges = vec![
-        vec![(1, 1.0)],
-        vec![(2, 1.0)],
-        vec![(3, 1.0)],
-        vec![],
-    ];
+    let edges = vec![vec![(1, 1.0)], vec![(2, 1.0)], vec![(3, 1.0)], vec![]];
 
     let get_neighbors = create_neighbors(edges);
     let config = SteinerTreeConfig {

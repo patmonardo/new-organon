@@ -65,12 +65,12 @@ pub enum DatasetSplits {
 ///     protected final ExecutionContext executionContext;
 ///     protected final GraphStore graphStore;
 ///     protected final GraphSchema schemaBeforeSteps;
-///     
+///
 ///     public abstract Map<DatasetSplits, PipelineGraphFilter> generateDatasetSplitGraphFilters();
 ///     public abstract void splitDatasets();
 ///     protected abstract RESULT execute(Map<DatasetSplits, PipelineGraphFilter> dataSplits);
 ///     protected abstract Set<RelationshipType> getAvailableRelTypesForNodePropertySteps();
-///     
+///
 ///     @Override
 ///     public RESULT compute() { /* template method */ }
 /// }
@@ -78,6 +78,12 @@ pub enum DatasetSplits {
 pub trait PipelineExecutor<PIPELINE: Pipeline, RESULT> {
     /// Access the pipeline being executed.
     fn pipeline(&self) -> &PIPELINE;
+
+    /// Borrow pipeline + graph store together.
+    ///
+    /// This exists to avoid borrow-checker conflicts in the default `compute()`
+    /// implementation (disjoint field borrows are expressed by the implementor).
+    fn pipeline_and_graph_store_mut(&mut self) -> (&PIPELINE, &mut Arc<DefaultGraphStore>);
 
     /// Access the graph store (mutable for property steps).
     fn graph_store_mut(&mut self) -> &mut Arc<DefaultGraphStore>;
@@ -187,7 +193,6 @@ pub trait PipelineExecutor<PIPELINE: Pipeline, RESULT> {
 
         // 3. Create node property step executor
         let mut node_property_step_executor = NodePropertyStepExecutor::new(
-            self.graph_store().clone(),
             feature_input_graph_filter.node_labels.clone(),
             feature_input_graph_filter.relationship_types.clone(),
             self.get_available_rel_types_for_node_property_steps(),
@@ -196,35 +201,39 @@ pub trait PipelineExecutor<PIPELINE: Pipeline, RESULT> {
 
         // 4. Validate node property steps context configs
         node_property_step_executor
-            .validate_node_property_steps_context_configs(self.pipeline().node_property_steps())
+            .validate_node_property_steps_context_configs(
+                &*self.graph_store(),
+                self.pipeline().node_property_steps(),
+            )
             .map_err(|e| PipelineExecutorError::StepValidationFailed(Box::new(e)))?;
 
         // 5. Split datasets
         self.split_datasets()?;
 
-        // 6-9. Execute steps, algorithm, and cleanup
-        let result: Result<RESULT, PipelineExecutorError> = (|| {
-            // 6. Execute node property steps
-            // Note: We don't validate the size of the feature-input graph as not every
-            // nodePropertyStep needs relationships
+        // 6. Execute node property steps (scoped to avoid overlapping borrows on `self`)
+        {
+            let (pipeline, graph_store) = self.pipeline_and_graph_store_mut();
             node_property_step_executor
-                .execute_node_property_steps(self.pipeline().node_property_steps())
+                .execute_node_property_steps(graph_store, pipeline.node_property_steps())
                 .map_err(|e| PipelineExecutorError::StepExecutionFailed(Box::new(e)))?;
+        }
 
-            // 7. Validate feature properties
-            self.pipeline()
-                .validate_feature_properties(&*self.graph_store(), self.node_labels())
-                .map_err(|e| PipelineExecutorError::FeatureValidationFailed(Box::new(e)))?;
+        // 7. Validate feature properties
+        self.pipeline()
+            .validate_feature_properties(&*self.graph_store(), self.node_labels())
+            .map_err(|e| PipelineExecutorError::FeatureValidationFailed(Box::new(e)))?;
 
-            // 8. Execute algorithm
-            self.execute(&data_split_graph_filters)
-        })();
+        // 8. Execute algorithm
+        let result: Result<RESULT, PipelineExecutorError> = self.execute(&data_split_graph_filters);
 
         // 9. Cleanup (always runs, even if error occurred)
         let cleanup_result = (|| -> Result<(), PipelineExecutorError> {
-            node_property_step_executor
-                .cleanup_intermediate_properties(self.pipeline().node_property_steps())
-                .map_err(|e| PipelineExecutorError::CleanupFailed(Box::new(e)))?;
+            {
+                let (pipeline, graph_store) = self.pipeline_and_graph_store_mut();
+                node_property_step_executor
+                    .cleanup_intermediate_properties(graph_store, pipeline.node_property_steps())
+                    .map_err(|e| PipelineExecutorError::CleanupFailed(Box::new(e)))?;
+            }
 
             self.additional_graph_store_cleanup(&data_split_graph_filters)?;
 

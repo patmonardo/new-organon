@@ -10,7 +10,10 @@ use std::marker::PhantomData;
 /// Compression extension trait for Collections
 pub trait CompressionSupport<T> {
     /// Compress the collection data
-    fn compress(&mut self, algorithm: CompressionAlgorithm) -> Result<CompressionResult, CompressionError>;
+    fn compress(
+        &mut self,
+        algorithm: CompressionAlgorithm,
+    ) -> Result<CompressionResult, CompressionError>;
 
     /// Decompress the collection data
     fn decompress(&mut self) -> Result<DecompressionResult, CompressionError>;
@@ -195,7 +198,10 @@ where
         self.inner.is_empty()
     }
 
-    fn sum(&self) -> Option<T> where T: std::iter::Sum {
+    fn sum(&self) -> Option<T>
+    where
+        T: std::iter::Sum,
+    {
         if self.is_compressed {
             None // Cannot compute sum on compressed data
         } else {
@@ -203,7 +209,10 @@ where
         }
     }
 
-    fn min(&self) -> Option<T> where T: Ord {
+    fn min(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         if self.is_compressed {
             None // Cannot compute min on compressed data
         } else {
@@ -211,7 +220,10 @@ where
         }
     }
 
-    fn max(&self) -> Option<T> where T: Ord {
+    fn max(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         if self.is_compressed {
             None // Cannot compute max on compressed data
         } else {
@@ -243,7 +255,10 @@ where
         }
     }
 
-    fn median(&self) -> Option<T> where T: Ord {
+    fn median(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         if self.is_compressed {
             None
         } else {
@@ -251,7 +266,10 @@ where
         }
     }
 
-    fn percentile(&self, p: f64) -> Option<T> where T: Ord {
+    fn percentile(&self, p: f64) -> Option<T>
+    where
+        T: Ord,
+    {
         if self.is_compressed {
             None
         } else {
@@ -259,7 +277,10 @@ where
         }
     }
 
-    fn binary_search(&self, key: &T) -> Result<usize, usize> where T: Ord {
+    fn binary_search(&self, key: &T) -> Result<usize, usize>
+    where
+        T: Ord,
+    {
         if self.is_compressed {
             Err(0) // Cannot binary search compressed data
         } else {
@@ -267,7 +288,10 @@ where
         }
     }
 
-    fn sort(&mut self) where T: Ord {
+    fn sort(&mut self)
+    where
+        T: Ord,
+    {
         if !self.is_compressed {
             self.inner.sort();
         }
@@ -326,12 +350,18 @@ where
         self.inner.value_type()
     }
 
-    fn with_capacity(_capacity: usize) -> Self where Self: Sized {
+    fn with_capacity(_capacity: usize) -> Self
+    where
+        Self: Sized,
+    {
         // Implementation for compressed collections
         todo!("Implement with_capacity for CompressedCollection")
     }
 
-    fn with_defaults(_count: usize, _default_value: T) -> Self where Self: Sized {
+    fn with_defaults(_count: usize, _default_value: T) -> Self
+    where
+        Self: Sized,
+    {
         // Implementation for compressed collections
         todo!("Implement with_defaults for CompressedCollection")
     }
@@ -342,7 +372,10 @@ where
     C: Collections<T>,
     T: Clone + Send + Sync + serde::Serialize + serde::de::DeserializeOwned,
 {
-    fn compress(&mut self, algorithm: CompressionAlgorithm) -> Result<CompressionResult, CompressionError> {
+    fn compress(
+        &mut self,
+        algorithm: CompressionAlgorithm,
+    ) -> Result<CompressionResult, CompressionError> {
         if self.is_compressed {
             return Err(CompressionError::AlreadyCompressed);
         }
@@ -362,26 +395,28 @@ where
             CompressionAlgorithm::Lz4 => {
                 // Placeholder - would use actual LZ4 library
                 serialized.clone() // No compression for now
-            },
+            }
             CompressionAlgorithm::Zstd => {
                 // Placeholder - would use actual Zstd library
                 serialized.clone() // No compression for now
-            },
+            }
             CompressionAlgorithm::Gzip => {
                 // Placeholder - would use actual Gzip library
                 serialized.clone() // No compression for now
-            },
+            }
             CompressionAlgorithm::Brotli => {
                 // Placeholder - would use actual Brotli library
                 serialized.clone() // No compression for now
-            },
+            }
             CompressionAlgorithm::Snappy => {
                 // Placeholder - would use actual Snappy library
                 serialized.clone() // No compression for now
-            },
+            }
             CompressionAlgorithm::Custom(_) => {
-                return Err(CompressionError::UnsupportedAlgorithm("Custom algorithms not implemented".to_string()));
-            },
+                return Err(CompressionError::UnsupportedAlgorithm(
+                    "Custom algorithms not implemented".to_string(),
+                ));
+            }
         };
 
         let compression_time = start_time.elapsed().as_millis() as u64;
@@ -394,8 +429,9 @@ where
         // Update statistics
         if let Some(ref mut stats) = self.compression_stats {
             stats.total_compressions += 1;
-            stats.average_compression_ratio =
-                (stats.average_compression_ratio * (stats.total_compressions - 1) as f64 + compression_ratio)
+            stats.average_compression_ratio = (stats.average_compression_ratio
+                * (stats.total_compressions - 1) as f64
+                + compression_ratio)
                 / stats.total_compressions as f64;
             stats.memory_saved_bytes += original_size - compressed.len();
         } else {
@@ -425,7 +461,9 @@ where
         let start_time = std::time::Instant::now();
 
         // Get compressed data
-        let compressed_data = self.compressed_data.take()
+        let compressed_data = self
+            .compressed_data
+            .take()
             .ok_or(CompressionError::NoCompressedData)?;
 
         // Decompress (placeholder - would use actual decompression)
@@ -464,7 +502,9 @@ where
     }
 
     fn compression_ratio(&self) -> Option<f64> {
-        self.compression_stats.as_ref().map(|s| s.average_compression_ratio)
+        self.compression_stats
+            .as_ref()
+            .map(|s| s.average_compression_ratio)
     }
 
     fn compression_stats(&self) -> Option<CompressionStats> {
@@ -517,11 +557,11 @@ impl CompressionUtils {
         algorithm: &CompressionAlgorithm,
     ) -> f64 {
         match algorithm {
-            CompressionAlgorithm::Lz4 => 0.6, // 40% compression
-            CompressionAlgorithm::Zstd => 0.5, // 50% compression
-            CompressionAlgorithm::Gzip => 0.4, // 60% compression
-            CompressionAlgorithm::Brotli => 0.3, // 70% compression
-            CompressionAlgorithm::Snappy => 0.7, // 30% compression
+            CompressionAlgorithm::Lz4 => 0.6,       // 40% compression
+            CompressionAlgorithm::Zstd => 0.5,      // 50% compression
+            CompressionAlgorithm::Gzip => 0.4,      // 60% compression
+            CompressionAlgorithm::Brotli => 0.3,    // 70% compression
+            CompressionAlgorithm::Snappy => 0.7,    // 30% compression
             CompressionAlgorithm::Custom(_) => 0.5, // Default estimate
         }
     }

@@ -53,15 +53,31 @@ impl Collections<Option<Vec<f64>>> for VecDoubleArray {
     }
 
     // Arrays don't support statistical operations - return None
-    fn sum(&self) -> Option<Option<Vec<f64>>> { None }
-    fn mean(&self) -> Option<f64> { None }
-    fn std_dev(&self) -> Option<f64> { None }
-    fn variance(&self) -> Option<f64> { None }
-    fn min(&self) -> Option<Option<Vec<f64>>> { None }
-    fn max(&self) -> Option<Option<Vec<f64>>> { None }
-    fn median(&self) -> Option<Option<Vec<f64>>> { None }
-    fn percentile(&self, _p: f64) -> Option<Option<Vec<f64>>> { None }
-    
+    fn sum(&self) -> Option<Option<Vec<f64>>> {
+        None
+    }
+    fn mean(&self) -> Option<f64> {
+        None
+    }
+    fn std_dev(&self) -> Option<f64> {
+        None
+    }
+    fn variance(&self) -> Option<f64> {
+        None
+    }
+    fn min(&self) -> Option<Option<Vec<f64>>> {
+        None
+    }
+    fn max(&self) -> Option<Option<Vec<f64>>> {
+        None
+    }
+    fn median(&self) -> Option<Option<Vec<f64>>> {
+        None
+    }
+    fn percentile(&self, _p: f64) -> Option<Option<Vec<f64>>> {
+        None
+    }
+
     fn binary_search(&self, _value: &Option<Vec<f64>>) -> Result<usize, usize> {
         Err(0) // Arrays don't support search
     }
@@ -120,4 +136,3 @@ impl Collections<Option<Vec<f64>>> for VecDoubleArray {
 }
 
 impl PropertyValuesAdapter<Option<Vec<f64>>> for VecDoubleArray {}
-

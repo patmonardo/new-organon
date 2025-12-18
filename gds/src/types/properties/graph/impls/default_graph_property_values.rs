@@ -4,7 +4,6 @@
 //! and the universal adapter system. All adapters are generic over Collections
 //! backends (Vec, Huge, Arrow), enabling runtime backend selection.
 
-
 // Import the macros from the crate root
 use crate::{generate_all_graph_adapters, generate_all_graph_array_adapters};
 
@@ -56,9 +55,9 @@ impl FromIterator<f64> for DefaultDoubleGraphPropertyValues<VecDouble> {
 mod tests {
     use super::*;
     use crate::collections::backends::vec::{VecDouble, VecLong};
-    use crate::types::ValueType;
-    use crate::types::properties::PropertyValues;
     use crate::types::properties::graph::GraphPropertyValues;
+    use crate::types::properties::PropertyValues;
+    use crate::types::ValueType;
 
     #[test]
     fn test_long_graph_property_values() {
@@ -73,11 +72,11 @@ mod tests {
 
     #[test]
     fn test_double_graph_property_values() {
-        let values: DefaultDoubleGraphPropertyValues<VecDouble> = [1.5, 2.5, 3.5].into_iter().collect();
+        let values: DefaultDoubleGraphPropertyValues<VecDouble> =
+            [1.5, 2.5, 3.5].into_iter().collect();
         assert_eq!(values.value_type(), ValueType::Double);
         assert_eq!(values.element_count(), 3);
         let collected: Vec<f64> = values.double_values().collect();
         assert_eq!(collected, vec![1.5, 2.5, 3.5]);
     }
 }
-

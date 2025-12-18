@@ -11,9 +11,9 @@
 //!
 //! Higher modularity (closer to 1) indicates stronger community structure.
 
+pub mod computation;
 pub mod spec;
 pub mod storage;
-pub mod computation;
 
 #[cfg(test)]
 mod integration_tests;

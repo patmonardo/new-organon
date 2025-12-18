@@ -61,8 +61,7 @@ impl RandomWalkComputationRuntime {
 
         // Process walks in parallel using rayon or similar
         // For now, simple sequential implementation
-        while let Some(start_node) = self.get_next_node(&nodes_to_walk, &node_index, total_nodes)
-        {
+        while let Some(start_node) = self.get_next_node(&nodes_to_walk, &node_index, total_nodes) {
             let mut rng = StdRng::seed_from_u64(self.random_seed.wrapping_add(start_node as u64));
 
             for _ in 0..self.walks_per_node {
@@ -76,12 +75,7 @@ impl RandomWalkComputationRuntime {
         }
     }
 
-    fn get_next_node(
-        &self,
-        nodes: &[usize],
-        index: &AtomicUsize,
-        total: usize,
-    ) -> Option<usize> {
+    fn get_next_node(&self, nodes: &[usize], index: &AtomicUsize, total: usize) -> Option<usize> {
         let idx = index.fetch_add(1, Ordering::SeqCst);
         if idx < total {
             Some(nodes[idx])

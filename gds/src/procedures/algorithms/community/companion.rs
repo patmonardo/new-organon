@@ -4,9 +4,9 @@
 //!
 //! This module provides utility functions for community detection algorithms.
 
+use super::super::stubs::FilteredNodePropertyValuesMarker;
 use super::super::stubs::{LongNodePropertyValues, NodePropertyValues};
 use super::consecutive_values::ConsecutiveLongNodePropertyValues;
-use super::super::stubs::FilteredNodePropertyValuesMarker;
 use std::collections::HashMap;
 
 struct CommunitySizeFilter {

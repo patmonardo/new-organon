@@ -3,8 +3,8 @@
 //! Orders nodes in a directed acyclic graph (DAG) such that for every edge (u, v),
 //! u appears before v. Optionally computes longest path distances.
 
-use crate::procedures::topological_sort::computation::TopologicalSortComputationRuntime;
 use crate::procedures::facades::traits::Result;
+use crate::procedures::topological_sort::computation::TopologicalSortComputationRuntime;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -64,7 +64,9 @@ impl TopologicalSortBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -93,10 +95,15 @@ impl TopologicalSortBuilder {
                 .collect()
         };
 
-        let mut runtime = TopologicalSortComputationRuntime::new(node_count, self.compute_max_distance);
+        let mut runtime =
+            TopologicalSortComputationRuntime::new(node_count, self.compute_max_distance);
         let result = runtime.compute(node_count, get_neighbors);
 
-        Ok((result.sorted_nodes, result.max_source_distances, start.elapsed()))
+        Ok((
+            result.sorted_nodes,
+            result.max_source_distances,
+            start.elapsed(),
+        ))
     }
 
     /// Stream mode: yields (node_id, max_distance) for each node in topological order
@@ -183,11 +190,7 @@ mod tests {
         let store = store_from_directed_edges(3, &[(0, 1), (1, 2)]);
         let graph = Graph::new(Arc::new(store));
 
-        let rows: Vec<_> = graph
-            .topological_sort()
-            .stream()
-            .unwrap()
-            .collect();
+        let rows: Vec<_> = graph.topological_sort().stream().unwrap().collect();
 
         assert_eq!(rows.len(), 3);
         assert_eq!(rows[0].node_id, 0);
@@ -200,10 +203,7 @@ mod tests {
         let store = store_from_directed_edges(3, &[(0, 1), (1, 2)]);
         let graph = Graph::new(Arc::new(store));
 
-        let stats = graph
-            .topological_sort()
-            .stats()
-            .unwrap();
+        let stats = graph.topological_sort().stats().unwrap();
 
         assert_eq!(stats.node_count, 3);
         assert!(stats.execution_time_ms < 1000);

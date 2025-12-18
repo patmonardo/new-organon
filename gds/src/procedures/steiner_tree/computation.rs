@@ -1,7 +1,9 @@
-use crate::procedures::steiner_tree::spec::{SteinerTreeConfig, SteinerTreeResult, PRUNED, ROOT_NODE};
+use crate::procedures::steiner_tree::spec::{
+    SteinerTreeConfig, SteinerTreeResult, PRUNED, ROOT_NODE,
+};
 use crate::procedures::steiner_tree::storage::SteinerTreeStorage;
-use std::collections::{BinaryHeap, HashSet, VecDeque};
 use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashSet, VecDeque};
 
 /// Priority queue entry for Dijkstra's algorithm
 #[derive(Debug, Clone)]
@@ -59,7 +61,9 @@ impl SteinerTreeComputationRuntime {
             return storage.into_result();
         }
 
-        let terminals: HashSet<usize> = self.config.target_nodes
+        let terminals: HashSet<usize> = self
+            .config
+            .target_nodes
             .iter()
             .map(|&t| t as usize)
             .collect();
@@ -102,8 +106,7 @@ impl SteinerTreeComputationRuntime {
         storage: &mut SteinerTreeStorage,
         _terminals: &HashSet<usize>,
         get_neighbors: &F,
-    )
-    where
+    ) where
         F: Fn(usize) -> Vec<(usize, f64)>,
     {
         let node_count = storage.parent.len();

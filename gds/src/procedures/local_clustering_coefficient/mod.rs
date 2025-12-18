@@ -27,17 +27,16 @@
 //!
 //! LCC depends on **Triangle Count** to enumerate triangles per node.
 
-pub mod spec;
-pub mod storage;
 pub mod computation;
 #[cfg(test)]
 pub mod integration_tests;
+pub mod spec;
+pub mod storage;
 
 // Re-export main types
+pub use computation::LocalClusteringCoefficientComputationRuntime;
 pub use spec::{
-    LOCAL_CLUSTERING_COEFFICIENTAlgorithmSpec,
-    LocalClusteringCoefficientConfig,
+    LOCAL_CLUSTERING_COEFFICIENTAlgorithmSpec, LocalClusteringCoefficientConfig,
     LocalClusteringCoefficientResult,
 };
 pub use storage::LocalClusteringCoefficientStorageRuntime;
-pub use computation::LocalClusteringCoefficientComputationRuntime;

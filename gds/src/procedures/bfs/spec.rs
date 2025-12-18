@@ -4,13 +4,13 @@
 //!
 //! This module defines the BFS algorithm specification, configuration, and result types.
 
+use super::computation::BfsComputationRuntime;
+use super::storage::BfsStorageRuntime;
 use crate::define_algorithm_spec;
 use crate::projection::codegen::config::validation::ConfigError;
 use crate::projection::eval::procedure::AlgorithmError;
-use super::storage::BfsStorageRuntime;
-use super::computation::BfsComputationRuntime;
-use crate::projection::RelationshipType;
 use crate::projection::orientation::Orientation;
+use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use serde::{Deserialize, Serialize};
 
@@ -67,7 +67,7 @@ impl BfsConfig {
         if self.concurrency == 0 {
             return Err(ConfigError::FieldValidation {
                 field: "concurrency".to_string(),
-                message: "must be > 0".to_string()
+                message: "must be > 0".to_string(),
             });
         }
         Ok(())

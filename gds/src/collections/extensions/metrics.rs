@@ -13,25 +13,25 @@ use std::time::{Duration, Instant};
 pub trait MetricsSupport<T> {
     /// Enable metrics collection
     fn enable_metrics(&mut self, config: MetricsConfig) -> Result<(), MetricsError>;
-    
+
     /// Disable metrics collection
     fn disable_metrics(&mut self);
-    
+
     /// Check if metrics are enabled
     fn is_metrics_enabled(&self) -> bool;
-    
+
     /// Get performance metrics
     fn get_metrics(&self) -> Option<PerformanceMetrics>;
-    
+
     /// Get operation counts
     fn get_operation_counts(&self) -> HashMap<String, u64>;
-    
+
     /// Get timing statistics
     fn get_timing_stats(&self) -> HashMap<String, Duration>;
-    
+
     /// Reset metrics
     fn reset_metrics(&mut self);
-    
+
     /// Export metrics to OpenTelemetry
     fn export_metrics(&self) -> Result<(), MetricsError>;
 }
@@ -71,7 +71,7 @@ pub struct PerformanceMetrics {
 }
 
 /// Metrics-enabled collection wrapper
-pub struct MetricsCollection<T, C> 
+pub struct MetricsCollection<T, C>
 where
     C: Collections<T>,
 {
@@ -84,7 +84,7 @@ where
     _phantom: PhantomData<T>,
 }
 
-impl<T, C> MetricsCollection<T, C> 
+impl<T, C> MetricsCollection<T, C>
 where
     C: Collections<T>,
     T: Clone + Send + Sync,
@@ -100,7 +100,7 @@ where
             _phantom: PhantomData,
         }
     }
-    
+
     pub fn with_metrics_config(inner: C, config: MetricsConfig) -> Self {
         Self {
             inner,
@@ -122,101 +122,128 @@ where
     fn get(&self, index: usize) -> Option<T> {
         self.inner.get(index)
     }
-    
+
     fn set(&mut self, index: usize, value: T) {
         self.inner.set(index, value);
     }
-    
+
     fn len(&self) -> usize {
         self.inner.len()
     }
-    
+
     fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
-    
-    fn sum(&self) -> Option<T> where T: std::iter::Sum {
+
+    fn sum(&self) -> Option<T>
+    where
+        T: std::iter::Sum,
+    {
         self.inner.sum()
     }
-    
-    fn min(&self) -> Option<T> where T: Ord {
+
+    fn min(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.min()
     }
-    
-    fn max(&self) -> Option<T> where T: Ord {
+
+    fn max(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.max()
     }
-    
+
     fn mean(&self) -> Option<f64> {
         self.inner.mean()
     }
-    
+
     fn std_dev(&self) -> Option<f64> {
         self.inner.std_dev()
     }
-    
+
     fn variance(&self) -> Option<f64> {
         self.inner.variance()
     }
-    
-    fn median(&self) -> Option<T> where T: Ord {
+
+    fn median(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.median()
     }
-    
-    fn percentile(&self, p: f64) -> Option<T> where T: Ord {
+
+    fn percentile(&self, p: f64) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.percentile(p)
     }
-    
-    fn binary_search(&self, key: &T) -> Result<usize, usize> where T: Ord {
+
+    fn binary_search(&self, key: &T) -> Result<usize, usize>
+    where
+        T: Ord,
+    {
         self.inner.binary_search(key)
     }
-    
-    fn sort(&mut self) where T: Ord {
+
+    fn sort(&mut self)
+    where
+        T: Ord,
+    {
         self.inner.sort();
     }
-    
+
     fn to_vec(self) -> Vec<T> {
         self.inner.to_vec()
     }
-    
+
     fn as_slice(&self) -> &[T] {
         self.inner.as_slice()
     }
-    
+
     fn is_null(&self, index: usize) -> bool {
         self.inner.is_null(index)
     }
-    
+
     fn null_count(&self) -> usize {
         self.inner.null_count()
     }
-    
+
     fn default_value(&self) -> T {
         self.inner.default_value()
     }
-    
+
     fn backend(&self) -> crate::config::CollectionsBackend {
         self.inner.backend()
     }
-    
+
     fn features(&self) -> &[crate::config::Extension] {
         &[Extension::Metrics]
     }
-    
+
     fn extensions(&self) -> &[crate::config::Extension] {
         &[Extension::Metrics]
     }
-    
+
     fn value_type(&self) -> crate::types::ValueType {
         self.inner.value_type()
     }
-    
-    fn with_capacity(_capacity: usize) -> Self where Self: Sized {
+
+    fn with_capacity(_capacity: usize) -> Self
+    where
+        Self: Sized,
+    {
         // Implementation for metrics collections
         todo!("Implement with_capacity for MetricsCollection")
     }
-    
-    fn with_defaults(_count: usize, _default_value: T) -> Self where Self: Sized {
+
+    fn with_defaults(_count: usize, _default_value: T) -> Self
+    where
+        Self: Sized,
+    {
         // Implementation for metrics collections
         todo!("Implement with_defaults for MetricsCollection")
     }
@@ -230,7 +257,7 @@ where
     fn enable_metrics(&mut self, config: MetricsConfig) -> Result<(), MetricsError> {
         self.metrics_config = Some(config);
         self.is_metrics_enabled = true;
-        
+
         // Initialize metrics
         self.metrics = Some(PerformanceMetrics {
             operation_counts: HashMap::new(),
@@ -239,32 +266,32 @@ where
             peak_memory: 0,
             last_updated: Instant::now(),
         });
-        
+
         Ok(())
     }
-    
+
     fn disable_metrics(&mut self) {
         self.metrics_config = None;
         self.is_metrics_enabled = false;
         self.metrics = None;
     }
-    
+
     fn is_metrics_enabled(&self) -> bool {
         self.is_metrics_enabled
     }
-    
+
     fn get_metrics(&self) -> Option<PerformanceMetrics> {
         self.metrics.clone()
     }
-    
+
     fn get_operation_counts(&self) -> HashMap<String, u64> {
         self.operation_counts.clone()
     }
-    
+
     fn get_timing_stats(&self) -> HashMap<String, Duration> {
         self.timing_stats.clone()
     }
-    
+
     fn reset_metrics(&mut self) {
         self.operation_counts.clear();
         self.timing_stats.clear();
@@ -276,12 +303,12 @@ where
             metrics.last_updated = Instant::now();
         }
     }
-    
+
     fn export_metrics(&self) -> Result<(), MetricsError> {
         if !self.is_metrics_enabled {
             return Err(MetricsError::MetricsNotEnabled);
         }
-        
+
         // Export to OpenTelemetry (placeholder implementation)
         if let Some(config) = &self.metrics_config {
             if config.enable_opentelemetry {
@@ -289,7 +316,7 @@ where
                 println!("Exporting metrics to OpenTelemetry...");
             }
         }
-        
+
         Ok(())
     }
 }
@@ -317,7 +344,7 @@ impl MetricsUtils {
     pub fn default_config() -> MetricsConfig {
         MetricsConfig::default()
     }
-    
+
     /// Create metrics configuration for production
     pub fn production_config() -> MetricsConfig {
         MetricsConfig {
@@ -329,7 +356,7 @@ impl MetricsUtils {
             export_interval: Duration::from_secs(30),
         }
     }
-    
+
     /// Create metrics configuration for development
     pub fn development_config() -> MetricsConfig {
         MetricsConfig {
@@ -341,25 +368,25 @@ impl MetricsUtils {
             export_interval: Duration::from_secs(10),
         }
     }
-    
+
     /// Format metrics for human reading
     pub fn format_metrics(metrics: &PerformanceMetrics) -> String {
         let mut output = String::new();
         output.push_str("=== Collections Performance Metrics ===\n");
-        
+
         output.push_str("Operation Counts:\n");
         for (operation, count) in &metrics.operation_counts {
             output.push_str(&format!("  {}: {}\n", operation, count));
         }
-        
+
         output.push_str("Timing Statistics:\n");
         for (operation, duration) in &metrics.timing_stats {
             output.push_str(&format!("  {}: {:?}\n", operation, duration));
         }
-        
+
         output.push_str(&format!("Memory Usage: {} bytes\n", metrics.memory_usage));
         output.push_str(&format!("Peak Memory: {} bytes\n", metrics.peak_memory));
-        
+
         output
     }
 }

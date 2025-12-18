@@ -5,11 +5,11 @@
 //! This module implements the "Gross pole" of the Bellman-Ford algorithm,
 //! handling persistent data access and the main algorithm execution.
 
-use super::spec::{BellmanFordResult, PathResult};
 use super::computation::BellmanFordComputationRuntime;
+use super::spec::{BellmanFordResult, PathResult};
 use crate::projection::eval::procedure::AlgorithmError;
-use crate::types::graph::Graph;
 use crate::types::graph::id_map::NodeId;
+use crate::types::graph::Graph;
 use std::collections::VecDeque;
 
 /// Bellman-Ford Storage Runtime
@@ -190,7 +190,8 @@ impl BellmanFordStorageRuntime {
             node_ids.push(current_node);
             costs.push(computation.distance(current_node));
 
-            current_node = computation.predecessor(current_node)
+            current_node = computation
+                .predecessor(current_node)
                 .ok_or_else(|| AlgorithmError::InvalidGraph("Missing predecessor".to_string()))?;
         }
 
@@ -231,8 +232,9 @@ impl BellmanFordStorageRuntime {
             node_ids.push(current_node);
             costs.push(computation.distance(current_node));
 
-            current_node = computation.predecessor(current_node)
-                .ok_or_else(|| AlgorithmError::InvalidGraph("Missing predecessor in cycle".to_string()))?;
+            current_node = computation.predecessor(current_node).ok_or_else(|| {
+                AlgorithmError::InvalidGraph("Missing predecessor in cycle".to_string())
+            })?;
 
             length += 1;
 

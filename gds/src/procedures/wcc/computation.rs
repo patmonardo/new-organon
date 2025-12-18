@@ -40,7 +40,8 @@ impl UnionFind {
 
     pub fn get_components(&self, node_count: usize) -> (Vec<u64>, usize) {
         let mut components = vec![0u64; node_count];
-        let mut component_map: std::collections::HashMap<usize, usize> = std::collections::HashMap::new();
+        let mut component_map: std::collections::HashMap<usize, usize> =
+            std::collections::HashMap::new();
         let mut next_component_id = 0usize;
 
         for (node_id, component) in components.iter_mut().enumerate() {

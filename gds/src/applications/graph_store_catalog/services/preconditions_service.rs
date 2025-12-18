@@ -1,5 +1,5 @@
 /// Service for checking preconditions before operations.
-/// 
+///
 /// Mirrors Java PreconditionsService interface.
 /// Simple interface with a single method for precondition validation.
 pub trait PreconditionsService {
@@ -9,7 +9,7 @@ pub trait PreconditionsService {
 }
 
 /// Default implementation of PreconditionsService.
-/// 
+///
 /// This is a simple implementation that can be extended as needed.
 #[derive(Clone, Debug)]
 pub struct DefaultPreconditionsService;

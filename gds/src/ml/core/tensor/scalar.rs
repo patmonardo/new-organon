@@ -3,7 +3,7 @@
 //! This directly mirrors Java's `Scalar extends Tensor<Scalar>` pattern.
 //! Contains data and dimensions directly, not wrapped in TensorData.
 
-use super::tensor::{Tensor, AsAny};
+use super::tensor::{AsAny, Tensor};
 use crate::ml::core::dimensions;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -149,7 +149,10 @@ mod tests {
         let a = Scalar::new(1.5);
         let b = Scalar::new(2.5);
         let result = a.add(&b);
-        let result_scalar = result.as_any().downcast_ref::<Scalar>().expect("Expected Scalar");
+        let result_scalar = result
+            .as_any()
+            .downcast_ref::<Scalar>()
+            .expect("Expected Scalar");
         assert_eq!(result_scalar.value(), 4.0);
     }
 
@@ -157,7 +160,10 @@ mod tests {
     fn test_scalar_multiply() {
         let scalar = Scalar::new(3.0);
         let result = scalar.scalar_multiply(2.0);
-        let result_scalar = result.as_any().downcast_ref::<Scalar>().expect("Expected Scalar");
+        let result_scalar = result
+            .as_any()
+            .downcast_ref::<Scalar>()
+            .expect("Expected Scalar");
         assert_eq!(result_scalar.value(), 6.0);
     }
 }

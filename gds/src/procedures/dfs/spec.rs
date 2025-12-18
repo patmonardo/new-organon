@@ -4,13 +4,13 @@
 //!
 //! This module defines the DFS algorithm specification, configuration, and result types.
 
+use super::computation::DfsComputationRuntime;
+use super::storage::DfsStorageRuntime;
 use crate::define_algorithm_spec;
 use crate::projection::codegen::config::validation::ConfigError;
 use crate::projection::eval::procedure::AlgorithmError;
-use super::storage::DfsStorageRuntime;
-use super::computation::DfsComputationRuntime;
-use crate::projection::RelationshipType;
 use crate::projection::orientation::Orientation;
+use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use serde::{Deserialize, Serialize};
 
@@ -64,7 +64,7 @@ impl DfsConfig {
         if self.concurrency == 0 {
             return Err(ConfigError::FieldValidation {
                 field: "concurrency".to_string(),
-                message: "must be > 0".to_string()
+                message: "must be > 0".to_string(),
             });
         }
         Ok(())
@@ -226,7 +226,9 @@ mod tests {
 
         let validation_config = spec.validation_config(&ExecutionContext::new("test_user"));
         // TODO: Implement actual validation logic
-        assert!(validation_config.validate_before_load(&valid_config).is_ok());
+        assert!(validation_config
+            .validate_before_load(&valid_config)
+            .is_ok());
     }
 
     #[test]

@@ -45,7 +45,7 @@ const ALPHA: f64 = 0.01;
 pub struct Relu {
     base: AbstractVariable, // COMPOSITION: wraps shared Variable logic
     parent: VariableRef,
-    alpha: f64,             // Leak factor for negative values
+    alpha: f64, // Leak factor for negative values
 }
 
 impl Relu {
@@ -68,7 +68,11 @@ impl Relu {
             dimensions,
             require_gradient,
         );
-        Self { base, parent, alpha }
+        Self {
+            base,
+            parent,
+            alpha,
+        }
     }
 
     /// Create leaky ReLU with default alpha (0.01).

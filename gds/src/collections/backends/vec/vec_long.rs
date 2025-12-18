@@ -16,9 +16,7 @@ impl Default for VecLong {
 
 impl VecLong {
     pub fn new() -> Self {
-        Self {
-            data: Vec::new(),
-        }
+        Self { data: Vec::new() }
     }
 
     pub fn with_capacity(capacity: usize) -> Self {
@@ -42,11 +40,18 @@ impl From<Vec<i64>> for VecLong {
     }
 }
 
-use crate::vec_collections;
-use crate::types::ValueType;
 use crate::collections::traits::PropertyValuesAdapter;
+use crate::types::ValueType;
+use crate::vec_collections;
 
-vec_collections!(VecLong, i64, ValueType::Long, 0i64, to_f64 = |x: i64| x as f64, kind = Ord);
+vec_collections!(
+    VecLong,
+    i64,
+    ValueType::Long,
+    0i64,
+    to_f64 = |x: i64| x as f64,
+    kind = Ord
+);
 
 // Implement PropertyValuesAdapter (marker trait)
 impl PropertyValuesAdapter<i64> for VecLong {}

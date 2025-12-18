@@ -12,11 +12,11 @@
 
 use crate::config::PregelConfig;
 use crate::pregel::{
-    ComputeContext, ComputeFn, InitContext, InitFn, MasterComputeContext, Messages,
-    PregelBuilder, PregelSchema, SyncQueueMessageIterator, SyncQueueMessenger, Visibility,
+    ComputeContext, ComputeFn, InitContext, InitFn, MasterComputeContext, Messages, PregelBuilder,
+    PregelSchema, SyncQueueMessageIterator, SyncQueueMessenger, Visibility,
 };
-use crate::types::ValueType;
 use crate::types::graph::Graph;
+use crate::types::ValueType;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -111,7 +111,8 @@ impl HitsSharedState {
 
     fn update_previous_norm(&self) {
         let current_norm = self.get_norm_sqrt();
-        self.previous_norm.store(current_norm.to_bits(), Ordering::SeqCst);
+        self.previous_norm
+            .store(current_norm.to_bits(), Ordering::SeqCst);
     }
 }
 
@@ -136,12 +137,10 @@ pub fn run_hits_pregel(
         .add(HUB, ValueType::Double, Visibility::Public)
         .build();
 
-    let init_fn: InitFn<PregelConfig> = Arc::new(
-        move |context: &mut InitContext<PregelConfig>| {
-            context.set_node_value(AUTHORITY, 1.0);
-            context.set_node_value(HUB, 1.0);
-        },
-    );
+    let init_fn: InitFn<PregelConfig> = Arc::new(move |context: &mut InitContext<PregelConfig>| {
+        context.set_node_value(AUTHORITY, 1.0);
+        context.set_node_value(HUB, 1.0);
+    });
 
     let compute_fn: ComputeFn<PregelConfig, SyncQueueMessageIterator> = {
         let shared = Arc::clone(&shared_state);
@@ -322,13 +321,22 @@ mod tests {
 
         // Verify normalization (L2 norm ~1.0)
         let hub_norm: f64 = result.hub_scores.iter().map(|h| h * h).sum::<f64>().sqrt();
-        let auth_norm: f64 = result.authority_scores.iter().map(|a| a * a).sum::<f64>().sqrt();
+        let auth_norm: f64 = result
+            .authority_scores
+            .iter()
+            .map(|a| a * a)
+            .sum::<f64>()
+            .sqrt();
 
         println!("Hub scores: {:?}", result.hub_scores);
         println!("Authority scores: {:?}", result.authority_scores);
         println!("Hub norm: {}, Auth norm: {}", hub_norm, auth_norm);
 
         // Verify at least one normalization worked (authorities typically more stable)
-        assert!(auth_norm > 0.5, "Auths should have meaningful values: got {}", auth_norm);
+        assert!(
+            auth_norm > 0.5,
+            "Auths should have meaningful values: got {}",
+            auth_norm
+        );
     }
 }

@@ -1,5 +1,5 @@
-use crate::core::User;
 use crate::applications::graph_store_catalog::facade::GraphStoreCatalogEntry;
+use crate::core::User;
 
 /// Service for listing graphs in the catalog.
 ///
@@ -35,4 +35,3 @@ impl Default for GraphListingService {
         Self::new()
     }
 }
-

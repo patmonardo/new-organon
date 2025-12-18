@@ -24,10 +24,10 @@ pub trait RelationshipIterator: RelationshipPredicate + Send + Sync {
     fn concurrent_copy(&self) -> Box<dyn RelationshipIterator>;
 
     // === Phase 2C: Weighted Relationship Streams ===
-    
+
     /// Stream the outgoing relationships for `node_id`, yielding weighted cursor snapshots
     /// optimized for algorithms requiring direct f64 weight access.
-    /// 
+    ///
     /// This method provides high-performance access to relationship weights without
     /// type conversion overhead, designed for pathfinding algorithms.
     fn stream_relationships_weighted<'a>(
@@ -49,7 +49,8 @@ pub trait RelationshipIterator: RelationshipPredicate + Send + Sync {
 pub type RelationshipStream<'a> = Box<dyn Iterator<Item = RelationshipCursorBox> + Send + 'a>;
 
 /// Boxed iterator over weighted relationship cursors.
-pub type WeightedRelationshipStream<'a> = Box<dyn Iterator<Item = WeightedRelationshipCursorBox> + Send + 'a>;
+pub type WeightedRelationshipStream<'a> =
+    Box<dyn Iterator<Item = WeightedRelationshipCursorBox> + Send + 'a>;
 
 #[cfg(test)]
 mod tests {
@@ -115,7 +116,7 @@ mod tests {
         }
 
         // === Phase 2C: Weighted Stream Implementations ===
-        
+
         fn stream_relationships_weighted<'a>(
             &'a self,
             node_id: NodeId,
@@ -181,7 +182,7 @@ mod tests {
     }
 
     // === Phase 2C: WeightedRelationshipCursor Implementation ===
-    
+
     #[derive(Debug)]
     struct WeightedCursor {
         source: NodeId,
@@ -250,7 +251,7 @@ mod tests {
     }
 
     // === Phase 2C: Weighted Stream Tests ===
-    
+
     #[test]
     fn weighted_streams_yield_f64_weights() {
         let iter = TestIterator {
@@ -281,11 +282,11 @@ mod tests {
             edges: vec![(1, 2, 42.0)],
         };
         let cursor = iter.stream_relationships_weighted(1, 0.0).next().unwrap();
-        
+
         // Direct f64 access - no conversion overhead
         let weight = cursor.weight();
         assert_eq!(weight, 42.0);
-        
+
         // Can be used directly in algorithms without casting
         let distance = weight + 10.0;
         assert_eq!(distance, 52.0);

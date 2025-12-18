@@ -5,11 +5,11 @@
 //! and performance utilities.
 
 pub mod array_util;
-pub mod page_util;
 pub mod cursor;
+pub mod page_util;
 pub mod performance;
 
 pub use array_util::*;
-pub use page_util::*;
 pub use cursor::*;
+pub use page_util::*;
 pub use performance::*;

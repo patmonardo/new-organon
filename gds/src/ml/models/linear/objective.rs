@@ -7,10 +7,10 @@ use crate::ml::core::functions::{
     constant::Constant, constant_scale::ConstantScale, element_sum::ElementSum,
     l2_norm_squared::L2NormSquared, mean_square_error::MeanSquareError, weights::Weights,
 };
+use crate::ml::core::variable::VariableRef;
 use crate::ml::gradient_descent::{batch_feature_matrix, Objective};
 use crate::ml::models::linear::{data::LinearRegressionData, regressor::LinearRegressor};
 use crate::ml::models::Features;
-use crate::ml::core::variable::VariableRef;
 use std::sync::Arc;
 
 /// Objective used by gradient descent training of linear regression.
@@ -61,25 +61,21 @@ impl<'a> Objective for LinearRegressionObjective<'a> {
     type ModelData = LinearRegressionData;
 
     fn weights(&self) -> Vec<Arc<Weights>> {
-        vec![self.model_data.weights().clone(), self.model_data.bias().clone()]
+        vec![
+            self.model_data.weights().clone(),
+            self.model_data.bias().clone(),
+        ]
     }
 
-    fn loss<B: crate::ml::core::batch::Batch>(
-        &self,
-        batch: &B,
-        train_size: usize,
-    ) -> VariableRef {
+    fn loss<B: crate::ml::core::batch::Batch>(&self, batch: &B, train_size: usize) -> VariableRef {
         let batch_features: VariableRef = Arc::new(batch_feature_matrix(batch, self.features));
         let regressor = LinearRegressor::new(self.model_data.clone());
 
         // Use the same Weights instances that are returned by weights() method
         let weights_var: VariableRef = self.model_data.weights().clone();
         let bias_var: VariableRef = self.model_data.bias().clone();
-        let predictions = regressor.predictions_variable_with_weights(
-            batch_features,
-            weights_var,
-            bias_var,
-        );
+        let predictions =
+            regressor.predictions_variable_with_weights(batch_features, weights_var, bias_var);
 
         let targets = self.batch_targets(batch);
 

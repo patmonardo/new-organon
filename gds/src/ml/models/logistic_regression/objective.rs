@@ -103,18 +103,20 @@ impl<'a> Objective for LogisticRegressionObjective<'a> {
     type ModelData = LogisticRegressionData;
 
     fn weights(&self) -> Vec<Arc<Weights>> {
-        vec![self.classifier.data().weights().clone(), self.classifier.data().bias().clone()]
+        vec![
+            self.classifier.data().weights().clone(),
+            self.classifier.data().bias().clone(),
+        ]
     }
 
-    fn loss<B: Batch>(
-        &self,
-        batch: &B,
-        train_size: usize,
-    ) -> VariableRef {
+    fn loss<B: Batch>(&self, batch: &B, train_size: usize) -> VariableRef {
         let unpenalized_loss = self.cross_entropy_loss(batch);
         let penalty_variable = self.penalty_for_batch(batch, train_size);
 
-        Arc::new(ElementSum::new_ref(vec![unpenalized_loss, penalty_variable]))
+        Arc::new(ElementSum::new_ref(vec![
+            unpenalized_loss,
+            penalty_variable,
+        ]))
     }
 
     fn model_data(&self) -> &Self::ModelData {

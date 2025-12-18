@@ -9,19 +9,19 @@ pub enum ConfigError {
     /// Field validation failed
     #[error("Field validation failed: {field} - {message}")]
     FieldValidation { field: String, message: String },
-    
+
     /// Required field is missing
     #[error("Required field missing: {field}")]
     RequiredFieldMissing { field: String },
-    
+
     /// Type validation failed
     #[error("Type validation failed: {field} - expected {expected}, got {actual}")]
-    TypeValidation { 
-        field: String, 
-        expected: String, 
-        actual: String 
+    TypeValidation {
+        field: String,
+        expected: String,
+        actual: String,
     },
-    
+
     /// Container validation failed
     #[error("Container validation failed: {message}")]
     ContainerValidation { message: String },
@@ -31,7 +31,7 @@ pub enum ConfigError {
 pub trait Validator {
     /// Validate a field value
     fn validate_field(&self, field_name: &str, value: &str) -> Result<(), ConfigError>;
-    
+
     /// Validate the entire configuration
     fn validate_config(&self) -> Result<(), ConfigError>;
 }
@@ -48,10 +48,10 @@ impl Validator for DefaultValidator {
                 message: "Field cannot be empty".to_string(),
             });
         }
-        
+
         Ok(())
     }
-    
+
     fn validate_config(&self) -> Result<(), ConfigError> {
         // Basic config validation
         Ok(())
@@ -73,7 +73,7 @@ impl ValidationUtils {
             Ok(())
         }
     }
-    
+
     /// Validate a numeric field
     pub fn validate_number(field_name: &str, value: &str) -> Result<(), ConfigError> {
         if value.parse::<f64>().is_err() {
@@ -85,7 +85,7 @@ impl ValidationUtils {
             Ok(())
         }
     }
-    
+
     /// Validate a boolean field
     pub fn validate_boolean(field_name: &str, value: &str) -> Result<(), ConfigError> {
         if value != "true" && value != "false" {

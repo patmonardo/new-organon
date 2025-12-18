@@ -3,10 +3,12 @@
 //! This module contains integration tests that verify the spanning tree algorithm
 //! works correctly with the ProcedureExecutor runtime.
 
+use super::computation::SpanningTreeComputationRuntime;
 use super::spec::{SPANNING_TREEAlgorithmSpec, SpanningTreeResult};
 use super::storage::SpanningTreeStorageRuntime;
-use super::computation::SpanningTreeComputationRuntime;
-use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor, AlgorithmSpec};
+use crate::projection::eval::procedure::{
+    AlgorithmSpec, ExecutionContext, ExecutionMode, ProcedureExecutor,
+};
 use serde_json::json;
 
 #[test]
@@ -144,12 +146,12 @@ fn test_spanning_tree_storage_computation_integration() {
 #[test]
 fn test_spanning_tree_result_serialization() {
     let spanning_tree = super::computation::SpanningTree::new(
-        0, // head
-        4, // node_count
-        4, // effective_node_count
-        vec![-1, 0, 1, 0], // parent
+        0,                        // head
+        4,                        // node_count
+        4,                        // effective_node_count
+        vec![-1, 0, 1, 0],        // parent
         vec![0.0, 1.0, 2.0, 1.5], // cost_to_parent
-        4.5, // total_weight
+        4.5,                      // total_weight
     );
 
     let result = SpanningTreeResult::new(spanning_tree, 100);

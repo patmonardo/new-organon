@@ -6,11 +6,11 @@
 //! handling persistent data access and the main algorithm orchestration.
 //! Delta Stepping uses a sophisticated binning strategy for efficient frontier management.
 
-use super::spec::{DeltaSteppingResult, DeltaSteppingPathResult};
 use super::computation::DeltaSteppingComputationRuntime;
+use super::spec::{DeltaSteppingPathResult, DeltaSteppingResult};
 use crate::projection::eval::procedure::AlgorithmError;
-use crate::types::graph::Graph;
 use crate::types::graph::id_map::NodeId;
+use crate::types::graph::Graph;
 use std::collections::VecDeque;
 use std::time::Instant;
 
@@ -67,7 +67,7 @@ impl DeltaSteppingStorageRuntime {
             self.source_node,
             self.delta,
             self.store_predecessors,
-            node_count
+            node_count,
         );
 
         // Initialize frontier with source node
@@ -192,7 +192,8 @@ impl DeltaSteppingStorageRuntime {
             node_ids.push(current_node);
             costs.push(computation.distance(current_node));
 
-            current_node = computation.predecessor(current_node)
+            current_node = computation
+                .predecessor(current_node)
                 .ok_or_else(|| AlgorithmError::InvalidGraph("Missing predecessor".to_string()))?;
         }
 

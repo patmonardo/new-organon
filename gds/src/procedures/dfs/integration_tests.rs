@@ -4,11 +4,11 @@
 //!
 //! This module contains integration tests for DFS algorithm with the executor runtime.
 
+use super::computation::DfsComputationRuntime;
 use super::spec::{DFSAlgorithmSpec, DfsConfig, DfsResult};
 use super::storage::DfsStorageRuntime;
-use super::computation::DfsComputationRuntime;
-use crate::projection::eval::procedure::{ProcedureExecutor, ExecutionMode, ExecutionContext};
 use crate::projection::eval::procedure::AlgorithmSpec;
+use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor};
 use serde_json::json;
 
 #[test]
@@ -94,14 +94,12 @@ fn test_dfs_storage_computation_integration() {
 fn test_dfs_result_serialization() {
     let result = DfsResult {
         visited_nodes: vec![(0, 0), (1, 1), (2, 2), (3, 3)],
-        paths: vec![
-            super::spec::DfsPathResult {
-                source_node: 0,
-                target_node: 3,
-                node_ids: vec![0, 1, 3],
-                path_length: 2,
-            }
-        ],
+        paths: vec![super::spec::DfsPathResult {
+            source_node: 0,
+            target_node: 3,
+            node_ids: vec![0, 1, 3],
+            path_length: 2,
+        }],
         nodes_visited: 4,
         computation_time_ms: 5,
     };

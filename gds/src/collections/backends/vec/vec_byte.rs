@@ -1,16 +1,29 @@
 //! VecByte: Vec-based i8 Collections implementation
 #[derive(Debug, Clone)]
-pub struct VecByte { pub data: Vec<i8> }
+pub struct VecByte {
+    pub data: Vec<i8>,
+}
 impl Default for VecByte {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl VecByte { pub fn new() -> Self { Self { data: Vec::new() } } }
-use crate::vec_collections;
+impl VecByte {
+    pub fn new() -> Self {
+        Self { data: Vec::new() }
+    }
+}
 use crate::types::ValueType;
-vec_collections!(VecByte, i8, ValueType::Byte, 0i8, to_f64 = |x: i8| x as f64, kind = Ord);
+use crate::vec_collections;
+vec_collections!(
+    VecByte,
+    i8,
+    ValueType::Byte,
+    0i8,
+    to_f64 = |x: i8| x as f64,
+    kind = Ord
+);
 
 use crate::collections::traits::PropertyValuesAdapter;
 

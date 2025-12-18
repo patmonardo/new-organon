@@ -5,7 +5,7 @@
 //! This module implements the "Gross pole" for spanning tree algorithms,
 //! handling persistent data access and orchestrating the Prim's algorithm execution.
 
-use super::computation::{SpanningTreeComputationRuntime, SpanningTree};
+use super::computation::{SpanningTree, SpanningTreeComputationRuntime};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::Graph;
 
@@ -70,7 +70,12 @@ impl SpanningTreeStorageRuntime {
     {
         // Handle empty graph upfront
         if node_count == 0 {
-            let empty = SpanningTreeComputationRuntime::new(self.start_node_id, self.compute_minimum, 0, self.concurrency);
+            let empty = SpanningTreeComputationRuntime::new(
+                self.start_node_id,
+                self.compute_minimum,
+                0,
+                self.concurrency,
+            );
             return Ok(empty.build_result(0));
         }
 
@@ -137,11 +142,18 @@ impl SpanningTreeStorageRuntime {
         direction: u8,
     ) -> Result<SpanningTree, AlgorithmError> {
         let node_count = graph.node_count() as u32;
-        self.compute_spanning_tree(node_count, |node_id| self.get_neighbors_from_graph(graph, node_id, direction))
+        self.compute_spanning_tree(node_count, |node_id| {
+            self.get_neighbors_from_graph(graph, node_id, direction)
+        })
     }
 
     /// Neighbor retrieval backed by Graph::stream_relationships (outgoing edges), with numeric fallback.
-    fn get_neighbors_from_graph(&self, graph: &dyn Graph, node_id: u32, direction: u8) -> Vec<(u32, f64)> {
+    fn get_neighbors_from_graph(
+        &self,
+        graph: &dyn Graph,
+        node_id: u32,
+        direction: u8,
+    ) -> Vec<(u32, f64)> {
         let fallback: f64 = 1.0;
         match direction {
             1 => graph
@@ -197,7 +209,10 @@ impl SpanningTreeStorageRuntime {
     /// # Returns
     ///
     /// A `Result` containing the `SpanningTree` or an error.
-    pub fn compute_spanning_tree_mock(&self, node_count: u32) -> Result<SpanningTree, AlgorithmError> {
+    pub fn compute_spanning_tree_mock(
+        &self,
+        node_count: u32,
+    ) -> Result<SpanningTree, AlgorithmError> {
         self.compute_spanning_tree(node_count, |node_id| self.get_neighbors(node_id))
     }
 }

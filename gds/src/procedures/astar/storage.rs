@@ -5,11 +5,11 @@
 //! This module implements the storage runtime for A* algorithm - the "Gross pole" for persistent data access.
 
 use super::computation::AStarComputationResult;
+use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
+use crate::types::properties::node::NodePropertyValues;
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::types::properties::node::NodePropertyValues;
-use crate::types::graph::id_map::NodeId;
 
 /// A* storage runtime for accessing graph data
 ///
@@ -91,7 +91,11 @@ impl AStarStorageRuntime {
                 total_cost = 0.0;
                 nodes_explored = 1;
             }
-            return Ok(AStarComputationResult::new(Some(path), total_cost, nodes_explored));
+            return Ok(AStarComputationResult::new(
+                Some(path),
+                total_cost,
+                nodes_explored,
+            ));
         }
 
         let g = graph.unwrap();
@@ -112,7 +116,11 @@ impl AStarStorageRuntime {
             if current == self.target_node {
                 let path = computation.reconstruct_path(self.source_node, self.target_node);
                 let total_cost = computation.get_total_cost(self.target_node);
-                return Ok(AStarComputationResult::new(path, total_cost, computation.nodes_explored()));
+                return Ok(AStarComputationResult::new(
+                    path,
+                    total_cost,
+                    computation.nodes_explored(),
+                ));
             }
 
             // Expand neighbors via relationship streams
@@ -126,13 +134,17 @@ impl AStarStorageRuntime {
 
             for cursor in stream {
                 let neighbor: NodeId = cursor.target_id();
-                if computation.is_visited(neighbor) { continue; }
+                if computation.is_visited(neighbor) {
+                    continue;
+                }
 
                 let tentative_g = computation.get_g_cost(current) + cursor.property();
                 if tentative_g < computation.get_g_cost(neighbor) {
                     computation.set_parent(neighbor, current);
                     computation.update_g_cost(neighbor, tentative_g);
-                    let h = self.compute_haversine_distance(neighbor, self.target_node).unwrap_or(0.0);
+                    let h = self
+                        .compute_haversine_distance(neighbor, self.target_node)
+                        .unwrap_or(0.0);
                     computation.update_f_cost(neighbor, tentative_g + h);
                     computation.add_to_open_set(neighbor);
                 }
@@ -140,7 +152,11 @@ impl AStarStorageRuntime {
         }
 
         // No path found
-        Ok(AStarComputationResult::new(None, f64::INFINITY, computation.nodes_explored()))
+        Ok(AStarComputationResult::new(
+            None,
+            f64::INFINITY,
+            computation.nodes_explored(),
+        ))
     }
 
     /// Compute Haversine distance between two nodes
@@ -155,10 +171,7 @@ impl AStarStorageRuntime {
         let (target_lat, target_lon) = self.get_coordinates(target)?;
 
         Ok(Self::haversine_distance(
-            source_lat,
-            source_lon,
-            target_lat,
-            target_lon,
+            source_lat, source_lon, target_lat, target_lon,
         ))
     }
 
@@ -168,7 +181,8 @@ impl AStarStorageRuntime {
             return Ok(coords);
         }
         // Prefer bound property values when available; fallback to mock
-        let coords = if let (Some(lat_vals), Some(lon_vals)) = (&self.lat_values, &self.lon_values) {
+        let coords = if let (Some(lat_vals), Some(lon_vals)) = (&self.lat_values, &self.lon_values)
+        {
             let idx = u64::try_from(node_id)
                 .map_err(|_| format!("invalid node id for property lookup: {node_id}"))?;
             let lat = lat_vals
@@ -242,12 +256,8 @@ mod tests {
 
     #[test]
     fn test_astar_storage_runtime_creation() {
-        let storage = AStarStorageRuntime::new(
-            0,
-            1,
-            "latitude".to_string(),
-            "longitude".to_string(),
-        );
+        let storage =
+            AStarStorageRuntime::new(0, 1, "latitude".to_string(), "longitude".to_string());
 
         assert_eq!(storage.source_node(), 0);
         assert_eq!(storage.target_node(), 1);
@@ -282,12 +292,7 @@ mod tests {
 
     #[test]
     fn test_coordinate_caching() {
-        let mut storage = AStarStorageRuntime::new(
-            0,
-            1,
-            "lat".to_string(),
-            "lon".to_string(),
-        );
+        let mut storage = AStarStorageRuntime::new(0, 1, "lat".to_string(), "lon".to_string());
 
         // First call should populate cache
         let coords1 = storage.get_coordinates(5).unwrap();
@@ -301,16 +306,13 @@ mod tests {
 
     #[test]
     fn test_astar_path_computation() {
-        let mut storage = AStarStorageRuntime::new(
-            0,
-            1,
-            "lat".to_string(),
-            "lon".to_string(),
-        );
+        let mut storage = AStarStorageRuntime::new(0, 1, "lat".to_string(), "lon".to_string());
 
         let mut computation = crate::procedures::astar::computation::AStarComputationRuntime::new();
 
-        let result = storage.compute_astar_path(&mut computation, None, 0).unwrap();
+        let result = storage
+            .compute_astar_path(&mut computation, None, 0)
+            .unwrap();
 
         assert!(result.path.is_some());
         assert_eq!(result.path.as_ref().unwrap().len(), 2);
@@ -331,7 +333,9 @@ mod tests {
 
         let mut computation = crate::procedures::astar::computation::AStarComputationRuntime::new();
 
-        let result = storage.compute_astar_path(&mut computation, None, 0).unwrap();
+        let result = storage
+            .compute_astar_path(&mut computation, None, 0)
+            .unwrap();
 
         assert!(result.path.is_some());
         assert_eq!(result.path.as_ref().unwrap().len(), 1);

@@ -34,17 +34,23 @@ fn test_pcst_simple_high_prize_node() {
     let result = runtime.compute(4, get_neighbors);
 
     // Node 2 has prize 10.0 - should definitely be included
-    assert_ne!(result.parent_array[2], PRUNED,
-        "Node 2 with prize 10.0 should be included");
+    assert_ne!(
+        result.parent_array[2], PRUNED,
+        "Node 2 with prize 10.0 should be included"
+    );
 
     // At least one node should be in the tree
-    assert!(result.effective_node_count >= 1,
+    assert!(
+        result.effective_node_count >= 1,
         "Should include at least 1 node, got {}",
-        result.effective_node_count);
+        result.effective_node_count
+    );
 
     // Total prize should be at least 10.0 (node 2's prize)
-    assert!(result.total_prize >= 9.0,
-        "Total prize should include node 2's contribution");
+    assert!(
+        result.total_prize >= 9.0,
+        "Total prize should include node 2's contribution"
+    );
 }
 
 #[test]
@@ -82,7 +88,10 @@ fn test_pcst_pruning_low_value_branch() {
         .iter()
         .filter(|&&n| result.parent_array[n] == PRUNED)
         .count();
-    assert!(pruned_count >= 2, "Should prune at least 2 low-value leaves");
+    assert!(
+        pruned_count >= 2,
+        "Should prune at least 2 low-value leaves"
+    );
 
     // Net value should be positive
     assert!(result.net_value > 0.0);
@@ -132,11 +141,7 @@ fn test_pcst_expensive_edges() {
     // Prizes: [5.0, 2.0, 5.0]
     // Edge weights: [10.0, 10.0] (very expensive)
     // Should keep only highest prize node
-    let edges = vec![
-        vec![(1, 10.0)],
-        vec![(0, 10.0), (2, 10.0)],
-        vec![(1, 10.0)],
-    ];
+    let edges = vec![vec![(1, 10.0)], vec![(0, 10.0), (2, 10.0)], vec![(1, 10.0)]];
 
     let get_neighbors = create_neighbors(edges);
     let config = PCSTreeConfig {
@@ -195,10 +200,7 @@ fn test_pcst_balanced_tradeoff() {
 #[test]
 fn test_pcst_zero_prizes() {
     // All prizes zero - should include minimal tree
-    let edges = vec![
-        vec![(1, 1.0)],
-        vec![(0, 1.0)],
-    ];
+    let edges = vec![vec![(1, 1.0)], vec![(0, 1.0)]];
 
     let get_neighbors = create_neighbors(edges);
     let config = PCSTreeConfig {

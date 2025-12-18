@@ -4,8 +4,8 @@
 //! complete before the scope ends. This is perfect for iterative algorithms
 //! like Pregel where each iteration (superstep) must finish before the next begins.
 
-use crate::concurrency::{BatchSize, Concurrency};
 use crate::concurrency::TerminationFlag;
+use crate::concurrency::{BatchSize, Concurrency};
 use rayon::prelude::*;
 
 /// Synchronization scope for parallel work.

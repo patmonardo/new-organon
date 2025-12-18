@@ -81,7 +81,8 @@ impl fmt::Display for ConstantScale {
         write!(
             f,
             "ConstantScale: {}, requireGradient: {}",
-            self.constant, self.require_gradient()
+            self.constant,
+            self.require_gradient()
         )
     }
 }

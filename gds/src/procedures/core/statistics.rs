@@ -139,10 +139,7 @@ impl StatisticsEngine {
         }
 
         // Collect all values in parallel
-        let values: Vec<f64> = (0..node_count)
-            .into_par_iter()
-            .map(value_fn)
-            .collect();
+        let values: Vec<f64> = (0..node_count).into_par_iter().map(value_fn).collect();
 
         Self::compute_statistics_from_values(values, config)
     }
@@ -218,7 +215,10 @@ impl StatisticsEngine {
 
         // Compute histogram
         let histogram = if config.compute_histogram {
-            Some(Self::compute_histogram(&finite_values, config.histogram_bins)?)
+            Some(Self::compute_histogram(
+                &finite_values,
+                config.histogram_bins,
+            )?)
         } else {
             None
         };
@@ -447,7 +447,8 @@ mod tests {
         let values = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let config = StatisticsConfig::default();
 
-        let (summary, histogram) = StatisticsEngine::compute_statistics_from_values(values, config).unwrap();
+        let (summary, histogram) =
+            StatisticsEngine::compute_statistics_from_values(values, config).unwrap();
 
         assert_eq!(summary.count, 5);
         assert_eq!(summary.min, 1.0);
@@ -462,7 +463,8 @@ mod tests {
         let values = (1..=100).map(|i| i as f64).collect();
         let config = StatisticsConfig::default();
 
-        let (summary, _) = StatisticsEngine::compute_statistics_from_values(values, config).unwrap();
+        let (summary, _) =
+            StatisticsEngine::compute_statistics_from_values(values, config).unwrap();
 
         assert_eq!(summary.percentiles.p50, 50.5); // Median of 1-100
         assert_eq!(summary.percentiles.p25, 25.75); // 25th percentile (corrected)
@@ -477,7 +479,8 @@ mod tests {
             ..Default::default()
         };
 
-        let (_, histogram) = StatisticsEngine::compute_statistics_from_values(values, config).unwrap();
+        let (_, histogram) =
+            StatisticsEngine::compute_statistics_from_values(values, config).unwrap();
         let histogram = histogram.unwrap();
 
         assert_eq!(histogram.bins.len(), 3);
@@ -489,7 +492,8 @@ mod tests {
         let values = vec![];
         let config = StatisticsConfig::default();
 
-        let (summary, histogram) = StatisticsEngine::compute_statistics_from_values(values, config).unwrap();
+        let (summary, histogram) =
+            StatisticsEngine::compute_statistics_from_values(values, config).unwrap();
 
         assert_eq!(summary.count, 0);
         assert!(histogram.is_some());
@@ -500,7 +504,8 @@ mod tests {
         let values = vec![1.0, f64::INFINITY, 2.0, f64::NEG_INFINITY, 3.0];
         let config = StatisticsConfig::default();
 
-        let (summary, _) = StatisticsEngine::compute_statistics_from_values(values, config).unwrap();
+        let (summary, _) =
+            StatisticsEngine::compute_statistics_from_values(values, config).unwrap();
 
         assert_eq!(summary.count, 3); // Only finite values
         assert_eq!(summary.infinite_count, 2);

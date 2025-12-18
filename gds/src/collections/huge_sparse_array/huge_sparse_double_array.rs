@@ -303,13 +303,13 @@ mod tests {
     #[test]
     fn test_builder_basic() {
         let mut builder = HugeSparseDoubleArray::builder(0.0);
-        builder.set(0, 3.14);
+        builder.set(0, 3.0);
         builder.set(100, 2.71);
         builder.set(1000, 1.41);
 
         let array = builder.build();
 
-        assert_eq!(array.get(0), 3.14);
+        assert_eq!(array.get(0), 3.0);
         assert_eq!(array.get(100), 2.71);
         assert_eq!(array.get(1000), 1.41);
         assert_eq!(array.get(50), 0.0); // Default value

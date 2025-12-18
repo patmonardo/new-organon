@@ -78,7 +78,12 @@ impl LabelPropagationBuilder {
 
     fn validate(&self) -> Result<()> {
         ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
-        ConfigValidator::in_range(self.max_iterations as f64, 1.0, 1_000_000_000.0, "max_iterations")?;
+        ConfigValidator::in_range(
+            self.max_iterations as f64,
+            1.0,
+            1_000_000_000.0,
+            "max_iterations",
+        )?;
         if let Some(prop) = &self.node_weight_property {
             ConfigValidator::non_empty_string(prop, "node_weight_property")?;
         }
@@ -96,7 +101,9 @@ impl LabelPropagationBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -155,8 +162,8 @@ impl LabelPropagationBuilder {
                 .collect()
         };
 
-        let mut runtime = LabelPropComputationRuntime::new(node_count, self.max_iterations)
-            .with_weights(weights);
+        let mut runtime =
+            LabelPropComputationRuntime::new(node_count, self.max_iterations).with_weights(weights);
         if let Some(seeds) = seeds {
             runtime = runtime.with_seeds(seeds);
         }

@@ -20,9 +20,15 @@ macro_rules! gds_value_binary {
             }
             fn as_object(&self) -> serde_json::Value {
                 let mut obj = serde_json::Map::new();
-                obj.insert("data".to_string(), serde_json::Value::from(self.data.clone()));
+                obj.insert(
+                    "data".to_string(),
+                    serde_json::Value::from(self.data.clone()),
+                );
                 if let Some(mime) = &self.mime_type {
-                    obj.insert("mime_type".to_string(), serde_json::Value::from(mime.clone()));
+                    obj.insert(
+                        "mime_type".to_string(),
+                        serde_json::Value::from(mime.clone()),
+                    );
                 }
                 serde_json::Value::Object(obj)
             }

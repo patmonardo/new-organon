@@ -50,34 +50,33 @@ macro_rules! value_type_table {
         $callback!(Int, i32, IntegralScalar, 0i32);
         $callback!(Long, i64, IntegralScalar, 0i64);
         $callback!(BigInt, i128, IntegralScalar, 0i128);
-        
+
         // ===== 2 FloatingPoint Scalars =====
         $callback!(Float, f32, FloatingPointScalar, 0.0f32);
         $callback!(Double, f64, FloatingPointScalar, 0.0f64);
-        
+
         // ===== 3 Other Scalars =====
         $callback!(Boolean, bool, OtherScalar, false);
         $callback!(Char, char, OtherScalar, '\0');
         $callback!(String, String, OtherScalar, String::new());
-        
+
         // ===== 5 Integral Arrays =====
         $callback!(ByteArray, Option<Vec<i8>>, IntegralArray, None);
         $callback!(ShortArray, Option<Vec<i16>>, IntegralArray, None);
         $callback!(IntArray, Option<Vec<i32>>, IntegralArray, None);
         $callback!(LongArray, Option<Vec<i64>>, IntegralArray, None);
         $callback!(BigIntArray, Option<Vec<i128>>, IntegralArray, None);
-        
+
         // ===== 2 FloatingPoint Arrays =====
         $callback!(FloatArray, Option<Vec<f32>>, FloatingPointArray, None);
         $callback!(DoubleArray, Option<Vec<f64>>, FloatingPointArray, None);
-        
+
         // ===== 3 Other Arrays =====
         $callback!(BooleanArray, Option<Vec<bool>>, OtherArray, None);
         $callback!(CharArray, Option<Vec<char>>, OtherArray, None);
         $callback!(StringArray, Option<Vec<String>>, OtherArray, None);
     };
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -91,9 +90,8 @@ mod tests {
                 const _: () = ();
             };
         }
-        
+
         // Invoke the table - if it compiles, the test passes
         crate::value_type_table!(count_test);
     }
 }
-

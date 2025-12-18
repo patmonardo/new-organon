@@ -1,7 +1,7 @@
 use super::{TerminatedException, TerminationMonitor};
+use std::sync::atomic::AtomicU64;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::sync::atomic::AtomicU64;
 use std::time::{Duration, Instant};
 
 /// Flag for checking if an algorithm should terminate.

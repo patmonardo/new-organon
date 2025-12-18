@@ -1,17 +1,16 @@
 // GraphStore Catalog - The storage processor ISA
 // This package mirrors the Java GDS applications.graphstorecatalog package.
 
-pub mod configs;
-pub mod services;
-pub mod loaders;
 pub mod applications;
+pub mod configs;
 pub mod facade;
+pub mod loaders;
 pub mod results;
+pub mod services;
 
-pub use configs::*;
-pub use services::*;
-pub use loaders::*;
 pub use applications::*;
+pub use configs::*;
 pub use facade::*;
+pub use loaders::*;
 pub use results::*;
-
+pub use services::*;

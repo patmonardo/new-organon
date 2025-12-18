@@ -1,20 +1,20 @@
 /// Configuration for dropping node properties from the graph store.
-/// 
+///
 /// Mirrors Java GraphDropNodePropertiesConfig interface.
 /// Extends BaseConfig + ConcurrencyConfig for dropping operations.
 pub trait GraphDropNodePropertiesConfig {
     /// Returns the optional graph name.
     fn graph_name(&self) -> Option<String>;
-    
+
     /// Returns the list of node properties to drop.
     fn node_properties(&self) -> Vec<String>;
-    
+
     /// Returns whether to fail if properties are missing.
     /// Defaults to true.
     fn fail_if_missing(&self) -> bool {
         true
     }
-    
+
     /// Parses node properties from user input.
     /// In Java, this uses UserInputAsStringOrListOfString.parse().
     fn parse_node_properties(user_input: &str) -> Vec<String> {
@@ -23,7 +23,7 @@ pub trait GraphDropNodePropertiesConfig {
 }
 
 /// Builder for creating GraphDropNodePropertiesConfig implementations.
-/// 
+///
 /// In Java, this uses CypherMapWrapper for configuration parsing.
 #[derive(Clone, Debug)]
 pub struct GraphDropNodePropertiesConfigImpl {
@@ -51,11 +51,11 @@ impl GraphDropNodePropertiesConfig for GraphDropNodePropertiesConfigImpl {
     fn graph_name(&self) -> Option<String> {
         self.graph_name.clone()
     }
-    
+
     fn node_properties(&self) -> Vec<String> {
         self.node_properties.clone()
     }
-    
+
     fn fail_if_missing(&self) -> bool {
         self.fail_if_missing
     }

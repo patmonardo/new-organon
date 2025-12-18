@@ -11,10 +11,10 @@
 //! - Softmax adds: softmax normalization logic (exp + row-wise normalization)
 //! - Delegates Variable trait methods to inner VariableBase
 
+use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::{Matrix, Tensor};
 use crate::ml::core::variable::{Variable, VariableRef};
-use crate::ml::core::abstract_variable::AbstractVariable;
 use std::fmt;
 
 /// Softmax activation function for multi-class classification.

@@ -13,8 +13,8 @@ use crate::projection::eval::procedure::*;
 use std::time::Duration;
 use std::time::Instant;
 
-use super::storage::{DegreeCentralityStorageRuntime, Orientation};
 use super::computation::DegreeCentralityComputationRuntime;
+use super::storage::{DegreeCentralityStorageRuntime, Orientation};
 
 // ============================================================================
 // Configuration

@@ -32,9 +32,8 @@
 //! );
 //! ```
 
-pub mod result;
 pub mod distribution;
+pub mod result;
 
-pub use result::*;
 pub use distribution::*;
-
+pub use result::*;

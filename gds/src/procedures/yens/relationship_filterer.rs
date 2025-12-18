@@ -74,7 +74,12 @@ impl RelationshipFilterer {
     /// Check if a relationship is valid (not blocked)
     ///
     /// Translation of: `validRelationship()` method (lines 60-80)
-    pub fn valid_relationship(&mut self, source: NodeId, target: NodeId, relationship_id: NodeId) -> bool {
+    pub fn valid_relationship(
+        &mut self,
+        source: NodeId,
+        target: NodeId,
+        relationship_id: NodeId,
+    ) -> bool {
         if source == self.filtering_spur_node {
             let forbidden = if self.track_relationships {
                 relationship_id
@@ -87,7 +92,9 @@ impl RelationshipFilterer {
             }
 
             // Binary search for forbidden value
-            while self.neighbor_index < self.all_neighbors && self.neighbors[self.neighbor_index] < forbidden {
+            while self.neighbor_index < self.all_neighbors
+                && self.neighbors[self.neighbor_index] < forbidden
+            {
                 self.neighbor_index += 1;
             }
 
@@ -128,7 +135,14 @@ mod tests {
     fn test_relationship_filterer_add_blocking_neighbor() {
         let mut filterer = RelationshipFilterer::new(5, true);
 
-        let path = MutablePathResult::new(0, 0, 3, vec![0, 1, 2, 3], vec![10, 11, 12], vec![0.0, 1.0, 2.0, 3.0]);
+        let path = MutablePathResult::new(
+            0,
+            0,
+            3,
+            vec![0, 1, 2, 3],
+            vec![10, 11, 12],
+            vec![0.0, 1.0, 2.0, 3.0],
+        );
 
         filterer.add_blocking_neighbor(&path, 0);
         filterer.add_blocking_neighbor(&path, 1);
@@ -154,7 +168,14 @@ mod tests {
         filterer.set_filter(1);
 
         // Add some blocked neighbors
-        let path = MutablePathResult::new(0, 0, 3, vec![0, 1, 2, 3], vec![10, 11, 12], vec![0.0, 1.0, 2.0, 3.0]);
+        let path = MutablePathResult::new(
+            0,
+            0,
+            3,
+            vec![0, 1, 2, 3],
+            vec![10, 11, 12],
+            vec![0.0, 1.0, 2.0, 3.0],
+        );
         filterer.add_blocking_neighbor(&path, 0); // blocks target node 2
         filterer.prepare();
 
@@ -174,7 +195,14 @@ mod tests {
 
         filterer.set_filter(1);
 
-        let path = MutablePathResult::new(0, 0, 3, vec![0, 1, 2, 3], vec![10, 11, 12], vec![0.0, 1.0, 2.0, 3.0]);
+        let path = MutablePathResult::new(
+            0,
+            0,
+            3,
+            vec![0, 1, 2, 3],
+            vec![10, 11, 12],
+            vec![0.0, 1.0, 2.0, 3.0],
+        );
         filterer.add_blocking_neighbor(&path, 0); // blocks relationship 10
         filterer.prepare();
 

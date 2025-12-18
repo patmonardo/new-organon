@@ -18,7 +18,9 @@ pub struct PureFormCatalog<S> {
 
 impl<S> PureFormCatalog<S> {
     pub fn new() -> Self {
-        Self { ops: HashMap::new() }
+        Self {
+            ops: HashMap::new(),
+        }
     }
 
     pub fn insert(&mut self, op: impl FormOperator<S> + 'static) {
@@ -204,9 +206,10 @@ mod tests {
         let program = FormShape::new(shape, fctx, morph);
 
         let mut request = FormRequest::new("base", program);
-        request
-            .artifacts
-            .insert("selection".to_string(), serde_json::json!({"node_ids": [0, 1, 2]}));
+        request.artifacts.insert(
+            "selection".to_string(),
+            serde_json::json!({"node_ids": [0, 1, 2]}),
+        );
         request.artifacts.insert(
             "node_properties".to_string(),
             serde_json::json!({
@@ -219,10 +222,16 @@ mod tests {
 
         let result = PureFormProcessor::<InMemoryFormStore>::evaluate(base, &request).unwrap();
 
-        assert_eq!(result.operator, "commitSubgraph -> materializeNodeProperties");
+        assert_eq!(
+            result.operator,
+            "commitSubgraph -> materializeNodeProperties"
+        );
         assert_eq!(result.graph.node_count(), 3);
 
-        let values = result.graph.node_property_f64("score").expect("score exists");
+        let values = result
+            .graph
+            .node_property_f64("score")
+            .expect("score exists");
         assert_eq!(values, &[1.0, 2.0, 3.0]);
 
         // Ensure edges were induced (0->1,1->2 kept; 2->3 and 0->3 dropped)

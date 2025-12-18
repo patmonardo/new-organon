@@ -3,9 +3,9 @@
 //! This replaces the property-specific config with a general Collections
 //! configuration system that can handle any type of collection.
 
-use std::marker::PhantomData;
-use crate::types::ValueType;
 use crate::types::default_value::DefaultValue;
+use crate::types::ValueType;
+use std::marker::PhantomData;
 
 /// Main Collections configuration
 #[derive(Debug, Clone, PartialEq)]
@@ -68,8 +68,7 @@ pub struct PerformanceConfig {
 }
 
 /// Extension configuration
-#[derive(Debug, Clone, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct ExtensionConfig {
     /// Enabled extensions
     pub enabled: Vec<Extension>,
@@ -78,8 +77,7 @@ pub struct ExtensionConfig {
 }
 
 /// ML-specific configuration
-#[derive(Debug, Clone, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct MLConfig {
     /// Tensor configuration
     pub tensor: TensorConfig,
@@ -107,27 +105,27 @@ pub struct DatasetConfig {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum CollectionsBackend {
     // Core backends
-    Vec,        // Standard library vectors
-    Huge,       // Paged arrays
-    Arrow,      // Apache Arrow
-    Std,        // Standard library arrays
+    Vec,   // Standard library vectors
+    Huge,  // Paged arrays
+    Arrow, // Apache Arrow
+    Std,   // Standard library arrays
 
     // Extension backends
-    Ndarray,    // ndarray integration
-    Gpu,        // GPU acceleration
+    Ndarray,     // ndarray integration
+    Gpu,         // GPU acceleration
     Distributed, // Distributed processing
     Compression, // Compression support
     Encryption,  // Encryption support
 
     // ML backends
-    Tensor,     // Tensor collections
-    Matrix,     // Matrix collections
-    Vector,     // Vector collections
+    Tensor, // Tensor collections
+    Matrix, // Matrix collections
+    Vector, // Vector collections
 
     // Composition backends
-    Hybrid,     // Hybrid backends
-    Layered,    // Layered collections
-    Adaptive,   // Adaptive collections
+    Hybrid,   // Hybrid backends
+    Layered,  // Layered collections
+    Adaptive, // Adaptive collections
 
     // Magic backends
     Auto,       // Auto-optimization
@@ -139,79 +137,79 @@ pub enum CollectionsBackend {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Feature {
     // Core features
-    Aggregation,    // Aggregation methods
-    Nullability,    // Null value support
-    Compression,    // Data compression
-    Encryption,     // Data encryption
+    Aggregation, // Aggregation methods
+    Nullability, // Null value support
+    Compression, // Data compression
+    Encryption,  // Data encryption
 
     // Performance features
-    Caching,        // Caching support
+    Caching,         // Caching support
     Parallelization, // Parallel processing
-    Optimization,   // Performance optimization
+    Optimization,    // Performance optimization
 
     // ML features
-    TensorOps,      // Tensor operations
-    MatrixOps,      // Matrix operations
-    VectorOps,      // Vector operations
+    TensorOps, // Tensor operations
+    MatrixOps, // Matrix operations
+    VectorOps, // Vector operations
 
     // Advanced features
-    AutoOptimize,   // Auto-optimization
-    AiPowered,      // AI-powered features
-    Predictive,     // Predictive features
+    AutoOptimize, // Auto-optimization
+    AiPowered,    // AI-powered features
+    Predictive,   // Predictive features
 }
 
 /// Extension enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Extension {
     // Core extensions
-    Aggregation,    // Aggregation methods
-    Nullability,    // Null value support
-    Compression,    // Data compression
-    Encryption,     // Data encryption
-    Paging,         // Paging support
+    Aggregation,      // Aggregation methods
+    Nullability,      // Null value support
+    Compression,      // Data compression
+    Encryption,       // Data encryption
+    Paging,           // Paging support
     MemoryEstimation, // Memory estimation
-    Queue,          // Queue support
-    Stack,          // Stack support
-    Metrics,        // Performance metrics
-    Random,         // Random generation and shuffling
-    Partitioning,   // Parallel partitioning support
+    Queue,            // Queue support
+    Stack,            // Stack support
+    Metrics,          // Performance metrics
+    Random,           // Random generation and shuffling
+    Partitioning,     // Parallel partitioning support
 
     // Performance extensions
-    Caching,        // Caching support
+    Caching,         // Caching support
     Parallelization, // Parallel processing
-    Optimization,   // Performance optimization
+    Optimization,    // Performance optimization
 
     // ML extensions
-    TensorOps,      // Tensor operations
-    MatrixOps,      // Matrix operations
-    VectorOps,      // Vector operations
+    TensorOps, // Tensor operations
+    MatrixOps, // Matrix operations
+    VectorOps, // Vector operations
 
     // Advanced extensions
-    AutoOptimize,   // Auto-optimization
-    AiPowered,      // AI-powered features
-    Predictive,     // Predictive features
+    AutoOptimize, // Auto-optimization
+    AiPowered,    // AI-powered features
+    Predictive,   // Predictive features
 }
 
 /// Dataset type enumeration
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DatasetType {
     // Standard datasets
-    Tabular,        // Tabular data
-    TimeSeries,     // Time series data
-    Graph,          // Graph data
-    Text,           // Text data
+    Tabular,    // Tabular data
+    TimeSeries, // Time series data
+    Graph,      // Graph data
+    Text,       // Text data
 
     // ML datasets
-    Image,          // Image data
-    Audio,          // Audio data
-    Video,          // Video data
-    Sensor,         // Sensor data
+    Image,  // Image data
+    Audio,  // Audio data
+    Video,  // Video data
+    Sensor, // Sensor data
 
     // Specialized datasets
-    Financial,      // Financial data
-    Scientific,     // Scientific data
-    Geospatial,     // Geospatial data
-    Social,         // Social media data
+    Financial,  // Financial data
+    Scientific, // Scientific data
+    Geospatial, // Geospatial data
+    Social,     // Social media data
 }
 
 /// Type constraint for element types
@@ -228,8 +226,7 @@ pub enum TypeConstraint {
 }
 
 /// Backend-specific settings
-#[derive(Debug, Clone, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct BackendSettings {
     /// Page size for paged backends
     pub page_size: Option<usize>,
@@ -275,8 +272,7 @@ pub struct MemoryConfig {
 }
 
 /// Extension settings
-#[derive(Debug, Clone, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct ExtensionSettings {
     /// Extension-specific configuration
     pub config: std::collections::HashMap<String, String>,
@@ -317,8 +313,7 @@ pub struct VectorConfig {
 }
 
 /// ML optimizations
-#[derive(Debug, Clone, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct MLOptimizations {
     /// Enable GPU acceleration
     pub gpu_acceleration: bool,
@@ -331,8 +326,7 @@ pub struct MLOptimizations {
 }
 
 /// Dataset settings
-#[derive(Debug, Clone, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct DatasetSettings {
     /// Dataset-specific configuration
     pub config: std::collections::HashMap<String, String>,
@@ -352,19 +346,19 @@ pub struct DataSourceConfig {
 /// Optimization level
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OptimizationLevel {
-    None,       // No optimization
-    Basic,      // Basic optimization
-    Advanced,   // Advanced optimization
-    Maximum,    // Maximum optimization
+    None,     // No optimization
+    Basic,    // Basic optimization
+    Advanced, // Advanced optimization
+    Maximum,  // Maximum optimization
 }
 
 /// Eviction policy
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EvictionPolicy {
-    LRU,        // Least Recently Used
-    LFU,        // Least Frequently Used
-    FIFO,       // First In First Out
-    Random,     // Random eviction
+    LRU,    // Least Recently Used
+    LFU,    // Least Frequently Used
+    FIFO,   // First In First Out
+    Random, // Random eviction
 }
 
 /// Parallel strategy
@@ -378,25 +372,25 @@ pub enum ParallelStrategy {
 /// Allocation strategy
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AllocationStrategy {
-    Linear,     // Linear allocation
-    Pool,       // Pool allocation
-    Custom,     // Custom allocation
+    Linear, // Linear allocation
+    Pool,   // Pool allocation
+    Custom, // Custom allocation
 }
 
 /// Tensor layout
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TensorLayout {
-    RowMajor,   // Row-major layout
-    ColMajor,   // Column-major layout
-    Strided,    // Strided layout
+    RowMajor, // Row-major layout
+    ColMajor, // Column-major layout
+    Strided,  // Strided layout
 }
 
 /// Matrix layout
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MatrixLayout {
-    RowMajor,   // Row-major layout
-    ColMajor,   // Column-major layout
-    Sparse,     // Sparse layout
+    RowMajor, // Row-major layout
+    ColMajor, // Column-major layout
+    Sparse,   // Sparse layout
 }
 
 /// Vector layout
@@ -410,34 +404,34 @@ pub enum VectorLayout {
 /// Tensor device
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TensorDevice {
-    CPU,        // CPU device
-    GPU,        // GPU device
-    TPU,        // TPU device
+    CPU, // CPU device
+    GPU, // GPU device
+    TPU, // TPU device
 }
 
 /// Matrix device
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MatrixDevice {
-    CPU,        // CPU device
-    GPU,        // GPU device
-    TPU,        // TPU device
+    CPU, // CPU device
+    GPU, // GPU device
+    TPU, // TPU device
 }
 
 /// Vector device
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VectorDevice {
-    CPU,        // CPU device
-    GPU,        // GPU device
-    TPU,        // TPU device
+    CPU, // CPU device
+    GPU, // GPU device
+    TPU, // TPU device
 }
 
 /// Data source type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DataSourceType {
-    File,       // File system
-    Database,   // Database
-    API,        // API endpoint
-    Stream,     // Data stream
+    File,     // File system
+    Database, // Database
+    API,      // API endpoint
+    Stream,   // Data stream
 }
 
 /// Collections configuration builder
@@ -545,7 +539,6 @@ impl Default for BackendConfig {
     }
 }
 
-
 impl Default for PerformanceConfig {
     fn default() -> Self {
         Self {
@@ -587,9 +580,6 @@ impl Default for MemoryConfig {
     }
 }
 
-
-
-
 impl Default for TensorConfig {
     fn default() -> Self {
         Self {
@@ -621,7 +611,6 @@ impl Default for VectorConfig {
     }
 }
 
-
 impl Default for DatasetConfig {
     fn default() -> Self {
         Self {
@@ -631,7 +620,6 @@ impl Default for DatasetConfig {
         }
     }
 }
-
 
 impl Default for DataSourceConfig {
     fn default() -> Self {

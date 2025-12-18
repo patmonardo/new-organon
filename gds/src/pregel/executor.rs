@@ -4,8 +4,8 @@
 //! Bulk Synchronous Parallel (BSP) loop.
 
 use crate::collections::HugeAtomicBitSet;
-use crate::concurrency::Concurrency;
 use crate::concurrency::install_with_concurrency;
+use crate::concurrency::Concurrency;
 use crate::core::utils::progress::tasks::LeafTask;
 use crate::pregel::{
     projection::PropertyProjection, ComputeFn, DefaultValue, ForkJoinComputer, InitFn,

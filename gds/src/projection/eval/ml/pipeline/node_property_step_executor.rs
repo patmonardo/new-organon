@@ -9,7 +9,9 @@ use std::error::Error as StdError;
 use std::sync::Arc;
 
 use crate::projection::eval::ml::pipeline::ExecutableNodePropertyStep;
+use crate::projection::{NodeLabel, RelationshipType};
 use crate::types::graph_store::DefaultGraphStore;
+use crate::types::graph_store::GraphStore;
 
 /// Executor for running sequences of node property steps in ML pipelines.
 ///
@@ -26,7 +28,6 @@ use crate::types::graph_store::DefaultGraphStore;
 /// registry pattern in ExecutableNodePropertyStep.
 #[derive(Debug)]
 pub struct NodePropertyStepExecutor {
-    graph_store: Arc<DefaultGraphStore>,
     node_labels: Vec<String>,
     relationship_types: Vec<String>,
     available_relationship_types_for_node_properties: HashSet<String>,
@@ -38,20 +39,17 @@ impl NodePropertyStepExecutor {
     ///
     /// # Arguments
     ///
-    /// * `graph_store` - The graph store to execute steps on
     /// * `node_labels` - Node labels to use for pipeline execution
     /// * `relationship_types` - Relationship types to use for pipeline execution
     /// * `available_relationship_types_for_node_properties` - Relationship types available for feature input
     /// * `concurrency` - Number of threads to use for parallel execution
     pub fn new(
-        graph_store: Arc<DefaultGraphStore>,
         node_labels: Vec<String>,
         relationship_types: Vec<String>,
         available_relationship_types_for_node_properties: HashSet<String>,
         concurrency: usize,
     ) -> Self {
         Self {
-            graph_store,
             node_labels,
             relationship_types,
             available_relationship_types_for_node_properties,
@@ -70,16 +68,17 @@ impl NodePropertyStepExecutor {
     /// Returns an error if any context configuration references non-existent labels or types.
     pub fn validate_node_property_steps_context_configs(
         &self,
+        graph_store: &DefaultGraphStore,
         steps: &[Box<dyn ExecutableNodePropertyStep>],
     ) -> Result<(), NodePropertyStepExecutorError> {
         for step in steps {
             // Validate context node labels
             let context_node_labels = step.context_node_labels();
-            self.validate_node_labels(&context_node_labels, &step.proc_name())?;
+            self.validate_node_labels(graph_store, &context_node_labels, &step.proc_name())?;
 
             // Validate context relationship types
             let context_rel_types = step.context_relationship_types();
-            self.validate_relationship_types(&context_rel_types, &step.proc_name())?;
+            self.validate_relationship_types(graph_store, &context_rel_types, &step.proc_name())?;
         }
 
         Ok(())
@@ -100,14 +99,17 @@ impl NodePropertyStepExecutor {
     /// Returns an error if any step execution fails.
     pub fn execute_node_property_steps(
         &mut self,
+        graph_store: &mut Arc<DefaultGraphStore>,
         steps: &[Box<dyn ExecutableNodePropertyStep>],
     ) -> Result<(), NodePropertyStepExecutorError> {
+        let graph_store = Arc::get_mut(graph_store)
+            .ok_or_else(|| NodePropertyStepExecutorError::GraphStoreLocked)?;
+
         for (i, step) in steps.iter().enumerate() {
             // Execute the step with pipeline's node labels and relationship types
             // The step will use its context config to determine actual feature inputs
             step.execute(
-                Arc::get_mut(&mut self.graph_store)
-                    .ok_or_else(|| NodePropertyStepExecutorError::GraphStoreLocked)?,
+                graph_store,
                 &self.node_labels,
                 &self.relationship_types,
                 self.concurrency,
@@ -128,25 +130,16 @@ impl NodePropertyStepExecutor {
     /// the final pipeline outputs.
     pub fn cleanup_intermediate_properties(
         &mut self,
+        graph_store: &mut Arc<DefaultGraphStore>,
         steps: &[Box<dyn ExecutableNodePropertyStep>],
     ) -> Result<(), NodePropertyStepExecutorError> {
-        let graph_store = Arc::get_mut(&mut self.graph_store)
+        let graph_store = Arc::get_mut(graph_store)
             .ok_or_else(|| NodePropertyStepExecutorError::GraphStoreLocked)?;
 
         for step in steps {
             let property_name = step.mutate_node_property();
-            // Remove the property from all node labels
-            // Note: Java's removeNodeProperty takes just the property key;
-            // Rust may need to iterate over node labels
-            for node_label in &self.node_labels {
-                // Assuming graph_store has a method to remove node properties
-                // This is a placeholder for the actual API
-                let _ = graph_store; // Use to prevent unused warning
-                let _ = node_label;
-                let _ = property_name;
-                // TODO: Call actual remove_node_property method when available
-                // graph_store.remove_node_property(node_label, property_name)?;
-            }
+            // DefaultGraphStore removes the property across label-indexes.
+            let _ = graph_store.remove_node_property(property_name);
         }
 
         Ok(())
@@ -156,38 +149,36 @@ impl NodePropertyStepExecutor {
 
     fn validate_node_labels(
         &self,
+        graph_store: &DefaultGraphStore,
         labels: &[String],
         step_name: &str,
     ) -> Result<(), NodePropertyStepExecutorError> {
         for label in labels {
-            // TODO: Need graph store API to check if label exists
-            // Placeholder for now
-            let _ = (label, step_name);
-            // if !self.graph_store.has_node_label(label) {
-            //     return Err(NodePropertyStepExecutorError::InvalidNodeLabel {
-            //         label: label.clone(),
-            //         step_name: step_name.to_string(),
-            //     });
-            // }
+            let node_label = NodeLabel::of(label.clone());
+            if !graph_store.has_node_label(&node_label) {
+                return Err(NodePropertyStepExecutorError::InvalidNodeLabel {
+                    label: label.clone(),
+                    step_name: step_name.to_string(),
+                });
+            }
         }
         Ok(())
     }
 
     fn validate_relationship_types(
         &self,
+        graph_store: &DefaultGraphStore,
         types: &[String],
         step_name: &str,
     ) -> Result<(), NodePropertyStepExecutorError> {
         for rel_type in types {
-            // TODO: Need graph store API to check if type exists
-            // Placeholder for now
-            let _ = (rel_type, step_name);
-            // if !self.graph_store.has_relationship_type(rel_type) {
-            //     return Err(NodePropertyStepExecutorError::InvalidRelationshipType {
-            //         rel_type: rel_type.clone(),
-            //         step_name: step_name.to_string(),
-            //     });
-            // }
+            let relationship_type = RelationshipType::of(rel_type.clone());
+            if !graph_store.has_relationship_type(&relationship_type) {
+                return Err(NodePropertyStepExecutorError::InvalidRelationshipType {
+                    rel_type: rel_type.clone(),
+                    step_name: step_name.to_string(),
+                });
+            }
         }
         Ok(())
     }
@@ -300,18 +291,12 @@ mod tests {
 
     #[test]
     fn test_executor_creation() {
-        let graph_store = create_test_graph_store();
         let node_labels = vec!["Node".to_string()];
         let relationship_types = vec!["REL".to_string()];
         let available_rel_types = HashSet::new();
 
-        let executor = NodePropertyStepExecutor::new(
-            graph_store,
-            node_labels,
-            relationship_types,
-            available_rel_types,
-            4,
-        );
+        let executor =
+            NodePropertyStepExecutor::new(node_labels, relationship_types, available_rel_types, 4);
 
         assert_eq!(executor.concurrency, 4);
     }
@@ -324,7 +309,6 @@ mod tests {
         let available_rel_types = HashSet::new();
 
         let executor = NodePropertyStepExecutor::new(
-            graph_store,
             node_labels.clone(),
             relationship_types,
             available_rel_types,
@@ -341,7 +325,7 @@ mod tests {
         ));
 
         let steps: Vec<Box<dyn ExecutableNodePropertyStep>> = vec![step];
-        let result = executor.validate_node_property_steps_context_configs(&steps);
+        let result = executor.validate_node_property_steps_context_configs(&*graph_store, &steps);
 
         assert!(
             result.is_ok(),
@@ -356,28 +340,30 @@ mod tests {
         let relationship_types = vec!["REL".to_string()];
         let available_rel_types = HashSet::new();
 
-        let executor = NodePropertyStepExecutor::new(
-            graph_store,
-            node_labels,
-            relationship_types,
-            available_rel_types,
-            4,
-        );
+        let executor =
+            NodePropertyStepExecutor::new(node_labels, relationship_types, available_rel_types, 4);
 
-        // Create step with configuration
+        // Create step with a context label that does not exist in the graph
         let mut config = HashMap::new();
         config.insert("maxIterations".to_string(), serde_json::json!(20));
 
-        let step = Box::new(NodePropertyStep::new(
+        let step = Box::new(NodePropertyStep::with_context(
             "gds.pagerank.mutate".to_string(),
             config,
+            vec!["__NO_SUCH_LABEL__".to_string()],
+            vec![],
         ));
 
         let steps: Vec<Box<dyn ExecutableNodePropertyStep>> = vec![step];
-        let result = executor.validate_node_property_steps_context_configs(&steps);
+        let result = executor.validate_node_property_steps_context_configs(&*graph_store, &steps);
 
-        // Note: Validation is currently a placeholder, so this will pass
-        assert!(result.is_ok(), "Validation placeholder always succeeds");
+        assert!(
+            matches!(
+                result,
+                Err(NodePropertyStepExecutorError::InvalidNodeLabel { .. })
+            ),
+            "Expected InvalidNodeLabel error, got: {result:?}"
+        );
     }
 
     #[test]
@@ -388,52 +374,53 @@ mod tests {
         let available_rel_types = HashSet::new();
 
         let executor = NodePropertyStepExecutor::new(
-            graph_store,
             node_labels.clone(),
             relationship_types,
             available_rel_types,
             4,
         );
 
-        // Create step with configuration
+        // Create step with a context relationship type that does not exist in the graph
         let mut config = HashMap::new();
         config.insert("maxIterations".to_string(), serde_json::json!(20));
 
-        let step = Box::new(NodePropertyStep::new(
+        let step = Box::new(NodePropertyStep::with_context(
             "gds.pagerank.mutate".to_string(),
             config,
+            vec![],
+            vec!["__NO_SUCH_REL_TYPE__".to_string()],
         ));
 
         let steps: Vec<Box<dyn ExecutableNodePropertyStep>> = vec![step];
-        let result = executor.validate_node_property_steps_context_configs(&steps);
+        let result = executor.validate_node_property_steps_context_configs(&*graph_store, &steps);
 
-        // Note: Validation is currently a placeholder, so this will pass
-        assert!(result.is_ok(), "Validation placeholder always succeeds");
+        assert!(
+            matches!(
+                result,
+                Err(NodePropertyStepExecutorError::InvalidRelationshipType { .. })
+            ),
+            "Expected InvalidRelationshipType error, got: {result:?}"
+        );
     }
 
     #[test]
     fn test_cleanup_intermediate_properties() {
-        let graph_store = create_test_graph_store();
+        let mut graph_store = create_test_graph_store();
         let node_labels = vec!["Node".to_string()];
         let relationship_types = vec!["REL".to_string()];
         let available_rel_types = HashSet::new();
 
-        let mut executor = NodePropertyStepExecutor::new(
-            graph_store,
-            node_labels,
-            relationship_types,
-            available_rel_types,
-            4,
-        );
+        let mut executor =
+            NodePropertyStepExecutor::new(node_labels, relationship_types, available_rel_types, 4);
 
         let steps: Vec<Box<dyn ExecutableNodePropertyStep>> = vec![
             create_test_step("gds.pagerank.mutate"),
             create_test_step("gds.louvain.mutate"),
         ];
 
-        let result = executor.cleanup_intermediate_properties(&steps);
+        let result = executor.cleanup_intermediate_properties(&mut graph_store, &steps);
 
-        // Should succeed (actual removal is TODO in implementation)
+        // Cleanup is best-effort; it should never fail the pipeline for missing properties.
         assert!(result.is_ok(), "Cleanup should succeed");
     }
 

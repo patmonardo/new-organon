@@ -147,9 +147,12 @@ impl FormStoreSurface for crate::types::graph_store::DefaultGraphStore {
             .get_graph_with_types(&types)
             .map_err(|e| GraphStoreError::InvalidOperation(e.to_string()))?;
 
-        let mut out: Vec<(MappedNodeId, MappedNodeId)> = Vec::with_capacity(graph.relationship_count());
+        let mut out: Vec<(MappedNodeId, MappedNodeId)> =
+            Vec::with_capacity(graph.relationship_count());
         for source in 0..graph.node_count() {
-            for cursor in graph.stream_relationships(source as MappedNodeId, graph.default_property_value()) {
+            for cursor in
+                graph.stream_relationships(source as MappedNodeId, graph.default_property_value())
+            {
                 out.push((cursor.source_id(), cursor.target_id()));
             }
         }
@@ -175,7 +178,10 @@ impl FormStoreSurface for crate::types::graph_store::DefaultGraphStore {
             )));
         }
 
-        let property_values = Arc::new(DefaultRelationshipPropertyValues::with_default(values, element_count));
+        let property_values = Arc::new(DefaultRelationshipPropertyValues::with_default(
+            values,
+            element_count,
+        ));
         self.add_relationship_property(relationship_type, key, property_values)
     }
 }

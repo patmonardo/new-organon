@@ -35,7 +35,11 @@ impl SyncQueueMessageIterator {
     }
 
     /// Initialize the iterator for a specific node's messages
-    fn init(&mut self, queues: std::sync::Arc<crate::collections::HugeObjectArray<Vec<f64>>>, node_id: usize) {
+    fn init(
+        &mut self,
+        queues: std::sync::Arc<crate::collections::HugeObjectArray<Vec<f64>>>,
+        node_id: usize,
+    ) {
         self.queues = Some(queues);
         self.node_id = node_id;
         self.index = 0;
@@ -139,9 +143,7 @@ impl Messenger<SyncQueueMessageIterator> for SyncQueueMessenger {
 
         let mut new_write = match std::sync::Arc::try_unwrap(old_read) {
             Ok(read_queues) => read_queues,
-            Err(_) => panic!(
-                "SyncQueueMessenger: read queues still referenced at init_iteration"
-            ),
+            Err(_) => panic!("SyncQueueMessenger: read queues still referenced at init_iteration"),
         };
 
         // Clear the new write queues (which were the old read queues)

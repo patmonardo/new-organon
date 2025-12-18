@@ -4,14 +4,14 @@
 //!
 //! This module defines the Yen's algorithm specification, configuration, and result types.
 
+use super::computation::YensComputationRuntime;
+use super::storage::YensStorageRuntime;
 use crate::define_algorithm_spec;
 use crate::projection::codegen::config::validation::ConfigError;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
-use super::storage::YensStorageRuntime;
-use super::computation::YensComputationRuntime;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -83,19 +83,19 @@ impl YensConfig {
         if self.concurrency == 0 {
             return Err(ConfigError::FieldValidation {
                 field: "concurrency".to_string(),
-                message: "must be > 0".to_string()
+                message: "must be > 0".to_string(),
             });
         }
         if self.k == 0 {
             return Err(ConfigError::FieldValidation {
                 field: "k".to_string(),
-                message: "must be > 0".to_string()
+                message: "must be > 0".to_string(),
             });
         }
         if self.source_node == self.target_node {
             return Err(ConfigError::FieldValidation {
                 field: "source_node".to_string(),
-                message: "source and target nodes must be different".to_string()
+                message: "source and target nodes must be different".to_string(),
             });
         }
 
@@ -221,17 +221,15 @@ mod tests {
     #[test]
     fn test_yens_result() {
         let result = YensResult {
-            paths: vec![
-                YensPathResult {
-                    index: 0,
-                    source_node: 0,
-                    target_node: 3,
-                    node_ids: vec![0, 1, 3],
-                    relationship_ids: vec![10, 13],
-                    costs: vec![0.0, 1.0, 2.0],
-                    total_cost: 2.0,
-                }
-            ],
+            paths: vec![YensPathResult {
+                index: 0,
+                source_node: 0,
+                target_node: 3,
+                node_ids: vec![0, 1, 3],
+                relationship_ids: vec![10, 13],
+                costs: vec![0.0, 1.0, 2.0],
+                total_cost: 2.0,
+            }],
             path_count: 1,
             computation_time_ms: 5,
         };
@@ -317,7 +315,9 @@ mod tests {
 
         let validation_config = spec.validation_config(&ExecutionContext::new("test_user"));
         // TODO: Implement actual validation logic
-        assert!(validation_config.validate_before_load(&valid_config).is_ok());
+        assert!(validation_config
+            .validate_before_load(&valid_config)
+            .is_ok());
     }
 
     #[test]

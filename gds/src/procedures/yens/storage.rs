@@ -5,15 +5,15 @@
 //! This module implements the "Gross pole" for Yen's algorithm - persistent data access
 //! and algorithm orchestration.
 
-use super::computation::YensComputationRuntime;
-use super::spec::{YensResult, YensPathResult};
-use super::mutable_path_result::MutablePathResult;
 use super::candidate_queue::CandidatePathsPriorityQueue;
-use crate::projection::eval::procedure::AlgorithmError;
-use crate::procedures::dijkstra::{DijkstraComputationRuntime, DijkstraStorageRuntime};
+use super::computation::YensComputationRuntime;
+use super::mutable_path_result::MutablePathResult;
+use super::spec::{YensPathResult, YensResult};
 use crate::procedures::dijkstra::targets::create_targets;
-use crate::types::graph::Graph;
+use crate::procedures::dijkstra::{DijkstraComputationRuntime, DijkstraStorageRuntime};
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
+use crate::types::graph::Graph;
 use std::collections::HashSet;
 
 /// Yen's Storage Runtime - handles persistent data access and algorithm orchestration
@@ -64,7 +64,12 @@ impl YensStorageRuntime {
         let start_time = std::time::Instant::now();
 
         // Initialize computation runtime
-        computation.initialize(self.source_node, self.target_node, self.k, self.track_relationships);
+        computation.initialize(
+            self.source_node,
+            self.target_node,
+            self.k,
+            self.track_relationships,
+        );
 
         // Find first shortest path using Dijkstra
         let first_path = self.find_first_path(graph, direction)?;
@@ -83,7 +88,8 @@ impl YensStorageRuntime {
         for i in 1..self.k {
             if let Some(prev_path) = k_shortest_paths.get(i - 1) {
                 // Generate candidate paths from previous path
-                let candidates = self.generate_candidates(prev_path, &k_shortest_paths, graph, direction)?;
+                let candidates =
+                    self.generate_candidates(prev_path, &k_shortest_paths, graph, direction)?;
 
                 for candidate in candidates {
                     candidate_queue.add_path(candidate);
@@ -146,12 +152,8 @@ impl YensStorageRuntime {
     ) -> Result<Option<MutablePathResult>, AlgorithmError> {
         let targets = create_targets(vec![target]);
 
-        let mut storage = DijkstraStorageRuntime::new(
-            source,
-            self.track_relationships,
-            self.concurrency,
-            false,
-        );
+        let mut storage =
+            DijkstraStorageRuntime::new(source, self.track_relationships, self.concurrency, false);
 
         if let Some(filter) = extra_filter {
             storage = storage.with_relationship_filter(filter);
@@ -230,9 +232,11 @@ impl YensStorageRuntime {
             let filter_removed_nodes = removed_nodes.clone();
             let filter_blocked = blocked_next_hops.clone();
 
-            let filter: Box<dyn Fn(NodeId, NodeId, NodeId) -> bool + Send + Sync> = Box::new(
-                move |source, target, _relationship_id| {
-                    if filter_removed_nodes.contains(&source) || filter_removed_nodes.contains(&target) {
+            let filter: Box<dyn Fn(NodeId, NodeId, NodeId) -> bool + Send + Sync> =
+                Box::new(move |source, target, _relationship_id| {
+                    if filter_removed_nodes.contains(&source)
+                        || filter_removed_nodes.contains(&target)
+                    {
                         return false;
                     }
 
@@ -241,10 +245,10 @@ impl YensStorageRuntime {
                     }
 
                     true
-                },
-            );
+                });
 
-            let spur_path = self.shortest_path(spur_node, self.target_node, graph, direction, Some(filter))?;
+            let spur_path =
+                self.shortest_path(spur_node, self.target_node, graph, direction, Some(filter))?;
             let Some(spur_path) = spur_path else {
                 continue;
             };
@@ -298,7 +302,9 @@ mod tests {
         let storage = YensStorageRuntime::new(0, 5, 3, true, 1);
         let mut computation = YensComputationRuntime::new(0, 5, 3, true, 1);
 
-        let result = storage.compute_yens(&mut computation, Some(graph.as_ref()), 0).unwrap();
+        let result = storage
+            .compute_yens(&mut computation, Some(graph.as_ref()), 0)
+            .unwrap();
 
         assert!(result.path_count <= 3);
 

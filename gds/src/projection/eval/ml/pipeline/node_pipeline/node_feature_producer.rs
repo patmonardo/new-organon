@@ -86,7 +86,6 @@ impl<C: NodePropertyPipelineBaseTrainConfig> NodeFeatureProducer<C> {
         let concurrency = 4; // TODO: Get from config
 
         let step_executor = NodePropertyStepExecutor::new(
-            graph_store.clone(),
             node_labels,
             relationship_types,
             available_relationship_types,
@@ -130,7 +129,7 @@ impl<C: NodePropertyPipelineBaseTrainConfig> NodeFeatureProducer<C> {
     ) -> Result<Features, NodeFeatureProducerError> {
         // Execute node property steps to compute intermediate properties
         self.step_executor
-            .execute_node_property_steps(pipeline.node_property_steps())
+            .execute_node_property_steps(&mut self.graph_store, pipeline.node_property_steps())
             .map_err(NodeFeatureProducerError::StepExecutionFailed)?;
 
         // Get target node labels
@@ -156,7 +155,7 @@ impl<C: NodePropertyPipelineBaseTrainConfig> NodeFeatureProducer<C> {
 
         // Cleanup intermediate properties (always executed, like finally block)
         self.step_executor
-            .cleanup_intermediate_properties(pipeline.node_property_steps())
+            .cleanup_intermediate_properties(&mut self.graph_store, pipeline.node_property_steps())
             .map_err(NodeFeatureProducerError::CleanupFailed)?;
 
         Ok(features)
@@ -175,7 +174,7 @@ impl<C: NodePropertyPipelineBaseTrainConfig> NodeFeatureProducer<C> {
         steps: &[Box<dyn ExecutableNodePropertyStep>],
     ) -> Result<(), NodePropertyStepExecutorError> {
         self.step_executor
-            .validate_node_property_steps_context_configs(steps)
+            .validate_node_property_steps_context_configs(&*self.graph_store, steps)
     }
 }
 
@@ -245,13 +244,7 @@ impl NodeFeatureProducer<PlaceholderNodePropertyConfig> {
             Arc::new(DefaultGraphStore::random(&config).expect("Failed to generate random graph"));
         let placeholder_config = PlaceholderNodePropertyConfig;
         let node_labels = placeholder_config.node_labels();
-        let step_executor = NodePropertyStepExecutor::new(
-            graph_store.clone(),
-            node_labels,
-            vec![],
-            HashSet::new(),
-            1,
-        );
+        let step_executor = NodePropertyStepExecutor::new(node_labels, vec![], HashSet::new(), 1);
 
         Self::new(step_executor, graph_store, placeholder_config)
     }

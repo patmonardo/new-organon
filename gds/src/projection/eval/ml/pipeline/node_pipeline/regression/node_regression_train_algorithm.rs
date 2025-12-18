@@ -144,7 +144,8 @@ mod tests {
             seed: Some(42),
             ..RandomGraphConfig::default()
         };
-        let graph_store = Arc::new(DefaultGraphStore::random(&random_config).expect("random graph"));
+        let graph_store =
+            Arc::new(DefaultGraphStore::random(&random_config).expect("random graph"));
 
         let _algorithm = NodeRegressionTrainAlgorithm::new(
             std::marker::PhantomData, // pipeline_trainer
@@ -167,7 +168,8 @@ mod tests {
             seed: Some(42),
             ..RandomGraphConfig::default()
         };
-        let graph_store = Arc::new(DefaultGraphStore::random(&random_config).expect("random graph"));
+        let graph_store =
+            Arc::new(DefaultGraphStore::random(&random_config).expect("random graph"));
 
         let algorithm = NodeRegressionTrainAlgorithm::new(
             std::marker::PhantomData,

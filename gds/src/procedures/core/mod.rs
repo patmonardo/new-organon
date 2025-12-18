@@ -191,10 +191,10 @@
 //!     .build()?;
 //! ```
 
+pub mod memory_estimation;
 pub mod prelude;
+pub mod progress_tracking;
 pub mod result;
+pub mod result_builders;
 pub mod scaling;
 pub mod statistics;
-pub mod memory_estimation;
-pub mod progress_tracking;
-pub mod result_builders;

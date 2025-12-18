@@ -4,14 +4,14 @@
 //!
 //! This module contains integration tests for Yen's algorithm with the executor runtime.
 
+use super::computation::YensComputationRuntime;
 use super::spec::{YensConfig, YensResult};
 use super::storage::YensStorageRuntime;
-use super::computation::YensComputationRuntime;
-use crate::projection::eval::procedure::{ProcedureExecutor, ExecutionMode, ExecutionContext};
 use crate::projection::eval::procedure::AlgorithmSpec;
-use serde_json::json;
+use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor};
 use crate::types::prelude::DefaultGraphStore;
 use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
+use serde_json::json;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -69,8 +69,8 @@ mod tests {
         assert_eq!(spec.name(), "yens");
         assert_eq!(spec.graph_name(), "test_graph");
 
-    // Test that the algorithm can be created
-    assert_eq!(spec.graph_name(), "test_graph");
+        // Test that the algorithm can be created
+        assert_eq!(spec.graph_name(), "test_graph");
     }
 
     #[test]

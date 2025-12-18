@@ -9,10 +9,10 @@ macro_rules! generate_primitive_values {
         use $crate::values::traits::*;
 
         // Import the other macros
-        use $crate::gds_value_scalar;
-        use $crate::gds_value_binary;
-        use $crate::gds_value_array_direct;
         use $crate::gds_value_array_convert;
+        use $crate::gds_value_array_direct;
+        use $crate::gds_value_binary;
+        use $crate::gds_value_scalar;
 
         // Scalar integral value
         gds_value_scalar!(DefaultLongValue, i64, Long, IntegralValue, long_value);

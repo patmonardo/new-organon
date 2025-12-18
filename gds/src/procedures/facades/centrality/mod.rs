@@ -8,25 +8,25 @@
 //! - Harmonic: Reciprocal distances
 //! - HITS: Hub and authority scores
 
-pub mod degree_centrality;
-pub mod pagerank;
+pub mod articulation_points;
 pub mod betweenness;
 pub mod bridges;
+pub mod celf;
 pub mod closeness;
+pub mod degree_centrality;
 pub mod harmonic;
 pub mod hits_pregel;
-pub mod articulation_points;
-pub mod celf;
+pub mod pagerank;
 
 // Re-export main facades
-pub use degree_centrality::DegreeCentralityFacade;
-pub use pagerank::PageRankBuilder;
+pub use articulation_points::{
+    ArticulationPointRow, ArticulationPointsFacade, ArticulationPointsStats,
+};
 pub use betweenness::BetweennessCentralityFacade;
 pub use bridges::{BridgeRow, BridgesFacade, BridgesStats};
-pub use hits_pregel::{HitsPregelBuilder, HitsPregelRow, HitsPregelStats};
-pub use closeness::ClosenessCentralityFacade;
-pub use harmonic::HarmonicCentralityFacade;
-pub use articulation_points::{ArticulationPointRow, ArticulationPointsFacade, ArticulationPointsStats};
 pub use celf::{CELFFacade, CELFRow, CELFStats};
-
-
+pub use closeness::ClosenessCentralityFacade;
+pub use degree_centrality::DegreeCentralityFacade;
+pub use harmonic::HarmonicCentralityFacade;
+pub use hits_pregel::{HitsPregelBuilder, HitsPregelRow, HitsPregelStats};
+pub use pagerank::PageRankBuilder;

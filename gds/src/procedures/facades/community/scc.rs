@@ -7,12 +7,12 @@
 //! Parameters:
 //! - `concurrency`: accepted for Java GDS alignment; currently unused.
 
+use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::procedures::facades::builder_base::ConfigValidator;
 use crate::procedures::facades::traits::Result;
 use crate::procedures::scc::{SccComputationRuntime, SccResult, SccStorageRuntime};
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use crate::concurrency::TerminationFlag;
 use std::sync::Arc;
 
 /// Per-node SCC assignment row.

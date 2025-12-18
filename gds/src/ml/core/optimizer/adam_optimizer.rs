@@ -106,7 +106,10 @@ impl Updater for AdamOptimizer {
             // theta_0 = theta_0 - (alpha * m_cap) / (sqrt(v_cap) + epsilon)  // updates the parameters
             let update = m_cap.scalar_multiply(-self.learning_rate);
             let v_cap_sqrt = v_cap.map(f64::sqrt);
-            let epsilon_tensor = v_cap_sqrt.as_ref().ones_like().scalar_multiply(self.epsilon);
+            let epsilon_tensor = v_cap_sqrt
+                .as_ref()
+                .ones_like()
+                .scalar_multiply(self.epsilon);
             let v_cap_sqrt_with_epsilon = v_cap_sqrt.add(epsilon_tensor.as_ref());
             let v_cap_inv = v_cap_sqrt_with_epsilon.map(|v| 1.0 / v);
             let final_update = update.elementwise_product(v_cap_inv.as_ref());

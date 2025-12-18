@@ -29,18 +29,15 @@
 //! See `doc/adr0020_pagerank_path_knowledge.md` for philosophy.
 
 pub mod computation;
+pub mod degree_functions;
+pub mod memory_estimation;
+pub mod pregel_computation;
 pub mod spec;
 pub mod storage;
-pub mod pregel_computation;
-pub mod memory_estimation;
-pub mod degree_functions;
 
-pub use spec::{PageRankAlgorithmSpec, PageRankComputationResult};
-pub use pregel_computation::{PAGE_RANK, PageRankPregelRunResult, run_pagerank_pregel};
-pub use memory_estimation::{PageRankMemoryEstimation, estimate_pagerank_memory};
 pub use degree_functions::{
-    DegreeFunction,
-    pagerank_degree_function,
-    eigenvector_degree_function,
-    average_degree,
+    average_degree, eigenvector_degree_function, pagerank_degree_function, DegreeFunction,
 };
+pub use memory_estimation::{estimate_pagerank_memory, PageRankMemoryEstimation};
+pub use pregel_computation::{run_pagerank_pregel, PageRankPregelRunResult, PAGE_RANK};
+pub use spec::{PageRankAlgorithmSpec, PageRankComputationResult};

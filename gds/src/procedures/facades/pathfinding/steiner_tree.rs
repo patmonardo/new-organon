@@ -111,10 +111,7 @@ impl SteinerTreeAlgorithm {
     }
 
     /// Run on adjacency list
-    pub fn run_on_adjacency_list(
-        self,
-        adjacency_list: &[Vec<(usize, f64)>],
-    ) -> SteinerTreeResult {
+    pub fn run_on_adjacency_list(self, adjacency_list: &[Vec<(usize, f64)>]) -> SteinerTreeResult {
         let node_count = adjacency_list.len();
         let get_neighbors = |node: usize| adjacency_list[node].clone();
         self.run(node_count, get_neighbors)
@@ -158,11 +155,7 @@ mod tests {
     #[test]
     fn test_steiner_tree_simple() {
         // Path graph: 0 - 1 - 2 - 3
-        let edges = vec![
-            (0, 1, 1.0),
-            (1, 2, 1.0),
-            (2, 3, 1.0),
-        ];
+        let edges = vec![(0, 1, 1.0), (1, 2, 1.0), (2, 3, 1.0)];
 
         let result = SteinerTreeBuilder::new()
             .source_node(0)

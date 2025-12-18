@@ -77,10 +77,7 @@ mod tests {
 
     #[test]
     fn test_betweenness_complete_graph() {
-        let graph = build_graph(
-            vec![(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)],
-            4,
-        );
+        let graph = build_graph(vec![(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)], 4);
         let mut runtime = BetweennessCentralityComputationRuntime::new(4);
         let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
         let result = runtime.compute(4, 2.0, &get_neighbors);
@@ -129,13 +126,18 @@ mod tests {
         let result = runtime.compute(5, 2.0, &get_neighbors);
 
         // Node 0 connects the two triangles
-        assert!(result.centralities[0] > 0.0,
-                "Node 0 should have high centrality (bridge)");
+        assert!(
+            result.centralities[0] > 0.0,
+            "Node 0 should have high centrality (bridge)"
+        );
 
         // All nodes should have non-negative centrality
         for i in 0..5 {
-            assert!(result.centralities[i] >= 0.0,
-                    "Node {}: centrality should be non-negative", i);
+            assert!(
+                result.centralities[i] >= 0.0,
+                "Node {}: centrality should be non-negative",
+                i
+            );
         }
     }
 }

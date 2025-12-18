@@ -7,9 +7,9 @@
 //!
 //! Lower conductance indicates better community separation.
 
+pub mod computation;
 pub mod spec;
 pub mod storage;
-pub mod computation;
 
 #[cfg(test)]
 mod integration_tests;

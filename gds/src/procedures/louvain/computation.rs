@@ -1,7 +1,6 @@
 use super::spec::LouvainResult;
 
-pub struct LouvainComputationRuntime {
-}
+pub struct LouvainComputationRuntime {}
 
 impl LouvainComputationRuntime {
     pub fn new() -> Self {

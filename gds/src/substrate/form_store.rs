@@ -58,7 +58,10 @@ impl InMemoryFormStore {
         self
     }
 
-    pub fn with_inverse_indexed(mut self, rel_types: impl IntoIterator<Item = RelationshipType>) -> Self {
+    pub fn with_inverse_indexed(
+        mut self,
+        rel_types: impl IntoIterator<Item = RelationshipType>,
+    ) -> Self {
         self.inverse_indexed = rel_types.into_iter().collect();
         self
     }
@@ -71,29 +74,16 @@ impl InMemoryFormStore {
     ) -> GraphStoreResult<()> {
         let mut out: Vec<(MappedNodeId, MappedNodeId)> = Vec::new();
         for (src_orig, dst_orig) in edges {
-            let src = *self
-                .mapped_by_original
-                .get(&src_orig)
-                .ok_or_else(|| {
-                    GraphStoreError::InvalidOperation(
-                        "edge source original id not found".to_string(),
-                    )
-                })?;
-            let dst = *self
-                .mapped_by_original
-                .get(&dst_orig)
-                .ok_or_else(|| {
-                    GraphStoreError::InvalidOperation(
-                        "edge target original id not found".to_string(),
-                    )
-                })?;
+            let src = *self.mapped_by_original.get(&src_orig).ok_or_else(|| {
+                GraphStoreError::InvalidOperation("edge source original id not found".to_string())
+            })?;
+            let dst = *self.mapped_by_original.get(&dst_orig).ok_or_else(|| {
+                GraphStoreError::InvalidOperation("edge target original id not found".to_string())
+            })?;
             out.push((src, dst));
         }
 
-        self.edges_by_type
-            .entry(rel_type)
-            .or_default()
-            .extend(out);
+        self.edges_by_type.entry(rel_type).or_default().extend(out);
         Ok(())
     }
 
@@ -138,9 +128,12 @@ impl FormStoreSurface for InMemoryFormStore {
             ));
         }
 
-        let mut seen: HashSet<OriginalNodeId> = HashSet::with_capacity(selected_original_node_ids.len());
-        let mut new_original_by_mapped: Vec<OriginalNodeId> = Vec::with_capacity(selected_original_node_ids.len());
-        let mut old_mapped_to_new: HashMap<MappedNodeId, MappedNodeId> = HashMap::with_capacity(selected_original_node_ids.len());
+        let mut seen: HashSet<OriginalNodeId> =
+            HashSet::with_capacity(selected_original_node_ids.len());
+        let mut new_original_by_mapped: Vec<OriginalNodeId> =
+            Vec::with_capacity(selected_original_node_ids.len());
+        let mut old_mapped_to_new: HashMap<MappedNodeId, MappedNodeId> =
+            HashMap::with_capacity(selected_original_node_ids.len());
 
         for (new_mapped, original) in selected_original_node_ids.iter().copied().enumerate() {
             if !seen.insert(original) {
@@ -160,7 +153,8 @@ impl FormStoreSurface for InMemoryFormStore {
             old_mapped_to_new.insert(old_mapped, new_mapped_id);
         }
 
-        let mut committed = InMemoryFormStore::new(new_original_by_mapped)?.with_graph_name(graph_name);
+        let mut committed =
+            InMemoryFormStore::new(new_original_by_mapped)?.with_graph_name(graph_name);
         committed.inverse_indexed = self.inverse_indexed.clone();
 
         let mut kept_by_type: HashMap<RelationshipType, usize> = HashMap::new();
@@ -194,7 +188,9 @@ impl FormStoreSurface for InMemoryFormStore {
         if mapped_node_id < 0 {
             return None;
         }
-        self.original_by_mapped.get(mapped_node_id as usize).copied()
+        self.original_by_mapped
+            .get(mapped_node_id as usize)
+            .copied()
     }
 
     fn inverse_indexed_relationship_types(&self) -> HashSet<RelationshipType> {
@@ -260,8 +256,7 @@ impl FormStoreSurface for InMemoryFormStore {
             ));
         }
 
-        self.rel_props_f64
-            .insert((relationship_type, key), values);
+        self.rel_props_f64.insert((relationship_type, key), values);
         Ok(())
     }
 }

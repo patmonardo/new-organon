@@ -1,8 +1,10 @@
-use super::{GraphProjectConfig, GraphStoreCreator, GraphStoreLoader, MemoryEstimation, ResultStore};
+use super::{
+    GraphProjectConfig, GraphStoreCreator, GraphStoreLoader, MemoryEstimation, ResultStore,
+};
+use crate::concurrency::TerminationFlag;
 use crate::core::{ConcreteGraphDimensions, GraphDimensions};
 use crate::types::graph_store::{DatabaseId, DefaultGraphStore};
 use crate::types::random::{RandomGraphConfig, Randomizable};
-use crate::concurrency::TerminationFlag;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
@@ -59,11 +61,13 @@ impl GraphStoreLoader for GraphStoreFromDatabaseLoader {
 
 impl GraphStoreCreator for GraphStoreFromDatabaseLoader {
     fn estimate_memory_usage_during_loading(&self) -> Box<dyn MemoryEstimation> {
-        self.graph_store_factory.estimate_memory_usage_during_loading()
+        self.graph_store_factory
+            .estimate_memory_usage_during_loading()
     }
 
     fn estimate_memory_usage_after_loading(&self) -> Box<dyn MemoryEstimation> {
-        self.graph_store_factory.estimate_memory_usage_after_loading()
+        self.graph_store_factory
+            .estimate_memory_usage_after_loading()
     }
 }
 
@@ -78,7 +82,11 @@ pub struct GraphLoaderContext {
 }
 
 impl GraphLoaderContext {
-    pub fn new(database_id: DatabaseId, termination_flag: TerminationFlag, transaction_context: TransactionContext) -> Self {
+    pub fn new(
+        database_id: DatabaseId,
+        termination_flag: TerminationFlag,
+        transaction_context: TransactionContext,
+    ) -> Self {
         Self {
             database_id,
             termination_flag,
@@ -176,7 +184,10 @@ struct DatabaseGraphProjectConfig {
 
 impl DatabaseGraphProjectConfig {
     fn new(graph_name: String, username: String) -> Self {
-        Self { graph_name, username }
+        Self {
+            graph_name,
+            username,
+        }
     }
 }
 

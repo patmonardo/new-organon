@@ -18,15 +18,23 @@ where
     F: Fn(usize) -> f64,
 {
     if !should_compute {
-        return CentralityStats { histogram: None, compute_milliseconds: 0, success: true };
+        return CentralityStats {
+            histogram: None,
+            compute_milliseconds: 0,
+            success: true,
+        };
     }
     let start = Instant::now();
     let mut values = Vec::with_capacity(node_count);
-    for id in 0..node_count { values.push(centrality_fn(id)); }
+    for id in 0..node_count {
+        values.push(centrality_fn(id));
+    }
     let elapsed = start.elapsed().as_millis();
     // Touch summary to validate; if NaN causes issues, mark failure
     let success = !centrality_summary(&values).is_empty();
-    CentralityStats { histogram: Some(values), compute_milliseconds: elapsed, success }
+    CentralityStats {
+        histogram: Some(values),
+        compute_milliseconds: elapsed,
+        success,
+    }
 }
-
-

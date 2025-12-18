@@ -5,8 +5,8 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    use crate::procedures::facades::Graph;
     use crate::procedures::facades::traits::StreamResults;
+    use crate::procedures::facades::Graph;
     use crate::projection::RelationshipType;
     use crate::types::graph::{RelationshipTopology, SimpleIdMap};
     use crate::types::graph_store::{
@@ -14,7 +14,10 @@ mod tests {
     };
     use crate::types::schema::{Direction, MutableGraphSchema};
 
-    fn store_from_undirected_edges(node_count: usize, edges: &[(usize, usize)]) -> DefaultGraphStore {
+    fn store_from_undirected_edges(
+        node_count: usize,
+        edges: &[(usize, usize)],
+    ) -> DefaultGraphStore {
         let mut outgoing: Vec<Vec<i64>> = vec![Vec::new(); node_count];
         let mut incoming: Vec<Vec<i64>> = vec![Vec::new(); node_count];
 
@@ -161,7 +164,8 @@ mod tests {
         //   3 -- 4
         //        |
         //        5
-        let store = store_from_undirected_edges(6, &[(0, 1), (1, 2), (1, 3), (2, 4), (3, 4), (4, 5)]);
+        let store =
+            store_from_undirected_edges(6, &[(0, 1), (1, 2), (1, 3), (2, 4), (3, 4), (4, 5)]);
         let graph = Graph::new(Arc::new(store));
 
         let rows: Vec<_> = graph.articulation_points().stream().unwrap().collect();

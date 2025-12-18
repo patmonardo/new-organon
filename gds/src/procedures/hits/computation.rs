@@ -59,7 +59,12 @@ impl HitsComputationRuntime {
 
     /// Normalize authority scores using L2 norm
     pub fn normalize_authorities(&mut self) {
-        let norm: f64 = self.authority_scores_new.iter().map(|x| x * x).sum::<f64>().sqrt();
+        let norm: f64 = self
+            .authority_scores_new
+            .iter()
+            .map(|x| x * x)
+            .sum::<f64>()
+            .sqrt();
         if norm > 0.0 {
             for score in &mut self.authority_scores_new {
                 *score /= norm;
@@ -78,7 +83,12 @@ impl HitsComputationRuntime {
 
     /// Normalize hub scores using L2 norm
     pub fn normalize_hubs(&mut self) {
-        let norm: f64 = self.hub_scores_new.iter().map(|x| x * x).sum::<f64>().sqrt();
+        let norm: f64 = self
+            .hub_scores_new
+            .iter()
+            .map(|x| x * x)
+            .sum::<f64>()
+            .sqrt();
         if norm > 0.0 {
             for score in &mut self.hub_scores_new {
                 *score /= norm;
@@ -91,12 +101,16 @@ impl HitsComputationRuntime {
     /// Check for convergence based on tolerance
     pub fn has_converged(&mut self, tolerance: f64) -> bool {
         // Calculate max delta between consecutive iterations
-        let hub_delta = self.hub_scores.iter()
+        let hub_delta = self
+            .hub_scores
+            .iter()
             .zip(self.hub_scores_new.iter())
             .map(|(a, b)| (a - b).abs())
             .fold(0.0, f64::max);
-        
-        let auth_delta = self.authority_scores.iter()
+
+        let auth_delta = self
+            .authority_scores
+            .iter()
             .zip(self.authority_scores_new.iter())
             .map(|(a, b)| (a - b).abs())
             .fold(0.0, f64::max);

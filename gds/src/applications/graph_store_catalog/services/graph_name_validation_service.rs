@@ -34,7 +34,10 @@ impl GraphNameValidationService {
 
     /// Validates a graph name that might be null.
     /// In Java, this returns Optional<GraphName>.
-    pub fn validate_possible_null(&self, graph_name: Option<&str>) -> Result<Option<GraphName>, String> {
+    pub fn validate_possible_null(
+        &self,
+        graph_name: Option<&str>,
+    ) -> Result<Option<GraphName>, String> {
         match graph_name {
             None => Ok(None),
             Some(name) => Ok(Some(self.validate(name)?)),
@@ -43,7 +46,10 @@ impl GraphNameValidationService {
 
     /// Validates a single graph name or list of graph names.
     /// In Java, this handles both String and List<String> inputs.
-    pub fn validate_single_or_list(&self, input: &serde_json::Value) -> Result<Vec<GraphName>, String> {
+    pub fn validate_single_or_list(
+        &self,
+        input: &serde_json::Value,
+    ) -> Result<Vec<GraphName>, String> {
         match input {
             serde_json::Value::String(s) => Ok(vec![self.validate(s)?]),
             serde_json::Value::Array(items) => {

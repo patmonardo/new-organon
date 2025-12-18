@@ -11,11 +11,11 @@ use crate::collections::backends::vec::{VecDouble, VecLong};
 use crate::config::GraphStoreConfig;
 use crate::projection::orientation::Orientation;
 use crate::projection::{NodeLabel, RelationshipType};
+use crate::types::graph::id_map::{MappedNodeId, OriginalNodeId};
 use crate::types::graph::{
     id_map::{IdMap, SimpleIdMap},
     DefaultGraph, Graph, GraphCharacteristics, GraphCharacteristicsBuilder, RelationshipTopology,
 };
-use crate::types::graph::id_map::{MappedNodeId, OriginalNodeId};
 use crate::types::properties::graph::impls::default_graph_property_values::{
     DefaultDoubleGraphPropertyValues, DefaultLongGraphPropertyValues,
 };

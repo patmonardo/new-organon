@@ -21,10 +21,10 @@
 //! ctx.backward(&mse);
 //! ```
 
+use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::variable::{Variable, VariableRef};
 use std::fmt;
 
@@ -49,7 +49,8 @@ impl MeanSquareError {
         let dimensions = dimensions::scalar();
         // Require gradient if any parent requires gradient
         let require_gradient = parents.iter().any(|p| p.require_gradient());
-        let base = AbstractVariable::with_gradient_requirement(parents, dimensions, require_gradient);
+        let base =
+            AbstractVariable::with_gradient_requirement(parents, dimensions, require_gradient);
 
         Self { base }
     }

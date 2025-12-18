@@ -214,7 +214,12 @@ impl ParallelFloatPageCreator {
             pages.push(Vec::new());
         }
 
-        self.fill_pages(&mut pages, last_page_size, page_size, &Some(generator.clone()));
+        self.fill_pages(
+            &mut pages,
+            last_page_size,
+            page_size,
+            &Some(generator.clone()),
+        );
 
         pages
     }
@@ -270,13 +275,7 @@ impl ParallelFloatPageCreator {
                 .enumerate()
                 .for_each(|(page_index, page)| {
                     let allocator = self.allocator_factory.new_allocator();
-                    self.create_and_fill_page(
-                        page,
-                        page_index,
-                        page_size,
-                        &allocator,
-                        generator,
-                    );
+                    self.create_and_fill_page(page, page_index, page_size, &allocator, generator);
                 });
         }
 
@@ -365,7 +364,7 @@ mod tests {
         assert!(!pages.is_empty());
         // Check first and last elements
         assert_eq!(pages[0][0], 0.0);
-        
+
         // Find the last page and check its last element
         let last_page_index = pages.len() - 1;
         let last_page = &pages[last_page_index];
@@ -391,12 +390,12 @@ mod tests {
         // Spot check several indices across all concurrency levels
         for idx in [0, 1000, 50000, 99999] {
             let expected = (idx as f32) * 0.5;
-            
+
             // Find the page and index within that page
             let page_size = 32 * 1024 / std::mem::size_of::<f32>(); // 32KB pages
             let page_index = idx / page_size;
             let index_in_page = idx % page_size;
-            
+
             assert_eq!(pages1[page_index][index_in_page], expected);
             assert_eq!(pages2[page_index][index_in_page], expected);
             assert_eq!(pages4[page_index][index_in_page], expected);
@@ -433,7 +432,7 @@ mod tests {
         for (page_index, page) in pages.iter().enumerate() {
             let page_size = 32 * 1024 / std::mem::size_of::<f32>(); // 32KB pages
             let start_index = page_index * page_size;
-            
+
             for (i, &value) in page.iter().enumerate() {
                 let global_index = start_index + i;
                 if global_index < 1000 {
@@ -445,12 +444,12 @@ mod tests {
 
     #[test]
     fn test_constant_values() {
-        let creator = ParallelFloatPageCreator::of(Concurrency::of(4), |_| 3.14159);
+        let creator = ParallelFloatPageCreator::of(Concurrency::of(4), |_| 3.0);
         let pages = creator.create_pages(1000);
 
         for page in &pages {
             for &value in page {
-                assert_eq!(value, 3.14159);
+                assert_eq!(value, 3.0);
             }
         }
     }
@@ -469,13 +468,17 @@ mod tests {
 
     #[test]
     fn test_alternating_pattern() {
-        let creator = ParallelFloatPageCreator::of(Concurrency::of(4), |i| {
-            if i % 2 == 0 {
-                1.0
-            } else {
-                -1.0
-            }
-        });
+        let creator =
+            ParallelFloatPageCreator::of(
+                Concurrency::of(4),
+                |i| {
+                    if i % 2 == 0 {
+                        1.0
+                    } else {
+                        -1.0
+                    }
+                },
+            );
 
         let pages = creator.create_pages(100);
 

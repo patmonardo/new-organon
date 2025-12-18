@@ -6,8 +6,8 @@ use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use std::time::Duration;
 
-use super::storage::LocalClusteringCoefficientStorageRuntime;
 use super::computation::LocalClusteringCoefficientComputationRuntime;
+use super::storage::LocalClusteringCoefficientStorageRuntime;
 
 // ============================================================================
 // Configuration

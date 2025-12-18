@@ -18,11 +18,7 @@ pub struct ApproxMaxKCutStorageRuntime {
 
 impl ApproxMaxKCutStorageRuntime {
     pub fn new(node_count: usize, k: u8, minimize: bool) -> Self {
-        let initial_cost = if minimize {
-            f64::MAX
-        } else {
-            f64::MIN
-        };
+        let initial_cost = if minimize { f64::MAX } else { f64::MIN };
 
         Self {
             communities: Mutex::new(vec![0; node_count]),

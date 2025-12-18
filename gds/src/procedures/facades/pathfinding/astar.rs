@@ -256,33 +256,47 @@ impl AStarBuilder {
     /// Validate configuration before execution
     fn validate(&self) -> Result<()> {
         match self.source {
-            None => return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "source node must be specified".to_string()
-            )),
-            Some(id) if id == u64::MAX => return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "source node ID cannot be u64::MAX".to_string()
-            )),
+            None => {
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(
+                        "source node must be specified".to_string(),
+                    ),
+                )
+            }
+            Some(id) if id == u64::MAX => {
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(
+                        "source node ID cannot be u64::MAX".to_string(),
+                    ),
+                )
+            }
             _ => {}
         }
 
         if self.concurrency == 0 {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "concurrency must be > 0".to_string()
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "concurrency must be > 0".to_string(),
+                ),
+            );
         }
 
         if self.targets.is_empty() {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "at least one target node must be specified for A*".to_string(),
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "at least one target node must be specified for A*".to_string(),
+                ),
+            );
         }
 
         match self.direction.to_ascii_lowercase().as_str() {
             "outgoing" | "incoming" => {}
             other => {
-                return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                    format!("direction must be 'outgoing' or 'incoming' (got '{other}')"),
-                ));
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                        "direction must be 'outgoing' or 'incoming' (got '{other}')"
+                    )),
+                );
             }
         }
 
@@ -332,7 +346,9 @@ impl AStarBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let lat_values = graph_view.node_properties("latitude");
         let lon_values = graph_view.node_properties("longitude");
@@ -464,9 +480,11 @@ impl AStarBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "A* mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "A* mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 
     /// Write mode: Compute and persist to storage
@@ -484,9 +502,11 @@ impl AStarBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "A* mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "A* mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 }
 
@@ -587,19 +607,28 @@ mod tests {
 
     #[test]
     fn test_validate_invalid_direction() {
-        let builder = AStarBuilder::new(store()).source(0).target(1).direction("both");
+        let builder = AStarBuilder::new(store())
+            .source(0)
+            .target(1)
+            .direction("both");
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_invalid_concurrency() {
-        let builder = AStarBuilder::new(store()).source(0).target(1).concurrency(0);
+        let builder = AStarBuilder::new(store())
+            .source(0)
+            .target(1)
+            .concurrency(0);
         assert!(builder.validate().is_err());
     }
 
     #[test]
     fn test_validate_empty_weight_property() {
-        let builder = AStarBuilder::new(store()).source(0).target(1).weight_property("");
+        let builder = AStarBuilder::new(store())
+            .source(0)
+            .target(1)
+            .weight_property("");
         assert!(builder.validate().is_err());
     }
 
@@ -621,7 +650,10 @@ mod tests {
 
     #[test]
     fn test_stats_requires_validation() {
-        let builder = AStarBuilder::new(store()).source(0).target(1).concurrency(0); // Invalid concurrency
+        let builder = AStarBuilder::new(store())
+            .source(0)
+            .target(1)
+            .concurrency(0); // Invalid concurrency
         assert!(builder.stats().is_err());
     }
 
@@ -684,17 +716,26 @@ mod tests {
     #[test]
     fn test_stats_returns_heuristic_specific_info() {
         // Test Manhattan heuristic
-        let builder = AStarBuilder::new(store()).source(0).target(1).heuristic(Heuristic::Manhattan);
+        let builder = AStarBuilder::new(store())
+            .source(0)
+            .target(1)
+            .heuristic(Heuristic::Manhattan);
         let stats = builder.stats().unwrap();
         assert_eq!(stats.heuristic_accuracy, 1.2); // Manhattan is less accurate
 
         // Test Euclidean heuristic
-        let builder = AStarBuilder::new(store()).source(0).target(1).heuristic(Heuristic::Euclidean);
+        let builder = AStarBuilder::new(store())
+            .source(0)
+            .target(1)
+            .heuristic(Heuristic::Euclidean);
         let stats = builder.stats().unwrap();
         assert_eq!(stats.heuristic_accuracy, 1.0); // Euclidean is perfect
 
         // Test Haversine heuristic
-        let builder = AStarBuilder::new(store()).source(0).target(1).heuristic(Heuristic::Haversine);
+        let builder = AStarBuilder::new(store())
+            .source(0)
+            .target(1)
+            .heuristic(Heuristic::Haversine);
         let stats = builder.stats().unwrap();
         assert_eq!(stats.heuristic_accuracy, 1.0); // Haversine is perfect for geo
     }

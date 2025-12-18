@@ -76,7 +76,6 @@ impl PathFindingResult {
     pub fn paths(&self) -> impl Iterator<Item = &DijkstraPathResult> {
         self.paths.iter()
     }
-
 }
 
 #[cfg(test)]
@@ -85,16 +84,14 @@ mod tests {
 
     #[test]
     fn test_path_finding_result_creation() {
-        let paths = vec![
-            DijkstraPathResult {
-                index: 0,
-                source_node: 0,
-                target_node: 5,
-                node_ids: vec![0, 1, 3, 5],
-                relationship_ids: vec![0, 1, 2],
-                costs: vec![0.0, 3.5, 7.0, 10.5],
-            },
-        ];
+        let paths = vec![DijkstraPathResult {
+            index: 0,
+            source_node: 0,
+            target_node: 5,
+            node_ids: vec![0, 1, 3, 5],
+            relationship_ids: vec![0, 1, 2],
+            costs: vec![0.0, 3.5, 7.0, 10.5],
+        }];
 
         let result = PathFindingResult::new(paths);
         assert_eq!(result.path_count(), 1);
@@ -140,16 +137,14 @@ mod tests {
 
     #[test]
     fn test_for_each_path() {
-        let paths = vec![
-            DijkstraPathResult {
-                index: 0,
-                source_node: 0,
-                target_node: 5,
-                node_ids: vec![0, 1, 3, 5],
-                relationship_ids: vec![0, 1, 2],
-                costs: vec![0.0, 3.5, 7.0, 10.5],
-            },
-        ];
+        let paths = vec![DijkstraPathResult {
+            index: 0,
+            source_node: 0,
+            target_node: 5,
+            node_ids: vec![0, 1, 3, 5],
+            relationship_ids: vec![0, 1, 2],
+            costs: vec![0.0, 3.5, 7.0, 10.5],
+        }];
 
         let mut result = PathFindingResult::new(paths);
         let mut count = 0;
@@ -163,35 +158,32 @@ mod tests {
 
     #[test]
     fn test_map_paths() {
-        let paths = vec![
-            DijkstraPathResult {
-                index: 0,
-                source_node: 0,
-                target_node: 5,
-                node_ids: vec![0, 1, 3, 5],
-                relationship_ids: vec![0, 1, 2],
-                costs: vec![0.0, 3.5, 7.0, 10.5],
-            },
-        ];
+        let paths = vec![DijkstraPathResult {
+            index: 0,
+            source_node: 0,
+            target_node: 5,
+            node_ids: vec![0, 1, 3, 5],
+            relationship_ids: vec![0, 1, 2],
+            costs: vec![0.0, 3.5, 7.0, 10.5],
+        }];
 
         let mut result = PathFindingResult::new(paths);
-        let target_nodes: Vec<crate::types::graph::id_map::NodeId> = result.map_paths(|path| path.target_node);
+        let target_nodes: Vec<crate::types::graph::id_map::NodeId> =
+            result.map_paths(|path| path.target_node);
 
         assert_eq!(target_nodes, vec![5]);
     }
 
     #[test]
     fn test_path_set() {
-        let paths = vec![
-            DijkstraPathResult {
-                index: 0,
-                source_node: 0,
-                target_node: 5,
-                node_ids: vec![0, 1, 3, 5],
-                relationship_ids: vec![0, 1, 2],
-                costs: vec![0.0, 3.5, 7.0, 10.5],
-            },
-        ];
+        let paths = vec![DijkstraPathResult {
+            index: 0,
+            source_node: 0,
+            target_node: 5,
+            node_ids: vec![0, 1, 3, 5],
+            relationship_ids: vec![0, 1, 2],
+            costs: vec![0.0, 3.5, 7.0, 10.5],
+        }];
 
         let mut result = PathFindingResult::new(paths);
         let path_set = result.path_set();

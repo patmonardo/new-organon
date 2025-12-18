@@ -206,11 +206,11 @@ mod tests {
     #[test]
     fn test_basic_operations() {
         let list = HugeSparseDoubleArrayList::of(vec![]);
-        list.set(0, vec![3.14, 2.71]);
+        list.set(0, vec![3.0, 2.71]);
         list.set(1, vec![1.41]);
         list.set(100, vec![1.73, 2.23, 3.16]);
 
-        assert_eq!(list.get(0), vec![3.14, 2.71]);
+        assert_eq!(list.get(0), vec![3.0, 2.71]);
         assert_eq!(list.get(1), vec![1.41]);
         assert_eq!(list.get(100), vec![1.73, 2.23, 3.16]);
         assert_eq!(list.get(50), Vec::<f64>::new()); // default
@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn test_contains() {
         let list = HugeSparseDoubleArrayList::of(vec![]);
-        list.set(0, vec![3.14]);
+        list.set(0, vec![3.0]);
         list.set(100, vec![2.71]);
 
         assert!(list.contains(0));
@@ -254,10 +254,10 @@ mod tests {
     fn test_empty_vectors() {
         let list = HugeSparseDoubleArrayList::of(vec![0.0]);
         list.set(0, vec![]); // explicitly set empty vector
-        list.set(1, vec![3.14, 2.71]);
+        list.set(1, vec![3.0, 2.71]);
 
         assert_eq!(list.get(0), Vec::<f64>::new()); // explicitly set to empty
-        assert_eq!(list.get(1), vec![3.14, 2.71]);
+        assert_eq!(list.get(1), vec![3.0, 2.71]);
         assert_eq!(list.get(2), vec![0.0]); // default
         assert!(list.contains(0)); // explicitly set
         assert!(!list.contains(2)); // never set
@@ -267,9 +267,9 @@ mod tests {
     fn test_default_value() {
         let default = vec![9.9, 8.8];
         let list = HugeSparseDoubleArrayList::of(default.clone());
-        list.set(42, vec![3.14]);
+        list.set(42, vec![3.0]);
 
-        assert_eq!(list.get(42), vec![3.14]);
+        assert_eq!(list.get(42), vec![3.0]);
         assert_eq!(list.get(0), default);
         assert_eq!(list.get(100), default);
     }
@@ -305,7 +305,7 @@ mod tests {
     #[test]
     fn test_overwrite() {
         let list = HugeSparseDoubleArrayList::of(vec![]);
-        list.set(42, vec![3.14]);
+        list.set(42, vec![3.0]);
         list.set(42, vec![2.71, 1.41]); // overwrite
 
         assert_eq!(list.get(42), vec![2.71, 1.41]);
@@ -364,8 +364,8 @@ mod tests {
         let list = HugeSparseDoubleArrayList::with_capacity(vec![], 1000);
         assert_eq!(list.capacity(), 1000);
 
-        list.set(500, vec![3.14, 2.71]);
+        list.set(500, vec![3.0, 2.71]);
         assert_eq!(list.capacity(), 1000);
-        assert_eq!(list.get(500), vec![3.14, 2.71]);
+        assert_eq!(list.get(500), vec![3.0, 2.71]);
     }
 }

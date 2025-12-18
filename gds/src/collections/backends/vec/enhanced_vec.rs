@@ -16,9 +16,7 @@ impl<T> Default for EnhancedVec<T> {
 
 impl<T> EnhancedVec<T> {
     pub fn new() -> Self {
-        Self {
-            data: Vec::new(),
-        }
+        Self { data: Vec::new() }
     }
 
     pub fn with_capacity(capacity: usize) -> Self {
@@ -36,7 +34,7 @@ impl<T> EnhancedVec<T> {
     }
 }
 
-impl<T> Collections<T> for EnhancedVec<T> 
+impl<T> Collections<T> for EnhancedVec<T>
 where
     T: Clone + Default + Ord + Sum + Send + Sync,
 {
@@ -57,7 +55,10 @@ where
         self.data.len()
     }
 
-    fn sum(&self) -> Option<T> where T: Sum {
+    fn sum(&self) -> Option<T>
+    where
+        T: Sum,
+    {
         Some(self.data.iter().cloned().sum())
     }
 
@@ -71,11 +72,17 @@ where
         }
     }
 
-    fn min(&self) -> Option<T> where T: Ord {
+    fn min(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.data.iter().min().cloned()
     }
 
-    fn max(&self) -> Option<T> where T: Ord {
+    fn max(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.data.iter().max().cloned()
     }
 
@@ -91,7 +98,10 @@ where
         None
     }
 
-    fn median(&self) -> Option<T> where T: Ord {
+    fn median(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         if self.data.is_empty() {
             None
         } else {
@@ -102,7 +112,10 @@ where
         }
     }
 
-    fn percentile(&self, p: f64) -> Option<T> where T: Ord {
+    fn percentile(&self, p: f64) -> Option<T>
+    where
+        T: Ord,
+    {
         if self.data.is_empty() || !(0.0..=100.0).contains(&p) {
             None
         } else {
@@ -113,11 +126,17 @@ where
         }
     }
 
-    fn binary_search(&self, key: &T) -> Result<usize, usize> where T: Ord {
+    fn binary_search(&self, key: &T) -> Result<usize, usize>
+    where
+        T: Ord,
+    {
         self.data.binary_search(key)
     }
 
-    fn sort(&mut self) where T: Ord {
+    fn sort(&mut self)
+    where
+        T: Ord,
+    {
         self.data.sort();
     }
 
@@ -129,21 +148,35 @@ where
         &self.data
     }
 
-    fn is_null(&self, _index: usize) -> bool { false }
-    fn null_count(&self) -> usize { 0 }
-    fn default_value(&self) -> T { T::default() }
-    fn backend(&self) -> crate::config::CollectionsBackend { 
-        crate::config::CollectionsBackend::Vec 
+    fn is_null(&self, _index: usize) -> bool {
+        false
     }
-    fn features(&self) -> &[crate::config::Extension] { &[] }
-    fn extensions(&self) -> &[crate::config::Extension] { &[] }
-    fn value_type(&self) -> crate::types::ValueType { 
+    fn null_count(&self) -> usize {
+        0
+    }
+    fn default_value(&self) -> T {
+        T::default()
+    }
+    fn backend(&self) -> crate::config::CollectionsBackend {
+        crate::config::CollectionsBackend::Vec
+    }
+    fn features(&self) -> &[crate::config::Extension] {
+        &[]
+    }
+    fn extensions(&self) -> &[crate::config::Extension] {
+        &[]
+    }
+    fn value_type(&self) -> crate::types::ValueType {
         crate::types::ValueType::Long // Generic fallback
     }
     fn with_capacity(capacity: usize) -> Self {
-        Self { data: Vec::with_capacity(capacity) }
+        Self {
+            data: Vec::with_capacity(capacity),
+        }
     }
     fn with_defaults(count: usize, default_value: T) -> Self {
-        Self { data: vec![default_value; count] }
+        Self {
+            data: vec![default_value; count],
+        }
     }
 }

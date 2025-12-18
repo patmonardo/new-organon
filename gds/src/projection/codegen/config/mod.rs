@@ -14,9 +14,9 @@
 //!     },
 //!     validation: |cfg| {
 //!         if cfg.value <= 0.0 {
-//!             return Err(ConfigError::FieldValidation { 
-//!                 field: "value".to_string(), 
-//!                 message: "Must be positive".to_string() 
+//!             return Err(ConfigError::FieldValidation {
+//!                 field: "value".to_string(),
+//!                 message: "Must be positive".to_string()
 //!             });
 //!         }
 //!         Ok(())
@@ -26,4 +26,3 @@
 
 pub mod define_config;
 pub mod validation;
-

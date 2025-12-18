@@ -1,3 +1,4 @@
+use crate::collections::backends::vec::VecDouble;
 use crate::projection::{NodeLabel, RelationshipType};
 use crate::types::graph::{IdMap, RelationshipTopology, SimpleIdMap};
 use crate::types::graph_store::{
@@ -6,7 +7,6 @@ use crate::types::graph_store::{
 };
 use crate::types::properties::graph::impls::default_graph_property_values::DefaultDoubleGraphPropertyValues;
 use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
-use crate::collections::backends::vec::VecDouble;
 use crate::types::schema::{Direction, MutableGraphSchema};
 use crate::types::ValueType;
 use rand::rngs::StdRng;
@@ -173,8 +173,15 @@ impl Randomizable<(&RandomGraphConfig, &RandomRelationshipConfig)> for Relations
         }
 
         Ok(RelationshipTopology::new(
-            outgoing.into_iter().map(|adj| adj.into_iter().map(|id| id as i64).collect()).collect(),
-            incoming.map(|inc| inc.into_iter().map(|adj| adj.into_iter().map(|id| id as i64).collect()).collect())
+            outgoing
+                .into_iter()
+                .map(|adj| adj.into_iter().map(|id| id as i64).collect())
+                .collect(),
+            incoming.map(|inc| {
+                inc.into_iter()
+                    .map(|adj| adj.into_iter().map(|id| id as i64).collect())
+                    .collect()
+            }),
         ))
     }
 }
@@ -318,16 +325,18 @@ impl Randomizable<RandomGraphConfig> for DefaultGraphStore {
         );
 
         // Add a random floating-point score for each node.
-        let node_property_values = Arc::new(<DefaultDoubleNodePropertyValues<VecDouble> as Randomizable<
-            RandomNodeDoublePropertyConfig,
-        >>::random_with_rng(
-            &RandomNodeDoublePropertyConfig {
-                node_count: config.node_count,
-                min: 0.0,
-                max: 1.0,
-            },
-            rng,
-        )?);
+        let node_property_values = Arc::new(
+            <DefaultDoubleNodePropertyValues<VecDouble> as Randomizable<
+                RandomNodeDoublePropertyConfig,
+            >>::random_with_rng(
+                &RandomNodeDoublePropertyConfig {
+                    node_count: config.node_count,
+                    min: 0.0,
+                    max: 1.0,
+                },
+                rng,
+            )?,
+        );
         let label_set: HashSet<NodeLabel> = node_labels.into_iter().collect();
         store.add_node_property(label_set, "random_score", node_property_values)?;
 
@@ -348,7 +357,9 @@ impl Randomizable<RandomGraphConfig> for DefaultGraphStore {
         } else {
             total_relationships as f64 / max_edges as f64
         };
-        let graph_property_values = Arc::new(DefaultDoubleGraphPropertyValues::<crate::collections::backends::vec::VecDouble>::singleton(density));
+        let graph_property_values = Arc::new(DefaultDoubleGraphPropertyValues::<
+            crate::collections::backends::vec::VecDouble,
+        >::singleton(density));
         store.add_graph_property("edge_density", graph_property_values)?;
 
         Ok(store)

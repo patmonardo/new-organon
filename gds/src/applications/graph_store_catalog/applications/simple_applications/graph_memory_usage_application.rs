@@ -1,7 +1,7 @@
-use crate::types::graph_store::{DatabaseId, GraphStore};
-use crate::core::User;
 use super::super::super::loaders::GraphStoreCatalogService;
 use crate::applications::graph_store_catalog::results::GraphMemoryUsage;
+use crate::core::User;
+use crate::types::graph_store::{DatabaseId, GraphStore};
 use std::collections::HashMap;
 
 /// Application for computing graph memory usage.
@@ -31,9 +31,9 @@ impl GraphMemoryUsageApplication {
         graph_name: &str,
     ) -> GraphMemoryUsage {
         // In Java, this would call the catalog service to get actual memory usage
-        let graph_store = self
-            .graph_store_catalog_service
-            .get_graph_store(user, database_id, graph_name);
+        let graph_store =
+            self.graph_store_catalog_service
+                .get_graph_store(user, database_id, graph_name);
 
         let estimated_bytes = self.estimate_memory_usage(&graph_store);
         GraphMemoryUsage::new(

@@ -6,11 +6,11 @@
 //! and algorithm orchestration.
 
 use super::computation::DfsComputationRuntime;
-use super::spec::{DfsResult, DfsPathResult};
+use super::spec::{DfsPathResult, DfsResult};
 use crate::projection::eval::procedure::AlgorithmError;
-use crate::types::graph::Graph;
 use crate::types::graph::id_map::NodeId;
-use std::collections::{VecDeque, HashMap};
+use crate::types::graph::Graph;
+use std::collections::{HashMap, VecDeque};
 
 /// DFS Storage Runtime - handles persistent data access and algorithm orchestration
 ///
@@ -51,7 +51,11 @@ impl DfsStorageRuntime {
     ///
     /// Translation of: `DFS.compute()` (lines 1.051.0-200)
     /// This orchestrates the main DFS algorithm loop using a stack
-    pub fn compute_dfs(&self, computation: &mut DfsComputationRuntime, graph: Option<&dyn Graph>) -> Result<DfsResult, AlgorithmError> {
+    pub fn compute_dfs(
+        &self,
+        computation: &mut DfsComputationRuntime,
+        graph: Option<&dyn Graph>,
+    ) -> Result<DfsResult, AlgorithmError> {
         let start_time = std::time::Instant::now();
 
         // Initialize computation runtime
@@ -83,7 +87,9 @@ impl DfsStorageRuntime {
             // Check if we found a target
             if !self.target_nodes.is_empty() && self.target_nodes.contains(&current_node) {
                 if self.track_paths {
-                    if let Some(path) = self.reconstruct_path(self.source_node, current_node, &predecessors) {
+                    if let Some(path) =
+                        self.reconstruct_path(self.source_node, current_node, &predecessors)
+                    {
                         paths.push(path);
                     }
                 }

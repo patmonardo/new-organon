@@ -55,9 +55,11 @@ impl ConductanceBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.community_property.is_empty() {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "community_property cannot be empty".to_string(),
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "community_property cannot be empty".to_string(),
+                ),
+            );
         }
         Ok(())
     }
@@ -79,7 +81,9 @@ impl ConductanceBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -174,6 +178,9 @@ mod tests {
     fn builder_api() {
         // Test that builder methods exist and are chainable
         // (Cannot test actual execution without a real graph store)
-        assert_eq!(std::mem::size_of::<ConductanceBuilder>(), std::mem::size_of::<ConductanceBuilder>());
+        assert_eq!(
+            std::mem::size_of::<ConductanceBuilder>(),
+            std::mem::size_of::<ConductanceBuilder>()
+        );
     }
 }

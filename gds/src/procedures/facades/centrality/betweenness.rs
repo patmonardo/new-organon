@@ -111,7 +111,9 @@ impl BetweennessCentralityFacade {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, self.orientation())
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -223,8 +225,8 @@ impl BetweennessCentralityFacade {
         let stddev = var.sqrt();
 
         let percentile = |p: f64| -> f64 {
-            let idx = ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round()
-                as usize;
+            let idx =
+                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
             sorted[idx]
         };
 
@@ -264,9 +266,11 @@ impl BetweennessCentralityFacade {
     ) -> Result<crate::procedures::facades::builder_base::MutationResult> {
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "BetweennessCentrality mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "BetweennessCentrality mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 }
 

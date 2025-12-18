@@ -59,7 +59,12 @@ impl LouvainBuilder {
     }
 
     fn validate(&self) -> Result<()> {
-        ConfigValidator::in_range(self.config.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
+        ConfigValidator::in_range(
+            self.config.concurrency as f64,
+            1.0,
+            1_000_000.0,
+            "concurrency",
+        )?;
         Ok(())
     }
 
@@ -71,7 +76,9 @@ impl LouvainBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let storage = LouvainStorageRuntime::new(self.config.concurrency);
         let mut computation = LouvainComputationRuntime::new();

@@ -470,7 +470,9 @@ macro_rules! impl_property_values_universal {
         where
             C: $crate::collections::traits::Collections<$element_type>
                 + $crate::collections::traits::PropertyValuesAdapter<$element_type>
-                + Send + Sync + std::fmt::Debug,
+                + Send
+                + Sync
+                + std::fmt::Debug,
         {
             fn value_type(&self) -> $crate::types::ValueType {
                 $crate::types::ValueType::$value_type
@@ -499,7 +501,9 @@ macro_rules! impl_node_property_values_universal {
         where
             C: $crate::collections::traits::Collections<$element_type>
                 + $crate::collections::traits::PropertyValuesAdapter<$element_type>
-                + Send + Sync + std::fmt::Debug,
+                + Send
+                + Sync
+                + std::fmt::Debug,
         {
             fn node_count(&self) -> usize {
                 self.node_count
@@ -520,49 +524,79 @@ macro_rules! impl_node_property_values_universal {
                     && !self.universal.collection().is_null(node_id as usize)
             }
 
-            fn double_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<f64> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::Double,
-                ))
+            fn double_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<f64> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::Double,
+                    ),
+                )
             }
 
-            fn long_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<i64> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::Long,
-                ))
+            fn long_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<i64> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::Long,
+                    ),
+                )
             }
 
-            fn double_array_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<f64>> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::DoubleArray,
-                ))
+            fn double_array_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<f64>> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::DoubleArray,
+                    ),
+                )
             }
 
-            fn float_array_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<f32>> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::FloatArray,
-                ))
+            fn float_array_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<f32>> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::FloatArray,
+                    ),
+                )
             }
 
-            fn long_array_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<i64>> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::LongArray,
-                ))
+            fn long_array_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<i64>> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::LongArray,
+                    ),
+                )
             }
 
-            fn get_object(&self, node_id: u64) -> $crate::types::properties::PropertyValuesResult<Box<dyn std::any::Any>> {
+            fn get_object(
+                &self,
+                node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Box<dyn std::any::Any>> {
                 #[allow(unused_imports)]
                 use $crate::collections::traits::Collections;
                 self.universal
                     .collection()
                     .get(node_id as usize)
                     .map(|v| Box::new(v) as Box<dyn std::any::Any>)
-                    .ok_or_else(|| $crate::types::properties::PropertyValuesError::InvalidNodeId(node_id))
+                    .ok_or_else(|| {
+                        $crate::types::properties::PropertyValuesError::InvalidNodeId(node_id)
+                    })
             }
 
             fn dimension(&self) -> Option<usize> {
@@ -592,19 +626,29 @@ macro_rules! impl_typed_node_property_values_universal {
         where
             C: $crate::collections::traits::Collections<$element_type>
                 + $crate::collections::traits::PropertyValuesAdapter<$element_type>
-                + Send + Sync + std::fmt::Debug,
+                + Send
+                + Sync
+                + std::fmt::Debug,
         {
-            fn long_value(&self, node_id: u64) -> $crate::types::properties::PropertyValuesResult<i64> {
+            fn long_value(
+                &self,
+                node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<i64> {
                 #[allow(unused_imports)]
                 use $crate::collections::traits::Collections;
                 self.universal
                     .collection()
                     .get(node_id as usize)
                     .map(|v| v as i64)
-                    .ok_or_else(|| $crate::types::properties::PropertyValuesError::InvalidNodeId(node_id))
+                    .ok_or_else(|| {
+                        $crate::types::properties::PropertyValuesError::InvalidNodeId(node_id)
+                    })
             }
 
-            fn double_value(&self, node_id: u64) -> $crate::types::properties::PropertyValuesResult<f64> {
+            fn double_value(
+                &self,
+                node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<f64> {
                 Ok(self.long_value(node_id)? as f64)
             }
 
@@ -613,32 +657,52 @@ macro_rules! impl_typed_node_property_values_universal {
                     && !self.universal.collection().is_null(node_id as usize)
             }
 
-            fn double_array_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<f64>> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::DoubleArray,
-                ))
+            fn double_array_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<f64>> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::DoubleArray,
+                    ),
+                )
             }
 
-            fn float_array_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<f32>> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::FloatArray,
-                ))
+            fn float_array_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<f32>> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::FloatArray,
+                    ),
+                )
             }
 
-            fn long_array_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<i64>> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::LongArray,
-                ))
+            fn long_array_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<i64>> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::LongArray,
+                    ),
+                )
             }
 
-            fn get_object(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<Box<dyn std::any::Any>> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::String,
-                ))
+            fn get_object(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Box<dyn std::any::Any>> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::String,
+                    ),
+                )
             }
 
             fn dimension(&self) -> Option<usize> {
@@ -659,7 +723,9 @@ macro_rules! impl_typed_node_property_values_universal {
         where
             C: $crate::collections::traits::Collections<$element_type>
                 + $crate::collections::traits::PropertyValuesAdapter<$element_type>
-                + Send + Sync + std::fmt::Debug,
+                + Send
+                + Sync
+                + std::fmt::Debug,
         {
             fn long_value_unchecked(&self, node_id: u64) -> i64 {
                 #[allow(unused_imports)]
@@ -680,19 +746,29 @@ macro_rules! impl_typed_node_property_values_universal {
         where
             C: $crate::collections::traits::Collections<$element_type>
                 + $crate::collections::traits::PropertyValuesAdapter<$element_type>
-                + Send + Sync + std::fmt::Debug,
+                + Send
+                + Sync
+                + std::fmt::Debug,
         {
-            fn double_value(&self, node_id: u64) -> $crate::types::properties::PropertyValuesResult<f64> {
+            fn double_value(
+                &self,
+                node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<f64> {
                 #[allow(unused_imports)]
                 use $crate::collections::traits::Collections;
                 self.universal
                     .collection()
                     .get(node_id as usize)
                     .map(|v| v as f64)
-                    .ok_or_else(|| $crate::types::properties::PropertyValuesError::InvalidNodeId(node_id))
+                    .ok_or_else(|| {
+                        $crate::types::properties::PropertyValuesError::InvalidNodeId(node_id)
+                    })
             }
 
-            fn long_value(&self, node_id: u64) -> $crate::types::properties::PropertyValuesResult<i64> {
+            fn long_value(
+                &self,
+                node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<i64> {
                 Ok(self.double_value(node_id)? as i64)
             }
 
@@ -701,32 +777,52 @@ macro_rules! impl_typed_node_property_values_universal {
                     && !self.universal.collection().is_null(node_id as usize)
             }
 
-            fn double_array_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<f64>> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::DoubleArray,
-                ))
+            fn double_array_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<f64>> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::DoubleArray,
+                    ),
+                )
             }
 
-            fn float_array_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<f32>> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::FloatArray,
-                ))
+            fn float_array_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<f32>> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::FloatArray,
+                    ),
+                )
             }
 
-            fn long_array_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<i64>> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::LongArray,
-                ))
+            fn long_array_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<i64>> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::LongArray,
+                    ),
+                )
             }
 
-            fn get_object(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<Box<dyn std::any::Any>> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::String,
-                ))
+            fn get_object(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Box<dyn std::any::Any>> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::String,
+                    ),
+                )
             }
 
             fn dimension(&self) -> Option<usize> {
@@ -747,7 +843,9 @@ macro_rules! impl_typed_node_property_values_universal {
         where
             C: $crate::collections::traits::Collections<$element_type>
                 + $crate::collections::traits::PropertyValuesAdapter<$element_type>
-                + Send + Sync + std::fmt::Debug,
+                + Send
+                + Sync
+                + std::fmt::Debug,
         {
             fn double_value_unchecked(&self, node_id: u64) -> f64 {
                 #[allow(unused_imports)]
@@ -768,57 +866,90 @@ macro_rules! impl_typed_node_property_values_universal {
         where
             C: $crate::collections::traits::Collections<$element_type>
                 + $crate::collections::traits::PropertyValuesAdapter<$element_type>
-                + Send + Sync + std::fmt::Debug,
+                + Send
+                + Sync
+                + std::fmt::Debug,
         {
-            fn long_array_value(&self, node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<i64>> {
+            fn long_array_value(
+                &self,
+                node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<i64>> {
                 #[allow(unused_imports)]
                 use $crate::collections::traits::Collections;
                 // For arrays: get() returns Option<Option<Vec<T>>>
                 // Convert element type to i64
                 match self.universal.collection().get(node_id as usize) {
                     Some(Some(vec)) => Ok(vec.into_iter().map(|v| v as i64).collect()),
-                    _ => Err($crate::types::properties::PropertyValuesError::InvalidNodeId(node_id))
+                    _ => {
+                        Err($crate::types::properties::PropertyValuesError::InvalidNodeId(node_id))
+                    }
                 }
             }
 
-            fn long_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<i64> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::Long,
-                ))
+            fn long_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<i64> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::Long,
+                    ),
+                )
             }
 
-            fn double_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<f64> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::Double,
-                ))
+            fn double_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<f64> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::Double,
+                    ),
+                )
             }
 
             fn has_value(&self, node_id: u64) -> bool {
                 #[allow(unused_imports)]
                 use $crate::collections::traits::Collections;
                 node_id < self.node_count as u64
-                    && self.universal.collection().get(node_id as usize).flatten().is_some()
+                    && self
+                        .universal
+                        .collection()
+                        .get(node_id as usize)
+                        .flatten()
+                        .is_some()
             }
 
-            fn double_array_value(&self, node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<f64>> {
+            fn double_array_value(
+                &self,
+                node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<f64>> {
                 // Convert i64 array to f64 array
                 self.long_array_value(node_id)
                     .map(|arr| arr.into_iter().map(|v| v as f64).collect())
             }
 
-            fn float_array_value(&self, node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<f32>> {
+            fn float_array_value(
+                &self,
+                node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<f32>> {
                 // Convert i64 array to f32 array
                 self.long_array_value(node_id)
                     .map(|arr| arr.into_iter().map(|v| v as f32).collect())
             }
 
-            fn get_object(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<Box<dyn std::any::Any>> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::String,
-                ))
+            fn get_object(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Box<dyn std::any::Any>> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::String,
+                    ),
+                )
             }
 
             fn dimension(&self) -> Option<usize> {
@@ -847,7 +978,9 @@ macro_rules! impl_typed_node_property_values_universal {
         where
             C: $crate::collections::traits::Collections<$element_type>
                 + $crate::collections::traits::PropertyValuesAdapter<$element_type>
-                + Send + Sync + std::fmt::Debug,
+                + Send
+                + Sync
+                + std::fmt::Debug,
         {
             fn long_array_value_unchecked(&self, node_id: u64) -> Option<Vec<i64>> {
                 #[allow(unused_imports)]
@@ -870,62 +1003,97 @@ macro_rules! impl_typed_node_property_values_universal {
         where
             C: $crate::collections::traits::Collections<$element_type>
                 + $crate::collections::traits::PropertyValuesAdapter<$element_type>
-                + Send + Sync + std::fmt::Debug,
+                + Send
+                + Sync
+                + std::fmt::Debug,
         {
-            fn double_array_value(&self, node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<f64>> {
+            fn double_array_value(
+                &self,
+                node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<f64>> {
                 #[allow(unused_imports)]
                 use $crate::collections::traits::Collections;
                 // For arrays: get() returns Option<Option<Vec<T>>>
                 // Convert f32/f64 to f64 and unwrap
                 match self.universal.collection().get(node_id as usize) {
                     Some(Some(vec)) => Ok(vec.into_iter().map(|v| v as f64).collect()),
-                    _ => Err($crate::types::properties::PropertyValuesError::InvalidNodeId(node_id))
+                    _ => {
+                        Err($crate::types::properties::PropertyValuesError::InvalidNodeId(node_id))
+                    }
                 }
             }
 
-            fn float_array_value(&self, node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<f32>> {
+            fn float_array_value(
+                &self,
+                node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<f32>> {
                 #[allow(unused_imports)]
                 use $crate::collections::traits::Collections;
                 // For arrays: get() returns Option<Option<Vec<T>>>
                 // Convert f32/f64 to f32 and unwrap
                 match self.universal.collection().get(node_id as usize) {
                     Some(Some(vec)) => Ok(vec.into_iter().map(|v| v as f32).collect()),
-                    _ => Err($crate::types::properties::PropertyValuesError::InvalidNodeId(node_id))
+                    _ => {
+                        Err($crate::types::properties::PropertyValuesError::InvalidNodeId(node_id))
+                    }
                 }
             }
 
-            fn long_array_value(&self, node_id: u64) -> $crate::types::properties::PropertyValuesResult<Vec<i64>> {
+            fn long_array_value(
+                &self,
+                node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Vec<i64>> {
                 // Convert f64/f32 array to i64 array
                 self.double_array_value(node_id)
                     .map(|arr| arr.into_iter().map(|v| v as i64).collect())
             }
 
-            fn long_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<i64> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::Long,
-                ))
+            fn long_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<i64> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::Long,
+                    ),
+                )
             }
 
-            fn double_value(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<f64> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::Double,
-                ))
+            fn double_value(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<f64> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::Double,
+                    ),
+                )
             }
 
             fn has_value(&self, node_id: u64) -> bool {
                 #[allow(unused_imports)]
                 use $crate::collections::traits::Collections;
                 node_id < self.node_count as u64
-                    && self.universal.collection().get(node_id as usize).flatten().is_some()
+                    && self
+                        .universal
+                        .collection()
+                        .get(node_id as usize)
+                        .flatten()
+                        .is_some()
             }
 
-            fn get_object(&self, _node_id: u64) -> $crate::types::properties::PropertyValuesResult<Box<dyn std::any::Any>> {
-                Err($crate::types::properties::PropertyValuesError::unsupported_type(
-                    self.value_type(),
-                    $crate::types::ValueType::String,
-                ))
+            fn get_object(
+                &self,
+                _node_id: u64,
+            ) -> $crate::types::properties::PropertyValuesResult<Box<dyn std::any::Any>> {
+                Err(
+                    $crate::types::properties::PropertyValuesError::unsupported_type(
+                        self.value_type(),
+                        $crate::types::ValueType::String,
+                    ),
+                )
             }
 
             fn dimension(&self) -> Option<usize> {
@@ -954,7 +1122,9 @@ macro_rules! impl_typed_node_property_values_universal {
         where
             C: $crate::collections::traits::Collections<$element_type>
                 + $crate::collections::traits::PropertyValuesAdapter<$element_type>
-                + Send + Sync + std::fmt::Debug,
+                + Send
+                + Sync
+                + std::fmt::Debug,
         {
             fn double_array_value_unchecked(&self, node_id: u64) -> Option<Vec<f64>> {
                 #[allow(unused_imports)]
@@ -973,7 +1143,9 @@ macro_rules! impl_typed_node_property_values_universal {
         where
             C: $crate::collections::traits::Collections<$element_type>
                 + $crate::collections::traits::PropertyValuesAdapter<$element_type>
-                + Send + Sync + std::fmt::Debug,
+                + Send
+                + Sync
+                + std::fmt::Debug,
         {
             fn float_array_value_unchecked(&self, node_id: u64) -> Option<Vec<f32>> {
                 #[allow(unused_imports)]

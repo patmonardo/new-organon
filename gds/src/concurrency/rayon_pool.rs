@@ -8,7 +8,10 @@ use std::sync::Arc;
 static POOLS_BY_SIZE: Lazy<RwLock<HashMap<usize, Arc<ThreadPool>>>> =
     Lazy::new(|| RwLock::new(HashMap::new()));
 
-pub(crate) fn install_with_concurrency<R>(concurrency: Concurrency, f: impl FnOnce() -> R + Send) -> R
+pub(crate) fn install_with_concurrency<R>(
+    concurrency: Concurrency,
+    f: impl FnOnce() -> R + Send,
+) -> R
 where
     R: Send,
 {

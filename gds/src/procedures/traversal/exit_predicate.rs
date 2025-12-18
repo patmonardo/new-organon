@@ -27,8 +27,12 @@ pub trait ExitPredicate {
     /// * `source_node` - The source node
     /// * `current_node` - The current node being processed
     /// * `weight_at_source` - Total weight collected by Aggregator during traversal
-    fn test(&self, source_node: NodeId, current_node: NodeId, weight_at_source: f64)
-        -> ExitPredicateResult;
+    fn test(
+        &self,
+        source_node: NodeId,
+        current_node: NodeId,
+        weight_at_source: f64,
+    ) -> ExitPredicateResult;
 }
 
 /// Default exit predicate that follows all nodes

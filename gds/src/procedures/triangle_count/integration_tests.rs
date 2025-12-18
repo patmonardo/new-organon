@@ -73,11 +73,7 @@ mod tests {
     #[test]
     fn test_tetrahedron() {
         // Complete graph K4 (tetrahedron): 4 triangles
-        let edges = vec![
-            (0, 1), (0, 2), (0, 3),
-            (1, 2), (1, 3),
-            (2, 3),
-        ];
+        let edges = vec![(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)];
         let graph = create_graph(edges, 4);
 
         let mut runtime = TriangleCountComputationRuntime::new();
@@ -139,9 +135,15 @@ mod tests {
     fn test_k5_complete_graph() {
         // Complete graph K5: 10 triangles
         let edges = vec![
-            (0, 1), (0, 2), (0, 3), (0, 4),
-            (1, 2), (1, 3), (1, 4),
-            (2, 3), (2, 4),
+            (0, 1),
+            (0, 2),
+            (0, 3),
+            (0, 4),
+            (1, 2),
+            (1, 3),
+            (1, 4),
+            (2, 3),
+            (2, 4),
             (3, 4),
         ];
         let graph = create_graph(edges, 5);
@@ -160,10 +162,7 @@ mod tests {
     #[test]
     fn test_two_disconnected_triangles() {
         // Two separate triangles: (0-1-2) and (3-4-5)
-        let edges = vec![
-            (0, 1), (1, 2), (2, 0),
-            (3, 4), (4, 5), (5, 3),
-        ];
+        let edges = vec![(0, 1), (1, 2), (2, 0), (3, 4), (4, 5), (5, 3)];
         let graph = create_graph(edges, 6);
 
         let mut runtime = TriangleCountComputationRuntime::new();

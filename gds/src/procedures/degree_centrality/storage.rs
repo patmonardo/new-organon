@@ -69,7 +69,10 @@ impl<'a, G: GraphStore> DegreeCentralityStorageRuntime<'a, G> {
     ) -> Result<Self, AlgorithmError> {
         let rel_types = HashSet::new();
         let graph = graph_store
-            .get_graph_with_types_and_orientation(&rel_types, to_projection_orientation(orientation))
+            .get_graph_with_types_and_orientation(
+                &rel_types,
+                to_projection_orientation(orientation),
+            )
             .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         Ok(Self {

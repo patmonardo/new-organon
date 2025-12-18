@@ -6,13 +6,13 @@
 //! computation using a sophisticated binning strategy for efficient frontier management.
 //! Delta Stepping is particularly effective for graphs with varying edge weights.
 
-pub mod spec;
-pub mod storage;
 pub mod computation;
 #[cfg(test)]
 pub mod integration_tests;
+pub mod spec;
+pub mod storage;
 
 // Re-export main types for easy access
+pub use computation::DeltaSteppingComputationRuntime;
 pub use spec::{DELTA_STEPPINGAlgorithmSpec, DeltaSteppingConfig, DeltaSteppingResult};
 pub use storage::DeltaSteppingStorageRuntime;
-pub use computation::DeltaSteppingComputationRuntime;

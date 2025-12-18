@@ -2,8 +2,8 @@
 //!
 //! Internal data structures for CELF computation.
 
-use crate::collections::HugeDoubleArray;
 use crate::collections::BitSet;
+use crate::collections::HugeDoubleArray;
 use crate::core::utils::paged::HugeLongArrayStack;
 use std::collections::HashMap;
 

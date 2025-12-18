@@ -18,8 +18,8 @@
 
 use crate::projection::eval::ml::pipeline::FeatureStep;
 use serde_json::Value;
-use std::hash::{Hash, Hasher};
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 
 /// A concrete implementation of FeatureStep for node properties.
 ///
@@ -117,7 +117,10 @@ mod tests {
     fn test_configuration() {
         let step = NodeFeatureStep::of("age");
         let config = step.configuration();
-        assert_eq!(config.get("nodeProperty"), Some(&Value::String("age".to_string())));
+        assert_eq!(
+            config.get("nodeProperty"),
+            Some(&Value::String("age".to_string()))
+        );
     }
 
     #[test]

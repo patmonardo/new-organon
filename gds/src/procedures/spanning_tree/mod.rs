@@ -29,15 +29,14 @@
 //! let result = algorithm.execute(&graph_store, &config, &context)?;
 //! ```
 
-pub mod spec;
-pub mod storage;
 pub mod computation;
 #[cfg(test)]
 pub mod integration_tests;
+pub mod spec;
+pub mod storage;
 
 // Re-export main types
+pub use computation::SpanningTreeComputationRuntime;
+pub use computation::{SpanningGraph, SpanningTree};
 pub use spec::{SPANNING_TREEAlgorithmSpec, SpanningTreeConfig, SpanningTreeResult};
 pub use storage::SpanningTreeStorageRuntime;
-pub use computation::SpanningTreeComputationRuntime;
-pub use computation::{SpanningTree, SpanningGraph};
-

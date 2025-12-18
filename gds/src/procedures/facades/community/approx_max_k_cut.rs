@@ -96,13 +96,13 @@ impl ApproxMaxKCutBuilder {
         ConfigValidator::in_range(self.iterations as f64, 1.0, 1000.0, "iterations")?;
 
         if self.min_community_sizes.len() != self.k as usize {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                format!(
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
                     "min_community_sizes length ({}) must equal k ({})",
                     self.min_community_sizes.len(),
                     self.k
-                ),
-            ));
+                )),
+            );
         }
 
         Ok(())
@@ -125,7 +125,9 @@ impl ApproxMaxKCutBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -249,7 +251,23 @@ mod tests {
     #[test]
     fn facade_partitions_graph() {
         // Simple clique
-        let store = store_from_edges(4, &[(0, 1), (1, 0), (0, 2), (2, 0), (1, 2), (2, 1), (0, 3), (3, 0), (1, 3), (3, 1), (2, 3), (3, 2)]);
+        let store = store_from_edges(
+            4,
+            &[
+                (0, 1),
+                (1, 0),
+                (0, 2),
+                (2, 0),
+                (1, 2),
+                (2, 1),
+                (0, 3),
+                (3, 0),
+                (1, 3),
+                (3, 1),
+                (2, 3),
+                (3, 2),
+            ],
+        );
         let graph = Graph::new(Arc::new(store));
 
         let rows: Vec<_> = graph
@@ -274,12 +292,7 @@ mod tests {
         let store = store_from_edges(4, &[(0, 1), (1, 2), (2, 3)]);
         let graph = Graph::new(Arc::new(store));
 
-        let stats = graph
-            .approx_max_k_cut()
-            .k(2)
-            .iterations(3)
-            .stats()
-            .unwrap();
+        let stats = graph.approx_max_k_cut().k(2).iterations(3).stats().unwrap();
 
         assert_eq!(stats.k, 2);
         assert_eq!(stats.node_count, 4);

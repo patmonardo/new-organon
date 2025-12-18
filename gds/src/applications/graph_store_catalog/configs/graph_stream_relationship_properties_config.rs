@@ -1,13 +1,13 @@
 use super::GraphStreamRelationshipsConfig;
 
 /// Configuration for streaming relationship properties from the graph store.
-/// 
+///
 /// Mirrors Java GraphStreamRelationshipPropertiesConfig interface.
 /// Extends GraphStreamRelationshipsConfig with property validation.
 pub trait GraphStreamRelationshipPropertiesConfig: GraphStreamRelationshipsConfig {
     /// Returns the list of relationship properties to stream.
     fn relationship_properties(&self) -> Vec<String>;
-    
+
     /// Validates that the specified relationship properties exist for the given types.
     /// In Java, this has complex validation logic checking GraphStore.
     fn validate(&self) -> Result<(), String> {
@@ -43,7 +43,7 @@ impl GraphStreamRelationshipsConfig for GraphStreamRelationshipPropertiesConfigI
     fn graph_name(&self) -> Option<String> {
         self.graph_name.clone()
     }
-    
+
     fn relationship_types(&self) -> Vec<String> {
         self.relationship_types.clone()
     }

@@ -2,9 +2,9 @@
 //!
 //! Influence Maximization using the Independent Cascade model.
 
+pub mod computation;
 pub mod spec;
 pub mod storage;
-pub mod computation;
 
-pub use spec::{CELFAlgorithmSpec, CELFConfig, CELFResult};
 pub use computation::CELFComputationRuntime;
+pub use spec::{CELFAlgorithmSpec, CELFConfig, CELFResult};

@@ -1,5 +1,4 @@
-
-//! ## Organization 
+//! ## Organization
 //!
 //! - `macros/` - Tools that PROJECT (eval_macro, config, procedure macros)
 //! - `descriptors/` - IDENTITY/Science (property, computation, storage, pipeline)

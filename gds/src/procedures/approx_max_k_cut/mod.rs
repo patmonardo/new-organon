@@ -4,9 +4,9 @@
 //! of edges crossing between communities using a Greedy Randomized Adaptive
 //! Search Procedure (GRASP) with local search.
 
+pub mod computation;
 pub mod spec;
 pub mod storage;
-pub mod computation;
 
 #[cfg(test)]
 mod integration_tests;

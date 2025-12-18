@@ -54,7 +54,9 @@ impl BridgesFacade {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -135,7 +137,10 @@ mod tests {
     use crate::types::schema::{Direction, MutableGraphSchema};
     use std::collections::HashMap;
 
-    fn store_from_undirected_edges(node_count: usize, edges: &[(usize, usize)]) -> DefaultGraphStore {
+    fn store_from_undirected_edges(
+        node_count: usize,
+        edges: &[(usize, usize)],
+    ) -> DefaultGraphStore {
         let mut outgoing: Vec<Vec<i64>> = vec![Vec::new(); node_count];
         let mut incoming: Vec<Vec<i64>> = vec![Vec::new(); node_count];
 
@@ -187,9 +192,15 @@ mod tests {
 
         assert_eq!(rows.len(), 3);
         // All edges should be bridges
-        assert!(rows.iter().any(|r| (r.from == 0 && r.to == 1) || (r.from == 1 && r.to == 0)));
-        assert!(rows.iter().any(|r| (r.from == 1 && r.to == 2) || (r.from == 2 && r.to == 1)));
-        assert!(rows.iter().any(|r| (r.from == 2 && r.to == 3) || (r.from == 3 && r.to == 2)));
+        assert!(rows
+            .iter()
+            .any(|r| (r.from == 0 && r.to == 1) || (r.from == 1 && r.to == 0)));
+        assert!(rows
+            .iter()
+            .any(|r| (r.from == 1 && r.to == 2) || (r.from == 2 && r.to == 1)));
+        assert!(rows
+            .iter()
+            .any(|r| (r.from == 2 && r.to == 3) || (r.from == 3 && r.to == 2)));
     }
 
     #[test]

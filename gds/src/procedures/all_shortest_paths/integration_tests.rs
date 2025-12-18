@@ -6,7 +6,10 @@
 #[cfg(test)]
 mod integration_tests {
     use crate::procedures::all_shortest_paths::ALL_SHORTEST_PATHSAlgorithmSpec;
-    use crate::projection::eval::procedure::{ComputationResult, ExecutionContext, ExecutionMode, ProcedureExecutor, AlgorithmSpec, ProjectionHint};
+    use crate::projection::eval::procedure::{
+        AlgorithmSpec, ComputationResult, ExecutionContext, ExecutionMode, ProcedureExecutor,
+        ProjectionHint,
+    };
     use crate::types::graph::id_map::NodeId;
     use serde_json::json;
 
@@ -42,28 +45,30 @@ mod integration_tests {
         let algorithm = ALL_SHORTEST_PATHSAlgorithmSpec::new("test_graph".to_string());
 
         // Create mock computation results for each test
-        let create_result = || ComputationResult::new(
-            crate::procedures::all_shortest_paths::AllShortestPathsResult {
-                results: vec![
-                    crate::procedures::all_shortest_paths::ShortestPathResult {
-                        source: 0 as NodeId,
-                        target: 1 as NodeId,
-                        distance: 2.0,
-                    },
-                    crate::procedures::all_shortest_paths::ShortestPathResult {
-                        source: 0 as NodeId,
-                        target: 2 as NodeId,
-                        distance: 4.0,
-                    },
-                ],
-                node_count: 3,
-                max_distance: 4.0,
-                min_distance: 2.0,
-                infinite_distances: 0,
-                execution_time: std::time::Duration::from_millis(50),
-            },
-            std::time::Duration::from_millis(50),
-        );
+        let create_result = || {
+            ComputationResult::new(
+                crate::procedures::all_shortest_paths::AllShortestPathsResult {
+                    results: vec![
+                        crate::procedures::all_shortest_paths::ShortestPathResult {
+                            source: 0 as NodeId,
+                            target: 1 as NodeId,
+                            distance: 2.0,
+                        },
+                        crate::procedures::all_shortest_paths::ShortestPathResult {
+                            source: 0 as NodeId,
+                            target: 2 as NodeId,
+                            distance: 4.0,
+                        },
+                    ],
+                    node_count: 3,
+                    max_distance: 4.0,
+                    min_distance: 2.0,
+                    infinite_distances: 0,
+                    execution_time: std::time::Duration::from_millis(50),
+                },
+                std::time::Duration::from_millis(50),
+            )
+        };
 
         // Test supported execution modes
         let stream_result = algorithm.consume_result(create_result(), &ExecutionMode::Stream);
@@ -73,8 +78,12 @@ mod integration_tests {
         assert!(stats_result.is_ok(), "Stats mode should be supported");
 
         // Test unsupported execution mode
-        let write_result = algorithm.consume_result(create_result(), &ExecutionMode::WriteNodeProperty);
-        assert!(write_result.is_err(), "WriteNodeProperty mode should not be supported");
+        let write_result =
+            algorithm.consume_result(create_result(), &ExecutionMode::WriteNodeProperty);
+        assert!(
+            write_result.is_err(),
+            "WriteNodeProperty mode should not be supported"
+        );
     }
 
     #[test]
@@ -103,7 +112,10 @@ mod integration_tests {
         // Note: The current macro doesn't validate config, it just passes through
         // In a real implementation, this would be validated
         let result = algorithm.parse_config(&invalid_config);
-        assert!(result.is_ok(), "Config parsing should succeed (validation happens elsewhere)");
+        assert!(
+            result.is_ok(),
+            "Config parsing should succeed (validation happens elsewhere)"
+        );
     }
 
     #[test]

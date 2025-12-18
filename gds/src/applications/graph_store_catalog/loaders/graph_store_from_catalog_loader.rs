@@ -98,7 +98,10 @@ struct CatalogGraphProjectConfig {
 
 impl CatalogGraphProjectConfig {
     fn new(graph_name: String, username: String) -> Self {
-        Self { graph_name, username }
+        Self {
+            graph_name,
+            username,
+        }
     }
 }
 

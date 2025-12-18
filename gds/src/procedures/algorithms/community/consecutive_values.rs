@@ -4,7 +4,9 @@
 //!
 //! This module provides node property values that remap community IDs to consecutive integers.
 
-use super::super::stubs::{LongNodePropertyValues, FilteredNodePropertyValuesMarker, ValueType, NodePropertyValues};
+use super::super::stubs::{
+    FilteredNodePropertyValuesMarker, LongNodePropertyValues, NodePropertyValues, ValueType,
+};
 use std::collections::HashMap;
 
 /// Node property values that remap community IDs to consecutive integers
@@ -237,9 +239,7 @@ mod tests {
 
     #[test]
     fn test_consecutive_mapping_empty() {
-        let input = Box::new(TestLongProperty {
-            values: vec![],
-        });
+        let input = Box::new(TestLongProperty { values: vec![] });
 
         let consecutive = ConsecutiveLongNodePropertyValues::new(input);
 

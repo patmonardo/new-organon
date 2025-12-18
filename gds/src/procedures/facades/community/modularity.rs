@@ -3,8 +3,8 @@
 //! Measures community quality by comparing actual edges within communities
 //! to expected edges if the network were random.
 
-use crate::procedures::modularity::computation::ModularityComputationRuntime;
 use crate::procedures::facades::traits::Result;
+use crate::procedures::modularity::computation::ModularityComputationRuntime;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -47,9 +47,11 @@ impl ModularityBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.community_property.is_empty() {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "community_property cannot be empty".to_string(),
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "community_property cannot be empty".to_string(),
+                ),
+            );
         }
         Ok(())
     }
@@ -71,7 +73,9 @@ impl ModularityBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -164,6 +168,9 @@ mod tests {
     #[test]
     fn builder_api() {
         // Test that builder methods exist and are chainable
-        assert_eq!(std::mem::size_of::<ModularityBuilder>(), std::mem::size_of::<ModularityBuilder>());
+        assert_eq!(
+            std::mem::size_of::<ModularityBuilder>(),
+            std::mem::size_of::<ModularityBuilder>()
+        );
     }
 }

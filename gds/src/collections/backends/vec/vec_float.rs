@@ -23,8 +23,8 @@ impl From<Vec<f32>> for VecFloat {
         Self { data }
     }
 }
-use crate::vec_collections;
 use crate::types::ValueType;
+use crate::vec_collections;
 vec_collections!(VecFloat, f32, ValueType::Float, 0.0f32, kind = Float);
 
 use crate::collections::traits::PropertyValuesAdapter;

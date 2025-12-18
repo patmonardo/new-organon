@@ -92,8 +92,7 @@ mod tests {
     #[test]
     fn kcore_star_graph() {
         // Star: center node 0 connected to 1,2,3,4 (center has degree 4, leaves have degree 1)
-        let store =
-            store_from_outgoing(vec![vec![1, 2, 3, 4], vec![0], vec![0], vec![0], vec![0]]);
+        let store = store_from_outgoing(vec![vec![1, 2, 3, 4], vec![0], vec![0], vec![0], vec![0]]);
         let graph = Graph::new(Arc::new(store));
 
         let result = graph.kcore().run().unwrap();

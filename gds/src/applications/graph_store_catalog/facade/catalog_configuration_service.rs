@@ -36,17 +36,26 @@ impl CatalogConfigurationService {
 
     /// Validates a graph name configuration with strict validation.
     pub fn validate_graph_name_strictly(&self, graph_name: &str) -> Result<GraphName, String> {
-        self.graph_name_validation_service.validate_strictly(graph_name)
+        self.graph_name_validation_service
+            .validate_strictly(graph_name)
     }
 
     /// Validates a possible null graph name.
-    pub fn validate_possible_null_graph_name(&self, graph_name: Option<&str>) -> Result<Option<GraphName>, String> {
-        self.graph_name_validation_service.validate_possible_null(graph_name)
+    pub fn validate_possible_null_graph_name(
+        &self,
+        graph_name: Option<&str>,
+    ) -> Result<Option<GraphName>, String> {
+        self.graph_name_validation_service
+            .validate_possible_null(graph_name)
     }
 
     /// Validates a single graph name or list of graph names.
-    pub fn validate_single_or_list_graph_name(&self, graph_name_or_list: &serde_json::Value) -> Result<Vec<GraphName>, String> {
-        self.graph_name_validation_service.validate_single_or_list(graph_name_or_list)
+    pub fn validate_single_or_list_graph_name(
+        &self,
+        graph_name_or_list: &serde_json::Value,
+    ) -> Result<Vec<GraphName>, String> {
+        self.graph_name_validation_service
+            .validate_single_or_list(graph_name_or_list)
     }
 
     /// Validates graph store properties.
@@ -55,7 +64,8 @@ impl CatalogConfigurationService {
         graph_store: &G,
         properties: &[String],
     ) -> Result<(), String> {
-        self.graph_store_validation_service.ensure_node_properties_exist(graph_store, properties)
+        self.graph_store_validation_service
+            .ensure_node_properties_exist(graph_store, properties)
     }
 
     /// Validates relationship properties against relationship types.
@@ -65,11 +75,12 @@ impl CatalogConfigurationService {
         relationship_type: &str,
         relationship_properties: &[String],
     ) -> Result<(), String> {
-        self.graph_store_validation_service.ensure_relationship_properties_match_relationship_type(
-            graph_store,
-            relationship_type,
-            relationship_properties,
-        )
+        self.graph_store_validation_service
+            .ensure_relationship_properties_match_relationship_type(
+                graph_store,
+                relationship_type,
+                relationship_properties,
+            )
     }
 
     /// Validates that relationships may be deleted.
@@ -79,11 +90,8 @@ impl CatalogConfigurationService {
         relationship_type: &str,
         graph_name: &GraphName,
     ) -> Result<(), String> {
-        self.graph_store_validation_service.ensure_relationships_may_be_deleted(
-            graph_store,
-            relationship_type,
-            graph_name.value(),
-        )
+        self.graph_store_validation_service
+            .ensure_relationships_may_be_deleted(graph_store, relationship_type, graph_name.value())
     }
 
     /// Validates graph property exists.
@@ -92,7 +100,8 @@ impl CatalogConfigurationService {
         graph_store: &impl GraphStore,
         graph_property: &str,
     ) -> Result<(), String> {
-        self.graph_store_validation_service.ensure_graph_property_exists(graph_store, graph_property)
+        self.graph_store_validation_service
+            .ensure_graph_property_exists(graph_store, graph_property)
     }
 
     /// Validates read access permissions.
@@ -101,7 +110,8 @@ impl CatalogConfigurationService {
         graph_store: &impl GraphStore,
         should_export_additional_node_properties: bool,
     ) -> Result<(), String> {
-        self.graph_store_validation_service.ensure_read_access(graph_store, should_export_additional_node_properties)
+        self.graph_store_validation_service
+            .ensure_read_access(graph_store, should_export_additional_node_properties)
     }
 
     /// Parses user input write properties.
@@ -129,11 +139,8 @@ impl CatalogConfigurationService {
         node_labels: &[String],
         node_properties: &[String],
     ) -> Result<(), String> {
-        self.graph_store_validation_service.ensure_node_properties_match_node_labels(
-            graph_store,
-            node_labels,
-            node_properties,
-        )
+        self.graph_store_validation_service
+            .ensure_node_properties_match_node_labels(graph_store, node_labels, node_properties)
     }
 
     /// Validates relationship properties match relationship types.
@@ -142,11 +149,12 @@ impl CatalogConfigurationService {
         graph_store: &impl GraphStore,
         configuration: &impl GraphStreamRelationshipPropertiesConfig,
     ) -> Result<(), String> {
-        self.graph_store_validation_service.ensure_relationship_properties_match_relationship_types(
-            graph_store,
-            &configuration.relationship_types(),
-            &configuration.relationship_properties(),
-        )
+        self.graph_store_validation_service
+            .ensure_relationship_properties_match_relationship_types(
+                graph_store,
+                &configuration.relationship_types(),
+                &configuration.relationship_properties(),
+            )
     }
 
     /// Validates relationship types are present.
@@ -166,11 +174,12 @@ impl CatalogConfigurationService {
         relationship_type_as_string: &str,
         possible_relationship_property: Option<&str>,
     ) -> Result<(), String> {
-        self.graph_store_validation_service.ensure_possible_relationship_property_matches_relationship_type(
-            graph_store,
-            relationship_type_as_string,
-            possible_relationship_property,
-        )
+        self.graph_store_validation_service
+            .ensure_possible_relationship_property_matches_relationship_type(
+                graph_store,
+                relationship_type_as_string,
+                possible_relationship_property,
+            )
     }
 
     /// Filters existing node properties.
@@ -179,7 +188,8 @@ impl CatalogConfigurationService {
         graph_store: &impl GraphStore,
         node_properties: &[String],
     ) -> Vec<String> {
-        self.graph_store_validation_service.filter_existing_node_properties(graph_store, node_properties)
+        self.graph_store_validation_service
+            .filter_existing_node_properties(graph_store, node_properties)
     }
 
     /// Validates node properties do not exist.

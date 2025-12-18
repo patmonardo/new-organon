@@ -55,7 +55,10 @@ impl DagLongestPathComputationRuntime {
                 let new_distance = source_distance + weight;
 
                 // Update if we found a longer path
-                if self.storage.compare_and_update_distance(target, new_distance) {
+                if self
+                    .storage
+                    .compare_and_update_distance(target, new_distance)
+                {
                     self.storage.set_predecessor(target, source);
                 }
 

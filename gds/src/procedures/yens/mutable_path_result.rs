@@ -58,7 +58,14 @@ impl MutablePathResult {
         relationship_ids: Vec<NodeId>,
         costs: Vec<f64>,
     ) -> Self {
-        Self::new(index, source_node, target_node, node_ids, relationship_ids, costs)
+        Self::new(
+            index,
+            source_node,
+            target_node,
+            node_ids,
+            relationship_ids,
+            costs,
+        )
     }
 
     /// Convert to immutable path result
@@ -161,7 +168,8 @@ impl MutablePathResult {
         self.node_ids.extend_from_slice(&other.node_ids[1..]);
 
         // Append relationship IDs
-        self.relationship_ids.extend_from_slice(&other.relationship_ids);
+        self.relationship_ids
+            .extend_from_slice(&other.relationship_ids);
 
         // Append costs (add base cost to each)
         for &cost in &other.costs[1..] {
@@ -241,7 +249,9 @@ mod tests {
     #[test]
     fn test_mutable_path_result_node_access() {
         let path = MutablePathResult::new(
-            0, 0, 3,
+            0,
+            0,
+            3,
             vec![0, 1, 2, 3],
             vec![10, 11, 12],
             vec![0.0, 1.0, 2.0, 3.0],
@@ -256,7 +266,9 @@ mod tests {
     #[test]
     fn test_mutable_path_result_sub_path() {
         let path = MutablePathResult::new(
-            0, 0, 3,
+            0,
+            0,
+            3,
             vec![0, 1, 2, 3],
             vec![10, 11, 12],
             vec![0.0, 1.0, 2.0, 3.0],
@@ -271,8 +283,22 @@ mod tests {
     #[test]
     #[ignore] // Algorithm needs review
     fn test_mutable_path_result_matches() {
-        let path1 = MutablePathResult::new(0, 0, 3, vec![0, 1, 2, 3], vec![10, 11, 12], vec![0.0, 1.0, 2.0, 3.0]);
-        let path2 = MutablePathResult::new(0, 0, 3, vec![0, 1, 2, 4], vec![10, 11, 13], vec![0.0, 1.0, 2.0, 4.0]);
+        let path1 = MutablePathResult::new(
+            0,
+            0,
+            3,
+            vec![0, 1, 2, 3],
+            vec![10, 11, 12],
+            vec![0.0, 1.0, 2.0, 3.0],
+        );
+        let path2 = MutablePathResult::new(
+            0,
+            0,
+            3,
+            vec![0, 1, 2, 4],
+            vec![10, 11, 13],
+            vec![0.0, 1.0, 2.0, 4.0],
+        );
 
         assert!(path1.matches(&path2, 2));
         assert!(!path1.matches(&path2, 3));
@@ -280,8 +306,10 @@ mod tests {
 
     #[test]
     fn test_mutable_path_result_append() {
-        let mut path1 = MutablePathResult::new(0, 0, 2, vec![0, 1, 2], vec![10, 11], vec![0.0, 1.0, 2.0]);
-        let path2 = MutablePathResult::new(0, 2, 4, vec![2, 3, 4], vec![12, 13], vec![0.0, 1.0, 2.0]);
+        let mut path1 =
+            MutablePathResult::new(0, 0, 2, vec![0, 1, 2], vec![10, 11], vec![0.0, 1.0, 2.0]);
+        let path2 =
+            MutablePathResult::new(0, 2, 4, vec![2, 3, 4], vec![12, 13], vec![0.0, 1.0, 2.0]);
 
         path1.append(&path2);
 

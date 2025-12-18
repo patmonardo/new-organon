@@ -3,9 +3,9 @@
 //! Generates random walks from nodes in the graph using biased sampling.
 //! Supports node2vec-style exploration with configurable return and in-out factors.
 
-use crate::procedures::random_walk::computation::RandomWalkComputationRuntime;
 use crate::procedures::facades::builder_base::ConfigValidator;
 use crate::procedures::facades::traits::Result;
+use crate::procedures::random_walk::computation::RandomWalkComputationRuntime;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -118,7 +118,9 @@ impl RandomWalkBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -128,7 +130,12 @@ impl RandomWalkBuilder {
         let fallback = graph_view.default_property_value();
 
         // Convert source nodes to internal IDs
-        let source_nodes_internal: Vec<usize> = self.source_nodes.clone().into_iter().map(|n| n as usize).collect();
+        let source_nodes_internal: Vec<usize> = self
+            .source_nodes
+            .clone()
+            .into_iter()
+            .map(|n| n as usize)
+            .collect();
 
         // Get neighbors
         let get_neighbors = |node_idx: usize| -> Vec<usize> {

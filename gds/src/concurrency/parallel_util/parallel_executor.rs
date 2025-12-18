@@ -3,9 +3,9 @@
 //! This module provides the core parallel execution functions that all graph algorithms use.
 //! These mirror Java GDS's ParallelUtil but leverage Rust's Rayon for work-stealing parallelism.
 
-use crate::concurrency::{BatchSize, Concurrency};
-use crate::concurrency::TerminationFlag;
 use crate::concurrency::install_with_concurrency;
+use crate::concurrency::TerminationFlag;
+use crate::concurrency::{BatchSize, Concurrency};
 use rayon::prelude::*;
 use std::ops::Range;
 

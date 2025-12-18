@@ -1,11 +1,11 @@
 //! WCC Algorithm Specification
-use serde::{Deserialize, Serialize};
+use super::computation::WccComputationRuntime;
+use super::storage::WccStorageRuntime;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
-use super::storage::WccStorageRuntime;
-use super::computation::WccComputationRuntime;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WccConfig {

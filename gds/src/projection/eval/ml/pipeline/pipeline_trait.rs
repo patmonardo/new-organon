@@ -6,6 +6,9 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error as StdError;
 use std::fmt;
 
+use crate::projection::NodeLabel;
+use crate::types::graph_store::GraphStore;
+
 use super::executable_node_property_step::ExecutableNodePropertyStep;
 use super::feature_step::FeatureStep;
 
@@ -75,16 +78,16 @@ pub trait Pipeline {
     /// ```java
     /// default void validateBeforeExecution(GraphStore graphStore, Collection<NodeLabel> nodeLabels) {
     ///     Set<String> invalidProperties = featurePropertiesMissingFromGraph(graphStore, nodeLabels);
-    ///     
+    ///
     ///     // Remove properties that will be created by node property steps
     ///     nodePropertySteps().stream()
     ///         .flatMap(step -> Stream.ofNullable((String) step.config().get(MUTATE_PROPERTY_KEY)))
     ///         .forEach(invalidProperties::remove);
-    ///         
+    ///
     ///     if (!invalidProperties.isEmpty()) {
     ///         throw Pipeline.missingNodePropertiesFromFeatureSteps(invalidProperties);
     ///     }
-    ///     
+    ///
     ///     specificValidateBeforeExecution(graphStore);
     /// }
     /// ```
@@ -132,7 +135,7 @@ pub trait Pipeline {
     /// ```java
     /// default void validateFeatureProperties(GraphStore graphStore, Collection<NodeLabel> nodeLabels) {
     ///     Set<String> invalidProperties = featurePropertiesMissingFromGraph(graphStore, nodeLabels);
-    ///     
+    ///
     ///     if (!invalidProperties.isEmpty()) {
     ///         throw missingNodePropertiesFromFeatureSteps(invalidProperties);
     ///     }
@@ -161,7 +164,7 @@ pub trait Pipeline {
     /// ```java
     /// default Set<String> featurePropertiesMissingFromGraph(GraphStore graphStore, Collection<NodeLabel> nodeLabels) {
     ///     var graphProperties = graphStore.nodePropertyKeys(nodeLabels);
-    ///     
+    ///
     ///     return featureSteps()
     ///         .stream()
     ///         .flatMap(step -> step.inputNodeProperties().stream())
@@ -171,12 +174,22 @@ pub trait Pipeline {
     /// ```
     fn feature_properties_missing_from_graph(
         &self,
-        _graph_store: &crate::types::graph_store::DefaultGraphStore,
-        _node_labels: &[String],
+        graph_store: &crate::types::graph_store::DefaultGraphStore,
+        node_labels: &[String],
     ) -> HashSet<String> {
-        // TODO: Implement node_property_keys on DefaultGraphStore
-        // For now, return empty set (all properties valid)
-        HashSet::new()
+        let labels: HashSet<NodeLabel> = node_labels
+            .iter()
+            .map(|label| NodeLabel::of(label.clone()))
+            .collect();
+
+        let graph_properties = graph_store.node_property_keys_for_labels(&labels);
+
+        self.feature_steps()
+            .iter()
+            .flat_map(|step| step.input_node_properties())
+            .filter(|property| !graph_properties.contains(*property))
+            .cloned()
+            .collect()
     }
 
     /// Convert pipeline to map for serialization (ToMapConvertible).

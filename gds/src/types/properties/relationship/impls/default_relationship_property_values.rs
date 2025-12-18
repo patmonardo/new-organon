@@ -45,19 +45,18 @@ impl DefaultRelationshipPropertyValues {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::ValueType;
     use crate::types::properties::relationship::RelationshipPropertyValues;
     use crate::types::properties::PropertyValues;
+    use crate::types::ValueType;
 
     #[test]
     fn default_relationship_property_values_behavior() {
         let values = DefaultRelationshipPropertyValues::with_values(vec![1.0, 2.5, 3.7], 0.0, 3);
 
         assert_eq!(values.value_type(), ValueType::Double);
-        assert_eq!(values.element_count(), 3);  // Use element_count from PropertyValues trait
+        assert_eq!(values.element_count(), 3); // Use element_count from PropertyValues trait
         assert_eq!(values.double_value(1).unwrap(), 2.5);
         assert!(values.has_value(0));
         assert!(!values.has_value(10));
     }
 }
-

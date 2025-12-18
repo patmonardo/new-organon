@@ -14,13 +14,19 @@ where
     I: IntoIterator<Item = f64>,
 {
     if !should_compute_distribution {
-        return SimilarityStats { histogram: None, compute_milliseconds: 0, success: true };
+        return SimilarityStats {
+            histogram: None,
+            compute_milliseconds: 0,
+            success: true,
+        };
     }
     let start = Instant::now();
     let values: Vec<f64> = values_iter.into_iter().collect();
     let elapsed = start.elapsed().as_millis();
     let success = !similarity_summary(&values).is_empty();
-    SimilarityStats { histogram: Some(values), compute_milliseconds: elapsed, success }
+    SimilarityStats {
+        histogram: Some(values),
+        compute_milliseconds: elapsed,
+        success,
+    }
 }
-
-

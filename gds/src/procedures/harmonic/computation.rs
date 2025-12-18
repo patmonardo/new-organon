@@ -86,10 +86,7 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
 
-    fn create_graph(
-        edges: Vec<(usize, usize)>,
-        node_count: usize,
-    ) -> HashMap<usize, Vec<usize>> {
+    fn create_graph(edges: Vec<(usize, usize)>, node_count: usize) -> HashMap<usize, Vec<usize>> {
         let mut graph = HashMap::new();
         for i in 0..node_count {
             graph.insert(i, Vec::new());
@@ -139,21 +136,33 @@ mod tests {
 
         // Node 0: can reach 1 at d=1, 2 at d=2, 3 at d=3
         //         = (1/1 + 1/2 + 1/3) / 3 = (6/6 + 3/6 + 2/6) / 3 = 11/18
-        let expected_0 = (1.0 + 0.5 + 1.0/3.0) / 3.0;
-        assert!((result.centralities[0] - expected_0).abs() < 1e-10,
-                "Node 0: expected {}, got {}", expected_0, result.centralities[0]);
+        let expected_0 = (1.0 + 0.5 + 1.0 / 3.0) / 3.0;
+        assert!(
+            (result.centralities[0] - expected_0).abs() < 1e-10,
+            "Node 0: expected {}, got {}",
+            expected_0,
+            result.centralities[0]
+        );
 
         // Node 1: can reach 0 at d=1, 2 at d=1, 3 at d=2
         //         = (1/1 + 1/1 + 1/2) / 3 = 2.5 / 3
         let expected_1 = (1.0 + 1.0 + 0.5) / 3.0;
-        assert!((result.centralities[1] - expected_1).abs() < 1e-10,
-                "Node 1: expected {}, got {}", expected_1, result.centralities[1]);
+        assert!(
+            (result.centralities[1] - expected_1).abs() < 1e-10,
+            "Node 1: expected {}, got {}",
+            expected_1,
+            result.centralities[1]
+        );
 
         // Node 3: can reach 2 at d=1, 1 at d=2, 0 at d=3
         //         = (1/1 + 1/2 + 1/3) / 3 = 11/18
-        let expected_3 = (1.0 + 0.5 + 1.0/3.0) / 3.0;
-        assert!((result.centralities[3] - expected_3).abs() < 1e-10,
-                "Node 3: expected {}, got {}", expected_3, result.centralities[3]);
+        let expected_3 = (1.0 + 0.5 + 1.0 / 3.0) / 3.0;
+        assert!(
+            (result.centralities[3] - expected_3).abs() < 1e-10,
+            "Node 3: expected {}, got {}",
+            expected_3,
+            result.centralities[3]
+        );
     }
 
     #[test]
@@ -165,14 +174,21 @@ mod tests {
 
         // Center (0): can reach all 4 leaves at d=1
         //             = (1 + 1 + 1 + 1) / 4 = 1.0
-        assert!((result.centralities[0] - 1.0).abs() < 1e-10,
-                "Center: expected 1.0, got {}", result.centralities[0]);
+        assert!(
+            (result.centralities[0] - 1.0).abs() < 1e-10,
+            "Center: expected 1.0, got {}",
+            result.centralities[0]
+        );
 
         // Leaf (1): can reach center at d=1, others at d=2
         //           = (1/1 + 1/2 + 1/2 + 1/2) / 4 = 2.5 / 4 = 0.625
         let expected_leaf = (1.0 + 0.5 + 0.5 + 0.5) / 4.0;
-        assert!((result.centralities[1] - expected_leaf).abs() < 1e-10,
-                "Leaf: expected {}, got {}", expected_leaf, result.centralities[1]);
+        assert!(
+            (result.centralities[1] - expected_leaf).abs() < 1e-10,
+            "Leaf: expected {}, got {}",
+            expected_leaf,
+            result.centralities[1]
+        );
     }
 
     #[test]
@@ -185,8 +201,12 @@ mod tests {
         // Each node can reach 2 others at d=1
         // harmonic = (1/1 + 1/1) / 2 = 1.0
         for i in 0..3 {
-            assert!((result.centralities[i] - 1.0).abs() < 1e-10,
-                    "Node {}: expected 1.0, got {}", i, result.centralities[i]);
+            assert!(
+                (result.centralities[i] - 1.0).abs() < 1e-10,
+                "Node {}: expected 1.0, got {}",
+                i,
+                result.centralities[i]
+            );
         }
     }
 
@@ -200,12 +220,20 @@ mod tests {
         // Node 0: can reach 1 at d=1, cannot reach 2,3
         //         = 1/1 / 3 = 1/3
         let expected = 1.0 / 3.0;
-        assert!((result.centralities[0] - expected).abs() < 1e-10,
-                "Node 0: expected {}, got {}", expected, result.centralities[0]);
+        assert!(
+            (result.centralities[0] - expected).abs() < 1e-10,
+            "Node 0: expected {}, got {}",
+            expected,
+            result.centralities[0]
+        );
 
         // Same for node 1
-        assert!((result.centralities[1] - expected).abs() < 1e-10,
-                "Node 1: expected {}, got {}", expected, result.centralities[1]);
+        assert!(
+            (result.centralities[1] - expected).abs() < 1e-10,
+            "Node 1: expected {}, got {}",
+            expected,
+            result.centralities[1]
+        );
 
         // Node 2 and 3 same as 0 and 1
         assert!((result.centralities[2] - expected).abs() < 1e-10);

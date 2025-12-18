@@ -1,10 +1,10 @@
 //! GraphStore trait - Central interface for managing and accessing graph data.
 
 use super::{Capabilities, DatabaseInfo, DeletionResult};
-use crate::projection::{NodeLabel, RelationshipType};
-use crate::types::graph::{Graph, GraphResult};
-use crate::types::graph::id_map::IdMap;
 use crate::projection::orientation::Orientation;
+use crate::projection::{NodeLabel, RelationshipType};
+use crate::types::graph::id_map::IdMap;
+use crate::types::graph::{Graph, GraphResult};
 use crate::types::properties::graph::GraphPropertyValues;
 use crate::types::properties::node::NodePropertyValues;
 use crate::types::properties::relationship::RelationshipPropertyValues;
@@ -582,10 +582,8 @@ impl<G: GraphStore> GraphStore for GraphStoreAdapter<G> {
         relationship_types: &HashSet<RelationshipType>,
         relationship_property_selectors: &HashMap<RelationshipType, String>,
     ) -> GraphResult<Arc<dyn Graph>> {
-        self.graph_store.get_graph_with_types_and_selectors(
-            relationship_types,
-            relationship_property_selectors,
-        )
+        self.graph_store
+            .get_graph_with_types_and_selectors(relationship_types, relationship_property_selectors)
     }
 
     fn get_graph_with_types_and_orientation(
@@ -603,11 +601,12 @@ impl<G: GraphStore> GraphStore for GraphStoreAdapter<G> {
         relationship_property_selectors: &HashMap<RelationshipType, String>,
         orientation: Orientation,
     ) -> GraphResult<Arc<dyn Graph>> {
-        self.graph_store.get_graph_with_types_selectors_and_orientation(
-            relationship_types,
-            relationship_property_selectors,
-            orientation,
-        )
+        self.graph_store
+            .get_graph_with_types_selectors_and_orientation(
+                relationship_types,
+                relationship_property_selectors,
+                orientation,
+            )
     }
 }
 

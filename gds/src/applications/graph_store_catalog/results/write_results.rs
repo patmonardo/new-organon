@@ -1,7 +1,7 @@
 // Write result types - direct translation from Java
 
-use std::collections::HashMap;
 use serde_json::Value;
+use std::collections::HashMap;
 
 /// Result for writing node properties.
 /// Mirrors Java NodePropertiesWriteResult class.
@@ -232,7 +232,11 @@ pub struct WriteRelationshipPropertiesResultBuilder {
 impl WriteRelationshipPropertiesResultBuilder {
     /// Creates a new Builder
     /// Mirrors Java Builder(String graphName, String relationshipType, List<String> relationProperties)
-    pub fn new(graph_name: String, relationship_type: String, relationship_properties: Vec<String>) -> Self {
+    pub fn new(
+        graph_name: String,
+        relationship_type: String,
+        relationship_properties: Vec<String>,
+    ) -> Self {
         Self {
             graph_name,
             relationship_type,
@@ -301,7 +305,11 @@ impl WriteRelationshipResult {
         relationships_written: u64,
         configuration: HashMap<String, Value>,
     ) -> Self {
-        let properties_written = if relationship_property.is_some() { relationships_written } else { 0 };
+        let properties_written = if relationship_property.is_some() {
+            relationships_written
+        } else {
+            0
+        };
         Self {
             write_millis,
             graph_name,
@@ -328,7 +336,11 @@ pub struct WriteRelationshipResultBuilder {
 impl WriteRelationshipResultBuilder {
     /// Creates a new Builder
     /// Mirrors Java Builder(String graphName, String relationshipType, Optional<String> maybeRelationshipProperty)
-    pub fn new(graph_name: String, relationship_type: String, maybe_relationship_property: Option<String>) -> Self {
+    pub fn new(
+        graph_name: String,
+        relationship_type: String,
+        maybe_relationship_property: Option<String>,
+    ) -> Self {
         Self {
             graph_name,
             relationship_type,

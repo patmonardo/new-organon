@@ -2,8 +2,8 @@
 //!
 //! This module provides memory estimation for PageRank algorithm execution.
 
-use crate::mem::{MemoryEstimation, MemoryRange, MemoryTree};
 use crate::core::graph_dimensions::GraphDimensions;
+use crate::mem::{MemoryEstimation, MemoryRange, MemoryTree};
 use crate::pregel::{PregelSchema, Visibility};
 use crate::types::ValueType;
 
@@ -107,7 +107,10 @@ impl MemoryEstimation for PageRankMemoryEstimation {
         // Create a hierarchical memory tree
         MemoryTree::new(
             self.description(),
-            node_values.add(&message_queues).add(&convergence_tracking).add(&graph_overhead),
+            node_values
+                .add(&message_queues)
+                .add(&convergence_tracking)
+                .add(&graph_overhead),
             vec![
                 MemoryTree::leaf("Node Values".to_string(), node_values),
                 MemoryTree::leaf("Message Queues".to_string(), message_queues),
@@ -128,7 +131,11 @@ pub fn create_pagerank_memory_estimation(
     avg_degree: f64,
 ) -> PageRankMemoryEstimation {
     // Validate that this is a PageRank schema
-    if let Some(pagerank_prop) = schema.elements().iter().find(|e| e.property_key == "pagerank") {
+    if let Some(pagerank_prop) = schema
+        .elements()
+        .iter()
+        .find(|e| e.property_key == "pagerank")
+    {
         assert_eq!(pagerank_prop.property_type, ValueType::Double);
         assert_eq!(pagerank_prop.visibility, Visibility::Public);
     } else {
@@ -146,7 +153,10 @@ pub fn estimate_pagerank_memory(node_count: usize) -> MemoryRange {
     // Assume average degree of 10 (typical for many real-world graphs)
     let avg_degree = 10.0;
     let estimation = PageRankMemoryEstimation::new(node_count, avg_degree);
-    let dims = crate::core::graph_dimensions::ConcreteGraphDimensions::of(node_count, (node_count as f64 * avg_degree) as usize);
+    let dims = crate::core::graph_dimensions::ConcreteGraphDimensions::of(
+        node_count,
+        (node_count as f64 * avg_degree) as usize,
+    );
     *estimation.estimate(&dims, 1).memory_usage()
 }
 

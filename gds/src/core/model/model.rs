@@ -6,7 +6,7 @@
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-use crate::config::{BaseConfig, ToMapConvertible, GraphSchema};
+use crate::config::{BaseConfig, GraphSchema, ToMapConvertible};
 // use crate::ml::TrainingMethod;  // Commented out - ml module deactivated
 use crate::core::model::types::ModelConfig;
 
@@ -89,4 +89,3 @@ pub trait CustomInfo: ToMapConvertible + serde::Serialize + serde::de::Deseriali
         None
     }
 }
-

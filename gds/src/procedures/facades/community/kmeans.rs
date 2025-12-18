@@ -112,7 +112,12 @@ impl KMeansBuilder {
     }
 
     fn validate_basic(&self) -> Result<()> {
-        ConfigValidator::in_range(self.config.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
+        ConfigValidator::in_range(
+            self.config.concurrency as f64,
+            1.0,
+            1_000_000.0,
+            "concurrency",
+        )?;
         ConfigValidator::in_range(self.config.k as f64, 1.0, 1_000_000.0, "k")?;
         ConfigValidator::in_range(
             self.config.max_iterations as f64,
@@ -139,7 +144,9 @@ impl KMeansBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -162,12 +169,12 @@ impl KMeansBuilder {
             .available_node_properties()
             .contains(&self.config.node_property)
         {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                format!(
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
                     "node_property '{}' not found on graph",
                     self.config.node_property
-                ),
-            ));
+                )),
+            );
         }
 
         let pv = graph_view
@@ -190,24 +197,24 @@ impl KMeansBuilder {
 
         if !config.seed_centroids.is_empty() {
             if config.seed_centroids.len() != config.k {
-                return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                    format!(
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
                         "seed_centroids must contain exactly k={} centroids, got {}",
                         config.k,
                         config.seed_centroids.len()
-                    ),
-                ));
+                    )),
+                );
             }
             for (i, c) in config.seed_centroids.iter().enumerate() {
                 if c.len() != dims {
-                    return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                        format!(
+                    return Err(
+                        crate::projection::eval::procedure::AlgorithmError::Execution(format!(
                             "seed_centroids[{}] dimension mismatch: expected {}, got {}",
                             i,
                             dims,
                             c.len()
-                        ),
-                    ));
+                        )),
+                    );
                 }
             }
         }
@@ -221,15 +228,15 @@ impl KMeansBuilder {
                 ))
             })?;
             if arr.len() != dims {
-                return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                    format!(
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
                         "node_property '{}' dimension mismatch at node {}: expected {}, got {}",
                         config.node_property,
                         i,
                         dims,
                         arr.len()
-                    ),
-                ));
+                    )),
+                );
             }
             points.push(arr);
         }
@@ -247,11 +254,13 @@ impl KMeansBuilder {
             .into_iter()
             .zip(result.distance_from_center)
             .enumerate()
-            .map(|(node_id, (community_id, distance_from_center))| KMeansRow {
-                node_id: node_id as u64,
-                community_id,
-                distance_from_center,
-            });
+            .map(
+                |(node_id, (community_id, distance_from_center))| KMeansRow {
+                    node_id: node_id as u64,
+                    community_id,
+                    distance_from_center,
+                },
+            );
         Ok(Box::new(iter))
     }
 

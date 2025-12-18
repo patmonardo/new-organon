@@ -22,10 +22,10 @@ pub type RelationshipCursorBox = Box<dyn RelationshipCursor + Send>;
 // === Phase 2A: Specialized Cursor Architecture ===
 
 /// Optimized relationship cursor for algorithms requiring direct f64 weight access.
-/// 
+///
 /// This trait is designed for pathfinding algorithms (Dijkstra, A*, Bellman-Ford, etc.)
 /// that need high-performance access to relationship weights as f64 values.
-/// 
+///
 /// **Key Benefits:**
 /// - Direct f64 access (no conversion overhead)
 /// - Java GDS alignment (algorithms use `double` weights)
@@ -34,12 +34,12 @@ pub type RelationshipCursorBox = Box<dyn RelationshipCursor + Send>;
 pub trait WeightedRelationshipCursor: Debug {
     /// Returns the source node ID of this relationship.
     fn source_id(&self) -> NodeId;
-    
+
     /// Returns the target node ID of this relationship.
     fn target_id(&self) -> NodeId;
-    
+
     /// Returns the weight of this relationship as f64.
-    /// 
+    ///
     /// This method provides direct f64 access optimized for algorithms.
     /// No type conversion is performed - the weight is already stored as f64.
     fn weight(&self) -> f64;
@@ -49,12 +49,12 @@ pub trait WeightedRelationshipCursor: Debug {
 pub trait ModifiableWeightedRelationshipCursor: WeightedRelationshipCursor {
     /// Sets the source node ID of this relationship.
     fn set_source_id(&mut self, source_id: NodeId);
-    
+
     /// Sets the target node ID of this relationship.
     fn set_target_id(&mut self, target_id: NodeId);
-    
+
     /// Sets the weight of this relationship as f64.
-    /// 
+    ///
     /// This method accepts f64 directly, optimized for algorithm updates.
     fn set_weight(&mut self, weight: f64);
 }
@@ -65,10 +65,10 @@ pub type WeightedRelationshipCursorBox = Box<dyn WeightedRelationshipCursor + Se
 // === Phase 2B: General Purpose Typed Cursor Architecture ===
 
 /// General-purpose relationship cursor with Value enum support and smart converter.
-/// 
+///
 /// This trait is designed for general property access where you need to work with
 /// the full `Value` enum and want automatic type conversions via the smart converter pattern.
-/// 
+///
 /// **Key Benefits:**
 /// - Full `Value` enum support (Long, Double, Boolean, String, Bytes, Null)
 /// - Smart converter `get<T>()` method with automatic type conversions
@@ -78,29 +78,29 @@ pub type WeightedRelationshipCursorBox = Box<dyn WeightedRelationshipCursor + Se
 pub trait TypedRelationshipCursor: Debug {
     /// Returns the source node ID of this relationship.
     fn source_id(&self) -> NodeId;
-    
+
     /// Returns the target node ID of this relationship.
     fn target_id(&self) -> NodeId;
-    
+
     /// Returns the property value as a `Value` enum.
-    /// 
+    ///
     /// This method provides access to the full `Value` enum, supporting all types:
     /// - `Value::Long(i64)` - Integer values
-    /// - `Value::Double(f64)` - Floating-point values  
+    /// - `Value::Double(f64)` - Floating-point values
     /// - `Value::Boolean(bool)` - Boolean values
     /// - `Value::String(String)` - String values
     /// - `Value::Bytes { data: Vec<u8>, mime_type: Option<String> }` - Binary data with MIME
     /// - `Value::Null` - Null values
     fn value(&self) -> std::sync::Arc<dyn crate::values::traits::GdsValue>;
-    
+
     /// Smart converter: Get property value as type T with automatic conversion.
-    /// 
+    ///
     /// This method provides type-safe access with automatic conversions:
     /// - `i64` ↔ `f64` (numeric compatibility)
     /// - `i64` ↔ `bool` (0 = false, non-zero = true)
     /// - `f64` ↔ `bool` (0.0 = false, non-zero = true)
     /// - `String` ↔ `i64`/`f64` (string parsing)
-    /// 
+    ///
     /// Returns `Err(ValueError)` for incompatible conversions.
     fn get<T: crate::values::traits::FromGdsValue>(&self) -> Result<T, String>;
 }
@@ -109,17 +109,17 @@ pub trait TypedRelationshipCursor: Debug {
 pub trait ModifiableTypedRelationshipCursor: TypedRelationshipCursor {
     /// Sets the source node ID of this relationship.
     fn set_source_id(&mut self, source_id: NodeId);
-    
+
     /// Sets the target node ID of this relationship.
     fn set_target_id(&mut self, target_id: NodeId);
-    
+
     /// Sets the property value as a `GdsValue`.
-    /// 
+    ///
     /// This method accepts the full `GdsValue` trait object, supporting all types.
     fn set_value(&mut self, value: std::sync::Arc<dyn crate::values::traits::GdsValue>);
-    
+
     /// Smart setter: Set property value from type T with automatic conversion.
-    /// 
+    ///
     /// This method provides type-safe setting with automatic conversions.
     /// Returns `Err(ValueError)` for incompatible conversions.
     fn set<T: crate::values::traits::FromGdsValue>(&mut self, value: T) -> Result<(), String>;
@@ -178,9 +178,9 @@ mod tests {
         assert_eq!(cursor.target_id(), 2);
         assert_eq!(cursor.property(), 3.0);
     }
-    
+
     // === Phase 2A: WeightedRelationshipCursor Tests ===
-    
+
     #[derive(Debug, Default, Clone, Copy)]
     struct WeightedCursor {
         source: NodeId,
@@ -221,11 +221,11 @@ mod tests {
         let mut cursor = WeightedCursor::default();
         cursor.set_source_id(1);
         cursor.set_target_id(2);
-        cursor.set_weight(3.14);
+        cursor.set_weight(3.0);
 
         assert_eq!(cursor.source_id(), 1);
         assert_eq!(cursor.target_id(), 2);
-        assert_eq!(cursor.weight(), 3.14);
+        assert_eq!(cursor.weight(), 3.0);
     }
 
     #[test]
@@ -239,14 +239,14 @@ mod tests {
         // Direct f64 access - no conversion overhead
         let weight = cursor.weight();
         assert_eq!(weight, 42.0);
-        
+
         // Can be used directly in algorithms without casting
         let distance = weight + 10.0;
         assert_eq!(distance, 52.0);
     }
-    
+
     // === Phase 2B: TypedRelationshipCursor Tests ===
-    
+
     #[derive(Clone)]
     struct TypedCursor {
         source: NodeId,
@@ -337,11 +337,11 @@ mod tests {
         // Smart converter: i64 to f64
         let weight: f64 = cursor.get().unwrap();
         assert_eq!(weight, 42.0);
-        
+
         // Smart converter: i64 to bool
         let active: bool = cursor.get().unwrap();
         assert_eq!(active, true);
-        
+
         // Smart converter: i64 to i64 (no conversion)
         let count: i64 = cursor.get().unwrap();
         assert_eq!(count, 42);
@@ -351,9 +351,18 @@ mod tests {
     fn typed_cursor_supports_all_value_types() {
         let test_cases = vec![
             (crate::values::PrimitiveValues::long_value(42), "Long"),
-            (crate::values::PrimitiveValues::floating_point_value(3.14), "Double"),
-            (crate::values::PrimitiveValues::boolean_value(true), "Boolean"),
-            (crate::values::PrimitiveValues::string_value("hello".to_string()), "String"),
+            (
+                crate::values::PrimitiveValues::floating_point_value(3.0),
+                "Double",
+            ),
+            (
+                crate::values::PrimitiveValues::boolean_value(true),
+                "Boolean",
+            ),
+            (
+                crate::values::PrimitiveValues::string_value("hello".to_string()),
+                "String",
+            ),
         ];
 
         for (value, type_name) in test_cases {
@@ -363,7 +372,12 @@ mod tests {
                 value: value.clone(),
             };
 
-            assert_eq!(cursor.value().value_type(), value.value_type(), "Failed for {}", type_name);
+            assert_eq!(
+                cursor.value().value_type(),
+                value.value_type(),
+                "Failed for {}",
+                type_name
+            );
         }
     }
 
@@ -376,15 +390,20 @@ mod tests {
         assert_eq!(cursor.value().value_type(), crate::types::ValueType::Long);
 
         // f64
-        cursor.set_value(crate::values::PrimitiveValues::floating_point_value(3.14));
+        cursor.set_value(crate::values::PrimitiveValues::floating_point_value(3.0));
         assert_eq!(cursor.value().value_type(), crate::types::ValueType::Double);
 
         // bool
         cursor.set_value(crate::values::PrimitiveValues::boolean_value(true));
-        assert_eq!(cursor.value().value_type(), crate::types::ValueType::Boolean);
+        assert_eq!(
+            cursor.value().value_type(),
+            crate::types::ValueType::Boolean
+        );
 
         // String
-        cursor.set_value(crate::values::PrimitiveValues::string_value("hello".to_string()));
+        cursor.set_value(crate::values::PrimitiveValues::string_value(
+            "hello".to_string(),
+        ));
         assert_eq!(cursor.value().value_type(), crate::types::ValueType::String);
     }
 }

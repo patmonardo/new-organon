@@ -1,7 +1,7 @@
 // Other result types - direct translation from Java
 
-use std::collections::HashMap;
 use serde_json::Value;
+use std::collections::HashMap;
 
 /// Result for graph memory usage analysis.
 /// Mirrors Java GraphMemoryUsage class.
@@ -148,8 +148,11 @@ impl TopologyResult {
 
 impl std::fmt::Display for TopologyResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "TopologyResult({}, {}, type: {})", 
-               self.source_node_id, self.target_node_id, self.relationship_type)
+        write!(
+            f,
+            "TopologyResult({}, {}, type: {})",
+            self.source_node_id, self.target_node_id, self.relationship_type
+        )
     }
 }
 
@@ -209,8 +212,8 @@ impl GraphGenerationStats {
     ) -> Self {
         Self {
             name: graph_name,
-            nodes: 0, // Will be set during generation
-            relationships: 0, // Will be set during generation
+            nodes: 0,           // Will be set during generation
+            relationships: 0,   // Will be set during generation
             generate_millis: 0, // Will be set during generation
             relationship_seed,
             average_degree,

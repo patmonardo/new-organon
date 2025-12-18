@@ -17,8 +17,8 @@ pub struct ClosenessCentralityComputationResult {
 }
 
 pub struct ClosenessCentralityComputationRuntime {
-    farness: Vec<u64>,          // Sum of distances from each node
-    component_size: Vec<u64>,   // Count of reachable nodes from each node
+    farness: Vec<u64>,        // Sum of distances from each node
+    component_size: Vec<u64>, // Count of reachable nodes from each node
     msbfs: AggregatedNeighborProcessingMsBfs,
 }
 
@@ -48,7 +48,8 @@ impl ClosenessCentralityComputationRuntime {
         // for each reached node at `depth`, add (number_of_sources_at_node * depth)
         // into farness[node] and add number_of_sources_at_node into component_size[node].
         for source_offset in (0..node_count).step_by(crate::procedures::msbfs::OMEGA) {
-            let source_len = (source_offset + crate::procedures::msbfs::OMEGA).min(node_count) - source_offset;
+            let source_len =
+                (source_offset + crate::procedures::msbfs::OMEGA).min(node_count) - source_offset;
 
             self.msbfs.run(
                 source_offset,
@@ -113,10 +114,7 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
 
-    fn create_graph(
-        edges: Vec<(usize, usize)>,
-        node_count: usize,
-    ) -> HashMap<usize, Vec<usize>> {
+    fn create_graph(edges: Vec<(usize, usize)>, node_count: usize) -> HashMap<usize, Vec<usize>> {
         let mut relationships: HashMap<usize, Vec<usize>> = HashMap::new();
         for i in 0..node_count {
             relationships.insert(i, Vec::new());
@@ -175,19 +173,31 @@ mod tests {
         // Node 0: can reach 1@d1, 2@d2, 3@d3 = sum = 6, component = 3
         //         closeness = 3 / 6 = 0.5
         let expected_0 = 3.0 / 6.0;
-        assert!((result.centralities[0] - expected_0).abs() < 1e-10,
-                "Node 0: expected {}, got {}", expected_0, result.centralities[0]);
+        assert!(
+            (result.centralities[0] - expected_0).abs() < 1e-10,
+            "Node 0: expected {}, got {}",
+            expected_0,
+            result.centralities[0]
+        );
 
         // Node 1: can reach 0@d1, 2@d1, 3@d2 = sum = 4, component = 3
         //         closeness = 3 / 4 = 0.75
         let expected_1 = 3.0 / 4.0;
-        assert!((result.centralities[1] - expected_1).abs() < 1e-10,
-                "Node 1: expected {}, got {}", expected_1, result.centralities[1]);
+        assert!(
+            (result.centralities[1] - expected_1).abs() < 1e-10,
+            "Node 1: expected {}, got {}",
+            expected_1,
+            result.centralities[1]
+        );
 
         // Node 2: by symmetry like node 1
         let expected_2 = 3.0 / 4.0;
-        assert!((result.centralities[2] - expected_2).abs() < 1e-10,
-                "Node 2: expected {}, got {}", expected_2, result.centralities[2]);
+        assert!(
+            (result.centralities[2] - expected_2).abs() < 1e-10,
+            "Node 2: expected {}, got {}",
+            expected_2,
+            result.centralities[2]
+        );
 
         // Node 3: by symmetry like node 0
         let expected_3 = 3.0 / 6.0;
@@ -205,15 +215,23 @@ mod tests {
 
         // Center: 4 neighbors at d=1 = sum = 4, component = 4
         //         closeness = 4 / 4 = 1.0
-        assert!((result.centralities[0] - 1.0).abs() < 1e-10,
-                "Center: expected 1.0, got {}", result.centralities[0]);
+        assert!(
+            (result.centralities[0] - 1.0).abs() < 1e-10,
+            "Center: expected 1.0, got {}",
+            result.centralities[0]
+        );
 
         // Leaf (e.g., node 1): 1@d1 + 3@d2 = sum = 7, component = 4
         //                      closeness = 4 / 7 ≈ 0.571
         let expected_leaf = 4.0 / 7.0;
         for i in 1..5 {
-            assert!((result.centralities[i] - expected_leaf).abs() < 1e-10,
-                    "Leaf {}: expected {}, got {}", i, expected_leaf, result.centralities[i]);
+            assert!(
+                (result.centralities[i] - expected_leaf).abs() < 1e-10,
+                "Leaf {}: expected {}, got {}",
+                i,
+                expected_leaf,
+                result.centralities[i]
+            );
         }
     }
 
@@ -229,8 +247,12 @@ mod tests {
         // Each node reaches 2 others at d=1 = sum = 2, component = 2
         // closeness = 2 / 2 = 1.0
         for i in 0..3 {
-            assert!((result.centralities[i] - 1.0).abs() < 1e-10,
-                    "Node {}: expected 1.0, got {}", i, result.centralities[i]);
+            assert!(
+                (result.centralities[i] - 1.0).abs() < 1e-10,
+                "Node {}: expected 1.0, got {}",
+                i,
+                result.centralities[i]
+            );
         }
     }
 

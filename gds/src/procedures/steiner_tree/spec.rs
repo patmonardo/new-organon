@@ -5,20 +5,20 @@ use serde::{Deserialize, Serialize};
 pub struct SteinerTreeConfig {
     /// Source node from which to start the tree
     pub source_node: u64,
-    
+
     /// Terminal nodes that must be included in the tree
     pub target_nodes: Vec<u64>,
-    
+
     /// Optional relationship weight property
     #[serde(skip_serializing_if = "Option::is_none")]
     pub relationship_weight_property: Option<String>,
-    
+
     /// Delta parameter for delta-stepping optimization (default: 1.0)
     /// Smaller values: more accurate but slower
     /// Larger values: faster but may miss optimizations
     #[serde(default = "default_delta")]
     pub delta: f64,
-    
+
     /// Whether to apply rerouting optimization (default: true)
     /// Rerouting can improve solution quality but adds overhead
     #[serde(default = "default_apply_rerouting")]
@@ -38,16 +38,16 @@ fn default_apply_rerouting() -> bool {
 pub struct SteinerTreeResult {
     /// Parent node for each node in the tree (-1 for root, -2 for pruned)
     pub parent_array: Vec<i64>,
-    
+
     /// Cost of edge to parent for each node
     pub relationship_to_parent_cost: Vec<f64>,
-    
+
     /// Total cost of the Steiner tree
     pub total_cost: f64,
-    
+
     /// Number of nodes included in the tree
     pub effective_node_count: u64,
-    
+
     /// Number of terminal nodes reached
     pub effective_target_nodes_count: u64,
 }

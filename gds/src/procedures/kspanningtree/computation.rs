@@ -6,8 +6,8 @@
 //! 1. Computing MST using Prim's algorithm
 //! 2. Progressively cutting k weakest edges
 
-use std::collections::BinaryHeap;
 use std::cmp::Ordering;
+use std::collections::BinaryHeap;
 
 /// Result of k-spanning tree computation
 #[derive(Clone)]
@@ -36,7 +36,10 @@ impl PartialEq for QueueElement {
 impl Ord for QueueElement {
     fn cmp(&self, other: &Self) -> Ordering {
         // Min-heap: reverse comparison
-        other.cost.partial_cmp(&self.cost).unwrap_or(Ordering::Equal)
+        other
+            .cost
+            .partial_cmp(&self.cost)
+            .unwrap_or(Ordering::Equal)
     }
 }
 
@@ -203,10 +206,7 @@ impl KSpanningTreeComputationRuntime {
                         self.cost_to_parent[node_id] = cost;
                         nodes_in_tree += 1;
                         exterior[node_id] = true;
-                        trim_pq.push(QueueElement {
-                            node_id,
-                            cost,
-                        });
+                        trim_pq.push(QueueElement { node_id, cost });
 
                         // Relax neighbors
                         for (neighbor, edge_cost) in get_neighbors(node_id) {
@@ -234,10 +234,7 @@ impl KSpanningTreeComputationRuntime {
                 nodes_in_tree += 1;
                 exterior[node_id] = true;
 
-                trim_pq.push(QueueElement {
-                    node_id,
-                    cost,
-                });
+                trim_pq.push(QueueElement { node_id, cost });
 
                 // Relax neighbors
                 for (neighbor, edge_cost) in get_neighbors(node_id) {

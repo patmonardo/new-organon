@@ -155,7 +155,7 @@ pub trait BooleanValue: GdsValue {
 }
 
 /// Smart converter trait for type-safe value extraction
-/// 
+///
 /// This trait enables the smart converter pattern where a single `get<T>()` method
 /// can extract values with automatic type conversions (e.g., i64 → f64).
 pub trait FromGdsValue: Sized {
@@ -198,7 +198,7 @@ impl FromGdsValue for i64 {
                     Err("Failed to downcast to DefaultBooleanValue".to_string())
                 }
             }
-            _ => Err(format!("Cannot convert {:?} to i64", value.value_type()))
+            _ => Err(format!("Cannot convert {:?} to i64", value.value_type())),
         }
     }
 }
@@ -228,7 +228,7 @@ impl FromGdsValue for f64 {
                     Err("Failed to downcast to DefaultBooleanValue".to_string())
                 }
             }
-            _ => Err(format!("Cannot convert {:?} to f64", value.value_type()))
+            _ => Err(format!("Cannot convert {:?} to f64", value.value_type())),
         }
     }
 }
@@ -265,7 +265,7 @@ impl FromGdsValue for bool {
                     Err("Failed to downcast to DefaultStringValue".to_string())
                 }
             }
-            _ => Err(format!("Cannot convert {:?} to bool", value.value_type()))
+            _ => Err(format!("Cannot convert {:?} to bool", value.value_type())),
         }
     }
 }
@@ -302,7 +302,7 @@ impl FromGdsValue for String {
                     Err("Failed to downcast to DefaultStringValue".to_string())
                 }
             }
-            _ => Err(format!("Cannot convert {:?} to String", value.value_type()))
+            _ => Err(format!("Cannot convert {:?} to String", value.value_type())),
         }
     }
 }

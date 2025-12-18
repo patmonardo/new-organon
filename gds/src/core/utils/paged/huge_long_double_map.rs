@@ -240,8 +240,8 @@ mod tests {
     #[test]
     fn handles_key_zero() {
         let mut map = HugeLongDoubleMap::new();
-        map.add_to(0, 3.14);
-        assert!((map.get_or_default(0, 0.0) - 3.14).abs() < 1e-10);
+        map.add_to(0, 3.0);
+        assert!((map.get_or_default(0, 0.0) - 3.0).abs() < 1e-10);
     }
 
     #[test]

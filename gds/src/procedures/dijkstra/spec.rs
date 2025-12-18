@@ -6,16 +6,16 @@
 //! Dijkstra is implemented as a configurable Algorithmic Virtual Machine with
 //! polymorphic target system, traversal state management, and stream-based results.
 
+use super::computation::DijkstraComputationRuntime;
+use super::path_finding_result::PathFindingResult;
+use super::storage::DijkstraStorageRuntime;
+use super::targets::create_targets;
 use crate::define_algorithm_spec;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
-use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
-use super::storage::DijkstraStorageRuntime;
-use super::computation::DijkstraComputationRuntime;
-use super::targets::create_targets;
-use super::path_finding_result::PathFindingResult;
+use std::collections::HashSet;
 
 /// Dijkstra algorithm configuration
 ///
@@ -61,7 +61,10 @@ impl Default for DijkstraConfig {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DijkstraDirection { Outgoing, Incoming }
+enum DijkstraDirection {
+    Outgoing,
+    Incoming,
+}
 
 impl DijkstraDirection {
     fn from_str(s: &str) -> Self {
@@ -76,31 +79,41 @@ impl DijkstraDirection {
             DijkstraDirection::Incoming => "incoming",
         }
     }
-    fn default_as_str() -> String { Self::Outgoing.as_str().to_string() }
+    fn default_as_str() -> String {
+        Self::Outgoing.as_str().to_string()
+    }
 }
 
 impl DijkstraConfig {
     /// Validate configuration parameters
-    pub fn validate(&self) -> Result<(), crate::projection::codegen::config::validation::ConfigError> {
+    pub fn validate(
+        &self,
+    ) -> Result<(), crate::projection::codegen::config::validation::ConfigError> {
         if self.source_node < 0 {
-            return Err(crate::projection::codegen::config::validation::ConfigError::FieldValidation {
-                field: "source_node".to_string(),
-                message: "Must be >= 0".to_string(),
-            });
+            return Err(
+                crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+                    field: "source_node".to_string(),
+                    message: "Must be >= 0".to_string(),
+                },
+            );
         }
 
         if let Some(bad) = self.target_nodes.iter().copied().find(|id| *id < 0) {
-            return Err(crate::projection::codegen::config::validation::ConfigError::FieldValidation {
-                field: "target_nodes".to_string(),
-                message: format!("All target nodes must be >= 0, got {}", bad),
-            });
+            return Err(
+                crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+                    field: "target_nodes".to_string(),
+                    message: format!("All target nodes must be >= 0, got {}", bad),
+                },
+            );
         }
 
         if self.concurrency == 0 {
-            return Err(crate::projection::codegen::config::validation::ConfigError::FieldValidation {
-                field: "concurrency".to_string(),
-                message: "Must be greater than 0".to_string(),
-            });
+            return Err(
+                crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+                    field: "concurrency".to_string(),
+                    message: "Must be greater than 0".to_string(),
+                },
+            );
         }
 
         Ok(())
@@ -337,7 +350,9 @@ mod tests {
         });
 
         let validation_config = spec.validation_config(&ExecutionContext::new("test"));
-        assert!(validation_config.validate_before_load(&valid_config).is_ok());
+        assert!(validation_config
+            .validate_before_load(&valid_config)
+            .is_ok());
 
         // Test invalid configuration - the validation_config doesn't validate our custom fields
         // so we'll test the config validation directly instead

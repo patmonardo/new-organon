@@ -152,11 +152,8 @@ impl<C: PregelRuntimeConfig + Clone, I: MessageIterator> ForkJoinComputeStep<C, 
             Arc::clone(&has_sent_message),
         );
 
-        let init_context = InitContext::new(
-            Arc::clone(&graph),
-            config.clone(),
-            Arc::clone(&node_value),
-        );
+        let init_context =
+            InitContext::new(Arc::clone(&graph), config.clone(), Arc::clone(&node_value));
 
         Self {
             init_fn,

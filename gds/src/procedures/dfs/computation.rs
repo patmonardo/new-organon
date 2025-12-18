@@ -4,8 +4,8 @@
 //!
 //! This module implements the "Subtle pole" for DFS algorithm - ephemeral computation state.
 
-use std::collections::HashMap;
 use crate::types::graph::id_map::NodeId;
+use std::collections::HashMap;
 
 /// DFS Computation Runtime - handles ephemeral computation state
 ///
@@ -88,7 +88,10 @@ impl DfsComputationRuntime {
     /// Translation of: `DFSComputation.getVisitedNodes()` (lines 171-185)
     /// This returns all visited nodes as a vector of (node, discovery_order) pairs
     pub fn get_visited_nodes(&self) -> Vec<(NodeId, u32)> {
-        self.visited_nodes.iter().map(|(&node, &order)| (node, order)).collect()
+        self.visited_nodes
+            .iter()
+            .map(|(&node, &order)| (node, order))
+            .collect()
     }
 
     /// Check if max depth constraint is satisfied

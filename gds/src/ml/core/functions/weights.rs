@@ -11,14 +11,12 @@
 //! - Weights adds: data storage (trainable parameters)
 //! - Weights delegates Variable trait methods to inner AbstractVariable
 
+use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::abstract_variable::NotAFunctionException;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
 use crate::ml::core::variable::{Variable, VariableRef};
-use crate::ml::core::abstract_variable::AbstractVariable;
-use parking_lot::{
-    MappedRwLockReadGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
-};
+use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::fmt;
 use std::sync::Arc;
 
@@ -28,7 +26,7 @@ use std::sync::Arc;
 /// Uses type erasure - stores a boxed Tensor protected by an `Arc<RwLock<…>>`
 /// so that gradients can update the value concurrently.
 pub struct Weights {
-    base: AbstractVariable,                 // COMPOSITION: shared Variable behaviour
+    base: AbstractVariable,             // COMPOSITION: shared Variable behaviour
     data: Arc<RwLock<Box<dyn Tensor>>>, // Shared trainable tensor
 }
 
@@ -171,7 +169,7 @@ impl Clone for Weights {
         let base = AbstractVariable::with_gradient_requirement(
             vec![],
             self.base.dimensions().to_vec(),
-            true
+            true,
         );
         Self {
             base,
@@ -239,7 +237,6 @@ impl fmt::Display for Weights {
         )
     }
 }
-
 
 // ============================================================================
 // Tests

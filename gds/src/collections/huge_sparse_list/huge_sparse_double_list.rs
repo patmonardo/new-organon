@@ -228,11 +228,11 @@ mod tests {
     #[test]
     fn test_basic_operations() {
         let list = HugeSparseDoubleList::of(0.0);
-        list.set(0, 3.14);
+        list.set(0, 3.0);
         list.set(1, 2.71);
         list.set(100, 1.41);
 
-        assert_eq!(list.get(0), 3.14);
+        assert_eq!(list.get(0), 3.0);
         assert_eq!(list.get(1), 2.71);
         assert_eq!(list.get(100), 1.41);
         assert_eq!(list.get(50), 0.0); // default
@@ -241,7 +241,7 @@ mod tests {
     #[test]
     fn test_contains() {
         let list = HugeSparseDoubleList::of(0.0);
-        list.set(0, 3.14);
+        list.set(0, 3.0);
         list.set(100, 2.71);
 
         assert!(list.contains(0));
@@ -275,7 +275,7 @@ mod tests {
     #[test]
     fn test_add_to() {
         let list = HugeSparseDoubleList::of(0.0);
-        list.set(0, 3.14);
+        list.set(0, 3.0);
         list.add_to(0, 0.01);
         assert!((list.get(0) - 3.15).abs() < 1e-10);
 
@@ -289,20 +289,20 @@ mod tests {
         let list = HugeSparseDoubleList::of(0.0);
 
         // First set should succeed
-        assert!(list.set_if_absent(0, 3.14));
-        assert_eq!(list.get(0), 3.14);
+        assert!(list.set_if_absent(0, 3.0));
+        assert_eq!(list.get(0), 3.0);
 
         // Second set should fail
         assert!(!list.set_if_absent(0, 2.71));
-        assert_eq!(list.get(0), 3.14); // unchanged
+        assert_eq!(list.get(0), 3.0); // unchanged
     }
 
     #[test]
     fn test_default_value() {
         let list = HugeSparseDoubleList::of(9.99);
-        list.set(42, 3.14);
+        list.set(42, 3.0);
 
-        assert_eq!(list.get(42), 3.14);
+        assert_eq!(list.get(42), 3.0);
         assert_eq!(list.get(0), 9.99); // default
         assert_eq!(list.get(100), 9.99); // default
     }
@@ -338,7 +338,7 @@ mod tests {
     #[test]
     fn test_overwrite() {
         let list = HugeSparseDoubleList::of(0.0);
-        list.set(42, 3.14);
+        list.set(42, 3.0);
         list.set(42, 2.71); // overwrite
 
         assert_eq!(list.get(42), 2.71);
@@ -387,8 +387,8 @@ mod tests {
         let list = HugeSparseDoubleList::with_capacity(0.0, 1000);
         assert_eq!(list.capacity(), 1000);
 
-        list.set(500, 3.14);
+        list.set(500, 3.0);
         assert_eq!(list.capacity(), 1000);
-        assert_eq!(list.get(500), 3.14);
+        assert_eq!(list.get(500), 3.0);
     }
 }

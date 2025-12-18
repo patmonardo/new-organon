@@ -3,9 +3,9 @@
 //! Provides common types and patterns used across all facade builders,
 //! reducing boilerplate while maintaining consistency.
 
-use std::time::{Duration, Instant};
 use super::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
+use std::time::{Duration, Instant};
 
 /// Execution context tracking for algorithm runs
 #[derive(Debug, Clone)]
@@ -117,9 +117,10 @@ impl ConfigValidator {
     /// Validate that a value is positive
     pub fn positive(value: f64, field_name: &str) -> Result<()> {
         if value <= 0.0 {
-            return Err(AlgorithmError::Execution(
-                format!("{} must be positive, got {}", field_name, value)
-            ));
+            return Err(AlgorithmError::Execution(format!(
+                "{} must be positive, got {}",
+                field_name, value
+            )));
         }
         Ok(())
     }
@@ -127,9 +128,10 @@ impl ConfigValidator {
     /// Validate that a value is in range [min, max]
     pub fn in_range(value: f64, min: f64, max: f64, field_name: &str) -> Result<()> {
         if value < min || value > max {
-            return Err(AlgorithmError::Execution(
-                format!("{} must be in range [{}, {}], got {}", field_name, min, max, value)
-            ));
+            return Err(AlgorithmError::Execution(format!(
+                "{} must be in range [{}, {}], got {}",
+                field_name, min, max, value
+            )));
         }
         Ok(())
     }
@@ -137,9 +139,10 @@ impl ConfigValidator {
     /// Validate that an iteration count is reasonable
     pub fn iterations(value: u32, field_name: &str) -> Result<()> {
         if value == 0 || value > 1_000_000 {
-            return Err(AlgorithmError::Execution(
-                format!("{} must be > 0 and <= 1_000_000, got {}", field_name, value)
-            ));
+            return Err(AlgorithmError::Execution(format!(
+                "{} must be > 0 and <= 1_000_000, got {}",
+                field_name, value
+            )));
         }
         Ok(())
     }
@@ -147,9 +150,10 @@ impl ConfigValidator {
     /// Validate that a property name is non-empty
     pub fn non_empty_string(value: &str, field_name: &str) -> Result<()> {
         if value.is_empty() {
-            return Err(AlgorithmError::Execution(
-                format!("{} cannot be empty", field_name)
-            ));
+            return Err(AlgorithmError::Execution(format!(
+                "{} cannot be empty",
+                field_name
+            )));
         }
         Ok(())
     }
@@ -173,7 +177,9 @@ impl StatsAggregator {
         }
 
         let index = ((p / 100.0) * sorted_values.len() as f64) as usize;
-        sorted_values.get(index.min(sorted_values.len() - 1)).copied()
+        sorted_values
+            .get(index.min(sorted_values.len() - 1))
+            .copied()
     }
 
     /// Compute mean from values
@@ -191,11 +197,7 @@ impl StatsAggregator {
             return None;
         }
         let mean = Self::mean(values)?;
-        let variance = values
-            .iter()
-            .map(|v| (v - mean).powi(2))
-            .sum::<f64>()
-            / values.len() as f64;
+        let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / values.len() as f64;
         Some(variance.sqrt())
     }
 }

@@ -314,11 +314,11 @@ mod tests {
     #[test]
     fn handles_key_zero() {
         let mut map = HugeLongLongDoubleMap::new();
-        map.set(0, 0, 3.14);
+        map.set(0, 0, 3.0);
         map.set(0, 1, 2.71);
         map.set(1, 0, 1.41);
 
-        assert!((map.get_or_default(0, 0, 0.0) - 3.14).abs() < 1e-10);
+        assert!((map.get_or_default(0, 0, 0.0) - 3.0).abs() < 1e-10);
         assert!((map.get_or_default(0, 1, 0.0) - 2.71).abs() < 1e-10);
         assert!((map.get_or_default(1, 0, 0.0) - 1.41).abs() < 1e-10);
     }

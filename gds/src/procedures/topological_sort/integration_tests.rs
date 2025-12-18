@@ -5,11 +5,7 @@ mod tests {
     #[test]
     fn test_simple_dag() {
         // 0 -> 1 -> 2
-        let edges: Vec<Vec<(usize, f64)>> = vec![
-            vec![(1, 1.0)],
-            vec![(2, 1.0)],
-            vec![],
-        ];
+        let edges: Vec<Vec<(usize, f64)>> = vec![vec![(1, 1.0)], vec![(2, 1.0)], vec![]];
 
         let get_neighbors = |node: usize| edges[node].clone();
 
@@ -23,11 +19,7 @@ mod tests {
     #[test]
     fn test_with_max_distance() {
         // 0 -> 1 (weight 2) -> 2 (weight 3)
-        let edges: Vec<Vec<(usize, f64)>> = vec![
-            vec![(1, 2.0)],
-            vec![(2, 3.0)],
-            vec![],
-        ];
+        let edges: Vec<Vec<(usize, f64)>> = vec![vec![(1, 2.0)], vec![(2, 3.0)], vec![]];
 
         let get_neighbors = |node: usize| edges[node].clone();
 
@@ -67,12 +59,7 @@ mod tests {
     #[test]
     fn test_disconnected_graph() {
         // 0 -> 1, 2 -> 3 (two separate chains)
-        let edges: Vec<Vec<(usize, f64)>> = vec![
-            vec![(1, 1.0)],
-            vec![],
-            vec![(3, 1.0)],
-            vec![],
-        ];
+        let edges: Vec<Vec<(usize, f64)>> = vec![vec![(1, 1.0)], vec![], vec![(3, 1.0)], vec![]];
 
         let get_neighbors = |node: usize| edges[node].clone();
 

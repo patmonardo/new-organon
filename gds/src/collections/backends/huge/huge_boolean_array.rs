@@ -522,11 +522,11 @@ mod tests {
     fn test_set_all() {
         let mut array = HugeBooleanArray::new(5);
         array.set_all(|i| i % 2 == 0);
-        assert_eq!(array.get(0), true);  // 0 % 2 == 0
+        assert_eq!(array.get(0), true); // 0 % 2 == 0
         assert_eq!(array.get(1), false); // 1 % 2 != 0
-        assert_eq!(array.get(2), true);  // 2 % 2 == 0
+        assert_eq!(array.get(2), true); // 2 % 2 == 0
         assert_eq!(array.get(3), false); // 3 % 2 != 0
-        assert_eq!(array.get(4), true);  // 4 % 2 == 0
+        assert_eq!(array.get(4), true); // 4 % 2 == 0
     }
 
     #[test]

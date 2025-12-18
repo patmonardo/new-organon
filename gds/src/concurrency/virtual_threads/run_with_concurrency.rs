@@ -5,8 +5,8 @@
 //!
 //! This mirrors Java GDS's RunWithConcurrency but with Rust's simplicity.
 
-use crate::concurrency::{virtual_threads::Executor, Concurrency};
 use crate::concurrency::TerminationFlag;
+use crate::concurrency::{virtual_threads::Executor, Concurrency};
 
 /// Builder for flexible task execution with concurrency control.
 ///
@@ -225,9 +225,7 @@ impl RunWithConcurrencyParams {
                 scope.spawn_many(task_count, |i| {
                     // `spawn_many` gives each worker a unique index; execute that slot.
                     // If termination triggers, some tasks may remain unexecuted.
-                    let task = tasks
-                        .get(i)
-                        .and_then(|slot| slot.lock().take());
+                    let task = tasks.get(i).and_then(|slot| slot.lock().take());
 
                     if let Some(task) = task {
                         task();

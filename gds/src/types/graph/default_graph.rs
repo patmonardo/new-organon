@@ -1,4 +1,5 @@
 use super::{Graph, GraphCharacteristics, GraphResult, RelationshipTopology};
+use crate::config::GraphStoreConfig;
 use crate::projection::RelationshipType;
 use crate::types::graph::characteristics::GraphCharacteristicsBuilder;
 use crate::types::graph::id_map::{
@@ -10,12 +11,11 @@ use crate::types::properties::relationship::{
     relationship_properties::RelationshipProperties,
     relationship_property_values::RelationshipPropertyValues, DefaultModifiableRelationshipCursor,
     DefaultRelationshipCursor, DefaultRelationshipPropertyStore, ModifiableRelationshipCursor,
-    RelationshipCursor, RelationshipCursorBox, RelationshipIterator,
-    RelationshipPredicate, RelationshipStream, WeightedRelationshipCursor, WeightedRelationshipCursorBox,
+    RelationshipCursor, RelationshipCursorBox, RelationshipIterator, RelationshipPredicate,
+    RelationshipStream, WeightedRelationshipCursor, WeightedRelationshipCursorBox,
     WeightedRelationshipStream,
 };
 use crate::types::schema::{GraphSchema, NodeLabel};
-use crate::config::GraphStoreConfig;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -714,7 +714,7 @@ impl RelationshipIterator for DefaultGraph {
     }
 
     // === Phase 2C: Weighted Stream Implementations ===
-    
+
     fn stream_relationships_weighted<'a>(
         &'a self,
         node_id: MappedNodeId,

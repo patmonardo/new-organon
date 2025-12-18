@@ -1,7 +1,7 @@
 use super::GraphAccessGraphPropertiesConfig;
 
 /// Configuration for streaming graph properties from the graph store.
-/// 
+///
 /// Mirrors Java GraphStreamGraphPropertiesConfig interface.
 /// Extends GraphAccessGraphPropertiesConfig with a factory method for construction.
 pub trait GraphStreamGraphPropertiesConfig: GraphAccessGraphPropertiesConfig {
@@ -9,7 +9,7 @@ pub trait GraphStreamGraphPropertiesConfig: GraphAccessGraphPropertiesConfig {
 }
 
 /// Builder for creating GraphStreamGraphPropertiesConfig implementations.
-/// 
+///
 /// In Java, this uses CypherMapWrapper for configuration parsing.
 /// For now, this is a simple struct that can be extended as needed.
 #[derive(Clone, Debug)]
@@ -32,11 +32,10 @@ impl GraphAccessGraphPropertiesConfig for GraphStreamGraphPropertiesConfigImpl {
     fn graph_name(&self) -> Option<String> {
         self.graph_name.clone()
     }
-    
+
     fn graph_property(&self) -> String {
         self.graph_property.clone()
     }
 }
 
 impl GraphStreamGraphPropertiesConfig for GraphStreamGraphPropertiesConfigImpl {}
-

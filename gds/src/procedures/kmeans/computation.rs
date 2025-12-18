@@ -137,7 +137,8 @@ impl Default for KMeansComputationRuntime {
 }
 
 fn seeded_rng(base_seed: Option<u64>, restart: u32) -> ChaCha8Rng {
-    let seed = base_seed.unwrap_or(0xC0FFEE_u64) ^ ((restart as u64).wrapping_mul(0x9E3779B97F4A7C15));
+    let seed =
+        base_seed.unwrap_or(0xC0FFEE_u64) ^ ((restart as u64).wrapping_mul(0x9E3779B97F4A7C15));
     ChaCha8Rng::seed_from_u64(seed)
 }
 

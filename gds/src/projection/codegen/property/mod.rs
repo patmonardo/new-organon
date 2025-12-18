@@ -20,14 +20,14 @@
 //! ```
 
 /// Core PropertyValues implementation macros
-/// 
+///
 /// Generates typed storage backends for each ValueType with proper
 /// element counting and type conversion policies.
 #[macro_use]
 mod property_values;
 
 /// Triadic PropertyStore matrix macros
-/// 
+///
 /// Generates property adapters for Node, Relationship, and Graph properties
 /// using the universal adapter pattern with Collections backends.
 #[macro_use]

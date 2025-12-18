@@ -6,13 +6,13 @@
 //! handling persistent data access and the main algorithm orchestration.
 //! This is the core of the Algorithmic Virtual Machine.
 
-use super::spec::{DijkstraResult, DijkstraPathResult};
 use super::computation::DijkstraComputationRuntime;
+use super::spec::{DijkstraPathResult, DijkstraResult};
 use super::targets::Targets;
 use crate::projection::eval::procedure::AlgorithmError;
-use std::time::Instant;
-use crate::types::graph::Graph;
 use crate::types::graph::id_map::NodeId;
+use crate::types::graph::Graph;
+use std::time::Instant;
 
 /// Dijkstra Storage Runtime
 ///
@@ -209,7 +209,8 @@ impl DijkstraStorageRuntime {
                 relationship_ids.push(computation.get_relationship_id(current_node).unwrap_or(0));
             }
 
-            current_node = computation.get_predecessor(current_node)
+            current_node = computation
+                .get_predecessor(current_node)
                 .ok_or_else(|| AlgorithmError::InvalidGraph("Missing predecessor".to_string()))?;
         }
 
@@ -247,7 +248,8 @@ impl DijkstraStorageRuntime {
         if let Some(g) = graph {
             let fallback = g.default_property_value();
             let mapped: NodeId = node_id;
-            let iter = if direction == 1 { // 1 = incoming
+            let iter = if direction == 1 {
+                // 1 = incoming
                 g.stream_inverse_relationships_weighted(mapped, fallback)
             } else {
                 g.stream_relationships_weighted(mapped, fallback)
@@ -287,9 +289,9 @@ impl DijkstraStorageRuntime {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::computation::DijkstraComputationRuntime;
-    use super::super::targets::{SingleTarget, ManyTargets, AllTargets};
+    use super::super::targets::{AllTargets, ManyTargets, SingleTarget};
+    use super::*;
 
     #[test]
     fn test_dijkstra_storage_runtime_creation() {
@@ -356,15 +358,16 @@ mod tests {
     fn relationship_filter_blocks_by_relationship_id_and_tracking_records_ids() {
         // Block the first adjacency entry for source=0 (relationship_id=0), forcing
         // the path 0->2->3 instead of 0->1->2->3 on the deterministic mock graph.
-        let mut storage = DijkstraStorageRuntime::new(0, true, 4, false)
-            .with_relationship_filter(|source, _target, relationship_id| {
-                !(source == 0 && relationship_id == 0)
-            });
+        let mut storage = DijkstraStorageRuntime::new(0, true, 4, false).with_relationship_filter(
+            |source, _target, relationship_id| !(source == 0 && relationship_id == 0),
+        );
 
         let mut computation = DijkstraComputationRuntime::new(0, true, 4, false);
         let targets = Box::new(SingleTarget::new(3));
 
-        let result = storage.compute_dijkstra(&mut computation, targets, None, 0).unwrap();
+        let result = storage
+            .compute_dijkstra(&mut computation, targets, None, 0)
+            .unwrap();
         let mut paths = result.path_finding_result.clone();
         let first = paths.find_first().expect("expected at least one path");
 

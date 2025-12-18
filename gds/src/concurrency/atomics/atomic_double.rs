@@ -106,10 +106,12 @@ impl AtomicDouble {
             let current = f64::from_bits(current_bits);
             let next = current + delta;
             let next_bits = next.to_bits();
-            match self
-                .bits
-                .compare_exchange_weak(current_bits, next_bits, Ordering::SeqCst, Ordering::Relaxed)
-            {
+            match self.bits.compare_exchange_weak(
+                current_bits,
+                next_bits,
+                Ordering::SeqCst,
+                Ordering::Relaxed,
+            ) {
                 Ok(_) => return next,
                 Err(actual) => current_bits = actual,
             }
@@ -125,10 +127,12 @@ impl AtomicDouble {
             let current = f64::from_bits(current_bits);
             let next = update(current);
             let next_bits = next.to_bits();
-            match self
-                .bits
-                .compare_exchange_weak(current_bits, next_bits, Ordering::SeqCst, Ordering::Relaxed)
-            {
+            match self.bits.compare_exchange_weak(
+                current_bits,
+                next_bits,
+                Ordering::SeqCst,
+                Ordering::Relaxed,
+            ) {
                 Ok(_) => return current,
                 Err(actual) => current_bits = actual,
             }
@@ -144,10 +148,12 @@ impl AtomicDouble {
             let current = f64::from_bits(current_bits);
             let next = update(current);
             let next_bits = next.to_bits();
-            match self
-                .bits
-                .compare_exchange_weak(current_bits, next_bits, Ordering::SeqCst, Ordering::Relaxed)
-            {
+            match self.bits.compare_exchange_weak(
+                current_bits,
+                next_bits,
+                Ordering::SeqCst,
+                Ordering::Relaxed,
+            ) {
                 Ok(_) => return next,
                 Err(actual) => current_bits = actual,
             }
@@ -385,8 +391,8 @@ mod tests {
 
     #[test]
     fn test_new() {
-        let atomic = AtomicDouble::new(3.14);
-        assert_eq!(atomic.load(Ordering::SeqCst), 3.14);
+        let atomic = AtomicDouble::new(3.0);
+        assert_eq!(atomic.load(Ordering::SeqCst), 3.0);
     }
 
     #[test]

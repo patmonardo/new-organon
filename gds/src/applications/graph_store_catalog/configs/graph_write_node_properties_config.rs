@@ -36,7 +36,9 @@ impl NodePropertySpec {
 
     /// Returns the property name to write to the database.
     pub fn write_property(&self) -> String {
-        self.renamed_node_property.clone().unwrap_or_else(|| self.node_property_name.clone())
+        self.renamed_node_property
+            .clone()
+            .unwrap_or_else(|| self.node_property_name.clone())
     }
 
     /// Returns the original node property name.

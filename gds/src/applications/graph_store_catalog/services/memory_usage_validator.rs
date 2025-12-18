@@ -14,7 +14,12 @@ pub struct MemoryUsageValidator {
 
 impl MemoryUsageValidator {
     /// Creates a new MemoryUsageValidator.
-    pub fn new(username: String, memory_tracker: MemoryTracker, use_max_memory_estimation: bool, log: Log) -> Self {
+    pub fn new(
+        username: String,
+        memory_tracker: MemoryTracker,
+        use_max_memory_estimation: bool,
+        log: Log,
+    ) -> Self {
         Self {
             log,
             use_max_memory_estimation,
@@ -101,7 +106,10 @@ impl MemoryUsageValidator {
     }
 
     /// Computes memory range from memory tree with dimensions.
-    fn compute_memory_range(&self, _memory_tree_with_dimensions: &MemoryTreeWithDimensions) -> MemoryRange {
+    fn compute_memory_range(
+        &self,
+        _memory_tree_with_dimensions: &MemoryTreeWithDimensions,
+    ) -> MemoryRange {
         // Placeholder implementation - in real implementation would compute from tree
         MemoryRange::new(1024, 2048)
     }
@@ -137,7 +145,10 @@ pub struct MemoryTreeWithDimensions {
 
 impl MemoryTreeWithDimensions {
     pub fn new(min_bytes: u64, max_bytes: u64) -> Self {
-        Self { min_bytes, max_bytes }
+        Self {
+            min_bytes,
+            max_bytes,
+        }
     }
 
     pub fn min_bytes(&self) -> u64 {
@@ -158,7 +169,10 @@ pub struct MemoryRange {
 
 impl MemoryRange {
     pub fn new(min_bytes: u64, max_bytes: u64) -> Self {
-        Self { min_bytes, max_bytes }
+        Self {
+            min_bytes,
+            max_bytes,
+        }
     }
 
     pub fn min_bytes(&self) -> u64 {

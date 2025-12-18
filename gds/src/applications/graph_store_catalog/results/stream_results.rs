@@ -32,7 +32,12 @@ pub struct GraphStreamNodePropertiesResult {
 }
 
 impl GraphStreamNodePropertiesResult {
-    pub fn new(node_id: i64, node_property: String, property_value: Value, node_labels: Vec<String>) -> Self {
+    pub fn new(
+        node_id: i64,
+        node_property: String,
+        property_value: Value,
+        node_labels: Vec<String>,
+    ) -> Self {
         Self {
             node_id,
             node_property,
@@ -53,7 +58,12 @@ pub struct GraphStreamRelationshipPropertyResult {
 }
 
 impl GraphStreamRelationshipPropertyResult {
-    pub fn new(source_node_id: i64, target_node_id: i64, relationship_type: String, property_value: f64) -> Self {
+    pub fn new(
+        source_node_id: i64,
+        target_node_id: i64,
+        relationship_type: String,
+        property_value: f64,
+    ) -> Self {
         Self {
             source_node_id,
             target_node_id,

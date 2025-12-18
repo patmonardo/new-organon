@@ -6,13 +6,15 @@
 //! with the core executor runtime, demonstrating the Algorithmic Virtual Machine
 //! architecture with polymorphic target system and stream-based results.
 
+use super::computation::DijkstraComputationRuntime;
+use super::path_finding_result::PathFindingResult;
 use super::spec::{DIJKSTRAAlgorithmSpec, DijkstraConfig, DijkstraResult};
 use super::storage::DijkstraStorageRuntime;
-use super::computation::DijkstraComputationRuntime;
-use super::targets::{SingleTarget, ManyTargets, AllTargets, create_targets, Targets};
+use super::targets::{create_targets, AllTargets, ManyTargets, SingleTarget, Targets};
 use super::traversal_state::TraversalState;
-use super::path_finding_result::PathFindingResult;
-use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor, AlgorithmSpec};
+use crate::projection::eval::procedure::{
+    AlgorithmSpec, ExecutionContext, ExecutionMode, ProcedureExecutor,
+};
 use serde_json::json;
 
 #[test]
@@ -38,7 +40,9 @@ fn test_dijkstra_config_validation() {
     });
 
     let validation_config = spec.validation_config(&ExecutionContext::new("test"));
-    assert!(validation_config.validate_before_load(&valid_config).is_ok());
+    assert!(validation_config
+        .validate_before_load(&valid_config)
+        .is_ok());
 
     // Test invalid configuration - the validation_config doesn't validate our custom fields
     // so we'll test the config validation directly instead

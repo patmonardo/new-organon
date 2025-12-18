@@ -178,4 +178,3 @@ mod tests {
         assert!(!prop.has_value(3)); // i64::MIN means no value
     }
 }
-

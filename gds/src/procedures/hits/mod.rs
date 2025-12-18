@@ -26,20 +26,16 @@
 //! - **storage.rs** - Storage Runtime (Gross pole - GraphStore access)
 //! - **computation.rs** - Computation Runtime (Subtle pole - hub/authority scores)
 
-pub mod spec;
-pub mod storage;
 pub mod computation;
 pub mod pregel_computation;
+pub mod spec;
+pub mod storage;
 
 // Re-export main types
-pub use spec::{
-    HITSAlgorithmSpec,
-    HitsConfig,
-    HitsResult,
-};
-pub use storage::HitsStorageRuntime;
 pub use computation::HitsComputationRuntime;
 pub use pregel_computation::{run_hits_pregel, HitsPregelRunResult};
+pub use spec::{HITSAlgorithmSpec, HitsConfig, HitsResult};
+pub use storage::HitsStorageRuntime;
 
 #[cfg(test)]
 mod pregel_integration_tests;

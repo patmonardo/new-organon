@@ -27,13 +27,13 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
+use crate::config::base_types::AlgoBaseConfig;
 use crate::config::PageRankConfig;
 use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult};
 use crate::procedures::facades::traits::{CentralityScore, Result};
 use crate::procedures::pagerank::run_pagerank_pregel;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
-use crate::config::base_types::AlgoBaseConfig;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -211,7 +211,9 @@ impl PageRankBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, self.orientation())
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let pr_config = PageRankConfig::builder()
             .base(AlgoBaseConfig {
@@ -315,8 +317,8 @@ impl PageRankBuilder {
         let stddev = var.sqrt();
 
         let percentile = |p: f64| -> f64 {
-            let idx = ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round()
-                as usize;
+            let idx =
+                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
             sorted[idx]
         };
 
@@ -350,9 +352,11 @@ impl PageRankBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "PageRank mutate/write is not implemented yet".to_string(),
-        ))
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "PageRank mutate/write is not implemented yet".to_string(),
+            ),
+        )
     }
 }
 

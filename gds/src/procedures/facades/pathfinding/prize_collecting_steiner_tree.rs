@@ -99,10 +99,7 @@ impl PCSTreeAlgorithm {
     }
 
     /// Run on adjacency list
-    pub fn run_on_adjacency_list(
-        self,
-        adjacency_list: &[Vec<(usize, f64)>],
-    ) -> PCSTreeResult {
+    pub fn run_on_adjacency_list(self, adjacency_list: &[Vec<(usize, f64)>]) -> PCSTreeResult {
         let node_count = adjacency_list.len();
         let get_neighbors = |node: usize| adjacency_list[node].clone();
         self.run(node_count, get_neighbors)
@@ -130,8 +127,7 @@ mod tests {
 
     #[test]
     fn test_pcst_builder() {
-        let builder = PCSTreeBuilder::new()
-            .prizes(vec![0.0, 5.0, 10.0, 3.0]);
+        let builder = PCSTreeBuilder::new().prizes(vec![0.0, 5.0, 10.0, 3.0]);
 
         // Builder creates correct config
         assert_eq!(builder.config.prizes, vec![0.0, 5.0, 10.0, 3.0]);

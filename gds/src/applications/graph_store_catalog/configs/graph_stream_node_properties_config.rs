@@ -1,7 +1,7 @@
-use super::{GraphNodePropertiesConfig, GraphExportNodePropertiesConfig};
+use super::{GraphExportNodePropertiesConfig, GraphNodePropertiesConfig};
 
 /// Configuration for streaming node properties from the graph store.
-/// 
+///
 /// Mirrors Java GraphStreamNodePropertiesConfig interface.
 /// Extends GraphExportNodePropertiesConfig with a factory method.
 pub trait GraphStreamNodePropertiesConfig: GraphExportNodePropertiesConfig {
@@ -9,7 +9,7 @@ pub trait GraphStreamNodePropertiesConfig: GraphExportNodePropertiesConfig {
 }
 
 /// Builder for creating GraphStreamNodePropertiesConfig implementations.
-/// 
+///
 /// In Java, this uses CypherMapWrapper for configuration parsing.
 #[derive(Clone, Debug)]
 pub struct GraphStreamNodePropertiesConfigImpl {
@@ -40,7 +40,7 @@ impl GraphNodePropertiesConfig for GraphStreamNodePropertiesConfigImpl {
     fn graph_name(&self) -> Option<String> {
         self.graph_name.clone()
     }
-    
+
     fn node_labels(&self) -> Vec<String> {
         self.node_labels.clone()
     }
@@ -50,7 +50,7 @@ impl GraphExportNodePropertiesConfig for GraphStreamNodePropertiesConfigImpl {
     fn node_properties(&self) -> Vec<String> {
         self.node_properties.clone()
     }
-    
+
     fn list_node_labels(&self) -> bool {
         self.list_node_labels
     }

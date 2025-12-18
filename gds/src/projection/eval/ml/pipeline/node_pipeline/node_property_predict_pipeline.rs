@@ -126,6 +126,7 @@ impl Pipeline for NodePropertyPredictPipeline {
 mod tests {
     use super::*;
     use crate::projection::eval::ml::pipeline::ExecutableNodePropertyStep;
+    use crate::projection::eval::ml::pipeline::PipelineValidationError;
 
     #[test]
     fn test_empty_pipeline() {
@@ -197,5 +198,34 @@ mod tests {
         assert!(pipeline
             .specific_validate_before_execution(&graph_store)
             .is_ok());
+    }
+
+    #[test]
+    fn test_validate_before_execution_missing_property_errors() {
+        use crate::types::graph_store::DefaultGraphStore;
+        use crate::types::random::RandomGraphConfig;
+
+        // Use a property name that is extremely unlikely to exist in any random graph.
+        let missing_prop = "__definitely_missing_feature_property__";
+        let pipeline =
+            NodePropertyPredictPipeline::new(vec![], vec![NodeFeatureStep::of(missing_prop)]);
+
+        let config = RandomGraphConfig {
+            seed: Some(42),
+            node_count: 50,
+            ..RandomGraphConfig::default()
+        };
+        let graph_store = DefaultGraphStore::random(&config).expect("random graph");
+
+        let err = pipeline
+            .validate_before_execution(&graph_store, &[])
+            .expect_err("expected missing property validation error");
+
+        match err {
+            PipelineValidationError::MissingNodeProperties { properties } => {
+                assert!(properties.contains(&missing_prop.to_string()));
+            }
+            other => panic!("unexpected error: {other}"),
+        }
     }
 }

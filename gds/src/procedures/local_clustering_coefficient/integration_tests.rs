@@ -86,11 +86,11 @@ mod tests {
 
         assert_eq!(runtime.local_clustering_coefficients[0], 1.0);
         assert_eq!(runtime.local_clustering_coefficients[1], 1.0);
-        assert!((runtime.local_clustering_coefficients[2] - 2.0/3.0).abs() < 0.001);
+        assert!((runtime.local_clustering_coefficients[2] - 2.0 / 3.0).abs() < 0.001);
         assert_eq!(runtime.local_clustering_coefficients[3], 1.0);
         assert_eq!(runtime.local_clustering_coefficients[4], 1.0);
 
-        let expected_avg = (1.0 + 1.0 + 2.0/3.0 + 1.0 + 1.0) / 5.0;
+        let expected_avg = (1.0 + 1.0 + 2.0 / 3.0 + 1.0 + 1.0) / 5.0;
         assert!((runtime.average_clustering_coefficient - expected_avg).abs() < 0.001);
     }
 
@@ -139,11 +139,11 @@ mod tests {
         runtime.compute(&[1, 2, 2, 1], &[2, 3, 3, 2]);
 
         assert_eq!(runtime.local_clustering_coefficients[0], 1.0);
-        assert!((runtime.local_clustering_coefficients[1] - 2.0/3.0).abs() < 0.001);
-        assert!((runtime.local_clustering_coefficients[2] - 2.0/3.0).abs() < 0.001);
+        assert!((runtime.local_clustering_coefficients[1] - 2.0 / 3.0).abs() < 0.001);
+        assert!((runtime.local_clustering_coefficients[2] - 2.0 / 3.0).abs() < 0.001);
         assert_eq!(runtime.local_clustering_coefficients[3], 1.0);
 
-        let expected_avg = (1.0 + 2.0/3.0 + 2.0/3.0 + 1.0) / 4.0;
+        let expected_avg = (1.0 + 2.0 / 3.0 + 2.0 / 3.0 + 1.0) / 4.0;
         assert!((runtime.average_clustering_coefficient - expected_avg).abs() < 0.001);
     }
 
@@ -174,10 +174,10 @@ mod tests {
 
         assert_eq!(runtime.local_clustering_coefficients[0], 0.0); // center
         for i in 1..5 {
-            assert!((runtime.local_clustering_coefficients[i] - 1.0/3.0).abs() < 0.001);
+            assert!((runtime.local_clustering_coefficients[i] - 1.0 / 3.0).abs() < 0.001);
         }
 
-        let expected_avg = (0.0 + 4.0 * 1.0/3.0) / 5.0;
+        let expected_avg = (0.0 + 4.0 * 1.0 / 3.0) / 5.0;
         assert!((runtime.average_clustering_coefficient - expected_avg).abs() < 0.001);
     }
 

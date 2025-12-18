@@ -4,7 +4,9 @@
 //!
 //! This module provides node property values that only writes changed values for incremental algorithms.
 
-use super::super::stubs::{LongNodePropertyValues, FilteredNodePropertyValuesMarker, ValueType, NodePropertyValues};
+use super::super::stubs::{
+    FilteredNodePropertyValuesMarker, LongNodePropertyValues, NodePropertyValues, ValueType,
+};
 
 /// Node property values that only writes changed values (for incremental algorithms)
 ///
@@ -45,7 +47,7 @@ use super::super::stubs::{LongNodePropertyValues, FilteredNodePropertyValuesMark
 /// let seed_props = /* previous iteration results */;
 /// let new_props = /* current iteration results */;
 /// let incremental = LongIfChangedNodePropertyValues::new(seed_props, new_props);
-/// 
+///
 /// // Only nodes whose community changed will have values written
 /// // Unchanged nodes return i64::MIN (sentinel value)
 /// ```
@@ -146,7 +148,9 @@ impl NodePropertyValues for LongIfChangedNodePropertyValues {
     ///
     /// Maximum of seed and new property node counts
     fn node_count(&self) -> usize {
-        self.seed_properties.node_count().max(self.new_properties.node_count())
+        self.seed_properties
+            .node_count()
+            .max(self.new_properties.node_count())
     }
 
     /// Get the value type
@@ -214,9 +218,9 @@ mod tests {
         // Check has_value
         assert!(!incremental.has_value(0)); // Unchanged
         assert!(!incremental.has_value(1)); // Unchanged
-        assert!(incremental.has_value(2));  // Changed
+        assert!(incremental.has_value(2)); // Changed
         assert!(!incremental.has_value(3)); // Unchanged
-        assert!(incremental.has_value(4));  // Changed
+        assert!(incremental.has_value(4)); // Changed
     }
 
     #[test]

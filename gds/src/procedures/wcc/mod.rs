@@ -4,12 +4,12 @@
 //!
 //! Finds all weakly connected components in an undirected graph.
 
-pub mod spec;
-pub mod storage;
 pub mod computation;
 #[cfg(test)]
 pub mod integration_tests;
+pub mod spec;
+pub mod storage;
 
+pub use computation::WccComputationRuntime;
 pub use spec::{WccAlgorithmSpec, WccConfig, WccResult};
 pub use storage::WccStorageRuntime;
-pub use computation::WccComputationRuntime;

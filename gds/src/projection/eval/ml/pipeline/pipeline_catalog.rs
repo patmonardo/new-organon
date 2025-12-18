@@ -330,8 +330,7 @@ mod tests {
 
         fn node_property_steps(
             &self,
-        ) -> &[Box<dyn crate::projection::eval::ml::pipeline::ExecutableNodePropertyStep>]
-        {
+        ) -> &[Box<dyn crate::projection::eval::ml::pipeline::ExecutableNodePropertyStep>] {
             &[]
         }
 

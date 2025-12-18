@@ -37,10 +37,10 @@
 //! }
 //! ```
 
+use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor};
 use crate::ml::core::variable::{Variable, VariableRef};
-use crate::ml::core::abstract_variable::AbstractVariable;
 use std::any::Any;
 
 /// Element-wise addition of matrix and scalar.
@@ -150,15 +150,24 @@ impl Variable for EWiseAddMatrixScalar {
             if matrix_tensor.rows() == 1 && matrix_tensor.cols() == 1 {
                 matrix_tensor[(0, 0)]
             } else {
-                panic!("Expected 1x1 matrix for scalar, got {}x{} matrix", matrix_tensor.rows(), matrix_tensor.cols());
+                panic!(
+                    "Expected 1x1 matrix for scalar, got {}x{} matrix",
+                    matrix_tensor.rows(),
+                    matrix_tensor.cols()
+                );
             }
         } else {
             // Try to extract from Weights variable if it's a Weights wrapper
             let scalar_var = self.scalar_variable();
-            if let Some(weights) = (scalar_var as &dyn Any).downcast_ref::<crate::ml::core::functions::Weights>() {
+            if let Some(weights) =
+                (scalar_var as &dyn Any).downcast_ref::<crate::ml::core::functions::Weights>()
+            {
                 weights.borrow_scalar().value()
             } else {
-                panic!("Expected Scalar tensor, 1x1 Matrix, or Weights variable for scalar, got: {}", std::any::type_name_of_val(scalar_var));
+                panic!(
+                    "Expected Scalar tensor, 1x1 Matrix, or Weights variable for scalar, got: {}",
+                    std::any::type_name_of_val(scalar_var)
+                );
             }
         };
 

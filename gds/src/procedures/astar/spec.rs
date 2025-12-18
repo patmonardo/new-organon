@@ -5,10 +5,10 @@
 //! This module defines the A* algorithm specification using focused macros.
 
 use crate::define_algorithm_spec;
-use crate::projection::relationship_type::RelationshipType;
-use std::collections::HashSet;
 use crate::projection::orientation::Orientation;
+use crate::projection::relationship_type::RelationshipType;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 // use serde_json::json; // not needed here
 use crate::types::graph::id_map::NodeId;
 
@@ -50,7 +50,10 @@ impl Default for AStarConfig {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum AStarDirection { Outgoing, Incoming }
+enum AStarDirection {
+    Outgoing,
+    Incoming,
+}
 
 impl AStarDirection {
     fn from_str(s: &str) -> Self {
@@ -65,7 +68,9 @@ impl AStarDirection {
             AStarDirection::Incoming => "incoming",
         }
     }
-    fn default_as_str() -> String { Self::Outgoing.as_str().to_string() }
+    fn default_as_str() -> String {
+        Self::Outgoing.as_str().to_string()
+    }
 }
 
 impl AStarConfig {
@@ -302,7 +307,9 @@ mod tests {
         assert_eq!(spec.graph_name(), "test_graph");
 
         // Test config validation through spec
-        let validation_config = spec.validation_config(&crate::projection::eval::procedure::ExecutionContext::new("test"));
+        let validation_config = spec.validation_config(
+            &crate::projection::eval::procedure::ExecutionContext::new("test"),
+        );
         assert!(validation_config.validate_before_load(&json!({})).is_ok());
     }
 }

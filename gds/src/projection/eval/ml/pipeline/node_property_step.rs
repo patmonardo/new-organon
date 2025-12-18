@@ -29,14 +29,25 @@
 //! Stub/ProcedureExecutor infrastructure. Algorithm execution happens directly via a registry
 //! pattern. Stubs can be added later when needed for Form Pipeline extensibility.
 
+use crate::collections::backends::vec::VecDouble;
 use crate::projection::eval::ml::pipeline::{
     ExecutableNodePropertyStep, NodePropertyStepContextConfig,
 };
-use std::collections::HashMap;
+use crate::projection::NodeLabel;
+use crate::types::graph_store::GraphStore;
+use crate::types::properties::node::DefaultDoubleNodePropertyValues;
+use crate::types::properties::node::NodePropertyValues;
+use std::collections::{HashMap, HashSet};
 use std::error::Error as StdError;
+use std::sync::Arc;
 
 /// Configuration key for the mutate property name.
 pub const MUTATE_PROPERTY_KEY: &str = "mutateProperty";
+
+/// A minimal built-in algorithm used for smoke tests.
+///
+/// This is intentionally simple: it writes a constant `f64` node property.
+pub const DEBUG_WRITE_CONSTANT_DOUBLE_MUTATE: &str = "gds.debug.writeConstantDouble.mutate";
 
 /// Node property step that executes an algorithm to compute node properties.
 ///
@@ -161,19 +172,39 @@ impl ExecutableNodePropertyStep for NodePropertyStep {
             .entry("concurrency".to_string())
             .or_insert_with(|| serde_json::Value::Number(concurrency.into()));
 
-        // TODO: Execute algorithm via registry
-        // This is a placeholder for the algorithm execution infrastructure.
-        // In a full implementation, this would look up the algorithm in a registry
-        // and execute it directly on the graph_store with the exec_config.
-        //
-        // Example future implementation:
-        // ```
-        // let algorithm_registry = AlgorithmRegistry::global();
-        // algorithm_registry.execute(&self.algorithm_name, graph_store, &exec_config)?;
-        // ```
+        match self.algorithm_name.as_str() {
+            DEBUG_WRITE_CONSTANT_DOUBLE_MUTATE => {
+                let mutate_property = self.get_mutate_property()?;
+                let value = exec_config
+                    .get("value")
+                    .and_then(|v| v.as_f64())
+                    .unwrap_or(1.0);
 
-        // For now, return success (this will be wired up when we have algorithm infrastructure)
-        Ok(())
+                let node_count = graph_store.node_count();
+                let backend = VecDouble::from(vec![value; node_count]);
+                let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
+                let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+                let labels: HashSet<NodeLabel> = node_labels
+                    .iter()
+                    .map(|label| NodeLabel::of(label.clone()))
+                    .collect();
+
+                graph_store
+                    .add_node_property(labels, mutate_property, values)
+                    .map_err(|e| {
+                        Box::new(NodePropertyStepError::ExecutionFailed {
+                            algorithm: self.algorithm_name.clone(),
+                            message: e.to_string(),
+                        }) as Box<dyn StdError>
+                    })?;
+
+                Ok(())
+            }
+            _ => Err(Box::new(NodePropertyStepError::AlgorithmNotImplemented {
+                algorithm: self.algorithm_name.clone(),
+            })),
+        }
     }
 
     fn config(&self) -> &HashMap<String, serde_json::Value> {
@@ -289,6 +320,12 @@ pub enum NodePropertyStepError {
         /// Error message
         message: String,
     },
+
+    /// Algorithm isn't wired into the Rust execution runtime yet.
+    AlgorithmNotImplemented {
+        /// Name of the algorithm
+        algorithm: String,
+    },
 }
 
 impl std::fmt::Display for NodePropertyStepError {
@@ -303,6 +340,13 @@ impl std::fmt::Display for NodePropertyStepError {
             }
             NodePropertyStepError::ExecutionFailed { algorithm, message } => {
                 write!(f, "Algorithm '{}' execution failed: {}", algorithm, message)
+            }
+            NodePropertyStepError::AlgorithmNotImplemented { algorithm } => {
+                write!(
+                    f,
+                    "Algorithm '{}' is not implemented in the Rust node-property step runtime",
+                    algorithm
+                )
             }
         }
     }

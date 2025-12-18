@@ -5,32 +5,32 @@
 
 use crate::collections::traits::Collections;
 use crate::config::Extension;
-use crate::core::utils::shuffle::{SplittableRandom, Random};
+use crate::core::utils::shuffle::{Random, SplittableRandom};
 use std::marker::PhantomData;
 
 /// Random extension trait for Collections
 pub trait RandomSupport<T> {
     /// Enable random functionality
     fn enable_random(&mut self, seed: Option<u64>) -> Result<(), RandomError>;
-    
+
     /// Disable random functionality
     fn disable_random(&mut self);
-    
+
     /// Check if random is enabled
     fn is_random_enabled(&self) -> bool;
-    
+
     /// Shuffle the collection
     fn shuffle(&mut self) -> Result<(), RandomError>;
-    
+
     /// Generate random data
     fn generate_random(&mut self, count: usize) -> Result<(), RandomError>;
-    
+
     /// Get random element
     fn random_element(&mut self) -> Option<T>;
-    
+
     /// Get random sample
     fn random_sample(&mut self, size: usize) -> Vec<T>;
-    
+
     /// Split random generator
     fn split_random(&mut self) -> Result<SplittableRandom, RandomError>;
 }
@@ -58,7 +58,7 @@ impl Default for RandomConfig {
 }
 
 /// Random-enabled collection wrapper
-pub struct RandomCollection<T, C> 
+pub struct RandomCollection<T, C>
 where
     C: Collections<T>,
 {
@@ -69,7 +69,7 @@ where
     _phantom: PhantomData<T>,
 }
 
-impl<T, C> RandomCollection<T, C> 
+impl<T, C> RandomCollection<T, C>
 where
     C: Collections<T>,
     T: Clone + Send + Sync,
@@ -83,7 +83,7 @@ where
             _phantom: PhantomData,
         }
     }
-    
+
     pub fn with_random_config(inner: C, config: RandomConfig) -> Self {
         Self {
             inner,
@@ -103,101 +103,128 @@ where
     fn get(&self, index: usize) -> Option<T> {
         self.inner.get(index)
     }
-    
+
     fn set(&mut self, index: usize, value: T) {
         self.inner.set(index, value);
     }
-    
+
     fn len(&self) -> usize {
         self.inner.len()
     }
-    
+
     fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
-    
-    fn sum(&self) -> Option<T> where T: std::iter::Sum {
+
+    fn sum(&self) -> Option<T>
+    where
+        T: std::iter::Sum,
+    {
         self.inner.sum()
     }
-    
-    fn min(&self) -> Option<T> where T: Ord {
+
+    fn min(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.min()
     }
-    
-    fn max(&self) -> Option<T> where T: Ord {
+
+    fn max(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.max()
     }
-    
+
     fn mean(&self) -> Option<f64> {
         self.inner.mean()
     }
-    
+
     fn std_dev(&self) -> Option<f64> {
         self.inner.std_dev()
     }
-    
+
     fn variance(&self) -> Option<f64> {
         self.inner.variance()
     }
-    
-    fn median(&self) -> Option<T> where T: Ord {
+
+    fn median(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.median()
     }
-    
-    fn percentile(&self, p: f64) -> Option<T> where T: Ord {
+
+    fn percentile(&self, p: f64) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.percentile(p)
     }
-    
-    fn binary_search(&self, key: &T) -> Result<usize, usize> where T: Ord {
+
+    fn binary_search(&self, key: &T) -> Result<usize, usize>
+    where
+        T: Ord,
+    {
         self.inner.binary_search(key)
     }
-    
-    fn sort(&mut self) where T: Ord {
+
+    fn sort(&mut self)
+    where
+        T: Ord,
+    {
         self.inner.sort();
     }
-    
+
     fn to_vec(self) -> Vec<T> {
         self.inner.to_vec()
     }
-    
+
     fn as_slice(&self) -> &[T] {
         self.inner.as_slice()
     }
-    
+
     fn is_null(&self, index: usize) -> bool {
         self.inner.is_null(index)
     }
-    
+
     fn null_count(&self) -> usize {
         self.inner.null_count()
     }
-    
+
     fn default_value(&self) -> T {
         self.inner.default_value()
     }
-    
+
     fn backend(&self) -> crate::config::CollectionsBackend {
         self.inner.backend()
     }
-    
+
     fn features(&self) -> &[crate::config::Extension] {
         &[Extension::Random]
     }
-    
+
     fn extensions(&self) -> &[crate::config::Extension] {
         &[Extension::Random]
     }
-    
+
     fn value_type(&self) -> crate::types::ValueType {
         self.inner.value_type()
     }
-    
-    fn with_capacity(_capacity: usize) -> Self where Self: Sized {
+
+    fn with_capacity(_capacity: usize) -> Self
+    where
+        Self: Sized,
+    {
         // Implementation for random collections
         todo!("Implement with_capacity for RandomCollection")
     }
-    
-    fn with_defaults(_count: usize, _default_value: T) -> Self where Self: Sized {
+
+    fn with_defaults(_count: usize, _default_value: T) -> Self
+    where
+        Self: Sized,
+    {
         // Implementation for random collections
         todo!("Implement with_defaults for RandomCollection")
     }
@@ -216,29 +243,29 @@ where
             enable_sampling: true,
             enable_splitting: true,
         };
-        
+
         self.random_generator = Some(SplittableRandom::with_seed(seed));
         self.random_config = Some(config);
         self.is_random_enabled = true;
-        
+
         Ok(())
     }
-    
+
     fn disable_random(&mut self) {
         self.random_config = None;
         self.is_random_enabled = false;
         self.random_generator = None;
     }
-    
+
     fn is_random_enabled(&self) -> bool {
         self.is_random_enabled
     }
-    
+
     fn shuffle(&mut self) -> Result<(), RandomError> {
         if !self.is_random_enabled {
             return Err(RandomError::RandomNotEnabled);
         }
-        
+
         if let Some(ref mut rng) = self.random_generator {
             // Use Fisher-Yates shuffle algorithm directly on the collection
             let len = self.inner.len();
@@ -251,15 +278,15 @@ where
                 }
             }
         }
-        
+
         Ok(())
     }
-    
+
     fn generate_random(&mut self, count: usize) -> Result<(), RandomError> {
         if !self.is_random_enabled {
             return Err(RandomError::RandomNotEnabled);
         }
-        
+
         if let Some(ref mut rng) = self.random_generator {
             // Generate random data based on the value type
             for i in 0..count {
@@ -267,15 +294,15 @@ where
                 self.inner.set(i, random_value);
             }
         }
-        
+
         Ok(())
     }
-    
+
     fn random_element(&mut self) -> Option<T> {
         if !self.is_random_enabled || self.inner.is_empty() {
             return None;
         }
-        
+
         if let Some(ref mut rng) = self.random_generator {
             let index = rng.next_long(0, self.inner.len());
             self.inner.get(index)
@@ -283,34 +310,34 @@ where
             None
         }
     }
-    
+
     fn random_sample(&mut self, size: usize) -> Vec<T> {
         if !self.is_random_enabled || self.inner.is_empty() {
             return Vec::new();
         }
-        
+
         if let Some(ref mut rng) = self.random_generator {
             let mut sample = Vec::new();
             let collection_size = self.inner.len();
-            
+
             for _ in 0..size {
                 let index = rng.next_long(0, collection_size);
                 if let Some(value) = self.inner.get(index) {
                     sample.push(value);
                 }
             }
-            
+
             sample
         } else {
             Vec::new()
         }
     }
-    
+
     fn split_random(&mut self) -> Result<SplittableRandom, RandomError> {
         if !self.is_random_enabled {
             return Err(RandomError::RandomNotEnabled);
         }
-        
+
         if let Some(ref mut rng) = self.random_generator {
             Ok(rng.split())
         } else {
@@ -328,7 +355,9 @@ where
     fn generate_random_value_static(_rng: &mut SplittableRandom) -> Result<T, RandomError> {
         // This is a simplified implementation - in practice, you'd need proper type conversion
         // For now, we'll use a placeholder implementation
-        Err(RandomError::GenerationFailed("Type-specific random generation not implemented".to_string()))
+        Err(RandomError::GenerationFailed(
+            "Type-specific random generation not implemented".to_string(),
+        ))
     }
 }
 
@@ -357,7 +386,7 @@ impl RandomUtils {
     pub fn default_config() -> RandomConfig {
         RandomConfig::default()
     }
-    
+
     /// Create random configuration with seed
     pub fn with_seed(seed: u64) -> RandomConfig {
         RandomConfig {
@@ -368,7 +397,7 @@ impl RandomUtils {
             enable_splitting: true,
         }
     }
-    
+
     /// Create random configuration for testing
     pub fn testing_config() -> RandomConfig {
         RandomConfig {
@@ -379,14 +408,14 @@ impl RandomUtils {
             enable_splitting: true,
         }
     }
-    
+
     /// Estimate memory usage for random operations
     pub fn estimate_random_memory(_collection_size: usize) -> usize {
         // Random operations typically don't require additional memory
         // beyond the collection itself
         0
     }
-    
+
     /// Calculate optimal sample size for given collection size
     pub fn optimal_sample_size(collection_size: usize) -> usize {
         // Use square root of collection size as a reasonable sample size

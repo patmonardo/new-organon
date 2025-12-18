@@ -18,11 +18,11 @@ pub struct BetweennessCentralityComputationResult {
 
 pub struct BetweennessCentralityComputationRuntime {
     centralities: Vec<f64>,
-    sigma: Vec<u64>,                    // shortest path counts from source
-    delta: Vec<f64>,                    // dependencies
-    distances: Vec<i32>,                // BFS distances from source
-    predecessors: Vec<Vec<usize>>,      // predecessors in shortest path DAG
-    backward_nodes: Vec<usize>,         // stack for backward phase
+    sigma: Vec<u64>,               // shortest path counts from source
+    delta: Vec<f64>,               // dependencies
+    distances: Vec<i32>,           // BFS distances from source
+    predecessors: Vec<Vec<usize>>, // predecessors in shortest path DAG
+    backward_nodes: Vec<usize>,    // stack for backward phase
 }
 
 impl BetweennessCentralityComputationRuntime {
@@ -67,11 +67,7 @@ impl BetweennessCentralityComputationRuntime {
 
     /// Phase 1: Forward BFS from source node
     /// Computes sigma (path counts) and predecessors
-    fn forward_phase(
-        &mut self,
-        source_node: usize,
-        get_neighbors: &impl Fn(usize) -> Vec<usize>,
-    ) {
+    fn forward_phase(&mut self, source_node: usize, get_neighbors: &impl Fn(usize) -> Vec<usize>) {
         // Reset per-source arrays
         self.sigma.iter_mut().for_each(|s| *s = 0);
         self.distances.iter_mut().for_each(|d| *d = -1);
@@ -151,10 +147,7 @@ mod tests {
     use super::*;
     use std::collections::HashMap;
 
-    fn create_graph(
-        edges: Vec<(usize, usize)>,
-        node_count: usize,
-    ) -> HashMap<usize, Vec<usize>> {
+    fn create_graph(edges: Vec<(usize, usize)>, node_count: usize) -> HashMap<usize, Vec<usize>> {
         let mut relationships: HashMap<usize, Vec<usize>> = HashMap::new();
         for i in 0..node_count {
             relationships.insert(i, Vec::new());
@@ -216,13 +209,20 @@ mod tests {
         // Center is on every path between leaves
         // From each leaf, 3 paths go through center to other leaves
         // 4 leaves × 3 paths = 12 / 2 (undirected) = 6.0
-        assert!((result.centralities[0] - 6.0).abs() < 1e-10,
-                "Center: expected 6.0, got {}", result.centralities[0]);
+        assert!(
+            (result.centralities[0] - 6.0).abs() < 1e-10,
+            "Center: expected 6.0, got {}",
+            result.centralities[0]
+        );
 
         // Leaves don't lie on paths between other nodes
         for i in 1..5 {
-            assert!((result.centralities[i]).abs() < 1e-10,
-                    "Leaf {}: expected 0.0, got {}", i, result.centralities[i]);
+            assert!(
+                (result.centralities[i]).abs() < 1e-10,
+                "Leaf {}: expected 0.0, got {}",
+                i,
+                result.centralities[i]
+            );
         }
     }
 
@@ -237,8 +237,11 @@ mod tests {
         // But multiple shortest paths exist, so dependencies spread
         // All nodes should have equal non-zero centrality
         for i in 0..3 {
-            assert!(result.centralities[i] >= 0.0,
-                    "Node {}: centrality should be non-negative", i);
+            assert!(
+                result.centralities[i] >= 0.0,
+                "Node {}: centrality should be non-negative",
+                i
+            );
         }
     }
 
@@ -261,10 +264,7 @@ mod tests {
     #[test]
     fn test_betweenness_complete_graph_k4() {
         // Complete graph K4
-        let graph = create_graph(
-            vec![(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)],
-            4,
-        );
+        let graph = create_graph(vec![(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)], 4);
         let mut runtime = BetweennessCentralityComputationRuntime::new(4);
         let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
         let result = runtime.compute(4, 2.0, &get_neighbors);
@@ -272,8 +272,12 @@ mod tests {
         // In complete graph, all paths have length 1 (direct edge)
         // No node lies on a shortest path between two others
         for i in 0..4 {
-            assert!((result.centralities[i]).abs() < 1e-10,
-                    "Node {}: expected 0.0, got {}", i, result.centralities[i]);
+            assert!(
+                (result.centralities[i]).abs() < 1e-10,
+                "Node {}: expected 0.0, got {}",
+                i,
+                result.centralities[i]
+            );
         }
     }
 
@@ -291,13 +295,18 @@ mod tests {
         let result = runtime.compute(4, 2.0, &get_neighbors);
 
         // Nodes 1 and 2 should have equal centrality (symmetric)
-        assert!((result.centralities[1] - result.centralities[2]).abs() < 1e-10,
-                "Nodes 1 and 2 should have same centrality");
+        assert!(
+            (result.centralities[1] - result.centralities[2]).abs() < 1e-10,
+            "Nodes 1 and 2 should have same centrality"
+        );
 
         // All centralities should be non-negative
         for i in 0..4 {
-            assert!(result.centralities[i] >= 0.0,
-                    "Node {}: centrality should be non-negative", i);
+            assert!(
+                result.centralities[i] >= 0.0,
+                "Node {}: centrality should be non-negative",
+                i
+            );
         }
     }
 }

@@ -3,9 +3,9 @@
 use super::base_types::{AlgoBaseConfig, BuilderConfig, ConcurrencyConfig, Config};
 use super::validation::{ConfigError, ConfigValidation};
 use crate::core::Aggregation;
+use crate::define_config;
 use crate::projection::{NodeLabel, Orientation, RelationshipType};
 use crate::types::{DefaultValue, PropertyState};
-use crate::define_config;
 
 /// Property configuration for graph construction
 #[derive(Debug, Clone)]

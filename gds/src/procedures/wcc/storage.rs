@@ -1,6 +1,6 @@
 //! WCC Storage Runtime
+use super::computation::{WccComputationResult, WccComputationRuntime};
 use crate::types::graph::Graph;
-use super::computation::{WccComputationRuntime, WccComputationResult};
 
 pub struct WccStorageRuntime {
     #[allow(dead_code)]

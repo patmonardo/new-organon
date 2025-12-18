@@ -19,7 +19,7 @@ pub use crate::types::concurrency::Concurrency;
 // =============================================================================
 // JAVA GDS ALIGNMENT: Everything is i64 (matches Java Long)
 // =============================================================================
-// 
+//
 // This replaces the SUSPECT dual-type system with Java GDS alignment:
 // - Java GDS: Everything is Long (signed 64-bit)
 // - Rust GDS: Everything is i64 (signed 64-bit)
@@ -30,7 +30,7 @@ pub use crate::types::concurrency::Concurrency;
 /// Node identifier type (matches Java GDS Long)
 pub type NodeId = i64;
 
-/// Property value type (matches Java GDS Long) 
+/// Property value type (matches Java GDS Long)
 pub type PropertyValue = i64;
 
 /// Algorithm weight type (matches Java GDS Long)
@@ -45,7 +45,7 @@ pub type FloatValue = f64;
 // =============================================================================
 // LEGACY ALIASES (for backward compatibility during transition)
 // =============================================================================
-// 
+//
 // These will be removed after full migration to Java GDS alignment
 // TODO: Remove these aliases after updating all 228 usages
 

@@ -14,9 +14,15 @@ mod tests {
             graph.insert(i, Vec::new());
         }
         for (from, to, weight) in edges {
-            graph.entry(from).or_insert_with(Vec::new).push((to, weight));
+            graph
+                .entry(from)
+                .or_insert_with(Vec::new)
+                .push((to, weight));
             if from != to {
-                graph.entry(to).or_insert_with(Vec::new).push((from, weight));
+                graph
+                    .entry(to)
+                    .or_insert_with(Vec::new)
+                    .push((from, weight));
             }
         }
         graph
@@ -26,13 +32,9 @@ mod tests {
     fn test_single_node() {
         let graph = create_weighted_graph(vec![], 1);
         let mut runtime = KSpanningTreeComputationRuntime::new(1);
-        let result = runtime.compute(
-            1,
-            0,
-            1,
-            "min",
-            |node| graph.get(&node).cloned().unwrap_or_default(),
-        );
+        let result = runtime.compute(1, 0, 1, "min", |node| {
+            graph.get(&node).cloned().unwrap_or_default()
+        });
 
         assert_eq!(result.root, 0);
         assert_eq!(result.total_cost, 0.0);
@@ -42,13 +44,9 @@ mod tests {
     fn test_two_nodes_edge() {
         let graph = create_weighted_graph(vec![(0, 1, 5.0)], 2);
         let mut runtime = KSpanningTreeComputationRuntime::new(2);
-        let result = runtime.compute(
-            2,
-            0,
-            2,
-            "min",
-            |node| graph.get(&node).cloned().unwrap_or_default(),
-        );
+        let result = runtime.compute(2, 0, 2, "min", |node| {
+            graph.get(&node).cloned().unwrap_or_default()
+        });
 
         assert_eq!(result.root, 0);
         assert_eq!(result.total_cost, 5.0);
@@ -60,13 +58,9 @@ mod tests {
         let edges = vec![(0, 1, 1.0), (1, 2, 2.0), (0, 2, 3.0)];
         let graph = create_weighted_graph(edges, 3);
         let mut runtime = KSpanningTreeComputationRuntime::new(3);
-        let result = runtime.compute(
-            3,
-            0,
-            1,
-            "min",
-            |node| graph.get(&node).cloned().unwrap_or_default(),
-        );
+        let result = runtime.compute(3, 0, 1, "min", |node| {
+            graph.get(&node).cloned().unwrap_or_default()
+        });
 
         assert_eq!(result.root, 0);
         // k=1 means only the root is included
@@ -80,13 +74,9 @@ mod tests {
         let edges = vec![(0, 1, 1.0), (1, 2, 1.0), (2, 3, 1.0), (3, 0, 1.0)];
         let graph = create_weighted_graph(edges, 4);
         let mut runtime = KSpanningTreeComputationRuntime::new(4);
-        let result = runtime.compute(
-            4,
-            0,
-            2,
-            "min",
-            |node| graph.get(&node).cloned().unwrap_or_default(),
-        );
+        let result = runtime.compute(4, 0, 2, "min", |node| {
+            graph.get(&node).cloned().unwrap_or_default()
+        });
 
         assert_eq!(result.root, 0);
         // k=2 means 2 components (root is one)
@@ -99,13 +89,9 @@ mod tests {
         let edges = vec![(0, 1, 1.0), (1, 2, 1.0), (2, 3, 1.0), (3, 4, 1.0)];
         let graph = create_weighted_graph(edges, 5);
         let mut runtime = KSpanningTreeComputationRuntime::new(5);
-        let result = runtime.compute(
-            5,
-            0,
-            5,
-            "min",
-            |node| graph.get(&node).cloned().unwrap_or_default(),
-        );
+        let result = runtime.compute(5, 0, 5, "min", |node| {
+            graph.get(&node).cloned().unwrap_or_default()
+        });
 
         assert_eq!(result.root, 0);
         // All nodes should be included
@@ -116,19 +102,18 @@ mod tests {
     fn test_complete_graph_k4() {
         // Complete graph K4: all pairs connected with distance = 1
         let edges = vec![
-            (0, 1, 1.0), (0, 2, 1.0), (0, 3, 1.0),
-            (1, 2, 1.0), (1, 3, 1.0),
+            (0, 1, 1.0),
+            (0, 2, 1.0),
+            (0, 3, 1.0),
+            (1, 2, 1.0),
+            (1, 3, 1.0),
             (2, 3, 1.0),
         ];
         let graph = create_weighted_graph(edges, 4);
         let mut runtime = KSpanningTreeComputationRuntime::new(4);
-        let result = runtime.compute(
-            4,
-            0,
-            4,
-            "min",
-            |node| graph.get(&node).cloned().unwrap_or_default(),
-        );
+        let result = runtime.compute(4, 0, 4, "min", |node| {
+            graph.get(&node).cloned().unwrap_or_default()
+        });
 
         assert_eq!(result.root, 0);
         // MST of K4 has weight 3 (3 edges)
@@ -140,19 +125,12 @@ mod tests {
     #[test]
     fn test_disconnected_graph() {
         // Two disconnected components
-        let edges = vec![
-            (0, 1, 1.0),
-            (2, 3, 2.0),
-        ];
+        let edges = vec![(0, 1, 1.0), (2, 3, 2.0)];
         let graph = create_weighted_graph(edges, 4);
         let mut runtime = KSpanningTreeComputationRuntime::new(4);
-        let result = runtime.compute(
-            4,
-            0,
-            4,
-            "min",
-            |node| graph.get(&node).cloned().unwrap_or_default(),
-        );
+        let result = runtime.compute(4, 0, 4, "min", |node| {
+            graph.get(&node).cloned().unwrap_or_default()
+        });
 
         assert_eq!(result.root, 0);
         // Can only reach nodes 0 and 1 from start node 0
@@ -162,18 +140,12 @@ mod tests {
     #[test]
     fn test_star_graph() {
         // Star: center (0) connected to leaves (1,2,3,4) with weights
-        let edges = vec![
-            (0, 1, 1.0), (0, 2, 2.0), (0, 3, 3.0), (0, 4, 4.0)
-        ];
+        let edges = vec![(0, 1, 1.0), (0, 2, 2.0), (0, 3, 3.0), (0, 4, 4.0)];
         let graph = create_weighted_graph(edges, 5);
         let mut runtime = KSpanningTreeComputationRuntime::new(5);
-        let result = runtime.compute(
-            5,
-            0,
-            3,
-            "min",
-            |node| graph.get(&node).cloned().unwrap_or_default(),
-        );
+        let result = runtime.compute(5, 0, 3, "min", |node| {
+            graph.get(&node).cloned().unwrap_or_default()
+        });
 
         assert_eq!(result.root, 0);
         // k=3: include 3 nodes total

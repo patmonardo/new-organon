@@ -113,11 +113,7 @@ fn test_isolated_nodes() {
     let communities = vec![Some(0), None, Some(0)];
 
     let runtime = ModularityComputationRuntime::new();
-    let result = runtime.compute(
-        3,
-        |node| communities[node],
-        |node| edges[node].clone(),
-    );
+    let result = runtime.compute(3, |node| communities[node], |node| edges[node].clone());
 
     // Only one community (node 1 skipped)
     assert_eq!(result.community_count, 1);

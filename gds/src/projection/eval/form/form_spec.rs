@@ -12,8 +12,8 @@ use std::time::{Duration, Instant};
 
 use serde_json::Value as JsonValue;
 
-use crate::substrate::FormStoreSurface;
 use crate::projection::eval::procedure::ExecutionContext;
+use crate::substrate::FormStoreSurface;
 use crate::types::graph::id_map::{MappedNodeId, OriginalNodeId};
 use crate::types::graph_store::DefaultGraphStore;
 use crate::types::graph_store::GraphName;
@@ -148,7 +148,9 @@ where
 pub struct CommitSubgraphOperator;
 
 impl CommitSubgraphOperator {
-    fn parse_selected_original_node_ids(artifacts: &FormArtifacts) -> Result<Vec<OriginalNodeId>, FormError> {
+    fn parse_selected_original_node_ids(
+        artifacts: &FormArtifacts,
+    ) -> Result<Vec<OriginalNodeId>, FormError> {
         fn parse_array(value: &JsonValue) -> Option<Vec<OriginalNodeId>> {
             let arr = value.as_array()?;
             let mut out = Vec::with_capacity(arr.len());
@@ -295,7 +297,9 @@ impl MaterializeNodePropertiesOperator {
         Ok("double")
     }
 
-    fn parse_value_type(spec: &serde_json::Map<String, JsonValue>) -> Result<&'static str, FormError> {
+    fn parse_value_type(
+        spec: &serde_json::Map<String, JsonValue>,
+    ) -> Result<&'static str, FormError> {
         if let Some(vt) = spec.get("value_type").and_then(|v| v.as_str()) {
             match vt {
                 "double" | "float" | "f64" => return Ok("double"),
@@ -474,9 +478,7 @@ where
             .get("node_properties")
             .and_then(|v| v.as_object())
             .ok_or_else(|| {
-                FormError::Config(
-                    "Missing node_properties artifact (expected object)".to_string(),
-                )
+                FormError::Config("Missing node_properties artifact (expected object)".to_string())
             })?;
 
         let mut store = (*input.base_graph).clone();
@@ -547,7 +549,9 @@ where
 pub struct MaterializeRelationshipPropertiesOperator;
 
 impl MaterializeRelationshipPropertiesOperator {
-    fn parse_value_type(spec: &serde_json::Map<String, JsonValue>) -> Result<&'static str, FormError> {
+    fn parse_value_type(
+        spec: &serde_json::Map<String, JsonValue>,
+    ) -> Result<&'static str, FormError> {
         if let Some(vt) = spec.get("value_type").and_then(|v| v.as_str()) {
             match vt {
                 "double" | "float" | "f64" => return Ok("double"),
@@ -571,9 +575,7 @@ impl MaterializeRelationshipPropertiesOperator {
         let mut out: Vec<(OriginalNodeId, OriginalNodeId)> = Vec::with_capacity(arr.len());
         for (i, pair) in arr.iter().enumerate() {
             let pair_arr = pair.as_array().ok_or_else(|| {
-                FormError::Config(format!(
-                    "edges_by_original_node_id[{i}] must be [src, dst]"
-                ))
+                FormError::Config(format!("edges_by_original_node_id[{i}] must be [src, dst]"))
             })?;
             if pair_arr.len() != 2 {
                 return Err(FormError::Config(format!(
@@ -581,14 +583,10 @@ impl MaterializeRelationshipPropertiesOperator {
                 )));
             }
             let src = pair_arr[0].as_i64().ok_or_else(|| {
-                FormError::Config(format!(
-                    "edges_by_original_node_id[{i}][0] must be i64"
-                ))
+                FormError::Config(format!("edges_by_original_node_id[{i}][0] must be i64"))
             })? as OriginalNodeId;
             let dst = pair_arr[1].as_i64().ok_or_else(|| {
-                FormError::Config(format!(
-                    "edges_by_original_node_id[{i}][1] must be i64"
-                ))
+                FormError::Config(format!("edges_by_original_node_id[{i}][1] must be i64"))
             })? as OriginalNodeId;
             out.push((src, dst));
         }
@@ -608,21 +606,21 @@ impl MaterializeRelationshipPropertiesOperator {
             ));
         }
 
-        let default_value = spec
-            .get("default")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0);
+        let default_value = spec.get("default").and_then(|v| v.as_f64()).unwrap_or(0.0);
 
         let mut missing: usize = 0;
         let mut unused: usize = 0;
 
         // Case 1: direct store-order values
         if spec.get("edges_by_original_node_id").is_none() {
-            let values = spec.get("values").and_then(|v| v.as_array()).ok_or_else(|| {
-                FormError::Config(format!(
-                    "relationship_properties.{relationship_type}.{key} must provide values"
-                ))
-            })?;
+            let values = spec
+                .get("values")
+                .and_then(|v| v.as_array())
+                .ok_or_else(|| {
+                    FormError::Config(format!(
+                        "relationship_properties.{relationship_type}.{key} must provide values"
+                    ))
+                })?;
 
             let expected = store.relationship_count_for_type(relationship_type);
             if values.len() != expected {
@@ -658,14 +656,16 @@ impl MaterializeRelationshipPropertiesOperator {
         }
 
         // Case 2: endpoint-addressed values (original node ids)
-        let edges_by_original = Self::parse_edges_by_original(
-            spec.get("edges_by_original_node_id").unwrap(),
-        )?;
-        let values = spec.get("values").and_then(|v| v.as_array()).ok_or_else(|| {
-            FormError::Config(format!(
-                "relationship_properties.{relationship_type}.{key} must provide values"
-            ))
-        })?;
+        let edges_by_original =
+            Self::parse_edges_by_original(spec.get("edges_by_original_node_id").unwrap())?;
+        let values = spec
+            .get("values")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| {
+                FormError::Config(format!(
+                    "relationship_properties.{relationship_type}.{key} must provide values"
+                ))
+            })?;
         if values.len() != edges_by_original.len() {
             return Err(FormError::Config(format!(
                 "relationship_properties.{relationship_type}.{key}.values length ({}) must equal edges_by_original_node_id length ({})",
@@ -810,7 +810,9 @@ where
 }
 
 /// Convenience for timing form evaluation.
-pub fn time_form_eval<T>(f: impl FnOnce() -> Result<T, FormError>) -> Result<(T, Duration), FormError> {
+pub fn time_form_eval<T>(
+    f: impl FnOnce() -> Result<T, FormError>,
+) -> Result<(T, Duration), FormError> {
     let start = Instant::now();
     let out = f()?;
     Ok((out, start.elapsed()))
@@ -820,8 +822,8 @@ pub fn time_form_eval<T>(f: impl FnOnce() -> Result<T, FormError>) -> Result<(T,
 mod tests {
     use super::*;
     use crate::form::{Context, FormShape, Morph, Shape};
-    use crate::types::random::random_graph::RandomGraphConfig;
     use crate::types::graph_store::GraphStore;
+    use crate::types::random::random_graph::RandomGraphConfig;
     use std::sync::Arc;
 
     #[test]
@@ -862,7 +864,10 @@ mod tests {
             .unwrap();
 
         let result = out.graph;
-        assert_eq!(out.proof.get("kind").and_then(|v| v.as_str()), Some("commitSubgraph"));
+        assert_eq!(
+            out.proof.get("kind").and_then(|v| v.as_str()),
+            Some("commitSubgraph")
+        );
         assert_eq!(
             out.proof
                 .pointer("/selection/count")
@@ -870,7 +875,10 @@ mod tests {
             Some(3)
         );
 
-        assert_eq!(crate::types::graph_store::GraphStore::node_count(result.as_ref()), 3);
+        assert_eq!(
+            crate::types::graph_store::GraphStore::node_count(result.as_ref()),
+            3
+        );
 
         // The projected graph must not reference nodes outside the committed set.
         let g = result.get_graph();

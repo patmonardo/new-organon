@@ -39,19 +39,19 @@ use serde_json::Value as JsonValue;
 /// Control plane for the RealityFabric.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct FabricControl {
-	pub tenant_id: Option<String>,
-	pub subject: Option<String>,
-	pub trace_id: Option<String>,
+    pub tenant_id: Option<String>,
+    pub subject: Option<String>,
+    pub trace_id: Option<String>,
 
-	/// Free-form routing/policy labels (pool, region, priority class, etc.).
-	pub labels: HashMap<String, String>,
+    /// Free-form routing/policy labels (pool, region, priority class, etc.).
+    pub labels: HashMap<String, String>,
 }
 
 /// Time plane for the RealityFabric.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct FabricTime {
-	/// Optional wall-time budget for a unit of work.
-	pub max_wall_time_ms: Option<u64>,
+    /// Optional wall-time budget for a unit of work.
+    pub max_wall_time_ms: Option<u64>,
 }
 
 /// Witness plane for the RealityFabric.
@@ -61,7 +61,7 @@ pub struct FabricTime {
 /// This is where proofs/traces/audit events can be recorded without forcing
 /// evaluators to depend on any particular persistence or observability stack.
 pub trait WitnessFabric: Send + Sync {
-	fn record(&self, event: JsonValue);
+    fn record(&self, event: JsonValue);
 }
 
 /// Default witness implementation: do nothing.
@@ -69,7 +69,7 @@ pub trait WitnessFabric: Send + Sync {
 pub struct NoopWitnessFabric;
 
 impl WitnessFabric for NoopWitnessFabric {
-	fn record(&self, _event: JsonValue) {}
+    fn record(&self, _event: JsonValue) {}
 }
 
 /// The RealityFabric: a five-fold, “fat pipe” connection into reality.
@@ -82,11 +82,11 @@ impl WitnessFabric for NoopWitnessFabric {
 /// in-memory surfaces; later they can be concrete substrate services.
 #[derive(Debug, Clone)]
 pub struct RealityFabric<S, C, W = NoopWitnessFabric> {
-	pub storage: S,
-	pub compute: C,
-	pub control: FabricControl,
-	pub time: FabricTime,
-	pub witness: W,
+    pub storage: S,
+    pub compute: C,
+    pub control: FabricControl,
+    pub time: FabricTime,
+    pub witness: W,
 }
 
 /// Alias used when we want to emphasize the “pipe” metaphor.

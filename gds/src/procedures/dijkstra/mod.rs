@@ -7,19 +7,19 @@
 //! The algorithm supports single-target, many-targets, and all-targets modes with composable
 //! relationship filters and heuristic functions.
 
-pub mod spec;
-pub mod storage;
 pub mod computation;
-pub mod targets;
-pub mod traversal_state;
-pub mod path_finding_result;
 #[cfg(test)]
 pub mod integration_tests;
+pub mod path_finding_result;
+pub mod spec;
+pub mod storage;
+pub mod targets;
+pub mod traversal_state;
 
 // Re-export main types for easy access
+pub use computation::DijkstraComputationRuntime;
+pub use path_finding_result::PathFindingResult;
 pub use spec::{DIJKSTRAAlgorithmSpec, DijkstraConfig, DijkstraResult};
 pub use storage::DijkstraStorageRuntime;
-pub use computation::DijkstraComputationRuntime;
-pub use targets::{Targets, SingleTarget, ManyTargets, AllTargets};
+pub use targets::{AllTargets, ManyTargets, SingleTarget, Targets};
 pub use traversal_state::TraversalState;
-pub use path_finding_result::PathFindingResult;

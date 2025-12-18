@@ -136,4 +136,3 @@ impl Collections<Option<Vec<f32>>> for VecFloatArray {
 }
 
 impl PropertyValuesAdapter<Option<Vec<f32>>> for VecFloatArray {}
-

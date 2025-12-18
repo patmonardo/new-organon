@@ -1,4 +1,4 @@
-use crate::procedures::steiner_tree::spec::{PRUNED, SteinerTreeResult};
+use crate::procedures::steiner_tree::spec::{SteinerTreeResult, PRUNED};
 
 /// Storage for Steiner Tree computation
 #[derive(Debug)]

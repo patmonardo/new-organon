@@ -6,14 +6,14 @@
 //! Bellman-Ford is unique among shortest path algorithms in its ability to detect
 //! negative cycles, making it essential for certain graph analysis tasks.
 
-use crate::define_algorithm_spec;
-use crate::projection::relationship_type::RelationshipType;
-use crate::projection::orientation::Orientation;
-use std::collections::HashSet;
-use serde::{Deserialize, Serialize};
-use super::storage::BellmanFordStorageRuntime;
 use super::computation::BellmanFordComputationRuntime;
+use super::storage::BellmanFordStorageRuntime;
+use crate::define_algorithm_spec;
+use crate::projection::orientation::Orientation;
+use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 /// Bellman-Ford algorithm configuration
 ///
@@ -53,7 +53,10 @@ impl Default for BellmanFordConfig {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum BellmanDirection { Outgoing, Incoming }
+enum BellmanDirection {
+    Outgoing,
+    Incoming,
+}
 
 impl BellmanDirection {
     fn from_str(s: &str) -> Self {
@@ -68,17 +71,23 @@ impl BellmanDirection {
             BellmanDirection::Incoming => "incoming",
         }
     }
-    fn default_as_str() -> String { Self::Outgoing.as_str().to_string() }
+    fn default_as_str() -> String {
+        Self::Outgoing.as_str().to_string()
+    }
 }
 
 impl BellmanFordConfig {
     /// Validate configuration parameters
-    pub fn validate(&self) -> Result<(), crate::projection::codegen::config::validation::ConfigError> {
+    pub fn validate(
+        &self,
+    ) -> Result<(), crate::projection::codegen::config::validation::ConfigError> {
         if self.concurrency == 0 {
-            return Err(crate::projection::codegen::config::validation::ConfigError::FieldValidation {
-                field: "concurrency".to_string(),
-                message: "Must be greater than 0".to_string(),
-            });
+            return Err(
+                crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+                    field: "concurrency".to_string(),
+                    message: "Must be greater than 0".to_string(),
+                },
+            );
         }
 
         Ok(())
@@ -251,7 +260,9 @@ mod tests {
         });
 
         let validation_config = spec.validation_config(&ExecutionContext::new("test"));
-        assert!(validation_config.validate_before_load(&valid_config).is_ok());
+        assert!(validation_config
+            .validate_before_load(&valid_config)
+            .is_ok());
 
         // Test with invalid config
         // Test invalid configuration - the validation_config doesn't validate our custom fields

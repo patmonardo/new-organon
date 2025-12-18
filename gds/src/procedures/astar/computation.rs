@@ -95,7 +95,8 @@ impl AStarComputationRuntime {
 
     /// Get node with lowest f-cost from open set
     pub fn get_lowest_f_cost_node(&self) -> Option<NodeId> {
-        self.open_set.iter()
+        self.open_set
+            .iter()
             .min_by(|a, b| {
                 let f_a = self.f_cost.get(a).unwrap_or(&f64::INFINITY);
                 let f_b = self.f_cost.get(b).unwrap_or(&f64::INFINITY);

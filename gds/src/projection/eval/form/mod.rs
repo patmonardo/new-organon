@@ -11,10 +11,10 @@
 //! eval/form       ← FormProcessor + FormOperator
 //! ```
 
-pub mod form_spec;
 pub mod executor;
+pub mod form_spec;
 pub mod pure_executor;
 
 pub use executor::*;
-pub use pure_executor::*;
 pub use form_spec::*;
+pub use pure_executor::*;

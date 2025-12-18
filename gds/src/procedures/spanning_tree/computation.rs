@@ -449,10 +449,7 @@ impl SpanningTreeComputationRuntime {
     /// * `cost` - Cost to reach this node
     /// * `parent_id` - Parent node ID
     pub fn add_to_queue(&mut self, node_id: u32, cost: f64, parent_id: u32) {
-        self.priority_queue.push(QueueItem {
-            node_id,
-            cost,
-        });
+        self.priority_queue.push(QueueItem { node_id, cost });
         self.parent[node_id as usize] = parent_id as i32;
         self.cost_to_parent[node_id as usize] = cost;
     }
@@ -467,10 +464,7 @@ impl SpanningTreeComputationRuntime {
     pub fn update_cost(&mut self, node_id: u32, cost: f64, parent_id: u32) {
         // For simplicity, we'll add a new entry to the queue
         // In a more sophisticated implementation, we'd update the existing entry
-        self.priority_queue.push(QueueItem {
-            node_id,
-            cost,
-        });
+        self.priority_queue.push(QueueItem { node_id, cost });
         self.parent[node_id as usize] = parent_id as i32;
         self.cost_to_parent[node_id as usize] = cost;
     }

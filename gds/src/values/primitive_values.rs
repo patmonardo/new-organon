@@ -47,12 +47,12 @@ mod tests {
 
     #[test]
     fn test_double_value() {
-        let val = PrimitiveValues::of(&json!(3.14)).unwrap();
+        let val = PrimitiveValues::of(&json!(3.0)).unwrap();
         let fp = val
             .as_any()
             .downcast_ref::<DefaultFloatingPointValue>()
             .unwrap();
-        assert!((fp.double_value() - 3.14).abs() < 0.001);
+        assert!((fp.double_value() - 3.0).abs() < 0.001);
     }
 
     #[test]
@@ -93,7 +93,7 @@ mod tests {
             .as_any()
             .downcast_ref::<DefaultFloatingPointValue>()
             .unwrap();
-        assert!((fp.double_value() - 3.14).abs() < 0.001);
+        assert!((fp.double_value() - 3.0).abs() < 0.001);
     }
 
     #[test]

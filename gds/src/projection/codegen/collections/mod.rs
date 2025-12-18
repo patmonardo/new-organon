@@ -19,19 +19,19 @@
 //! **Future**: Additional backends (sparse, atomic, cursors) can be added as needed.
 
 /// Vec backend macros (ACTIVE - lightweight trait impl)
-/// 
+///
 /// Implements Collections trait for Vec-backed types with a `data: Vec<T>` field.
 /// This is the "Level 0" infrastructure - just trait implementation, no type generation.
-/// 
+///
 /// **Moved from**: `collections/macros/backends/vec.rs`
 #[macro_use]
 mod vec_backend;
 
 /// Huge backend macros (ACTIVE - lightweight trait impl)
-/// 
+///
 /// Implements Collections trait for HugeArray-backed types (paged arrays for billions of elements).
 /// Similar to vec_backend, but for HugeArrays - just trait implementation, no type generation.
-/// 
+///
 /// **Moved from**: `collections/macros/backends/huge.rs`
 #[macro_use]
 mod huge_backend;

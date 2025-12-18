@@ -5,14 +5,14 @@
 //! This module implements the algorithm specification for spanning tree algorithms
 //! using our focused macro system.
 
+use super::storage::SpanningTreeStorageRuntime;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::AlgorithmError;
-use crate::projection::relationship_type::RelationshipType;
 use crate::projection::orientation::Orientation;
-use std::collections::HashSet;
-use std::collections::HashMap;
-use super::storage::SpanningTreeStorageRuntime;
+use crate::projection::relationship_type::RelationshipType;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 /// Configuration for spanning tree algorithms.
 ///
@@ -246,10 +246,10 @@ define_algorithm_spec! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
+    use crate::procedures::spanning_tree::SpanningTree;
     use crate::projection::eval::procedure::AlgorithmSpec;
     use crate::projection::eval::procedure::ExecutionContext;
-    use crate::procedures::spanning_tree::SpanningTree;
+    use serde_json::json;
 
     #[test]
     fn test_spanning_tree_config_default() {
@@ -278,12 +278,12 @@ mod tests {
     #[test]
     fn test_spanning_tree_result_creation() {
         let spanning_tree = SpanningTree::new(
-            0, // head
-            4, // node_count
-            4, // effective_node_count
-            vec![-1, 0, 1, 0], // parent
+            0,                        // head
+            4,                        // node_count
+            4,                        // effective_node_count
+            vec![-1, 0, 1, 0],        // parent
             vec![0.0, 1.0, 2.0, 1.5], // cost_to_parent
-            4.5, // total_weight
+            4.5,                      // total_weight
         );
 
         let result = SpanningTreeResult::new(spanning_tree, 100);

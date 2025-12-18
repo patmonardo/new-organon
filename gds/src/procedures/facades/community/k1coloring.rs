@@ -88,7 +88,9 @@ impl K1ColoringBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -144,7 +146,12 @@ impl K1ColoringBuilder {
     /// Stats mode: yields convergence info + number of distinct colors used.
     pub fn stats(&self) -> Result<K1ColoringStats> {
         let (result, elapsed_ms) = self.compute()?;
-        let color_count = result.colors.iter().copied().collect::<HashSet<u64>>().len();
+        let color_count = result
+            .colors
+            .iter()
+            .copied()
+            .collect::<HashSet<u64>>()
+            .len();
 
         Ok(K1ColoringStats {
             did_converge: result.did_converge,

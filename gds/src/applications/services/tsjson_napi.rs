@@ -25,10 +25,7 @@ fn err(op: &str, code: &str, message: &str) -> serde_json::Value {
 }
 
 fn handle_graph_store_catalog(request: &serde_json::Value) -> serde_json::Value {
-    let op = request
-        .get("op")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let op = request.get("op").and_then(|v| v.as_str()).unwrap_or("");
 
     match op {
         // Mirrors logic/src/absolute/form/gds.application.ts
@@ -75,7 +72,11 @@ fn handle_graph_store_catalog(request: &serde_json::Value) -> serde_json::Value 
                 }
             }
         }
-        _ => err(op, "UNSUPPORTED_OP", "Unsupported graph_store_catalog operation."),
+        _ => err(
+            op,
+            "UNSUPPORTED_OP",
+            "Unsupported graph_store_catalog operation.",
+        ),
     }
 }
 
@@ -92,10 +93,7 @@ pub fn invoke(request_json: String) -> napi::Result<String> {
     let request: serde_json::Value = serde_json::from_str(&request_json)
         .map_err(|e| napi::Error::from_reason(format!("Invalid JSON request: {e}")))?;
 
-    let op = request
-        .get("op")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let op = request.get("op").and_then(|v| v.as_str()).unwrap_or("");
 
     // Prefer facade-based routing when present.
     if let Some(facade) = request.get("facade").and_then(|v| v.as_str()) {
@@ -108,7 +106,10 @@ pub fn invoke(request_json: String) -> napi::Result<String> {
 
     let response = match op {
         "ping" => {
-            let nonce = request.get("nonce").cloned().unwrap_or(serde_json::Value::Null);
+            let nonce = request
+                .get("nonce")
+                .cloned()
+                .unwrap_or(serde_json::Value::Null);
             ok("ping", serde_json::json!({ "nonce": nonce }))
         }
         "version" => ok(
@@ -162,7 +163,10 @@ mod tests {
         let response: serde_json::Value = serde_json::from_str(&response_json).unwrap();
 
         assert_eq!(response.get("ok").and_then(|v| v.as_bool()), Some(true));
-        assert_eq!(response.get("op").and_then(|v| v.as_str()), Some("list_graphs"));
+        assert_eq!(
+            response.get("op").and_then(|v| v.as_str()),
+            Some("list_graphs")
+        );
 
         let entries = response
             .get("data")
@@ -202,12 +206,24 @@ mod tests {
         let response: serde_json::Value = serde_json::from_str(&response_json).unwrap();
 
         assert_eq!(response.get("ok").and_then(|v| v.as_bool()), Some(true));
-        assert_eq!(response.get("op").and_then(|v| v.as_str()), Some("graph_memory_usage"));
+        assert_eq!(
+            response.get("op").and_then(|v| v.as_str()),
+            Some("graph_memory_usage")
+        );
 
         let data = response.get("data").unwrap();
-        assert_eq!(data.get("graphName").and_then(|v| v.as_str()), Some("graph2"));
-        assert_eq!(data.get("nodes").and_then(|v| v.as_u64()), Some(expected_nodes));
-        assert_eq!(data.get("relationships").and_then(|v| v.as_u64()), Some(expected_rels));
+        assert_eq!(
+            data.get("graphName").and_then(|v| v.as_str()),
+            Some("graph2")
+        );
+        assert_eq!(
+            data.get("nodes").and_then(|v| v.as_u64()),
+            Some(expected_nodes)
+        );
+        assert_eq!(
+            data.get("relationships").and_then(|v| v.as_u64()),
+            Some(expected_rels)
+        );
 
         let _ = TSJSON_CATALOG.drop(&["graph2"], false);
     }

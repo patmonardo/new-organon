@@ -14,9 +14,7 @@
 // without replacing the existing accumulator infrastructure.
 
 use super::{
-    consumer::{
-        BufferedEdgeConsumer, BufferedNodeConsumer, RecordConsumer,
-    },
+    consumer::{BufferedEdgeConsumer, BufferedNodeConsumer, RecordConsumer},
     importer::{EdgeAccumulator, NodeAccumulator},
     task::{ImportTask, TaskError, TaskFactory},
     ScanCursor,

@@ -5,40 +5,38 @@
 
 use crate::collections::traits::Collections;
 use crate::config::Extension;
-use crate::core::utils::paged::{
-    HugeLongArrayStack, PagedLongStack
-};
+use crate::core::utils::paged::{HugeLongArrayStack, PagedLongStack};
 use std::marker::PhantomData;
 
 /// Stack extension trait for Collections
 pub trait StackSupport<T> {
     /// Enable stack functionality
     fn enable_stack(&mut self, capacity: usize) -> Result<(), StackError>;
-    
+
     /// Disable stack functionality
     fn disable_stack(&mut self);
-    
+
     /// Check if stack is enabled
     fn is_stack_enabled(&self) -> bool;
-    
+
     /// Get stack capacity
     fn stack_capacity(&self) -> Option<usize>;
-    
+
     /// Get stack size
     fn stack_size(&self) -> usize;
-    
+
     /// Check if stack is empty
     fn is_stack_empty(&self) -> bool;
-    
+
     /// Check if stack is full
     fn is_stack_full(&self) -> bool;
-    
+
     /// Push element onto stack
     fn push(&mut self, value: T) -> Result<(), StackError>;
-    
+
     /// Pop element from stack
     fn pop(&mut self) -> Option<T>;
-    
+
     /// Peek at top element without removing
     fn peek(&self) -> Option<T>;
 }
@@ -64,7 +62,7 @@ impl Default for StackConfig {
 }
 
 /// Stack-enabled collection wrapper
-pub struct StackCollection<T, C> 
+pub struct StackCollection<T, C>
 where
     C: Collections<T>,
 {
@@ -76,7 +74,7 @@ where
     _phantom: PhantomData<T>,
 }
 
-impl<T, C> StackCollection<T, C> 
+impl<T, C> StackCollection<T, C>
 where
     C: Collections<T>,
     T: Clone + Send + Sync,
@@ -91,7 +89,7 @@ where
             _phantom: PhantomData,
         }
     }
-    
+
     pub fn with_stack_config(inner: C, config: StackConfig) -> Self {
         Self {
             inner,
@@ -112,101 +110,128 @@ where
     fn get(&self, index: usize) -> Option<T> {
         self.inner.get(index)
     }
-    
+
     fn set(&mut self, index: usize, value: T) {
         self.inner.set(index, value);
     }
-    
+
     fn len(&self) -> usize {
         self.inner.len()
     }
-    
+
     fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
-    
-    fn sum(&self) -> Option<T> where T: std::iter::Sum {
+
+    fn sum(&self) -> Option<T>
+    where
+        T: std::iter::Sum,
+    {
         self.inner.sum()
     }
-    
-    fn min(&self) -> Option<T> where T: Ord {
+
+    fn min(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.min()
     }
-    
-    fn max(&self) -> Option<T> where T: Ord {
+
+    fn max(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.max()
     }
-    
+
     fn mean(&self) -> Option<f64> {
         self.inner.mean()
     }
-    
+
     fn std_dev(&self) -> Option<f64> {
         self.inner.std_dev()
     }
-    
+
     fn variance(&self) -> Option<f64> {
         self.inner.variance()
     }
-    
-    fn median(&self) -> Option<T> where T: Ord {
+
+    fn median(&self) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.median()
     }
-    
-    fn percentile(&self, p: f64) -> Option<T> where T: Ord {
+
+    fn percentile(&self, p: f64) -> Option<T>
+    where
+        T: Ord,
+    {
         self.inner.percentile(p)
     }
-    
-    fn binary_search(&self, key: &T) -> Result<usize, usize> where T: Ord {
+
+    fn binary_search(&self, key: &T) -> Result<usize, usize>
+    where
+        T: Ord,
+    {
         self.inner.binary_search(key)
     }
-    
-    fn sort(&mut self) where T: Ord {
+
+    fn sort(&mut self)
+    where
+        T: Ord,
+    {
         self.inner.sort();
     }
-    
+
     fn to_vec(self) -> Vec<T> {
         self.inner.to_vec()
     }
-    
+
     fn as_slice(&self) -> &[T] {
         self.inner.as_slice()
     }
-    
+
     fn is_null(&self, index: usize) -> bool {
         self.inner.is_null(index)
     }
-    
+
     fn null_count(&self) -> usize {
         self.inner.null_count()
     }
-    
+
     fn default_value(&self) -> T {
         self.inner.default_value()
     }
-    
+
     fn backend(&self) -> crate::config::CollectionsBackend {
         self.inner.backend()
     }
-    
+
     fn features(&self) -> &[crate::config::Extension] {
         &[Extension::Stack]
     }
-    
+
     fn extensions(&self) -> &[crate::config::Extension] {
         &[Extension::Stack]
     }
-    
+
     fn value_type(&self) -> crate::types::ValueType {
         self.inner.value_type()
     }
-    
-    fn with_capacity(_capacity: usize) -> Self where Self: Sized {
+
+    fn with_capacity(_capacity: usize) -> Self
+    where
+        Self: Sized,
+    {
         // Implementation for stack collections
         todo!("Implement with_capacity for StackCollection")
     }
-    
-    fn with_defaults(_count: usize, _default_value: T) -> Self where Self: Sized {
+
+    fn with_defaults(_count: usize, _default_value: T) -> Self
+    where
+        Self: Sized,
+    {
         // Implementation for stack collections
         todo!("Implement with_defaults for StackCollection")
     }
@@ -222,9 +247,9 @@ where
             capacity,
             enable_huge: capacity > 100_000, // Use huge stack for large capacities
             enable_paged: capacity > 1_000_000, // Use paged stack for massive capacities
-            enable_double: false, // Default to long stack
+            enable_double: false,            // Default to long stack
         };
-        
+
         if config.enable_paged {
             // Use paged stack for massive capacities
             let paged_stack = PagedLongStack::new(capacity);
@@ -234,28 +259,28 @@ where
             let huge_stack = HugeLongArrayStack::new(capacity);
             self.huge_stack = Some(huge_stack);
         }
-        
+
         self.stack_config = Some(config);
         self.is_stack_enabled = true;
-        
+
         Ok(())
     }
-    
+
     fn disable_stack(&mut self) {
         self.stack_config = None;
         self.is_stack_enabled = false;
         self.huge_stack = None;
         self.paged_stack = None;
     }
-    
+
     fn is_stack_enabled(&self) -> bool {
         self.is_stack_enabled
     }
-    
+
     fn stack_capacity(&self) -> Option<usize> {
         self.stack_config.as_ref().map(|c| c.capacity)
     }
-    
+
     fn stack_size(&self) -> usize {
         if let Some(ref huge) = self.huge_stack {
             huge.size()
@@ -265,7 +290,7 @@ where
             0
         }
     }
-    
+
     fn is_stack_empty(&self) -> bool {
         if let Some(ref huge) = self.huge_stack {
             huge.is_empty()
@@ -275,7 +300,7 @@ where
             true
         }
     }
-    
+
     fn is_stack_full(&self) -> bool {
         if let Some(ref huge) = self.huge_stack {
             huge.size() >= self.stack_capacity().unwrap_or(0)
@@ -285,33 +310,33 @@ where
             false
         }
     }
-    
+
     fn push(&mut self, value: T) -> Result<(), StackError> {
         if !self.is_stack_enabled {
             return Err(StackError::StackNotEnabled);
         }
-        
+
         if self.is_stack_full() {
             return Err(StackError::StackFull);
         }
-        
+
         // Convert T to i64 for stack operations
         let stack_value = self.convert_to_stack_value(value)?;
-        
+
         if let Some(ref mut huge) = self.huge_stack {
             huge.push(stack_value);
         } else if let Some(ref mut paged) = self.paged_stack {
             paged.push(stack_value);
         }
-        
+
         Ok(())
     }
-    
+
     fn pop(&mut self) -> Option<T> {
         if !self.is_stack_enabled || self.is_stack_empty() {
             return None;
         }
-        
+
         let stack_value = if let Some(ref mut huge) = self.huge_stack {
             huge.pop()
         } else if let Some(ref mut paged) = self.paged_stack {
@@ -319,15 +344,15 @@ where
         } else {
             return None;
         };
-        
+
         self.convert_from_stack_value(stack_value)
     }
-    
+
     fn peek(&self) -> Option<T> {
         if !self.is_stack_enabled || self.is_stack_empty() {
             return None;
         }
-        
+
         let stack_value = if let Some(ref huge) = self.huge_stack {
             huge.peek()
         } else if let Some(ref paged) = self.paged_stack {
@@ -335,7 +360,7 @@ where
         } else {
             return None;
         };
-        
+
         self.convert_from_stack_value(stack_value)
     }
 }
@@ -349,9 +374,11 @@ where
     fn convert_to_stack_value(&self, _value: T) -> Result<i64, StackError> {
         // This is a simplified conversion - in practice, you'd need proper type conversion
         // For now, we'll use a placeholder implementation
-        Err(StackError::ConversionFailed("Type conversion not implemented".to_string()))
+        Err(StackError::ConversionFailed(
+            "Type conversion not implemented".to_string(),
+        ))
     }
-    
+
     /// Convert i64 from stack operations back to T
     fn convert_from_stack_value(&self, _value: i64) -> Option<T> {
         // This is a simplified conversion - in practice, you'd need proper type conversion
@@ -398,7 +425,7 @@ impl StackUtils {
             capacity * std::mem::size_of::<i64>()
         }
     }
-    
+
     /// Choose optimal stack type based on capacity
     pub fn choose_stack_type(capacity: usize) -> StackConfig {
         StackConfig {
@@ -408,7 +435,7 @@ impl StackUtils {
             enable_double: false,
         }
     }
-    
+
     /// Calculate optimal capacity for given data size
     pub fn optimal_capacity(data_size: usize) -> usize {
         // Use power of 2 capacities for optimal performance

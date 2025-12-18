@@ -97,24 +97,21 @@ pub mod facades;
 // Module structure
 
 pub mod all_shortest_paths;
+pub mod approx_max_k_cut;
+pub mod articulation_points;
 pub mod astar;
 pub mod bellman_ford;
+pub mod betweenness;
 pub mod bfs;
+pub mod bridges;
+pub mod celf;
+pub mod closeness;
+pub mod conductance;
+pub mod dag_longest_path;
 pub mod degree_centrality;
 pub mod delta_stepping;
 pub mod dfs;
 pub mod dijkstra;
-pub mod pagerank;
-pub mod spanning_tree;
-pub mod traversal;
-pub mod yens;
-pub mod scc;
-pub mod articulation_points;
-pub mod betweenness;
-pub mod bridges;
-pub mod celf;
-pub mod closeness;
-pub mod dag_longest_path;
 pub mod harmonic;
 pub mod hits;
 pub mod k1coloring;
@@ -125,17 +122,20 @@ pub mod label_propagation;
 pub mod leiden;
 pub mod local_clustering_coefficient;
 pub mod louvain;
-pub mod msbfs;
-pub mod similarity;
-pub mod topological_sort;
-pub mod random_walk;
-pub mod triangle_count;
-pub mod conductance;
-pub mod approx_max_k_cut;
 pub mod modularity;
-pub mod steiner_tree;
+pub mod msbfs;
+pub mod pagerank;
 pub mod prize_collecting_steiner_tree;
+pub mod random_walk;
+pub mod scc;
+pub mod similarity;
+pub mod spanning_tree;
+pub mod steiner_tree;
+pub mod topological_sort;
+pub mod traversal;
+pub mod triangle_count;
 pub mod wcc;
+pub mod yens;
 
 // Future modules (to be implemented)
 // pub mod facade;      // Public API facades
@@ -145,6 +145,10 @@ pub use all_shortest_paths::{
     ALL_SHORTEST_PATHSAlgorithmSpec, AllShortestPathsComputationRuntime, AllShortestPathsConfig,
     AllShortestPathsResult, AllShortestPathsStorageRuntime,
 };
+pub use articulation_points::{
+    ArticulationPointsAlgorithmSpec, ArticulationPointsComputationRuntime,
+    ArticulationPointsConfig, ArticulationPointsResult, ArticulationPointsStorageRuntime,
+};
 pub use astar::{
     ASTARAlgorithmSpec, AStarComputationRuntime, AStarConfig, AStarResult, AStarStorageRuntime,
 };
@@ -152,7 +156,20 @@ pub use bellman_ford::{
     BELLMAN_FORDAlgorithmSpec, BellmanFordComputationRuntime, BellmanFordConfig, BellmanFordResult,
     BellmanFordStorageRuntime,
 };
+pub use betweenness::{
+    BetweennessCentralityAlgorithmSpec, BetweennessCentralityComputationRuntime,
+    BetweennessCentralityConfig, BetweennessCentralityResult, BetweennessCentralityStorageRuntime,
+};
 pub use bfs::{BFSAlgorithmSpec, BfsComputationRuntime, BfsConfig, BfsResult, BfsStorageRuntime};
+pub use bridges::{
+    BridgesAlgorithmSpec, BridgesComputationRuntime, BridgesConfig, BridgesResult,
+    BridgesStorageRuntime,
+};
+pub use celf::{CELFAlgorithmSpec, CELFComputationRuntime, CELFConfig, CELFResult};
+pub use closeness::{
+    ClosenessCentralityAlgorithmSpec, ClosenessCentralityComputationRuntime,
+    ClosenessCentralityConfig, ClosenessCentralityResult, ClosenessCentralityStorageRuntime,
+};
 pub use degree_centrality::{
     DEGREE_CENTRALITYAlgorithmSpec, DegreeCentralityComputationRuntime, DegreeCentralityConfig,
     DegreeCentralityResult, DegreeCentralityStorageRuntime,
@@ -166,42 +183,6 @@ pub use dijkstra::{
     AllTargets, DIJKSTRAAlgorithmSpec, DijkstraComputationRuntime, DijkstraConfig, DijkstraResult,
     DijkstraStorageRuntime, ManyTargets, PathFindingResult, SingleTarget, Targets, TraversalState,
 };
-pub use pagerank::{
-    estimate_pagerank_memory, run_pagerank_pregel, PageRankAlgorithmSpec,
-    PageRankComputationResult, PageRankMemoryEstimation, PageRankPregelRunResult,
-};
-pub use spanning_tree::{
-    SPANNING_TREEAlgorithmSpec, SpanningGraph, SpanningTree, SpanningTreeComputationRuntime,
-    SpanningTreeConfig, SpanningTreeResult, SpanningTreeStorageRuntime,
-};
-pub use traversal::{
-    Aggregator, ExitPredicate, ExitPredicateResult, FollowExitPredicate, OneHopAggregator,
-    TargetExitPredicate,
-};
-pub use yens::{
-    CandidatePathsPriorityQueue, MutablePathResult, RelationshipFilterer, YENSAlgorithmSpec,
-    YensComputationRuntime, YensConfig, YensResult, YensStorageRuntime,
-};
-pub use scc::{SCCAlgorithmSpec, SccConfig, SccResult, SccStorageRuntime, SccComputationRuntime};
-pub use articulation_points::{
-    ArticulationPointsAlgorithmSpec, ArticulationPointsComputationRuntime,
-    ArticulationPointsConfig, ArticulationPointsResult, ArticulationPointsStorageRuntime,
-};
-pub use betweenness::{
-    BetweennessCentralityAlgorithmSpec, BetweennessCentralityComputationRuntime,
-    BetweennessCentralityConfig, BetweennessCentralityResult, BetweennessCentralityStorageRuntime,
-};
-pub use bridges::{
-    BridgesAlgorithmSpec, BridgesComputationRuntime, BridgesConfig, BridgesResult,
-    BridgesStorageRuntime,
-};
-pub use celf::{
-    CELFAlgorithmSpec, CELFComputationRuntime, CELFConfig, CELFResult,
-};
-pub use closeness::{
-    ClosenessCentralityAlgorithmSpec, ClosenessCentralityComputationRuntime,
-    ClosenessCentralityConfig, ClosenessCentralityResult, ClosenessCentralityStorageRuntime,
-};
 pub use harmonic::{
     HarmonicAlgorithmSpec, HarmonicComputationRuntime, HarmonicConfig, HarmonicResult,
     HarmonicStorageRuntime,
@@ -209,7 +190,6 @@ pub use harmonic::{
 pub use hits::{
     HITSAlgorithmSpec, HitsComputationRuntime, HitsConfig, HitsResult, HitsStorageRuntime,
 };
-pub use kmeans::{KMeansComputationRuntime, KMeansConfig, KMeansResult, KMeansSamplerType};
 pub use k1coloring::{
     K1ColoringAlgorithmSpec, K1ColoringComputationRuntime, K1ColoringConfig, K1ColoringResult,
     K1ColoringStorageRuntime,
@@ -218,6 +198,7 @@ pub use kcore::{
     KCoreAlgorithmSpec, KCoreComputationResult, KCoreComputationRuntime, KCoreConfig, KCoreResult,
     KCoreStorageRuntime,
 };
+pub use kmeans::{KMeansComputationRuntime, KMeansConfig, KMeansResult, KMeansSamplerType};
 pub use kspanningtree::{
     KSpanningTreeAlgorithmSpec, KSpanningTreeComputationRuntime, KSpanningTreeConfig,
     KSpanningTreeResult, KSpanningTreeStorageRuntime,
@@ -236,11 +217,28 @@ pub use louvain::{
     LouvainStorageRuntime,
 };
 pub use msbfs::{AggregatedNeighborProcessingMsBfs, OMEGA};
+pub use pagerank::{
+    estimate_pagerank_memory, run_pagerank_pregel, PageRankAlgorithmSpec,
+    PageRankComputationResult, PageRankMemoryEstimation, PageRankPregelRunResult,
+};
+pub use scc::{SCCAlgorithmSpec, SccComputationRuntime, SccConfig, SccResult, SccStorageRuntime};
+pub use spanning_tree::{
+    SPANNING_TREEAlgorithmSpec, SpanningGraph, SpanningTree, SpanningTreeComputationRuntime,
+    SpanningTreeConfig, SpanningTreeResult, SpanningTreeStorageRuntime,
+};
+pub use traversal::{
+    Aggregator, ExitPredicate, ExitPredicateResult, FollowExitPredicate, OneHopAggregator,
+    TargetExitPredicate,
+};
 pub use triangle_count::{
     TriangleCountAlgorithmSpec, TriangleCountComputationRuntime, TriangleCountConfig,
     TriangleCountResult, TriangleCountStorageRuntime,
 };
 pub use wcc::{WccAlgorithmSpec, WccComputationRuntime, WccConfig, WccResult, WccStorageRuntime};
+pub use yens::{
+    CandidatePathsPriorityQueue, MutablePathResult, RelationshipFilterer, YENSAlgorithmSpec,
+    YensComputationRuntime, YensConfig, YensResult, YensStorageRuntime,
+};
 
 // pub use algorithms::*;
 pub use core::*;

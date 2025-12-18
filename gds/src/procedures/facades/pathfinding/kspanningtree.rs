@@ -3,9 +3,9 @@
 //! Computes k spanning trees by first computing an MST using Prim's algorithm,
 //! then progressively pruning to maintain exactly k nodes.
 
-use crate::procedures::kspanningtree::computation::KSpanningTreeComputationRuntime;
 use crate::procedures::facades::builder_base::ConfigValidator;
 use crate::procedures::facades::traits::Result;
+use crate::procedures::kspanningtree::computation::KSpanningTreeComputationRuntime;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -73,17 +73,22 @@ impl KSpanningTreeBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.source_node.is_none() {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "source_node is required".to_string(),
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "source_node is required".to_string(),
+                ),
+            );
         }
 
         ConfigValidator::in_range(self.k as f64, 1.0, 1_000_000.0, "k")?;
 
         if self.objective != "min" && self.objective != "max" {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                format!("objective must be 'min' or 'max', got '{}'", self.objective),
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "objective must be 'min' or 'max', got '{}'",
+                    self.objective
+                )),
+            );
         }
 
         Ok(())
@@ -98,9 +103,7 @@ impl KSpanningTreeBuilder {
         })
     }
 
-    fn compute(
-        &self,
-    ) -> Result<(Vec<i64>, Vec<f64>, f64, u64, std::time::Duration)> {
+    fn compute(&self) -> Result<(Vec<i64>, Vec<f64>, f64, u64, std::time::Duration)> {
         self.validate()?;
         let start = Instant::now();
 
@@ -111,7 +114,9 @@ impl KSpanningTreeBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -120,9 +125,12 @@ impl KSpanningTreeBuilder {
 
         // Check source node exists
         if source as usize >= node_count {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                format!("source_node {} out of range [0, {})", source, node_count),
-            ));
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "source_node {} out of range [0, {})",
+                    source, node_count
+                )),
+            );
         }
 
         let fallback = graph_view.default_property_value();
@@ -199,7 +207,9 @@ impl KSpanningTreeBuilder {
         let (parent, _cost_to_parent, total_cost, _root, elapsed) = self.compute()?;
 
         // Count nodes in tree (parent != -1 or is root)
-        let node_count = parent.iter().enumerate()
+        let node_count = parent
+            .iter()
+            .enumerate()
             .filter(|(idx, &p)| p != -1 || *idx == _root as usize)
             .count();
 
@@ -223,7 +233,10 @@ mod tests {
     use crate::types::schema::{Direction, MutableGraphSchema};
     use std::collections::HashMap;
 
-    fn store_from_undirected_edges(node_count: usize, edges: &[(usize, usize)]) -> DefaultGraphStore {
+    fn store_from_undirected_edges(
+        node_count: usize,
+        edges: &[(usize, usize)],
+    ) -> DefaultGraphStore {
         let mut outgoing: Vec<Vec<i64>> = vec![Vec::new(); node_count];
         let mut incoming: Vec<Vec<i64>> = vec![Vec::new(); node_count];
 
@@ -271,16 +284,15 @@ mod tests {
         let store = store_from_undirected_edges(4, &[(0, 1), (1, 2), (2, 3)]);
         let graph = Graph::new(Arc::new(store));
 
-        let stats = graph
-            .kspanning_tree()
-            .source_node(0)
-            .k(4)
-            .stats()
-            .unwrap();
+        let stats = graph.kspanning_tree().source_node(0).k(4).stats().unwrap();
 
         // K=4 should include all nodes in a 4-node path
         // If k >= node_count, the algorithm returns the full MST
-        assert!(stats.node_count >= 1, "Expected at least 1 node, got {}", stats.node_count);
+        assert!(
+            stats.node_count >= 1,
+            "Expected at least 1 node, got {}",
+            stats.node_count
+        );
     }
 
     #[test]

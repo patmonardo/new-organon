@@ -9,9 +9,9 @@
 //! - `seed_property`: optional triangle-count property name (not yet wired; we compute triangles)
 
 use crate::procedures::facades::builder_base::ConfigValidator;
+use crate::procedures::facades::community::triangle_count::TriangleCountBuilder;
 use crate::procedures::facades::traits::Result;
 use crate::procedures::local_clustering_coefficient::LocalClusteringCoefficientComputationRuntime;
-use crate::procedures::facades::community::triangle_count::TriangleCountBuilder;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -112,10 +112,12 @@ impl LocalClusteringCoefficientBuilder {
         let iter = coeffs
             .into_iter()
             .enumerate()
-            .map(|(node_id, local_clustering_coefficient)| LocalClusteringCoefficientRow {
-                node_id: node_id as u64,
-                local_clustering_coefficient,
-            });
+            .map(
+                |(node_id, local_clustering_coefficient)| LocalClusteringCoefficientRow {
+                    node_id: node_id as u64,
+                    local_clustering_coefficient,
+                },
+            );
         Ok(Box::new(iter))
     }
 

@@ -245,7 +245,8 @@ mod tests {
             seed: Some(42),
             ..RandomGraphConfig::default()
         };
-        let graph_store = Arc::new(DefaultGraphStore::random(&random_config).expect("random graph"));
+        let graph_store =
+            Arc::new(DefaultGraphStore::random(&random_config).expect("random graph"));
 
         let _algorithm = factory.build_with_pipeline(
             graph_store,

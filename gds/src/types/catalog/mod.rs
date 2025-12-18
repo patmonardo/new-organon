@@ -9,10 +9,8 @@
 //! - The catalog stores `Arc<DefaultGraphStore>` to align with current
 //!   executor and specs which operate on `DefaultGraphStore` directly.
 
-pub mod service;
 pub mod in_memory;
+pub mod service;
 
-pub use service::*;
 pub use in_memory::*;
-
-
+pub use service::*;

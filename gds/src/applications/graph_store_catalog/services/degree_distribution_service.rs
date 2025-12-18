@@ -1,5 +1,5 @@
-use crate::types::graph_store::GraphStore;
 use crate::concurrency::TerminationFlag;
+use crate::types::graph_store::GraphStore;
 
 /// Service for computing degree distribution of graphs.
 ///
@@ -35,4 +35,3 @@ impl Default for DegreeDistributionService {
         Self::new()
     }
 }
-

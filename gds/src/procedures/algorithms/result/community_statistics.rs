@@ -28,11 +28,7 @@ pub struct CommunityStats {
     pub success: bool,
 }
 
-pub fn community_stats<F, I>(
-    node_count: usize,
-    community_fn: F,
-    instructions: &I,
-) -> CommunityStats
+pub fn community_stats<F, I>(node_count: usize, community_fn: F, instructions: &I) -> CommunityStats
 where
     F: Fn(usize) -> u64,
     I: StatisticsComputationInstructions,
@@ -46,9 +42,14 @@ where
         // Validate by producing a summary
         let _ = community_summary(&sizes);
         Some(sizes)
-    } else { None };
+    } else {
+        None
+    };
     let elapsed = start.elapsed().as_millis();
-    CommunityStats { component_count, histogram, compute_milliseconds: elapsed, success: true }
+    CommunityStats {
+        component_count,
+        histogram,
+        compute_milliseconds: elapsed,
+        success: true,
+    }
 }
-
-

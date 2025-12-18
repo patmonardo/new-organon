@@ -4,8 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TopologicalSortConfig {
     /// Whether to compute maximum distance from source nodes
     #[serde(default = "default_compute_max_distance")]
@@ -15,7 +14,6 @@ pub struct TopologicalSortConfig {
 fn default_compute_max_distance() -> bool {
     false
 }
-
 
 /// Result of topological sort computation
 #[derive(Debug, Clone, Serialize, Deserialize)]
