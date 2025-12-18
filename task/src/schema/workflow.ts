@@ -83,7 +83,7 @@ export type Coordination = z.infer<typeof CoordinationSchema>;
 export type Workflow = z.infer<typeof WorkflowSchema>;
 
 // =====================================================================
-// WORKFLOW UNITY (W = Concept + Controller)
+// WORKFLOW UNITY (W = Concept + Control Surface)
 // =====================================================================
 
 export const WorkflowConceptSchema = z.object({
@@ -98,6 +98,10 @@ export const WorkflowConceptSchema = z.object({
 export const WorkflowControllerStepSchema = z.object({
   id: z.string(),
   description: z.string(),
+  /**
+   * Action identifier (often a syscall/tool name).
+   * Together with Coordination rules this forms an Action:Rule control surface.
+   */
   action: z.string(),
   defaultInput: z.unknown().optional(),
 });
@@ -110,6 +114,7 @@ export const WorkflowControllerSchema = z.object({
 export const WorkflowUnitySchema = z.object({
   id: z.string(),
   concept: WorkflowConceptSchema,
+  // Historical naming: "controller" is the workflow control surface (step program).
   controller: WorkflowControllerSchema,
 });
 

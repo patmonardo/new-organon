@@ -5,7 +5,7 @@ import {
   type TawActEvent,
   type TawIntentEvent,
   type TawPlanEvent,
-} from '@organon/task';
+} from '../root-agent';
 
 import type { ContextDocument } from './agent-context';
 

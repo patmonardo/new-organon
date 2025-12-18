@@ -3,7 +3,7 @@ import {
   TawResultEventSchema,
   type TawActEvent,
   type TawResultEvent,
-} from '@organon/task';
+} from './root-agent';
 
 import {
   KERNEL_TAW_ACTIONS,

@@ -10,6 +10,16 @@ Provide a type-safe, extensible framework for defining and executing computation
 - Agent — an active executor with capabilities, health, and assignment logic.  
 - Workflow — an orchestrator of Tasks and Agents (DAGs or sequences), responsible for scheduling, monitoring, and recovery.
 
+## Four-Fold Reality Box (working mapping)
+
+This package is intentionally “meaning constrained” to the final synthesis (Agent) and its execution artifacts.
+
+- **Controller = Model**: the control surface is an Action:Rule structure (what actions exist + when/how they apply).
+- **Workflow = Task**: the live synthesis that carries the goal forward through actions.
+- **View = Agent**: the dharmic display/active perspective that enacts the loop.
+
+This keeps Organon Task embeddable: if you need a server framework, embed the agent runtime into an external host-adapter package.
+
 ## Schema files
 - `src/schema/task.ts` — Task Zod schema (execution, state, config)  
 - `src/schema/agent.ts` — Agent Zod schema (capabilities, health, assignment)  
@@ -17,23 +27,24 @@ Provide a type-safe, extensible framework for defining and executing computation
 - `src/schema/definition.ts` — conceptual foundation (reference)  
 - `src/schema/index.ts` — consolidated exports
 
-## Relative runtime platform (disabled)
-- `src/relative/` contains an early “relative” runtime platform (historical / Nest-flavored).
-- It is currently **disabled** (excluded from the active SDK build) so we can rebuild TAW step-by-step without committing to a framework runtime.
+## Runtime
+- `src/agent/` contains the framework-agnostic agent runtime surface (RootAgent loop + absorption).
+
+Organon Task’s agent runtime is designed to be **embeddable**: treat it like a component you can host inside another system.
+
+Note: Organon Task intentionally does **not** implement external agent-stack integrations (MCP/GenKit/etc). If you need a NestJS (or similar) infrastructure, the agent embeds into an external host-adapter package (e.g. a NestJS module) rather than Task depending on that framework.
 
 ## Design Principles
-- API-first: clear schemas suitable for REST/GraphQL endpoints.  
+- Schema-first: small, precise, validated artifacts.  
 - Type-safe: derive types from Zod schemas for runtime + compile-time guarantees.  
 - Extensible: plugin/adaptor friendly (executors, persistence, schedulers).  
 - Observable: metrics, logs, and traces for operational visibility.  
 - Scalable & resilient: distributed execution and task recovery patterns.
 
 ## Implementation Outline
-1. Service layer: business logic for creating, scheduling, and reconciling Tasks.  
-2. Controller layer: REST/GraphQL endpoints for clients and operators.  
-3. Repository layer: persistence adapters (databases, queues).  
-4. Executor layer: concrete runtime implementations for Agents.  
-5. Integration adapters: connectors for external tooling and infra.
+1. Repository layer: persistence adapters (databases, queues).  
+2. Executor layer: concrete runtime implementations for Agents.  
+3. Agent runtime: RootAgent loop/absorption surfaces.
 
 ## Development
 - Build: `pnpm --filter @organon/task build`  

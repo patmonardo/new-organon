@@ -4,7 +4,7 @@
 - **Dialectical cube layers**:
   - **BEC**: `logic/` (@organon/logic) — canonical knowledge-graph encoding + schemas.
   - **MVC**: `model/` (@organon/model) — Next.js + Prisma + UI + “SDSL/Malloy” modeling docs.
-  - **TAW**: `task/` (@organon/task) — Task/Agent/Workflow orchestration (NestJS-flavored, plus Zod schemas).
+  - **TAW**: `task/` (@organon/task) — Task/Agent/Workflow orchestration (schema-first, framework-agnostic).
 - Rust crates exist under `gds/`, `gdsl/`, `reality/` (Cargo workspace), but **they are not part of the PNPM workspace build** right now (no JS/Rust binding yet). Don’t add scripts that implicitly build NAPI.
 
 ## Codegen boundaries (read before generating)

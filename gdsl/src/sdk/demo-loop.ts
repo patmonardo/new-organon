@@ -8,7 +8,7 @@ import {
   type PlanPromptOptions,
   type StepsToTawPlanOptions,
 } from './taw-helpers';
-import type { TawIntentEvent, TawPlanEvent } from '@organon/task';
+import type { TawIntentEvent, TawPlanEvent } from '../root-agent';
 
 export type DemoLoopSeed = {
   context: ContextDocument;

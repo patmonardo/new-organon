@@ -12,7 +12,6 @@ ignoredBuiltDependencies:
   - protobufjs
 
 onlyBuiltDependencies:
-  - '@nestjs/core'
   - '@swc/core'
   - '@prisma/engines'
   - bcrypt

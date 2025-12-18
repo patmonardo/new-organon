@@ -1,6 +1,10 @@
 # Task Schema Module - Engineering Implementation
 
-This module transforms the philosophical and dialectical foundations from `definition.ts` into concrete, engineering-focused Zod schemas suitable for NestJS and Genkit integration.
+This module transforms the philosophical and dialectical foundations from `definition.ts` into concrete, engineering-focused Zod schemas and a small runtime surface.
+
+Organon Task intentionally does **not** ship a server/framework runtime (Express/etc) or “integration layers” for external agent stacks. Anything beyond an Active/Applied Model is accessed externally (MCP, GenKit, etc) and is out-of-scope here.
+
+The agent runtime in this package is meant to be **embeddable**: a component that can be hosted by another system. If you want NestJS, build a separate NestJS package that embeds the agent runtime as a module/component.
 
 ## Schema Files
 
@@ -8,9 +12,7 @@ This module transforms the philosophical and dialectical foundations from `defin
 
 1. **`task.ts`** - Task Schema (Pure Engineering)
    - Practical Zod schema for Task entities
-   - NestJS Controller integration ready
-   - Genkit functional API compatibility
-   - SystemD-style service management
+   - Lifecycle management (structural)
    - Comprehensive execution state tracking
    - Resource management and monitoring
 
@@ -26,7 +28,6 @@ This module transforms the philosophical and dialectical foundations from `defin
    - Practical Zod schema for Workflow entities
    - DAG-based execution orchestration
    - Sophisticated scheduling and triggers
-   - Genkit flow integration
    - Comprehensive monitoring and observability
    - Step-by-step execution tracking
 
@@ -51,7 +52,7 @@ This module transforms the philosophical and dialectical foundations from `defin
 The engineering schemas follow these principles:
 
 - **API-First**: Designed for REST/GraphQL APIs with proper validation
-- **Framework Integration**: Native NestJS and Genkit compatibility
+- **Schema-First**: Small, precise schemas with runtime validation
 - **Production-Ready**: Security, monitoring, audit trails, and error handling
 - **Extensible**: Plugin architecture through configuration objects
 - **Observable**: Comprehensive metrics, logging, and tracing support
@@ -71,18 +72,26 @@ Each schema includes:
 - **Identity & Classification**: Unique identification and categorization
 - **Operational State**: Current status, progress, and health metrics
 - **Configuration**: Runtime settings and resource requirements
-- **Integration**: NestJS/Genkit compatibility layers
+ - **Integration**: intentionally external (MCP/GenKit/etc)
 - **Metadata & Audit**: Creation tracking, version history, audit trails
 - **Security**: Authentication, authorization, and compliance features
 
+## Embeddable Singularity (stack view)
+
+Organon Task is designed to be the last synthesis point (Agent) in a larger chain:
+Reality → GDS → GDSL → Logic → Model → Task.
+
+Inside Task, a useful working mapping is:
+- Controller = Model (Action:Rule)
+- Workflow = Task (live synthesis)
+- View = Agent (dharmic display)
+
 ## Next Steps
 
-Ready for concrete class implementation:
+Ready for concrete class implementation (framework-agnostic):
 
-1. **Service Classes**: Business logic implementation
-2. **Controller Classes**: NestJS REST API endpoints
-3. **Repository Classes**: Data persistence layers
-4. **Executor Classes**: Runtime execution engines
-5. **Integration Adapters**: Genkit flow and tool adapters
+1. **Repository Classes**: Data persistence layers
+2. **Executor Classes**: Runtime execution engines
+3. **Agent Runtime**: container loop surfaces that consume/emit OS artifacts
 
-The schemas provide the complete API foundation for building a production-ready task orchestration system.
+The schemas provide the foundation for building an applied-model task orchestration system.

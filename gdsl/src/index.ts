@@ -1,5 +1,10 @@
 export * from './schema';
 export * from './kernel-api';
+export * from './invariants';
+export * from './root-agent';
+export * from './root-agent-boot';
+export * from './root-agent-absorb';
+export * from './syscalls';
 export * from './trace';
 export * from './kernel-trace';
 export * from './taw-kernel';
@@ -10,4 +15,5 @@ export * from './sdk/fact-trace';
 export * from './sdk/taw-helpers';
 export * from './sdk/demo-loop';
 export * from './sdk/demo-kernel-port';
+export * from './sdk/gds-tsjson-kernel-port';
 

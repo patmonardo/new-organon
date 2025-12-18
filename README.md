@@ -72,7 +72,7 @@ The “TAW” layer defines the *shape* of work (not a full runtime yet):
 - Agent — an executor with capabilities/health/assignment shape
 - Workflow — orchestration shape (steps, dependencies)
 
-Note: `task/src/relative/` contains an older Nest-flavored runtime direction and is currently disabled in the active SDK build so the runtime can be rebuilt deliberately.
+Note: the agent runtime is being rebuilt under `task/src/agent/`.
 
 ## Development
 

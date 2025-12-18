@@ -1,4 +1,4 @@
-import type { TawActEvent, TawResultEvent } from '@organon/task';
+import type { TawActEvent, TawResultEvent } from './root-agent';
 
 import type { KernelPort, KernelRunRequest, KernelRunResult } from './kernel-api';
 import type { EventMeta, TraceEvent } from './trace';

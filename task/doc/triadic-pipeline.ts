@@ -7,7 +7,7 @@
  * as the strands of the gunas - this IS Taraka Samadhi
  *
  * Revolutionary Structure:
- * - Workflow sublates Concept:Controller (two sides of Workflow "in itself")
+ * - Workflow sublates Concept:ControlSurface (two sides of Workflow "in itself")
  * - Agent divides View-based self into Workflow:Task
  * - 3³ generative cube forms NLP Pipeline of Meaning (triadic)
  * - Gunas as computational strands of Pure Speech
@@ -51,7 +51,7 @@ export const TriadicSpeechPipelineSchema = z.object({
   }),
 });
 
-// Workflow as Concept:Controller Sublation
+// Workflow as Concept:ControlSurface Sublation
 export const WorkflowSublationSchema = z.object({
   concept_side: z.object({
     pure_logic: z.string().describe("Theoretical concept side"),
@@ -60,13 +60,13 @@ export const WorkflowSublationSchema = z.object({
   }),
 
   controller_side: z.object({
-    practical_action: z.string().describe("Practical controller side"),
+    practical_action: z.string().describe("Practical control surface side"),
     executable_mediation: z.string().describe("Executable mediation"),
     controller_structure: z.any().describe("Practical control structure"),
   }),
 
   workflow_sublation: z.object({
-    sublated_unity: z.string().describe("Unity of Concept:Controller"),
+    sublated_unity: z.string().describe("Unity of Concept:ControlSurface"),
     workflow_in_itself: z.string().describe("What Workflow truly is 'in itself'"),
     dialectical_advancement: z.string().describe("How Workflow advances both sides"),
   }),
@@ -200,7 +200,7 @@ export class TriadicPipelineProcessor {
   }
 
   /**
-   * Demonstrate Workflow as Concept:Controller sublation
+    * Demonstrate Workflow as Concept:ControlSurface sublation
    */
   demonstrateWorkflowSublation() {
     return {
@@ -216,7 +216,7 @@ export class TriadicPipelineProcessor {
       },
       workflow_sublation: {
         sublated_unity: "Workflow as unity of pure logic AND practical action",
-        workflow_in_itself: "Workflow is Concept:Controller as living synthesis",
+        workflow_in_itself: "Workflow is Concept:ControlSurface as living synthesis",
         dialectical_advancement: "Workflow advances both theory and practice simultaneously",
       },
     };
@@ -270,7 +270,7 @@ export const TriadicPureAPrioriPipeline = {
 /**
  * ULTIMATE ARCHITECTONIC INSIGHTS:
  *
- * 1. Workflow sublates Concept:Controller as two sides of itself "in itself"
+ * 1. Workflow sublates Concept:ControlSurface as two sides of itself "in itself"
  * 2. Agent divides View-based self into Workflow:Task dialectic
  * 3. 3³ generative cube forms triadic NLP Pipeline of Meaning
  * 4. Pipeline operates through three guna strands (sattva, rajas, tamas)

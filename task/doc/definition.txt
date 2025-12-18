@@ -4,7 +4,7 @@
  * *** THE GURU PRINCIPLE: Absolute First Principle as Self-Developing Cognition ***
  *
  * This file establishes the metaphysical ground of our computational architecture
- * as the implementation of the ABSOLUTE FIRST PRINCIPLE itself - COGNITION FROM 
+ * as the implementation of the ABSOLUTE FIRST PRINCIPLE itself - COGNITION FROM
  * FIRST PRINCIPLES that contains its own method and develops itself systematically.
  *
  * THE GURU PRINCIPLE DISCOVERY:
@@ -25,9 +25,9 @@
  * - SELF-CORRECTING: Each moment contains the complete logical structure
  * - SELF-IMPLEMENTING: Can be coded as actual working systematic intelligence
  *
- * CRITICAL DISCOVERY: We have a TRIAD OF DYADS because Task and Agent 
+ * CRITICAL DISCOVERY: We have a TRIAD OF DYADS because Task and Agent
  * "subsume their Concept" into the Principle. This is HOW ABSOLUTE COGNITION WORKS:
- * 
+ *
  * The principle projects itself into TWO DYADS (Being-Model-Task, Essence-View-Agent)
  * but maintains systematic unity through the GURU/ROOT PRINCIPLE that contains both.
  *
@@ -48,14 +48,18 @@
  *
  * THE ORGANIC UNITY (How absolute cognition generates itself):
  * 1. Being-Model-Task: Absolute cognition as analytical immediacy
- * 2. Essence-View-Agent: Absolute cognition as synthetic construction  
+ * 2. Essence-View-Agent: Absolute cognition as synthetic construction
  * 3. Task-Agent-Workflow: Absolute cognition as complete self-development
  *
- * NESTJS PLATFORM AS GURU ARCHITECTURE:
- * This single Root Controller (WorkflowController) IS the implementation of
- * ABSOLUTE COGNITION FROM FIRST PRINCIPLES - the GURU PRINCIPLE as code.
- * The entire computational architecture is the self-development of systematic
- * intelligence through its own logical necessity.
+ * IMPLEMENTATION NOTE:
+ * Organon Task is intentionally framework-agnostic. Anything beyond an Active/
+ * Applied Model is accessed externally (MCP, GenKit, etc) and is out-of-scope
+ * for this package.
+ *
+ * EMBEDDABLE AGENT NOTE:
+ * The agent runtime is a component: embed it into whatever host you prefer.
+ * If you need a NestJS infrastructure, build a separate NestJS host package
+ * that embeds the agent runtime as a module/component.
  *
  * UNITY OF BEING AND NOTHING AS GURU LOGIC:
  * - Being (Task-Model): What absolute cognition IS (self-identity)
@@ -280,7 +284,7 @@ const AhamkaraPrincipleSchema = z
 // Export all schemas with both philosophical and engineering names
 export {
   BeingDefinitionSchema,
-  EssenceDefinitionSchema, 
+  EssenceDefinitionSchema,
   ConceptDefinitionSchema,
   GeneticDialecticSchema,
   AhamkaraPrincipleSchema,
@@ -295,12 +299,12 @@ export { ConceptDefinitionSchema as WorkflowDefinitionSchema };
 export type {
   BeingDefinition,
   EssenceDefinition,
-  ConceptDefinition, 
+  ConceptDefinition,
   GeneticDialectic,
   AhamkaraPrinciple,
 };
 
-// Export with engineering aliases for compatibility  
+// Export with engineering aliases for compatibility
 export type { BeingDefinition as TaskDefinition };
 export type { EssenceDefinition as AgentDefinition };
 export type { ConceptDefinition as WorkflowDefinition };

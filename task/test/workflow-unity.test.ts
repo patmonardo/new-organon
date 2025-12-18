@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { WorkflowUnitySchema } from '../src/schema/workflow.js';
 
-describe('WorkflowUnitySchema (W = Concept + Controller)', () => {
+describe('WorkflowUnitySchema (W = Concept + Control Surface)', () => {
   it('parses a minimal workflow unity', () => {
     const wf = WorkflowUnitySchema.parse({
       id: 'wf1',
