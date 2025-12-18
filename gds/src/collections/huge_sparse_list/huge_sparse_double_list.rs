@@ -275,7 +275,7 @@ mod tests {
     #[test]
     fn test_add_to() {
         let list = HugeSparseDoubleList::of(0.0);
-        list.set(0, 3.0);
+        list.set(0, 3.14);
         list.add_to(0, 0.01);
         assert!((list.get(0) - 3.15).abs() < 1e-10);
 

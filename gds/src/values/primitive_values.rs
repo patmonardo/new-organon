@@ -93,7 +93,7 @@ mod tests {
             .as_any()
             .downcast_ref::<DefaultFloatingPointValue>()
             .unwrap();
-        assert!((fp.double_value() - 3.0).abs() < 0.001);
+        assert!((fp.double_value() - 3.14).abs() < 0.001);
     }
 
     #[test]

@@ -8,7 +8,6 @@ use std::collections::HashMap;
 
 use crate::projection::eval::procedure::ExecutionContext;
 use crate::substrate::{RealityFabric, WitnessFabric};
-use crate::types::graph_store::DefaultGraphStore;
 
 use super::form_spec::{
     time_form_eval, CommitSubgraphOperator, FormError, FormInput, FormOperator, FormOperatorOutput,
@@ -205,6 +204,7 @@ mod tests {
     use super::*;
     use crate::form::{Context, FormShape, Morph, Shape};
     use crate::substrate::FabricControl;
+    use crate::types::graph_store::DefaultGraphStore;
     use crate::types::graph_store::GraphStore;
     use crate::types::random::random_graph::RandomGraphConfig;
     use crate::types::ValueType;
