@@ -4,7 +4,7 @@ import {
   DemoKernelPort,
   runKernelOrganicUnity,
   type KernelRunRequest,
-} from '../src/sdsl';
+} from '@organon/gdsl';
 
 describe('Kernel organic unity (Knowing → Print)', () => {
   it('runs a kernel and returns taw + trace prints', async () => {

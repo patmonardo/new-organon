@@ -3,7 +3,6 @@ packages:
   - logic
   - model
   - task
-  - model/examples/dashboard
 
 ignoredBuiltDependencies:
   - '@firebase/util'

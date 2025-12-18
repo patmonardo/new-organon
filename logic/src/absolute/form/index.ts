@@ -1,1 +1,1 @@
-export * from '@organon/gdsl/ir';
+export * from '@organon/gdsl/schema';

@@ -8,46 +8,22 @@
  */
 
 import type { ContextDocument, StructuredFact } from './agent-view';
-import type { EventMeta, FactStoreInfo } from './terminology';
+import type { EventMeta } from './terminology';
 
 export type { DialecticalInfo, EventMeta, FactStoreInfo, FactStoreMode } from './terminology';
 
-export type FactTraceEvent = {
-  kind: string;
-  payload?: unknown;
-  meta?: EventMeta;
-};
+export type {
+  FactTraceEvent,
+  TraceGoal,
+  TraceSchema,
+} from '@organon/gdsl';
 
-export type TraceGoal = {
-  id: string;
-  type: string;
-  description: string;
-};
-
-export type TraceSchema = {
-  id: string;
-  name?: string;
-  description?: string;
-};
-
-function nowIso() {
-  return new Date().toISOString();
-}
-
-function inferProvenance(op?: FactStoreInfo['op']): StructuredFact['provenance'] {
-  if (op === 'assert') return 'asserted';
-  if (op === 'revise') return 'inferred';
-  if (op === 'retract') return 'asserted';
-  if (op === 'project') return 'inferred';
-  if (op === 'index') return 'observed';
-  return undefined;
-}
-
-function factId(evt: FactTraceEvent, idx: number) {
-  const ids = evt.meta?.factStore?.ids;
-  const idPart = Array.isArray(ids) && ids.length ? ids[0] : String(idx);
-  return `${evt.kind}:${idPart}`;
-}
+import {
+  contextFromFactTrace as baseContextFromFactTrace,
+  type FactTraceEvent,
+  type TraceGoal,
+  type TraceSchema,
+} from '@organon/gdsl';
 
 export function contextFromFactTrace(
   events: FactTraceEvent[],
@@ -58,46 +34,5 @@ export function contextFromFactTrace(
     maxFacts?: number;
   },
 ): ContextDocument {
-  const maxFacts = opts?.maxFacts ?? 200;
-  const slice = events.slice(0, maxFacts);
-
-  const schemaId = opts?.schema?.id ?? inferSchemaId(slice);
-
-  const facts: StructuredFact[] = slice.map((evt, i) => {
-    const fs = evt.meta?.factStore;
-    return {
-      id: factId(evt, i),
-      label: fs?.kind ?? evt.kind,
-      type: evt.kind,
-      value: evt.payload ?? null,
-      provenance: inferProvenance(fs?.op),
-      confidence: undefined,
-      relevance: undefined,
-    };
-  });
-
-  return {
-    id: opts?.id ?? `ctx-${schemaId}-${Date.now()}`,
-    timestamp: nowIso(),
-    facts,
-    schema: {
-      id: schemaId,
-      name: opts?.schema?.name,
-      description: opts?.schema?.description,
-      fieldCount: facts.length,
-      requiredFields: [],
-      optionalFields: facts.map((f) => f.id),
-    },
-    constraints: [],
-    goal: opts?.goal,
-    dependencies: [],
-  };
-}
-
-function inferSchemaId(events: FactTraceEvent[]) {
-  for (const e of events) {
-    const kind = e.meta?.factStore?.kind;
-    if (typeof kind === 'string' && kind.length) return `trace:${kind}`;
-  }
-  return 'trace';
+  return baseContextFromFactTrace(events, opts) as unknown as ContextDocument;
 }

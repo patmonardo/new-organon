@@ -3,9 +3,10 @@ import { describe, it, expect } from 'vitest';
 import {
   seedDemoLoopFromTrace,
   plannerTextToTawPlan,
-  choiceToTawAct,
+  actionToTawActEvent,
+  kernelRunRequestToTawActEvent,
   type FactTraceEvent,
-} from '../src/sdsl';
+} from '@organon/gdsl';
 
 describe('demo-loop', () => {
   it('seeds intent + plan prompt from trace', () => {
@@ -22,6 +23,7 @@ describe('demo-loop', () => {
       schema: { id: 'trace:demo', name: 'Demo' },
       goal: { id: 'g1', type: 'demo', description: 'Demonstrate the loop' },
       planPrompt: { maxSteps: 3, style: 'numbered' },
+      promptText: '## Goal\nDemonstrate the loop',
       intent: { source: 'test', correlationId: 'c1' },
     });
 
@@ -43,18 +45,7 @@ describe('demo-loop', () => {
   });
 
   it('maps a chosen action into taw.act (function)', () => {
-    const evt = choiceToTawAct(
-      {
-        type: 'function',
-        call: {
-          type: 'function',
-          name: 'tool.doThing',
-          arguments: { x: 1 },
-          schema: { type: 'object', properties: { x: { type: 'number' } }, required: ['x'] },
-        },
-      },
-      { goalId: 'g1', stepId: 's1', source: 'test' },
-    );
+    const evt = actionToTawActEvent('tool.doThing', { x: 1 }, { goalId: 'g1', stepId: 's1', source: 'test' });
 
     expect(evt.kind).toBe('taw.act');
     expect(evt.payload.goalId).toBe('g1');
@@ -64,11 +55,8 @@ describe('demo-loop', () => {
   });
 
   it('maps a chosen action into taw.act (kernel.run)', () => {
-    const evt = choiceToTawAct(
-      {
-        type: 'kernel.run',
-        request: { model: { id: 'kernel.demo' }, input: { a: 1 } },
-      },
+    const evt = kernelRunRequestToTawActEvent(
+      { model: { id: 'kernel.demo' }, input: { a: 1 } },
       { goalId: 'g1', stepId: 's2', source: 'test' },
     );
 

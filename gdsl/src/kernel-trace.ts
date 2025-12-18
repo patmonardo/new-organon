@@ -1,6 +1,5 @@
-import type { FactTraceEvent } from './fact-trace';
-import type { KernelRunRequest, KernelRunResult } from './kernel';
-import type { EventMeta, FactStoreInfo } from './terminology';
+import type { KernelRunRequest, KernelRunResult } from './kernel-api';
+import type { EventMeta, FactStoreInfo, TraceEvent } from './trace';
 
 export const KERNEL_TRACE_KINDS = {
   request: 'kernel.run.request',
@@ -24,14 +23,14 @@ function mergeFactStore(
   };
 }
 
-export function kernelRunRequestToFactTraceEvent(
+export function kernelRunRequestToTraceEvent(
   request: KernelRunRequest,
   opts?: {
     runId?: string;
     meta?: EventMeta;
     factStore?: Partial<FactStoreInfo>;
   },
-): FactTraceEvent {
+): TraceEvent<KernelRunRequest> {
   const meta: EventMeta | undefined =
     opts?.meta || opts?.runId || opts?.factStore
       ? {
@@ -56,7 +55,7 @@ export function kernelRunRequestToFactTraceEvent(
   };
 }
 
-export function kernelRunResultToFactTraceEvent(
+export function kernelRunResultToTraceEvent(
   result: KernelRunResult,
   opts?: {
     runId?: string;
@@ -64,7 +63,7 @@ export function kernelRunResultToFactTraceEvent(
     meta?: EventMeta;
     factStore?: Partial<FactStoreInfo>;
   },
-): FactTraceEvent {
+): TraceEvent<KernelRunResult | { request: KernelRunRequest; result: KernelRunResult }> {
   const meta: EventMeta | undefined =
     opts?.meta || opts?.runId || opts?.factStore
       ? {
@@ -89,7 +88,7 @@ export function kernelRunResultToFactTraceEvent(
   };
 }
 
-export function kernelRunToFactTraceEvents(
+export function kernelRunToTraceEvents(
   request: KernelRunRequest,
   result: KernelRunResult,
   opts?: {
@@ -98,14 +97,14 @@ export function kernelRunToFactTraceEvents(
     requestFactStore?: Partial<FactStoreInfo>;
     resultFactStore?: Partial<FactStoreInfo>;
   },
-): FactTraceEvent[] {
+): TraceEvent[] {
   return [
-    kernelRunRequestToFactTraceEvent(request, {
+    kernelRunRequestToTraceEvent(request, {
       runId: opts?.runId,
       meta: opts?.meta,
       factStore: opts?.requestFactStore,
     }),
-    kernelRunResultToFactTraceEvent(result, {
+    kernelRunResultToTraceEvent(result, {
       runId: opts?.runId,
       meta: opts?.meta,
       factStore: opts?.resultFactStore,

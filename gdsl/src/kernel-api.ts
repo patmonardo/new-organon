@@ -1,13 +1,12 @@
 import { z } from 'zod';
 
 /**
- * Kernel models (NOT LLMs)
+ * Kernel API (TS-side contract)
  *
- * These are distributed/portable inference operators: GDS procedures, GNNs,
- * classical ML kernels, scoring functions, etc.
+ * This module is the canonical TypeScript surface for describing kernel-like
+ * computation (GDS procedures, GNNs, ML kernels, scoring functions, etc.).
  *
- * The Model package owns their representational interface (request/result);
- * TAW owns execution.
+ * It intentionally does NOT provide an implementation adapter.
  */
 
 export const KernelModelRefSchema = z.object({
@@ -35,6 +34,22 @@ export const KernelRunResultSchema = z.object({
 });
 export type KernelRunResult = z.infer<typeof KernelRunResultSchema>;
 
+/**
+ * Stable action identifiers for execution/event streams.
+ *
+ * Note: execution happens outside this package; these constants are just a
+ * shared language boundary.
+ */
 export const KERNEL_TAW_ACTIONS = {
   run: 'kernel.run',
 } as const;
+
+/**
+ * KernelPort (execution boundary)
+ *
+ * Implementations live in higher layers (Task, adapters, servers).
+ */
+export interface KernelPort {
+  readonly name: string;
+  run(request: KernelRunRequest): Promise<KernelRunResult>;
+}

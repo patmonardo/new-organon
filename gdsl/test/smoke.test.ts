@@ -5,13 +5,13 @@ import { resolve } from 'node:path';
 import {
 	GdsGraphStoreCatalogCallSchema,
 	gdsApplicationOperationId,
-} from '../src/ir/gds.application';
+} from '../src/schema/gds.application';
 
 import {
 	gdslAlgorithmOperationId,
-} from '../src/ir/algorithm';
+} from '../src/schema/algorithm';
 
-import { GdslRunRequestSchema } from '../src/ir/run';
+import { GdslRunRequestSchema } from '../src/schema/run';
 
 describe('@organon/gdsl smoke', () => {
 	it('parses a minimal call and computes stable operation id', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { DemoKernelPort, type KernelRunRequest } from '../src/sdsl';
+import { DemoKernelPort, type KernelRunRequest } from '@organon/gdsl';
 
 describe('kernel-port', () => {
   it('runs demo gds.pregel.rank deterministically', async () => {

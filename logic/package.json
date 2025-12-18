@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "@organon/gdsl": "workspace:*",
+    "@organon/task": "workspace:*",
     "neo4j-driver": "^5.25.0",
     "uuid": "^11.1.0",
     "zod": "^4.0.0"

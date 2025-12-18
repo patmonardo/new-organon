@@ -11,9 +11,9 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./ir": {
-      "types": "./dist/ir/index.d.ts",
-      "default": "./dist/ir/index.js"
+    "./schema": {
+      "types": "./dist/schema/index.d.ts",
+      "default": "./dist/schema/index.js"
     }
   },
   "scripts": {
@@ -28,6 +28,7 @@
     "format": "prettier --write \"**/*.{ts,js,md,json,yml,yaml}\" --ignore-path .gitignore"
   },
   "dependencies": {
+    "@organon/task": "workspace:*",
     "zod": "^4.0.0"
   },
   "devDependencies": {

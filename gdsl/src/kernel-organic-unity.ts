@@ -1,12 +1,9 @@
-import type { FactTraceEvent, EventMeta } from './fact-trace';
-import type { KernelPort } from './kernel-port';
-import type { KernelRunRequest, KernelRunResult } from './kernel';
-import type { TawActEvent, TawResultEvent } from './taw-schema';
-import {
-  kernelRunRequestToTawActEvent,
-  kernelRunResultToTawResultEvent,
-} from './agent-to-taw';
-import { kernelRunToFactTraceEvents } from './kernel-trace';
+import type { TawActEvent, TawResultEvent } from '@organon/task';
+
+import type { KernelPort, KernelRunRequest, KernelRunResult } from './kernel-api';
+import type { EventMeta, TraceEvent } from './trace';
+import { kernelRunRequestToTawActEvent, kernelRunResultToTawResultEvent } from './taw-kernel';
+import { kernelRunToTraceEvents } from './kernel-trace';
 
 export type KernelOrganicUnityOptions = {
   goalId: string;
@@ -14,10 +11,7 @@ export type KernelOrganicUnityOptions = {
   correlationId?: string;
   source?: string;
 
-  /**
-   * Shared meta for both TAW events and FactTrace events.
-   * Keep this structural: narration belongs in TS space, not in the kernel.
-   */
+  /** Shared meta for both TAW and trace prints. */
   meta?: EventMeta;
 
   /** Optional stable identifier for this run in trace space. */
@@ -28,16 +22,12 @@ export type KernelOrganicUnity = {
   request: KernelRunRequest;
   result: KernelRunResult;
 
-  /** Discursive print (TAW). */
   taw: {
     act: TawActEvent;
     result: TawResultEvent;
   };
 
-  /** Discursive print (FactTrace). */
-  trace: FactTraceEvent[];
-
-  /** The runId actually used (if any). */
+  trace: TraceEvent[];
   runId?: string;
 };
 
@@ -48,12 +38,6 @@ function deriveRunId(opts: KernelOrganicUnityOptions): string | undefined {
   return undefined;
 }
 
-/**
- * Organic unity helper: runs a kernel (Knowing) and returns its prints in TS space (Conceiving/Thinking).
- *
- * - Kernel execution is sublingual lawful activity.
- * - TS artifacts are the Eval → Print moment.
- */
 export async function runKernelOrganicUnity(
   port: KernelPort,
   request: KernelRunRequest,
@@ -79,7 +63,7 @@ export async function runKernelOrganicUnity(
 
   const runId = deriveRunId(opts);
 
-  const trace = kernelRunToFactTraceEvents(request, result, {
+  const trace = kernelRunToTraceEvents(request, result, {
     runId,
     meta: opts.meta,
   });

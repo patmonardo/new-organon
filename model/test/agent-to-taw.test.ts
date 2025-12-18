@@ -7,9 +7,10 @@ import {
   kernelRunResultToTawResultEvent,
   planTextToTawPlanEvent,
   promptOutputToPlanPromptText,
-  KERNEL_TAW_ACTIONS,
   type FunctionCallOutput,
 } from '../src/sdsl';
+
+import { KERNEL_TAW_ACTIONS } from '@organon/gdsl';
 
 describe('Model → TAW bridge', () => {
   it('maps FunctionCallOutput into a validated taw.act event', () => {

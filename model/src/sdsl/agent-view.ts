@@ -15,6 +15,17 @@ import { z } from "zod";
 import type { FormShape, FormField, FormMode } from "./types";
 import { AgentModel, SimpleAgentModel, type AgentGoal, type RelevanceLevel, type ConfidenceLevel, type ProvenanceType } from "./agent-model";
 
+import {
+  ContextDocumentSchema,
+  ContextConstraintSchema,
+  SchemaDescriptionSchema,
+  StructuredFactSchema,
+  type ContextConstraint,
+  type ContextDocument,
+  type SchemaDescription,
+  type StructuredFact,
+} from '@organon/gdsl';
+
 // =============================================================================
 // CONTEXT DOCUMENT - The Agent's Display Language
 // =============================================================================
@@ -24,72 +35,16 @@ import { AgentModel, SimpleAgentModel, type AgentGoal, type RelevanceLevel, type
  *
  * This is the agent equivalent of DisplayElement
  */
-export const StructuredFactSchema = z.object({
-  id: z.string(),
-  label: z.string().optional(),
-  type: z.string(),
-  value: z.unknown(),
-
-  // Agent-specific metadata
-  relevance: z.enum(["critical", "important", "relevant", "peripheral", "irrelevant"]).optional(),
-  confidence: z.enum(["certain", "high", "medium", "low", "speculative"]).optional(),
-  provenance: z.enum(["asserted", "inferred", "observed", "hypothesized", "inherited"]).optional(),
-});
-export type StructuredFact = z.infer<typeof StructuredFactSchema>;
-
-/**
- * SchemaDescription - How the agent understands the shape
- */
-export const SchemaDescriptionSchema = z.object({
-  id: z.string(),
-  name: z.string().optional(),
-  description: z.string().optional(),
-  fieldCount: z.number(),
-  requiredFields: z.array(z.string()),
-  optionalFields: z.array(z.string()),
-});
-export type SchemaDescription = z.infer<typeof SchemaDescriptionSchema>;
-
-/**
- * ContextConstraint - Boundaries for agent reasoning
- */
-export const ContextConstraintSchema = z.object({
-  type: z.enum(["must", "should", "should_not", "must_not"]),
-  description: z.string(),
-  fieldId: z.string().optional(),
-});
-export type ContextConstraint = z.infer<typeof ContextConstraintSchema>;
-
-/**
- * ContextDocument - The agent's equivalent of DisplayDocument
- *
- * This is the "Generic Display Language" for agents
- */
-export const ContextDocumentSchema = z.object({
-  // Identity
-  id: z.string(),
-  timestamp: z.string(),
-
-  // Content
-  facts: z.array(StructuredFactSchema),
-  schema: SchemaDescriptionSchema,
-  constraints: z.array(ContextConstraintSchema).optional(),
-
-  // Goal context
-  goal: z.object({
-    id: z.string(),
-    type: z.string(),
-    description: z.string(),
-  }).optional(),
-
-  // Relationship graph (simplified)
-  dependencies: z.array(z.object({
-    from: z.string(),
-    to: z.string(),
-    type: z.string(),
-  })).optional(),
-});
-export type ContextDocument = z.infer<typeof ContextDocumentSchema>;
+export {
+  ContextDocumentSchema,
+  ContextConstraintSchema,
+  SchemaDescriptionSchema,
+  StructuredFactSchema,
+  type ContextConstraint,
+  type ContextDocument,
+  type SchemaDescription,
+  type StructuredFact,
+};
 
 // =============================================================================
 // AGENT VIEW STATE

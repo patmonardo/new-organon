@@ -6,23 +6,26 @@ import {
   count,
   dimension,
   modelAndViewToFactTraceEvents,
+} from '../sdsl/index';
+
+import {
   DemoKernelPort,
   seedDemoLoopFromTrace,
   plannerTextToTawPlan,
-  choiceToTawAct,
+  kernelRunRequestToTawActEvent,
   kernelRunResultToTawResultEvent,
-  kernelRunToFactTraceEvents,
+  kernelRunToTraceEvents,
   contextFromFactTrace,
-} from '../sdsl/index';
+  type FactTraceEvent,
+  type KernelRunRequest,
+  type KernelRunResult,
+  type EventMeta,
+} from '@organon/gdsl';
 
-import type {
-  EventMeta,
-  FactTraceEvent,
-  KernelRunRequest,
-  KernelRunResult,
-  TawKind,
-  TawPayload,
-} from '../sdsl/index';
+import type { TawKind, TawPayload } from '@organon/task';
+
+// NOTE: This demo runner intentionally imports the kernel/demo-loop primitives from
+// GDSL, not Model SDSL.
 
 function printJson(label: string, value: unknown) {
   // eslint-disable-next-line no-console
@@ -81,6 +84,7 @@ async function main() {
     schema,
     goal,
     planPrompt: { maxSteps: 5, style: 'numbered' },
+    promptText: '## Goal\nRun the Model→TAW demo loop',
     intent: { source: 'demo-loop-runner', correlationId: 'corr-demo-1' },
   });
 
@@ -117,15 +121,12 @@ async function main() {
     params: { iterations: 10 },
   };
 
-  const actEvent = choiceToTawAct(
-    { type: 'kernel.run', request: kernelRequest },
-    {
-      goalId: goal.id,
-      stepId: 's2',
-      source: 'demo-loop-runner',
-      correlationId: planEnvelope.correlationId ?? planEnvelope.id,
-    },
-  );
+  const actEvent = kernelRunRequestToTawActEvent(kernelRequest, {
+    goalId: goal.id,
+    stepId: 's2',
+    source: 'demo-loop-runner',
+    correlationId: planEnvelope.correlationId ?? planEnvelope.id,
+  });
   const actEnvelope = publishTaw(bus, actEvent);
 
   // 5) Kernel execution via port → taw.result
@@ -141,9 +142,9 @@ async function main() {
   const resultEnvelope = publishTaw(bus, resultEvent);
 
   // 6) Close the loop: kernel request+result → FactTrace → new Context
-  const kernelTrace = kernelRunToFactTraceEvents(kernelRequest, kernelResult, {
+  const kernelTrace = kernelRunToTraceEvents(kernelRequest, kernelResult, {
     runId: resultEnvelope.id,
-  });
+  }) as FactTraceEvent[];
 
   const nextTrace = [...trace, ...kernelTrace];
   const nextContext = contextFromFactTrace(nextTrace, {

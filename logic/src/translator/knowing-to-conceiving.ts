@@ -1,4 +1,4 @@
-import type { PrintEnvelope } from '../../task/src/schema/prints.js';
+import type { PrintEnvelope } from '@organon/task';
 
 /**
  * Small translator: Prajna (knowing) -> Jnana (conceiving)

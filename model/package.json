@@ -13,6 +13,7 @@
     "dev": "tsc --watch",
     "d": "tsc --watch",
     "demo:loop": "pnpm -w tsx model/src/demo/demo-loop-run.ts",
+    "pretest": "pnpm --filter @organon/gdsl build",
     "test": "vitest run",
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui",
@@ -30,6 +31,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.1.1",
+    "@organon/gdsl": "workspace:*",
     "@organon/task": "workspace:*",
     "@prisma/client": "^7.2.0",
     "apache-arrow": "^17.0.0",

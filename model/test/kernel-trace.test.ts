@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 
 import {
   contextFromFactTrace,
-  kernelRunToFactTraceEvents,
+  kernelRunToTraceEvents,
   type KernelRunRequest,
   type KernelRunResult,
-} from '../src/sdsl';
+} from '@organon/gdsl';
 
 describe('kernel-trace', () => {
   it('converts kernel run into trace events', () => {
@@ -20,7 +20,7 @@ describe('kernel-trace', () => {
       output: { scores: { n1: 0.5 } },
     };
 
-    const events = kernelRunToFactTraceEvents(request, result, { runId: 'run-123' });
+    const events = kernelRunToTraceEvents(request, result, { runId: 'run-123' });
 
     expect(events).toHaveLength(2);
     expect(events[0].kind).toBe('kernel.run.request');
@@ -40,7 +40,7 @@ describe('kernel-trace', () => {
       output: { y: 2 },
     };
 
-    const events = kernelRunToFactTraceEvents(request, result, { runId: 'r1' });
+    const events = kernelRunToTraceEvents(request, result, { runId: 'r1' });
     const ctx = contextFromFactTrace(events, { schema: { id: 'trace:kernel' } });
 
     const requestFact = ctx.facts.find((f) => f.type === 'kernel.run.request');

@@ -11,7 +11,7 @@
  * The Agent alone speaks both GDSL (Genera DSL) and Every SDSL (Sarvadharma).
  * The root sdsl/ folder is the integration point for all SDSLs.
  *
- * Standalone BI package - zero dependencies on GDS/GDSL/Logic/Task.
+ * Note: kernel representational contracts are sourced from @organon/gdsl.
  */
 
 // Core SDSL (semantic modeling)
@@ -61,20 +61,7 @@ export * from './agent-runtime';
 // Model → TAW bridges
 export * from './agent-to-taw';
 
-// Demo loop helpers (trace → intent/plan/act)
-export * from './demo-loop';
 
-// Kernel models (GDS/GNN/ML etc.)
-export * from './kernel';
-
-// Kernel execution port (TAW/execution boundary)
-export * from './kernel-port';
-
-// Kernel → FactTrace helpers (closing the loop)
-export * from './kernel-trace';
-
-// Kernel Organic Unity (Knowing → Print)
-export * from './kernel-organic-unity';
 
 // RealityPipe primitives (internal middleware)
 export * from './reality-pipe';
