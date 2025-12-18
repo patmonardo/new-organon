@@ -34,10 +34,7 @@
     "task:build": "pnpm --filter=@organon/task build",
     "task:test": "pnpm --filter=@organon/task test",
     "task:dev": "pnpm --filter=@organon/task dev",
-    "task:start": "pnpm --filter=@organon/task start",
-    "kg:validate": "tsx tools/validate-kg.ts",
-    "kg:build": "tsx tools/build-kg.ts",
-    "next:upgrade": "tsx tools/next-upgrade.ts"
+    "task:start": "pnpm --filter=@organon/task start"
   },
   "devDependencies": {
     "fast-glob": "^3.3.2",

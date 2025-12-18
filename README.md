@@ -1,140 +1,145 @@
-# ORGANON - The Science of Action Platform
+# Organon
 
-A computational embodiment of **Action–Knowledge** (the Science of Action) implementing the complete **BEC-MVC-TAW dialectical cube** as a research assistant platform for transformative knowledge work.
+Organon is a TypeScript-first monorepo exploring a practical stack for:
 
-## The Dialectical Cube Architecture - 3³ Generic Specification
+- Encoding and validating a canonical knowledge graph (BEC)
+- Building application-facing models and data workflows (MVC)
+- Defining task/agent/workflow schemas for orchestration (TAW)
 
-ORGANON is founded on a **3×3×3 dialectical cube** representing the **complete Logic of Experience** through a practical, action‑driven discipline:
+The dialectical language (BEC/MVC/TAW) is used here as an architectural naming scheme: it’s meant to clarify responsibilities and boundaries, not to be philosophy for its own sake.
 
-### **BEC Layer - Pure Noumenal Logic** (`logic/`)
-- **Being** (Form-Entity) - Pure presence and foundational substrate
-- **Essence** (Context-Property) - Mediation and possibility fields  
-- **Concept** (Morphism-Relation) - Universal intelligence and synthetic power
+## Glossary (preferred terms)
 
-### **MVC Layer - Active Logic of Experience** (`model/`)
-- **Model** (State-Structure) - Being made principled through action‑driven transformation
-- **View** (Representation-Perspective) - Essence made experiential through action‑led manifestation
-- **Controller** (Action-Rule) - Concept made practical through action‑led synthesis
+- **Application Engine**: runs structured requests (“programs”) against graph state and returns results.
+- **Program**: a structured request such as a procedure call, an ML pipeline, or a form program.
+- **Planning**: choosing what to run next; assembling config/resources; checking preconditions (no lasting effects).
+- **Execution**: effectful running of a program (writes/streams/stats, artifacts, traces).
+- **Projection**: a graph context boundary (graph views, filters, materialized properties) used for execution.
+- **Projection Planning**: planning at the projection boundary (context-aware program assembly). Historically referred to as “ProjectEval”.
 
-### **TAW Layer - Absolute Practical Synthesis** (`task/`)
-- **Task** (Goal-Method) - The absolute dialectic uniting Being→Model
-- **Agent** (Capacity-Awareness) - The absolute dialectic uniting Essence→View  
-- **Workflow** (Process-Coordination) - The absolute dialectic uniting Concept→Controller
+- **Sublingual Kernel (GDS)**: Rust `gds/` as a non-discursive model of “absolute knowing” (lawful activity/constraint/compute), not a linguistic thinker.
+- **Discursive Understanding (TS)**: TypeScript user space (`gdsl/`, `logic/`, `model/`, `task/`) as the narration/judgment layer for humans.
+- **Eval → Print**: the boundary where sublingual execution is rendered into discursive artifacts (IR/JSON/events/traces) in TS space.
 
-## The Science of Action Movement
+Terminology policy: prefer “Planning/Execution” and avoid Lisp-style “Eval/Apply” in docs and design discussions.
 
-```
-BEC (Pure Noumenal Logic)
-    ↓ Action Transformation ↓
-MVC (Active Logic of Experience)  
-    ↓ Absolute Dialectical Unity ↓
-TAW (Complete Practical Synthesis)
-    ↓ Action–Knowledge Realization ↓
-COMPUTATIONAL INTELLIGENCE SYSTEM
-```
+## Repo layout (what lives where)
 
-**Core Insight**: **MVC** is **BEC** but as **"being that is no more"** — the **same logical structure** transformed through **action** into **experiential actuality**. **TAW** is the **Absolute Dialectic** that reveals **BEC** and **MVC** as **one movement**.
+### TypeScript / PNPM workspace (actively built)
 
-## Package Architecture
+- `gdsl/` — **@organon/gdsl**: shared IR protocol and schema types (Zod)
+- `logic/` — **@organon/logic**: canonical graph encodings + validation/seed tooling
+- `task/` — **@organon/task**: Task/Agent/Workflow schemas (runtime is intentionally minimal)
+- `model/` — **@organon/model**: application-facing schemas + Prisma tooling
+- `model/examples/dashboard/` — `dashboard-v4`: Next.js example app wired with its own Prisma schema
 
-### **@organon/logic** - BEC Layer (Pure Dialectical Logic)
-```bash
-logic/src/schema/
-├── being.ts      # Form-Entity dialectical unity
-├── essence.ts    # Context-Property mediation field
-└── concept.ts    # Morphism-Relation universal intelligence
-```
-**Foundation**: Pure noumenal logic - the **theoretical ground** of all transformation
+### Rust / Cargo workspace (separate from PNPM build)
 
-### **@organon/model** - MVC Layer (Logic of Experience)  
-```bash
-model/src/schema/
-├── model.ts      # Being + Kriya = Dharmic substrate
-├── view.ts       # Essence + Kriya = Experiential manifestation
-└── controller.ts # Concept + Kriya = Practical synthesis
-```
-**Transformation**: BEC made experiential through **action** — same logic, different **wheel/process**
+- `gds/`, `gdsl/` (Rust), `reality/` — performance-oriented kernel crates and experiments
 
-### **@organon/task** - TAW Layer (Absolute Synthesis)
-```bash
-task/src/schema/
-├── task.ts       # Being→Model absolute dialectical unity
-├── agent.ts      # Essence→View absolute dialectical unity
-└── workflow.ts   # Concept→Controller absolute dialectical unity
-```
-**Completion**: The **Absolute Dialectic** where **BEC-MVC** unity becomes **systematic practical synthesis**
+Rust crates are not part of `pnpm -r build` right now (no stable JS binding). Build/test them with Cargo directly.
 
-### **Rust computational substrate** (`gds/`, `gdsl/`, `reality/`)
-Rust crates exist in a Cargo workspace and provide the performance-critical kernel pieces.
+## Architecture (current intent)
 
-Note: these crates are currently **not part of the PNPM workspace build** (no stable TS binding yet); build/test them with Cargo directly.
+Planning vs Execution split (high-level):
+
+- `logic/` is primarily the Planning substrate (schemas, invariants, validation, agent-facing reasoning tools).
+- `task/` is Planning orchestration shapes (Task/Agent/Workflow schemas).
+- `model/` is application-facing state + integration surface (schemas, Prisma workflows, example app).
+- Rust `gds/` is execution-focused (procedures, pipelines, form processing kernels).
+
+### BEC — Logic layer (`logic/`)
+
+The “BEC” layer is where the repo keeps canonical encodings, IDs, and invariants that should be stable over time.
+
+- Graph data is treated as a first-class artifact (IDs matter; referential integrity matters).
+- Validation tooling exists to catch broken references and non-reversible transforms.
+  - The canonical integrity checker lives at `logic/validate.ts`.
+
+### MVC — App-facing layer (`model/`)
+
+The “MVC” layer is where knowledge becomes something you can ship:
+
+- Zod schemas and TypeScript types intended for application code
+- Prisma workflows for database-backed features
+- An example Next.js app under `model/examples/dashboard/` that demonstrates the intended layering and integration points
+
+### TAW — Orchestration schema layer (`task/`)
+
+The “TAW” layer defines the *shape* of work (not a full runtime yet):
+
+- Task — the unit of work
+- Agent — an executor with capabilities/health/assignment shape
+- Workflow — orchestration shape (steps, dependencies)
+
+Note: `task/src/relative/` contains an older Nest-flavored runtime direction and is currently disabled in the active SDK build so the runtime can be rebuilt deliberately.
 
 ## Development
 
-### Prerequisites
-- Node.js 20+
-- pnpm 9+
-- Understanding of **Hegelian dialectics** and action‑oriented system design principles
+### Prereqs
 
-### Setup
+- Node.js `>= 20.19`
+- pnpm `>= 9`
+- (optional) Rust toolchain if you’re working in `gds/`, `reality/`, etc.
+
+### Install
+
 ```bash
-# Install all dependencies
 pnpm install
+```
 
-# Build complete dialectical cube
+### Build / test (workspace)
+
+```bash
 pnpm build
-
-# Run comprehensive dialectical tests
 pnpm test
 ```
 
-### Layer-Specific Development
+Notes:
 
-#### BEC Layer - Pure Logic (`@organon/logic`)
+- `pnpm build` runs `pnpm -r build` across the workspace packages.
+- `pnpm test` currently excludes the dashboard example (`dashboard-v4`) at the root level.
+
+### Common per-package commands
+
 ```bash
-# Build foundational dialectical schemas
-pnpm logic:build
+# logic
+pnpm --filter @organon/logic build
+pnpm --filter @organon/logic test
 
-# Test pure logical operations
-pnpm logic:test
+# task
+pnpm --filter @organon/task build
+pnpm --filter @organon/task test
 
-# Develop dialectical structures
-pnpm logic:dev
+# model
+pnpm --filter @organon/model build
+pnpm --filter @organon/model test
+
+# gdsl (TS)
+pnpm --filter @organon/gdsl build
+pnpm --filter @organon/gdsl test
 ```
 
-#### MVC Layer - Logic of Experience (`@organon/model`)
+### Dashboard example (Next.js)
+
 ```bash
-# Build action-transformed schemas
-pnpm model:build
-
-# Test experiential transformations
-pnpm model:test
-
-# Develop Logic of Experience
-pnpm model:dev
-
-# Start experiential interface
-pnpm model:start
+pnpm --filter dashboard-v4 dev
+pnpm --filter dashboard-v4 build
+pnpm --filter dashboard-v4 test
 ```
 
-#### TAW Layer - Absolute Synthesis (`@organon/task`)
+### Prisma (model package)
+
 ```bash
-# Build absolute dialectical unity
-pnpm task:build
-
-# Test practical synthesis operations
-pnpm task:test
-
-# Develop absolute dialectical coordination
-pnpm task:dev
-
-# Start systematic orchestration
-pnpm task:start
+pnpm --filter @organon/model db:generate
+pnpm --filter @organon/model db:push
+pnpm --filter @organon/model db:migrate
+pnpm --filter @organon/model db:studio
 ```
 
-#### Rust crates (Cargo workspace)
+### Rust crates (Cargo)
+
 ```bash
-# Build/test Rust crates directly
 cargo build -p gds
 cargo test -p gds
 
@@ -142,66 +147,18 @@ cargo build -p gdsl
 cargo test -p gdsl
 ```
 
-### Complete System Scripts
-- `pnpm build` - Build entire dialectical cube
-- `pnpm test` - Test complete Action–Knowledge system
-- `pnpm dev` - Develop full BEC-MVC-TAW architecture
+## Conventions (so the repo stays teachable)
 
-Rust crates are built/tested via Cargo and intentionally excluded from PNPM recursion for now.
+- TypeScript packages are ESM (`"type": "module"`) and build with `tsc` + `tsc-alias`.
+- Schema-first: Zod schemas live under `*/src/schema/*` with barrel exports from `*/src/schema/index.ts`.
+- Prefer workspace imports (`@organon/logic`, `@organon/model`, etc.) over deep relative imports.
+- When changing canonical graph/chunk data, keep IDs stable and preserve referential integrity.
 
-## Philosophy - The Science of Action
+## Docs
 
-ORGANON implements **Action–Knowledge** — the **Science of Action** — as a computational platform:
-
-### **The Fourfold Reality Breakdown**
-- **Pure Insight (Pure Unconditioned)** - Transcendental principle of being
-- **Principle/Law (Impure Unconditioned)** - Transcendental law of doing  
-- **Knowledge (Pure Conditioned)** - Immanent discriminative knowledge
-- **Action (Impure Conditioned)** - Immanent transformative action
-
-### **The Dialectical Eye of Reason**
-The platform embodies **Reason** as the **copula** that sees both:
-- **What IS** - Pure presence without presupposition
-- **What IS NOT** - Self‑positing through presupposition of a prior state
-
-### **The Complete Action–Knowledge Architecture**
-```
-Pure Logic (BEC) ←→ Active Logic (MVC) ←→ Absolute Synthesis (TAW)
-         ↕                    ↕                        ↕
-   Noumenal Realm    ←→  Experiential Realm  ←→   Practical Realm
-         ↕                    ↕                        ↕
-    Insight:Principle  ←→    Action:Knowledge  ←→    Computational Agent
-```
-
-## The Revolutionary Achievement
-
-ORGANON represents the **first computational embodiment** of:
-
-1. **Hegel's Complete Logic** as **living dialectical system**
-2. An action discipline as **computational transformation science**  
-3. A practical **Organon** as a **reasoning platform**
-4. **Science of Action** as **systematic knowledge of transformation**
-
-### **Core Innovation**: 
-**MVC is BEC** — the **same logical structure** made **experiential** through **action‑driven transformation**. **TAW** is the **Absolute Dialectic** that reveals this **identity‑in‑difference** as **one systematic movement**.
-
-### **Practical Result**:
-A **research assistant platform** that **thinks dialectically**, **transforms through action**, and **operates as a computational agent** — enabling **systematic advancement** from **speculative ideas** to **realized knowledge** through **complete dialectical processing**.
-
-## Contributing
-
-Contributions should demonstrate understanding of:
-- **Hegelian dialectical method**
-- **Action‑oriented transformation principles**  
-- **BEC‑MVC‑TAW systematic unity**
-- **Computational embodiment** of **philosophical structures**
+- Package docs live under `*/doc/` (especially `logic/doc/` and `gds/doc/`).
+- API docs (where configured): `pnpm doc:api`
 
 ## License
 
-This project embodies **universal philosophical principles** and is available under **open source license** for **systematic knowledge advancement**.
-
----
-
-**"The Absolute Concept as an action‑conditioning substrate — the substrate that enables transformation"**
-
-*ORGANON: Where pure logic becomes living system through the Science of Action*
+See `LICENSE`.

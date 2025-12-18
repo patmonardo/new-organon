@@ -1,0 +1,13 @@
+{
+  "id": "p-principle-001",
+  "kind": "knowing",
+  "role": "kernel",
+  "timestamp": "2025-12-18T00:00:00Z",
+  "ontology": "monadic",
+  "provenance": { "id": "prov-p-1", "origin": "empirical", "createdAt": "2025-12-18T00:00:00Z" },
+  "payload": {
+    "modality": "signal",
+    "summary": "spike in activity on node X",
+    "trace": { "metric": "pagerank", "value": 0.62 }
+  }
+}

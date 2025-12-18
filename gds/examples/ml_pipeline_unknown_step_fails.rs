@@ -169,7 +169,7 @@ mod enabled {
         );
 
         let step = gds::projection::eval::ml::pipeline::NodePropertyStep::new(
-            "gds.pagerank.mutate".to_string(),
+            "gds.fastRP.mutate".to_string(),
             config,
         );
 

@@ -5,7 +5,7 @@ Date: 2025-08-17
 
 ## Context
 - We need a clear “Absolute Form” that anchors the system. In our codebase this lives in two places:
-  - `logic/src/absolute/core` — core root artifacts: Contracts, Kriya, Action, Engine (non-transactional Root).
+  - `logic/src/absolute/core` — core root artifacts: Contracts, Action, Engine (non-transactional Root).
   - `logic/src/absolute/essence` — driver artifacts (Container/Contained drivers). It supplies drivers for two complementary triads used across the system:
     - Container (form/shape) triad: Shape, Context, Morph (how forms are structured semantically)
     - Contained (carrier) triad: Entity, Property, Relation (how content is carried and grounded)
@@ -14,7 +14,7 @@ Date: 2025-08-17
 
 ## Decision
 - Define `absolute/core` and `absolute/essence` as the Absolute Form surface:
-  - `absolute/core`: Contracts (canonical schemas such as `ProcessorInputs`), Kriya orchestration contracts, Action signatures, and the non-transactional root `FormProcessor` API surface.
+  - `absolute/core`: Contracts (canonical schemas such as `ProcessorInputs`), Action orchestration contracts, Action signatures, and the non-transactional root `FormProcessor` API surface.
   - `absolute/essence`: Drivers (Container/Contained drivers) that name and supply semantics for both the Container and Contained triads; these drivers feed the transactional engines located under `logic/src/essence`.
   - The Absolute surface exposes six Active objects that act as the bridge vocabulary and drivers: ActiveShape, ActiveContext, ActiveMorph, ActiveEntity, ActiveProperty, ActiveRelation. Container-side Active objects are non-transactional unities; Contained-side Active objects are the transactional carriers consumed by engines.
   - Action: externalized effects and decisions are emitted by the root but executed transactionally by engines below.

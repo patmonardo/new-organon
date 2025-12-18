@@ -30,10 +30,13 @@
 //! pattern. Stubs can be added later when needed for Form Pipeline extensibility.
 
 use crate::collections::backends::vec::VecDouble;
+use crate::config::PageRankConfig;
+use crate::procedures::pagerank::run_pagerank_pregel;
 use crate::projection::eval::ml::pipeline::{
     ExecutableNodePropertyStep, NodePropertyStepContextConfig,
 };
 use crate::projection::NodeLabel;
+use crate::projection::RelationshipType;
 use crate::types::graph_store::GraphStore;
 use crate::types::properties::node::DefaultDoubleNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -48,6 +51,11 @@ pub const MUTATE_PROPERTY_KEY: &str = "mutateProperty";
 ///
 /// This is intentionally simple: it writes a constant `f64` node property.
 pub const DEBUG_WRITE_CONSTANT_DOUBLE_MUTATE: &str = "gds.debug.writeConstantDouble.mutate";
+
+/// A first real algorithm wiring for ML pipelines.
+///
+/// Computes PageRank and writes the resulting scores to `mutateProperty`.
+pub const PAGERANK_MUTATE: &str = "gds.pagerank.mutate";
 
 /// Node property step that executes an algorithm to compute node properties.
 ///
@@ -182,6 +190,79 @@ impl ExecutableNodePropertyStep for NodePropertyStep {
 
                 let node_count = graph_store.node_count();
                 let backend = VecDouble::from(vec![value; node_count]);
+                let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
+                let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+                let labels: HashSet<NodeLabel> = node_labels
+                    .iter()
+                    .map(|label| NodeLabel::of(label.clone()))
+                    .collect();
+
+                graph_store
+                    .add_node_property(labels, mutate_property, values)
+                    .map_err(|e| {
+                        Box::new(NodePropertyStepError::ExecutionFailed {
+                            algorithm: self.algorithm_name.clone(),
+                            message: e.to_string(),
+                        }) as Box<dyn StdError>
+                    })?;
+
+                Ok(())
+            }
+            PAGERANK_MUTATE => {
+                let mutate_property = self.get_mutate_property()?;
+
+                let mut builder = PageRankConfig::builder();
+
+                if let Some(df) = exec_config.get("dampingFactor").and_then(|v| v.as_f64()) {
+                    builder = builder.damping_factor(df);
+                }
+
+                if let Some(tol) = exec_config.get("tolerance").and_then(|v| v.as_f64()) {
+                    builder = builder.tolerance(tol);
+                }
+
+                if let Some(max_iter) = exec_config.get("maxIterations").and_then(|v| v.as_u64()) {
+                    builder = builder.max_iterations(max_iter as usize);
+                }
+
+                let config = builder.build().map_err(|e| {
+                    Box::new(NodePropertyStepError::ExecutionFailed {
+                        algorithm: self.algorithm_name.clone(),
+                        message: format!("invalid config: {e}"),
+                    }) as Box<dyn StdError>
+                })?;
+
+                // Build a graph view restricted to relationship types used by the pipeline.
+                let rel_types: HashSet<RelationshipType> = relationship_types
+                    .iter()
+                    .map(|t| RelationshipType::of(t.clone()))
+                    .collect();
+
+                let graph = graph_store
+                    .get_graph_with_types(&rel_types)
+                    .map_err(|e| {
+                        Box::new(NodePropertyStepError::ExecutionFailed {
+                            algorithm: self.algorithm_name.clone(),
+                            message: format!("failed to build graph view: {e}"),
+                        }) as Box<dyn StdError>
+                    })?;
+
+                let result = run_pagerank_pregel(graph, config, None);
+
+                let node_count = graph_store.node_count();
+                if result.scores.len() != node_count {
+                    return Err(Box::new(NodePropertyStepError::ExecutionFailed {
+                        algorithm: self.algorithm_name.clone(),
+                        message: format!(
+                            "pagerank returned {} scores for {} nodes",
+                            result.scores.len(),
+                            node_count
+                        ),
+                    }));
+                }
+
+                let backend = VecDouble::from(result.scores);
                 let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
                 let values: Arc<dyn NodePropertyValues> = Arc::new(values);
 

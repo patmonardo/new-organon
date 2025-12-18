@@ -6,6 +6,9 @@
 
 **Everything is a FormShape. A Concept IS a FormShape.**
 
+Note: in this repo, “Pure Reason / Kernel” is not meant as *discursive thinking* (inner speech). It is closer to a **sublingual lawful activity** that supports later human-facing understanding.
+See `gds/doc/PRELINGUAL-KERNEL-COGITO-MEDIATION.md`.
+
 Not:
 - FormShape is a "format" for Concepts
 - FormShape "represents" Concepts

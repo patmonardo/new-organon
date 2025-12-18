@@ -17,6 +17,15 @@ The goal is not “everything in Rust because it’s ‘GDS’.” The goal is *
 - **PureForm**: declarative IR + schemas + constraints (TS)
 - **GivenForm**: execution + effects + compute (TS runtime + Rust kernel)
 
+### A boundary that is easy to violate: pre-lingual kernel vs discursive user space
+
+Treat Rust `gds/` as a **sublingual kernel**: lawful compute and constraint enforcement, not a discursive “thinking” surface.
+
+Human-facing narration (schemas, explanations, traces) lives in TS user space.
+See `gds/doc/PRELINGUAL-KERNEL-COGITO-MEDIATION.md`.
+
+RealityFabric note: the intended long-run projection substrate is described in `reality/doc/REALITYFABRIC-PROJECTS-ORGANIC-UNITY.md`.
+
 ## Packages and responsibilities (canonical)
 
 ### TS workspace (user space)

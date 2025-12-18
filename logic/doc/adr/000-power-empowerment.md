@@ -83,11 +83,11 @@ Tradeoffs:
   - unit: empowerment algebra edge cases
   - integration: two competing ActiveAspect updates with differing empowerment tokens
 
-## Terminology (Kriya / Jnana)
+## Terminology (Action / Concept)
 
 To keep a minimal, consistent vocabulary across code and docs we adopt two Sanskrit-derived terms with precise technical meanings:
-- Kriya — maps to Empowerment in the runtime: tokens that enable, authorize, or weight action. Kriya tokens are active, transient or persistent, and carry weight/confidence/provenance.
-- Jnana — maps to Knowledge/confidence: the epistemic score or certainty attached to data, schema, or empowerment. Jnana influences scoring in the empowerment algebra (e.g., combined score uses weight * certainty).
+- Action — maps to Empowerment in the runtime: tokens that enable, authorize, or weight action. Action tokens are active, transient or persistent, and carry weight/confidence/provenance.
+- Concept — maps to Knowledge/confidence: the epistemic score or certainty attached to data, schema, or empowerment. Concept influences scoring in the empowerment algebra (e.g., combined score uses weight * certainty).
 
 Rationale: this preserves the useful metaphors (Kriya as doing/empowering, Jnana as knowing) while keeping them small, explicit, and implementable in the schema/form/processor layers.
 

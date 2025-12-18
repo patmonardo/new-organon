@@ -8,3 +8,4 @@ export * from './provenance';
 export * from './topic';
 export * from './taw';
 export * from './telemetry';
+export * from './prints';

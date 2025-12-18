@@ -2,6 +2,8 @@
 
 *Transcendental Logic as Self-Positing Activity*
 
+See also: `gds/doc/FICHTE-KNOWING-THINKING-CONCEIVING-ARCHITECTURE.md`.
+
 ## The Fichtean Architecture
 
 ### The I Posits Itself

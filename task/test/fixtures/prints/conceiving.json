@@ -1,0 +1,14 @@
+{
+  "id": "p-0002",
+  "kind": "conceiving",
+  "role": "user",
+  "timestamp": "2025-12-18T00:01:00Z",
+  "ontology": "triadic",
+  "provenance": { "id": "prov-0002", "origin": "reflective", "createdAt": "2025-12-18T00:01:00Z", "agentId": "agent-1" },
+  "derivedFrom": ["p-0001"],
+  "payload": {
+    "proposition": "Node X centrality increased due to new inbound edges",
+    "proof": { "steps": ["observed spike","correlated edges"], "evidenceIds": ["p-0001"] },
+    "narrative": "Short causal explanation"
+  }
+}

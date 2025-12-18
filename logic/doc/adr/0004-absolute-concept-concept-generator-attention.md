@@ -7,7 +7,7 @@ Date: 2025-08-19
 
 Work in `logic/src/absolute/concept` introduced pure, deterministic helpers that evaluate aspects and produce judgements, bhumi assessments, and realm classifications. The emerging shape of `AbsoluteConcept` resembles a generative concept pipeline: an a priori semantic synthesizer that weights evidence, composes judgements, and emits candidate intents and planning hints.
 
-Philosophical resonance: this design parallels classical Yogic ideas (Samyama, Jnana, Samadhi, Dhyana) and modern metaphors for attention and generative models. Fichte's notion of the "I" as productive activity and the Abhidharmakosa's treatment of dharmas both suggest a metaprocess that synthesizes elemental appearances into knowledge of Dharma.
+Philosophical resonance: this design parallels classical Yogic ideas (Samyama, Concept, Samadhi, Dhyana) and modern metaphors for attention and generative models. Fichte's notion of the "I" as productive activity and the Abhidharmakosa's treatment of essences both suggest a metaprocess that synthesizes elemental appearances into knowledge of Essence.
 
 ## Decision
 

@@ -51,15 +51,15 @@ Use this as a translation table when writing code, schemas, or tests.
 - **Ground:Condition:Facticity** → `Morph`: container unity of shape+context, mechanism of change
 - **Essential Relation** → `Aspect`: relations that express essences-in-existence (spectral/relational view)
 
-## 2.5) Thinghood × Kriya → Entity (factorization for codegen)
+## 2.5) Thinghood × Action → Entity (factorization for codegen)
 
 Your framing:
 
 - **Thinghood** (Hegel: “The Thing and its Properties”) gives the logical progression of *concrete existence becoming thingness*.
-- **Kriya** (activation) turns thingness into a **process**.
+- **Action** (activation) turns thingness into a **process**.
 - The crossing yields **Entity** as the activation of concrete existence into Thingness:
   - **Noumenal Process**: “thingness as inward process” (what-it-is in its ownness).
-  - Adding **Kriya** produces a **Phenomenal Process**: “thingness as outwardly expressible operation” (what-it-does / how-it-appears).
+  - Adding **Action** produces a **Phenomenal Process**: “thingness as outwardly expressible operation” (what-it-does / how-it-appears).
 
 This repo already has anchors for that split:
 
@@ -139,14 +139,14 @@ In the Pre-Concept scaffold, we do:
 We do *not* do:
 - Concept-judgment classification as truth (universality/particularity/singularity judgments), except as a named future hook.
 
-## 3.6) Dharma Megha (Absolute) — the Essence → Concept transition hook
+## 3.6) Essence Megha (Absolute) — the Essence → Concept transition hook
 
 Insight to preserve:
 - The transition we ultimately seek is the movement from **Reflection as Pre-Conceptual process** (Sphere of Essence; necessity) into the **Sphere of the Concept** (freedom).
-- You name this transitional “weather system” **Dharma Megha** (the Absolute in logic terms): the condition under which reflective necessity becomes the ground of free Conceptual activity.
+- You name this transitional “weather system” **Essence Megha** (the Absolute in logic terms): the condition under which reflective necessity becomes the ground of free Conceptual activity.
 
 Engineering implication (keep it honest):
-- In this repo, “Dharma Megha” should be treated as the *explicit boundary event/handoff* between layers, not as something we silently mix into Essence.
+- In this repo, “Essence Megha” should be treated as the *explicit boundary event/handoff* between layers, not as something we silently mix into Essence.
 - Until the Concept layer exists, we only leave:
   - a named hook (documentation + types/entrypoints if needed), and
   - clear preconditions (e.g., contradiction-free Context → lawful Property; remainder → Morph).

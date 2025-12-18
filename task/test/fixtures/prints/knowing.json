@@ -1,0 +1,13 @@
+{
+  "id": "p-0001",
+  "kind": "knowing",
+  "role": "kernel",
+  "timestamp": "2025-12-18T00:00:00Z",
+  "ontology": "monadic",
+  "provenance": { "id": "prov-0001", "origin": "empirical", "createdAt": "2025-12-18T00:00:00Z" },
+  "payload": {
+    "modality": "graph-activity",
+    "summary": "pagerank spike on node X",
+    "embedding": [0.12, 0.03, 0.98]
+  }
+}

@@ -34,7 +34,7 @@ export const ProvenanceSchema = z.object({
   sources: z.array(z.string()).optional(),
   evidence: z.array(EvidenceSchema).optional(),
   agentId: z.string().optional(),
-  createdAt: z.date().default(() => new Date()),
+  createdAt: z.preprocess((val) => (typeof val === 'string' ? new Date(val) : val), z.date()).default(() => new Date()),
   metadata: z.record(z.string(), z.any()).optional(),
 });
 

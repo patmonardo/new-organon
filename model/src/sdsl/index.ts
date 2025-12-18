@@ -73,6 +73,9 @@ export * from './kernel-port';
 // Kernel → FactTrace helpers (closing the loop)
 export * from './kernel-trace';
 
+// Kernel Organic Unity (Knowing → Print)
+export * from './kernel-organic-unity';
+
 // RealityPipe primitives (internal middleware)
 export * from './reality-pipe';
 

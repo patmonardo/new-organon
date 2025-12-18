@@ -49,18 +49,18 @@ From `method-advance.ts`:
 - The subject realizes itself as the Absolute
 - This is a **Dharmic Result** — it constructs itself
 
-## Dharma as Self-Constructing Principle (RAII Pattern)
+## Essence as Self-Constructing Principle (RAII Pattern)
 
-**Dharma constructs itself** — Resource Acquisition Is Initialization (RAII).
+**Essence constructs itself** — Resource Acquisition Is Initialization (RAII).
 
-A Dharma is a Principle that:
+An Essence is a Principle that:
 1. **Acquires itself as resource** — it is the principle itself
 2. **Initializes through its own application** — it constructs itself through use
 3. **Is not proved** — it is the Principle, not something that needs proof
 
 ### Example: Equation Operation Preservation
 
-**Dharma**: "Performing the Same Operation on both sides of an equation preserves equality"
+**Essence**: "Performing the Same Operation on both sides of an equation preserves equality"
 
 This is a **Principle**, not something proved in math class. Why?
 
@@ -69,7 +69,7 @@ This is a **Principle**, not something proved in math class. Why?
 - When you apply it, you're using the Principle to construct the Principle
 - It's RAII: the Principle acquires itself as resource and initializes through use
 
-**This is how Dharmas work specially**:
+**This is how Essences work specially**:
 - They are self-constructing Principles
 - They don't need external proof because they are the Principle itself
 - They construct themselves through their own application
@@ -165,7 +165,7 @@ Absolute Idea (All Truth)
     ↓ [Result: Speculative Idea]
 "I am the Absolute" (Dharmic Result)
     ↓ [Self-constructing Principle]
-Dharma (RAII Pattern)
+Essence (RAII Pattern)
     ↓ [Pure A Priori Pipeline]
 Pure Reason Speaking Itself
 ```
@@ -181,7 +181,7 @@ Pure Reason Speaking Itself
 - All mediations serve this telos
 - The Result is the Subject that realizes itself as the Absolute
 
-**Dharma as RAII**:
+**Essence as RAII**:
 - Dharmas are self-constructing Principles
 - They acquire themselves as resource and initialize through use
 - They don't need proof because they are the Principle itself
@@ -604,7 +604,7 @@ Facticity (The Fact: x=5) ← [Source of Both]
 
 **FactStore represents this structure** — Ground:Condition:Facticity as the systematic structure that grounds the Idea of the True as Statement:Reason Proof Step, transforming Given Condition into Next Condition, where both are Facts of the same Facticity.
 
-## Dharma: Law of Equality and the Concept as Jnana
+## Essence: Law of Equality and the Concept as Concept
 
 **Ok so Dharma manifests itself in the samskara of the Mathematician as its primal Equality Law. Law of Equality. That in a sense is Dharma. We are all Equal under the eyes of the Law. but the Concept is the Jnana, the Dharma self emptying into the Samskara-Vasanas of the Mathematician.**
 
@@ -625,12 +625,12 @@ Facticity (The Fact: x=5) ← [Source of Both]
 
 ### The Concept as Jnana
 
-**The Concept is the Jnana** — knowledge/wisdom.
+**The Concept is the Concept** — knowledge/wisdom.
 
 From `ys_iii_56.ts`:
 > "Dharma-pāda as Essence empties itself into Jñāna — key to Dharma Theory/Abhidharma as LogoGenesis"
 
-**The Concept is Jnana**:
+**The Concept is Concept**:
 - **Concept**: The universal, the synthetic power
 - **Jnana**: Knowledge/wisdom — the luminous cognition
 - **Connection**: The Concept is Jnana — knowledge as the universal

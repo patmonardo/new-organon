@@ -1,0 +1,15 @@
+{
+  "id": "p-concept-001",
+  "kind": "conceiving",
+  "role": "user",
+  "timestamp": "2025-12-18T00:01:00Z",
+  "ontology": "triadic",
+  "provenance": { "id": "prov-j-1", "origin": "reflective", "createdAt": "2025-12-18T00:01:00Z", "agentId": "logic-adjudicator" },
+  "derivedFrom": ["p-principle-001"],
+  "epistemicLevel": "conclusive",
+  "payload": {
+    "proposition": "Node X centrality increased due to new inbound edges",
+    "proof": { "steps": ["observed spike","correlated edges"], "evidenceIds": ["p-principle-001"] },
+    "narrative": "Causal reconstruction identifying new inbound links"
+  }
+}
