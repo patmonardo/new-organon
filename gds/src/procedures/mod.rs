@@ -216,8 +216,8 @@ pub use louvain::{
 };
 pub use msbfs::{AggregatedNeighborProcessingMsBfs, OMEGA};
 pub use pagerank::{
-    estimate_pagerank_memory, run_pagerank_pregel, PageRankAlgorithmSpec,
-    PageRankComputationResult, PageRankMemoryEstimation, PageRankPregelRunResult,
+    estimate_pagerank_memory, run_pagerank, PageRankAlgorithmSpec, PageRankComputationResult,
+    PageRankMemoryEstimation, PageRankRunResult,
 };
 pub use scc::{SCCAlgorithmSpec, SccComputationRuntime, SccConfig, SccResult, SccStorageRuntime};
 pub use spanning_tree::{

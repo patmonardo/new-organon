@@ -12,7 +12,7 @@ use crate::types::prelude::GraphStore;
 use serde_json::{json, Value as JsonValue};
 use std::time::Instant;
 
-use super::pregel_computation::run_pagerank_pregel;
+use super::computation::run_pagerank;
 
 // ============================================================================
 // Algorithm Specification
@@ -261,7 +261,7 @@ impl AlgorithmSpec for PageRankAlgorithmSpec {
         let graph = graph_store.get_graph();
 
         let source_set = source_nodes.map(|v| v.into_iter().collect());
-        let run_result = run_pagerank_pregel(graph, pr_config, source_set);
+        let run_result = run_pagerank(graph, pr_config, source_set);
 
         let elapsed = timer.elapsed();
 

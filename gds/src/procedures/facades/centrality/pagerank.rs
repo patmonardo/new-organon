@@ -31,7 +31,7 @@ use crate::config::base_types::AlgoBaseConfig;
 use crate::config::PageRankConfig;
 use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult};
 use crate::procedures::facades::traits::{CentralityScore, Result};
-use crate::procedures::pagerank::run_pagerank_pregel;
+use crate::procedures::pagerank::run_pagerank;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -235,7 +235,7 @@ impl PageRankBuilder {
             .clone()
             .map(|v| v.into_iter().collect::<std::collections::HashSet<u64>>());
 
-        let run = run_pagerank_pregel(graph_view, pr_config, source_set);
+        let run = run_pagerank(graph_view, pr_config, source_set);
 
         Ok((
             run.scores,

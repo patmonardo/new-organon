@@ -31,7 +31,7 @@
 
 use crate::collections::backends::vec::VecDouble;
 use crate::config::PageRankConfig;
-use crate::procedures::pagerank::run_pagerank_pregel;
+use crate::procedures::pagerank::run_pagerank;
 use crate::projection::eval::ml::pipeline::{
     ExecutableNodePropertyStep, NodePropertyStepContextConfig,
 };
@@ -248,7 +248,7 @@ impl ExecutableNodePropertyStep for NodePropertyStep {
                         }) as Box<dyn StdError>
                     })?;
 
-                let result = run_pagerank_pregel(graph, config, None);
+                let result = run_pagerank(graph, config, None);
 
                 let node_count = graph_store.node_count();
                 if result.scores.len() != node_count {
