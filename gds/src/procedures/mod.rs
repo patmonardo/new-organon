@@ -187,9 +187,7 @@ pub use harmonic::{
     HarmonicAlgorithmSpec, HarmonicComputationRuntime, HarmonicConfig, HarmonicResult,
     HarmonicStorageRuntime,
 };
-pub use hits::{
-    HITSAlgorithmSpec, HitsComputationRuntime, HitsConfig, HitsResult, HitsStorageRuntime,
-};
+pub use hits::{HITSAlgorithmSpec, HitsConfig, HitsResult, HitsRunResult, HitsStorageRuntime, run_hits};
 pub use k1coloring::{
     K1ColoringAlgorithmSpec, K1ColoringComputationRuntime, K1ColoringConfig, K1ColoringResult,
     K1ColoringStorageRuntime,

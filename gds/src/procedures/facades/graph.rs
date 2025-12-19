@@ -10,7 +10,7 @@ use super::pathfinding::{
 
 use super::centrality::{
     ArticulationPointsFacade, BetweennessCentralityFacade, BridgesFacade, CELFFacade,
-    ClosenessCentralityFacade, DegreeCentralityFacade, HarmonicCentralityFacade, HitsPregelBuilder,
+    ClosenessCentralityFacade, DegreeCentralityFacade, HarmonicCentralityFacade, HitsBuilder,
     PageRankBuilder,
 };
 
@@ -128,11 +128,11 @@ impl Graph {
         PageRankBuilder::new(Arc::clone(&self.store))
     }
 
-    /// HITS Pregel (bidirectional authority/hub scoring).
+    /// HITS (bidirectional authority/hub scoring).
     ///
-    /// Demonstrates bidirectional Pregel: authority from incoming neighbors, hubs from outgoing.
-    pub fn hits_pregel(&self) -> HitsPregelBuilder {
-        HitsPregelBuilder::new(Arc::clone(&self.store))
+    /// Implemented using bidirectional Pregel: authority from incoming neighbors, hubs from outgoing.
+    pub fn hits(&self) -> HitsBuilder {
+        HitsBuilder::new(Arc::clone(&self.store))
     }
 
     /// Articulation Points (cut vertices) for undirected connectivity.

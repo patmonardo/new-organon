@@ -15,7 +15,7 @@ pub mod celf;
 pub mod closeness;
 pub mod degree_centrality;
 pub mod harmonic;
-pub mod hits_pregel;
+pub mod hits;
 pub mod pagerank;
 
 // Re-export main facades
@@ -28,5 +28,5 @@ pub use celf::{CELFFacade, CELFRow, CELFStats};
 pub use closeness::ClosenessCentralityFacade;
 pub use degree_centrality::DegreeCentralityFacade;
 pub use harmonic::HarmonicCentralityFacade;
-pub use hits_pregel::{HitsPregelBuilder, HitsPregelRow, HitsPregelStats};
+pub use hits::{HitsBuilder, HitsRow, HitsStats};
 pub use pagerank::PageRankBuilder;

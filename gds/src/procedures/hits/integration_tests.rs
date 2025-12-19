@@ -6,7 +6,7 @@ mod tests {
     use std::sync::Arc;
 
     #[test]
-    fn test_hits_pregel_smoke() {
+    fn test_hits_smoke() {
         // Create a simple random graph
         let config = RandomGraphConfig {
             seed: Some(42),
@@ -18,7 +18,7 @@ mod tests {
         let graph = Graph::new(store);
 
         let (hubs, auths) = graph
-            .hits_pregel()
+            .hits()
             .max_iterations(20)
             .tolerance(1e-4)
             .run()
@@ -36,7 +36,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hits_pregel_stream() {
+    fn test_hits_stream() {
         let config = RandomGraphConfig {
             seed: Some(7),
             node_count: 4,
@@ -47,7 +47,7 @@ mod tests {
         let graph = Graph::new(store);
 
         let rows = graph
-            .hits_pregel()
+            .hits()
             .stream()
             .expect("HITS stream should succeed");
 
@@ -65,7 +65,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hits_pregel_stats() {
+    fn test_hits_stats() {
         let config = RandomGraphConfig {
             seed: Some(123),
             node_count: 3,
@@ -76,7 +76,7 @@ mod tests {
         let graph = Graph::new(store);
 
         let stats = graph
-            .hits_pregel()
+            .hits()
             .max_iterations(10)
             .stats()
             .expect("HITS stats should succeed");
@@ -91,7 +91,7 @@ mod tests {
     }
 
     #[test]
-    fn test_hits_pregel_empty() {
+    fn test_hits_empty() {
         // Single node, no edges
         let config = RandomGraphConfig {
             seed: Some(1),
@@ -102,7 +102,7 @@ mod tests {
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
         let graph = Graph::new(store);
 
-        let result = graph.hits_pregel().run();
+        let result = graph.hits().run();
 
         // Should handle empty graph gracefully
         assert!(

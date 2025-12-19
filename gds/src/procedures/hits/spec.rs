@@ -5,8 +5,12 @@
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use std::time::Duration;
+use std::time::Instant;
 
-use super::computation::HitsComputationRuntime;
+use crate::projection::{Orientation, RelationshipType};
+use std::collections::HashSet;
+
+use super::computation::run_hits;
 use super::storage::HitsStorageRuntime;
 
 // ============================================================================
@@ -62,7 +66,7 @@ define_algorithm_spec! {
 
     execute: |self, graph_store, config, context| {
         // Parse configuration
-        let _parsed_config: HitsConfig = serde_json::from_value(config.clone())
+        let parsed_config: HitsConfig = serde_json::from_value(config.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {}", e)))?;
 
         context.log(
@@ -73,50 +77,34 @@ define_algorithm_spec! {
             ),
         );
 
+        let start = Instant::now();
+
         // Create storage runtime
         let storage = HitsStorageRuntime::new(graph_store)?;
 
-        // Create computation runtime
-        let node_count = storage.node_count();
-        let mut computation = HitsComputationRuntime::new(node_count);
+        // Build an unfiltered natural-orientation view.
+        let rel_types: HashSet<RelationshipType> = HashSet::new();
+        let graph = graph_store
+            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
+            .map_err(|e| AlgorithmError::Execution(format!("Failed to get graph: {}", e)))?;
 
-        // Initialize all nodes with hub = 1.0, authority = 1.0
-        computation.initialize();
-
-        // Run HITS iterations
-        for iteration in 0..100 {
-            // Calculate authorities from incoming hubs
-            computation.calculate_authorities();
-            computation.normalize_authorities();
-
-            // Calculate hubs from outgoing authorities
-            computation.calculate_hubs();
-            computation.normalize_hubs();
-
-            if computation.has_converged(1e-6) {
-                context.log(
-                    LogLevel::Info,
-                    &format!("HITS converged after {} iterations", iteration + 1),
-                );
-                break;
-            }
-        }
+        let result = run_hits(graph, parsed_config.max_iterations, parsed_config.tolerance);
 
         context.log(
             LogLevel::Info,
             &format!(
                 "HITS computed: {} nodes, iterations: {}",
-                node_count,
-                computation.get_iterations()
+                storage.node_count(),
+                result.iterations_ran
             ),
         );
 
         Ok(HitsResult {
-            hub_scores: computation.get_hub_scores().clone(),
-            authority_scores: computation.get_authority_scores().clone(),
-            iterations: computation.get_iterations(),
-            did_converge: computation.did_converge(),
-            execution_time: Duration::from_millis(50),
+            hub_scores: result.hub_scores,
+            authority_scores: result.authority_scores,
+            iterations: result.iterations_ran,
+            did_converge: result.did_converge,
+            execution_time: start.elapsed(),
         })
     }
 }
