@@ -23,7 +23,11 @@ pub struct MultiMean {
 
 impl MultiMean {
     pub fn new(parent: Box<dyn Variable>, sub_graph: Box<dyn BatchNeighbors>) -> Self {
-        let parent: VariableRef = parent.into();
+        Self::new_ref(parent.into(), sub_graph)
+    }
+
+    /// Ref-based constructor for DAG-safe graph building.
+    pub fn new_ref(parent: VariableRef, sub_graph: Box<dyn BatchNeighbors>) -> Self {
         assert!(
             parent.dimension(ROWS_INDEX) >= sub_graph.node_count(),
             "Expecting a row for each node in the subgraph"
@@ -59,12 +63,14 @@ impl MultiMean {
 
         for (batch_idx, &batch_node_id) in batch_ids.iter().enumerate() {
             let neighbors = self.sub_graph.neighbors(batch_node_id);
-            let closed_neighborhood_degree = neighbors.len() + 1;
+            let mut denom = 1.0;
+            for &neighbor in neighbors {
+                denom += self.sub_graph.relationship_weight(batch_node_id, neighbor);
+            }
 
             // Pass gradient to batch node's data
             for col in 0..cols {
-                let normalized_gradient =
-                    multi_mean_gradient.data_at(batch_idx, col) / closed_neighborhood_degree as f64;
+                let normalized_gradient = multi_mean_gradient.data_at(batch_idx, col) / denom;
                 result_matrix.add_data_at(batch_node_id, col, normalized_gradient);
             }
 
@@ -80,7 +86,7 @@ impl MultiMean {
                     result_matrix.add_data_at(
                         neighbor,
                         col,
-                        neighbor_gradient / closed_neighborhood_degree as f64,
+                        neighbor_gradient / denom,
                     );
                 }
             }
@@ -106,8 +112,10 @@ impl Variable for MultiMean {
 
         for (batch_idx, &batch_node_id) in batch_ids.iter().enumerate() {
             let neighbors = self.sub_graph.neighbors(batch_node_id);
-            // TODO: Replace with sum of weights to normalize the weights
-            let closed_neighborhood_degree = neighbors.len() + 1;
+            let mut denom = 1.0;
+            for &neighbor in neighbors {
+                denom += self.sub_graph.relationship_weight(batch_node_id, neighbor);
+            }
 
             // Initialize mean row with parent row for nodeId in batch
             for col in 0..cols {
@@ -115,7 +123,7 @@ impl Variable for MultiMean {
                 result_means.add_data_at(
                     batch_idx,
                     col,
-                    source_col_entry / closed_neighborhood_degree as f64,
+                    source_col_entry / denom,
                 );
             }
 
@@ -129,7 +137,7 @@ impl Variable for MultiMean {
                     result_means.add_data_at(
                         batch_idx,
                         col,
-                        neighbor_col_data / closed_neighborhood_degree as f64,
+                        neighbor_col_data / denom,
                     );
                 }
             }

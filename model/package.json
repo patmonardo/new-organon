@@ -2,6 +2,7 @@
   "name": "@organon/model",
   "private": false,
   "version": "0.1.0",
+  "license": "GPL-3.0-only",
   "description": "Organon Model Processor",
   "type": "module",
   "main": "dist/index.js",

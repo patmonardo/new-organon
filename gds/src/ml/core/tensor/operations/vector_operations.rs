@@ -1,5 +1,53 @@
 //! Vector operations - translated from FloatVectorOperations.java
 
+/// Compute dot product between two vectors.
+///
+/// Panics if the lengths differ.
+pub fn dot(lhs: &[f64], rhs: &[f64]) -> f64 {
+    assert_eq!(
+        lhs.len(),
+        rhs.len(),
+        "dot product requires equal lengths, got {} and {}",
+        lhs.len(),
+        rhs.len()
+    );
+
+    lhs.iter().zip(rhs.iter()).map(|(a, b)| a * b).sum()
+}
+
+/// Compute cosine similarity between two vectors.
+///
+/// Returns 0.0 if either vector has zero norm.
+/// Panics if the lengths differ.
+pub fn cosine_similarity(lhs: &[f64], rhs: &[f64]) -> f64 {
+    assert_eq!(
+        lhs.len(),
+        rhs.len(),
+        "cosine similarity requires equal lengths, got {} and {}",
+        lhs.len(),
+        rhs.len()
+    );
+
+    let mut dot_product = 0.0;
+    let mut lhs_norm_sq = 0.0;
+    let mut rhs_norm_sq = 0.0;
+
+    for i in 0..lhs.len() {
+        let a = lhs[i];
+        let b = rhs[i];
+        dot_product += a * b;
+        lhs_norm_sq += a * a;
+        rhs_norm_sq += b * b;
+    }
+
+    let denom = (lhs_norm_sq * rhs_norm_sq).sqrt();
+    if denom > 0.0 {
+        dot_product / denom
+    } else {
+        0.0
+    }
+}
+
 /// Add rhs to lhs in place.
 pub fn add_in_place(lhs: &mut [f64], rhs: &[f64]) {
     let length = lhs.len().min(rhs.len());
@@ -59,6 +107,37 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_dot() {
+        let lhs = vec![1.0, 2.0, 3.0];
+        let rhs = vec![4.0, 5.0, 6.0];
+        assert_eq!(dot(&lhs, &rhs), 32.0);
+    }
+
+    #[test]
+    fn test_cosine_similarity_perfect() {
+        let v1 = vec![1.0, 2.0, 3.0];
+        let v2 = vec![2.0, 4.0, 6.0];
+        let sim = cosine_similarity(&v1, &v2);
+        assert!((sim - 1.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_cosine_similarity_orthogonal() {
+        let v1 = vec![1.0, 0.0];
+        let v2 = vec![0.0, 1.0];
+        let sim = cosine_similarity(&v1, &v2);
+        assert!((sim - 0.0).abs() < 1e-12);
+    }
+
+    #[test]
+    fn test_cosine_similarity_zero_vector_returns_zero() {
+        let v1 = vec![0.0, 0.0, 0.0];
+        let v2 = vec![1.0, 2.0, 3.0];
+        let sim = cosine_similarity(&v1, &v2);
+        assert_eq!(sim, 0.0);
+    }
 
     #[test]
     fn test_add_in_place() {

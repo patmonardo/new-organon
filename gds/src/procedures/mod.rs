@@ -136,6 +136,7 @@ pub mod traversal;
 pub mod triangle_count;
 pub mod wcc;
 pub mod yens;
+pub mod embeddings;
 
 // Future modules (to be implemented)
 // pub mod facade;      // Public API facades
@@ -210,6 +211,9 @@ pub use local_clustering_coefficient::{
     LocalClusteringCoefficientConfig, LocalClusteringCoefficientResult,
     LocalClusteringCoefficientStorageRuntime,
 };
+
+// Embeddings
+pub use embeddings::{FastRPAlgorithmSpec, FastRPConfig, FastRPResult, Node2VecAlgorithmSpec, Node2VecConfig, Node2VecResult};
 pub use louvain::{
     LouvainAlgorithmSpec, LouvainComputationRuntime, LouvainConfig, LouvainResult,
     LouvainStorageRuntime,

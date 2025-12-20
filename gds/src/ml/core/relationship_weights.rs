@@ -24,7 +24,7 @@ pub const DEFAULT_VALUE: f64 = 1.0;
 ///     double weight(long source, long target, double defaultValue);
 /// }
 /// ```
-pub trait RelationshipWeights {
+pub trait RelationshipWeights: Send + Sync {
     /// Get the weight of the relationship from source to target.
     ///
     /// # Arguments
@@ -69,14 +69,14 @@ pub const UNWEIGHTED: UnweightedRelationships = UnweightedRelationships;
 /// This allows easy creation of weight functions from lambdas.
 pub struct ClosureRelationshipWeights<F>
 where
-    F: Fn(u64, u64, f64) -> f64,
+    F: Fn(u64, u64, f64) -> f64 + Send + Sync,
 {
     func: F,
 }
 
 impl<F> ClosureRelationshipWeights<F>
 where
-    F: Fn(u64, u64, f64) -> f64,
+    F: Fn(u64, u64, f64) -> f64 + Send + Sync,
 {
     pub fn new(func: F) -> Self {
         Self { func }
@@ -85,7 +85,7 @@ where
 
 impl<F> RelationshipWeights for ClosureRelationshipWeights<F>
 where
-    F: Fn(u64, u64, f64) -> f64,
+    F: Fn(u64, u64, f64) -> f64 + Send + Sync,
 {
     fn weight_with_default(&self, source: u64, target: u64, default_value: f64) -> f64 {
         (self.func)(source, target, default_value)

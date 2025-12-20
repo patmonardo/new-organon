@@ -25,7 +25,11 @@ pub struct ElementWiseMax {
 
 impl ElementWiseMax {
     pub fn new(parent: Box<dyn Variable>, batch_neighbors: Box<dyn BatchNeighbors>) -> Self {
-        let parent: VariableRef = parent.into();
+        Self::new_ref(parent.into(), batch_neighbors)
+    }
+
+    /// Ref-based constructor for DAG-safe graph building.
+    pub fn new_ref(parent: VariableRef, batch_neighbors: Box<dyn BatchNeighbors>) -> Self {
         assert!(
             parent.dimension(ROWS_INDEX) >= batch_neighbors.node_count(),
             "Expecting a row for each node in the subgraph"

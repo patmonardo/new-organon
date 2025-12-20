@@ -8,6 +8,7 @@ use super::BatchNeighbors;
 /// SubGraph represents a sampled neighborhood subgraph for batch processing.
 ///
 /// This is the main implementation of BatchNeighbors used in GNN training.
+#[derive(Debug, Clone)]
 pub struct SubGraph {
     /// Local IDs of nodes in the input batch
     mapped_batch_node_ids: Vec<usize>,
@@ -17,6 +18,11 @@ pub struct SubGraph {
 
     /// Adjacency list: neighbors[node_id] = [neighbor_ids...]
     neighbors: Vec<Vec<usize>>,
+
+    /// Relationship weights aligned with `neighbors` (if weighted).
+    ///
+    /// neighbor_weights[src][k] is the weight of edge (src -> neighbors[src][k]).
+    neighbor_weights: Option<Vec<Vec<f64>>>,
 
     /// Whether the graph has relationship weights
     weighted: bool,
@@ -28,12 +34,14 @@ impl SubGraph {
         mapped_batch_node_ids: Vec<usize>,
         original_node_ids: Vec<u64>,
         neighbors: Vec<Vec<usize>>,
+        neighbor_weights: Option<Vec<Vec<f64>>>,
         weighted: bool,
     ) -> Self {
         Self {
             mapped_batch_node_ids,
             original_node_ids,
             neighbors,
+            neighbor_weights,
             weighted,
         }
     }
@@ -66,9 +74,22 @@ impl BatchNeighbors for SubGraph {
         &self.neighbors[batch_id]
     }
 
-    fn relationship_weight(&self, _src: usize, _trg: usize) -> f64 {
-        // TODO: Implement actual weight lookup
-        // For now, return default weight
+    fn relationship_weight(&self, src: usize, trg: usize) -> f64 {
+        if !self.weighted {
+            return 1.0;
+        }
+
+        let Some(weights) = self.neighbor_weights.as_ref() else {
+            return 1.0;
+        };
+
+        let neighbors = &self.neighbors[src];
+        for (idx, &n) in neighbors.iter().enumerate() {
+            if n == trg {
+                return weights[src][idx];
+            }
+        }
+
         1.0
     }
 }
@@ -83,6 +104,7 @@ mod tests {
             vec![0, 1, 2],
             vec![10, 20, 30, 40, 50],
             vec![vec![3, 4], vec![4], vec![3]],
+            None,
             false,
         );
 
@@ -97,6 +119,7 @@ mod tests {
             vec![0, 1],
             vec![100, 200, 300, 400],
             vec![vec![2, 3], vec![3]],
+            None,
             false,
         );
 
@@ -113,6 +136,7 @@ mod tests {
             vec![0, 1],
             original_ids.clone(),
             vec![vec![2], vec![3]],
+            None,
             false,
         );
 

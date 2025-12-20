@@ -4,36 +4,31 @@
 //! This is a literal 1:1 translation following repository translation policy.
 
 use super::{FeatureExtractor, ScalarFeatureExtractor};
-// TODO: Uncomment when Graph and NodePropertyValues are available
-// use crate::types::graph::Graph;
-// use crate::types::properties::NodePropertyValues;
+use crate::types::properties::node::NodePropertyValues;
+use crate::types::ValueType;
+use std::sync::Arc;
 
 /// Extracts scalar features from node properties.
 ///
 /// This corresponds to the ScalarPropertyExtractor class in Java GDS.
 /// Package-private constructor in Java - use through FeatureExtraction.propertyExtractors().
 pub struct ScalarPropertyExtractor {
-    // TODO: Uncomment when dependencies available
-    // graph: Graph,
-    // property_key: String,
-    // node_property_values: NodePropertyValues,
-    _placeholder: (),
+    property_key: String,
+    node_property_values: Arc<dyn NodePropertyValues>,
+    value_type: ValueType,
 }
 
 impl ScalarPropertyExtractor {
     /// Create a new scalar property extractor.
     ///
     /// Package-private in Java (no pub visibility modifier).
-    /// Note: This is a placeholder until Graph type is available.
     #[allow(dead_code)]
-    pub(crate) fn new(_graph: (), _property_key: String) -> Self {
-        // TODO: Implement when Graph type available
-        // let node_property_values = graph.node_properties(&property_key);
+    pub(crate) fn new(property_key: String, node_property_values: Arc<dyn NodePropertyValues>) -> Self {
+        let value_type = node_property_values.value_type();
         Self {
-            // graph,
-            // property_key,
-            // node_property_values,
-            _placeholder: (),
+            property_key,
+            node_property_values,
+            value_type,
         }
     }
 }
@@ -45,20 +40,31 @@ impl FeatureExtractor for ScalarPropertyExtractor {
 }
 
 impl ScalarFeatureExtractor for ScalarPropertyExtractor {
-    fn extract(&self, _node_id: u64) -> f64 {
-        // TODO: Implement when NodePropertyValues available
-        // let property_value = self.node_property_values.double_value(node_id);
-        // if property_value.is_nan() {
-        //     panic!(
-        //         "Node with ID `{}` has invalid feature property value `NaN` for property `{}`",
-        //         self.graph.to_original_node_id(node_id),
-        //         self.property_key
-        //     );
-        // }
-        // property_value
+    fn extract(&self, node_id: u64) -> f64 {
+        let value = match self.value_type {
+            ValueType::Double => self
+                .node_property_values
+                .double_value(node_id)
+                .unwrap_or_else(|e| panic!("Failed reading property `{}`: {e}", self.property_key)),
+            ValueType::Long => self
+                .node_property_values
+                .long_value(node_id)
+                .unwrap_or_else(|e| panic!("Failed reading property `{}`: {e}", self.property_key))
+                as f64,
+            other => panic!(
+                "ScalarPropertyExtractor expected scalar Double/Long but property `{}` is {:?}",
+                self.property_key, other
+            ),
+        };
 
-        // Placeholder
-        0.0
+        if value.is_nan() {
+            panic!(
+                "Node with ID `{}` has invalid feature property value `NaN` for property `{}`",
+                node_id, self.property_key
+            );
+        }
+
+        value
     }
 }
 
@@ -68,9 +74,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_placeholder() {
-        // Placeholder test until dependencies are ready
-        let extractor = ScalarPropertyExtractor::new((), "test".to_string());
+    fn test_dimension_is_one() {
+        // smoke: we can create the extractor if we have values
+        use crate::collections::backends::vec::VecDouble;
+        use crate::types::properties::node::DefaultDoubleNodePropertyValues;
+
+        let backend = VecDouble::from(vec![1.0, 2.0]);
+        let values = DefaultDoubleNodePropertyValues::from_collection(backend, 2);
+        let extractor = ScalarPropertyExtractor::new("x".to_string(), Arc::new(values));
         assert_eq!(FeatureExtractor::dimension(&extractor), 1);
     }
 }

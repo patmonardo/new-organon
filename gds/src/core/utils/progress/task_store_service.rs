@@ -145,6 +145,12 @@ impl Default for TaskStoreService {
 mod tests {
     use super::*;
     use crate::core::utils::progress::{JobId, Task};
+    use std::sync::{Mutex, OnceLock};
+
+    fn task_store_holder_lock() -> std::sync::MutexGuard<'static, ()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(())).lock().expect("lock poisoned")
+    }
 
     #[test]
     fn test_create_service_enabled() {
@@ -166,6 +172,7 @@ mod tests {
 
     #[test]
     fn test_get_task_store_enabled() {
+        let _lock = task_store_holder_lock();
         let db_name = "test_service_enabled";
 
         #[allow(deprecated)]
@@ -203,6 +210,7 @@ mod tests {
 
     #[test]
     fn test_database_names_enabled() {
+        let _lock = task_store_holder_lock();
         let db1 = "test_service_names_db1";
         let db2 = "test_service_names_db2";
 
@@ -234,6 +242,7 @@ mod tests {
 
     #[test]
     fn test_database_count_enabled() {
+        let _lock = task_store_holder_lock();
         let db1 = "test_service_count_db1";
         let db2 = "test_service_count_db2";
         let db3 = "test_service_count_db3";
@@ -267,6 +276,7 @@ mod tests {
 
     #[test]
     fn test_purge_database_enabled() {
+        let _lock = task_store_holder_lock();
         let db1 = "test_service_purge_db1";
         let db2 = "test_service_purge_db2";
 
@@ -303,6 +313,7 @@ mod tests {
 
     #[test]
     fn test_purge_all_enabled() {
+        let _lock = task_store_holder_lock();
         let db1 = "test_service_purge_all_db1";
         let db2 = "test_service_purge_all_db2";
         let db3 = "test_service_purge_all_db3";

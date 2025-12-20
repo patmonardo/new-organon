@@ -1,7 +1,7 @@
 use super::computation::{NodeSimilarityComputationResult, NodeSimilarityComputationRuntime};
 use super::storage::NodeSimilarityStorageRuntime;
 use crate::define_algorithm_spec;
-use crate::procedures::similarity::similarity_metric::NodeSimilarityMetric;
+use super::similarity_metric::NodeSimilarityMetric;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
@@ -65,20 +65,6 @@ impl From<NodeSimilarityComputationResult> for NodeSimilarityResult {
             target: r.target,
             similarity: r.similarity,
         }
-    }
-}
-
-pub struct NodeSimilarityAlgorithmSpec {
-    graph_name: String,
-}
-
-impl NodeSimilarityAlgorithmSpec {
-    pub fn new(graph_name: String) -> Self {
-        Self { graph_name }
-    }
-
-    pub fn graph_name(&self) -> &str {
-        &self.graph_name
     }
 }
 
@@ -147,3 +133,8 @@ impl NodeSimilarityAlgorithmResult {
         Self { similarities }
     }
 }
+
+// The `define_algorithm_spec!` macro generates `NODE_SIMILARITYAlgorithmSpec`.
+// Provide a stable alias that matches the naming used across the codebase.
+pub type NodeSimilarityAlgorithmSpec = NODE_SIMILARITYAlgorithmSpec;
+

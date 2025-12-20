@@ -1,6 +1,7 @@
 {
   "name": "organon",
   "version": "0.1.0",
+  "license": "GPL-3.0-only",
   "private": false,
   "description": "Organon Research Assistant Platform",
   "workspaces": [

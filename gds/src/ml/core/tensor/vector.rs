@@ -83,6 +83,16 @@ impl Vector {
         self.data.iter_mut()
     }
 
+    /// Borrow the underlying data as a slice.
+    pub fn as_slice(&self) -> &[f64] {
+        &self.data
+    }
+
+    /// Mutably borrow the underlying data as a slice.
+    pub fn as_mut_slice(&mut self) -> &mut [f64] {
+        &mut self.data
+    }
+
     /// Convert to Vec<f64>.
     pub fn to_vec(&self) -> Vec<f64> {
         self.data.clone()

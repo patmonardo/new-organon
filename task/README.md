@@ -5,18 +5,27 @@ A compact overview of the Task–Agent–Workflow subsystem: typed schemas, runt
 ## Purpose
 Provide a type-safe, extensible framework for defining and executing computational Tasks, assigning them to Agents, and orchestrating them inside Workflows. Designed for production use (validation, observability, scalability) and for reuse across the Organon monorepo.
 
+Organon Task is the **Kriya Jnana (Science of Action)** layer: knowledge that is made objective through execution (traces, artifacts, results) and then re-internalized into the next determination.
+
 ## Core Concepts
 - Task — a unit of work with id, config, state, and result.  
 - Agent — an active executor with capabilities, health, and assignment logic.  
 - Workflow — an orchestrator of Tasks and Agents (DAGs or sequences), responsible for scheduling, monitoring, and recovery.
 
-## Four-Fold Reality Box (working mapping)
+## Working Mapping (triad)
 
-This package is intentionally “meaning constrained” to the final synthesis (Agent) and its execution artifacts.
+This package uses a compact mapping that keeps “final synthesis” precise:
 
-- **Controller = Model**: the control surface is an Action:Rule structure (what actions exist + when/how they apply).
-- **Workflow = Task**: the live synthesis that carries the goal forward through actions.
-- **View = Agent**: the dharmic display/active perspective that enacts the loop.
+- **Task = Being**: determinate work to be done.
+- **Agent = Essence**: the mediated inner runtime (capability + perspective).
+- **Workflow = Concept**: the composed unity that actually orchestrates execution.
+
+In practical TS terms, you can treat the process as **Active Logic**:
+
+- **Concept Activation → Controller**: Concept becomes effective only by entering a controller surface (decision + dispatch).
+- **Controller + Concept Activation → Workflow**: together they form the unit that orchestrates Tasks through Agents.
+
+In this sense, a **Workflow is synthesized** (it composes Tasks through Agents), while an **Agent’s view is received** (it registers constraints, context, and observations).
 
 This keeps Organon Task embeddable: if you need a server framework, embed the agent runtime into an external host-adapter package.
 

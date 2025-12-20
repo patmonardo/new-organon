@@ -16,6 +16,7 @@ pub mod constant_scale;
 pub mod element_sum;
 pub mod element_wise_max;
 pub mod ewise_add_matrix_scalar;
+pub mod labelwise_feature_projection;
 
 // Matrix operations
 pub mod matrix_multiply_with_transposed_second_operand;
@@ -53,6 +54,7 @@ pub use cross_entropy_loss::*;
 pub use element_sum::*;
 pub use element_wise_max::*;
 pub use ewise_add_matrix_scalar::*;
+pub use labelwise_feature_projection::*;
 pub use focal_loss::*;
 pub use l2_norm_squared::*;
 pub use lazy_constant::*;

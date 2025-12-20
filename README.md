@@ -6,6 +6,8 @@ Organon is a TypeScript-first monorepo exploring a practical stack for:
 - Building application-facing models and data workflows (MVC)
 - Defining task/agent/workflow schemas for orchestration (TAW)
 
+License: GPL-3.0-only (GNU GPLv3). See [LICENSE](LICENSE).
+
 The dialectical language (BEC/MVC/TAW) is used here as an architectural naming scheme: it’s meant to clarify responsibilities and boundaries, not to be philosophy for its own sake.
 
 ## Glossary (preferred terms)

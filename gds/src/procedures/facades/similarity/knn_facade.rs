@@ -1,0 +1,98 @@
+use crate::procedures::facades::traits::Result;
+use crate::procedures::similarity::knn::{KnnConfig, KnnNodePropertySpec, KnnResultRow, SimilarityMetric};
+use crate::types::prelude::DefaultGraphStore;
+use std::sync::Arc;
+
+pub struct KnnBuilder {
+    graph_store: Arc<DefaultGraphStore>,
+    node_property: String,
+    node_properties: Vec<KnnNodePropertySpec>,
+    k: usize,
+    metric: SimilarityMetric,
+    similarity_cutoff: f64,
+    concurrency: usize,
+}
+
+impl KnnBuilder {
+    pub fn new(graph_store: Arc<DefaultGraphStore>, node_property: impl Into<String>) -> Self {
+        Self {
+            graph_store,
+            node_property: node_property.into(),
+            node_properties: Vec::new(),
+            k: 10,
+            metric: SimilarityMetric::Default,
+            similarity_cutoff: 0.0,
+            concurrency: 4,
+        }
+    }
+
+    pub fn add_property(mut self, node_property: impl Into<String>, metric: SimilarityMetric) -> Self {
+        self.node_properties
+            .push(KnnNodePropertySpec::new(node_property, metric));
+        self
+    }
+
+    pub fn properties(mut self, node_properties: Vec<KnnNodePropertySpec>) -> Self {
+        self.node_properties = node_properties;
+        self
+    }
+
+    pub fn k(mut self, k: usize) -> Self {
+        self.k = k;
+        self
+    }
+
+    pub fn metric(mut self, metric: SimilarityMetric) -> Self {
+        self.metric = metric;
+        self
+    }
+
+    pub fn similarity_cutoff(mut self, cutoff: f64) -> Self {
+        self.similarity_cutoff = cutoff;
+        self
+    }
+
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
+        self
+    }
+
+    fn build_config(&self) -> KnnConfig {
+        KnnConfig {
+            node_property: self.node_property.clone(),
+            node_properties: self.node_properties.clone(),
+            k: self.k,
+            similarity_metric: self.metric,
+            similarity_cutoff: self.similarity_cutoff,
+            concurrency: self.concurrency,
+        }
+    }
+
+    pub fn stream(self) -> Result<Box<dyn Iterator<Item = KnnResultRow>>> {
+        let config = self.build_config();
+        let computation = crate::procedures::similarity::knn::KnnComputationRuntime::new();
+        let storage = crate::procedures::similarity::knn::KnnStorageRuntime::new(config.concurrency);
+
+        let results = if config.node_properties.is_empty() {
+            storage.compute_single(
+                &computation,
+                self.graph_store.as_ref(),
+                &config.node_property,
+                config.k,
+                config.similarity_cutoff,
+                config.similarity_metric,
+            )?
+        } else {
+            storage.compute_multi(
+                &computation,
+                self.graph_store.as_ref(),
+                &config.node_properties,
+                config.k,
+                config.similarity_cutoff,
+            )?
+        };
+
+        let rows: Vec<KnnResultRow> = results.into_iter().map(KnnResultRow::from).collect();
+        Ok(Box::new(rows.into_iter()))
+    }
+}

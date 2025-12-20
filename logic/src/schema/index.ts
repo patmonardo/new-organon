@@ -29,6 +29,9 @@ export * from "./content";
 export * from "./judgment";
 export * from "./syllogism";
 
+// Kernel boundary vocabulary
+export * from "./form-processor";
+
 // Empowerment (will, action, doing)
 export * from "./power";
 export * from "./signature";

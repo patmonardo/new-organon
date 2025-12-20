@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 
+use crate::prints::{PrintEnvelope, PrintKind, PrintProvenance};
 use crate::projection::eval::procedure::ExecutionContext;
 use crate::substrate::{RealityFabric, WitnessFabric};
 
@@ -188,6 +189,30 @@ impl FormProcessor {
                 "output_graph": request.output_graph_name,
                 "final_proof": final_proof,
             }));
+
+            // Emit a canonical print envelope at the Eval → Print boundary.
+            // This keeps kernel emissions structured and provenance-bearing, while allowing
+            // discursive layers to narrate/interpret without pushing prose into the kernel.
+            let print = PrintEnvelope::new(
+                PrintKind::FactTrace,
+                PrintProvenance {
+                    source: "gds::projection::form_eval".to_string(),
+                    run_id: (*trace_id).clone(),
+                    kernel_version: None,
+                },
+                serde_json::json!({
+                    "kind": "form.eval",
+                    "base_graph": request.graph_name,
+                    "output_graph": request.output_graph_name,
+                    "operator": patterns,
+                    "execution_time_ms": elapsed.as_millis(),
+                }),
+            )
+            .with_proof(proof.clone());
+
+            if let Ok(value) = serde_json::to_value(&print) {
+                witness.record(value);
+            }
         }
 
         Ok(FormResult {
@@ -326,6 +351,11 @@ mod tests {
         assert!(events.iter().any(|e| e["kind"] == "form.eval.start"));
         assert!(events.iter().any(|e| e["kind"] == "form.eval.step"));
         assert!(events.iter().any(|e| e["kind"] == "form.eval.end"));
+        assert!(
+            events
+                .iter()
+                .any(|e| e["kind"] == "facttrace" && e["payload"]["kind"] == "form.eval")
+        );
         assert!(
             events
                 .iter()

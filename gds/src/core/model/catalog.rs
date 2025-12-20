@@ -1,6 +1,7 @@
 use super::types::Model;
 use anyhow::Result;
 use std::any::Any;
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -130,6 +131,119 @@ impl ModelCatalog for EmptyModelCatalog {
         0
     }
     fn remove_all_loaded(&self) {}
+    fn verify_model_can_be_stored(
+        &self,
+        _username: &str,
+        _model_name: &str,
+        _model_type: &str,
+    ) -> Result<()> {
+        Ok(())
+    }
+}
+
+/// Simple in-memory model catalog.
+///
+/// This is primarily useful for unit tests and for wiring algorithm-parity layers
+/// (like `...graphsage.algo`) without a persistence backend.
+#[derive(Default)]
+pub struct InMemoryModelCatalog {
+    models: parking_lot::RwLock<HashMap<(String, String), Arc<dyn Any + Send + Sync>>>,
+}
+
+impl InMemoryModelCatalog {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl ModelCatalog for InMemoryModelCatalog {
+    fn register_listener(&self, _listener: Box<dyn ModelCatalogListener>) {}
+    fn unregister_listener(&self, _listener: &dyn ModelCatalogListener) {}
+
+    fn set<D, C, I>(&self, model: Model<D, C, I>) -> Result<()>
+    where
+        D: super::types::ModelData + 'static,
+        C: super::types::ModelConfig + 'static,
+        I: super::types::CustomInfo + 'static,
+    {
+        let key = (model.creator().to_string(), model.name().to_string());
+        self.models
+            .write()
+            .insert(key, Arc::new(model) as Arc<dyn Any + Send + Sync>);
+        Ok(())
+    }
+
+    fn get<D, C, I>(&self, username: &str, model_name: &str) -> Result<Arc<Model<D, C, I>>>
+    where
+        D: super::types::ModelData + 'static,
+        C: super::types::ModelConfig + 'static,
+        I: super::types::CustomInfo + 'static,
+    {
+        let key = (username.to_string(), model_name.to_string());
+        let arc = self
+            .models
+            .read()
+            .get(&key)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Model not found"))?;
+
+        Arc::downcast::<Model<D, C, I>>(arc)
+            .map_err(|_| anyhow::anyhow!("Model type mismatch"))
+    }
+
+    fn get_untyped(&self, username: &str, model_name: &str) -> Result<Arc<dyn Any + Send + Sync>> {
+        let key = (username.to_string(), model_name.to_string());
+        self.models
+            .read()
+            .get(&key)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("Model not found"))
+    }
+
+    fn exists(&self, username: &str, model_name: &str) -> bool {
+        let key = (username.to_string(), model_name.to_string());
+        self.models.read().contains_key(&key)
+    }
+
+    fn drop(&self, username: &str, model_name: &str) -> Result<Arc<dyn Any + Send + Sync>> {
+        let key = (username.to_string(), model_name.to_string());
+        self.models
+            .write()
+            .remove(&key)
+            .ok_or_else(|| anyhow::anyhow!("Model not found"))
+    }
+
+    fn list(&self, username: &str) -> Vec<Arc<dyn Any + Send + Sync>> {
+        self.models
+            .read()
+            .iter()
+            .filter(|((u, _), _)| u == username)
+            .map(|(_, v)| Arc::clone(v))
+            .collect()
+    }
+
+    fn publish(&self, username: &str, model_name: &str) -> Result<Arc<dyn Any + Send + Sync>> {
+        // Publishing semantics are implemented on the typed `Model` object; for now we just return it.
+        self.get_untyped(username, model_name)
+    }
+
+    fn store(
+        &self,
+        _username: &str,
+        _model_name: &str,
+        _model_dir: &Path,
+    ) -> Result<Arc<dyn Any + Send + Sync>> {
+        anyhow::bail!("InMemoryModelCatalog does not support store() yet")
+    }
+
+    fn model_count(&self) -> usize {
+        self.models.read().len()
+    }
+
+    fn remove_all_loaded(&self) {
+        self.models.write().clear();
+    }
+
     fn verify_model_can_be_stored(
         &self,
         _username: &str,

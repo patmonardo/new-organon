@@ -2,6 +2,8 @@
 
 This module transforms the philosophical and dialectical foundations from `definition.ts` into concrete, engineering-focused Zod schemas and a small runtime surface.
 
+In Organon terms, this module is part of **Kriya Jnana (Science of Action)**: cognition that becomes objective through enacted workflows (and the artifacts they produce).
+
 Organon Task intentionally does **not** ship a server/framework runtime (Express/etc) or “integration layers” for external agent stacks. Anything beyond an Active/Applied Model is accessed externally (MCP, GenKit, etc) and is out-of-scope here.
 
 The agent runtime in this package is meant to be **embeddable**: a component that can be hosted by another system. If you want NestJS, build a separate NestJS package that embeds the agent runtime as a module/component.
@@ -64,8 +66,8 @@ The engineering schemas follow these principles:
 The schemas implement the practical realization of the BEC-MVC-TAW architectonic:
 
 - **Task** = Being (computational work units)
-- **Agent** = Entity (computational actors)
-- **Workflow** = Container (orchestration logic)
+- **Agent** = Essence (computational actors as mediated capability + perspective)
+- **Workflow** = Concept (orchestration as composed unity)
 
 Each schema includes:
 
@@ -78,13 +80,15 @@ Each schema includes:
 
 ## Embeddable Singularity (stack view)
 
-Organon Task is designed to be the last synthesis point (Agent) in a larger chain:
+Organon Task is designed to be the synthesis point (Workflow) in a larger chain:
 Reality → GDS → GDSL → Logic → Model → Task.
 
 Inside Task, a useful working mapping is:
+- TS process = Active Logic
 - Controller = Model (Action:Rule)
-- Workflow = Task (live synthesis)
-- View = Agent (dharmic display)
+- Concept Activation → Controller (Concept becomes effective in control/decision)
+- Workflow = (Controller + Concept Activation) as composed unity
+- Agent = Essence (received view / execution perspective)
 
 ## Next Steps
 

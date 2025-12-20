@@ -17,6 +17,7 @@ pub mod ml;
 pub mod pregel;
 pub mod procedures;
 pub mod projection;
+pub mod prints;
 pub mod substrate;
 pub mod types;
 pub mod values;
@@ -29,6 +30,7 @@ pub mod applications;
 // pub use projection::*;
 pub use types::*;
 pub use values::*;
+pub use prints::*;
 
 // User-facing facade entrypoint (live-by-default).
 pub use procedures::facades::Graph;

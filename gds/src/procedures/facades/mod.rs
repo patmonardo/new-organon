@@ -63,6 +63,7 @@ pub mod traits;
 // Facade implementations by algorithm family
 pub mod centrality;
 pub mod community;
+pub mod embeddings;
 pub mod pathfinding;
 pub mod similarity;
 

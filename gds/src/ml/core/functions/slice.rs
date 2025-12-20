@@ -21,7 +21,11 @@ pub struct Slice {
 
 impl Slice {
     pub fn new(parent: Box<dyn Variable>, batch_ids: Vec<usize>) -> Self {
-        let parent: VariableRef = parent.into();
+        Self::new_ref(parent.into(), batch_ids)
+    }
+
+    /// Ref-based constructor for DAG-safe graph building.
+    pub fn new_ref(parent: VariableRef, batch_ids: Vec<usize>) -> Self {
         let dimensions = dimensions::matrix(batch_ids.len(), parent.dimension(COLUMNS_INDEX));
         let base = AbstractVariable::with_gradient_requirement(vec![parent], dimensions, true);
 

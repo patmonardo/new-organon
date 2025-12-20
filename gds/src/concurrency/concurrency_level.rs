@@ -1,5 +1,6 @@
 use std::fmt;
 use std::num::NonZeroUsize;
+use serde::{Deserialize, Serialize};
 
 /// Represents a concurrency level (number of threads/workers) for parallel processing.
 ///
@@ -29,7 +30,7 @@ use std::num::NonZeroUsize;
 /// let c = Concurrency::single_threaded();
 /// assert_eq!(c.value(), 1);
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Concurrency {
     value: NonZeroUsize,
 }

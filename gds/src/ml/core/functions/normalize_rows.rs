@@ -21,7 +21,11 @@ pub struct NormalizeRows {
 
 impl NormalizeRows {
     pub fn new(parent: Box<dyn Variable>) -> Self {
-        let parent: VariableRef = parent.into();
+        Self::new_ref(parent.into())
+    }
+
+    /// Ref-based constructor for DAG-safe graph building.
+    pub fn new_ref(parent: VariableRef) -> Self {
         let dimensions = parent.dimensions().to_vec();
         let base = AbstractVariable::with_gradient_requirement(vec![parent], dimensions, true);
         Self { base }

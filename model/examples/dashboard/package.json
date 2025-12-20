@@ -1,6 +1,7 @@
 {
   "name": "dashboard-v4",
   "private": true,
+  "license": "GPL-3.0-only",
   "scripts": {
     "generate": "prisma generate --no-hints --schema=./app/data/prisma/schema.prisma",
     "prisma-studio": "prisma studio --schema=./app/data/prisma/schema.prisma",

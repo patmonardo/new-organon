@@ -1,5 +1,6 @@
-use crate::procedures::similarity::computation::NodeSimilarityComputationResult;
 use crate::types::graph::graph::Graph;
+
+use super::computation::NodeSimilarityComputationResult;
 
 pub struct NodeSimilarityStorageRuntime {
     concurrency: usize,
@@ -23,3 +24,4 @@ impl NodeSimilarityStorageRuntime {
         computation.compute(graph, config, self.concurrency)
     }
 }
+

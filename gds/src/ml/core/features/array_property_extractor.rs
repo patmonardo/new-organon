@@ -4,37 +4,52 @@
 //! This is a literal 1:1 translation following repository translation policy.
 
 use super::{ArrayFeatureExtractor, FeatureExtractor};
+use crate::types::properties::node::NodePropertyValues;
+use crate::types::ValueType;
+use std::sync::Arc;
 
 /// Extracts array features from node properties.
 pub struct ArrayPropertyExtractor {
     dimension: usize,
-    // TODO: Replace placeholder once Graph type is available.
-    _graph: (),
     property_key: String,
-    // TODO: Replace placeholder once NodePropertyValues are available.
-    _node_property_values: (),
+    node_property_values: Arc<dyn NodePropertyValues>,
+    value_type: ValueType,
 }
 
 impl ArrayPropertyExtractor {
-    pub(crate) fn _new(dimension: usize, graph: (), property_key: String) -> Self {
+    pub(crate) fn new(
+        dimension: usize,
+        property_key: String,
+        node_property_values: Arc<dyn NodePropertyValues>,
+    ) -> Self {
+        let value_type = node_property_values.value_type();
         Self {
             dimension,
-            _graph: graph,
             property_key,
-            _node_property_values: (),
+            node_property_values,
+            value_type,
         }
     }
 
     fn fetch_property_value(&self, node_id: u64) -> Option<Vec<f64>> {
-        let _ = node_id;
-        let _ = &self._node_property_values;
-        todo!("Call NodePropertyValues::double_array_value once available.");
-    }
-
-    fn original_node_id(&self, node_id: u64) -> u64 {
-        let _ = &self._graph;
-        // TODO: Replace with graph.to_original_node_id(node_id) once Graph is available.
-        node_id
+        let v = match self.value_type {
+            ValueType::DoubleArray => self
+                .node_property_values
+                .double_array_value(node_id)
+                .ok(),
+            ValueType::FloatArray => self
+                .node_property_values
+                .float_array_value(node_id)
+                .ok()
+                .map(|v| v.into_iter().map(|x| x as f64).collect()),
+            ValueType::LongArray => self
+                .node_property_values
+                .long_array_value(node_id)
+                .ok()
+                .map(|v| v.into_iter().map(|x| x as f64).collect()),
+            _ => None,
+        };
+        v
     }
 }
 
@@ -50,7 +65,7 @@ impl ArrayFeatureExtractor for ArrayPropertyExtractor {
             panic!(
                 "Missing node property for property key `{}` on node with id `{}`. Consider using a default value in the property projection.",
                 &self.property_key,
-                self.original_node_id(node_id)
+                node_id
             )
         });
 
@@ -66,7 +81,7 @@ impl ArrayFeatureExtractor for ArrayPropertyExtractor {
         if property_value.iter().any(|val| val.is_nan()) {
             panic!(
                 "Node with ID `{}` has invalid feature property value NaN for property `{}`",
-                self.original_node_id(node_id),
+                node_id,
                 &self.property_key
             );
         }

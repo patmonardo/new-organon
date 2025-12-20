@@ -7,12 +7,18 @@
 //! Also contains logic for looping on graphs and batches and writing into
 //! Matrices and HugeObjectArrays.
 
-use super::{ArrayFeatureExtractor, FeatureConsumer, FeatureExtractor, ScalarFeatureExtractor};
+use super::{
+    ArrayFeatureExtractor, ArrayPropertyExtractor, FeatureConsumer, FeatureExtractor,
+    HugeObjectArrayFeatureConsumer, LongArrayPropertyExtractor, ScalarFeatureExtractor,
+    ScalarPropertyExtractor,
+};
 // Note: These imports will need to be completed once we translate the full ml/core module
 // use crate::ml::core::batch::Batch;
 // use crate::ml::core::functions::Constant;
 // use crate::ml::core::tensor::Matrix;
-// use crate::types::graph::Graph;
+use crate::collections::HugeObjectArray;
+use crate::types::graph::Graph;
+use crate::types::ValueType;
 // use crate::collections::HugeObjectArray;
 
 /// Type-erased feature extractor wrapper.
@@ -74,7 +80,30 @@ pub fn extract(
 
 // TODO: Translate these methods once dependencies are available:
 // pub fn extract_batch(batch: &Batch, extractors: &[AnyFeatureExtractor]) -> Constant<Matrix>
-// pub fn extract_graph(graph: &Graph, extractors: &[AnyFeatureExtractor], features: &mut HugeObjectArray<Vec<f64>>) -> &mut HugeObjectArray<Vec<f64>>
+
+/// Extract features for all nodes in a graph into a HugeObjectArray of `Vec<f64>`.
+///
+/// Java: `FeatureExtraction.extract(Graph graph, List<FeatureExtractor> extractors, HugeObjectArray<double[]> features)`
+pub fn extract_graph(
+    graph: &dyn Graph,
+    extractors: &[AnyFeatureExtractor],
+    features: HugeObjectArray<Vec<f64>>,
+) -> HugeObjectArray<Vec<f64>> {
+    let feature_dim = feature_count(extractors);
+
+    // Ensure every row is allocated to the correct length.
+    // (HugeObjectArray default is empty Vec)
+    let mut consumer = HugeObjectArrayFeatureConsumer::new(features);
+    consumer
+        .features_mut()
+        .set_all(|_| vec![0.0f64; feature_dim]);
+
+    for node_id in 0..graph.node_count() {
+        extract(node_id as u64, node_id as u64, extractors, &mut consumer);
+    }
+
+    consumer.into_inner()
+}
 
 /// Calculate total feature count from a collection of extractors.
 ///
@@ -83,10 +112,77 @@ pub fn feature_count(extractors: &[AnyFeatureExtractor]) -> usize {
     extractors.iter().map(|e| e.dimension()).sum()
 }
 
-// TODO: Translate these utility methods once Graph and property system are available:
-// pub fn feature_count_from_graph(graph: &Graph, feature_properties: &[String]) -> usize
-// pub fn property_extractors(graph: &Graph, feature_properties: &[String]) -> Vec<AnyFeatureExtractor>
-// pub fn property_extractors_with_init(graph: &Graph, feature_properties: &[String], init_node_id: u64) -> Vec<AnyFeatureExtractor>
+/// Create feature extractors backed by node properties (Java: FeatureExtraction.propertyExtractors()).
+///
+/// Panics if a requested property is missing.
+pub fn property_extractors(graph: &dyn Graph, feature_properties: &[String]) -> Vec<AnyFeatureExtractor> {
+    property_extractors_with_init(graph, feature_properties, 0)
+}
+
+/// Create feature extractors backed by node properties with an explicit init node id.
+///
+/// This is used to infer array dimensions when not present in schema/values.
+pub fn property_extractors_with_init(
+    graph: &dyn Graph,
+    feature_properties: &[String],
+    init_node_id: u64,
+) -> Vec<AnyFeatureExtractor> {
+    feature_properties
+        .iter()
+        .map(|key| {
+            let values = graph.node_properties(key).unwrap_or_else(|| {
+                panic!(
+                    "Missing node property `{}`. Consider using a default value in the property projection.",
+                    key
+                )
+            });
+
+            match values.value_type() {
+                ValueType::Double | ValueType::Long => AnyFeatureExtractor::Scalar(Box::new(
+                    ScalarPropertyExtractor::new(key.clone(), values),
+                )),
+                ValueType::DoubleArray | ValueType::FloatArray => {
+                    let dim = values.dimension().unwrap_or_else(|| {
+                        // Infer from init node.
+                        values
+                            .double_array_value(init_node_id)
+                            .map(|v| v.len())
+                            .or_else(|_| values.float_array_value(init_node_id).map(|v| v.len()))
+                            .unwrap_or_else(|e| panic!("Failed inferring dimension for `{key}`: {e}"))
+                    });
+                    AnyFeatureExtractor::Array(Box::new(ArrayPropertyExtractor::new(
+                        dim,
+                        key.clone(),
+                        values,
+                    )))
+                }
+                ValueType::LongArray => {
+                    let dim = values.dimension().unwrap_or_else(|| {
+                        values
+                            .long_array_value(init_node_id)
+                            .map(|v| v.len())
+                            .unwrap_or_else(|e| panic!("Failed inferring dimension for `{key}`: {e}"))
+                    });
+                    AnyFeatureExtractor::Array(Box::new(LongArrayPropertyExtractor::new(
+                        dim,
+                        key.clone(),
+                        values,
+                    )))
+                }
+                other => panic!(
+                    "Unsupported feature property type for `{}`: {:?}",
+                    key, other
+                ),
+            }
+        })
+        .collect()
+}
+
+/// Convenience: compute feature count directly from graph properties.
+pub fn feature_count_from_graph(graph: &dyn Graph, feature_properties: &[String]) -> usize {
+    feature_count(&property_extractors(graph, feature_properties))
+}
+
 // pub fn feature_count_with_bias(graph: &Graph, feature_properties: &[String]) -> usize
 // pub fn memory_usage_in_bytes(number_of_features: usize) -> usize
 

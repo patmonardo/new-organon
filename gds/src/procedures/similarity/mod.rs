@@ -1,13 +1,20 @@
-pub mod computation;
-pub mod similarity_metric;
-pub mod spec;
-pub mod storage;
-pub mod vector_computer;
+pub mod knn;
+pub mod nodesim;
+pub mod filteredknn;
 
-#[cfg(test)]
-mod tests;
+// Preserve the existing public surface by re-exporting NodeSim types at the
+// similarity root.
+pub use nodesim::{
+	NodeSimilarityAlgorithmSpec,
+	NodeSimilarityConfig,
+	NodeSimilarityComputationRuntime,
+	NodeSimilarityMetric,
+	NodeSimilarityResult,
+	NodeSimilarityStorageRuntime,
+};
 
-pub use computation::NodeSimilarityComputationRuntime;
-pub use similarity_metric::NodeSimilarityMetric;
-pub use spec::{NodeSimilarityAlgorithmSpec, NodeSimilarityConfig, NodeSimilarityResult};
-pub use storage::NodeSimilarityStorageRuntime;
+pub use filteredknn::{
+	FilteredKnnAlgorithmSpec,
+	FilteredKnnConfig,
+};
+

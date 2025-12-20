@@ -1,4 +1,4 @@
-use crate::procedures::similarity::similarity_metric::SimilarityMetric;
+use super::similarity_metric::{NodeSimilarityMetric, SimilarityMetric};
 use crate::types::graph::graph::Graph;
 use rayon::prelude::*;
 use std::cmp::Reverse;
@@ -115,8 +115,7 @@ impl NodeSimilarityComputationRuntime {
                     let target_degree = graph.degree(target as crate::types::graph::MappedNodeId);
 
                     let sim = match config.similarity_metric {
-                        crate::procedures::similarity::similarity_metric::NodeSimilarityMetric::Jaccard =>
-                        {
+                        NodeSimilarityMetric::Jaccard => {
                             let union =
                                 (source_degree as f64 + target_degree as f64) - intersection;
                             if union > 0.0 {
@@ -125,8 +124,7 @@ impl NodeSimilarityComputationRuntime {
                                 0.0
                             }
                         }
-                        crate::procedures::similarity::similarity_metric::NodeSimilarityMetric::Overlap =>
-                        {
+                        NodeSimilarityMetric::Overlap => {
                             let min_degree = (source_degree as f64).min(target_degree as f64);
                             if min_degree > 0.0 {
                                 intersection / min_degree
@@ -134,8 +132,7 @@ impl NodeSimilarityComputationRuntime {
                                 0.0
                             }
                         }
-                        crate::procedures::similarity::similarity_metric::NodeSimilarityMetric::Cosine =>
-                        {
+                        NodeSimilarityMetric::Cosine => {
                             let sqrt_prod =
                                 ((source_degree as f64) * (target_degree as f64)).sqrt();
                             if sqrt_prod > 0.0 {

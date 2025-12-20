@@ -35,6 +35,11 @@ impl MatrixSum {
     /// Java: `public MatrixSum(List<Variable<Matrix>> parents) { super(parents, validatedDimensions(parents)); }`
     pub fn new(parents: Vec<Box<dyn Variable>>) -> Self {
         let parents: Vec<VariableRef> = parents.into_iter().map(Into::into).collect();
+        Self::new_ref(parents)
+    }
+
+    /// Ref-based constructor for DAG-safe graph building.
+    pub fn new_ref(parents: Vec<VariableRef>) -> Self {
         let dimensions = Self::validated_dimensions(&parents);
         let base = AbstractVariable::new(parents, dimensions);
         Self { base }

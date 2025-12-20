@@ -50,10 +50,36 @@ export const MomentSchema = z.object({
   definition: z.string(),
 
   /** Type: polarity, determination, quality, etc. */
-  type: z.enum(['polarity', 'determination', 'quality', 'negation', 'sublation', 'mediation', 'moment', 'process']),
+  type: z.enum([
+    'polarity',
+    'determination',
+    'quality',
+    'negation',
+    'sublation',
+    'mediation',
+    'moment',
+    'process',
+    // Extended vocabulary present in the IR corpus
+    'externality',
+    'reflection',
+    'passover',
+    'contradiction',
+    'immanence',
+    'appearance',
+  ]),
 
   /** Relationship to other moments (if any) */
-  relation: z.enum(['opposite', 'mediates', 'contains', 'transforms', 'negates']).optional(),
+  relation: z.enum([
+    'opposite',
+    'mediates',
+    'contains',
+    'transforms',
+    'negates',
+    // Extended relations present in the IR corpus
+    'passesOver',
+    'unified',
+    'transitions',
+  ]).optional(),
 
   /** Related moment name (if relation specified) */
   relatedTo: z.string().optional(),
@@ -95,7 +121,18 @@ export const ForceSchema = z.object({
   description: z.string(),
 
   /** Type: contradiction, negation, externality, etc. */
-  type: z.enum(['contradiction', 'negation', 'externality', 'sublation', 'mediation', 'immanence', 'reflection', 'passover']),
+  type: z.enum([
+    'contradiction',
+    'negation',
+    'externality',
+    'sublation',
+    'mediation',
+    'immanence',
+    'reflection',
+    'passover',
+    // Extended force type present in the IR corpus
+    'appearance',
+  ]),
 
   /** Trigger condition (when this force activates) */
   trigger: z.string(),
@@ -124,7 +161,16 @@ export const TransitionSchema = z.object({
   to: z.string(),
 
   /** Dialectic mechanism (how the transition occurs) */
-  mechanism: z.enum(['negation', 'sublation', 'mediation', 'passover', 'reflection', 'contradiction']),
+  mechanism: z.enum([
+    'negation',
+    'sublation',
+    'mediation',
+    'passover',
+    'reflection',
+    'contradiction',
+    // Extended mechanism present in the IR corpus
+    'appearance',
+  ]),
 
   /** Middle term (if any) - the mediating element */
   middleTerm: z.string().optional(),
