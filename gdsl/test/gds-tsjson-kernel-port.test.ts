@@ -26,6 +26,41 @@ describe('GdsTsjsonKernelPort', () => {
 		expect(call.user.username).toBe('alice');
 	});
 
+	it('maps gds.graph_store.put to TSJSON invoke', async () => {
+		const invocations: unknown[] = [];
+		const invoke = async (requestJson: string) => {
+			invocations.push(JSON.parse(requestJson));
+			return JSON.stringify({
+				ok: true,
+				op: 'put',
+				data: { graphName: 'stash1', nodeCount: 2, relationshipCount: 1 },
+			});
+		};
+
+		const port = new GdsTsjsonKernelPort(invoke);
+		const request: KernelRunRequest = {
+			model: { id: 'gds.graph_store.put' },
+			input: {
+				user: { username: 'alice', isAdmin: true },
+				databaseId: 'db1',
+				graphName: 'stash1',
+				snapshot: {
+					nodes: [0, 1],
+					relationships: [{ type: 'KNOWS', source: 0, target: 1 }],
+				},
+			},
+		};
+
+		const result = await port.run(request);
+		expect(result).toEqual({ ok: true, output: { graphName: 'stash1', nodeCount: 2, relationshipCount: 1 } });
+		expect(invocations).toHaveLength(1);
+
+		const call = invocations[0] as any;
+		expect(call.facade).toBe('graph_store');
+		expect(call.op).toBe('put');
+		expect(call.graphName).toBe('stash1');
+	});
+
 	it('propagates TSJSON ok=false envelopes as KernelRunResult ok=false', async () => {
 		const invoke = (requestJson: string) => {
 			// sanity: should be valid JSON

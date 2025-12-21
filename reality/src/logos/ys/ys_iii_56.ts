@@ -1,4 +1,47 @@
 import { DatasetUnit, makeUnitId } from '@organon/gdsl/registry/canon'
+import type { SutraAnalysis } from './schema'
+import { makeSutraRef } from './schema'
+
+export const YS_III_56_ANALYSIS: SutraAnalysis = {
+  text: {
+    ref: makeSutraRef('III', 56),
+    devanagari: 'सत्त्वपुरुषयोः शुद्धिसाम्ये कैवल्यमिति',
+    iast: 'sattvapuruṣayoḥ śuddhisāmye kaivalyam iti',
+  },
+  padaccheda: [
+    { surface: 'sattva-puruṣayoḥ', gloss: 'of sattva and puruṣa (gen. du.)' },
+    { surface: 'śuddhi-sāmye', gloss: 'in equality of purity (loc. sg.)' },
+    { surface: 'kaivalyam', gloss: 'kaivalya (aloneness/independence)' },
+    { surface: 'iti', gloss: 'thus / definition marker' },
+  ],
+  operators: [
+    {
+      kind: 'predicate',
+      token: 'śuddhi-sāmye',
+      claim:
+        'Criterion: no remainder of distortion; instrument-clarity is equivalent (in purity) to the Seer’s non-admixture.',
+    },
+    {
+      kind: 'predicate',
+      token: 'kaivalyam',
+      claim: 'Terminal consequence: independence of the Seer (non-mixing).',
+    },
+    {
+      kind: 'closure',
+      token: 'iti',
+      claim: 'Sūtra defines kaivalya by this criterion (not a narrative).',
+    },
+  ],
+  sources: [
+    {
+      id: 'fichte-1804-l28',
+      title: 'Fichte, Wissenschaftslehre 1804 — Lecture 28 (June 8, 1804)',
+      note: 'Used as the crosswalk for removing the “dual absolute” ambiguity (subject/object) via the midpoint.',
+    },
+  ],
+  thesis:
+    'Kaivalya is defined as the terminal equivalence-of-śuddhi between sattva (buddhi’s luminosity as instrument) and puruṣa; the “mirror” no longer adds remainder, so non-mixing obtains.',
+}
 
 export const YS_III_56_ONTOLOGY = {
   // Sutra and core terms

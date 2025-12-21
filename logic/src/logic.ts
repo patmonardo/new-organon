@@ -1,5 +1,5 @@
 export const logic = "logic";
 
-// GDSL is now a target IR, not an active dependency
-// The dialectic schemas live here in @organon/logic
-// GDSL will be informed by Logic/Model packages when needed
+// GDSL is the boundary vocabulary for the Rust kernel (Absolute Form / Knowing).
+// Logic extends that boundary with discursive/conceiving helpers (Projection,
+// reflective representation, etc.) without executing kernel code directly.

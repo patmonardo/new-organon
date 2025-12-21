@@ -62,3 +62,4 @@ config-files = [] # Future: YAML/JSON file loading
 rayon = []        # Parallel computation support
 procedures = []   # Procedure execution system
 ml = []           # Machine learning features
+node2vec = []     # Opt-in: experimental Node2Vec work (currently incomplete)

@@ -20,7 +20,10 @@ use super::community::{
     SccBuilder, TriangleCountBuilder, WccBuilder,
 };
 
-use super::embeddings::{FastRPBuilder, HashGNNBuilder, Node2VecBuilder};
+use super::embeddings::{FastRPBuilder, HashGNNBuilder};
+
+#[cfg(feature = "node2vec")]
+use super::embeddings::Node2VecBuilder;
 
 /// User-facing graph handle for running algorithms against a live `DefaultGraphStore`.
 ///
@@ -66,6 +69,11 @@ impl Graph {
         BellmanFordBuilder::new(Arc::clone(&self.store))
     }
 
+    #[cfg(feature = "node2vec")]
+    pub fn node2vec(&self) -> Node2VecBuilder {
+        Node2VecBuilder::new(Arc::clone(&self.store))
+    }
+
     /// Delta Stepping shortest-paths (binning strategy).
     pub fn delta_stepping(&self) -> DeltaSteppingBuilder {
         DeltaSteppingBuilder::new(Arc::clone(&self.store))
@@ -108,11 +116,6 @@ impl Graph {
     /// FastRP node embeddings.
     pub fn fast_rp(&self) -> FastRPBuilder {
         FastRPBuilder::new(Arc::clone(&self.store))
-    }
-
-    /// Node2Vec node embeddings.
-    pub fn node2vec(&self) -> Node2VecBuilder {
-        Node2VecBuilder::new(Arc::clone(&self.store))
     }
 
     /// HashGNN node embeddings.

@@ -16,4 +16,6 @@ export * from './sdk/taw-helpers';
 export * from './sdk/demo-loop';
 export * from './sdk/demo-kernel-port';
 export * from './sdk/gds-tsjson-kernel-port';
+export * from './judgment-kernel';
+export * from './syllogism-kernel';
 

@@ -1,5 +1,13 @@
 import { z } from 'zod';
 
+import { GdsFormEvalCallSchema } from './gds.form-eval';
+import { GdsGraphStoreCallSchema } from './gds.graph-store';
+import {
+	GdsDatabaseIdSchema,
+	GdsGraphNameSchema,
+	GdsUserSchema,
+} from './gds.common';
+
 /**
  * GDSL IR: GDS application protocol shapes
  *
@@ -10,18 +18,6 @@ import { z } from 'zod';
  * - TB-safe: heavy data is never returned directly; prefer handles/jobs/exports.
  * - Schema-first: operation IDs are stable string literals.
  */
-
-export const GdsUserSchema = z.object({
-	username: z.string().min(1),
-	isAdmin: z.boolean().optional().default(false),
-});
-export type GdsUser = z.infer<typeof GdsUserSchema>;
-
-export const GdsDatabaseIdSchema = z.string().min(1);
-export type GdsDatabaseId = z.infer<typeof GdsDatabaseIdSchema>;
-
-export const GdsGraphNameSchema = z.string().min(1);
-export type GdsGraphName = z.infer<typeof GdsGraphNameSchema>;
 
 export const GdsGraphStoreCatalogFacadeSchema = z.literal('graph_store_catalog');
 export type GdsGraphStoreCatalogFacade = z.infer<
@@ -154,7 +150,11 @@ export type GdsGraphStoreCatalogCall = z.infer<
 	typeof GdsGraphStoreCatalogCallSchema
 >;
 
-export const GdsApplicationCallSchema = z.union([GdsGraphStoreCatalogCallSchema]);
+export const GdsApplicationCallSchema = z.union([
+	GdsGraphStoreCatalogCallSchema,
+	GdsGraphStoreCallSchema,
+	GdsFormEvalCallSchema,
+]);
 export type GdsApplicationCall = z.infer<typeof GdsApplicationCallSchema>;
 
 export function gdsApplicationOperationId(call: GdsApplicationCall): string {

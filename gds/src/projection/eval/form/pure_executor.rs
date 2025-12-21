@@ -8,6 +8,7 @@ use super::form_spec::{
     time_form_eval, CommitSubgraphOperator, FormError, FormInput, FormOperator, FormOperatorOutput,
     FormRequest, FormResult, MaterializeNodePropertiesOperator,
     MaterializeRelationshipPropertiesOperator, PassThroughFormOperator,
+    CitFormOperator, EssenceFormOperator, ReflectionFormOperator, ShineFormOperator,
 };
 
 /// A registry of Form operators, monomorphized for a particular store type.
@@ -58,6 +59,12 @@ where
     pub fn new() -> Self {
         let mut catalog = PureFormCatalog::new();
         catalog.insert(PassThroughFormOperator::default());
+        // Canonical triad: essence → shine → reflection.
+        catalog.insert(EssenceFormOperator::default());
+        // Back-compat alias for earlier programs.
+        catalog.insert(CitFormOperator::default());
+        catalog.insert(ShineFormOperator::default());
+        catalog.insert(ReflectionFormOperator::default());
         catalog.insert(CommitSubgraphOperator::default());
         catalog.insert(MaterializeNodePropertiesOperator::default());
         catalog.insert(MaterializeRelationshipPropertiesOperator::default());

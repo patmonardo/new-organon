@@ -5,8 +5,10 @@
 
 pub mod fastrp;
 pub mod hashgnn;
+#[cfg(feature = "node2vec")]
 pub mod node2vec;
 
 pub use fastrp::{FastRPAlgorithmSpec, FastRPConfig, FastRPResult};
 pub use hashgnn::{HashGNNAlgorithmSpec, HashGNNConfig, HashGNNEmbeddings, HashGNNResult};
+#[cfg(feature = "node2vec")]
 pub use node2vec::{Node2VecAlgorithmSpec, Node2VecConfig, Node2VecResult};

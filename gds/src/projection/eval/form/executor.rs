@@ -14,6 +14,7 @@ use super::form_spec::{
     time_form_eval, CommitSubgraphOperator, FormError, FormInput, FormOperator, FormOperatorOutput,
     FormRequest, FormResult, MaterializeNodePropertiesOperator,
     MaterializeRelationshipPropertiesOperator, PassThroughFormOperator,
+    CitFormOperator, EssenceFormOperator, ReflectionFormOperator, ShineFormOperator,
 };
 
 /// A registry of Form operators.
@@ -48,6 +49,12 @@ impl FormProcessor {
     pub fn new(context: ExecutionContext) -> Self {
         let mut catalog = FormCatalog::new();
         catalog.insert(PassThroughFormOperator::default());
+        // Canonical triad: essence → shine → reflection.
+        catalog.insert(EssenceFormOperator::default());
+        // Back-compat alias for earlier programs.
+        catalog.insert(CitFormOperator::default());
+        catalog.insert(ShineFormOperator::default());
+        catalog.insert(ReflectionFormOperator::default());
         catalog.insert(CommitSubgraphOperator::default());
         catalog.insert(MaterializeNodePropertiesOperator::default());
         catalog.insert(MaterializeRelationshipPropertiesOperator::default());
@@ -266,6 +273,56 @@ mod tests {
             result.graph.relationship_count(),
             graph.relationship_count()
         );
+    }
+
+    #[test]
+    fn essence_shine_reflection_marks_reflective_consciousness_without_changing_graph() {
+        let graph = Arc::new(DefaultGraphStore::random(&RandomGraphConfig::seeded(8)).unwrap());
+        let mut ctx = ExecutionContext::new("user");
+        ctx.add_graph("g", graph.clone());
+
+        let mut rules = HashMap::new();
+        rules.insert("moment".to_string(), "shine".to_string());
+        rules.insert("hegel".to_string(), "Essence→Shine".to_string());
+        rules.insert(
+            "yoga".to_string(),
+            "YS IV.3 nirmāṇa-cittāni asmitā-mātra".to_string(),
+        );
+
+        let shape = Shape::new(vec![], vec![], HashMap::new(), rules);
+        let fctx = Context::new(vec![], vec![], "strategy".to_string(), vec![]);
+        let morph = Morph::new(vec![
+            "essence".to_string(),
+            "shine".to_string(),
+            "reflection".to_string(),
+        ]);
+        let program = FormShape::new(shape, fctx, morph);
+
+        let request = FormRequest::new("g", program);
+        let mut processor = FormProcessor::new(ctx);
+        let result = processor.evaluate(&request).unwrap();
+
+        assert_eq!(result.operator, "essence -> shine -> reflection");
+        assert_eq!(result.graph.node_count(), graph.node_count());
+        assert_eq!(
+            result.graph.relationship_count(),
+            graph.relationship_count()
+        );
+
+        assert_eq!(result.proof["steps"][0]["proof"]["kind"], "essence");
+        assert_eq!(result.proof["steps"][0]["proof"]["essentiality"], true);
+
+        assert_eq!(result.proof["steps"][1]["proof"]["kind"], "shine");
+        assert_eq!(result.proof["steps"][1]["proof"]["presupposes"], "essence");
+        assert_eq!(result.proof["steps"][1]["proof"]["positedness"], true);
+        assert_eq!(
+            result.proof["steps"][1]["proof"]["anchors"]["hegel"],
+            "Essence→Shine"
+        );
+
+        assert_eq!(result.proof["final"]["proof"]["kind"], "reflection");
+        assert_eq!(result.proof["final"]["proof"]["presupposes"], "shine");
+        assert_eq!(result.proof["final"]["proof"]["citta"], true);
     }
 
     #[test]

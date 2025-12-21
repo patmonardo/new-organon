@@ -133,6 +133,162 @@ where
     }
 }
 
+/// First moment: Essence (essentiality / presupposed).
+///
+/// This operator does not transform the graph. It only emits a proof marker that
+/// later moments can presuppose.
+///
+/// Working convention:
+/// - “Essence” here is a kernel marker for presupposed essentiality: the minimal
+///   condition for any further form-shaping operations.
+#[derive(Debug, Default)]
+pub struct EssenceFormOperator;
+
+impl<S> FormOperator<S> for EssenceFormOperator
+where
+    S: Send + Sync + 'static,
+{
+    fn name(&self) -> &str {
+        "essence"
+    }
+
+    fn evaluate(
+        &self,
+        input: FormInput<'_, S>,
+        _context: &mut ExecutionContext,
+    ) -> Result<FormOperatorOutput<S>, FormError> {
+        Ok(FormOperatorOutput {
+            graph: input.base_graph,
+            proof: serde_json::json!({
+                "kind": "essence",
+                "essentiality": true
+            }),
+        })
+    }
+}
+
+/// Back-compat alias: `cit`.
+///
+/// We accept `morph.patterns = ["cit", ...]` to avoid breaking older programs,
+/// but emit the canonical proof marker `kind = "essence"`.
+#[derive(Debug, Default)]
+pub struct CitFormOperator;
+
+impl<S> FormOperator<S> for CitFormOperator
+where
+    S: Send + Sync + 'static,
+{
+    fn name(&self) -> &str {
+        "cit"
+    }
+
+    fn evaluate(
+        &self,
+        input: FormInput<'_, S>,
+        _context: &mut ExecutionContext,
+    ) -> Result<FormOperatorOutput<S>, FormError> {
+        Ok(FormOperatorOutput {
+            graph: input.base_graph,
+            proof: serde_json::json!({
+                "kind": "essence",
+                "essentiality": true,
+                "invoked_as": "cit"
+            }),
+        })
+    }
+}
+
+/// Second moment: Shine (positedness / Essence→Shine).
+///
+/// This operator is intentionally minimal today: it does not change the base graph.
+/// Instead, it **re-marks** the immediate content as positedness (Essence→Shine),
+/// emitting a proof marker that can be composed into later Reflection operators.
+///
+/// Philosophical anchors (conventions, not enforcement):
+/// - Hegel: Essence → Shine (Schein)
+/// - Yoga: YS IV.3 “nirmāṇa-cittāni asmitā-mātra” (constructed minds as mere I-am-ness)
+#[derive(Debug, Default)]
+pub struct ShineFormOperator;
+
+impl<S> FormOperator<S> for ShineFormOperator
+where
+    S: Send + Sync + 'static,
+{
+    fn name(&self) -> &str {
+        "shine"
+    }
+
+    fn evaluate(
+        &self,
+        input: FormInput<'_, S>,
+        _context: &mut ExecutionContext,
+    ) -> Result<FormOperatorOutput<S>, FormError> {
+        let mut shape_rules = serde_json::Map::new();
+        for (k, v) in input.program.shape.validation_rules.iter() {
+            shape_rules.insert(k.clone(), serde_json::json!(v));
+        }
+
+        Ok(FormOperatorOutput {
+            graph: input.base_graph,
+            proof: serde_json::json!({
+                "kind": "shine",
+                "presupposes": "essence",
+                "positedness": true,
+                "anchors": {
+                    "hegel": "Essence→Shine",
+                    "yoga": "YS IV.3 nirmāṇa-cittāni asmitā-mātra"
+                },
+                "program": {
+                    "shape": {
+                        "validation_rules": shape_rules
+                    }
+                }
+            }),
+        })
+    }
+}
+
+/// Third moment: Reflection (determination of reflection; reflective consciousness / citta).
+///
+/// Today this is a proof marker only: it does not alter the base graph.
+#[derive(Debug, Default)]
+pub struct ReflectionFormOperator;
+
+impl<S> FormOperator<S> for ReflectionFormOperator
+where
+    S: Send + Sync + 'static,
+{
+    fn name(&self) -> &str {
+        "reflection"
+    }
+
+    fn evaluate(
+        &self,
+        input: FormInput<'_, S>,
+        _context: &mut ExecutionContext,
+    ) -> Result<FormOperatorOutput<S>, FormError> {
+        Ok(FormOperatorOutput {
+            graph: input.base_graph,
+            proof: serde_json::json!({
+                "kind": "reflection",
+                "presupposes": "shine",
+                "citta": true,
+                "anchors": {
+                    "hegel": "Shine→Reflection"
+                },
+                "program": {
+                    "context": {
+                        "dependencies": input.program.context.dependencies,
+                        "execution_order": input.program.context.execution_order,
+                        "runtime_strategy": input.program.context.runtime_strategy,
+                        "conditions": input.program.context.conditions
+                    }
+                }
+            }),
+        })
+    }
+}
+
 /// Commits a selected subgraph into a new `DefaultGraphStore`.
 ///
 /// This is the “B” operator: it turns a problematic selection into a definite
