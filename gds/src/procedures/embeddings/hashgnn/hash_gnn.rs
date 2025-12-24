@@ -1,5 +1,5 @@
 use crate::collections::HugeObjectArray;
-use crate::concurrency::{Concurrency, TerminationFlag};
+use crate::concurrency::TerminationFlag;
 use crate::core::utils::paged::HugeAtomicBitSet;
 use crate::core::utils::partition::{DegreeFunction, DegreePartition, Partition, PartitionUtils};
 use crate::core::utils::progress::ProgressTracker;
@@ -26,7 +26,7 @@ pub struct MinAndArgmin {
 pub struct HashGNN {
     graph: Arc<dyn Graph>,
     parameters: HashGNNParameters,
-    progress_tracker: ProgressTracker,
+    _progress_tracker: ProgressTracker,
     termination_flag: TerminationFlag,
 }
 
@@ -40,7 +40,7 @@ impl HashGNN {
         Self {
             graph,
             parameters,
-            progress_tracker,
+            _progress_tracker: progress_tracker,
             termination_flag,
         }
     }
@@ -82,7 +82,7 @@ impl HashGNN {
         };
 
         // Construct input embeddings.
-        let (mut embeddings_b, mut current_total_feature_count) =
+        let (embeddings_b, mut current_total_feature_count) =
             self.construct_input_embeddings(&range_partitions, random_seed);
 
         let embedding_dimension = embeddings_b
@@ -225,6 +225,7 @@ impl HashGNN {
 mod tests {
     use super::*;
     use crate::core::utils::progress::{ProgressTracker, Tasks};
+    use crate::types::concurrency::Concurrency;
     use super::super::hash_gnn_parameters::GenerateFeaturesConfig;
     use crate::types::properties::node::DefaultLongNodePropertyValues;
     use crate::types::graph_store::DefaultGraphStore;

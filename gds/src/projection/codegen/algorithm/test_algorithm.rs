@@ -1,6 +1,5 @@
 //! Test PageRank using the new define_algorithm! macro
 
-use crate::define_algorithm;
 use std::time::Duration;
 
 // Define PageRank using the new macro

@@ -58,16 +58,16 @@ where
     /// Construct a PureForm processor with the standard Form operators registered.
     pub fn new() -> Self {
         let mut catalog = PureFormCatalog::new();
-        catalog.insert(PassThroughFormOperator::default());
+        catalog.insert(PassThroughFormOperator);
         // Canonical triad: essence → shine → reflection.
-        catalog.insert(EssenceFormOperator::default());
+        catalog.insert(EssenceFormOperator);
         // Back-compat alias for earlier programs.
-        catalog.insert(CitFormOperator::default());
-        catalog.insert(ShineFormOperator::default());
-        catalog.insert(ReflectionFormOperator::default());
-        catalog.insert(CommitSubgraphOperator::default());
-        catalog.insert(MaterializeNodePropertiesOperator::default());
-        catalog.insert(MaterializeRelationshipPropertiesOperator::default());
+        catalog.insert(CitFormOperator);
+        catalog.insert(ShineFormOperator);
+        catalog.insert(ReflectionFormOperator);
+        catalog.insert(CommitSubgraphOperator);
+        catalog.insert(MaterializeNodePropertiesOperator);
+        catalog.insert(MaterializeRelationshipPropertiesOperator);
 
         Self {
             catalog,
@@ -153,10 +153,7 @@ where
                 }));
 
                 current_graph = graph;
-                last_proof = step_proofs
-                    .last()
-                    .cloned()
-                    .unwrap_or_else(|| serde_json::json!(null));
+                last_proof = step_proofs.last().cloned().unwrap_or(serde_json::Value::Null);
             }
 
             Ok((current_graph, last_proof))

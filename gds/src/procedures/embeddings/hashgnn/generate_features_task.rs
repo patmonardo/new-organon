@@ -96,6 +96,7 @@ impl GenerateFeaturesTask {
         });
     }
 
+    #[allow(dead_code)]
     pub fn total_feature_count(&self) -> u64 {
         self.total_feature_count
     }

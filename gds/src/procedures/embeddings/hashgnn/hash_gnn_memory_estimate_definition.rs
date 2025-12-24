@@ -8,10 +8,12 @@ use super::hash_gnn_parameters::HashGNNParameters;
 use crate::mem::Estimate;
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct HashGNNMemoryEstimateDefinition {
     parameters: HashGNNParameters,
 }
 
+#[allow(dead_code)]
 impl HashGNNMemoryEstimateDefinition {
     pub fn new(parameters: HashGNNParameters) -> Self {
         Self { parameters }
