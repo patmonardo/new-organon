@@ -150,8 +150,31 @@ Put it in **Rust** if it’s:
 - graph algorithms
 - ML math kernels
 - memory layouts / big arrays
-- concurrency-heavy execution
+- concurrency-heavy execution- **GraphStore extraction and materialization** (from Postgres to DuckDB/Polars)
+- **GNN inference primitives** (constraint propagation, traversal, reachability)
 
+## GraphStore and GNN inference layer
+
+**New architectural component**: See `gds/doc/GNN-GRAPHSTORE-INFERENCE-LAYER.md` for full details.
+
+**In brief**:
+- **Postgres** stores SDSL instances (Prisma models = operational store).
+- **GDS (Rust)** extracts GraphStores (in-memory, columnar, read-only analytic views).
+- **GraphStores** live in DuckDB (SQL-queryable) or Polars/Arrow (zero-copy columnar).
+- **GNN inference engine** (Rust traits) propagates constraints across domain boundaries.
+- **GDSL (TS)** provides typed facade for Agent consumption, emitting GDSL operations.
+
+**Boundary rules**:
+- GDS builds and queries GraphStores (read-only, no Postgres mutation).
+- Agents (TS) request inferences via GDSL facade.
+- Results return as GDSL IR, persisted through Prisma if validated.
+- LLMs propose, GNN verifies, Agent executes.
+
+**Why this split**:
+- Postgres = transactional (OLTP), row-oriented.
+- GraphStores = analytic (OLAP), column-oriented, optimized for traversal.
+- Rust handles extraction, zero-copy Arrow, and graph algorithms.
+- TS handles orchestration, schema, and user-facing types.
 ## Non-goals
 
 - We are not trying to make Rust the only source of truth for “language.”

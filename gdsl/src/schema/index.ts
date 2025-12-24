@@ -1,6 +1,7 @@
 export * from './gds.application';
 export * from './gds.tsjson';
 export * from './gds.form-eval';
+export * from './gds.form-eval.result';
 export * from './gds.common';
 export * from './gds.graph-store';
 

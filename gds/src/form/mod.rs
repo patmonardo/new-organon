@@ -6,3 +6,7 @@
 pub mod program;
 
 pub use program::*;
+
+// Inference APIs live under form now
+pub mod inference;
+pub use inference::*;
