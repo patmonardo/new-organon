@@ -4,6 +4,7 @@ import { GdsFormEvalCallSchema } from './gds.form-eval';
 import { GdsGraphStoreCallSchema } from './gds.graph-store';
 import {
 	GdsDatabaseIdSchema,
+	GdsApplicationFormKindSchema,
 	GdsGraphNameSchema,
 	GdsUserSchema,
 } from './gds.common';
@@ -25,6 +26,7 @@ export type GdsGraphStoreCatalogFacade = z.infer<
 >;
 
 const GraphStoreCatalogBase = z.object({
+	kind: GdsApplicationFormKindSchema.optional(),
 	facade: GdsGraphStoreCatalogFacadeSchema,
 	user: GdsUserSchema,
 	databaseId: GdsDatabaseIdSchema,

@@ -1,11 +1,12 @@
 import { z } from 'zod';
 
-import { GdsDatabaseIdSchema, GdsGraphNameSchema, GdsUserSchema } from './gds.common';
+import { GdsApplicationFormKindSchema, GdsDatabaseIdSchema, GdsGraphNameSchema, GdsUserSchema } from './gds.common';
 
 export const GdsGraphStoreFacadeSchema = z.literal('graph_store');
 export type GdsGraphStoreFacade = z.infer<typeof GdsGraphStoreFacadeSchema>;
 
 const GraphStoreBase = z.object({
+	kind: GdsApplicationFormKindSchema.optional(),
 	facade: GdsGraphStoreFacadeSchema,
 	user: GdsUserSchema,
 	databaseId: GdsDatabaseIdSchema,

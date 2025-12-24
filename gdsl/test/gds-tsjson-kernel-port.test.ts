@@ -13,7 +13,7 @@ describe('GdsTsjsonKernelPort', () => {
 		const port = new GdsTsjsonKernelPort(invoke);
 		const request: KernelRunRequest = {
 			model: { id: 'gds.graph_store_catalog.list_graphs' },
-			input: { user: { username: 'alice', isAdmin: true }, databaseId: 'db1' },
+			input: { kind: 'ApplicationForm', user: { username: 'alice', isAdmin: true }, databaseId: 'db1' },
 		};
 
 		const result = await port.run(request);
@@ -21,6 +21,7 @@ describe('GdsTsjsonKernelPort', () => {
 		expect(invocations).toHaveLength(1);
 
 		const call = invocations[0] as any;
+		expect(call.kind).toBe('ApplicationForm');
 		expect(call.facade).toBe('graph_store_catalog');
 		expect(call.op).toBe('list_graphs');
 		expect(call.user.username).toBe('alice');

@@ -667,4 +667,54 @@ mod tests {
 
         let _ = GraphCatalog::drop(TSJSON_CATALOG.as_ref(), &["graph_stash_put"], false);
     }
+
+    #[test]
+    fn invoke_accepts_application_form_kind_marker() {
+        // This test demonstrates the "wire" ApplicationForm marker:
+        // - Client ENC: includes kind="ApplicationForm"
+        // - Kernel DEC: ignores the marker for routing, but still executes correctly
+        // - Kernel ENC: returns standard TS-JSON envelope
+        let put_request = serde_json::json!({
+            "kind": "ApplicationForm",
+            "facade": "graph_store",
+            "op": "put",
+            "user": { "username": "alice", "isAdmin": true },
+            "databaseId": "db1",
+            "graphName": "graph_kind_marker",
+            "snapshot": {
+                "nodes": [0, 1],
+                "relationships": [
+                    { "type": "KNOWS", "source": 0, "target": 1 }
+                ]
+            }
+        });
+
+        let put_json = invoke(put_request.to_string()).unwrap();
+        let put_response: serde_json::Value = serde_json::from_str(&put_json).unwrap();
+        assert_eq!(put_response.get("ok").and_then(|v| v.as_bool()), Some(true));
+        assert_eq!(put_response.get("op").and_then(|v| v.as_str()), Some("put"));
+
+        let list_request = serde_json::json!({
+            "kind": "ApplicationForm",
+            "facade": "graph_store_catalog",
+            "op": "list_graphs",
+            "user": { "username": "alice", "isAdmin": true },
+            "databaseId": "db1"
+        });
+
+        let list_json = invoke(list_request.to_string()).unwrap();
+        let list_response: serde_json::Value = serde_json::from_str(&list_json).unwrap();
+        assert_eq!(list_response.get("ok").and_then(|v| v.as_bool()), Some(true));
+
+        let entries = list_response
+            .get("data")
+            .and_then(|v| v.get("entries"))
+            .and_then(|v| v.as_array())
+            .unwrap();
+        assert!(entries
+            .iter()
+            .any(|e| e.get("name").and_then(|v| v.as_str()) == Some("graph_kind_marker")));
+
+        let _ = GraphCatalog::drop(TSJSON_CATALOG.as_ref(), &["graph_kind_marker"], false);
+    }
 }

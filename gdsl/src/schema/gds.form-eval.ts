@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import {
+	GdsApplicationFormKindSchema,
 	GdsDatabaseIdSchema,
 	GdsGraphNameSchema,
 	GdsUserSchema,
@@ -77,6 +78,7 @@ export const GdsFormProgramSchema = z
 export type GdsFormProgram = z.infer<typeof GdsFormProgramSchema>;
 
 const FormEvalBase = z.object({
+	kind: GdsApplicationFormKindSchema.optional(),
 	facade: GdsFormEvalFacadeSchema,
 	user: GdsUserSchema,
 	databaseId: GdsDatabaseIdSchema,
