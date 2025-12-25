@@ -54,7 +54,7 @@ pub struct GraphStreamRelationshipPropertyResult {
     pub source_node_id: i64,
     pub target_node_id: i64,
     pub relationship_type: String,
-    pub property_value: f64,
+    pub property_value: Value,
 }
 
 impl GraphStreamRelationshipPropertyResult {
@@ -62,7 +62,7 @@ impl GraphStreamRelationshipPropertyResult {
         source_node_id: i64,
         target_node_id: i64,
         relationship_type: String,
-        property_value: f64,
+        property_value: Value,
     ) -> Self {
         Self {
             source_node_id,
@@ -81,7 +81,7 @@ pub struct GraphStreamRelationshipPropertiesResult {
     pub target_node_id: i64,
     pub relationship_type: String,
     pub relationship_property: String,
-    pub property_value: f64,
+    pub property_value: Value,
 }
 
 impl GraphStreamRelationshipPropertiesResult {
@@ -90,7 +90,7 @@ impl GraphStreamRelationshipPropertiesResult {
         target_node_id: i64,
         relationship_type: String,
         relationship_property: String,
-        property_value: f64,
+        property_value: Value,
     ) -> Self {
         Self {
             source_node_id,

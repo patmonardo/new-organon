@@ -1,10 +1,7 @@
 use super::*;
 use crate::applications::services::logging::Log;
-use crate::core::User;
-use crate::types::graph_store::{DatabaseId, DefaultGraphStore};
-use crate::types::random::{RandomGraphConfig, Randomizable};
-use rand::rngs::StdRng;
-use rand::SeedableRng;
+use crate::types::catalog::{GraphCatalog, InMemoryGraphCatalog};
+use std::sync::Arc;
 
 use crate::applications::graph_store_catalog::applications::*;
 use crate::applications::graph_store_catalog::loaders::GraphStoreCatalogService;
@@ -18,7 +15,7 @@ use crate::applications::graph_store_catalog::services::progress_tracker_factory
 /// Implements the builder pattern for constructing the facade with all dependencies.
 pub struct DefaultGraphCatalogApplicationsBuilder {
     pub log: Log,
-    pub graph_store_catalog_service: Box<dyn GraphStoreCatalogService>,
+    pub graph_store_catalog_service: Arc<dyn GraphStoreCatalogService>,
     pub graph_memory_usage_application: GraphMemoryUsageApplication,
     pub drop_graph_application: DropGraphApplication,
     pub drop_node_properties_application: DropNodePropertiesApplication,
@@ -43,15 +40,18 @@ pub struct DefaultGraphCatalogApplicationsBuilder {
 impl DefaultGraphCatalogApplicationsBuilder {
     /// Creates a new builder with default values.
     pub fn new(log: Log) -> Self {
+        // Default substrate: in-memory catalog
+        let catalog: Arc<dyn GraphCatalog> = Arc::new(InMemoryGraphCatalog::new());
+        let graph_store_catalog_service: Arc<dyn GraphStoreCatalogService> =
+            Arc::new(CatalogBackedGraphStoreCatalogService::new(catalog.clone()));
+
         Self {
             log: log.clone(),
-            graph_store_catalog_service: Box::new(DefaultGraphStoreCatalogService::new()),
-            graph_memory_usage_application: GraphMemoryUsageApplication::new(Box::new(
-                DefaultGraphStoreCatalogService::new(),
-            )),
-            drop_graph_application: DropGraphApplication::new(Box::new(
-                DefaultGraphStoreCatalogService::new(),
-            )),
+            graph_store_catalog_service: graph_store_catalog_service.clone(),
+            graph_memory_usage_application: GraphMemoryUsageApplication::new(
+                graph_store_catalog_service.clone(),
+            ),
+            drop_graph_application: DropGraphApplication::new(graph_store_catalog_service.clone()),
             drop_node_properties_application: DropNodePropertiesApplication::new(log.clone()),
             drop_relationships_application: DropRelationshipsApplication::new(log.clone()),
             stream_node_properties_application: StreamNodePropertiesApplication,
@@ -75,9 +75,11 @@ impl DefaultGraphCatalogApplicationsBuilder {
     /// Sets the graph store catalog service.
     pub fn with_graph_store_catalog_service(
         mut self,
-        service: Box<dyn GraphStoreCatalogService>,
+        service: Arc<dyn GraphStoreCatalogService>,
     ) -> Self {
-        self.graph_store_catalog_service = service;
+        self.graph_store_catalog_service = service.clone();
+        self.graph_memory_usage_application = GraphMemoryUsageApplication::new(service.clone());
+        self.drop_graph_application = DropGraphApplication::new(service.clone());
         self
     }
 
@@ -99,31 +101,24 @@ impl DefaultGraphCatalogApplicationsBuilder {
     }
 }
 
-/// Default implementation of GraphStoreCatalogService for the builder.
-#[derive(Clone, Debug)]
-struct DefaultGraphStoreCatalogService;
+/// Minimal GraphStoreCatalogService backed by a `types::catalog::GraphCatalog`.
+#[derive(Clone)]
+pub struct CatalogBackedGraphStoreCatalogService {
+    catalog: Arc<dyn GraphCatalog>,
+}
 
-impl DefaultGraphStoreCatalogService {
-    fn new() -> Self {
-        Self
+impl CatalogBackedGraphStoreCatalogService {
+    pub fn new(catalog: Arc<dyn GraphCatalog>) -> Self {
+        Self { catalog }
     }
 }
 
-impl GraphStoreCatalogService for DefaultGraphStoreCatalogService {
-    fn get_graph_store(
+impl GraphStoreCatalogService for CatalogBackedGraphStoreCatalogService {
+    fn graph_catalog(
         &self,
-        _user: &dyn User,
-        database_id: &DatabaseId,
-        graph_name: &str,
-    ) -> DefaultGraphStore {
-        let config = RandomGraphConfig {
-            graph_name: graph_name.to_string(),
-            database_name: database_id.to_string(),
-            ..Default::default()
-        };
-
-        let mut rng = StdRng::seed_from_u64(0);
-        DefaultGraphStore::random_with_rng(&config, &mut rng)
-            .expect("default graph store generation should succeed")
+        _user: &dyn crate::core::User,
+        _database_id: &crate::types::graph_store::DatabaseId,
+    ) -> Arc<dyn GraphCatalog> {
+        self.catalog.clone()
     }
 }

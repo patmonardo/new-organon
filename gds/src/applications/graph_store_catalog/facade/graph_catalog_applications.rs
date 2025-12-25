@@ -1,16 +1,28 @@
-use crate::applications::graph_store_catalog::results::GraphMemoryUsage;
+use crate::applications::graph_store_catalog::results::{
+    GraphMemoryUsage, GraphStreamNodePropertiesResult, GraphStreamRelationshipPropertiesResult,
+    TopologyResult,
+};
 use crate::core::User;
 use crate::types::graph_store::DatabaseId;
 use crate::types::graph_store::DeletionResult;
+use std::collections::HashMap;
 
 /// Main trait interface for GraphStore catalog operations.
 ///
 /// Mirrors Java GraphCatalogApplications interface.
 /// This is the primary facade that GDSL will consume - the TS Application Facade Consumer interface!
 pub trait GraphCatalogApplications {
+    /// Checks whether a named graph exists (in the catalog scope for this user/database).
+    fn graph_exists(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str) -> bool;
+
     /// Lists all graphs in the catalog.
-    fn list_graphs(&self, user: &dyn User, database_id: &DatabaseId)
-        -> Vec<GraphStoreCatalogEntry>;
+    fn list_graphs(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: Option<&str>,
+        include_degree_distribution: bool,
+    ) -> Vec<GraphStoreCatalogEntry>;
 
     /// Gets memory usage for a specific graph.
     fn graph_memory_usage(
@@ -64,7 +76,9 @@ pub trait GraphCatalogApplications {
         database_id: &DatabaseId,
         graph_name: &str,
         node_properties: &[String],
-    ) -> Result<Vec<NodePropertyResult>, String>;
+        node_labels: &[String],
+        list_node_labels: bool,
+    ) -> Result<Vec<GraphStreamNodePropertiesResult>, String>;
 
     /// Streams relationship properties from a graph.
     fn stream_relationship_properties(
@@ -73,7 +87,8 @@ pub trait GraphCatalogApplications {
         database_id: &DatabaseId,
         graph_name: &str,
         relationship_properties: &[String],
-    ) -> Result<Vec<RelationshipPropertyResult>, String>;
+        relationship_types: &[String],
+    ) -> Result<Vec<GraphStreamRelationshipPropertiesResult>, String>;
 
     /// Streams relationships from a graph.
     fn stream_relationships(
@@ -82,7 +97,7 @@ pub trait GraphCatalogApplications {
         database_id: &DatabaseId,
         graph_name: &str,
         relationship_types: &[String],
-    ) -> Result<Vec<RelationshipResult>, String>;
+    ) -> Result<Vec<TopologyResult>, String>;
 
     /// Writes node properties to the database.
     fn write_node_properties(
@@ -174,42 +189,8 @@ pub trait GraphCatalogApplications {
 
 /// Placeholder result types for the facade operations
 
-#[derive(Clone, Debug)]
-pub struct NodePropertyResult {
-    node_id: u64,
-    property_name: String,
-    property_value: serde_json::Value,
-    node_labels: Vec<String>,
-}
-
-impl NodePropertyResult {
-    pub fn new(
-        node_id: u64,
-        property_name: String,
-        property_value: serde_json::Value,
-        node_labels: Vec<String>,
-    ) -> Self {
-        Self {
-            node_id,
-            property_name,
-            property_value,
-            node_labels,
-        }
-    }
-
-    pub fn node_id(&self) -> u64 {
-        self.node_id
-    }
-    pub fn property_name(&self) -> &str {
-        &self.property_name
-    }
-    pub fn property_value(&self) -> &serde_json::Value {
-        &self.property_value
-    }
-    pub fn node_labels(&self) -> &[String] {
-        &self.node_labels
-    }
-}
+// Node property streaming uses `GraphStreamNodePropertiesResult` (Java parity)
+// from `results::stream_results`.
 
 #[derive(Clone, Debug)]
 pub struct RelationshipPropertyResult {
@@ -254,32 +235,7 @@ impl RelationshipPropertyResult {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct RelationshipResult {
-    source_id: u64,
-    target_id: u64,
-    relationship_type: String,
-}
-
-impl RelationshipResult {
-    pub fn new(source_id: u64, target_id: u64, relationship_type: String) -> Self {
-        Self {
-            source_id,
-            target_id,
-            relationship_type,
-        }
-    }
-
-    pub fn source_id(&self) -> u64 {
-        self.source_id
-    }
-    pub fn target_id(&self) -> u64 {
-        self.target_id
-    }
-    pub fn relationship_type(&self) -> &str {
-        &self.relationship_type
-    }
-}
+// Relationship streaming uses `TopologyResult` (Java parity) from `results::other_results`.
 
 #[derive(Clone, Debug)]
 pub struct WriteResult {
@@ -456,11 +412,70 @@ impl SamplingResult {
     }
 }
 
-// Placeholder configuration types
+// -----------------------------------------------------------------------------
+// Projection config types (minimal Java-parity shape)
+// -----------------------------------------------------------------------------
+//
+// Java parity note:
+// - Java uses `GraphProjectConfig` subtypes (e.g. GraphProjectFromStoreConfig / FromCypherConfig)
+//   that carry a rich set of fields (projections, filters, concurrency, jobId, etc.).
+// - In Rust we keep pass-1 configs intentionally small and stable for TS-JSON transport:
+//   they identify the output graph name, and optionally a source graph to clone from
+//   (catalog-backed projection), with room for future expansion.
+//
+// This matches the "Projection/Factory is the real interface" approach: we can
+// later swap the implementation to a real native factory (Arrow/Polars/etc.) without
+// changing the TS boundary.
+
 #[derive(Clone, Debug)]
-pub struct NativeProjectionConfig;
+pub struct NativeProjectionConfig {
+    /// Name of the projected graph to store in the catalog.
+    pub graph_name: String,
+    /// Optional source graph in the catalog; when present we project by cloning/filtering it.
+    pub source_graph_name: Option<String>,
+    /// Optional node label filter (Java parity: ElementProjection.PROJECT_ALL == "*").
+    /// - empty => all node labels
+    /// - contains "*" => all node labels
+    ///
+    /// Pass-1 note: we validate these labels against the source store schema, but do not
+    /// physically drop nodes yet (that requires a proper filtered IdMap / projection build).
+    pub node_labels: Vec<String>,
+    /// Optional node property filter (Java parity: "*" means PROJECT_ALL).
+    /// - empty => keep all node properties
+    /// - contains "*" => keep all node properties
+    pub node_properties: Vec<String>,
+    /// Optional relationship type filter (Java parity: ElementProjection.PROJECT_ALL == "*").
+    /// - empty => all relationship types
+    /// - contains "*" => all relationship types
+    pub relationship_types: Vec<String>,
+    /// Optional relationship property filter (Java parity: "*" means PROJECT_ALL).
+    /// - empty => keep all relationship properties
+    /// - contains "*" => keep all relationship properties
+    pub relationship_properties: Vec<String>,
+    /// Per-relationship-type property selector map.
+    ///
+    /// Java parity: this corresponds to “relationship projections” choosing a property key.
+    /// If present, Projection/Factory will keep these keys and algorithms can use them
+    /// to select relationship weights without additional knobs.
+    pub relationship_property_selectors: HashMap<String, String>,
+    /// Optional “default weight property” to use when a per-type selector is not specified.
+    pub weight_property: Option<String>,
+    /// If true, allow generating a small fictitious graph when no source is provided.
+    pub fictitious_loading: bool,
+}
+
 #[derive(Clone, Debug)]
-pub struct GenericProjectionConfig;
+pub struct GenericProjectionConfig {
+    pub graph_name: String,
+    pub source_graph_name: Option<String>,
+    pub node_labels: Vec<String>,
+    pub node_properties: Vec<String>,
+    pub relationship_types: Vec<String>,
+    pub relationship_properties: Vec<String>,
+    pub relationship_property_selectors: HashMap<String, String>,
+    pub weight_property: Option<String>,
+    pub fictitious_loading: bool,
+}
 #[derive(Clone, Debug)]
 pub struct GraphGenerationConfig;
 #[derive(Clone, Debug)]
@@ -471,14 +486,21 @@ pub struct GraphStoreCatalogEntry {
     graph_name: String,
     node_count: u64,
     relationship_count: u64,
+    degree_distribution: Option<HashMap<u32, u64>>,
 }
 
 impl GraphStoreCatalogEntry {
-    pub fn new(graph_name: String, node_count: u64, relationship_count: u64) -> Self {
+    pub fn new(
+        graph_name: String,
+        node_count: u64,
+        relationship_count: u64,
+        degree_distribution: Option<HashMap<u32, u64>>,
+    ) -> Self {
         Self {
             graph_name,
             node_count,
             relationship_count,
+            degree_distribution,
         }
     }
 
@@ -492,5 +514,9 @@ impl GraphStoreCatalogEntry {
 
     pub fn relationship_count(&self) -> u64 {
         self.relationship_count
+    }
+
+    pub fn degree_distribution(&self) -> Option<&HashMap<u32, u64>> {
+        self.degree_distribution.as_ref()
     }
 }

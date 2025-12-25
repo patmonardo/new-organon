@@ -2,6 +2,8 @@ use super::*;
 use crate::applications::services::logging::Log;
 use crate::core::User;
 use crate::types::graph_store::{DatabaseId, DeletionResult};
+use crate::applications::graph_store_catalog::services::GraphListingService;
+use std::sync::Arc;
 
 use crate::applications::graph_store_catalog::applications::{
     DropGraphApplication, DropNodePropertiesApplication, DropRelationshipsApplication,
@@ -25,7 +27,8 @@ use crate::applications::graph_store_catalog::services::progress_tracker_factory
 #[allow(dead_code)]
 pub struct DefaultGraphCatalogApplications {
     log: Log,
-    graph_store_catalog_service: Box<dyn GraphStoreCatalogService>,
+    graph_store_catalog_service: Arc<dyn GraphStoreCatalogService>,
+    graph_listing_service: GraphListingService,
     graph_memory_usage_application: GraphMemoryUsageApplication,
     drop_graph_application: DropGraphApplication,
     drop_node_properties_application: DropNodePropertiesApplication,
@@ -50,9 +53,12 @@ pub struct DefaultGraphCatalogApplications {
 impl DefaultGraphCatalogApplications {
     /// Creates a new DefaultGraphCatalogApplications using the builder pattern.
     pub fn new(builder: DefaultGraphCatalogApplicationsBuilder) -> Self {
+        let graph_listing_service =
+            GraphListingService::new(builder.graph_store_catalog_service.clone());
         Self {
             log: builder.log,
             graph_store_catalog_service: builder.graph_store_catalog_service,
+            graph_listing_service,
             graph_memory_usage_application: builder.graph_memory_usage_application,
             drop_graph_application: builder.drop_graph_application,
             drop_node_properties_application: builder.drop_node_properties_application,
@@ -79,13 +85,20 @@ impl DefaultGraphCatalogApplications {
 }
 
 impl GraphCatalogApplications for DefaultGraphCatalogApplications {
+    fn graph_exists(&self, user: &dyn User, database_id: &DatabaseId, graph_name: &str) -> bool {
+        let catalog = self.graph_store_catalog_service.graph_catalog(user, database_id);
+        catalog.get(graph_name).is_some()
+    }
+
     fn list_graphs(
         &self,
-        _user: &dyn User,
-        _database_id: &DatabaseId,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: Option<&str>,
+        include_degree_distribution: bool,
     ) -> Vec<GraphStoreCatalogEntry> {
-        // In Java, this would use GraphListingService
-        vec![] // Placeholder
+        self.graph_listing_service
+            .list_graphs(user, database_id, graph_name, include_degree_distribution)
     }
 
     fn graph_memory_usage(
@@ -138,16 +151,16 @@ impl GraphCatalogApplications for DefaultGraphCatalogApplications {
         _fail_if_missing: bool,
     ) -> Result<u64, String> {
         // Get graph store from catalog
-        let graph_store =
-            self.graph_store_catalog_service
-                .get_graph_store(user, database_id, graph_name);
+        let graph_store = self
+            .graph_store_catalog_service
+            .get_graph_store(user, database_id, graph_name)?;
 
         // Use the drop application
         Ok(self.drop_node_properties_application.compute(
             &self.task_registry_factory,
             &self.user_log_registry_factory,
             node_properties,
-            &graph_store,
+            graph_store.as_ref(),
         ))
     }
 
@@ -159,50 +172,126 @@ impl GraphCatalogApplications for DefaultGraphCatalogApplications {
         relationship_type: &str,
     ) -> Result<DeletionResult, String> {
         // Get graph store from catalog
-        let graph_store =
-            self.graph_store_catalog_service
-                .get_graph_store(user, database_id, graph_name);
+        let graph_store = self
+            .graph_store_catalog_service
+            .get_graph_store(user, database_id, graph_name)?;
 
         // Use the drop application
         Ok(self.drop_relationships_application.compute(
             &self.task_registry_factory,
             &self.user_log_registry_factory,
-            &graph_store,
+            graph_store.as_ref(),
             relationship_type,
         ))
     }
 
     fn stream_node_properties(
         &self,
-        _user: &dyn User,
-        _database_id: &DatabaseId,
-        _graph_name: &str,
-        _node_properties: &[String],
-    ) -> Result<Vec<NodePropertyResult>, String> {
-        // Placeholder implementation
-        Ok(vec![])
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: &str,
+        node_properties: &[String],
+        node_labels: &[String],
+        list_node_labels: bool,
+    ) -> Result<Vec<crate::applications::graph_store_catalog::results::GraphStreamNodePropertiesResult>, String> {
+        let graph_store = self
+            .graph_store_catalog_service
+            .get_graph_store(user, database_id, graph_name)?;
+
+        // Java parity: ElementProjection.PROJECT_ALL is "*" and means "all labels".
+        // We treat "*" as wildcard by passing an empty filter down to the application.
+        let want_labels: Vec<crate::projection::NodeLabel> = if node_labels.iter().any(|s| s.trim() == "*") {
+            Vec::new()
+        } else {
+            node_labels
+                .iter()
+                .filter_map(|s| {
+                    let t = s.trim();
+                    if t.is_empty() {
+                        None
+                    } else {
+                        Some(crate::projection::NodeLabel::of(t))
+                    }
+                })
+                .collect()
+        };
+
+        self.stream_node_properties_application.compute(
+            graph_store.as_ref(),
+            node_properties,
+            &want_labels,
+            list_node_labels,
+        )
     }
 
     fn stream_relationship_properties(
         &self,
-        _user: &dyn User,
-        _database_id: &DatabaseId,
-        _graph_name: &str,
-        _relationship_properties: &[String],
-    ) -> Result<Vec<RelationshipPropertyResult>, String> {
-        // Placeholder implementation
-        Ok(vec![])
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: &str,
+        relationship_properties: &[String],
+        relationship_types: &[String],
+    ) -> Result<
+        Vec<crate::applications::graph_store_catalog::results::GraphStreamRelationshipPropertiesResult>,
+        String,
+    > {
+        let graph_store = self
+            .graph_store_catalog_service
+            .get_graph_store(user, database_id, graph_name)?;
+
+        // Java parity: ElementProjection.PROJECT_ALL is "*" and means "all relationship types".
+        // We treat "*" as wildcard by passing an empty filter down to the application.
+        let want_types: Vec<crate::projection::RelationshipType> = if relationship_types.iter().any(|s| s.trim() == "*") {
+            Vec::new()
+        } else {
+            relationship_types
+                .iter()
+                .filter_map(|s| {
+                    let t = s.trim();
+                    if t.is_empty() {
+                        None
+                    } else {
+                        Some(crate::projection::RelationshipType::of(t))
+                    }
+                })
+                .collect()
+        };
+
+        // If `relationship_types` is empty, the application defaults to "all types in store".
+        self.stream_relationship_properties_application
+            .compute(graph_store.as_ref(), relationship_properties, &want_types)
     }
 
     fn stream_relationships(
         &self,
-        _user: &dyn User,
-        _database_id: &DatabaseId,
-        _graph_name: &str,
-        _relationship_types: &[String],
-    ) -> Result<Vec<RelationshipResult>, String> {
-        // Placeholder implementation
-        Ok(vec![])
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: &str,
+        relationship_types: &[String],
+    ) -> Result<Vec<crate::applications::graph_store_catalog::results::TopologyResult>, String> {
+        let graph_store = self
+            .graph_store_catalog_service
+            .get_graph_store(user, database_id, graph_name)?;
+
+        // Java parity: ElementProjection.PROJECT_ALL is "*" and means "all relationship types".
+        let want_types: Vec<crate::projection::RelationshipType> = if relationship_types.iter().any(|s| s.trim() == "*") {
+            Vec::new()
+        } else {
+            relationship_types
+                .iter()
+                .filter_map(|s| {
+                    let t = s.trim();
+                    if t.is_empty() {
+                        None
+                    } else {
+                        Some(crate::projection::RelationshipType::of(t))
+                    }
+                })
+                .collect()
+        };
+
+        self.stream_relationships_application
+            .compute(graph_store.as_ref(), &want_types)
     }
 
     fn write_node_properties(
@@ -277,32 +366,30 @@ impl GraphCatalogApplications for DefaultGraphCatalogApplications {
 
     fn project_native(
         &self,
-        _user: &dyn User,
-        _database_id: &DatabaseId,
-        _projection_config: &NativeProjectionConfig,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        projection_config: &NativeProjectionConfig,
     ) -> Result<ProjectionResult, String> {
-        // Placeholder implementation
-        Ok(ProjectionResult::new(
-            "projected_graph".to_string(),
-            1000,
-            5000,
-            100,
-        ))
+        self.native_project_application.project(
+            self.graph_store_catalog_service.clone(),
+            user,
+            database_id,
+            projection_config,
+        )
     }
 
     fn project_generic(
         &self,
-        _user: &dyn User,
-        _database_id: &DatabaseId,
-        _projection_config: &GenericProjectionConfig,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        projection_config: &GenericProjectionConfig,
     ) -> Result<ProjectionResult, String> {
-        // Placeholder implementation
-        Ok(ProjectionResult::new(
-            "projected_graph".to_string(),
-            1000,
-            5000,
-            150,
-        ))
+        self.generic_project_application.project(
+            self.graph_store_catalog_service.clone(),
+            user,
+            database_id,
+            projection_config,
+        )
     }
 
     fn generate_graph(

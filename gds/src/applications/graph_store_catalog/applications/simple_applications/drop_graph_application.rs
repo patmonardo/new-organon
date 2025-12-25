@@ -1,20 +1,23 @@
 use super::super::super::facade::GraphStoreCatalogEntry;
 use super::super::super::loaders::GraphStoreCatalogService;
 use crate::core::User;
+use crate::types::catalog::GraphCatalog;
+use crate::types::graph_store::DatabaseId;
+use std::sync::Arc;
 
 /// Application for dropping graphs from the catalog.
 ///
 /// Mirrors Java DropGraphApplication class.
 /// Contains graph dropping logic with validation and error handling.
 pub struct DropGraphApplication {
-    _graph_store_catalog_service: Box<dyn GraphStoreCatalogService>,
+    graph_store_catalog_service: Arc<dyn GraphStoreCatalogService>,
 }
 
 impl DropGraphApplication {
     /// Creates a new DropGraphApplication.
-    pub fn new(graph_store_catalog_service: Box<dyn GraphStoreCatalogService>) -> Self {
+    pub fn new(graph_store_catalog_service: Arc<dyn GraphStoreCatalogService>) -> Self {
         Self {
-            _graph_store_catalog_service: graph_store_catalog_service,
+            graph_store_catalog_service,
         }
     }
 
@@ -26,20 +29,23 @@ impl DropGraphApplication {
         &self,
         graph_names: &[String],
         should_fail_if_missing: bool,
-        _database_id: &crate::types::graph_store::DatabaseId,
-        _operator: &dyn User,
+        database_id: &DatabaseId,
+        operator: &dyn User,
         username_override: Option<&str>,
     ) -> Result<Vec<GraphStoreCatalogEntry>, String> {
-        if should_fail_if_missing {
-            // Placeholder behavior: we don't have a real catalog backing store yet,
-            // so we can't actually check existence.
-        }
-
         let _username_override = username_override;
 
-        Ok(graph_names
-            .iter()
-            .map(|graph_name| GraphStoreCatalogEntry::new(graph_name.clone(), 0, 0))
+        let catalog = self
+            .graph_store_catalog_service
+            .graph_catalog(operator, database_id);
+        let refs: Vec<&str> = graph_names.iter().map(|s| s.as_str()).collect();
+
+        let dropped = GraphCatalog::drop(catalog.as_ref(), &refs, should_fail_if_missing)
+            .map_err(|e| e.to_string())?;
+
+        Ok(dropped
+            .into_iter()
+            .map(|d| GraphStoreCatalogEntry::new(d.name, d.node_count, d.relationship_count, None))
             .collect())
     }
 }

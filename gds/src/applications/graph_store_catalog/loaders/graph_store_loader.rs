@@ -29,13 +29,35 @@ pub trait ResultStore {
     fn is_empty(&self) -> bool;
 }
 
-/// Placeholder for GraphStoreCatalogService trait.
-/// In real implementation, this would be the actual catalog service.
-pub trait GraphStoreCatalogService {
+/// GraphStoreCatalogService
+///
+/// Minimal loader/service boundary for the GraphStore Catalog applications layer.
+/// This is the *application-facing* abstraction over the underlying `types::catalog::GraphCatalog`.
+///
+/// Notes:
+/// - This is intentionally small today: it just exposes the catalog substrate and a helper
+///   for resolving named `GraphStore`s.
+/// - As we port more of the Java GDS subsystem, this will grow (permissions, per-db catalogs, etc.).
+pub trait GraphStoreCatalogService: Send + Sync {
+    /// Returns the catalog substrate for a given user/database.
+    ///
+    /// For now this is typically a single in-memory catalog, but the signature keeps the door open
+    /// for per-user/per-db scoping later.
+    fn graph_catalog(
+        &self,
+        user: &dyn crate::core::User,
+        database_id: &crate::types::graph_store::DatabaseId,
+    ) -> std::sync::Arc<dyn crate::types::catalog::GraphCatalog>;
+
+    /// Resolve a named graph store from the catalog.
     fn get_graph_store(
         &self,
         user: &dyn crate::core::User,
         database_id: &crate::types::graph_store::DatabaseId,
         graph_name: &str,
-    ) -> crate::types::graph_store::DefaultGraphStore;
+    ) -> Result<std::sync::Arc<crate::types::graph_store::DefaultGraphStore>, String> {
+        self.graph_catalog(user, database_id)
+            .get(graph_name)
+            .ok_or_else(|| format!("Graph not found: {graph_name}"))
+    }
 }
