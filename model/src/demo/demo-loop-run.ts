@@ -9,23 +9,22 @@ import {
 } from '../sdsl/index';
 
 import {
-  DemoKernelPort,
-  seedDemoLoopFromTrace,
-  plannerTextToTawPlan,
   kernelRunRequestToTawActEvent,
   kernelRunResultToTawResultEvent,
   kernelRunToTraceEvents,
-  contextFromFactTrace,
   type FactTraceEvent,
   type KernelRunRequest,
   type KernelRunResult,
   type EventMeta,
+  DemoKernelPort,
 } from '@organon/gdsl';
 
 import type { TawKind, TawPayload } from '@organon/task';
 
 // NOTE: This demo runner intentionally imports the kernel/demo-loop primitives from
 // GDSL, not Model SDSL.
+import { contextFromFactTrace } from '../sdsl/fact-trace';
+import { contextDocumentToTawIntentEvent, planTextToTawPlanEvent } from '../sdsl/agent-to-taw';
 
 function printJson(label: string, value: unknown) {
   // eslint-disable-next-line no-console
@@ -79,20 +78,16 @@ async function main() {
 
   const trace: FactTraceEvent[] = [...baseTrace, ...logicalTrace];
 
-  // 1) Trace → Context → taw.intent + plan prompt
-  const seed = seedDemoLoopFromTrace(trace, {
-    schema,
+  // 1) Trace → Context → taw.intent
+  const context = contextFromFactTrace(trace, { schema, goal });
+  const intentEvent = contextDocumentToTawIntentEvent(context, {
     goal,
-    planPrompt: { maxSteps: 5, style: 'numbered' },
-    promptText: '## Goal\nRun the Model→TAW demo loop',
-    intent: { source: 'demo-loop-runner', correlationId: 'corr-demo-1' },
+    source: 'demo-loop-runner',
+    correlationId: 'corr-demo-1',
   });
 
-  printJson('Context (from trace)', seed.context);
-  printJson('TAW intent event (Model→TAW)', seed.intentEvent);
-  // Keep plan prompt readable as text
-  // eslint-disable-next-line no-console
-  console.log(`\n=== Plan prompt text ===\n${seed.planPromptText}\n`);
+  printJson('Context (from trace)', context);
+  printJson('TAW intent event (Model→TAW)', intentEvent);
 
   // 2) Create a bus and publish the events (this is the “machine motion”)
   const bus = new InMemoryRealityPipe<TawKind, TawPayload, EventMeta>();
@@ -101,13 +96,13 @@ async function main() {
     console.log(`[bus] ${env.kind} id=${env.id} corr=${env.correlationId ?? '-'} source=${env.source ?? '-'}`);
   });
 
-  const intentEnvelope = publishTaw(bus, seed.intentEvent);
+  const intentEnvelope = publishTaw(bus, intentEvent);
 
   // 3) Simulate external planner output → taw.plan
   const plannerText = ['1. Identify kernel run', '2. Execute kernel.run with graph input', '3. Record result'].join(
     '\n',
   );
-  const planEvent = plannerTextToTawPlan(plannerText, {
+  const planEvent = planTextToTawPlanEvent(plannerText, {
     goalId: goal.id,
     source: 'demo-loop-runner',
     correlationId: intentEnvelope.correlationId ?? intentEnvelope.id,

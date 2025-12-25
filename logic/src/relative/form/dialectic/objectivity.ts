@@ -5,7 +5,7 @@ import type {
 	ObjectivityEntity,
 	ObjectivityProperty,
 	SyllogismArtifact,
-} from '@organon/gdsl/schema';
+} from './artifacts';
 
 import { withAppearanceMeta } from './appearance-meta';
 

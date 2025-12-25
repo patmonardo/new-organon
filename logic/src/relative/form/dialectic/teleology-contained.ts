@@ -2,7 +2,7 @@ import type {
 	EssentialRelation,
 	ObjectivityArtifact,
 	ObjectivityAspect,
-} from '@organon/gdsl/schema';
+} from './artifacts';
 
 import { withAppearanceMeta } from './appearance-meta';
 

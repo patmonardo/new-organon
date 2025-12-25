@@ -1,19 +1,25 @@
 import { z } from 'zod';
 
-import { GdsFormEvalCallSchema } from './gds.form-eval';
-import { GdsGraphStoreCallSchema } from './gds.graph-store';
+import { GdsFormEvalCallSchema } from './program';
 import {
 	GdsDatabaseIdSchema,
 	GdsApplicationFormKindSchema,
 	GdsGraphNameSchema,
 	GdsUserSchema,
-} from './gds.common';
+} from './common';
 
 /**
- * GDSL IR: GDS application protocol shapes
+ * GDSL IR: GDS application protocol shapes (GDS-L / "GDS Link")
  *
- * This is the TypeScript-first "IR protocol language" used to communicate with
- * the Rust GDS boundary (JSON-in/JSON-out via NAPI).
+ * This is the TypeScript-first **protocol layer** used to communicate with the
+ * Rust GDS boundary (JSON-in/JSON-out via TS-JSON / NAPI).
+ *
+ * Terminology:
+ * - **GDS-L (GDS Link)**: the client→server protocol itself (these payload shapes).
+ * - **KernelPort**: the transport/adapter that actually carries these payloads across
+ *   a boundary (in-process NAPI, remote HTTP, tests/mocks, etc.).
+ * - **G-DSL**: a broader "generic DSL" space that can *emit* GDS-L payloads; specific
+ *   S-DSLs can be viewed as projections/clients over this G-DSL space.
  *
  * Notes:
  * - TB-safe: heavy data is never returned directly; prefer handles/jobs/exports.
@@ -154,7 +160,6 @@ export type GdsGraphStoreCatalogCall = z.infer<
 
 export const GdsApplicationCallSchema = z.union([
 	GdsGraphStoreCatalogCallSchema,
-	GdsGraphStoreCallSchema,
 	GdsFormEvalCallSchema,
 ]);
 export type GdsApplicationCall = z.infer<typeof GdsApplicationCallSchema>;
@@ -162,3 +167,5 @@ export type GdsApplicationCall = z.infer<typeof GdsApplicationCallSchema>;
 export function gdsApplicationOperationId(call: GdsApplicationCall): string {
 	return `gds.${call.facade}.${call.op}`;
 }
+
+

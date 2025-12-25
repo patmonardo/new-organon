@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { GdsFormProgramSchema } from '../src/schema/gds.form-eval';
+import { GdsFormProgramSchema } from '../src/schema/program';
 
 describe('GdslMorphSchema integration', () => {
 	it('accepts morph.patterns and optional morph.steps', () => {

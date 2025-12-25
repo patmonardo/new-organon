@@ -1,5 +1,5 @@
 import type { DialecticIR } from '@schema/dialectic';
-import type { JudgmentArtifact } from '@organon/gdsl/schema';
+import type { JudgmentArtifact } from './artifacts';
 
 import type { ThingInWorld } from './appearance-contained';
 import { loadDialecticIR } from './registry';

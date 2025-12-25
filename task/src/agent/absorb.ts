@@ -1,9 +1,6 @@
-import type {
-  RootAgentAbsorbRequest,
-  RootAgentAbsorbResult,
-  StructuredFact,
-  TraceEvent,
-} from '@organon/gdsl';
+import type { StructuredFact } from '../schema/context-document';
+import type { TraceEvent } from '../schema/trace';
+import type { RootAgentAbsorbRequest, RootAgentAbsorbResult } from './envelope';
 
 function nowIso() {
   return new Date().toISOString();

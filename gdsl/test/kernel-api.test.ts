@@ -1,5 +1,5 @@
 import {
-  KERNEL_TAW_ACTIONS,
+  KERNEL_ACTIONS,
   KernelModelRefSchema,
   KernelRunRequestSchema,
   KernelRunResultSchema,
@@ -34,6 +34,6 @@ describe('kernel-api', () => {
   });
 
   it('exposes stable action ids', () => {
-    expect(KERNEL_TAW_ACTIONS.run).toBe('kernel.run');
+    expect(KERNEL_ACTIONS.run).toBe('kernel.run');
   });
 });

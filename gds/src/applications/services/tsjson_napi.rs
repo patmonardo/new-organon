@@ -1,8 +1,8 @@
-use napi_derive::napi;
 use once_cell::sync::Lazy;
 
 use crate::config::GraphStoreConfig;
-use crate::types::catalog::{CatalogError, GraphCatalog, InMemoryGraphCatalog};
+use crate::core::User;
+use crate::types::catalog::{GraphCatalog, InMemoryGraphCatalog};
 use crate::types::graph::id_map::SimpleIdMap;
 use crate::types::graph::RelationshipTopology;
 use crate::types::graph_store::{Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName, GraphStore};
@@ -11,11 +11,281 @@ use crate::projection::eval::procedure::ExecutionContext;
 use crate::projection::RelationshipType;
 use crate::form::program::{Context as FormContext, Morph as FormMorph, Shape as FormShapeMeta, FormShape};
 use crate::types::schema::GraphSchema;
+use crate::applications::graph_store_catalog::facade::{ApplicationsFacade, GraphCatalogApplications, GraphStoreCatalogEntry};
+use crate::applications::graph_store_catalog::results::GraphMemoryUsage as AppGraphMemoryUsage;
 
 use std::collections::HashMap;
 
 static TSJSON_CATALOG: Lazy<std::sync::Arc<InMemoryGraphCatalog>> =
     Lazy::new(|| std::sync::Arc::new(InMemoryGraphCatalog::new()));
+
+#[derive(Clone, Debug)]
+struct TsjsonUser {
+    username: String,
+    roles: Vec<String>,
+    permissions: Vec<String>,
+}
+
+impl TsjsonUser {
+    fn new(username: String, is_admin: bool) -> Self {
+        Self {
+            username,
+            roles: if is_admin { vec!["admin".to_string()] } else { vec![] },
+            permissions: vec![],
+        }
+    }
+}
+
+impl User for TsjsonUser {
+    fn username(&self) -> &str {
+        &self.username
+    }
+    fn roles(&self) -> &[String] {
+        &self.roles
+    }
+    fn is_authenticated(&self) -> bool {
+        true
+    }
+    fn permissions(&self) -> &[String] {
+        &self.permissions
+    }
+}
+
+/// GraphStoreCatalog facade backed by the TSJSON in-memory catalog.
+///
+/// This lets the transport layer route through the *facade contract* even while the
+/// full GraphStoreCatalog application subsystem is still being implemented.
+struct TsjsonCatalogBackedGraphCatalogApplications {
+    catalog: std::sync::Arc<InMemoryGraphCatalog>,
+}
+
+impl TsjsonCatalogBackedGraphCatalogApplications {
+    fn new(catalog: std::sync::Arc<InMemoryGraphCatalog>) -> Self {
+        Self { catalog }
+    }
+}
+
+impl GraphCatalogApplications for TsjsonCatalogBackedGraphCatalogApplications {
+    fn list_graphs(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+    ) -> Vec<GraphStoreCatalogEntry> {
+        self.catalog
+            .list(None, false)
+            .into_iter()
+            .map(|e| GraphStoreCatalogEntry::new(e.name, e.node_count, e.relationship_count))
+            .collect()
+    }
+
+    fn graph_memory_usage(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        graph_name: &str,
+    ) -> AppGraphMemoryUsage {
+        match self.catalog.size_of(graph_name) {
+            Ok(mu) => AppGraphMemoryUsage::new(
+                graph_name.to_string(),
+                format!("{} bytes", mu.bytes),
+                mu.bytes,
+                HashMap::new(),
+                mu.nodes,
+                mu.relationships,
+            ),
+            Err(_) => AppGraphMemoryUsage::new(
+                graph_name.to_string(),
+                "0 bytes".to_string(),
+                0,
+                HashMap::new(),
+                0,
+                0,
+            ),
+        }
+    }
+
+    fn drop_graph(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        graph_name: &str,
+        fail_if_missing: bool,
+    ) -> Result<GraphStoreCatalogEntry, String> {
+        let dropped =
+            GraphCatalog::drop(self.catalog.as_ref(), &[graph_name], fail_if_missing)
+                .map_err(|e| e.to_string())?;
+        dropped
+            .into_iter()
+            .next()
+            .map(|d| GraphStoreCatalogEntry::new(d.name, d.node_count, d.relationship_count))
+            .ok_or_else(|| "Graph not found".to_string())
+    }
+
+    fn drop_graphs(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        graph_names: &[String],
+        fail_if_missing: bool,
+    ) -> Result<Vec<GraphStoreCatalogEntry>, String> {
+        let refs: Vec<&str> = graph_names.iter().map(|s| s.as_str()).collect();
+        let dropped =
+            GraphCatalog::drop(self.catalog.as_ref(), &refs, fail_if_missing)
+                .map_err(|e| e.to_string())?;
+        Ok(dropped
+            .into_iter()
+            .map(|d| GraphStoreCatalogEntry::new(d.name, d.node_count, d.relationship_count))
+            .collect())
+    }
+
+    fn drop_node_properties(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _graph_name: &str,
+        _node_properties: &[String],
+        _fail_if_missing: bool,
+    ) -> Result<u64, String> {
+        Err("drop_node_properties not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+
+    fn drop_relationships(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _graph_name: &str,
+        _relationship_type: &str,
+    ) -> Result<crate::types::graph_store::DeletionResult, String> {
+        Err("drop_relationships not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+
+    fn stream_node_properties(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _graph_name: &str,
+        _node_properties: &[String],
+    ) -> Result<Vec<crate::applications::graph_store_catalog::facade::NodePropertyResult>, String> {
+        Err("stream_node_properties not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+
+    fn stream_relationship_properties(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _graph_name: &str,
+        _relationship_properties: &[String],
+    ) -> Result<Vec<crate::applications::graph_store_catalog::facade::RelationshipPropertyResult>, String> {
+        Err("stream_relationship_properties not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+
+    fn stream_relationships(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _graph_name: &str,
+        _relationship_types: &[String],
+    ) -> Result<Vec<crate::applications::graph_store_catalog::facade::RelationshipResult>, String> {
+        Err("stream_relationships not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+
+    fn write_node_properties(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _graph_name: &str,
+        _node_properties: &[String],
+    ) -> Result<crate::applications::graph_store_catalog::facade::WriteResult, String> {
+        Err("write_node_properties not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+
+    fn write_node_labels(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _graph_name: &str,
+        _node_labels: &[String],
+    ) -> Result<crate::applications::graph_store_catalog::facade::WriteResult, String> {
+        Err("write_node_labels not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+
+    fn write_relationship_properties(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _graph_name: &str,
+        _relationship_properties: &[String],
+    ) -> Result<crate::applications::graph_store_catalog::facade::WriteResult, String> {
+        Err("write_relationship_properties not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+
+    fn write_relationships(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _graph_name: &str,
+        _relationship_type: &str,
+    ) -> Result<crate::applications::graph_store_catalog::facade::WriteResult, String> {
+        Err("write_relationships not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+
+    fn export_to_csv(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _graph_name: &str,
+        _export_path: &str,
+    ) -> Result<crate::applications::graph_store_catalog::facade::ExportResult, String> {
+        Err("export_to_csv not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+
+    fn export_to_database(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _graph_name: &str,
+        _target_database: &str,
+    ) -> Result<crate::applications::graph_store_catalog::facade::ExportResult, String> {
+        Err("export_to_database not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+
+    fn project_native(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _projection_config: &crate::applications::graph_store_catalog::facade::NativeProjectionConfig,
+    ) -> Result<crate::applications::graph_store_catalog::facade::ProjectionResult, String> {
+        Err("project_native not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+
+    fn project_generic(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _projection_config: &crate::applications::graph_store_catalog::facade::GenericProjectionConfig,
+    ) -> Result<crate::applications::graph_store_catalog::facade::ProjectionResult, String> {
+        Err("project_generic not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+
+    fn generate_graph(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _generation_config: &crate::applications::graph_store_catalog::facade::GraphGenerationConfig,
+    ) -> Result<crate::applications::graph_store_catalog::facade::GenerationResult, String> {
+        Err("generate_graph not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+
+    fn sample_graph(
+        &self,
+        _user: &dyn User,
+        _database_id: &DatabaseId,
+        _graph_name: &str,
+        _sampling_config: &crate::applications::graph_store_catalog::facade::SamplingConfig,
+    ) -> Result<crate::applications::graph_store_catalog::facade::SamplingResult, String> {
+        Err("sample_graph not implemented for TSJSON catalog-backed facade yet".to_string())
+    }
+}
 
 fn ok(op: &str, data: serde_json::Value) -> serde_json::Value {
     serde_json::json!({
@@ -39,50 +309,138 @@ fn err(op: &str, code: &str, message: &str) -> serde_json::Value {
 fn handle_graph_store_catalog(request: &serde_json::Value) -> serde_json::Value {
     let op = request.get("op").and_then(|v| v.as_str()).unwrap_or("");
 
+    let username = request
+        .get("user")
+        .and_then(|v| v.get("username"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("anonymous")
+        .to_string();
+    let is_admin = request
+        .get("user")
+        .and_then(|v| v.get("isAdmin"))
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let user = TsjsonUser::new(username, is_admin);
+
+    let database_id = request
+        .get("databaseId")
+        .and_then(|v| v.as_str())
+        .unwrap_or("db");
+    let db = DatabaseId::new(database_id);
+
+    // Route through the facade contract (ApplicationsFacade), backed by the in-memory TSJSON catalog.
+    // We construct this per-call to avoid requiring global Send/Sync bounds on the facade trait objects.
+    let apps_facade = ApplicationsFacade::with_graph_store_catalog_applications(Box::new(
+        TsjsonCatalogBackedGraphCatalogApplications::new(TSJSON_CATALOG.clone()),
+    ));
+
     match op {
         // Mirrors logic/src/absolute/form/gds.application.ts
         "list_graphs" => {
-            // Optional extension: includeDegreeDist. Default false.
-            let include_degree_dist = request
-                .get("includeDegreeDist")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-
-            let entries = TSJSON_CATALOG
-                .list(None, include_degree_dist)
+            let entries = apps_facade
+                .graph_store_catalog()
+                .list_graphs(&user, &db)
                 .into_iter()
-                .map(|e| {
-                    serde_json::json!({
-                        "name": e.name,
-                        "nodeCount": e.node_count,
-                        "relationshipCount": e.relationship_count,
-                        "degreeDistribution": e.degree_distribution,
-                    })
-                })
+                .map(|e| serde_json::json!({
+                    "name": e.graph_name(),
+                    "nodeCount": e.node_count(),
+                    "relationshipCount": e.relationship_count(),
+                }))
                 .collect::<Vec<_>>();
 
             ok(op, serde_json::json!({ "entries": entries }))
+        }
+        "drop_graph" => {
+            let Some(graph_name) = request.get("graphName").and_then(|v| v.as_str()) else {
+                return err(op, "INVALID_REQUEST", "Missing required field: graphName");
+            };
+            let fail_if_missing = request
+                .get("failIfMissing")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            match apps_facade
+                .graph_store_catalog()
+                .drop_graph(&user, &db, graph_name, fail_if_missing)
+            {
+                Ok(d) => ok(
+                    op,
+                    serde_json::json!({
+                        "dropped": [{
+                            "name": d.graph_name(),
+                            "nodeCount": d.node_count(),
+                            "relationshipCount": d.relationship_count()
+                        }]
+                    }),
+                ),
+                Err(message) => {
+                    if message.to_lowercase().contains("not found") {
+                        err(op, "NOT_FOUND", "Graph not found")
+                    } else {
+                        err(op, "ERROR", &message)
+                    }
+                }
+            }
+        }
+        "drop_graphs" => {
+            let graph_names = request
+                .get("graphNames")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                        .filter(|s| !s.trim().is_empty())
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default();
+            let fail_if_missing = request
+                .get("failIfMissing")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            match apps_facade
+                .graph_store_catalog()
+                .drop_graphs(&user, &db, &graph_names, fail_if_missing)
+            {
+                Ok(dropped) => ok(
+                    op,
+                    serde_json::json!({
+                        "dropped": dropped.into_iter().map(|d| serde_json::json!({
+                            "name": d.graph_name(),
+                            "nodeCount": d.node_count(),
+                            "relationshipCount": d.relationship_count()
+                        })).collect::<Vec<_>>()
+                    }),
+                ),
+                Err(message) => {
+                    if message.to_lowercase().contains("not found") {
+                        err(op, "NOT_FOUND", "Graph not found")
+                    } else {
+                        err(op, "ERROR", &message)
+                    }
+                }
+            }
+        }
+        "drop_node_properties" => {
+            err(op, "UNIMPLEMENTED", "drop_node_properties not wired in TSJSON facade yet.")
         }
         "graph_memory_usage" => {
             let Some(graph_name) = request.get("graphName").and_then(|v| v.as_str()) else {
                 return err(op, "INVALID_REQUEST", "Missing required field: graphName");
             };
 
-            match TSJSON_CATALOG.size_of(graph_name) {
-                Ok(mu) => ok(
-                    op,
-                    serde_json::json!({
-                        "graphName": graph_name,
-                        "bytes": mu.bytes,
-                        "nodes": mu.nodes,
-                        "relationships": mu.relationships,
-                    }),
-                ),
-                Err(CatalogError::NotFound(_)) => err(op, "NOT_FOUND", "Graph not found"),
-                Err(CatalogError::AlreadyExists(_)) => {
-                    err(op, "INTERNAL", "Unexpected catalog error")
-                }
-            }
+            let mu = apps_facade
+                .graph_store_catalog()
+                .graph_memory_usage(&user, &db, graph_name);
+            ok(
+                op,
+                serde_json::json!({
+                    "graphName": graph_name,
+                    "bytes": mu.size_in_bytes,
+                    "nodes": mu.node_count,
+                    "relationships": mu.relationship_count,
+                }),
+            )
         }
         _ => err(
             op,
@@ -321,16 +679,32 @@ fn handle_form_eval(request: &serde_json::Value) -> serde_json::Value {
 
             let mut processor = FormProcessor::new(ctx);
             match processor.evaluate(&form_request) {
-                Ok(result) => ok(
-                    op,
-                    serde_json::json!({
-                        "graphName": graph_name,
-                        "outputGraphName": form_request.output_graph_name,
-                        "operator": result.operator,
-                        "execution_time_ms": result.execution_time.as_millis(),
-                        "proof": result.proof,
-                    }),
-                ),
+                Ok(result) => {
+                    // If an output graph name is provided, persist the ResultStore into the shared catalog
+                    // so it becomes addressable by subsequent GraphStore/GraphCatalog calls.
+                    let mut persisted_output = false;
+                    if let Some(output_name) = form_request.output_graph_name.as_deref() {
+                        TSJSON_CATALOG.set(output_name, result.graph.clone());
+                        persisted_output = true;
+                    }
+
+                    let node_count = GraphStore::node_count(result.graph.as_ref()) as u64;
+                    let relationship_count = GraphStore::relationship_count(result.graph.as_ref()) as u64;
+
+                    ok(
+                        op,
+                        serde_json::json!({
+                            "graphName": graph_name,
+                            "outputGraphName": form_request.output_graph_name,
+                            "persistedOutputGraph": persisted_output,
+                            "operator": result.operator,
+                            "execution_time_ms": result.execution_time.as_millis(),
+                            "nodeCount": node_count,
+                            "relationshipCount": relationship_count,
+                            "proof": result.proof,
+                        }),
+                    )
+                }
                 Err(e) => err(op, "FORM_EVAL_ERROR", &e.to_string()),
             }
         }
@@ -338,7 +712,7 @@ fn handle_form_eval(request: &serde_json::Value) -> serde_json::Value {
     }
 }
 
-/// TS-JSON / NAPI boundary for GDS.
+/// TS-JSON boundary for GDS.
 ///
 /// This module is intentionally small and FFI-friendly:
 /// - accepts/returns JSON strings
@@ -346,10 +720,13 @@ fn handle_form_eval(request: &serde_json::Value) -> serde_json::Value {
 /// - returns handles for large results instead of materializing data
 ///
 /// The internal Rust "applications" layer is free to mirror Java GDS closely.
-#[napi]
-pub fn invoke(request_json: String) -> napi::Result<String> {
-    let request: serde_json::Value = serde_json::from_str(&request_json)
-        .map_err(|e| napi::Error::from_reason(format!("Invalid JSON request: {e}")))?;
+pub fn invoke(request_json: String) -> String {
+    let request: serde_json::Value = match serde_json::from_str(&request_json) {
+        Ok(v) => v,
+        Err(e) => {
+            return err("", "INVALID_JSON", &format!("Invalid JSON request: {e}")).to_string();
+        }
+    };
 
     let op = request.get("op").and_then(|v| v.as_str()).unwrap_or("");
 
@@ -361,7 +738,7 @@ pub fn invoke(request_json: String) -> napi::Result<String> {
             "form_eval" => handle_form_eval(&request),
             _ => err(op, "UNSUPPORTED_FACADE", "Unsupported facade."),
         };
-        return Ok(response.to_string());
+        return response.to_string();
     }
 
     let response = match op {
@@ -382,11 +759,10 @@ pub fn invoke(request_json: String) -> napi::Result<String> {
         _ => err(op, "UNSUPPORTED_OP", "Unsupported operation."),
     };
 
-    Ok(response.to_string())
+    response.to_string()
 }
 
 /// Convenience: returns the Rust crate version.
-#[napi]
 pub fn version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
@@ -419,7 +795,7 @@ mod tests {
             "databaseId": "db1"
         });
 
-        let response_json = invoke(request.to_string()).unwrap();
+        let response_json = invoke(request.to_string());
         let response: serde_json::Value = serde_json::from_str(&response_json).unwrap();
 
         assert_eq!(response.get("ok").and_then(|v| v.as_bool()), Some(true));
@@ -462,7 +838,7 @@ mod tests {
             "graphName": "graph2"
         });
 
-        let response_json = invoke(request.to_string()).unwrap();
+        let response_json = invoke(request.to_string());
         let response: serde_json::Value = serde_json::from_str(&response_json).unwrap();
 
         assert_eq!(response.get("ok").and_then(|v| v.as_bool()), Some(true));
@@ -489,6 +865,91 @@ mod tests {
     }
 
     #[test]
+    fn invoke_graph_store_catalog_drop_graph_round_trip() {
+        let config = RandomGraphConfig {
+            graph_name: "graph_drop_1".to_string(),
+            database_name: "db1".to_string(),
+            ..Default::default()
+        };
+        let mut rng = StdRng::seed_from_u64(30);
+        let store = DefaultGraphStore::random_with_rng(&config, &mut rng).unwrap();
+        TSJSON_CATALOG.set("graph_drop_1", Arc::new(store));
+
+        let request = serde_json::json!({
+            "facade": "graph_store_catalog",
+            "op": "drop_graph",
+            "user": { "username": "alice", "isAdmin": true },
+            "databaseId": "db1",
+            "graphName": "graph_drop_1",
+            "failIfMissing": true
+        });
+
+        let response_json = invoke(request.to_string());
+        let response: serde_json::Value = serde_json::from_str(&response_json).unwrap();
+        assert_eq!(response.get("ok").and_then(|v| v.as_bool()), Some(true));
+        assert_eq!(
+            response.get("op").and_then(|v| v.as_str()),
+            Some("drop_graph")
+        );
+
+        // Verify it is gone.
+        let list_request = serde_json::json!({
+            "facade": "graph_store_catalog",
+            "op": "list_graphs",
+            "user": { "username": "alice", "isAdmin": true },
+            "databaseId": "db1"
+        });
+        let list_json = invoke(list_request.to_string());
+        let list_response: serde_json::Value = serde_json::from_str(&list_json).unwrap();
+        let entries = list_response
+            .get("data")
+            .and_then(|v| v.get("entries"))
+            .and_then(|v| v.as_array())
+            .unwrap();
+        assert!(
+            !entries.iter().any(|e| e.get("name").and_then(|v| v.as_str()) == Some("graph_drop_1"))
+        );
+    }
+
+    #[test]
+    fn invoke_graph_store_catalog_drop_graphs_round_trip() {
+        let mut rng = StdRng::seed_from_u64(31);
+        for name in ["graph_drop_a", "graph_drop_b"] {
+            let config = RandomGraphConfig {
+                graph_name: name.to_string(),
+                database_name: "db1".to_string(),
+                ..Default::default()
+            };
+            let store = DefaultGraphStore::random_with_rng(&config, &mut rng).unwrap();
+            TSJSON_CATALOG.set(name, Arc::new(store));
+        }
+
+        let request = serde_json::json!({
+            "facade": "graph_store_catalog",
+            "op": "drop_graphs",
+            "user": { "username": "alice", "isAdmin": true },
+            "databaseId": "db1",
+            "graphNames": ["graph_drop_a", "graph_drop_b"],
+            "failIfMissing": true
+        });
+
+        let response_json = invoke(request.to_string());
+        let response: serde_json::Value = serde_json::from_str(&response_json).unwrap();
+        assert_eq!(response.get("ok").and_then(|v| v.as_bool()), Some(true));
+        assert_eq!(
+            response.get("op").and_then(|v| v.as_str()),
+            Some("drop_graphs")
+        );
+
+        let dropped = response
+            .get("data")
+            .and_then(|v| v.get("dropped"))
+            .and_then(|v| v.as_array())
+            .unwrap();
+        assert_eq!(dropped.len(), 2);
+    }
+
+    #[test]
     fn invoke_form_eval_pass_through_round_trip() {
         let config = RandomGraphConfig {
             graph_name: "graph_form_eval".to_string(),
@@ -509,7 +970,7 @@ mod tests {
             "artifacts": {}
         });
 
-        let response_json = invoke(request.to_string()).unwrap();
+        let response_json = invoke(request.to_string());
         let response: serde_json::Value = serde_json::from_str(&response_json).unwrap();
 
         assert_eq!(response.get("ok").and_then(|v| v.as_bool()), Some(true));
@@ -530,6 +991,67 @@ mod tests {
         let _ = GraphCatalog::drop(
             TSJSON_CATALOG.as_ref(),
             &["graph_form_eval"],
+            false,
+        );
+    }
+
+    #[test]
+    fn invoke_form_eval_persists_output_graph_into_catalog_when_named() {
+        let config = RandomGraphConfig {
+            graph_name: "graph_form_eval_in".to_string(),
+            database_name: "db1".to_string(),
+            ..Default::default()
+        };
+        let mut rng = StdRng::seed_from_u64(22);
+        let store = DefaultGraphStore::random_with_rng(&config, &mut rng).unwrap();
+        TSJSON_CATALOG.set("graph_form_eval_in", Arc::new(store));
+
+        let request = serde_json::json!({
+            "facade": "form_eval",
+            "op": "evaluate",
+            "user": { "username": "alice", "isAdmin": true },
+            "databaseId": "db1",
+            "graphName": "graph_form_eval_in",
+            "outputGraphName": "graph_form_eval_out",
+            "program": { "morph": { "patterns": ["passThrough"] } },
+            "artifacts": {}
+        });
+
+        let response_json = invoke(request.to_string());
+        let response: serde_json::Value = serde_json::from_str(&response_json).unwrap();
+
+        assert_eq!(response.get("ok").and_then(|v| v.as_bool()), Some(true));
+        let data = response.get("data").unwrap();
+        assert_eq!(
+            data.get("outputGraphName").and_then(|v| v.as_str()),
+            Some("graph_form_eval_out")
+        );
+        assert_eq!(
+            data.get("persistedOutputGraph").and_then(|v| v.as_bool()),
+            Some(true)
+        );
+
+        // Verify it shows up in catalog listing.
+        let list_request = serde_json::json!({
+            "facade": "graph_store_catalog",
+            "op": "list_graphs",
+            "user": { "username": "alice", "isAdmin": true },
+            "databaseId": "db1"
+        });
+        let list_json = invoke(list_request.to_string());
+        let list_response: serde_json::Value = serde_json::from_str(&list_json).unwrap();
+        let entries = list_response
+            .get("data")
+            .and_then(|v| v.get("entries"))
+            .and_then(|v| v.as_array())
+            .unwrap();
+        assert!(
+            entries.iter().any(|e| e.get("name").and_then(|v| v.as_str()) == Some("graph_form_eval_out"))
+        );
+
+        let _ = GraphCatalog::drop(
+            TSJSON_CATALOG.as_ref(),
+            &["graph_form_eval_in", "graph_form_eval_out"],
             false,
         );
     }
@@ -564,7 +1086,7 @@ mod tests {
             "artifacts": {}
         });
 
-        let response_json = invoke(request.to_string()).unwrap();
+        let response_json = invoke(request.to_string());
         let response: serde_json::Value = serde_json::from_str(&response_json).unwrap();
 
         assert_eq!(response.get("ok").and_then(|v| v.as_bool()), Some(true));
@@ -639,7 +1161,7 @@ mod tests {
             }
         });
 
-        let response_json = invoke(request.to_string()).unwrap();
+        let response_json = invoke(request.to_string());
         let response: serde_json::Value = serde_json::from_str(&response_json).unwrap();
         assert_eq!(response.get("ok").and_then(|v| v.as_bool()), Some(true));
         assert_eq!(response.get("op").and_then(|v| v.as_str()), Some("put"));
@@ -656,7 +1178,7 @@ mod tests {
             "user": { "username": "alice", "isAdmin": true },
             "databaseId": "db1"
         });
-        let list_json = invoke(list_request.to_string()).unwrap();
+        let list_json = invoke(list_request.to_string());
         let list_response: serde_json::Value = serde_json::from_str(&list_json).unwrap();
         let entries = list_response
             .get("data")
@@ -689,7 +1211,7 @@ mod tests {
             }
         });
 
-        let put_json = invoke(put_request.to_string()).unwrap();
+        let put_json = invoke(put_request.to_string());
         let put_response: serde_json::Value = serde_json::from_str(&put_json).unwrap();
         assert_eq!(put_response.get("ok").and_then(|v| v.as_bool()), Some(true));
         assert_eq!(put_response.get("op").and_then(|v| v.as_str()), Some("put"));
@@ -702,7 +1224,7 @@ mod tests {
             "databaseId": "db1"
         });
 
-        let list_json = invoke(list_request.to_string()).unwrap();
+        let list_json = invoke(list_request.to_string());
         let list_response: serde_json::Value = serde_json::from_str(&list_json).unwrap();
         assert_eq!(list_response.get("ok").and_then(|v| v.as_bool()), Some(true));
 

@@ -5,12 +5,10 @@ import {
 	GdsDatabaseIdSchema,
 	GdsGraphNameSchema,
 	GdsUserSchema,
-} from './gds.common';
-
-import { GdslMorphSchema } from './morph';
+} from './common';
 
 /**
- * GDS Form Eval protocol (Absolute Form / kernel surface)
+ * Program (Absolute Form / kernel surface)
  *
  * This is the TS-first contract for the Rust kernel FormProcessor.
  *
@@ -21,6 +19,52 @@ import { GdslMorphSchema } from './morph';
 export const GdsFormEvalFacadeSchema = z.literal('form_eval');
 export type GdsFormEvalFacade = z.infer<typeof GdsFormEvalFacadeSchema>;
 
+/**
+ * Morph (Active Ground) schema
+ *
+ * The kernel executes `morph.patterns` (string operator chain).
+ *
+ * `morph.steps` is optional planning metadata that higher layers can use.
+ */
+export const GdslFormOpSchema = z.string().min(1);
+export type GdslFormOp = z.infer<typeof GdslFormOpSchema>;
+
+export const GdslMorphStepSchema = z.discriminatedUnion('kind', [
+	// Non-discursive kernel Form ISA operator (must correspond to a kernel operator name).
+	z
+		.object({
+			kind: z.literal('form'),
+			op: GdslFormOpSchema,
+			params: z.record(z.string(), z.unknown()).optional(),
+		})
+		.passthrough(),
+
+	// Discursive placeholders (kept structural; higher layers may interpret).
+	z
+		.object({
+			kind: z.literal('judge'),
+			moment: z.enum(['existence', 'reflection', 'necessity', 'concept']).optional(),
+		})
+		.passthrough(),
+
+	z
+		.object({
+			kind: z.literal('syllogize'),
+		})
+		.passthrough(),
+]);
+export type GdslMorphStep = z.infer<typeof GdslMorphStepSchema>;
+
+export const GdslMorphSchema = z
+	.object({
+		/** Executable kernel operator chain. */
+		patterns: z.array(GdslFormOpSchema).min(1),
+		/** Optional structured plan. */
+		steps: z.array(GdslMorphStepSchema).optional(),
+	})
+	.passthrough();
+export type GdslMorph = z.infer<typeof GdslMorphSchema>;
+
 export const GdsFormProgramSchema = z
 	.object({
 		/**
@@ -28,24 +72,11 @@ export const GdsFormProgramSchema = z
 		 *
 		 * This mirrors the kernel's `Shape` envelope. The kernel may ignore it today,
 		 * but it is part of the contract for schema-first expansion.
-			 *
-			 * Dialectical convention (semantic mapping; not enforced by the boundary):
-			 * - `shape`   → Essence
-			 * - `context` → Determination of Essence / Reflection
-			 * - `morph`   → Ground as **Active Ground** (operator chain)
-			 *
-			 * Working convention for early moments:
-			 * - `morph.patterns[0] = "essence"` (first moment; essentiality / presupposed)
-			 * - `morph.patterns[1] = "shine"` (second moment; positedness)
-			 * - `morph.patterns[2] = "reflection"` (third moment; reflective consciousness / citta)
-			 *
-			 * Back-compat:
-			 * - `"cit"` is accepted as an alias for `"essence"` by the kernel.
 		 *
-		 * Convention for the second moment (Shine):
-		 * - `shape.validation_rules.moment = "shine"`
-		 * - `shape.validation_rules.hegel = "Essence→Shine"`
-		 * - `shape.validation_rules.yoga = "YS IV.3 nirmāṇa-cittāni asmitā-mātra"`
+		 * Dialectical convention (semantic mapping; not enforced by the boundary):
+		 * - `shape`   → Essence
+		 * - `context` → Determination of Essence / Reflection
+		 * - `morph`   → Ground as **Active Ground** (operator chain)
 		 */
 		shape: z
 			.object({
@@ -105,3 +136,24 @@ export type GdsFormEvalCall = z.infer<typeof GdsFormEvalCallSchema>;
 export function isGdsFormEvalCall(input: unknown): input is GdsFormEvalCall {
 	return GdsFormEvalCallSchema.safeParse(input).success;
 }
+
+/**
+ * TS-JSON response `data` for `form_eval.evaluate`.
+ *
+ * Mirrors: `gds/src/applications/services/tsjson_napi.rs` (handle_form_eval → "evaluate").
+ */
+export const GdsFormEvalEvaluateDataSchema = z
+	.object({
+		graphName: GdsGraphNameSchema,
+		outputGraphName: GdsGraphNameSchema.nullable().optional(),
+		persistedOutputGraph: z.boolean().optional(),
+		operator: z.string().min(1),
+		execution_time_ms: z.number().nonnegative().optional(),
+		nodeCount: z.number().int().nonnegative().optional(),
+		relationshipCount: z.number().int().nonnegative().optional(),
+		proof: z.unknown(),
+	})
+	.passthrough();
+export type GdsFormEvalEvaluateData = z.infer<typeof GdsFormEvalEvaluateDataSchema>;
+
+

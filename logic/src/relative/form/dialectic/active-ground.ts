@@ -1,5 +1,18 @@
 import type { GdsFormProgram } from '@organon/gdsl/schema';
-import type { JudgmentArtifact, SyllogismKernelInput } from '@organon/gdsl';
+import type { JudgmentArtifact } from './artifacts';
+
+/**
+ * Discursive syllogism request input (logic-layer, not kernel-layer).
+ *
+ * NOTE: This type used to be imported from `@organon/gdsl` (syllogism-kernel),
+ * but GDSL no longer contains agent/discursive kernel surfaces.
+ */
+export type SyllogismKernelInput = {
+	morphPatterns: string[];
+	judgment?: { thesis: string; grounds?: string[] };
+	phenomenology?: unknown;
+	proof?: unknown;
+} & Record<string, unknown>;
 
 /**
  * Morph as Active Ground → Syllogism input seed.

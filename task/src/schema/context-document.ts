@@ -1,10 +1,13 @@
 import { z } from 'zod';
 
 /**
- * Agent context display language (structural)
+ * Agent Context Display Language (structural)
  *
  * This is the portable schema for what an Agent consumes:
  * facts + schema + optional constraints/goals/dependencies.
+ *
+ * NOTE: This previously lived in @organon/gdsl. It now lives in @organon/task
+ * so agent runtimes do not reach into GDSL.
  */
 
 export const StructuredFactSchema = z.object({
@@ -61,3 +64,5 @@ export const ContextDocumentSchema = z.object({
       .optional(),
 });
 export type ContextDocument = z.infer<typeof ContextDocumentSchema>;
+
+

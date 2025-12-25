@@ -40,7 +40,7 @@ export type KernelRunResult = z.infer<typeof KernelRunResultSchema>;
  * Note: execution happens outside this package; these constants are just a
  * shared language boundary.
  */
-export const KERNEL_TAW_ACTIONS = {
+export const KERNEL_ACTIONS = {
   run: 'kernel.run',
 } as const;
 
@@ -48,6 +48,10 @@ export const KERNEL_TAW_ACTIONS = {
  * KernelPort (execution boundary)
  *
  * Implementations live in higher layers (Task, adapters, servers).
+ *
+ * Terminology:
+ * - When the target is the Rust GDS kernel, a `KernelPort` implementation is
+ *   effectively a **GDS-L (GDS Link)** transport adapter.
  */
 export interface KernelPort {
   readonly name: string;

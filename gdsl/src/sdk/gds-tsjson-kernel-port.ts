@@ -3,8 +3,8 @@ import type { KernelPort, KernelRunRequest, KernelRunResult } from '../kernel-ap
 import {
 	GdsApplicationCallSchema,
 	type GdsApplicationCall,
-} from '../schema/gds.application';
-import { GdsTsjsonResponseSchema } from '../schema/gds.tsjson';
+} from '../schema/application';
+import { GdsTsjsonResponseSchema } from '../schema/tsjson';
 
 export type TsjsonInvoker = (requestJson: string) => string | Promise<string>;
 
@@ -50,7 +50,16 @@ function kernelRequestToGdsApplicationCall(request: KernelRunRequest): GdsApplic
 /**
  * GdsTsjsonKernelPort
  *
- * Bridges the generic `KernelPort` API onto the Rust TS-JSON NAPI boundary:
+ * Bridges the generic `KernelPort` API onto the Rust TS-JSON NAPI boundary.
+ *
+ * Architectural note (terminology):
+ * - **GDS-L (GDS Link)**: the client→server protocol for calling into GDS.
+ *   - In this repo, the "Link" payload is `GdsApplicationCall` (facade/op + inputs).
+ *   - The "Link" transport is the `KernelPort` adapter (this class).
+ * - **G-DSL (Generic / Global DSL)**: the higher-level, client-facing DSL space
+ *   that *produces* GDS-L payloads (e.g. FormDB, S-DSL specializations).
+ *
+ * Transport details:
  * - request: JSON string
  * - response: JSON string envelope { ok, op, data|error }
  *
@@ -91,3 +100,12 @@ export class GdsTsjsonKernelPort implements KernelPort {
 		}
 	}
 }
+
+/**
+ * Alias export for architectural naming:
+ * `GdsLinkTsjsonKernelPort` == `GdsTsjsonKernelPort`.
+ *
+ * Prefer this name when you want to emphasize "GDS Link" (client→server protocol)
+ * rather than "TSJSON transport".
+ */
+export { GdsTsjsonKernelPort as GdsLinkTsjsonKernelPort };

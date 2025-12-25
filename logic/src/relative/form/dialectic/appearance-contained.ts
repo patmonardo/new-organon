@@ -3,7 +3,7 @@ import type {
 	ObjectivityAspect,
 	ObjectivityEntity,
 	ObjectivityProperty,
-} from '@organon/gdsl/schema';
+} from './artifacts';
 
 import { withAppearanceMeta } from './appearance-meta';
 

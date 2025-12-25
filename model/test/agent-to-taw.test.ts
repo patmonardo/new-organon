@@ -10,7 +10,7 @@ import {
   type FunctionCallOutput,
 } from '../src/sdsl';
 
-import { KERNEL_TAW_ACTIONS } from '@organon/gdsl';
+import { KERNEL_ACTIONS } from '@organon/gdsl';
 
 describe('Model → TAW bridge', () => {
   it('maps FunctionCallOutput into a validated taw.act event', () => {
@@ -119,7 +119,7 @@ describe('Model → TAW bridge', () => {
     expect(event.kind).toBe('taw.act');
     expect(event.payload.goalId).toBe('g1');
     expect(event.payload.stepId).toBe('s2');
-    expect(event.payload.action).toBe(KERNEL_TAW_ACTIONS.run);
+    expect(event.payload.action).toBe(KERNEL_ACTIONS.run);
     expect((event.payload.input as any).model.id).toBe('gds.pagerank');
   });
 

@@ -1,15 +1,15 @@
 import { describe, it, expect } from 'vitest';
 
 import {
-  seedDemoLoopFromTrace,
-  plannerTextToTawPlan,
-  actionToTawActEvent,
+  planTextToTawPlanEvent,
   kernelRunRequestToTawActEvent,
-  type FactTraceEvent,
-} from '@organon/gdsl';
+  contextDocumentToTawIntentEvent,
+} from '../src/sdsl/agent-to-taw';
+
+import { contextFromFactTrace, type FactTraceEvent } from '../src/sdsl/fact-trace';
 
 describe('demo-loop', () => {
-  it('seeds intent + plan prompt from trace', () => {
+  it('builds taw.intent from a context derived from trace', () => {
     const trace: FactTraceEvent[] = [
       { kind: 'shape.create', payload: { id: 'shape-1' } },
       {
@@ -19,39 +19,23 @@ describe('demo-loop', () => {
       },
     ];
 
-    const seed = seedDemoLoopFromTrace(trace, {
-      schema: { id: 'trace:demo', name: 'Demo' },
-      goal: { id: 'g1', type: 'demo', description: 'Demonstrate the loop' },
-      planPrompt: { maxSteps: 3, style: 'numbered' },
-      promptText: '## Goal\nDemonstrate the loop',
-      intent: { source: 'test', correlationId: 'c1' },
-    });
+    const goal = { id: 'g1', type: 'demo', description: 'Demonstrate the loop' };
+    const context = contextFromFactTrace(trace, { schema: { id: 'trace:demo', name: 'Demo' }, goal });
+    const intent = contextDocumentToTawIntentEvent(context, { goal, source: 'test', correlationId: 'c1' });
 
-    expect(seed.intentEvent.kind).toBe('taw.intent');
-    expect(seed.intentEvent.payload.goal.id).toBe('g1');
-    expect(seed.planPromptText).toContain('## Response Format');
-    expect(seed.planPromptText).toContain('Limit to at most 3 steps.');
-    expect(seed.context.goal?.id).toBe('g1');
+    expect(intent.kind).toBe('taw.intent');
+    expect(intent.payload.goal.id).toBe('g1');
+    expect(context.goal?.id).toBe('g1');
   });
 
   it('parses planner output into taw.plan', () => {
     const planText = ['1. First step', '2. Second step'].join('\n');
-    const evt = plannerTextToTawPlan(planText, { goalId: 'g1', source: 'test' });
+    const evt = planTextToTawPlanEvent(planText, { goalId: 'g1', source: 'test' });
 
     expect(evt.kind).toBe('taw.plan');
     expect(evt.payload.goalId).toBe('g1');
     expect(evt.payload.steps).toHaveLength(2);
     expect(evt.payload.steps[0]?.description).toBe('First step');
-  });
-
-  it('maps a chosen action into taw.act (function)', () => {
-    const evt = actionToTawActEvent('tool.doThing', { x: 1 }, { goalId: 'g1', stepId: 's1', source: 'test' });
-
-    expect(evt.kind).toBe('taw.act');
-    expect(evt.payload.goalId).toBe('g1');
-    expect(evt.payload.stepId).toBe('s1');
-    expect(evt.payload.action).toBe('tool.doThing');
-    expect(evt.payload.input).toEqual({ x: 1 });
   });
 
   it('maps a chosen action into taw.act (kernel.run)', () => {

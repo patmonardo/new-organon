@@ -62,6 +62,25 @@ impl ApplicationsFacade {
     pub fn operations(&self) -> &OperationsApplicationsStub {
         &self.operations_applications
     }
+
+    /// Create an ApplicationsFacade with a provided GraphStoreCatalog facade implementation.
+    ///
+    /// This is useful for embedding scenarios where the transport layer (NAPI/TSJSON, HTTP, etc.)
+    /// owns the storage substrate and wants to route through the facade contract.
+    pub fn with_graph_store_catalog_applications(
+        graph_store_catalog_applications: Box<dyn GraphCatalogApplications>,
+    ) -> Self {
+        let graph_catalog_applications = GraphCatalogApplicationsStub::new();
+        let model_catalog_applications = ModelCatalogApplicationsStub::new();
+        let operations_applications = OperationsApplicationsStub::new();
+
+        Self {
+            graph_store_catalog_applications,
+            graph_catalog_applications,
+            model_catalog_applications,
+            operations_applications,
+        }
+    }
 }
 
 // Placeholder stub types for applications that will be implemented later

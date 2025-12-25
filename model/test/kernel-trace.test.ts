@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 
 import {
-  contextFromFactTrace,
   kernelRunToTraceEvents,
   type KernelRunRequest,
   type KernelRunResult,
 } from '@organon/gdsl';
+
+import { contextFromFactTrace } from '../src/sdsl/fact-trace';
 
 describe('kernel-trace', () => {
   it('converts kernel run into trace events', () => {

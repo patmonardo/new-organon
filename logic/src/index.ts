@@ -10,5 +10,5 @@ export * from "./api";
 // NOTE: Absolute/FormProcessor now lives in the Rust `gds` kernel.
 // TS `@organon/logic` is the discursive/relative layer; use `@organon/gdsl/schema`
 // for boundary schemas.
-// export * from "./absolute/form";
+export * from "./absolute/form";
 // export * from "./relative"

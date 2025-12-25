@@ -1,13 +1,12 @@
+import type { ContextDocument } from '../schema/context-document';
+import type { TraceEvent } from '../schema/trace';
 import type {
-  ContextDocument,
   RootAgentAbsorbRequest,
   RootAgentAbsorbResult,
   RootAgentBootEnvelope,
   RootAgentKernelTurn,
   RootAgentLoopTurn,
-  SyscallTable,
-  TraceEvent,
-} from '@organon/gdsl';
+} from './envelope';
 
 import type { TawActEvent, TawIntentEvent, TawPlanEvent, TawResultEvent } from '../schema/taw';
 
@@ -15,7 +14,7 @@ export type RootAgentState = {
   boot: RootAgentBootEnvelope;
   context: ContextDocument;
   intent: TawIntentEvent;
-  syscalls?: SyscallTable;
+  syscalls?: RootAgentBootEnvelope['syscalls'];
   planPromptText?: string;
 };
 

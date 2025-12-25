@@ -31,3 +31,5 @@ export const GdsTsjsonResponseSchema = z.union([
 	GdsTsjsonErrResponseSchema,
 ]);
 export type GdsTsjsonResponse = z.infer<typeof GdsTsjsonResponseSchema>;
+
+

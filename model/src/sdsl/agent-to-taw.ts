@@ -13,10 +13,6 @@ import {
   TawResultEventSchema,
 } from './taw-schema';
 import type { KernelRunRequest, KernelRunResult } from '@organon/gdsl';
-import {
-  kernelRunRequestToTawActEvent as baseKernelRunRequestToTawActEvent,
-  kernelRunResultToTawResultEvent as baseKernelRunResultToTawResultEvent,
-} from '@organon/gdsl';
 
 export type FunctionCallToTawActOptions = {
   goalId: string;
@@ -233,7 +229,18 @@ export function kernelRunRequestToTawActEvent(
   request: KernelRunRequest,
   opts: KernelRunToTawActOptions,
 ): TawActEvent {
-  return baseKernelRunRequestToTawActEvent(request, opts);
+  return TawActEventSchema.parse({
+    kind: 'taw.act',
+    payload: {
+      goalId: opts.goalId,
+      stepId: opts.stepId,
+      action: 'kernel.run',
+      input: request,
+    },
+    meta: opts.meta,
+    correlationId: opts.correlationId,
+    source: opts.source,
+  });
 }
 
 export type KernelResultToTawResultOptions = {
@@ -248,5 +255,17 @@ export function kernelRunResultToTawResultEvent(
   result: KernelRunResult,
   opts: KernelResultToTawResultOptions,
 ): TawResultEvent {
-  return baseKernelRunResultToTawResultEvent(result, opts);
+  return TawResultEventSchema.parse({
+    kind: 'taw.result',
+    payload: {
+      goalId: opts.goalId,
+      stepId: opts.stepId,
+      ok: result.ok,
+      output: result.ok ? result.output : undefined,
+      error: result.ok ? undefined : result.error,
+    },
+    meta: opts.meta,
+    correlationId: opts.correlationId,
+    source: opts.source,
+  });
 }

@@ -7,7 +7,7 @@ import {
   type RootAgentAbsorbRequest,
   type RootAgentKernelTurn,
   type RootAgentLoopTurn,
-} from '@organon/gdsl';
+} from './envelope';
 
 import {
   TawActEventSchema,
@@ -43,7 +43,7 @@ export class RootAgent {
   }
 
   /**
-   * Executes one agent turn and validates the emitted turn artifact using GDSL.
+   * Executes one agent turn and validates the emitted turn artifact.
    */
   async turn(executor: RootAgentTurnExecutor): Promise<RootAgentLoopTurn | RootAgentKernelTurn> {
     const out = await executor({ state: this.state });

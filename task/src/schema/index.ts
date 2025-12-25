@@ -7,5 +7,7 @@ export * from './graph';
 export * from './provenance';
 export * from './topic';
 export * from './taw';
+export * from './trace';
 export * from './telemetry';
 export * from './prints';
+export * from './context-document';

@@ -1,9 +1,4 @@
-import type {
-	ConceptArtifact,
-	JudgmentArtifact,
-	SyllogismArtifact,
-	ObjectivityArtifact,
-} from '@organon/gdsl/schema';
+import type { ConceptArtifact, JudgmentArtifact, ObjectivityArtifact, SyllogismArtifact } from './artifacts';
 
 import { deriveObjectivityFromSyllogism } from './objectivity';
 

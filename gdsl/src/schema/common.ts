@@ -29,3 +29,5 @@ export type GdsGraphName = z.infer<typeof GdsGraphNameSchema>;
  */
 export const GdsApplicationFormKindSchema = z.literal('ApplicationForm');
 export type GdsApplicationFormKind = z.infer<typeof GdsApplicationFormKindSchema>;
+
+
