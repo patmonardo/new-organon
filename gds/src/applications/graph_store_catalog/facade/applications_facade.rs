@@ -26,9 +26,9 @@ impl ApplicationsFacade {
     ///
     /// Currently focused on GraphStore Catalog operations - the Storage ISA!
     pub fn create(log: Log) -> Self {
-        // Create the main GraphStore Catalog applications using our builder
+        // Create the main GraphStore Catalog applications with defaults
         let graph_store_catalog_applications =
-            DefaultGraphCatalogApplicationsBuilder::new(log.clone()).build();
+            Box::new(DefaultGraphCatalogApplications::with_defaults(log.clone()));
 
         // Create placeholder applications (to be implemented later)
         let graph_catalog_applications = GraphCatalogApplicationsStub::new();
@@ -36,7 +36,7 @@ impl ApplicationsFacade {
         let operations_applications = OperationsApplicationsStub::new();
 
         Self {
-            graph_store_catalog_applications: Box::new(graph_store_catalog_applications),
+            graph_store_catalog_applications,
             graph_catalog_applications,
             model_catalog_applications,
             operations_applications,

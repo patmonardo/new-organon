@@ -1,32 +1,43 @@
-/// Configuration for writing node labels to the database.
-///
-/// Mirrors Java WriteLabelConfig interface.
-/// Extends BaseConfig + multiple trait bounds (ConcurrencyConfig, WriteConfig, JobIdConfig).
-/// For now, we'll define it as a simple trait that can be extended later.
-pub trait WriteLabelConfig {
-    /// Returns the node filter expression as a string.
-    /// This filter determines which nodes will have the label written.
-    fn node_filter(&self) -> String;
-}
+//! Configuration for writing node labels to the database.
+//!
+//! Mirrors Java WriteLabelConfig interface and integrates with the Rust config system.
 
-/// Builder for creating WriteLabelConfig implementations.
-///
-/// In Java, this uses CypherMapWrapper for configuration parsing.
-/// For now, this is a simple struct that can be extended as needed.
-#[derive(Clone, Debug)]
-pub struct WriteLabelConfigImpl {
-    node_filter: String,
-}
+use crate::define_config;
 
-impl WriteLabelConfigImpl {
-    /// Creates a new WriteLabelConfig.
-    pub fn new(node_filter: String) -> Self {
-        Self { node_filter }
+define_config!(
+    pub struct WriteLabelConfig {
+        validate = |cfg: &WriteLabelConfig| {
+            if cfg.node_filter.trim().is_empty() {
+                return Err(crate::config::validation::ConfigError::InvalidParameter {
+                    parameter: "nodeFilter".to_string(),
+                    reason: "must not be empty".to_string(),
+                });
+            }
+            Ok(())
+        },
+        /// The node filter expression as a string (required)
+        node_filter: String = String::new(),
     }
-}
+);
 
-impl WriteLabelConfig for WriteLabelConfigImpl {
-    fn node_filter(&self) -> String {
-        self.node_filter.clone()
+impl WriteLabelConfig {
+    /// Factory method to create config from components.
+    pub fn of(node_filter: String) -> Result<Self, String> {
+        let config = Self::builder()
+            .node_filter(node_filter)
+            .build()?;
+
+        Ok(config)
+    }
+
+    /// Create from JSON value (for wire protocol deserialization)
+    pub fn from_json(json: &serde_json::Value) -> Result<Self, String> {
+        let node_filter = json.get("nodeFilter")
+            .ok_or("nodeFilter is required")?
+            .as_str()
+            .ok_or("nodeFilter must be a string")?
+            .to_string();
+
+        Self::of(node_filter)
     }
 }

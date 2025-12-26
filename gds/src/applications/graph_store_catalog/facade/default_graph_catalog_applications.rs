@@ -52,6 +52,12 @@ pub struct DefaultGraphCatalogApplications {
 }
 
 impl DefaultGraphCatalogApplications {
+    /// Creates a new DefaultGraphCatalogApplications with default dependencies.
+    /// This is a convenience method that creates all default services internally.
+    pub fn with_defaults(log: Log) -> Self {
+        DefaultGraphCatalogApplicationsBuilder::new(log).build()
+    }
+
     /// Creates a new DefaultGraphCatalogApplications using the builder pattern.
     pub fn new(builder: DefaultGraphCatalogApplicationsBuilder) -> Self {
         let graph_listing_service =

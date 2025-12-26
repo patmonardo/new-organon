@@ -114,10 +114,9 @@ macro_rules! define_config {
 
                 // Build the config
                 pub fn build(self) -> Result<$name, $crate::config::validation::ConfigError> {
-                    let defaults = $name::default();
                     let config = $name {
                         $(
-                            $field: self.$field.unwrap_or(defaults.$field),
+                            $field: self.$field.unwrap_or($name::default().$field),
                         )*
                     };
 

@@ -270,3 +270,9 @@ pub fn validate_model_name(name: &str) -> Result<(), ConfigError> {
 pub fn validate_non_empty_string(value: &str, parameter: &str) -> Result<(), ConfigError> {
     ConfigValidation::validate_non_empty_string(value, parameter)
 }
+
+impl From<ConfigError> for String {
+    fn from(err: ConfigError) -> String {
+        err.to_string()
+    }
+}

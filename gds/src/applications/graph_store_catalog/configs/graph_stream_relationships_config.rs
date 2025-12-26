@@ -1,54 +1,87 @@
-/// Configuration for streaming relationships from the graph store.
-///
-/// Mirrors Java GraphStreamRelationshipsConfig interface.
-/// Similar pattern to GraphNodePropertiesConfig but for relationships.
-pub trait GraphStreamRelationshipsConfig {
-    /// Returns the optional graph name.
-    fn graph_name(&self) -> Option<String>;
+//! Configuration for streaming relationships from the graph store.
+//!
+//! Mirrors Java GraphStreamRelationshipsConfig interface and integrates with the Rust config system.
+//! Similar pattern to GraphNodePropertiesConfig but for relationships.
 
-    /// Returns the list of relationship types to process.
-    /// Defaults to ["*"] (all types) if not specified.
-    fn relationship_types(&self) -> Vec<String> {
-        vec!["*".to_string()]
+use crate::define_config;
+
+define_config!(
+    pub struct GraphStreamRelationshipsConfig {
+        validate = |cfg: &GraphStreamRelationshipsConfig| {
+            // Relationship types can be empty (defaults to ["*"]) or contain valid strings
+            for rel_type in &cfg.relationship_types {
+                if rel_type.trim().is_empty() && rel_type != "*" {
+                    return Err(crate::config::validation::ConfigError::InvalidParameter {
+                        parameter: "relationshipTypes".to_string(),
+                        reason: "must not contain empty strings (except '*' wildcard)".to_string(),
+                    });
+                }
+            }
+            Ok(())
+        },
+        /// Optional graph name (if None, must be provided elsewhere)
+        graph_name: Option<String> = None,
+        /// Relationship types to filter by (defaults to ["*"] for all types)
+        relationship_types: Vec<String> = vec!["*".to_string()],
     }
+);
 
-    /// Parses relationship types from user input.
-    /// In Java, this uses UserInputAsStringOrListOfString.parse().
-    fn parse_relationship_types(user_input: &str) -> Vec<String> {
-        vec![user_input.to_string()]
-    }
-
-    /// Validates that the specified relationship types exist in the graph.
-    /// In Java, this has validation logic checking GraphStore.
-    fn validate(&self) -> Result<(), String> {
-        // Placeholder validation - in real implementation would check GraphStore
-        Ok(())
-    }
-}
-
-/// Builder for creating GraphStreamRelationshipsConfig implementations.
-#[derive(Clone, Debug)]
-pub struct GraphStreamRelationshipsConfigImpl {
-    graph_name: Option<String>,
-    relationship_types: Vec<String>,
-}
-
-impl GraphStreamRelationshipsConfigImpl {
-    /// Creates a new GraphStreamRelationshipsConfig.
-    pub fn new(graph_name: Option<String>, relationship_types: Vec<String>) -> Self {
-        Self {
-            graph_name,
-            relationship_types,
+impl GraphStreamRelationshipsConfig {
+    /// Parse relationship types from user input (string or list).
+    /// Mirrors Java UserInputAsStringOrListOfString.parse().
+    pub fn parse_relationship_types(user_input: &serde_json::Value) -> Result<Vec<String>, String> {
+        match user_input {
+            serde_json::Value::String(s) => {
+                if s.trim().is_empty() {
+                    return Err("relationshipTypes cannot be empty string".into());
+                }
+                Ok(vec![s.clone()])
+            }
+            serde_json::Value::Array(arr) => {
+                let mut result = Vec::new();
+                for item in arr {
+                    match item {
+                        serde_json::Value::String(s) => {
+                            if s.trim().is_empty() {
+                                return Err("relationshipTypes cannot contain empty strings".into());
+                            }
+                            result.push(s.clone());
+                        }
+                        _ => return Err("relationshipTypes array must contain only strings".into()),
+                    }
+                }
+                // Default to ["*"] if empty array
+                if result.is_empty() {
+                    Ok(vec!["*".to_string()])
+                } else {
+                    Ok(result)
+                }
+            }
+            _ => Err("relationshipTypes must be a string or array of strings".into()),
         }
     }
-}
 
-impl GraphStreamRelationshipsConfig for GraphStreamRelationshipsConfigImpl {
-    fn graph_name(&self) -> Option<String> {
-        self.graph_name.clone()
+    /// Factory method to create config from components.
+    pub fn of(graph_name: Option<String>, relationship_types: Vec<String>) -> Result<Self, String> {
+        let config = Self::builder()
+            .graph_name(graph_name)
+            .relationship_types(relationship_types)
+            .build()?;
+
+        Ok(config)
     }
 
-    fn relationship_types(&self) -> Vec<String> {
-        self.relationship_types.clone()
+    /// Create from JSON value (for wire protocol deserialization)
+    pub fn from_json(json: &serde_json::Value) -> Result<Self, String> {
+        let graph_name = json.get("graphName")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        let relationship_types = json.get("relationshipTypes")
+            .and_then(|v| v.as_array())
+            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect::<Vec<_>>())
+            .unwrap_or_else(|| vec!["*".to_string()]);
+
+        Self::of(graph_name, relationship_types)
     }
 }

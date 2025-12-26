@@ -1,35 +1,23 @@
-/// Configuration for writing relationship properties to the database.
-///
-/// Mirrors Java WriteRelationshipPropertiesConfig interface.
-/// Extends BaseConfig + multiple trait bounds (ConcurrencyConfig, WriteConfig, JobIdConfig).
-/// For now, we'll define it as a simple trait that can be extended later.
-pub trait WriteRelationshipPropertiesConfig {
-    // In Java, this is mostly just non-functional flags.
-    // The actual configuration comes from the CypherMapWrapper.
-    // For now, this is a marker trait that can be extended as needed.
-}
+//! Configuration for writing relationship properties to the database.
+//!
+//! Mirrors Java WriteRelationshipPropertiesConfig interface and integrates with the Rust config system.
 
-/// Builder for creating WriteRelationshipPropertiesConfig implementations.
-///
-/// In Java, this uses CypherMapWrapper for configuration parsing.
-/// For now, this is a simple struct that can be extended as needed.
-#[derive(Clone, Debug)]
-pub struct WriteRelationshipPropertiesConfigImpl {
-    // Placeholder for configuration data
-    // In Java, this would hold the CypherMapWrapper
-}
+use crate::define_config;
 
-impl WriteRelationshipPropertiesConfigImpl {
-    /// Creates a new WriteRelationshipPropertiesConfig.
-    pub fn new() -> Self {
-        Self {}
+define_config!(
+    pub struct WriteRelationshipPropertiesConfig {
+        // No specific configuration parameters - marker config similar to Java
+    }
+);
+
+impl WriteRelationshipPropertiesConfig {
+    /// Factory method to create config from components.
+    pub fn of() -> Result<Self, String> {
+        Ok(Self::builder().build()?)
+    }
+
+    /// Create from JSON value (for wire protocol deserialization)
+    pub fn from_json(_json: &serde_json::Value) -> Result<Self, String> {
+        Self::of()
     }
 }
-
-impl Default for WriteRelationshipPropertiesConfigImpl {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl WriteRelationshipPropertiesConfig for WriteRelationshipPropertiesConfigImpl {}

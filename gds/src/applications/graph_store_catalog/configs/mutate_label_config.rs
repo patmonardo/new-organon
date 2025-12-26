@@ -1,31 +1,43 @@
-/// Configuration for mutating node labels in the graph store.
-///
-/// Mirrors Java MutateLabelConfig interface.
-/// Simple trait with a single method for specifying the node filter.
-pub trait MutateLabelConfig {
-    /// Returns the node filter expression as a string.
-    /// This filter determines which nodes will have the label applied.
-    fn node_filter(&self) -> String;
-}
+//! Configuration for mutating node labels in the graph store.
+//!
+//! Mirrors Java MutateLabelConfig interface and integrates with the Rust config system.
 
-/// Builder for creating MutateLabelConfig implementations.
-///
-/// In Java, this uses CypherMapWrapper for configuration parsing.
-/// For now, this is a simple struct that can be extended as needed.
-#[derive(Clone, Debug)]
-pub struct MutateLabelConfigImpl {
-    node_filter: String,
-}
+use crate::define_config;
 
-impl MutateLabelConfigImpl {
-    /// Creates a new MutateLabelConfig.
-    pub fn new(node_filter: String) -> Self {
-        Self { node_filter }
+define_config!(
+    pub struct MutateLabelConfig {
+        validate = |cfg: &MutateLabelConfig| {
+            if cfg.node_filter.trim().is_empty() {
+                return Err(crate::config::validation::ConfigError::InvalidParameter {
+                    parameter: "nodeFilter".to_string(),
+                    reason: "must not be empty".to_string(),
+                });
+            }
+            Ok(())
+        },
+        /// The node filter expression as a string (required)
+        node_filter: String = String::new(),
     }
-}
+);
 
-impl MutateLabelConfig for MutateLabelConfigImpl {
-    fn node_filter(&self) -> String {
-        self.node_filter.clone()
+impl MutateLabelConfig {
+    /// Factory method to create config from components.
+    pub fn of(node_filter: String) -> Result<Self, String> {
+        let config = Self::builder()
+            .node_filter(node_filter)
+            .build()?;
+
+        Ok(config)
+    }
+
+    /// Create from JSON value (for wire protocol deserialization)
+    pub fn from_json(json: &serde_json::Value) -> Result<Self, String> {
+        let node_filter = json.get("nodeFilter")
+            .ok_or("nodeFilter is required")?
+            .as_str()
+            .ok_or("nodeFilter must be a string")?
+            .to_string();
+
+        Self::of(node_filter)
     }
 }

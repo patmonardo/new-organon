@@ -23,7 +23,7 @@ impl NodeLabelMutatorApplication {
         graph_store: &impl GraphStore,
         graph_name: &str,
         node_label_as_string: &str,
-        configuration: &dyn MutateLabelConfig,
+        configuration: &MutateLabelConfig,
         node_filter: &Expression,
     ) -> MutateLabelResult {
         // In Java, this would apply the node filter and mutate labels
