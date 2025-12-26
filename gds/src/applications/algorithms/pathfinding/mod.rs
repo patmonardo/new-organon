@@ -7,6 +7,7 @@ pub mod dfs;
 pub mod dijkstra;
 pub mod kspanningtree;
 pub mod random_walk;
+pub mod spanning_tree;
 
 pub use all_shortest_paths::*;
 pub use astar::*;
@@ -16,3 +17,4 @@ pub use dfs::*;
 pub use dijkstra::*;
 pub use kspanningtree::*;
 pub use random_walk::*;
+pub use spanning_tree::*;

@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 /// Per-node spanning tree row.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct SpanningTreeRow {
     pub node: u64,
     pub parent: Option<u64>,
@@ -20,7 +20,7 @@ pub struct SpanningTreeRow {
 }
 
 /// Aggregated stats for spanning tree.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct SpanningTreeStats {
     pub effective_node_count: u64,
     pub total_weight: f64,
