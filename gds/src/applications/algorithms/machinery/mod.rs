@@ -1,37 +1,9 @@
-pub mod algorithm_processing_template_convenience;
-pub mod algorithm_processing_template;
-pub mod algorithm_processing_timings;
-pub mod algorithm_estimation_template;
-pub mod computation_service;
-pub mod dimension_transformer;
-pub mod memory_guard;
-pub mod side_effect;
-pub mod result_renderer;
-pub mod mutate_step;
-pub mod write_step;
-pub mod result_builder;
 pub mod progress_tracker_creator;
-pub mod algorithm_label;
-pub mod mutate_node_property;
-pub mod write_to_database;
-pub mod request_scoped_dependencies;
-pub mod write_context;
+pub mod stream_processing_template;
 
-pub use algorithm_processing_template_convenience::AlgorithmProcessingTemplateConvenience;
-pub use algorithm_processing_template::AlgorithmProcessingTemplate;
-pub use algorithm_processing_timings::{AlgorithmProcessingTimings, AlgorithmProcessingTimingsBuilder};
-pub use algorithm_estimation_template::AlgorithmEstimationTemplate;
-pub use computation_service::{Computation, ComputationService};
-pub use dimension_transformer::{DimensionTransformer, DisabledDimensionTransformer};
-pub use memory_guard::{MemoryGuard, DefaultMemoryGuard, MemoryRequirement, MemoryGuardError};
-pub use side_effect::{SideEffect, SideEffectExecutor, MutateSideEffect, WriteSideEffect};
-pub use result_renderer::{ResultRenderer, MutateResultRenderer, WriteResultRenderer, StatsResultRenderer, StreamResultRenderer};
-pub use mutate_step::MutateStep;
-pub use write_step::WriteStep;
-pub use result_builder::{ResultBuilder, StreamResultBuilder, StatsResultBuilder, MutateResultBuilder, WriteResultBuilder};
 pub use progress_tracker_creator::{ProgressTrackerCreator, DefaultProgressTrackerCreator};
-pub use algorithm_label::AlgorithmLabel;
-pub use mutate_node_property::{MutateNodeProperty, DefaultMutateNodeProperty};
-pub use write_to_database::{WriteToDatabase, DefaultWriteToDatabase};
-pub use request_scoped_dependencies::RequestScopedDependencies;
-pub use write_context::WriteContext;
+pub use stream_processing_template::{StreamProcessingTemplate, StreamProcessingError};
+
+// NOTE: The rest of the machinery modules exist in the repo, but are not compiled yet.
+// We'll expand this module surface as we wire stream/stats/mutate/write modes through the
+// Java-parity processing templates.

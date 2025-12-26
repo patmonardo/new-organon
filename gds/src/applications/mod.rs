@@ -1,4 +1,5 @@
 pub mod graph_store_catalog;
+pub mod algorithms;
 pub mod services;
 
 pub use graph_store_catalog::*;

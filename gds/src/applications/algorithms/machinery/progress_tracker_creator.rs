@@ -40,7 +40,7 @@ impl Default for DefaultProgressTrackerCreator {
 impl ProgressTrackerCreator for DefaultProgressTrackerCreator {
     fn create_progress_tracker<C: Config>(
         &self,
-        config: &C,
+        _config: &C,
         task: Tasks,
     ) -> ProgressTracker {
         // TODO: Implement actual progress tracker creation

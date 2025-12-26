@@ -231,11 +231,6 @@ impl PathfindingAlgorithms {
 
     /// Helper method to create progress tracker
     fn create_progress_tracker<C: Config>(&self, config: &C, task: Tasks) -> ProgressTracker {
-        // TODO: Implement progress tracker creation
-        // This would typically involve:
-        // 1. Using the progress tracker creator
-        // 2. Creating the appropriate progress tracker
-        
-        todo!("Implement progress tracker creation")
+        self.progress_tracker_creator.create_progress_tracker(config, task)
     }
 }

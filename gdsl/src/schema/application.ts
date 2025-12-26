@@ -213,15 +213,153 @@ export type GdsGraphStoreCatalogCall = z.infer<
 	typeof GdsGraphStoreCatalogCallSchema
 >;
 
+/**
+ * Algorithm execution mode (Java GDS parity).
+ * - stream: Returns individual result rows
+ * - stats: Returns aggregated statistics only
+ * - mutate: Writes results to in-memory graph projection
+ * - write: Writes results back to database
+ */
+export const AlgorithmModeSchema = z
+	.enum(['stream', 'stats', 'mutate', 'write'])
+	.default('stream');
+export type AlgorithmMode = z.infer<typeof AlgorithmModeSchema>;
+
 export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
+	// ============================================================================
+	// Pathfinding Algorithms (unified with mode parameter)
+	// ============================================================================
 	AlgorithmsBase.extend({
-		op: z.literal('pagerank_stream'),
+		op: z.literal('bfs'),
+		mode: AlgorithmModeSchema,
 		graphName: GdsGraphNameSchema,
-		/** Optional relationship type filter (Java parity: "*" means all). */
-		relationshipTypes: z.array(z.string().min(1)).default([]),
-		/** Select relationship property key used as weight (wiring only unless algorithm consumes it). */
+		sourceNode: z.number().int().nonnegative(),
+		targetNodes: z.array(z.number().int().nonnegative()).optional(),
+		maxDepth: z.number().int().positive().optional(),
+		trackPaths: z.boolean().optional(),
+		concurrency: z.number().int().positive().optional(),
+		delta: z.number().int().positive().optional(),
+	}),
+	AlgorithmsBase.extend({
+		op: z.literal('dfs'),
+		mode: AlgorithmModeSchema,
+		graphName: GdsGraphNameSchema,
+		sourceNode: z.number().int().nonnegative(),
+		targetNodes: z.array(z.number().int().nonnegative()).optional(),
+		maxDepth: z.number().int().positive().optional(),
+		trackPaths: z.boolean().optional(),
+		concurrency: z.number().int().positive().optional(),
+	}),
+	AlgorithmsBase.extend({
+		op: z.literal('dijkstra'),
+		mode: AlgorithmModeSchema,
+		graphName: GdsGraphNameSchema,
+		sourceNode: z.number().int().nonnegative(),
+		targetNode: z.number().int().nonnegative().optional(),
+		targetNodes: z.array(z.number().int().nonnegative()).optional(),
 		weightProperty: z.string().min(1).optional(),
-		/** Per-type property selector overrides. */
+		direction: z.enum(['incoming', 'outgoing', 'both']).optional(),
+		trackRelationships: z.boolean().optional(),
+		concurrency: z.number().int().positive().optional(),
+	}),
+	AlgorithmsBase.extend({
+		op: z.literal('bellman_ford'),
+		mode: AlgorithmModeSchema,
+		graphName: GdsGraphNameSchema,
+		sourceNode: z.number().int().nonnegative(),
+		weightProperty: z.string().min(1).optional(),
+		direction: z.enum(['incoming', 'outgoing']).optional(),
+		relationshipTypes: z.array(z.string().min(1)).optional(),
+		trackNegativeCycles: z.boolean().optional(),
+		trackPaths: z.boolean().optional(),
+		concurrency: z.number().int().positive().optional(),
+	}),
+	AlgorithmsBase.extend({
+		op: z.literal('astar'),
+		mode: AlgorithmModeSchema,
+		graphName: GdsGraphNameSchema,
+		sourceNode: z.number().int().nonnegative(),
+		targetNode: z.number().int().nonnegative().optional(),
+		targetNodes: z.array(z.number().int().nonnegative()).optional(),
+		weightProperty: z.string().min(1).optional(),
+		direction: z.enum(['incoming', 'outgoing']).optional(),
+		relationshipTypes: z.array(z.string().min(1)).optional(),
+		heuristic: z.enum(['manhattan', 'euclidean', 'haversine']).optional(),
+		concurrency: z.number().int().positive().optional(),
+	}),
+	AlgorithmsBase.extend({
+		op: z.literal('delta_stepping'),
+		mode: AlgorithmModeSchema,
+		graphName: GdsGraphNameSchema,
+		sourceNode: z.number().int().nonnegative(),
+		delta: z.number().positive().optional(),
+		weightProperty: z.string().min(1).optional(),
+		direction: z.enum(['incoming', 'outgoing']).optional(),
+		relationshipTypes: z.array(z.string().min(1)).optional(),
+		concurrency: z.number().int().positive().optional(),
+	}),
+	AlgorithmsBase.extend({
+		op: z.literal('yens'),
+		mode: AlgorithmModeSchema,
+		graphName: GdsGraphNameSchema,
+		sourceNode: z.number().int().nonnegative(),
+		targetNode: z.number().int().nonnegative(),
+		k: z.number().int().positive().optional(),
+		weightProperty: z.string().min(1).optional(),
+		direction: z.enum(['incoming', 'outgoing']).optional(),
+		relationshipTypes: z.array(z.string().min(1)).optional(),
+		concurrency: z.number().int().positive().optional(),
+	}),
+	AlgorithmsBase.extend({
+		op: z.literal('all_shortest_paths'),
+		mode: AlgorithmModeSchema,
+		graphName: GdsGraphNameSchema,
+		weighted: z.boolean().optional(),
+		weightProperty: z.string().min(1).optional(),
+		direction: z.enum(['incoming', 'outgoing', 'undirected']).optional(),
+		relationshipTypes: z.array(z.string().min(1)).optional(),
+		maxResults: z.number().int().positive().optional(),
+		concurrency: z.number().int().positive().optional(),
+	}),
+	AlgorithmsBase.extend({
+		op: z.literal('spanning_tree'),
+		mode: AlgorithmModeSchema,
+		graphName: GdsGraphNameSchema,
+		startNode: z.number().int().nonnegative().optional(),
+		computeMinimum: z.boolean().optional(),
+		weightProperty: z.string().min(1).optional(),
+		direction: z.enum(['incoming', 'outgoing', 'undirected']).optional(),
+		relationshipTypes: z.array(z.string().min(1)).optional(),
+		concurrency: z.number().int().positive().optional(),
+	}),
+	AlgorithmsBase.extend({
+		op: z.literal('topological_sort'),
+		mode: AlgorithmModeSchema,
+		graphName: GdsGraphNameSchema,
+		computeMaxDistance: z.boolean().optional(),
+		concurrency: z.number().int().positive().optional(),
+	}),
+	AlgorithmsBase.extend({
+		op: z.literal('random_walk'),
+		mode: AlgorithmModeSchema,
+		graphName: GdsGraphNameSchema,
+		walksPerNode: z.number().int().positive().optional(),
+		walkLength: z.number().int().positive().optional(),
+		returnFactor: z.number().positive().optional(),
+		inOutFactor: z.number().positive().optional(),
+		sourceNodes: z.array(z.number().int().nonnegative()).optional(),
+		randomSeed: z.number().int().nonnegative().optional(),
+		concurrency: z.number().int().positive().optional(),
+	}),
+	// ============================================================================
+	// Centrality Algorithms (future)
+	// ============================================================================
+	AlgorithmsBase.extend({
+		op: z.literal('pagerank'),
+		mode: AlgorithmModeSchema,
+		graphName: GdsGraphNameSchema,
+		relationshipTypes: z.array(z.string().min(1)).default([]),
+		weightProperty: z.string().min(1).optional(),
 		relationshipPropertySelectors: z.record(z.string().min(1), z.string().min(1)).optional(),
 		config: z
 			.object({
