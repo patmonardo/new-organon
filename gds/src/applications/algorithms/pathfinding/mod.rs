@@ -5,6 +5,7 @@ pub mod bfs;
 pub mod delta_stepping;
 pub mod dfs;
 pub mod dijkstra;
+pub mod kspanningtree;
 
 pub use all_shortest_paths::*;
 pub use astar::*;
@@ -12,3 +13,4 @@ pub use bellman_ford::*;
 pub use delta_stepping::*;
 pub use dfs::*;
 pub use dijkstra::*;
+pub use kspanningtree::*;

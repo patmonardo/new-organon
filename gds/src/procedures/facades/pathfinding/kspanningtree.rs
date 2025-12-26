@@ -15,7 +15,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Result row for k-spanning tree stream mode
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct KSpanningTreeRow {
     pub node_id: u64,
     pub parent_id: i64,
@@ -23,7 +23,7 @@ pub struct KSpanningTreeRow {
 }
 
 /// Statistics for k-spanning tree computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct KSpanningTreeStats {
     pub node_count: usize,
     pub total_cost: f64,

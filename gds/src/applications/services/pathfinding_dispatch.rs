@@ -10,6 +10,7 @@ use crate::applications::algorithms::pathfinding::bfs;
 use crate::applications::algorithms::pathfinding::delta_stepping;
 use crate::applications::algorithms::pathfinding::dfs;
 use crate::applications::algorithms::pathfinding::dijkstra;
+use crate::applications::algorithms::pathfinding::kspanningtree;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -47,6 +48,11 @@ pub fn handle_astar(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 /// Delta Stepping dispatcher
 pub fn handle_delta_stepping(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     delta_stepping::handle_delta_stepping(request, catalog)
+}
+
+/// K-Spanning Tree dispatcher
+pub fn handle_kspanningtree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    kspanningtree::handle_kspanningtree(request, catalog)
 }
 
 /// Yen's K Shortest Paths dispatcher

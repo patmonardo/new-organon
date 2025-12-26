@@ -402,6 +402,7 @@ fn handle_algorithms(request: &serde_json::Value) -> serde_json::Value {
         "bellman_ford" => algorithms_dispatch::handle_bellman_ford(request, catalog),
         "astar" => algorithms_dispatch::handle_astar(request, catalog),
         "delta_stepping" => algorithms_dispatch::handle_delta_stepping(request, catalog),
+        "kspanningtree" => algorithms_dispatch::handle_kspanningtree(request, catalog),
         "yens" => algorithms_dispatch::handle_yens(request, catalog),
         "all_shortest_paths" => algorithms_dispatch::handle_all_shortest_paths(request, catalog),
         "spanning_tree" => algorithms_dispatch::handle_spanning_tree(request, catalog),
