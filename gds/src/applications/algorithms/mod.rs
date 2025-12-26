@@ -17,7 +17,11 @@
 pub mod machinery;
 pub mod metadata;
 pub mod pathfinding;
+pub mod centrality;
+pub mod community;
 
 pub use machinery::*;
 pub use metadata::*;
 pub use pathfinding::*;
+pub use centrality::*;
+pub use community::*;
