@@ -32,6 +32,6 @@ pub use kspanningtree::{KSpanningTreeBuilder, KSpanningTreeRow, KSpanningTreeSta
 pub use prize_collecting_steiner_tree::{PCSTreeAlgorithm, PCSTreeBuilder};
 pub use random_walk::{RandomWalkBuilder, RandomWalkRow, RandomWalkStats};
 pub use spanning_tree::{SpanningTreeBuilder, SpanningTreeRow, SpanningTreeStats};
-pub use steiner_tree::{SteinerTreeAlgorithm, SteinerTreeBuilder};
+pub use steiner_tree::{SteinerTreeBuilder, SteinerTreeRow, SteinerTreeStats};
 pub use topological_sort::{TopologicalSortBuilder, TopologicalSortRow, TopologicalSortStats};
 pub use yens::{YensBuilder, YensStats};

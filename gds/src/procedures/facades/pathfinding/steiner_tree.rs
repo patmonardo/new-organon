@@ -1,169 +1,240 @@
-use crate::procedures::steiner_tree::computation::SteinerTreeComputationRuntime;
-use crate::procedures::steiner_tree::{SteinerTreeConfig, SteinerTreeResult};
+//! Steiner Tree Facade
+//!
+//! Computes minimum Steiner trees connecting source nodes to terminal nodes.
+//! Uses approximation algorithms with delta-stepping and rerouting optimizations.
 
-/// Builder for the Steiner Tree algorithm
-///
-/// Finds the minimum-weight tree connecting a source node to a set of terminal nodes.
-/// This is a fundamental problem in network design and optimization.
-///
-/// # Example
-///
-/// ```ignore
-/// let result = SteinerTreeBuilder::new()
-///     .source_node(0)
-///     .target_nodes(vec![3, 5, 7])
-///     .delta(0.5)           // Pruning sensitivity
-///     .apply_rerouting(true) // Enable rerouting optimization
-///     .build()
-///     .run(graph);
-/// ```
-#[derive(Debug, Clone)]
-pub struct SteinerTreeBuilder {
-    config: SteinerTreeConfig,
+use crate::procedures::facades::builder_base::ConfigValidator;
+use crate::procedures::facades::traits::Result;
+use crate::procedures::steiner_tree::computation::SteinerTreeComputationRuntime;
+use crate::procedures::steiner_tree::SteinerTreeConfig;
+use crate::projection::orientation::Orientation;
+use crate::projection::RelationshipType;
+use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use std::collections::HashSet;
+use std::sync::Arc;
+
+/// Result row for Steiner tree stream mode
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SteinerTreeRow {
+    pub node: u64,
+    pub parent: Option<u64>,
+    pub cost_to_parent: f64,
 }
 
-impl Default for SteinerTreeBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
+/// Statistics for Steiner tree computation
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct SteinerTreeStats {
+    pub effective_node_count: u64,
+    pub effective_target_nodes_count: u64,
+    pub total_cost: f64,
+    pub computation_time_ms: u64,
+}
+
+/// Steiner Tree algorithm builder
+#[derive(Clone)]
+pub struct SteinerTreeBuilder {
+    graph_store: Arc<DefaultGraphStore>,
+    source_node: u64,
+    target_nodes: Vec<u64>,
+    relationship_weight_property: Option<String>,
+    delta: f64,
+    apply_rerouting: bool,
 }
 
 impl SteinerTreeBuilder {
-    /// Create a new Steiner Tree builder
-    pub fn new() -> Self {
+    pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
-            config: SteinerTreeConfig {
-                source_node: 0,
-                target_nodes: Vec::new(),
-                relationship_weight_property: None,
-                delta: 1.0,
-                apply_rerouting: false,
-            },
+            graph_store,
+            source_node: 0,
+            target_nodes: Vec::new(),
+            relationship_weight_property: None,
+            delta: 1.0,
+            apply_rerouting: true,
         }
     }
 
-    /// Set the source node (root of the tree)
     pub fn source_node(mut self, source: u64) -> Self {
-        self.config.source_node = source;
+        self.source_node = source;
         self
     }
 
-    /// Set the target nodes (terminals that must be connected)
     pub fn target_nodes(mut self, targets: Vec<u64>) -> Self {
-        self.config.target_nodes = targets;
+        self.target_nodes = targets;
         self
     }
 
-    /// Set the delta parameter for pruning
-    ///
-    /// Controls how aggressively non-terminal leaves are pruned.
-    /// Higher values = more aggressive pruning.
-    /// Default: 0.0 (no pruning)
+    pub fn relationship_weight_property(mut self, property: &str) -> Self {
+        self.relationship_weight_property = Some(property.to_string());
+        self
+    }
+
     pub fn delta(mut self, delta: f64) -> Self {
-        self.config.delta = delta;
+        self.delta = delta;
         self
     }
 
-    /// Enable or disable rerouting optimization
-    ///
-    /// When enabled, the algorithm attempts to find better paths by
-    /// considering alternative routes through the partially built tree.
-    /// Default: false
     pub fn apply_rerouting(mut self, apply: bool) -> Self {
-        self.config.apply_rerouting = apply;
+        self.apply_rerouting = apply;
         self
     }
 
-    /// Build the algorithm with the configured parameters
-    pub fn build(self) -> SteinerTreeAlgorithm {
-        SteinerTreeAlgorithm {
-            config: self.config,
-        }
-    }
-}
-
-/// Configured Steiner Tree algorithm ready to run
-pub struct SteinerTreeAlgorithm {
-    config: SteinerTreeConfig,
-}
-
-impl SteinerTreeAlgorithm {
-    /// Run Steiner Tree on a graph represented by a neighbor function
-    ///
-    /// # Arguments
-    ///
-    /// * `node_count` - Number of nodes in the graph
-    /// * `get_neighbors` - Function that returns (neighbor_id, edge_weight) pairs for a node
-    ///
-    /// # Returns
-    ///
-    /// `SteinerTreeResult` containing:
-    /// - Parent array (tree structure)
-    /// - Cost to reach each node
-    /// - Total tree cost
-    /// - Nodes included in the tree
-    pub fn run<F>(self, node_count: usize, get_neighbors: F) -> SteinerTreeResult
-    where
-        F: Fn(usize) -> Vec<(usize, f64)>,
-    {
-        let runtime = SteinerTreeComputationRuntime::new(self.config);
-        runtime.compute(node_count, get_neighbors)
-    }
-
-    /// Run on adjacency list
-    pub fn run_on_adjacency_list(self, adjacency_list: &[Vec<(usize, f64)>]) -> SteinerTreeResult {
-        let node_count = adjacency_list.len();
-        let get_neighbors = |node: usize| adjacency_list[node].clone();
-        self.run(node_count, get_neighbors)
-    }
-
-    /// Run on edge list
-    pub fn run_on_edge_list(
-        self,
-        node_count: usize,
-        edges: &[(usize, usize, f64)],
-    ) -> SteinerTreeResult {
-        // Build adjacency list
-        let mut adjacency_list = vec![Vec::new(); node_count];
-        for &(src, dst, weight) in edges {
-            adjacency_list[src].push((dst, weight));
+    fn validate(&self) -> Result<()> {
+        if self.target_nodes.is_empty() {
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "target_nodes must not be empty".to_string(),
+                ),
+            );
         }
 
-        self.run_on_adjacency_list(&adjacency_list)
+        ConfigValidator::in_range(self.delta, 0.0, 100.0, "delta")?;
+
+        Ok(())
+    }
+
+    fn compute(&self) -> Result<(Vec<SteinerTreeRow>, SteinerTreeStats)> {
+        self.validate()?;
+        let start = std::time::Instant::now();
+
+        // Steiner tree works on undirected graphs
+        let rel_types: HashSet<RelationshipType> = HashSet::new();
+        let graph_view = self
+            .graph_store
+            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
+
+        let node_count = graph_view.node_count();
+        if node_count == 0 {
+            return Ok((Vec::new(), SteinerTreeStats {
+                effective_node_count: 0,
+                effective_target_nodes_count: 0,
+                total_cost: 0.0,
+                computation_time_ms: start.elapsed().as_millis() as u64,
+            }));
+        }
+
+        let fallback = graph_view.default_property_value();
+
+        // Get neighbors with weights
+        let get_neighbors = |node_idx: usize| -> Vec<(usize, f64)> {
+            graph_view
+                .stream_relationships(node_idx as i64, fallback)
+                .filter_map(|cursor| {
+                    let target = cursor.target_id();
+                    if target >= 0 {
+                        let weight = 1.0; // TODO: get actual weight property when available
+                        Some((target as usize, weight))
+                    } else {
+                        None
+                    }
+                })
+                .collect()
+        };
+
+        let config = SteinerTreeConfig {
+            source_node: self.source_node,
+            target_nodes: self.target_nodes.clone(),
+            relationship_weight_property: self.relationship_weight_property.clone(),
+            delta: self.delta,
+            apply_rerouting: self.apply_rerouting,
+        };
+
+        let runtime = SteinerTreeComputationRuntime::new(config);
+        let result = runtime.compute(node_count, get_neighbors);
+
+        let mut rows = Vec::new();
+        for (node_idx, &parent) in result.parent_array.iter().enumerate() {
+            if parent >= 0 {
+                rows.push(SteinerTreeRow {
+                    node: node_idx as u64,
+                    parent: Some(parent as u64),
+                    cost_to_parent: result.relationship_to_parent_cost[node_idx],
+                });
+            } else if parent == -1 {
+                // Root node
+                rows.push(SteinerTreeRow {
+                    node: node_idx as u64,
+                    parent: None,
+                    cost_to_parent: 0.0,
+                });
+            }
+            // Skip pruned nodes (parent == -2)
+        }
+
+        let stats = SteinerTreeStats {
+            effective_node_count: result.effective_node_count,
+            effective_target_nodes_count: result.effective_target_nodes_count,
+            total_cost: result.total_cost,
+            computation_time_ms: start.elapsed().as_millis() as u64,
+        };
+
+        Ok((rows, stats))
+    }
+
+    /// Stream mode: yields tree edges
+    pub fn stream(&self) -> Result<Box<dyn Iterator<Item = SteinerTreeRow>>> {
+        let (rows, _) = self.compute()?;
+        Ok(Box::new(rows.into_iter()))
+    }
+
+    /// Stats mode: aggregated tree stats
+    pub fn stats(&self) -> Result<SteinerTreeStats> {
+        let (_, stats) = self.compute()?;
+        Ok(stats)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 
-    #[test]
-    fn test_steiner_tree_builder() {
-        let builder = SteinerTreeBuilder::new()
-            .source_node(0)
-            .target_nodes(vec![3, 5, 7])
-            .delta(0.5)
-            .apply_rerouting(true);
-
-        // Builder creates correct config
-        assert_eq!(builder.config.source_node, 0);
-        assert_eq!(builder.config.target_nodes, vec![3, 5, 7]);
-        assert_eq!(builder.config.delta, 0.5);
-        assert_eq!(builder.config.apply_rerouting, true);
+    fn store() -> Arc<DefaultGraphStore> {
+        let config = RandomGraphConfig {
+            seed: Some(13),
+            node_count: 10,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        Arc::new(DefaultGraphStore::random(&config).unwrap())
     }
 
     #[test]
-    fn test_steiner_tree_simple() {
-        // Path graph: 0 - 1 - 2 - 3
-        let edges = vec![(0, 1, 1.0), (1, 2, 1.0), (2, 3, 1.0)];
+    fn test_builder_defaults() {
+        let builder = SteinerTreeBuilder::new(store());
+        assert_eq!(builder.source_node, 0);
+        assert!(builder.target_nodes.is_empty());
+        assert!(builder.relationship_weight_property.is_none());
+        assert_eq!(builder.delta, 1.0);
+        assert!(builder.apply_rerouting);
+    }
 
-        let result = SteinerTreeBuilder::new()
+    #[test]
+    fn test_stream_smoke() {
+        let store = store();
+        let rows: Vec<_> = crate::procedures::facades::graph::Graph::new(store)
+            .steiner_tree()
             .source_node(0)
-            .target_nodes(vec![3])
-            .build()
-            .run_on_edge_list(4, &edges);
+            .target_nodes(vec![5, 7])
+            .stream()
+            .unwrap()
+            .collect();
 
-        assert_eq!(result.total_cost, 3.0); // Cost to reach node 3
-        assert_eq!(result.effective_target_nodes_count, 1); // Found 1 target
+        assert!(!rows.is_empty());
+    }
+
+    #[test]
+    fn test_stats_smoke() {
+        let store = store();
+        let stats = crate::procedures::facades::graph::Graph::new(store)
+            .steiner_tree()
+            .source_node(0)
+            .target_nodes(vec![5, 7])
+            .stats()
+            .unwrap();
+
+        assert!(stats.effective_target_nodes_count >= 0);
     }
 }

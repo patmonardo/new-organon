@@ -5,7 +5,7 @@ use crate::types::prelude::DefaultGraphStore;
 use super::pathfinding::{
     AStarBuilder, AllShortestPathsBuilder, BellmanFordBuilder, BfsBuilder, DagLongestPathBuilder,
     DeltaSteppingBuilder, DfsBuilder, DijkstraBuilder, KSpanningTreeBuilder, RandomWalkBuilder,
-    SpanningTreeBuilder, TopologicalSortBuilder, YensBuilder,
+    SpanningTreeBuilder, SteinerTreeBuilder, TopologicalSortBuilder, YensBuilder,
 };
 
 use super::centrality::{
@@ -97,6 +97,11 @@ impl Graph {
     /// K-spanning tree (prune MST to exactly k nodes).
     pub fn kspanning_tree(&self) -> KSpanningTreeBuilder {
         KSpanningTreeBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// Steiner tree (minimum tree connecting source to terminals).
+    pub fn steiner_tree(&self) -> SteinerTreeBuilder {
+        SteinerTreeBuilder::new(Arc::clone(&self.store))
     }
 
     /// Topological sort for directed acyclic graphs (DAG).

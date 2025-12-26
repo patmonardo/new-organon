@@ -42,6 +42,10 @@ pub fn handle_spanning_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
     crate::applications::services::pathfinding_dispatch::handle_spanning_tree(request, catalog)
 }
 
+pub fn handle_steiner_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::services::pathfinding_dispatch::handle_steiner_tree(request, catalog)
+}
+
 pub fn handle_topological_sort(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::services::pathfinding_dispatch::handle_topological_sort(request, catalog)
 }

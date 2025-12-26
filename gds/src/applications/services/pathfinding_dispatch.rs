@@ -13,6 +13,7 @@ use crate::applications::algorithms::pathfinding::dijkstra;
 use crate::applications::algorithms::pathfinding::kspanningtree;
 use crate::applications::algorithms::pathfinding::random_walk;
 use crate::applications::algorithms::pathfinding::spanning_tree;
+use crate::applications::algorithms::pathfinding::steiner_tree;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -71,6 +72,11 @@ pub fn handle_all_shortest_paths(request: &Value, catalog: Arc<dyn GraphCatalog>
 /// Spanning Tree dispatcher
 pub fn handle_spanning_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     spanning_tree::handle_spanning_tree(request, catalog)
+}
+
+/// Steiner Tree dispatcher
+pub fn handle_steiner_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    steiner_tree::handle_steiner_tree(request, catalog)
 }
 
 /// Topological Sort dispatcher

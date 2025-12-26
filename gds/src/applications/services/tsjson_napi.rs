@@ -406,6 +406,7 @@ fn handle_algorithms(request: &serde_json::Value) -> serde_json::Value {
         "yens" => algorithms_dispatch::handle_yens(request, catalog),
         "all_shortest_paths" => algorithms_dispatch::handle_all_shortest_paths(request, catalog),
         "spanning_tree" => algorithms_dispatch::handle_spanning_tree(request, catalog),
+        "steiner_tree" => algorithms_dispatch::handle_steiner_tree(request, catalog),
         "topological_sort" => algorithms_dispatch::handle_topological_sort(request, catalog),
         "random_walk" => algorithms_dispatch::handle_random_walk(request, catalog),
 
