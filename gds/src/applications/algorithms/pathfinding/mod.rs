@@ -9,6 +9,7 @@ pub mod kspanningtree;
 pub mod random_walk;
 pub mod spanning_tree;
 pub mod steiner_tree;
+pub mod topological_sort;
 
 pub use all_shortest_paths::*;
 pub use astar::*;
@@ -20,3 +21,4 @@ pub use kspanningtree::*;
 pub use random_walk::*;
 pub use spanning_tree::*;
 pub use steiner_tree::*;
+pub use topological_sort::*;

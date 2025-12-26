@@ -14,14 +14,14 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Result row for topological sort stream mode
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct TopologicalSortRow {
     pub node_id: u64,
     pub max_distance: Option<f64>,
 }
 
 /// Statistics for topological sort computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct TopologicalSortStats {
     pub node_count: usize,
     pub execution_time_ms: u64,
