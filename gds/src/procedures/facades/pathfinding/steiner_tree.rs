@@ -235,6 +235,6 @@ mod tests {
             .stats()
             .unwrap();
 
-        assert!(stats.effective_target_nodes_count >= 0);
+        assert!(stats.effective_target_nodes_count > 0);
     }
 }
