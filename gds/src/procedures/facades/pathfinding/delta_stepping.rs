@@ -18,7 +18,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 /// Statistics about Delta Stepping execution
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct DeltaSteppingStats {
     pub paths_found: u64,
     pub computation_time_ms: u64,

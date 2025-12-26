@@ -7,6 +7,7 @@ use crate::applications::algorithms::pathfinding::all_shortest_paths;
 use crate::applications::algorithms::pathfinding::astar;
 use crate::applications::algorithms::pathfinding::bellman_ford;
 use crate::applications::algorithms::pathfinding::bfs;
+use crate::applications::algorithms::pathfinding::delta_stepping;
 use crate::applications::algorithms::pathfinding::dfs;
 use crate::applications::algorithms::pathfinding::dijkstra;
 use crate::types::catalog::GraphCatalog;
@@ -44,9 +45,8 @@ pub fn handle_astar(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 }
 
 /// Delta Stepping dispatcher
-pub fn handle_delta_stepping(_request: &Value, _catalog: Arc<dyn GraphCatalog>) -> Value {
-    let op = "delta_stepping";
-    err(op, "NOT_IMPLEMENTED", "Delta Stepping not yet implemented")
+pub fn handle_delta_stepping(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    delta_stepping::handle_delta_stepping(request, catalog)
 }
 
 /// Yen's K Shortest Paths dispatcher
