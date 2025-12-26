@@ -30,10 +30,6 @@ pub fn handle_kspanningtree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
     crate::applications::services::pathfinding_dispatch::handle_kspanningtree(request, catalog)
 }
 
-pub fn handle_yens(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
-    crate::applications::services::pathfinding_dispatch::handle_yens(request, catalog)
-}
-
 pub fn handle_all_shortest_paths(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::services::pathfinding_dispatch::handle_all_shortest_paths(request, catalog)
 }
@@ -48,6 +44,10 @@ pub fn handle_steiner_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
 
 pub fn handle_topological_sort(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::services::pathfinding_dispatch::handle_topological_sort(request, catalog)
+}
+
+pub fn handle_yens(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::services::pathfinding_dispatch::handle_yens(request, catalog)
 }
 
 pub fn handle_random_walk(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {

@@ -15,7 +15,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 /// Statistics about Yen's execution
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct YensStats {
     pub paths_found: u64,
     pub computation_time_ms: u64,

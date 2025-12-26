@@ -10,6 +10,7 @@ pub mod random_walk;
 pub mod spanning_tree;
 pub mod steiner_tree;
 pub mod topological_sort;
+pub mod yens;
 
 pub use all_shortest_paths::*;
 pub use astar::*;
@@ -22,3 +23,4 @@ pub use random_walk::*;
 pub use spanning_tree::*;
 pub use steiner_tree::*;
 pub use topological_sort::*;
+pub use yens::*;
