@@ -44,7 +44,7 @@ use std::time::Instant;
 // ============================================================================
 
 /// Statistics about PageRank computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct PageRankStats {
     /// Minimum PageRank score
     pub min: f64,
@@ -499,4 +499,105 @@ mod tests {
         assert!((scores[0] - scores[1]).abs() < 1e-8);
         assert!((scores[1] - scores[2]).abs() < 1e-8);
     }
+}
+
+// ============================================================================
+// JSON API Handler
+// ============================================================================
+
+use serde_json::{json, Value};
+use crate::types::catalog::GraphCatalog;
+
+/// Handle PageRank requests from JSON API
+pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    let op = "pagerank";
+
+    // Parse request parameters
+    let graph_name = match request.get("graphName").and_then(|v| v.as_str()) {
+        Some(name) => name,
+        None => return err(op, "INVALID_REQUEST", "Missing 'graphName' parameter"),
+    };
+
+    let mode = request
+        .get("mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("stream");
+
+    let concurrency = request
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(1) as usize;
+
+    let direction = request
+        .get("direction")
+        .and_then(|v| v.as_str())
+        .unwrap_or("outgoing");
+
+    let source_nodes = request
+        .get("sourceNodes")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_u64()).collect())
+        .unwrap_or(vec![]);
+
+    let iterations = request
+        .get("iterations")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(20) as u32;
+
+    let damping_factor = request
+        .get("dampingFactor")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.85);
+
+    let tolerance = request
+        .get("tolerance")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(1e-4);
+
+    // Get graph store
+    let graph_store = match catalog.get(graph_name) {
+        Some(store) => store,
+        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+    };
+
+    // Create builder
+    let mut builder = PageRankBuilder::new(graph_store)
+        .concurrency(concurrency)
+        .direction(direction)
+        .iterations(iterations)
+        .damping_factor(damping_factor)
+        .tolerance(tolerance);
+
+    if !source_nodes.is_empty() {
+        builder = builder.source_nodes(source_nodes);
+    }
+
+    // Execute based on mode
+    match mode {
+        "stream" => match builder.stream() {
+            Ok(rows_iter) => {
+                let rows: Vec<_> = rows_iter.collect();
+                json!({
+                    "ok": true,
+                    "op": op,
+                    "data": rows
+                })
+            }
+            Err(e) => err(op, "EXECUTION_ERROR", &format!("PageRank execution failed: {:?}", e)),
+        },
+        "stats" => match builder.stats() {
+            Ok(stats) => json!({
+                "ok": true,
+                "op": op,
+                "data": stats
+            }),
+            Err(e) => err(op, "EXECUTION_ERROR", &format!("PageRank stats failed: {:?}", e)),
+        },
+        _ => err(op, "INVALID_REQUEST", "Invalid mode"),
+    }
+}
+
+/// Common error response builder
+fn err(op: &str, code: &str, message: &str) -> Value {
+    json!({ "ok": false, "op": op, "error": { "code": code, "message": message } })
 }

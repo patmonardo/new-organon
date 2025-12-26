@@ -410,6 +410,7 @@ fn handle_algorithms(request: &serde_json::Value) -> serde_json::Value {
         "steiner_tree" => algorithms_dispatch::handle_steiner_tree(request, catalog),
         "topological_sort" => algorithms_dispatch::handle_topological_sort(request, catalog),
         "random_walk" => algorithms_dispatch::handle_random_walk(request, catalog),
+        "pagerank" => algorithms_dispatch::handle_pagerank(request, catalog),
 
         _ => err(op, "UNSUPPORTED_OP", "Unsupported algorithms operation."),
     }

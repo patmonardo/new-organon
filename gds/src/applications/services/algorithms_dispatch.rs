@@ -57,3 +57,7 @@ pub fn handle_yens(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 pub fn handle_random_walk(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::services::pathfinding_dispatch::handle_random_walk(request, catalog)
 }
+
+pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::procedures::facades::centrality::pagerank::handle_pagerank(request, catalog)
+}

@@ -6,6 +6,7 @@ pub mod centrality_algorithms_stats_mode_business_facade;
 pub mod centrality_algorithms_stream_mode_business_facade;
 pub mod centrality_algorithms_write_mode_business_facade;
 pub mod hits_hook_generator;
+pub mod pagerank;
 
 pub use centrality_algorithms::*;
 pub use centrality_applications::*;
@@ -15,3 +16,4 @@ pub use centrality_algorithms_stats_mode_business_facade::*;
 pub use centrality_algorithms_stream_mode_business_facade::*;
 pub use centrality_algorithms_write_mode_business_facade::*;
 pub use hits_hook_generator::*;
+pub use pagerank::*;

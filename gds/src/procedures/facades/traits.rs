@@ -91,14 +91,14 @@ pub struct WriteStats {
 // ============================================================================
 
 /// Result type for centrality algorithms: (node_id, score)
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, serde::Serialize)]
 pub struct CentralityScore {
     pub node_id: u64,
     pub score: f64,
 }
 
 /// Statistics aggregated from centrality algorithm results
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct CentralityStats {
     pub min: f64,
     pub max: f64,
