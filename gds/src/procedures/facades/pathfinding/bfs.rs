@@ -42,7 +42,7 @@ use std::sync::Arc;
 // ============================================================================
 
 /// Statistics about BFS computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct BfsStats {
     /// Number of nodes visited during traversal
     pub nodes_visited: u64,

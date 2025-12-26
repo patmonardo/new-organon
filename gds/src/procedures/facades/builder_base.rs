@@ -5,6 +5,7 @@
 
 use super::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
+use serde::Serialize;
 use std::time::{Duration, Instant};
 
 /// Execution context tracking for algorithm runs
@@ -53,14 +54,14 @@ impl ExecutionContext {
 // ============================================================================
 
 /// Result of a mutation operation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct MutationResult {
     /// Number of nodes updated
     pub nodes_updated: u64,
     /// Property name created/updated
     pub property_name: String,
-    /// Execution time
-    pub execution_time: Duration,
+    /// Execution time in milliseconds
+    pub execution_time_ms: u64,
 }
 
 impl MutationResult {
@@ -69,25 +70,25 @@ impl MutationResult {
         Self {
             nodes_updated,
             property_name,
-            execution_time,
+            execution_time_ms: execution_time.as_millis() as u64,
         }
     }
 
     /// Get execution time in milliseconds
     pub fn execution_time_ms(&self) -> u64 {
-        self.execution_time.as_millis() as u64
+        self.execution_time_ms
     }
 }
 
 /// Result of a write operation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct WriteResult {
     /// Number of nodes written
     pub nodes_written: u64,
     /// Property name written
     pub property_name: String,
-    /// Execution time
-    pub execution_time: Duration,
+    /// Execution time in milliseconds
+    pub execution_time_ms: u64,
 }
 
 impl WriteResult {
@@ -96,13 +97,13 @@ impl WriteResult {
         Self {
             nodes_written,
             property_name,
-            execution_time,
+            execution_time_ms: execution_time.as_millis() as u64,
         }
     }
 
     /// Get execution time in milliseconds
     pub fn execution_time_ms(&self) -> u64 {
-        self.execution_time.as_millis() as u64
+        self.execution_time_ms
     }
 }
 

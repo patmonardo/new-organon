@@ -16,7 +16,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 /// Statistics about Bellman-Ford execution
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct BellmanFordStats {
     pub paths_found: u64,
     pub negative_cycles_found: u64,

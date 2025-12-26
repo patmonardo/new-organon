@@ -44,7 +44,7 @@ use std::sync::Arc;
 // ============================================================================
 
 /// Statistics about DFS computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct DfsStats {
     /// Number of nodes visited during traversal
     pub nodes_visited: u64,

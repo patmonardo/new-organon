@@ -14,7 +14,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 /// A single all-pairs shortest path distance row.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct AllShortestPathsRow {
     pub source: u64,
     pub target: u64,
@@ -22,7 +22,7 @@ pub struct AllShortestPathsRow {
 }
 
 /// Aggregated statistics for an all-shortest-paths run.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct AllShortestPathsStats {
     pub node_count: u64,
     pub result_count: u64,

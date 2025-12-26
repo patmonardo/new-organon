@@ -43,7 +43,7 @@ use std::sync::Arc;
 // ============================================================================
 
 /// Statistics about Dijkstra computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct DijkstraStats {
     /// Number of paths found
     pub paths_found: u64,

@@ -8,6 +8,8 @@
 
 pub mod machinery;
 pub mod metadata;
+pub mod pathfinding;
 
 pub use machinery::*;
 pub use metadata::*;
+pub use pathfinding::*;

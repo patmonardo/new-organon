@@ -5,6 +5,7 @@
 //! algorithms to customize their behavior.
 
 use crate::projection::eval::procedure::AlgorithmError;
+use serde::Serialize;
 
 /// Result type for facade operations
 pub type Result<T> = std::result::Result<T, AlgorithmError>;
@@ -132,7 +133,7 @@ pub struct CommunityStats {
 // ============================================================================
 
 /// Result type for path finding algorithms
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct PathResult {
     pub source: u64,
     pub target: u64,

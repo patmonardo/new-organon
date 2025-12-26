@@ -45,6 +45,7 @@ use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph_store::GraphStore;
 use crate::types::prelude::DefaultGraphStore;
+use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -93,7 +94,7 @@ impl Heuristic {
 // ============================================================================
 
 /// Statistics about A* computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct AStarStats {
     /// Number of nodes visited during search
     pub nodes_visited: u64,
