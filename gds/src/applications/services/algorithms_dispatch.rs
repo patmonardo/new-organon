@@ -26,6 +26,10 @@ pub fn handle_delta_stepping(request: &Value, catalog: Arc<dyn GraphCatalog>) ->
     crate::applications::services::pathfinding_dispatch::handle_delta_stepping(request, catalog)
 }
 
+pub fn handle_dag_longest_path(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::services::pathfinding_dispatch::handle_dag_longest_path(request, catalog)
+}
+
 pub fn handle_kspanningtree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::services::pathfinding_dispatch::handle_kspanningtree(request, catalog)
 }

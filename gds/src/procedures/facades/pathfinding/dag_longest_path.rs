@@ -14,7 +14,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Result row for longest path stream mode
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct DagLongestPathRow {
     pub index: u64,
     pub source_node: u64,
@@ -25,7 +25,7 @@ pub struct DagLongestPathRow {
 }
 
 /// Statistics for dag longest path computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct DagLongestPathStats {
     pub path_count: usize,
     pub execution_time_ms: u64,

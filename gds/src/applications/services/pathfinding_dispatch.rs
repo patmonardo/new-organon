@@ -7,6 +7,7 @@ use crate::applications::algorithms::pathfinding::all_shortest_paths;
 use crate::applications::algorithms::pathfinding::astar;
 use crate::applications::algorithms::pathfinding::bellman_ford;
 use crate::applications::algorithms::pathfinding::bfs;
+use crate::applications::algorithms::pathfinding::dag_longest_path;
 use crate::applications::algorithms::pathfinding::delta_stepping;
 use crate::applications::algorithms::pathfinding::dfs;
 use crate::applications::algorithms::pathfinding::dijkstra;
@@ -53,6 +54,11 @@ pub fn handle_astar(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 /// Delta Stepping dispatcher
 pub fn handle_delta_stepping(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     delta_stepping::handle_delta_stepping(request, catalog)
+}
+
+/// DAG Longest Path dispatcher
+pub fn handle_dag_longest_path(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    dag_longest_path::handle_dag_longest_path(request, catalog)
 }
 
 /// K-Spanning Tree dispatcher
