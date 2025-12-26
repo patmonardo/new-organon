@@ -15,14 +15,14 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Result row for random walk stream mode
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct RandomWalkRow {
     /// The walk as a sequence of node IDs
     pub path: Vec<u64>,
 }
 
 /// Statistics for random walk computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct RandomWalkStats {
     pub walk_count: usize,
     pub execution_time_ms: u64,

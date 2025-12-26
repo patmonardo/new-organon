@@ -11,6 +11,7 @@ use crate::applications::algorithms::pathfinding::delta_stepping;
 use crate::applications::algorithms::pathfinding::dfs;
 use crate::applications::algorithms::pathfinding::dijkstra;
 use crate::applications::algorithms::pathfinding::kspanningtree;
+use crate::applications::algorithms::pathfinding::random_walk;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -79,7 +80,6 @@ pub fn handle_topological_sort(_request: &Value, _catalog: Arc<dyn GraphCatalog>
 }
 
 /// Random Walk dispatcher
-pub fn handle_random_walk(_request: &Value, _catalog: Arc<dyn GraphCatalog>) -> Value {
-    let op = "random_walk";
-    err(op, "NOT_IMPLEMENTED", "Random Walk not yet implemented")
+pub fn handle_random_walk(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    random_walk::handle_random_walk(request, catalog)
 }
