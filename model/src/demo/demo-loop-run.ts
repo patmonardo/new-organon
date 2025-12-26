@@ -8,23 +8,14 @@ import {
   modelAndViewToFactTraceEvents,
 } from '../sdsl/index';
 
-import {
-  kernelRunRequestToTawActEvent,
-  kernelRunResultToTawResultEvent,
-  kernelRunToTraceEvents,
-  type FactTraceEvent,
-  type KernelRunRequest,
-  type KernelRunResult,
-  type EventMeta,
-  DemoKernelPort,
-} from '@organon/gdsl';
-
 import type { TawKind, TawPayload } from '@organon/task';
 
 // NOTE: This demo runner intentionally imports the kernel/demo-loop primitives from
 // GDSL, not Model SDSL.
 import { contextFromFactTrace } from '../sdsl/fact-trace';
-import { contextDocumentToTawIntentEvent, planTextToTawPlanEvent } from '../sdsl/agent-to-taw';
+import { contextDocumentToTawIntentEvent, planTextToTawPlanEvent, kernelRunRequestToTawActEvent, kernelRunResultToTawResultEvent } from '../sdsl/agent-to-taw';
+import { kernelRunToTraceEvents, type KernelRunRequest, type KernelRunResult, DemoKernelPort } from '@organon/gdsl';
+import { FactTraceEvent, EventMeta } from '../sdsl';
 
 function printJson(label: string, value: unknown) {
   // eslint-disable-next-line no-console

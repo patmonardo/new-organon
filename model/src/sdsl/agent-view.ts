@@ -24,7 +24,7 @@ import {
   type ContextDocument,
   type SchemaDescription,
   type StructuredFact,
-} from '@organon/gdsl';
+} from '@organon/task';
 
 // =============================================================================
 // CONTEXT DOCUMENT - The Agent's Display Language
