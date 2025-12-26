@@ -1,10 +1,11 @@
 // Stream result types - direct translation from Java
 
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// Result for streaming node properties.
 /// Mirrors Java GraphStreamNodePropertyResult class.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GraphStreamNodePropertyResult {
     pub node_id: i64,
     pub property_value: Value,
@@ -23,7 +24,7 @@ impl GraphStreamNodePropertyResult {
 
 /// Result for streaming multiple node properties.
 /// Mirrors Java GraphStreamNodePropertiesResult class.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GraphStreamNodePropertiesResult {
     pub node_id: i64,
     pub node_property: String,
@@ -49,7 +50,7 @@ impl GraphStreamNodePropertiesResult {
 
 /// Result for streaming relationship properties.
 /// Mirrors Java GraphStreamRelationshipPropertyResult class.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GraphStreamRelationshipPropertyResult {
     pub source_node_id: i64,
     pub target_node_id: i64,
@@ -75,7 +76,7 @@ impl GraphStreamRelationshipPropertyResult {
 
 /// Result for streaming multiple relationship properties.
 /// Mirrors Java GraphStreamRelationshipPropertiesResult class.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GraphStreamRelationshipPropertiesResult {
     pub source_node_id: i64,
     pub target_node_id: i64,

@@ -1,16 +1,36 @@
 /// Bellman-Ford algorithm result
 #[derive(Debug, Clone)]
 pub struct BellmanFordResult {
-    // TODO: Add fields as needed based on Java implementation
-    // This might include:
-    // - shortestPaths: PathFindingResult
-    // - containsNegativeCycle: bool
-    // - negativeCycles: PathFindingResult
+    /// Shortest paths found (empty if negative cycle detected or paths not tracked)
+    pub shortest_paths: Vec<PathResult>,
+    /// Negative cycles found (empty if not tracked)
+    pub negative_cycles: Vec<PathResult>,
+    /// Whether the graph contains negative cycles
+    pub contains_negative_cycle: bool,
+}
+
+/// Individual path result for Bellman-Ford
+#[derive(Debug, Clone)]
+pub struct PathResult {
+    /// Source node ID
+    pub source_node: u64,
+    /// Target node ID
+    pub target_node: u64,
+    /// Path as sequence of node IDs
+    pub path: Vec<u64>,
+    /// Total cost of the path
+    pub cost: f64,
+    /// Relationship IDs in the path
+    pub relationships: Vec<u64>,
 }
 
 impl BellmanFordResult {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            shortest_paths: vec![],
+            negative_cycles: vec![],
+            contains_negative_cycle: false,
+        }
     }
 }
 
@@ -34,8 +54,8 @@ impl PathFindingResult {
         Self {}
     }
 
-    pub fn for_each_path<F>(&self, _f: F) 
-    where 
+    pub fn for_each_path<F>(&self, _f: F)
+    where
         F: Fn(&PathResult),
     {
         // TODO: Implement path iteration
@@ -43,7 +63,7 @@ impl PathFindingResult {
     }
 
     pub fn map_paths<F, R>(&self, _f: F) -> Vec<R>
-    where 
+    where
         F: Fn(&PathResult) -> R,
     {
         // TODO: Implement path mapping

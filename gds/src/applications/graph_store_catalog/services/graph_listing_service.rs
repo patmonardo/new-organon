@@ -9,6 +9,7 @@ use std::sync::Arc;
 ///
 /// Mirrors Java GraphListingService class.
 /// Simple accessor service for retrieving graph catalog entries.
+#[derive(Clone)]
 pub struct GraphListingService {
     graph_store_catalog_service: Arc<dyn GraphStoreCatalogService>,
 }

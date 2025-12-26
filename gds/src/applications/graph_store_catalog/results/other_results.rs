@@ -129,7 +129,7 @@ impl MutateLabelResultBuilder {
 
 /// Result for topology operations.
 /// Mirrors Java TopologyResult class.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub struct TopologyResult {
     pub source_node_id: i64,
     pub target_node_id: i64,

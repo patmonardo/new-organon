@@ -1,5 +1,7 @@
 pub mod logging;
 pub mod pathfinding_dispatch;
+pub mod algorithms_dispatch;
+pub mod graph_store_catalog_dispatch;
 
 // TS-JSON is a JSON-in / JSON-out protocol used at the kernel boundary.
 // The core implementation is Rust-only (no N-API dependency).

@@ -9,7 +9,7 @@ use crate::applications::graph_store_catalog::applications::{
     DropGraphApplication, DropNodePropertiesApplication, DropRelationshipsApplication,
     ExportToCsvApplication, ExportToDatabaseApplication, GenerateGraphApplication,
     GenericProjectApplication, GraphMemoryUsageApplication, GraphSamplingApplication,
-    NativeProjectApplication, StreamNodePropertiesApplication,
+    ListGraphApplication, NativeProjectApplication, StreamNodePropertiesApplication,
     StreamRelationshipPropertiesApplication, StreamRelationshipsApplication,
     WriteNodeLabelApplication, WriteNodePropertiesApplication,
     WriteRelationshipPropertiesApplication, WriteRelationshipsApplication,
@@ -30,6 +30,7 @@ pub struct DefaultGraphCatalogApplications {
     graph_store_catalog_service: Arc<dyn GraphStoreCatalogService>,
     graph_listing_service: GraphListingService,
     graph_memory_usage_application: GraphMemoryUsageApplication,
+    list_graph_application: ListGraphApplication,
     drop_graph_application: DropGraphApplication,
     drop_node_properties_application: DropNodePropertiesApplication,
     drop_relationships_application: DropRelationshipsApplication,
@@ -57,9 +58,10 @@ impl DefaultGraphCatalogApplications {
             GraphListingService::new(builder.graph_store_catalog_service.clone());
         Self {
             log: builder.log,
-            graph_store_catalog_service: builder.graph_store_catalog_service,
-            graph_listing_service,
+            graph_store_catalog_service: builder.graph_store_catalog_service.clone(),
+            graph_listing_service: graph_listing_service.clone(),
             graph_memory_usage_application: builder.graph_memory_usage_application,
+            list_graph_application: ListGraphApplication::new(graph_listing_service),
             drop_graph_application: builder.drop_graph_application,
             drop_node_properties_application: builder.drop_node_properties_application,
             drop_relationships_application: builder.drop_relationships_application,
@@ -99,6 +101,16 @@ impl GraphCatalogApplications for DefaultGraphCatalogApplications {
     ) -> Vec<GraphStoreCatalogEntry> {
         self.graph_listing_service
             .list_graphs(user, database_id, graph_name, include_degree_distribution)
+    }
+
+    fn list_graphs_json(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: Option<&str>,
+        include_degree_distribution: bool,
+    ) -> serde_json::Value {
+        self.list_graph_application.compute(graph_name, include_degree_distribution, user, database_id)
     }
 
     fn graph_memory_usage(
@@ -156,12 +168,19 @@ impl GraphCatalogApplications for DefaultGraphCatalogApplications {
             .get_graph_store(user, database_id, graph_name)?;
 
         // Use the drop application
-        Ok(self.drop_node_properties_application.compute(
+        let (modified_store, count) = self.drop_node_properties_application.compute(
             &self.task_registry_factory,
             &self.user_log_registry_factory,
             node_properties,
             graph_store.as_ref(),
-        ))
+        )?;
+
+        // Put the modified store back in the catalog
+        self.graph_store_catalog_service
+            .graph_catalog(user, database_id)
+            .set(graph_name, Arc::new(modified_store));
+
+        Ok(count)
     }
 
     fn drop_relationships(
@@ -177,12 +196,19 @@ impl GraphCatalogApplications for DefaultGraphCatalogApplications {
             .get_graph_store(user, database_id, graph_name)?;
 
         // Use the drop application
-        Ok(self.drop_relationships_application.compute(
+        let (modified_store, deletion_result) = self.drop_relationships_application.compute(
             &self.task_registry_factory,
             &self.user_log_registry_factory,
             graph_store.as_ref(),
             relationship_type,
-        ))
+        )?;
+
+        // Put the modified store back in the catalog
+        self.graph_store_catalog_service
+            .graph_catalog(user, database_id)
+            .set(graph_name, Arc::new(modified_store));
+
+        Ok(deletion_result)
     }
 
     fn stream_node_properties(

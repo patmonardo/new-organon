@@ -5,6 +5,7 @@ use crate::applications::graph_store_catalog::results::{
 use crate::core::User;
 use crate::types::graph_store::DatabaseId;
 use crate::types::graph_store::DeletionResult;
+use serde_json::Value;
 use std::collections::HashMap;
 
 /// Main trait interface for GraphStore catalog operations.
@@ -23,6 +24,15 @@ pub trait GraphCatalogApplications {
         graph_name: Option<&str>,
         include_degree_distribution: bool,
     ) -> Vec<GraphStoreCatalogEntry>;
+
+    /// Lists all graphs in the catalog (JSON response).
+    fn list_graphs_json(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: Option<&str>,
+        include_degree_distribution: bool,
+    ) -> Value;
 
     /// Gets memory usage for a specific graph.
     fn graph_memory_usage(
@@ -332,7 +342,7 @@ impl ProjectionResult {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct GenerationResult {
     graph_name: String,
     nodes_generated: u64,
@@ -369,7 +379,7 @@ impl GenerationResult {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct SamplingResult {
     sampled_graph_name: String,
     original_nodes: u64,
