@@ -17,13 +17,13 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Result row for articulation points stream.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize)]
 pub struct ArticulationPointRow {
     pub node_id: u64,
 }
 
 /// Statistics for articulation points computation.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ArticulationPointsStats {
     pub articulation_point_count: u64,
     pub execution_time_ms: u64,
