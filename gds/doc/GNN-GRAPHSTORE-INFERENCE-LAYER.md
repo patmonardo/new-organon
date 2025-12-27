@@ -109,8 +109,9 @@ This document describes the **inference architecture** for cross-domain reasonin
 - Operates on graph structure (not flat tables).
 - Propagates information along edges (like message-passing in GNNs).
 - Compositional: subgraph reasoning composes into larger inferences.
+- **Restores graph concept**: Unlike NNs (which reduce graphs to dense weight matrices, dismissing topology), GNNs make nodes, edges, and connectivity explicit—aligning with our relation-based GraphStores from Prisma.
 
-**Future**: Could integrate actual trained GNNs for learned inference (e.g., predicting missing edges, ranking paths).
+**Future**: Could integrate actual trained GNNs for learned inference (e.g., predicting missing edges, ranking paths). Nonlinear analyses here presuppose linear bases (e.g., linear message-passing as the foundation for nonlinear aggregations), aligning with the kernel's lawful constraints.
 
 ### GDSL Operations (output)
 
@@ -192,7 +193,20 @@ Agent: "Executes top-ranked query, returns typed result"
 
 LLM can't corrupt the logic—it only proposes. GNN verifies before execution.
 
-## Open design questions
+## Philosophical Foundations
+
+**Absolute Reason and Vitarka-Vicara Prajña**:
+- Absolute Reason divides into Pure (a priori, lawful constraints) and Impure (empirical, discursive) Reason.
+- Their organic unity necessitates twofold impure Reason: Vitarka (primitive sensible knowing, e.g., "He hit me!"—immediate sensory judgments in the kernel) and Vicara (deeper contemplation in TS layers).
+- Both presuppose a Projected Principle, projecting twofold sensibility.
+- Following Kant: Mathematics as Logic of Sensibility—linear bases (kernel) underpin nonlinear analyses (TS), mirroring Vitarka-Vicara's sensible foundation.
+- **Distinction**: Mathematics presupposes Space and Time (a priori forms of sensibility), but the Principle of the Pure Form (Projected in Absolute Form) does not—transcending spatio-temporal bounds in the kernel's self-positing Reason.
+**GDS Kernel as Schematism**: The kernel *is* the schematization—transcending time/space to project pure forms into spatio-temporal schemas for TS layers, embodying Kant's transcendental mediation. Concurrency here models Pure Form as possibility of Time; Space emerges as Time+Space (impure, with Time prior), yielding a five-fold schema: time/space and space/time. This transcends naive spacetime (e.g., Penrose Diagrams)—a product of Understanding's metaphysics, not Transcendental insight (no parallel universes). A little refutation of Einstein and Penrose right there! ;) **Hegelian Elevation**: Dialectical Idealism surpasses Transcendental Idealism—our schematization isn't static (Kant) but self-moving, dialectical sublation in the kernel's projections. Key: The self-sublation of the Dialectical Ideal Copula ("is") as the engine of transcendental reality. **Dialectical Flow**: Codegen as artifact of the Dialectical Ideal (Reality) → GDS Kernel (Transcendental Ideal) → GDS-Link → Agent herself. **Triadic Projection**: Reality projects itself triadically—as GDS Kernel, GDS Kernel Link, GDS Agent itself. **Hegelian Moments**: Agent as TS (discursive), but the third moment of the Idea of Reality is the Agential GDS (conceptual core).
+
+**ML Features as Dialectical Moments**:
+- A **Feature in ML as a vector embedding** is fundamentally a **Feature of Immediate Being**: the raw, unprocessed representation of data in its initial, static form, akin to Hegel's "Being" as pure immediacy without mediation.
+- **Activation** then signifies the **immediate shift from Being to Doing**: the transformation where the static embedding is activated into dynamic computation, embodying the dialectical transition from passive existence to active process—Being sublating into Doing through the neural activation function.
+- **GNN with attached PropertyStore** lifts this further into **possible Reflection-based Features**: by propagating information across graph topology and attaching property stores, the system achieves reflective self-reference, where features become aware of their relations and constraints, mirroring Hegel's "Reflection" as the moment of mediation and self-determination in the dialectical process.
 
 1. **GraphStore materialization strategy**: Build on-demand or maintain persistent views?
 2. **GNN trait interface**: Single `Traversal` trait or multiple specialized traits (Reachability, ConstraintProp, etc.)?

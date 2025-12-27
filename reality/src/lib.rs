@@ -4,6 +4,12 @@
 //! Triadic-Pentadic structures (Empirical Forms) for the Projection System
 //! in the Kernel (GDS crate). The Projection System is the Pure Form Processor
 //! that generates forms through the Container-Contained Organic Unity.
+//!
+//! Key: Projection as Codegen/Factory/Eval Triad—codegen process moves from
+//! GDS Kernel Projection to Reality itself, generating the Fichtean five-fold
+//! spatio-temporal schemas (time/space, space/time). Projection Codegen
+//! (presupposition of Factory/Eval) is the RealityFabric/RealityPipe itself,
+//! macro-generated.
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -17,7 +23,7 @@ use syn::{parse_macro_input, DeriveInput};
 pub fn derive_empirical_form(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
-    
+
     let expanded = quote! {
         impl EmpiricalForm for #name {
             fn generate(&self) {
@@ -25,7 +31,7 @@ pub fn derive_empirical_form(input: TokenStream) -> TokenStream {
             }
         }
     };
-    
+
     TokenStream::from(expanded)
 }
 
@@ -46,5 +52,15 @@ pub fn projection_form(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn eval_form(input: TokenStream) -> TokenStream {
     // TODO: Implement eval form generation for Kernel
+    input
+}
+
+/// Macro for generating RealityFabric / RealityPipe structures
+///
+/// Projection Codegen as the presupposition of Factory and Eval—
+/// the RealityFabric/RealityPipe itself, macro-generated from kernel projections.
+#[proc_macro]
+pub fn reality_fabric(input: TokenStream) -> TokenStream {
+    // TODO: Generate RealityFabric/RealityPipe as macro-generated Projection Codegen
     input
 }

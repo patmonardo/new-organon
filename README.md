@@ -37,7 +37,7 @@ Terminology policy: prefer “Planning/Execution” and avoid Lisp-style “Eval
 
 ### Rust / Cargo workspace (separate from PNPM build)
 
-- `gds/`, `gdsl/` (Rust), `reality/` — performance-oriented kernel crates and experiments
+- `gds/`, `reality/` — performance-oriented kernel crates and experiments
 
 Rust crates are not part of `pnpm -r build` right now (no stable JS binding). Build/test them with Cargo directly.
 
@@ -125,9 +125,10 @@ pnpm --filter @organon/gdsl test
 ### Dashboard example (Next.js)
 
 ```bash
-pnpm --filter dashboard-v4 dev
-pnpm --filter dashboard-v4 build
-pnpm --filter dashboard-v4 test
+cd model/examples/dashboard
+pnpm dev
+pnpm build
+pnpm test
 ```
 
 ### Prisma (model package)
