@@ -44,7 +44,7 @@ use std::time::Instant;
 // ============================================================================
 
 /// Statistics about betweenness centrality in the graph
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct BetweennessStats {
     /// Minimum betweenness score
     pub min: f64,
