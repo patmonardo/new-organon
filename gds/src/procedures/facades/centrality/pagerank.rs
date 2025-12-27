@@ -30,7 +30,7 @@
 use crate::config::base_types::AlgoBaseConfig;
 use crate::config::PageRankConfig;
 use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult};
-use crate::procedures::facades::traits::{CentralityScore, Result};
+use crate::procedures::facades::traits::{AlgorithmRunner, CentralityScore, Result, StatsResults, StreamResults};
 use crate::procedures::pagerank::run_pagerank;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
@@ -72,7 +72,7 @@ pub struct PageRankStats {
 // Builder Type
 // ============================================================================
 
-/// PageRank algorithm builder - fluent configuration
+/// PageRank algorithm facade - fluent configuration
 ///
 /// Use this to configure and run PageRank with custom parameters.
 /// Supports multiple execution modes via method chaining.
@@ -86,14 +86,14 @@ pub struct PageRankStats {
 /// ```rust,no_run
 /// # use gds::Graph;
 /// # let graph = Graph::default();
-/// # use gds::procedures::facades::centrality::PageRankBuilder;
-/// let builder = PageRankBuilder::new()
+/// # use gds::procedures::facades::centrality::PageRankFacade;
+/// let facade = PageRankFacade::new()
 ///     .iterations(30)
 ///     .damping_factor(0.85)
 ///     .tolerance(1e-5);
 /// ```
 #[derive(Clone)]
-pub struct PageRankBuilder {
+pub struct PageRankFacade {
     graph_store: Arc<DefaultGraphStore>,
     direction: String,
     /// Pregel concurrency (Rayon worker threads)
@@ -108,8 +108,8 @@ pub struct PageRankBuilder {
     source_nodes: Option<Vec<u64>>,
 }
 
-impl PageRankBuilder {
-    /// Create a new PageRank builder bound to a live graph store.
+impl PageRankFacade {
+    /// Create a new PageRank facade bound to a live graph store.
     ///
     /// Defaults:
     /// - iterations: 20
@@ -253,8 +253,8 @@ impl PageRankBuilder {
     /// ```rust,no_run
     /// # use gds::Graph;
     /// # let graph = Graph::default();
-    /// # use gds::procedures::facades::centrality::PageRankBuilder;
-    /// let builder = PageRankBuilder::new();
+    /// # use gds::procedures::facades::centrality::PageRankFacade;
+    /// let builder = PageRankFacade::new();
     /// for score in builder.stream()? {
     ///     println!("Node {} has score {}", score.node_id, score.score);
     /// }
@@ -280,7 +280,7 @@ impl PageRankBuilder {
     /// # use gds::Graph;
     /// # let graph = Graph::default();
     /// # use gds::procedures::facades::centrality::PageRankBuilder;
-    /// let builder = PageRankBuilder::new();
+    /// let builder = PageRankFacade::new();
     /// let stats = builder.stats()?;
     /// println!("Converged: {}, Iterations: {}", stats.converged, stats.iterations_ran);
     /// ```
@@ -343,9 +343,9 @@ impl PageRankBuilder {
     /// ```rust,no_run
     /// # use gds::Graph;
     /// # let graph = Graph::default();
-    /// # use gds::procedures::facades::centrality::PageRankBuilder;
-    /// let builder = PageRankBuilder::new().damping_factor(0.85);
-    /// let result = builder.mutate("pagerank")?;
+    /// # use gds::procedures::facades::centrality::PageRankFacade;
+    /// let facade = PageRankFacade::new().damping_factor(0.85);
+    /// let result = facade.mutate("pagerank")?;
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
     pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
@@ -357,6 +357,86 @@ impl PageRankBuilder {
                 "PageRank mutate/write is not implemented yet".to_string(),
             ),
         )
+    }
+}
+
+impl AlgorithmRunner for PageRankFacade {
+    fn algorithm_name(&self) -> &'static str {
+        "pagerank"
+    }
+
+    fn description(&self) -> &'static str {
+        "Compute PageRank centrality scores using iterative link analysis"
+    }
+}
+
+impl StreamResults<CentralityScore> for PageRankFacade {
+    fn stream(&self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
+        let (scores, _iters, _converged, _elapsed) = self.compute_scores()?;
+        let iter = scores
+            .into_iter()
+            .enumerate()
+            .map(|(node_id, score)| CentralityScore {
+                node_id: node_id as u64,
+                score,
+            });
+        Ok(Box::new(iter))
+    }
+}
+
+impl StatsResults for PageRankFacade {
+    type Stats = PageRankStats;
+
+    fn stats(&self) -> Result<Self::Stats> {
+        let (scores, iterations_ran, converged, elapsed) = self.compute_scores()?;
+        if scores.is_empty() {
+            return Ok(PageRankStats {
+                min: 0.0,
+                max: 0.0,
+                mean: 0.0,
+                stddev: 0.0,
+                p50: 0.0,
+                p90: 0.0,
+                p99: 0.0,
+                iterations_ran,
+                converged,
+                execution_time_ms: elapsed.as_millis() as u64,
+            });
+        }
+
+        let mut sorted = scores.clone();
+        sorted.sort_by(|a, b| a.total_cmp(b));
+        let min = *sorted.first().unwrap();
+        let max = *sorted.last().unwrap();
+        let mean = scores.iter().sum::<f64>() / scores.len() as f64;
+        let var = scores
+            .iter()
+            .map(|x| {
+                let d = x - mean;
+                d * d
+            })
+            .sum::<f64>()
+            / scores.len() as f64;
+        let stddev = var.sqrt();
+
+        let percentile = |p: f64| -> f64 {
+            let idx =
+                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
+            sorted[idx]
+        };
+
+        Ok(PageRankStats {
+            min,
+            max,
+            mean,
+            stddev,
+            p50: percentile(50.0),
+            p90: percentile(90.0),
+            p99: percentile(99.0),
+            iterations_ran,
+            converged,
+            execution_time_ms: elapsed.as_millis() as u64,
+        })
     }
 }
 
@@ -382,96 +462,96 @@ mod tests {
 
     #[test]
     fn test_builder_defaults() {
-        let builder = PageRankBuilder::new(store());
-        assert_eq!(builder.iterations, 20);
-        assert_eq!(builder.damping_factor, 0.85);
-        assert_eq!(builder.tolerance, 1e-4);
+        let facade = PageRankFacade::new(store());
+        assert_eq!(facade.iterations, 20);
+        assert_eq!(facade.damping_factor, 0.85);
+        assert_eq!(facade.tolerance, 1e-4);
     }
 
     #[test]
     fn test_builder_fluent_chain() {
-        let builder = PageRankBuilder::new(store())
+        let facade = PageRankFacade::new(store())
             .iterations(30)
             .damping_factor(0.90)
             .tolerance(1e-5);
 
-        assert_eq!(builder.iterations, 30);
-        assert_eq!(builder.damping_factor, 0.90);
-        assert_eq!(builder.tolerance, 1e-5);
+        assert_eq!(facade.iterations, 30);
+        assert_eq!(facade.damping_factor, 0.90);
+        assert_eq!(facade.tolerance, 1e-5);
     }
 
     #[test]
     fn test_validate_iterations() {
-        let builder = PageRankBuilder::new(store()).iterations(0);
-        assert!(builder.validate().is_err()); // 0 is invalid
+        let facade = PageRankFacade::new(store()).iterations(0);
+        assert!(facade.validate().is_err()); // 0 is invalid
 
-        let builder = PageRankBuilder::new(store()).iterations(2_000_000);
-        assert!(builder.validate().is_err()); // Too large is invalid
+        let facade = PageRankFacade::new(store()).iterations(2_000_000);
+        assert!(facade.validate().is_err()); // Too large is invalid
 
-        let builder = PageRankBuilder::new(store()).iterations(50);
-        assert!(builder.validate().is_ok()); // 50 is valid
+        let facade = PageRankFacade::new(store()).iterations(50);
+        assert!(facade.validate().is_ok()); // 50 is valid
     }
 
     #[test]
     fn test_validate_damping_factor() {
-        let builder = PageRankBuilder::new(store()).damping_factor(0.0);
-        assert!(builder.validate().is_err()); // 0.0 is invalid
+        let facade = PageRankFacade::new(store()).damping_factor(0.0);
+        assert!(facade.validate().is_err()); // 0.0 is invalid
 
-        let builder = PageRankBuilder::new(store()).damping_factor(1.0);
-        assert!(builder.validate().is_err()); // 1.0 is invalid
+        let facade = PageRankFacade::new(store()).damping_factor(1.0);
+        assert!(facade.validate().is_err()); // 1.0 is invalid
 
-        let builder = PageRankBuilder::new(store()).damping_factor(0.85);
-        assert!(builder.validate().is_ok()); // 0.85 is valid
+        let facade = PageRankFacade::new(store()).damping_factor(0.85);
+        assert!(facade.validate().is_ok()); // 0.85 is valid
     }
 
     #[test]
     fn test_validate_tolerance() {
-        let builder = PageRankBuilder::new(store()).tolerance(0.0);
-        assert!(builder.validate().is_err()); // 0.0 is invalid (not positive)
+        let facade = PageRankFacade::new(store()).tolerance(0.0);
+        assert!(facade.validate().is_err()); // 0.0 is invalid (not positive)
 
-        let builder = PageRankBuilder::new(store()).tolerance(1e-4);
-        assert!(builder.validate().is_ok()); // positive is valid
+        let facade = PageRankFacade::new(store()).tolerance(1e-4);
+        assert!(facade.validate().is_ok()); // positive is valid
     }
 
     #[test]
     fn test_stream_requires_validation() {
-        let builder = PageRankBuilder::new(store()).iterations(0); // Invalid
-        assert!(builder.stream().is_err());
+        let facade = PageRankFacade::new(store()).iterations(0); // Invalid
+        assert!(facade.stream().is_err());
     }
 
     #[test]
     fn test_stats_requires_validation() {
-        let builder = PageRankBuilder::new(store()).damping_factor(0.0); // Invalid
-        assert!(builder.stats().is_err());
+        let facade = PageRankFacade::new(store()).damping_factor(0.0); // Invalid
+        assert!(facade.stats().is_err());
     }
 
     #[test]
     fn test_mutate_requires_validation() {
-        let builder = PageRankBuilder::new(store()).tolerance(0.0); // Invalid
-        assert!(builder.mutate("pr").is_err());
+        let facade = PageRankFacade::new(store()).tolerance(0.0); // Invalid
+        assert!(facade.mutate("pr").is_err());
     }
 
     #[test]
     fn test_mutate_validates_property_name() {
-        let builder = PageRankBuilder::new(store()); // Valid config
-        assert!(builder.mutate("").is_err()); // But empty property name
+        let facade = PageRankFacade::new(store()); // Valid config
+        assert!(facade.mutate("").is_err()); // But empty property name
     }
 
     #[test]
     fn test_mutate_accepts_valid_property() {
-        let builder = PageRankBuilder::new(store());
-        assert!(builder.mutate("pagerank").is_err());
+        let facade = PageRankFacade::new(store());
+        assert!(facade.mutate("pagerank").is_err());
     }
 
     #[test]
     fn test_stream_returns_node_count_rows() {
-        let rows: Vec<_> = PageRankBuilder::new(store()).stream().unwrap().collect();
+        let rows: Vec<_> = PageRankFacade::new(store()).stream().unwrap().collect();
         assert_eq!(rows.len(), 8);
     }
 
     #[test]
     fn test_stats_shape() {
-        let stats = PageRankBuilder::new(store()).stats().unwrap();
+        let stats = PageRankFacade::new(store()).stats().unwrap();
         assert!(stats.max >= stats.min);
     }
 
@@ -487,7 +567,7 @@ mod tests {
         };
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
 
-        let scores: Vec<_> = PageRankBuilder::new(store)
+        let scores: Vec<_> = PageRankFacade::new(store)
             .iterations(50)
             .tolerance(1e-9)
             .stream()
@@ -560,8 +640,8 @@ pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
         None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
     };
 
-    // Create builder
-    let mut builder = PageRankBuilder::new(graph_store)
+    // Create facade
+    let mut facade = PageRankFacade::new(graph_store)
         .concurrency(concurrency)
         .direction(direction)
         .iterations(iterations)
@@ -569,12 +649,12 @@ pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
         .tolerance(tolerance);
 
     if !source_nodes.is_empty() {
-        builder = builder.source_nodes(source_nodes);
+        facade = facade.source_nodes(source_nodes);
     }
 
     // Execute based on mode
     match mode {
-        "stream" => match builder.stream() {
+        "stream" => match facade.stream() {
             Ok(rows_iter) => {
                 let rows: Vec<_> = rows_iter.collect();
                 json!({
@@ -585,7 +665,7 @@ pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
             }
             Err(e) => err(op, "EXECUTION_ERROR", &format!("PageRank execution failed: {:?}", e)),
         },
-        "stats" => match builder.stats() {
+        "stats" => match facade.stats() {
             Ok(stats) => json!({
                 "ok": true,
                 "op": op,

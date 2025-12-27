@@ -29,4 +29,4 @@ pub use closeness::ClosenessCentralityFacade;
 pub use degree_centrality::DegreeCentralityFacade;
 pub use harmonic::HarmonicCentralityFacade;
 pub use hits::{HitsBuilder, HitsRow, HitsStats};
-pub use pagerank::PageRankBuilder;
+pub use pagerank::PageRankFacade;

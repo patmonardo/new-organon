@@ -3,7 +3,7 @@
 //! Handles JSON requests for PageRank operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::centrality::pagerank::PageRankBuilder;
+use crate::procedures::facades::centrality::pagerank::PageRankFacade;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -60,8 +60,8 @@ pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
         None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
     };
 
-    // Create builder
-    let mut builder = PageRankBuilder::new(graph_store)
+    // Create facade
+    let mut facade = PageRankFacade::new(graph_store)
         .concurrency(concurrency)
         .direction(direction)
         .iterations(iterations)
@@ -69,12 +69,12 @@ pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
         .tolerance(tolerance);
 
     if !source_nodes.is_empty() {
-        builder = builder.source_nodes(source_nodes);
+        facade = facade.source_nodes(source_nodes);
     }
 
     // Execute based on mode
     match mode {
-        "stream" => match builder.stream() {
+        "stream" => match facade.stream() {
             Ok(rows_iter) => {
                 let rows: Vec<_> = rows_iter.collect();
                 json!({
@@ -85,7 +85,7 @@ pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
             }
             Err(e) => err(op, "EXECUTION_ERROR", &format!("PageRank execution failed: {:?}", e)),
         },
-        "stats" => match builder.stats() {
+        "stats" => match facade.stats() {
             Ok(stats) => json!({
                 "ok": true,
                 "op": op,

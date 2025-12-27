@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Result row for HITS stream operation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct HitsRow {
     pub node_id: i64,
     pub hub_score: f64,
@@ -16,7 +16,7 @@ pub struct HitsRow {
 }
 
 /// Statistics for HITS algorithm
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct HitsStats {
     pub iterations: usize,
     pub converged: bool,

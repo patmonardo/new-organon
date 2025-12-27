@@ -11,7 +11,7 @@ use super::pathfinding::{
 use super::centrality::{
     ArticulationPointsFacade, BetweennessCentralityFacade, BridgesFacade, CELFFacade,
     ClosenessCentralityFacade, DegreeCentralityFacade, HarmonicCentralityFacade, HitsBuilder,
-    PageRankBuilder,
+    PageRankFacade,
 };
 
 use super::community::{
@@ -149,8 +149,8 @@ impl Graph {
     }
 
     /// PageRank (delta-based, Java GDS aligned).
-    pub fn pagerank(&self) -> PageRankBuilder {
-        PageRankBuilder::new(Arc::clone(&self.store))
+    pub fn pagerank(&self) -> PageRankFacade {
+        PageRankFacade::new(Arc::clone(&self.store))
     }
 
     /// HITS (bidirectional authority/hub scoring).
