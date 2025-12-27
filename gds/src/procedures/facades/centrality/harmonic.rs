@@ -22,7 +22,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Statistics about harmonic centrality.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct HarmonicCentralityStats {
     pub min: f64,
     pub max: f64,

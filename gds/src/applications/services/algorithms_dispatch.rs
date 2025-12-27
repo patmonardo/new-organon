@@ -85,3 +85,7 @@ pub fn handle_closeness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Valu
 pub fn handle_degree_centrality(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::algorithms::centrality::degree_centrality::handle_degree_centrality(request, catalog)
 }
+
+pub fn handle_harmonic(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::centrality::harmonic::handle_harmonic(request, catalog)
+}

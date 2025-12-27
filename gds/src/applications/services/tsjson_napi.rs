@@ -417,6 +417,7 @@ fn handle_algorithms(request: &serde_json::Value) -> serde_json::Value {
         "celf" => algorithms_dispatch::handle_celf(request, catalog),
         "closeness" => algorithms_dispatch::handle_closeness(request, catalog),
         "degree_centrality" => algorithms_dispatch::handle_degree_centrality(request, catalog),
+        "harmonic" => algorithms_dispatch::handle_harmonic(request, catalog),
 
         _ => err(op, "UNSUPPORTED_OP", "Unsupported algorithms operation."),
     }
