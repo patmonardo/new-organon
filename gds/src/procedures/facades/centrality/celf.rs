@@ -14,14 +14,14 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Result row for CELF stream mode
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct CELFRow {
     pub node_id: u64,
     pub spread: f64,
 }
 
 /// Statistics for CELF computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct CELFStats {
     pub seed_count: usize,
     pub total_spread: f64,

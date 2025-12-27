@@ -73,3 +73,7 @@ pub fn handle_betweenness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
 pub fn handle_bridges(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::algorithms::centrality::bridges::handle_bridges(request, catalog)
 }
+
+pub fn handle_celf(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::centrality::celf::handle_celf(request, catalog)
+}
