@@ -33,3 +33,18 @@ export {
   type MetricBinding,
 } from './semantic-hydrator';
 
+// ML algorithm dispatchers
+export {
+  MLDispatcher,
+  SimilarityDispatcher,
+  NodeEmbeddingsDispatcher,
+  type SimilarityConfig,
+  type NodeSimilarityConfig,
+  type EmbeddingConfig,
+  type GraphSageConfig,
+  type Node2VecConfig,
+  type FastRPConfig,
+  type HashGNNConfig,
+  type GATConfig,
+} from './ml-dispatcher';
+

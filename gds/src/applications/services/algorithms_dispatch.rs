@@ -145,3 +145,36 @@ pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) ->
 pub fn handle_wcc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::algorithms::community::wcc::handle_wcc(request, catalog)
 }
+
+pub fn handle_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::similarity::knn::handle_knn(request, catalog)
+}
+
+pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::similarity::node_similarity::handle_node_similarity(request, catalog)
+}
+
+pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::similarity::filtered_knn::handle_filtered_knn(request, catalog)
+}
+
+pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::similarity::filtered_node_similarity::handle_filtered_node_similarity(request, catalog)
+}
+
+pub fn handle_fast_rp(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::embeddings::fast_rp::handle_fast_rp(request, catalog)
+}
+
+pub fn handle_gat(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::embeddings::gat::handle_gat(request, catalog)
+}
+
+pub fn handle_hash_gnn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::embeddings::hash_gnn::handle_hash_gnn(request, catalog)
+}
+
+#[cfg(feature = "node2vec")]
+pub fn handle_node2vec(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::embeddings::node2vec::handle_node2vec(request, catalog)
+}

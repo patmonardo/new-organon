@@ -20,7 +20,7 @@ use super::community::{
     SccBuilder, TriangleCountBuilder, WccBuilder,
 };
 
-use super::embeddings::{FastRPBuilder, HashGNNBuilder};
+use super::embeddings::{FastRPBuilder, GATBuilder, HashGNNBuilder};
 
 #[cfg(feature = "node2vec")]
 use super::embeddings::Node2VecBuilder;
@@ -126,6 +126,11 @@ impl Graph {
     /// HashGNN node embeddings.
     pub fn hash_gnn(&self) -> HashGNNBuilder {
         HashGNNBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// GAT node embeddings (Graph Attention Network).
+    pub fn gat(&self) -> GATBuilder {
+        GATBuilder::new(Arc::clone(&self.store))
     }
 
     /// Degree centrality (counts connections per node).

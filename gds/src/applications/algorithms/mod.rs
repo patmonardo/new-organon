@@ -19,8 +19,12 @@ pub mod metadata;
 pub mod pathfinding;
 pub mod centrality;
 pub mod community;
+pub mod embeddings;
+pub mod similarity;
 
 pub use machinery::*;
 pub use metadata::*;
 pub use pathfinding::*;
 pub use centrality::*;
+pub use embeddings::*;
+pub use similarity::*;
