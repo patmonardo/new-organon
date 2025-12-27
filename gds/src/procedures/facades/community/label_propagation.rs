@@ -20,14 +20,14 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Per-node label assignment row.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct LabelPropagationRow {
     pub node_id: u64,
     pub label_id: u64,
 }
 
 /// Aggregated label propagation stats.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct LabelPropagationStats {
     pub did_converge: bool,
     pub ran_iterations: u64,

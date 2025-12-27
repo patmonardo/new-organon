@@ -17,14 +17,14 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Per-node k-core value row.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct KCoreRow {
     pub node_id: u64,
     pub core_value: i32,
 }
 
 /// Aggregated k-core stats.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct KCoreStats {
     pub degeneracy: i32,
     pub execution_time_ms: u64,

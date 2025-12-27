@@ -26,14 +26,14 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize)]
 pub struct KMeansRow {
     pub node_id: u64,
     pub community_id: u64,
     pub distance_from_center: f64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize)]
 pub struct KMeansStats {
     pub k: usize,
     pub community_count: usize,

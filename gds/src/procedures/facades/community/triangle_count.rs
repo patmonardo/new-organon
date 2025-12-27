@@ -20,14 +20,14 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 /// Per-node triangle count row.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct TriangleCountRow {
     pub node_id: u64,
     pub triangles: u64,
 }
 
 /// Aggregated triangle count statistics.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct TriangleCountStats {
     pub global_triangles: u64,
     pub execution_time_ms: u64,

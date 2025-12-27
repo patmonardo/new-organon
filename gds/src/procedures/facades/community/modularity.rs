@@ -13,7 +13,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Result row for modularity stream mode
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct ModularityRow {
     /// Community ID
     pub community: u64,
@@ -22,7 +22,7 @@ pub struct ModularityRow {
 }
 
 /// Statistics for modularity computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ModularityStats {
     /// Total modularity score across all communities
     pub total_modularity: f64,

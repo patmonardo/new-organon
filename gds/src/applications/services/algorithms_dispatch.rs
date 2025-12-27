@@ -93,3 +93,55 @@ pub fn handle_harmonic(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
 pub fn handle_hits(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::algorithms::centrality::hits::handle_hits(request, catalog)
 }
+
+pub fn handle_approx_max_k_cut(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::approx_max_k_cut::handle_approx_max_k_cut(request, catalog)
+}
+
+pub fn handle_conductance(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::conductance::handle_conductance(request, catalog)
+}
+
+pub fn handle_k1coloring(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::k1coloring::handle_k1coloring(request, catalog)
+}
+
+pub fn handle_kcore(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::kcore::handle_kcore(request, catalog)
+}
+
+pub fn handle_kmeans(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::kmeans::handle_kmeans(request, catalog)
+}
+
+pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::label_propagation::handle_label_propagation(request, catalog)
+}
+
+pub fn handle_leiden(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::leiden::handle_leiden(request, catalog)
+}
+
+pub fn handle_local_clustering_coefficient(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::local_clustering_coefficient::handle_local_clustering_coefficient(request, catalog)
+}
+
+pub fn handle_louvain(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::louvain::handle_louvain(request, catalog)
+}
+
+pub fn handle_modularity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::modularity::handle_modularity(request, catalog)
+}
+
+pub fn handle_scc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::scc::handle_scc(request, catalog)
+}
+
+pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::triangle_count::handle_triangle_count(request, catalog)
+}
+
+pub fn handle_wcc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::wcc::handle_wcc(request, catalog)
+}

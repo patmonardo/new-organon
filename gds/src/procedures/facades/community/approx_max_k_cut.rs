@@ -15,7 +15,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Result row for approx max k-cut stream mode
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct ApproxMaxKCutRow {
     /// Node ID
     pub node_id: u64,
@@ -24,7 +24,7 @@ pub struct ApproxMaxKCutRow {
 }
 
 /// Statistics for approx max k-cut computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ApproxMaxKCutStats {
     /// Total cut cost achieved
     pub cut_cost: f64,

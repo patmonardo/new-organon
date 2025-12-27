@@ -23,14 +23,14 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Per-node Louvain assignment row.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct LouvainRow {
     pub node_id: u64,
     pub community_id: u64,
 }
 
 /// Aggregated Louvain stats.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize)]
 pub struct LouvainStats {
     pub community_count: usize,
     pub execution_time_ms: u64,

@@ -17,14 +17,14 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 /// Per-node local clustering coefficient row.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize)]
 pub struct LocalClusteringCoefficientRow {
     pub node_id: u64,
     pub local_clustering_coefficient: f64,
 }
 
 /// Aggregated local clustering coefficient statistics.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize)]
 pub struct LocalClusteringCoefficientStats {
     pub average_clustering_coefficient: f64,
     pub execution_time_ms: u64,

@@ -16,14 +16,14 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Per-node WCC assignment row.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct WccRow {
     pub node_id: u64,
     pub component_id: u64,
 }
 
 /// Aggregated WCC stats.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct WccStats {
     pub component_count: usize,
     pub execution_time_ms: u64,

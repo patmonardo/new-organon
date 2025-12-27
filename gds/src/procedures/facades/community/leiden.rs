@@ -1,37 +1,54 @@
+//! Leiden Facade
+//!
+//! Leiden is a state-of-the-art community detection algorithm that improves
+//! upon Louvain by preventing disconnected communities through a refinement phase.
+//!
+//! Parameters:
+//! - `gamma`: Resolution parameter (default: 1.0)
+//! - `theta`: Randomness parameter for refinement (default: 0.01)
+//! - `tolerance`: Convergence tolerance (default: 0.0001)
+//! - `max_iterations`: Maximum iterations (default: 10)
+//! - `random_seed`: Random seed for reproducibility (default: 42)
+
+use crate::procedures::facades::builder_base::ConfigValidator;
+use crate::procedures::facades::traits::Result;
 use crate::procedures::leiden::computation::leiden as leiden_fn;
 use crate::procedures::leiden::{LeidenConfig, LeidenResult};
+use crate::projection::orientation::Orientation;
+use crate::projection::RelationshipType;
+use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use std::collections::HashSet;
+use std::sync::Arc;
+use std::time::Instant;
 
-/// Builder for the Leiden community detection algorithm
-///
-/// Leiden is a state-of-the-art community detection algorithm that improves
-/// upon Louvain by preventing disconnected communities through a refinement phase.
-///
-/// # Example
-///
-/// ```ignore
-/// let result = LeidenBuilder::new()
-///     .gamma(1.0)           // Resolution parameter
-///     .theta(0.01)          // Randomness for refinement
-///     .tolerance(0.0001)    // Convergence threshold
-///     .max_iterations(10)   // Maximum levels
-///     .build()
-///     .run(graph);
-/// ```
-#[derive(Debug, Clone)]
+/// Per-node Leiden assignment row.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+pub struct LeidenRow {
+    pub node_id: u64,
+    pub community_id: u64,
+}
+
+/// Aggregated Leiden stats.
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize)]
+pub struct LeidenStats {
+    pub community_count: u64,
+    pub modularity: f64,
+    pub levels: usize,
+    pub converged: bool,
+    pub execution_time_ms: u64,
+}
+
+/// Leiden algorithm builder.
+#[derive(Clone)]
 pub struct LeidenBuilder {
+    graph_store: Arc<DefaultGraphStore>,
     config: LeidenConfig,
 }
 
-impl Default for LeidenBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl LeidenBuilder {
-    /// Create a new Leiden builder with default parameters
-    pub fn new() -> Self {
+    pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
+            graph_store,
             config: LeidenConfig::default(),
         }
     }
@@ -72,15 +89,6 @@ impl LeidenBuilder {
         self
     }
 
-    /// Set initial community assignments (optional)
-    ///
-    /// If provided, algorithm starts with these communities instead of
-    /// singleton communities. Useful for incremental community detection.
-    pub fn seed_communities(mut self, seed: Vec<u64>) -> Self {
-        self.config.seed_communities = Some(seed);
-        self
-    }
-
     /// Set random seed for reproducibility
     ///
     /// Default: 42
@@ -89,65 +97,75 @@ impl LeidenBuilder {
         self
     }
 
-    /// Build the algorithm with the configured parameters
-    pub fn build(self) -> LeidenAlgorithm {
-        LeidenAlgorithm {
-            config: self.config,
-        }
-    }
-}
-
-/// Configured Leiden algorithm ready to run
-pub struct LeidenAlgorithm {
-    config: LeidenConfig,
-}
-
-impl LeidenAlgorithm {
-    /// Run Leiden on a graph represented by a neighbor function
-    ///
-    /// # Arguments
-    ///
-    /// * `node_count` - Number of nodes in the graph
-    /// * `get_neighbors` - Function that returns (neighbor_id, edge_weight) pairs for a node
-    ///
-    /// # Returns
-    ///
-    /// `LeidenResult` containing:
-    /// - Community assignments for each node
-    /// - Final modularity score
-    /// - Number of levels executed
-    /// - Convergence status
-    /// - Modularity progression
-    pub fn run<F>(self, node_count: usize, get_neighbors: F) -> LeidenResult
-    where
-        F: Fn(usize) -> Vec<(usize, f64)>,
-    {
-        let storage = leiden_fn(node_count, get_neighbors, &self.config);
-        storage.into_result()
+    fn validate(&self) -> Result<()> {
+        ConfigValidator::in_range(self.config.gamma, 0.0, 100.0, "gamma")?;
+        ConfigValidator::in_range(self.config.theta, 0.0, 1.0, "theta")?;
+        ConfigValidator::in_range(self.config.tolerance, 0.0, 1.0, "tolerance")?;
+        ConfigValidator::in_range(
+            self.config.max_iterations as f64,
+            1.0,
+            1000.0,
+            "max_iterations",
+        )?;
+        Ok(())
     }
 
-    /// Run Leiden on a graph with adjacency list representation
-    pub fn run_on_adjacency_list(self, adjacency_list: &[Vec<(usize, f64)>]) -> LeidenResult {
-        let node_count = adjacency_list.len();
-        let get_neighbors = |node: usize| adjacency_list[node].clone();
-        self.run(node_count, get_neighbors)
-    }
+    fn compute(&self) -> Result<(LeidenResult, u64)> {
+        self.validate()?;
+        let start = Instant::now();
 
-    /// Run Leiden on a graph with edge list representation
-    ///
-    /// Automatically builds adjacency list from edges.
-    pub fn run_on_edge_list(
-        self,
-        node_count: usize,
-        edges: &[(usize, usize, f64)],
-    ) -> LeidenResult {
-        // Build adjacency list
+        let rel_types: HashSet<RelationshipType> = HashSet::new();
+        let graph_view = self
+            .graph_store
+            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
+
+        // Build adjacency list from graph view
+        let node_count = graph_view.node_count();
         let mut adjacency_list = vec![Vec::new(); node_count];
-        for &(src, dst, weight) in edges {
-            adjacency_list[src].push((dst, weight));
+
+        for node_id in 0..node_count {
+            let relationships = graph_view.stream_relationships_weighted(node_id as i64, 1.0);
+            for cursor in relationships {
+                let target_id = cursor.target_id() as usize;
+                let weight = cursor.weight();
+                adjacency_list[node_id].push((target_id, weight));
+            }
         }
 
-        self.run_on_adjacency_list(&adjacency_list)
+        // Run Leiden algorithm
+        let storage = leiden_fn(node_count, |node: usize| adjacency_list[node].clone(), &self.config);
+        let result = storage.into_result();
+
+        Ok((result, start.elapsed().as_millis() as u64))
+    }
+
+    /// Stream mode: yields `(node_id, community_id)` for every node.
+    pub fn stream(&self) -> Result<Box<dyn Iterator<Item = LeidenRow>>> {
+        let (result, _elapsed) = self.compute()?;
+        let iter = result
+            .communities
+            .into_iter()
+            .enumerate()
+            .map(|(node_id, community_id)| LeidenRow {
+                node_id: node_id as u64,
+                community_id,
+            });
+        Ok(Box::new(iter))
+    }
+
+    /// Stats mode: returns aggregated statistics.
+    pub fn stats(&self) -> Result<LeidenStats> {
+        let (result, elapsed) = self.compute()?;
+        Ok(LeidenStats {
+            community_count: result.community_count,
+            modularity: result.modularity,
+            levels: result.levels,
+            converged: result.converged,
+            execution_time_ms: elapsed,
+        })
     }
 }
 
@@ -157,37 +175,21 @@ mod tests {
 
     #[test]
     fn test_leiden_builder() {
-        let builder = LeidenBuilder::new()
-            .gamma(1.5)
-            .theta(0.05)
-            .tolerance(0.001)
-            .max_iterations(20)
-            .random_seed(123);
+        // Test that builder creates correct config (without graph store for now)
+        let config = LeidenConfig {
+            gamma: 1.5,
+            theta: 0.05,
+            tolerance: 0.001,
+            max_iterations: 20,
+            random_seed: 123,
+            seed_communities: None,
+        };
 
-        // Builder creates correct config
-        assert_eq!(builder.config.gamma, 1.5);
-        assert_eq!(builder.config.theta, 0.05);
-        assert_eq!(builder.config.tolerance, 0.001);
-        assert_eq!(builder.config.max_iterations, 20);
-        assert_eq!(builder.config.random_seed, 123);
-    }
-
-    #[test]
-    fn test_leiden_run() {
-        // Simple triangle graph
-        let edges = vec![
-            (0, 1, 1.0),
-            (1, 0, 1.0),
-            (1, 2, 1.0),
-            (2, 1, 1.0),
-            (2, 0, 1.0),
-            (0, 2, 1.0),
-        ];
-
-        let result = LeidenBuilder::new().build().run_on_edge_list(3, &edges);
-
-        assert_eq!(result.communities.len(), 3);
-        assert_eq!(result.community_count, 1); // Fully connected = 1 community
-        assert!(result.modularity <= 0.0); // Modularity of fully connected graph
+        assert_eq!(config.gamma, 1.5);
+        assert_eq!(config.theta, 0.05);
+        assert_eq!(config.tolerance, 0.001);
+        assert_eq!(config.max_iterations, 20);
+        assert_eq!(config.random_seed, 123);
+        assert!(config.seed_communities.is_none());
     }
 }

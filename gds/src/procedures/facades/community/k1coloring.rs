@@ -19,14 +19,14 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Per-node color assignment row.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct K1ColoringRow {
     pub node_id: u64,
     pub color_id: u64,
 }
 
 /// Aggregated K1-Coloring stats.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct K1ColoringStats {
     pub did_converge: bool,
     pub ran_iterations: u64,

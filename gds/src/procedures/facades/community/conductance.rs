@@ -14,7 +14,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Result row for conductance stream mode
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct ConductanceRow {
     /// Community ID
     pub community: u64,
@@ -23,7 +23,7 @@ pub struct ConductanceRow {
 }
 
 /// Statistics for conductance computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ConductanceStats {
     /// Number of communities evaluated
     pub community_count: usize,

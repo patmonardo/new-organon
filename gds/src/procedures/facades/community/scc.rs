@@ -16,14 +16,14 @@ use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
 
 /// Per-node SCC assignment row.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct SccRow {
     pub node_id: u64,
     pub component_id: u64,
 }
 
 /// Aggregated SCC stats.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct SccStats {
     pub component_count: usize,
     pub execution_time_ms: u64,
