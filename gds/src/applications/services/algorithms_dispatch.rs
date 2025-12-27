@@ -77,3 +77,7 @@ pub fn handle_bridges(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
 pub fn handle_celf(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::algorithms::centrality::celf::handle_celf(request, catalog)
 }
+
+pub fn handle_closeness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::centrality::closeness::handle_closeness(request, catalog)
+}

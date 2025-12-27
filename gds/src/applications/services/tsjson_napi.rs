@@ -415,6 +415,7 @@ fn handle_algorithms(request: &serde_json::Value) -> serde_json::Value {
         "betweenness" => algorithms_dispatch::handle_betweenness(request, catalog),
         "bridges" => algorithms_dispatch::handle_bridges(request, catalog),
         "celf" => algorithms_dispatch::handle_celf(request, catalog),
+        "closeness" => algorithms_dispatch::handle_closeness(request, catalog),
 
         _ => err(op, "UNSUPPORTED_OP", "Unsupported algorithms operation."),
     }

@@ -21,7 +21,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Statistics about closeness centrality.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ClosenessCentralityStats {
     pub min: f64,
     pub max: f64,
