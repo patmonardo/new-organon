@@ -81,3 +81,7 @@ pub fn handle_celf(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 pub fn handle_closeness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::algorithms::centrality::closeness::handle_closeness(request, catalog)
 }
+
+pub fn handle_degree_centrality(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::centrality::degree_centrality::handle_degree_centrality(request, catalog)
+}

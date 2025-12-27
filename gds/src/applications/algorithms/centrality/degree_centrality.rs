@@ -1,17 +1,18 @@
-//! Closeness centrality algorithm dispatch handler.
+//! Degree centrality algorithm dispatch handler.
 //!
-//! Handles JSON requests for closeness centrality operations,
+//! Handles JSON requests for degree centrality operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::centrality::closeness::ClosenessCentralityFacade;
+use crate::procedures::degree_centrality::storage::Orientation;
+use crate::procedures::facades::centrality::degree_centrality::DegreeCentralityFacade;
 use crate::procedures::facades::traits::CentralityScore;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-/// Handle closeness centrality requests
-pub fn handle_closeness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
-    let op = "closeness";
+/// Handle degree centrality requests
+pub fn handle_degree_centrality(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    let op = "degree_centrality";
 
     // Parse request parameters
     let graph_name = match request.get("graphName").and_then(|v| v.as_str()) {
@@ -24,15 +25,28 @@ pub fn handle_closeness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Valu
         .and_then(|v| v.as_str())
         .unwrap_or("stream");
 
-    let direction = request
-        .get("direction")
-        .and_then(|v| v.as_str())
-        .unwrap_or("both");
-
-    let wasserman_faust = request
-        .get("wassermanFaust")
+    let normalize = request
+        .get("normalize")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
+
+    let orientation = request
+        .get("orientation")
+        .and_then(|v| v.as_str())
+        .unwrap_or("natural");
+
+    let weighted = request
+        .get("weighted")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    // Parse orientation
+    let orientation = match orientation {
+        "natural" => Orientation::Natural,
+        "reverse" => Orientation::Reverse,
+        "undirected" => Orientation::Undirected,
+        _ => return err(op, "INVALID_REQUEST", "Invalid orientation. Use 'natural', 'reverse', or 'undirected'"),
+    };
 
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
@@ -41,9 +55,10 @@ pub fn handle_closeness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Valu
     };
 
     // Create facade
-    let facade = ClosenessCentralityFacade::new(graph_store)
-        .direction(direction)
-        .wasserman_faust(wasserman_faust);
+    let facade = DegreeCentralityFacade::new(graph_store)
+        .normalize(normalize)
+        .orientation(orientation)
+        .weighted(weighted);
 
     // Execute based on mode
     match mode {
@@ -56,7 +71,7 @@ pub fn handle_closeness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Valu
                     "data": rows
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Closeness execution failed: {:?}", e)),
+            Err(e) => err(op, "EXECUTION_ERROR", &format!("Degree centrality execution failed: {:?}", e)),
         },
         "stats" => match facade.stats() {
             Ok(stats) => json!({
@@ -64,7 +79,7 @@ pub fn handle_closeness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Valu
                 "op": op,
                 "data": stats
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Closeness stats failed: {:?}", e)),
+            Err(e) => err(op, "EXECUTION_ERROR", &format!("Degree centrality stats failed: {:?}", e)),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

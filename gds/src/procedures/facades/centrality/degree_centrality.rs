@@ -40,7 +40,7 @@ use std::time::Instant;
 // ============================================================================
 
 /// Statistics about degree distribution in the graph
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct DegreeCentralityStats {
     /// Minimum degree found
     pub min: f64,
