@@ -413,6 +413,7 @@ fn handle_algorithms(request: &serde_json::Value) -> serde_json::Value {
         "pagerank" => algorithms_dispatch::handle_pagerank(request, catalog),
         "articulation_points" => algorithms_dispatch::handle_articulation_points(request, catalog),
         "betweenness" => algorithms_dispatch::handle_betweenness(request, catalog),
+        "bridges" => algorithms_dispatch::handle_bridges(request, catalog),
 
         _ => err(op, "UNSUPPORTED_OP", "Unsupported algorithms operation."),
     }

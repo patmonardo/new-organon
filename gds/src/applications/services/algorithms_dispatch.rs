@@ -69,3 +69,7 @@ pub fn handle_articulation_points(request: &Value, catalog: Arc<dyn GraphCatalog
 pub fn handle_betweenness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::algorithms::centrality::betweenness::handle_betweenness(request, catalog)
 }
+
+pub fn handle_bridges(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::centrality::bridges::handle_bridges(request, catalog)
+}

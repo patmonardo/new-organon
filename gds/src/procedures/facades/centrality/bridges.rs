@@ -13,14 +13,14 @@ use std::sync::Arc;
 use std::time::Instant;
 
 /// Result row for bridges stream mode
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
 pub struct BridgeRow {
     pub from: u64,
     pub to: u64,
 }
 
 /// Statistics for bridges computation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct BridgesStats {
     pub bridge_count: usize,
     pub execution_time_ms: u64,
