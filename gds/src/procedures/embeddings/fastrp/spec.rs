@@ -157,7 +157,7 @@ define_algorithm_spec! {
         let storage = FastRPStorageRuntime::new();
         let feature_extractors = storage
             .feature_extractors(graph_view.as_ref(), &config.feature_properties)
-            .map_err(|e| AlgorithmError::Execution(e))?;
+            .map_err(AlgorithmError::Execution)?;
 
         let result = FastRPComputationRuntime::run(
             graph_view,

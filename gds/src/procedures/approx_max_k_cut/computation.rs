@@ -75,9 +75,9 @@ impl ApproxMaxKCutComputationRuntime {
         }
 
         // Assign remaining nodes randomly
-        for i in node_idx..node_count {
+        for (_i, community_slot) in communities.iter_mut().enumerate().skip(node_idx).take(node_count - node_idx) {
             let community = rng.gen_range(0..self.config.k);
-            communities[i] = community;
+            *community_slot = community;
             cardinalities[community as usize] += 1;
         }
 

@@ -257,12 +257,12 @@ fn compute_silhouette(points: &[Vec<f64>], communities: &[u64], k: usize) -> Vec
 
         // b(i): minimum mean distance to points in other clusters
         let mut b = f64::INFINITY;
-        for c in 0..k {
-            if c == ci || members[c].is_empty() {
+        for (c, cluster_members) in members.iter().enumerate().take(k) {
+            if c == ci || cluster_members.is_empty() {
                 continue;
             }
             let mut sum = 0.0;
-            for &j in &members[c] {
+            for &j in cluster_members {
                 sum += distance(points[i].as_slice(), points[j].as_slice());
             }
             let mean = sum / (members[c].len() as f64);

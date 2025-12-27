@@ -22,6 +22,7 @@ impl PartialEq for DijkstraEntry {
 impl Eq for DijkstraEntry {}
 
 impl PartialOrd for DijkstraEntry {
+    #[allow(clippy::non_canonical_partial_ord_impl)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         // Reverse order for min-heap
         other.cost.partial_cmp(&self.cost)
@@ -182,10 +183,10 @@ impl SteinerTreeComputationRuntime {
 
         // Queue nodes for potential pruning
         let mut queue = VecDeque::new();
-        for node_id in 0..node_count {
+        for (node_id, &child_count_val) in child_count.iter().enumerate().take(node_count) {
             if storage.parent[node_id] != PRUNED
                 && storage.parent[node_id] != ROOT_NODE
-                && child_count[node_id] == 0
+                && child_count_val == 0
                 && !terminals.contains(&node_id)
             {
                 queue.push_back(node_id);

@@ -9,9 +9,10 @@ use crate::types::ValueType;
 use std::fmt;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, Default)]
 pub enum SimilarityMetric {
     #[serde(rename = "DEFAULT")]
+    #[default]
     Default,
     #[serde(rename = "COSINE")]
     Cosine,
@@ -23,12 +24,6 @@ pub enum SimilarityMetric {
     Jaccard,
     #[serde(rename = "OVERLAP")]
     Overlap,
-}
-
-impl Default for SimilarityMetric {
-    fn default() -> Self {
-        Self::Default
-    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

@@ -34,8 +34,7 @@ impl KnnComputationRuntime {
             .into_par_iter()
             .flat_map_iter(|i| {
                 let source = i as u64;
-                let mut rows: Vec<KnnComputationResult> = Vec::new();
-                rows.reserve(k.min(node_count.saturating_sub(1)));
+                let mut rows: Vec<KnnComputationResult> = Vec::with_capacity(k.min(node_count.saturating_sub(1)));
 
                 for j in 0..node_count {
                     if i == j {

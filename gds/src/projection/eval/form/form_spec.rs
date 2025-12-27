@@ -520,7 +520,7 @@ impl MaterializeNodePropertiesOperator {
                     .get("values_by_original_node_id")
                     .and_then(|v| v.as_object())
                 {
-                    for mapped in 0..node_count {
+                    for (mapped, out_val) in out.iter_mut().enumerate().take(node_count) {
                         let original = store
                             .to_original_node_id(mapped as MappedNodeId)
                             .ok_or_else(|| {
@@ -529,10 +529,10 @@ impl MaterializeNodePropertiesOperator {
                         let k = original.to_string();
                         let v = map.get(&k).cloned().unwrap_or(JsonValue::Null);
                         if let Some(n) = v.as_f64().or_else(|| v.as_i64().map(|n| n as f64)) {
-                            out[mapped] = n;
+                            *out_val = n;
                         } else {
                             missing += 1;
-                            out[mapped] = default_value.as_f64().unwrap_or(0.0);
+                            *out_val = default_value.as_f64().unwrap_or(0.0);
                         }
                     }
                 } else {
@@ -574,7 +574,7 @@ impl MaterializeNodePropertiesOperator {
                     .get("values_by_original_node_id")
                     .and_then(|v| v.as_object())
                 {
-                    for mapped in 0..node_count {
+                    for (mapped, out_val) in out.iter_mut().enumerate().take(node_count) {
                         let original = store
                             .to_original_node_id(mapped as MappedNodeId)
                             .ok_or_else(|| {
@@ -583,10 +583,10 @@ impl MaterializeNodePropertiesOperator {
                         let k = original.to_string();
                         let v = map.get(&k).cloned().unwrap_or(JsonValue::Null);
                         if let Some(n) = v.as_i64().or_else(|| v.as_u64().map(|n| n as i64)) {
-                            out[mapped] = n;
+                            *out_val = n;
                         } else {
                             missing += 1;
-                            out[mapped] = default_value.as_i64().unwrap_or(0);
+                            *out_val = default_value.as_i64().unwrap_or(0);
                         }
                     }
                 } else {

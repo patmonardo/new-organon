@@ -95,16 +95,11 @@ pub use bit_set::BitSet;
 pub use huge_sparse_array::HugeSparseLongArray;
 
 // Backend selection
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CollectionsBackend {
     Huge,  // Paged arrays
+    #[default]
     Vec,   // Enhanced vectors
     Arrow, // Apache Arrow
     Std,   // Standard library
-}
-
-impl Default for CollectionsBackend {
-    fn default() -> Self {
-        Self::Vec
-    }
 }

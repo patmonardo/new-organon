@@ -131,7 +131,7 @@ impl FilteredKnnStorageRuntime {
         let label_set: HashSet<NodeLabel> = labels.iter().cloned().collect();
 
         let mut allowed = vec![false; node_count];
-        for mapped in 0..node_count {
+        for (mapped, allowed_slot) in allowed.iter_mut().enumerate().take(node_count) {
             let mapped_i64 = mapped as i64;
             let mut ok = false;
             for label in &label_set {
@@ -140,7 +140,7 @@ impl FilteredKnnStorageRuntime {
                     break;
                 }
             }
-            allowed[mapped] = ok;
+            *allowed_slot = ok;
         }
 
         Ok(Some(allowed))

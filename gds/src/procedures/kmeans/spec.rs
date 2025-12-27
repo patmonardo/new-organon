@@ -1,17 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum KMeansSamplerType {
     #[serde(rename = "UNIFORM")]
+    #[default]
     Uniform,
     #[serde(rename = "KMEANSPP")]
     KmeansPlusPlus,
-}
-
-impl Default for KMeansSamplerType {
-    fn default() -> Self {
-        Self::Uniform
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

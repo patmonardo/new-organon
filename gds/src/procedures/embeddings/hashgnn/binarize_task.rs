@@ -90,8 +90,8 @@ impl BinarizeTask {
                 features::extract(node_id as u64, node_id as u64, &extractors, &mut consumer);
 
                 let bitset = Arc::new(HugeAtomicBitSet::new(output_dimension));
-                for i in 0..output_dimension {
-                    if embedding[i] as f64 > threshold {
+                for (i, &embedding_val) in embedding.iter().enumerate().take(output_dimension) {
+                    if embedding_val as f64 > threshold {
                         bitset.set(i);
                     }
                 }

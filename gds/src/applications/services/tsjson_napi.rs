@@ -214,7 +214,7 @@ fn handle_graph_store(request: &serde_json::Value) -> serde_json::Value {
             }
 
             let database_info = DatabaseInfo::new(
-                DatabaseId::new(&db.to_string()),
+                DatabaseId::new(&db),
                 DatabaseLocation::remote("tsjson", 0, None, None),
             );
 
@@ -224,7 +224,7 @@ fn handle_graph_store(request: &serde_json::Value) -> serde_json::Value {
                 database_info,
                 GraphSchema::empty(),
                 Capabilities::default(),
-                SimpleIdMap::from_original_ids(original_node_ids.into_iter()),
+                SimpleIdMap::from_original_ids(original_node_ids),
                 relationship_topologies,
             );
 
@@ -271,7 +271,7 @@ fn handle_graph_store(request: &serde_json::Value) -> serde_json::Value {
 
             // node properties
             if let Some(props_obj) = snapshot.get("nodeProperties").and_then(|v| v.as_object()) {
-                let node_count = GraphStore::node_count(&store) as usize;
+                let node_count = GraphStore::node_count(&store);
                 for (key, val) in props_obj.iter() {
                     let Some(arr) = val.as_array() else {
                         return err(op, "INVALID_REQUEST", "snapshot.nodeProperties values must be arrays");

@@ -38,11 +38,12 @@ pub trait CompressionSupport<T> {
 }
 
 /// Compression algorithms
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum CompressionAlgorithm {
     /// LZ4 compression (fast, moderate compression)
     Lz4,
     /// Zstd compression (good balance of speed and compression)
+    #[default]
     Zstd,
     /// Gzip compression (good compression, slower)
     Gzip,
@@ -52,12 +53,6 @@ pub enum CompressionAlgorithm {
     Snappy,
     /// Custom algorithm
     Custom(String),
-}
-
-impl Default for CompressionAlgorithm {
-    fn default() -> Self {
-        Self::Zstd
-    }
 }
 
 /// Compression configuration

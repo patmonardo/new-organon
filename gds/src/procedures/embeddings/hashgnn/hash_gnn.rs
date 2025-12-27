@@ -161,7 +161,7 @@ impl HashGNN {
             current_total_feature_count += added;
         }
 
-        let binary_output_vectors = if (self.parameters.iterations.saturating_sub(1)) % 2 == 0 {
+        let binary_output_vectors = if (self.parameters.iterations.saturating_sub(1)).is_multiple_of(2) {
             embeddings_a
         } else {
             embeddings_b

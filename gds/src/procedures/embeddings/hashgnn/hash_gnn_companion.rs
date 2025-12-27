@@ -105,8 +105,8 @@ impl HashTriple {
 
     pub fn compute_hashes_from_triple(embedding_dimension: usize, triple: HashTriple) -> Vec<i32> {
         let mut out = vec![0i32; embedding_dimension];
-        for i in 0..embedding_dimension {
-            out[i] = (((i as i64) * (triple.a as i64) + (triple.b as i64)) % (triple.c as i64))
+        for (i, out_val) in out.iter_mut().enumerate().take(embedding_dimension) {
+            *out_val = (((i as i64) * (triple.a as i64) + (triple.b as i64)) % (triple.c as i64))
                 as i32;
         }
         out

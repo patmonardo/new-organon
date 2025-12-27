@@ -144,7 +144,7 @@ impl KSpanningTreeBuilder {
 
             graph_view
                 .stream_relationships(node_id, fallback)
-                .map(|cursor| {
+                .filter_map(|cursor| {
                     let target = cursor.target_id();
                     if target < 0 {
                         return None;
@@ -157,7 +157,6 @@ impl KSpanningTreeBuilder {
                     };
                     Some((target as usize, weight))
                 })
-                .flatten()
                 .collect()
         };
 

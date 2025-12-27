@@ -28,9 +28,8 @@ impl MinHashTask {
         // Sequential for now (safe + deterministic).
         let mut total_feature_count: u64 = 0;
 
-        for k in 0..embedding_density {
+        for (_k, hashes_for_k) in hashes.iter().enumerate().take(embedding_density) {
             termination_flag.assert_running();
-            let hashes_for_k = &hashes[k];
 
             for partition in degree_partitions {
                 termination_flag.assert_running();
@@ -94,10 +93,9 @@ impl MinHashTask {
                         self_min_and_arg_min.arg_min
                     };
 
-                    if arg_min != -1 {
-                        if !current_embedding.get_and_set(arg_min as usize) {
-                            total_feature_count += 1;
-                        }
+                    if arg_min != -1
+                        && !current_embedding.get_and_set(arg_min as usize) {
+                        total_feature_count += 1;
                     }
                 });
             }

@@ -32,7 +32,7 @@ impl ArrayPropertyExtractor {
     }
 
     fn fetch_property_value(&self, node_id: u64) -> Option<Vec<f64>> {
-        let v = match self.value_type {
+        match self.value_type {
             ValueType::DoubleArray => self
                 .node_property_values
                 .double_array_value(node_id)
@@ -48,8 +48,7 @@ impl ArrayPropertyExtractor {
                 .ok()
                 .map(|v| v.into_iter().map(|x| x as f64).collect()),
             _ => None,
-        };
-        v
+        }
     }
 }
 

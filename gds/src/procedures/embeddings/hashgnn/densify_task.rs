@@ -62,8 +62,8 @@ fn projection_matrix(seed: u64, dense_dimension: usize, binary_dimension: usize)
     let mut matrix = Vec::with_capacity(binary_dimension);
     for _ in 0..binary_dimension {
         let mut row = vec![0.0f32; dense_dimension];
-        for d in 0..dense_dimension {
-            row[d] = compute_random_entry(&mut rng, entry_value);
+        for (_d, row_val) in row.iter_mut().enumerate().take(dense_dimension) {
+            *row_val = compute_random_entry(&mut rng, entry_value);
         }
         matrix.push(row);
     }

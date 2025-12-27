@@ -5,18 +5,10 @@
 // Type alias for cleaner code
 type GraphAccessGraphPropertiesConfig = crate::applications::graph_store_catalog::configs::GraphAccessGraphPropertiesConfig;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GraphRemoveGraphPropertiesConfig {
     /// Base graph access configuration
     pub access_config: GraphAccessGraphPropertiesConfig,
-}
-
-impl Default for GraphRemoveGraphPropertiesConfig {
-    fn default() -> Self {
-        Self {
-            access_config: GraphAccessGraphPropertiesConfig::default(),
-        }
-    }
 }
 
 impl GraphRemoveGraphPropertiesConfig {

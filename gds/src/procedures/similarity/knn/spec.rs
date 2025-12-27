@@ -54,16 +54,14 @@ impl KnnConfig {
                     "Missing `node_property` (or provide `node_properties`)".to_string(),
                 ));
             }
-        } else {
-            if self
-                .node_properties
-                .iter()
-                .any(|p| p.name.trim().is_empty())
-            {
-                return Err(AlgorithmError::InvalidGraph(
-                    "`node_properties` contains an empty property name".to_string(),
-                ));
-            }
+        } else if self
+            .node_properties
+            .iter()
+            .any(|p| p.name.trim().is_empty())
+        {
+            return Err(AlgorithmError::InvalidGraph(
+                "`node_properties` contains an empty property name".to_string(),
+            ));
         }
         Ok(())
     }

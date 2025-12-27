@@ -147,8 +147,8 @@ impl FastRP {
         let mut property_vectors: Vec<Vec<f32>> = vec![vec![0.0f32; property_dimension]; feature_dim];
 
         for d in 0..property_dimension {
-            for i in 0..feature_dim {
-                property_vectors[i][d] = compute_random_entry(&mut random, entry_value);
+            for pv in property_vectors.iter_mut().take(feature_dim) {
+                pv[d] = compute_random_entry(&mut random, entry_value);
             }
         }
 
@@ -168,7 +168,7 @@ impl FastRP {
         // Per-node deterministic reseeding to match Java behaviour.
         let mut random = HighQualityRandom::new(self.random_seed);
 
-        for node_usize in 0..self.graph.node_count() {
+        for (node_usize, embedding_slot) in embedding_b.iter_mut().enumerate().take(self.graph.node_count()) {
             self.termination_flag.assert_running();
             let node_id = node_usize as i64;
 
@@ -184,8 +184,8 @@ impl FastRP {
             random.reseed(self.random_seed ^ (original_id as u64));
 
             let mut vec = vec![0.0f32; embedding_dimension];
-            for i in 0..base_embedding_dimension {
-                vec[i] = compute_random_entry(&mut random, entry_value);
+            for (_i, val) in vec.iter_mut().enumerate().take(base_embedding_dimension) {
+                *val = compute_random_entry(&mut random, entry_value);
             }
 
             // Property feature contribution for tail dimensions.
@@ -199,7 +199,7 @@ impl FastRP {
                 feature_extraction::extract(node_id as u64, 0, &self.feature_extractors, &mut adder);
             }
 
-            embedding_b[node_usize] = vec;
+            *embedding_slot = vec;
         }
     }
 
@@ -342,10 +342,10 @@ impl FeatureConsumer for PropertyVectorAdder<'_> {
         // Equivalent to Java: addPropertyVector( offset, value )
         let v = value as f32;
         let pv = &self.property_vectors[offset];
-        for i in 0..pv.len() {
+        for (i, &pv_val) in pv.iter().enumerate() {
             let idx = self.base_embedding_dimension + i;
             if idx < self.embedding_dimension {
-                self.output[idx] = self.output[idx].mul_add(v, pv[i]);
+                self.output[idx] = self.output[idx].mul_add(v, pv_val);
             }
         }
     }

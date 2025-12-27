@@ -119,8 +119,8 @@ impl Variable for LabelwiseFeatureProjection {
 
             for out_col in 0..self.projected_feature_dimension {
                 let mut sum = 0.0;
-                for k in 0..x.len() {
-                    sum += x[k] * w.data_at(out_col, k);
+                for (k, &x_val) in x.iter().enumerate() {
+                    sum += x_val * w.data_at(out_col, k);
                 }
                 out.set_data_at(row, out_col, sum);
             }
@@ -167,8 +167,8 @@ impl Variable for LabelwiseFeatureProjection {
             let x = self.features.get(node_id as usize);
             for out_row in 0..grad_w.rows() {
                 let dy = self_grad.data_at(row, out_row);
-                for k in 0..grad_w.cols() {
-                    grad_w.add_data_at(out_row, k, dy * x[k]);
+                for (k, &x_val) in x.iter().enumerate().take(grad_w.cols()) {
+                    grad_w.add_data_at(out_row, k, dy * x_val);
                 }
             }
         }

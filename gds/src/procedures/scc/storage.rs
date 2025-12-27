@@ -59,14 +59,14 @@ impl SccStorageRuntime {
         let fallback = graph_view.default_property_value();
         let mut outgoing: Vec<Vec<usize>> = vec![Vec::new(); node_count];
 
-        for node in 0..node_count {
+        for (node, outgoing_list) in outgoing.iter_mut().enumerate().take(node_count) {
             if !termination_flag.running() {
                 return Err("Algorithm terminated by user".to_string());
             }
 
             // NodeId is i64; node indices are contiguous starting at 0.
             let node_id: i64 = node as i64;
-            outgoing[node] = graph_view
+            *outgoing_list = graph_view
                 .stream_relationships(node_id, fallback)
                 .map(|cursor| cursor.target_id())
                 .filter(|target| *target >= 0)
