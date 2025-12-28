@@ -240,7 +240,7 @@ mod tests {
         let train_config = NodeClassificationPipelineTrainConfig::default();
 
         // Should return placeholder for now
-        let _task = factory.progress_task(&graph_store, &train_config);
+        factory.progress_task(&graph_store, &train_config);
     }
 
     #[test]
@@ -255,7 +255,7 @@ mod tests {
         let pipeline = NodeClassificationTrainingPipeline::new();
 
         // Should return placeholder for now
-        let _task = NodeClassificationTrainPipelineAlgorithmFactory::progress_task_with_pipeline(
+        NodeClassificationTrainPipelineAlgorithmFactory::progress_task_with_pipeline(
             &graph_store,
             &pipeline,
         );
@@ -267,7 +267,7 @@ mod tests {
         let config = NodeClassificationPipelineTrainConfig::default();
 
         // Should return placeholder for now
-        let _estimation = factory.memory_estimation(&config);
+        factory.memory_estimation(&config);
     }
 
     // Note: duplicated progress-task tests removed.

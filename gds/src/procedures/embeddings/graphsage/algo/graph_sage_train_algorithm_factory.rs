@@ -22,14 +22,13 @@ impl GraphSageTrainAlgorithmFactory {
         &self,
         graph: Arc<dyn Graph>,
         config: GraphSageTrainConfig,
-        progress_tracker: ProgressTracker,
+        _progress_tracker: ProgressTracker,
         termination_flag: TerminationFlag,
     ) -> Box<dyn GraphSageTrain> {
         if config.is_multi_label {
             Box::new(MultiLabelGraphSageTrain::new(
                 graph,
                 config,
-                progress_tracker,
                 termination_flag,
                 self.gds_version.clone(),
             ))
@@ -37,7 +36,6 @@ impl GraphSageTrainAlgorithmFactory {
             Box::new(SingleLabelGraphSageTrain::new(
                 graph,
                 config,
-                progress_tracker,
                 termination_flag,
                 self.gds_version.clone(),
             ))

@@ -80,10 +80,7 @@ impl Node2VecComputationRuntime {
         // Build walk corpus + sampling probabilities (mirrors translated wrapper).
         let node_count = graph.node_count();
         let mut probabilities_builder = RandomWalkProbabilitiesBuilder::new(
-            node_count,
             Concurrency::of(config.concurrency.max(1)),
-            parameters.sampling_walk_parameters.positive_sampling_factor,
-            parameters.sampling_walk_parameters.negative_sampling_exponent,
         );
 
         let max_walk_count = node_count.saturating_mul(parameters.sampling_walk_parameters.walks_per_node);
@@ -150,22 +147,19 @@ impl Node2VecComputationRuntime {
         walks.set_max_walk_length(max_len);
         walks.set_size(used_walks);
 
-        let probabilities = probabilities_builder.build();
+        let _probabilities = probabilities_builder.build();
 
         let graph_for_mapping = Arc::clone(&graph);
-        let to_original = move |mapped: i64| graph_for_mapping.to_original_node_id(mapped).unwrap_or(mapped);
+        let _to_original = move |mapped: i64| graph_for_mapping.to_original_node_id(mapped).unwrap_or(mapped);
 
-        let progress_tracker = ProgressTracker::new(Tasks::Leaf("Node2Vec".to_string(), config.iterations));
+        let _progress_tracker = ProgressTracker::new(Tasks::Leaf("Node2Vec".to_string(), config.iterations));
 
         let model = Node2VecModel::new(
-            to_original,
             node_count,
             parameters.train_parameters.clone(),
             Concurrency::of(config.concurrency.max(1)),
             config.random_seed,
             walks,
-            probabilities,
-            progress_tracker,
             termination_flag,
         );
 

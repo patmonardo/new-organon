@@ -355,7 +355,7 @@ mod tests {
     #[test]
     fn test_database_id_scenario() {
         // Simulate database IDs that are non-sequential
-        let db_ids = vec![1001, 2003, 3005, 4007, 5009];
+        let db_ids = [1001, 2003, 3005, 4007, 5009];
         let node_count = db_ids.len();
         let props = OriginalIdNodePropertyValues::new(
             move |node_id| db_ids.get(node_id as usize).copied(),

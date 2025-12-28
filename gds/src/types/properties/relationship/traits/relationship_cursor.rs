@@ -340,7 +340,7 @@ mod tests {
 
         // Smart converter: i64 to bool
         let active: bool = cursor.get().unwrap();
-        assert_eq!(active, true);
+        assert!(active);
 
         // Smart converter: i64 to i64 (no conversion)
         let count: i64 = cursor.get().unwrap();

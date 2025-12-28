@@ -2,7 +2,6 @@
 
 use crate::concurrency::TerminationFlag;
 use crate::core::model::Model;
-use crate::core::utils::progress::ProgressTracker;
 use crate::procedures::embeddings::graphsage::algo::graph_sage::MODEL_TYPE;
 use crate::procedures::embeddings::graphsage::algo::graph_sage_model_data::{
     FeatureFunctionData, GraphSageModelData, LayerData, MatrixData, VectorData,
@@ -23,7 +22,6 @@ use super::graph_sage_train::GraphSageTrain;
 pub struct SingleLabelGraphSageTrain {
     graph: Arc<dyn Graph>,
     config: GraphSageTrainConfig,
-    progress_tracker: ProgressTracker,
     termination_flag: TerminationFlag,
     gds_version: String,
 }
@@ -32,14 +30,12 @@ impl SingleLabelGraphSageTrain {
     pub fn new(
         graph: Arc<dyn Graph>,
         config: GraphSageTrainConfig,
-        progress_tracker: ProgressTracker,
         termination_flag: TerminationFlag,
         gds_version: String,
     ) -> Self {
         Self {
             graph,
             config,
-            progress_tracker,
             termination_flag,
             gds_version,
         }

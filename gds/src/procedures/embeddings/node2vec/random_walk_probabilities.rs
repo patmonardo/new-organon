@@ -12,25 +12,16 @@ pub struct RandomWalkProbabilities {
 
 #[derive(Debug)]
 pub struct RandomWalkProbabilitiesBuilder {
-    node_count: usize,
     _concurrency: Concurrency,
-    positive_sampling_factor: f64,
-    negative_sampling_exponent: f64,
     node_frequencies: HashMap<i64, f64>,
 }
 
 impl RandomWalkProbabilitiesBuilder {
     pub fn new(
-        node_count: usize,
         concurrency: Concurrency,
-        positive_sampling_factor: f64,
-        negative_sampling_exponent: f64,
     ) -> Self {
         Self {
-            node_count,
             _concurrency: concurrency,
-            positive_sampling_factor,
-            negative_sampling_exponent,
             node_frequencies: HashMap::new(),
         }
     }

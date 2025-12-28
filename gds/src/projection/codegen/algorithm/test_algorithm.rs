@@ -52,8 +52,10 @@ mod tests {
 
     #[test]
     fn test_pagerank_config_validation() {
-        let mut config = PAGERANKConfig::default();
-        config.damping_factor = 1.5; // Invalid! (but validation not implemented yet)
+        let config = PAGERANKConfig {
+            damping_factor: 1.5, // Invalid! (but validation not implemented yet)
+            ..PAGERANKConfig::default()
+        };
 
         let result = config.validate();
         // TODO: Implement actual validation logic

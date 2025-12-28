@@ -1,10 +1,8 @@
 //! Node2Vec model implementation with skip-gram training.
 
 use super::compressed_random_walks::CompressedRandomWalks;
-use super::random_walk_probabilities::RandomWalkProbabilities;
 use super::train_parameters::TrainParameters;
 use crate::concurrency::{Concurrency, TerminationFlag};
-use crate::core::utils::progress::ProgressTracker;
 use rand::prelude::*;
 
 #[derive(Debug)]
@@ -14,38 +12,29 @@ pub struct TrainedNode2Vec {
 }
 
 pub struct Node2VecModel {
-    to_original: Box<dyn Fn(i64) -> i64 + Send + Sync>,
     node_count: usize,
     train_params: TrainParameters,
     _concurrency: Concurrency,
     random_seed: Option<u64>,
     walks: CompressedRandomWalks,
-    probabilities: RandomWalkProbabilities,
-    progress_tracker: ProgressTracker,
     termination_flag: TerminationFlag,
 }
 
 impl Node2VecModel {
     pub fn new(
-        to_original: impl Fn(i64) -> i64 + Send + Sync + 'static,
         node_count: usize,
         train_params: TrainParameters,
         concurrency: Concurrency,
         random_seed: Option<u64>,
         walks: CompressedRandomWalks,
-        probabilities: RandomWalkProbabilities,
-        progress_tracker: ProgressTracker,
         termination_flag: TerminationFlag,
     ) -> Self {
         Self {
-            to_original: Box::new(to_original),
             node_count,
             train_params,
             _concurrency: concurrency,
             random_seed,
             walks,
-            probabilities,
-            progress_tracker,
             termination_flag,
         }
     }
@@ -66,7 +55,7 @@ impl Node2VecModel {
 
         let mut loss_per_iteration = Vec::new();
 
-        for iteration in 0..self.train_params.iterations {
+        for _iteration in 0..self.train_params.iterations {
             self.termination_flag.assert_running();
 
             let mut total_loss = 0.0;

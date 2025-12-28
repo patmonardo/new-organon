@@ -529,7 +529,7 @@ mod tests {
             PhantomData,
             PhantomData,
         );
-        assert!(true, "Prakasa: Executor structure illuminates the whole");
+        // assert!(true, "Prakasa: Executor structure illuminates the whole");
 
         // KRIYA (क्रिया) = Action, Movement
         // - The work itself (execute, split, cleanup methods)
@@ -539,7 +539,7 @@ mod tests {
             "execute",
             "additional_graph_store_cleanup",
         ];
-        assert!(true, "Kriya: Methods execute the work");
+        // assert!(true, "Kriya: Methods execute the work");
 
         // KRAMA (क्रम) = Order, Sequence
         // - Stage = Krama (linear progression)
@@ -548,7 +548,7 @@ mod tests {
             DatasetSplit::Test,
             DatasetSplit::FeatureInput,
         ];
-        assert!(true, "Krama: Ordered progression through splits");
+        // assert!(true, "Krama: Ordered progression through splits");
     }
 
     #[test]
@@ -563,19 +563,19 @@ mod tests {
             PhantomData,
             PhantomData,
         );
-        assert!(true, "Prakasa: Structure illuminates whole pipeline");
+        // assert!(true, "Prakasa: Structure illuminates whole pipeline");
 
         // Execute KRIYA (the work)
         let _splits_result = executor.generate_dataset_split_graph_filters();
         let _execute_result = executor.execute(HashMap::new());
-        assert!(true, "Kriya: Actions executed (deferred in Pre-Prim)");
+        // assert!(true, "Kriya: Actions executed (deferred in Pre-Prim)");
 
         // Complete with KRAMA (ordered progression)
         let _cleanup = executor.get_available_rel_types_for_node_property_steps();
-        assert!(true, "Krama: Ordered progression through stages");
+        // assert!(true, "Krama: Ordered progression through stages");
 
         // THE PATTERN: Prakasa → Kriya → Krama
-        assert!(true, "All actions bracketed by Prakasa and Krama!");
+        // assert!(true, "All actions bracketed by Prakasa and Krama!");
     }
 
     #[test]
@@ -601,10 +601,10 @@ mod tests {
         ];
 
         // ✅ Compiles (this test running proves it)
-        assert!(true, "Code compiles");
+        // assert!(true, "Code compiles");
 
         // ✅ Tests pass
-        assert!(true, "Tests pass");
+        // assert!(true, "Tests pass");
 
         // ✅ TODOs explicit (Bija seeds counted)
         let todo_count = 20; // Counted manually
@@ -632,19 +632,19 @@ mod tests {
         // - Universal awareness
         // - Contains knowledge of all stages
         let _phase_is_prakasa = "Phase contains awareness of the whole";
-        assert!(true, "Phase = Prakasa (self-illuminating)");
+        // assert!(true, "Phase = Prakasa (self-illuminating)");
 
         // Stage = Krama (क्रम)
         // - Ordered sequence
         // - Linear progression
         // - Step-by-step advancement
         let _stage_is_krama = vec!["Stage 1", "Stage 2", "Stage 3"];
-        assert!(true, "Stage = Krama (ordered progression)");
+        // assert!(true, "Stage = Krama (ordered progression)");
 
         // Speculation (no money back guarantee):
         // - Phase illuminates (Prakasa)
         // - Work happens (Kriya)
         // - Stages progress (Krama)
-        assert!(true, "Interesting speculation indeed! 🕉️");
+        // assert!(true, "Interesting speculation indeed! 🕉️");
     }
 }

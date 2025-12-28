@@ -465,7 +465,7 @@ mod tests {
         let tasks = LinkPredictionTrain::progress_tasks(1000, &split_config, 10);
 
         // Should have multiple stages
-        assert!(tasks.len() > 0);
+        assert!(!tasks.is_empty());
 
         // Check task names
         let task_names: Vec<&str> = tasks.iter().map(|t| t.name.as_str()).collect();

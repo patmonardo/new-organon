@@ -174,7 +174,7 @@ impl<C: NodePropertyPipelineBaseTrainConfig> NodeFeatureProducer<C> {
         steps: &[Box<dyn ExecutableNodePropertyStep>],
     ) -> Result<(), NodePropertyStepExecutorError> {
         self.step_executor
-            .validate_node_property_steps_context_configs(&*self.graph_store, steps)
+            .validate_node_property_steps_context_configs(&self.graph_store, steps)
     }
 }
 

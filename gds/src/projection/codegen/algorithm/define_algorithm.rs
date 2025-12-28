@@ -203,6 +203,6 @@ mod tests {
     fn test_macro_compilation() {
         // Just test that the macro compiles without errors
         // The actual algorithm tests are in test_algorithm.rs
-        assert!(true);
+        // Compilation is verified by this test running
     }
 }

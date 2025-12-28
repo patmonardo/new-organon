@@ -207,7 +207,7 @@ mod tests {
             auto_tuning_config: AutoTuningConfig::default(),
         };
 
-        assert_eq!(pipeline.require_eager_features(), false);
+        assert!(!pipeline.require_eager_features());
     }
 
     #[test]

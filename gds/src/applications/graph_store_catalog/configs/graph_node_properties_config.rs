@@ -3,6 +3,9 @@
 //! Mirrors Java GraphNodePropertiesConfig interface and integrates with the Rust config system.
 //! This is the base trait that other node property configs extend.
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use crate::define_config;
 
 define_config!(

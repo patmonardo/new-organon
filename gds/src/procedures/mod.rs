@@ -214,8 +214,6 @@ pub use local_clustering_coefficient::{
 
 // Embeddings
 pub use embeddings::{FastRPAlgorithmSpec, FastRPConfig, FastRPResult};
-
-#[cfg(feature = "node2vec")]
 pub use embeddings::{Node2VecAlgorithmSpec, Node2VecConfig, Node2VecResult};
 pub use louvain::{
     LouvainAlgorithmSpec, LouvainComputationRuntime, LouvainConfig, LouvainResult,

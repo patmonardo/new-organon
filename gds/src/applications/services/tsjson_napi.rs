@@ -420,6 +420,15 @@ fn handle_algorithms(request: &serde_json::Value) -> serde_json::Value {
         "harmonic" => algorithms_dispatch::handle_harmonic(request, catalog),
         "hits" => algorithms_dispatch::handle_hits(request, catalog),
 
+        // ============================================================================
+        // Embedding Algorithms
+        // ============================================================================
+        "fast_rp" => algorithms_dispatch::handle_fast_rp(request, catalog),
+        "gat" => algorithms_dispatch::handle_gat(request, catalog),
+        "graphsage" => algorithms_dispatch::handle_graphsage(request, catalog),
+        "hash_gnn" => algorithms_dispatch::handle_hash_gnn(request, catalog),
+        "node2vec" => algorithms_dispatch::handle_node2vec(request, catalog),
+
         _ => err(op, "UNSUPPORTED_OP", "Unsupported algorithms operation."),
     }
 }

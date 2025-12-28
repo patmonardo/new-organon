@@ -45,7 +45,7 @@ impl NodePropertyPredictionSplitConfig {
     /// * `test_fraction` - Fraction of nodes for test set (0.0 to 1.0)
     /// * `validation_folds` - Number of cross-validation folds (minimum 2)
     pub fn new(test_fraction: f64, validation_folds: usize) -> Result<Self, String> {
-        if test_fraction < 0.0 || test_fraction > 1.0 {
+        if !(0.0..=1.0).contains(&test_fraction) {
             return Err(format!(
                 "test_fraction must be between 0.0 and 1.0, got {}",
                 test_fraction

@@ -466,7 +466,7 @@ mod tests {
         let pipeline = NodeClassificationTrainingPipeline::new();
         let node_count = 1000;
 
-        let _task = NodeClassificationTrain::progress_task(&pipeline, node_count);
+        NodeClassificationTrain::progress_task(&pipeline, node_count);
 
         // Should return placeholder for now
     }
@@ -478,7 +478,7 @@ mod tests {
         let model_catalog = ();
         let algorithms_facade = ();
 
-        let _estimation = NodeClassificationTrain::estimate(
+        NodeClassificationTrain::estimate(
             &pipeline,
             &config,
             &model_catalog,

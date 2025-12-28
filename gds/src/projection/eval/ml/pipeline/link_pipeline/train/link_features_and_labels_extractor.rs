@@ -380,11 +380,9 @@ mod tests {
 
         // Bija Principle 3: Structure complete = soil prepared
         let _structure_complete = true;
-        assert!(true, "Structure exists = seeds can be planted");
 
         // Bija Principle 4: Implementation deferred = waiting for spring
         let _waiting_for_prim = "Prim 0.1.x";
-        assert!(true, "Seeds planted, waiting for spring (Prim)");
     }
 
     #[test]
@@ -405,10 +403,8 @@ mod tests {
             extract_features_and_labels(PhantomData, vec![], 4, PhantomData, PhantomData);
 
         // ✅ Compiles (this test running proves it)
-        assert!(true, "Code compiles = Gamma achieved");
 
         // ✅ Tests pass
-        assert!(true, "Tests pass = Gamma validated");
 
         // ✅ TODOs explicit (Bija counted)
         let todo_count = 15;
@@ -444,6 +440,5 @@ mod tests {
         // Yellow = Unused (seed waiting for activation)
         // Red = Missing (space waiting to be filled)
         // Both show where LIFE will emerge!
-        assert!(true, "Yellows and reds = seeds ready to sprout!");
     }
 }

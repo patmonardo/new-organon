@@ -166,7 +166,7 @@ mod tests {
     #[test]
     fn test_clone() {
         let mode = ExecutionMode::Stream;
-        let cloned = mode.clone();
+        let cloned = mode;
         assert_eq!(mode, cloned);
     }
 }

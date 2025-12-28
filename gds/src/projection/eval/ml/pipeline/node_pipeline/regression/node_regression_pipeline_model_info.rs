@@ -182,9 +182,8 @@ mod tests {
 
     #[test]
     fn test_model_info_new() {
-        let pipeline = NodePropertyPredictPipeline::default();
         let info =
-            NodeRegressionPipelineModelInfo::new(HashMap::new(), HashMap::new(), (), pipeline);
+            NodeRegressionPipelineModelInfo::new(HashMap::new(), HashMap::new(), (), ());
 
         assert!(info.test_metrics().is_empty());
         assert!(info.outer_train_metrics().is_empty());
@@ -192,12 +191,11 @@ mod tests {
 
     #[test]
     fn test_model_info_builder() {
-        let pipeline = NodePropertyPredictPipeline::default();
         let result = NodeRegressionPipelineModelInfoBuilder::new()
             .test_metrics(HashMap::new())
             .outer_train_metrics(HashMap::new())
             .best_candidate(())
-            .pipeline(pipeline)
+            .pipeline(())
             .build();
 
         assert!(result.is_ok());
@@ -215,9 +213,8 @@ mod tests {
 
     #[test]
     fn test_to_map_structure() {
-        let pipeline = NodePropertyPredictPipeline::default();
         let info =
-            NodeRegressionPipelineModelInfo::new(HashMap::new(), HashMap::new(), (), pipeline);
+            NodeRegressionPipelineModelInfo::new(HashMap::new(), HashMap::new(), (), ());
 
         let map = info.to_map();
         assert!(map.contains_key("bestParameters"));

@@ -259,7 +259,7 @@ mod tests {
     #[test]
     fn test_progress_task_for_pipeline() {
         let pipeline = NodeRegressionTrainingPipeline::new();
-        let _task = NodeRegressionTrainPipelineAlgorithmFactory::progress_task_for_pipeline(
+        NodeRegressionTrainPipelineAlgorithmFactory::progress_task_for_pipeline(
             &pipeline, 1000, // node_count
         );
     }

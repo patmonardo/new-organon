@@ -20,10 +20,7 @@ use super::community::{
     SccBuilder, TriangleCountBuilder, WccBuilder,
 };
 
-use super::embeddings::{FastRPBuilder, GATBuilder, HashGNNBuilder};
-
-#[cfg(feature = "node2vec")]
-use super::embeddings::Node2VecBuilder;
+use super::embeddings::{FastRPBuilder, GATBuilder, GraphSageBuilder, HashGNNBuilder, Node2VecBuilder};
 
 /// User-facing graph handle for running algorithms against a live `DefaultGraphStore`.
 ///
@@ -69,7 +66,6 @@ impl Graph {
         BellmanFordBuilder::new(Arc::clone(&self.store))
     }
 
-    #[cfg(feature = "node2vec")]
     pub fn node2vec(&self) -> Node2VecBuilder {
         Node2VecBuilder::new(Arc::clone(&self.store))
     }
@@ -131,6 +127,11 @@ impl Graph {
     /// GAT node embeddings (Graph Attention Network).
     pub fn gat(&self) -> GATBuilder {
         GATBuilder::new(Arc::clone(&self.store))
+    }
+
+    /// GraphSAGE node embeddings (inductive representation learning).
+    pub fn graphsage(&self) -> GraphSageBuilder {
+        GraphSageBuilder::new(Arc::clone(&self.store))
     }
 
     /// Degree centrality (counts connections per node).

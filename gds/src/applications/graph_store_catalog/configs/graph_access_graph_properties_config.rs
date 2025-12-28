@@ -2,6 +2,9 @@
 //!
 //! Mirrors Java GraphAccessGraphPropertiesConfig interface and integrates with the Rust config system.
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 use crate::define_config;
 
 define_config!(
