@@ -229,6 +229,8 @@ impl Default for Node2VecConfig {
 pub struct Node2VecResult {
     pub embeddings: Vec<Vec<f32>>,
     pub loss_per_iteration: Vec<f64>,
+    pub embedding_dimension: usize,
+    pub node_count: usize,
 }
 
 define_algorithm_spec! {

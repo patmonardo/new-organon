@@ -301,8 +301,10 @@ mod tests {
         assert!(config.validate().is_ok());
 
         // Test invalid config
-        let mut invalid_config = AllShortestPathsConfig::default();
-        invalid_config.concurrency = 0;
+        let invalid_config = AllShortestPathsConfig {
+            concurrency: 0,
+            ..Default::default()
+        };
         assert!(invalid_config.validate().is_err());
     }
 

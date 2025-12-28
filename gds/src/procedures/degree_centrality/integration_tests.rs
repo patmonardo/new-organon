@@ -8,7 +8,7 @@ use crate::projection::eval::procedure::*;
 use serde_json::json;
 
 #[cfg(test)]
-mod integration_tests {
+mod tests {
     use super::*;
 
     #[test]

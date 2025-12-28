@@ -1007,7 +1007,7 @@ mod tests {
             serde_json::json!({"node_ids": [0, 1, 2]}),
         );
 
-        let op = CommitSubgraphOperator::default();
+        let op = CommitSubgraphOperator;
         let out = op
             .evaluate(
                 FormInput {

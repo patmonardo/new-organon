@@ -12,9 +12,9 @@ mod tests {
         }
 
         for (from, to) in edges {
-            relationships.entry(from).or_insert_with(Vec::new).push(to);
+            relationships.entry(from).or_default().push(to);
             if from != to {
-                relationships.entry(to).or_insert_with(Vec::new).push(from);
+                relationships.entry(to).or_default().push(from);
             }
         }
 

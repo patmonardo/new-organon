@@ -4,6 +4,6 @@
 
 pub mod fast_rp;
 pub mod gat;
+pub mod graphsage;
 pub mod hash_gnn;
-#[cfg(feature = "node2vec")]
 pub mod node2vec;

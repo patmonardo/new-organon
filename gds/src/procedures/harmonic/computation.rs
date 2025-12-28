@@ -92,9 +92,9 @@ mod tests {
             graph.insert(i, Vec::new());
         }
         for (from, to) in edges {
-            graph.entry(from).or_insert_with(Vec::new).push(to);
+            graph.entry(from).or_default().push(to);
             if from != to {
-                graph.entry(to).or_insert_with(Vec::new).push(from);
+                graph.entry(to).or_default().push(from);
             }
         }
         // Sort for consistency

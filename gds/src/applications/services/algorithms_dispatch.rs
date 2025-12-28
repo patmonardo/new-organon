@@ -174,7 +174,10 @@ pub fn handle_hash_gnn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
     crate::applications::algorithms::embeddings::hash_gnn::handle_hash_gnn(request, catalog)
 }
 
-#[cfg(feature = "node2vec")]
+pub fn handle_graphsage(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::embeddings::graphsage::handle_graphsage(request, catalog)
+}
+
 pub fn handle_node2vec(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::algorithms::embeddings::node2vec::handle_node2vec(request, catalog)
 }

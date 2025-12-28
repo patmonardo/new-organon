@@ -30,12 +30,12 @@ use std::sync::Arc;
 
 use super::spec::{EmbeddingInitializerConfig, Node2VecConfig, Node2VecResult};
 use super::storage::Node2VecStorageRuntime;
-use super::translated::compressed_random_walks::CompressedRandomWalks;
-use super::translated::node2vec_model::Node2VecModel;
-use super::translated::node2vec_parameters::Node2VecParameters;
-use super::translated::random_walk_probabilities::RandomWalkProbabilitiesBuilder;
-use super::translated::sampling_walk_parameters::SamplingWalkParameters;
-use super::translated::train_parameters::{EmbeddingInitializer, TrainParameters};
+use super::super::compressed_random_walks::CompressedRandomWalks;
+use super::super::node2vec_model::Node2VecModel;
+use super::super::node2vec_parameters::Node2VecParameters;
+use super::super::random_walk_probabilities::RandomWalkProbabilitiesBuilder;
+use super::super::sampling_walk_parameters::SamplingWalkParameters;
+use super::super::train_parameters::{EmbeddingInitializer, TrainParameters};
 
 #[derive(Debug, Default, Clone)]
 pub struct Node2VecComputationRuntime;
@@ -79,7 +79,7 @@ impl Node2VecComputationRuntime {
 
         // Build walk corpus + sampling probabilities (mirrors translated wrapper).
         let node_count = graph.node_count();
-        let probabilities_builder = RandomWalkProbabilitiesBuilder::new(
+        let mut probabilities_builder = RandomWalkProbabilitiesBuilder::new(
             node_count,
             Concurrency::of(config.concurrency.max(1)),
             parameters.sampling_walk_parameters.positive_sampling_factor,
@@ -172,8 +172,10 @@ impl Node2VecComputationRuntime {
         let trained = model.train();
 
         Ok(Node2VecResult {
-            embeddings: trained.embeddings.to_vec(),
+            embeddings: trained.embeddings.into_iter().map(|emb| emb.into_iter().map(|v| v as f32).collect()).collect(),
             loss_per_iteration: trained.loss_per_iteration,
+            embedding_dimension: config.embedding_dimension,
+            node_count,
         })
     }
 }

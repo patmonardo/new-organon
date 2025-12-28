@@ -199,8 +199,10 @@ mod tests {
         assert!(config.validate().is_ok());
 
         // Test invalid config
-        let mut invalid_config = DegreeCentralityConfig::default();
-        invalid_config.min_batch_size = 0;
+        let invalid_config = DegreeCentralityConfig {
+            min_batch_size: 0,
+            ..Default::default()
+        };
         assert!(invalid_config.validate().is_err());
     }
 

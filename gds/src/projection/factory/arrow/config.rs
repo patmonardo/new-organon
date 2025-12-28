@@ -249,8 +249,10 @@ mod tests {
 
     #[test]
     fn test_validation_empty_node_table() {
-        let mut config = ArrowProjectionConfig::default();
-        config.node_table_name = "".to_string();
+        let config = ArrowProjectionConfig {
+            node_table_name: "".to_string(),
+            ..Default::default()
+        };
 
         let result = config.validate();
         assert!(result.is_err());
@@ -264,8 +266,10 @@ mod tests {
 
     #[test]
     fn test_validation_empty_edge_table() {
-        let mut config = ArrowProjectionConfig::default();
-        config.edge_table_name = "".to_string();
+        let config = ArrowProjectionConfig {
+            edge_table_name: "".to_string(),
+            ..Default::default()
+        };
 
         let result = config.validate();
         assert!(result.is_err());
@@ -279,8 +283,10 @@ mod tests {
 
     #[test]
     fn test_validation_zero_concurrency() {
-        let mut config = ArrowProjectionConfig::default();
-        config.concurrency = 0;
+        let config = ArrowProjectionConfig {
+            concurrency: 0,
+            ..Default::default()
+        };
 
         let result = config.validate();
         assert!(result.is_err());
@@ -294,8 +300,10 @@ mod tests {
 
     #[test]
     fn test_validation_zero_batch_size() {
-        let mut config = ArrowProjectionConfig::default();
-        config.batch_size = 0;
+        let config = ArrowProjectionConfig {
+            batch_size: 0,
+            ..Default::default()
+        };
 
         let result = config.validate();
         assert!(result.is_err());

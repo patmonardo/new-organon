@@ -533,7 +533,7 @@ mod tests {
 
         // Ensure latitude/longitude properties exist so A* uses real coordinates.
         let lat: Vec<f64> = (0..config.node_count).map(|i| i as f64).collect();
-        let lon: Vec<f64> = (0..config.node_count).map(|i| (i as f64) * -1.0).collect();
+        let lon: Vec<f64> = (0..config.node_count).map(|i| -(i as f64)).collect();
         store
             .add_node_property_f64("latitude".to_string(), lat)
             .unwrap();

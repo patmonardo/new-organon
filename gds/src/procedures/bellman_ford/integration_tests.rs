@@ -147,7 +147,7 @@ fn test_bellman_ford_result_serialization() {
 
     // Test deserialization
     let deserialized: BellmanFordResult = serde_json::from_value(json).unwrap();
-    assert_eq!(deserialized.contains_negative_cycle, false);
+    assert!(!deserialized.contains_negative_cycle);
     assert!(deserialized.shortest_paths.is_empty());
     assert!(deserialized.negative_cycles.is_empty());
 }

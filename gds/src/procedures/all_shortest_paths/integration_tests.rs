@@ -4,7 +4,7 @@
 //! eval/procedure/executor to prove they work together correctly.
 
 #[cfg(test)]
-mod integration_tests {
+mod tests {
     use crate::procedures::all_shortest_paths::ALL_SHORTEST_PATHSAlgorithmSpec;
     use crate::projection::eval::procedure::{
         AlgorithmSpec, ComputationResult, ExecutionContext, ExecutionMode, ProcedureExecutor,

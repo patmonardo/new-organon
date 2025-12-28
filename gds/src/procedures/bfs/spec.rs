@@ -220,12 +220,17 @@ mod tests {
     #[test]
     fn test_bfs_config_validation_integration() {
         // Macro validation_config does not validate custom fields; use BfsConfig::validate()
-        let mut config = BfsConfig::default();
-        config.concurrency = 4;
+        let config = BfsConfig {
+            concurrency: 4,
+            ..Default::default()
+        };
         assert!(config.validate().is_ok());
 
-        config.concurrency = 0;
-        assert!(config.validate().is_err());
+        let invalid_config = BfsConfig {
+            concurrency: 0,
+            ..Default::default()
+        };
+        assert!(invalid_config.validate().is_err());
     }
 
     #[test]

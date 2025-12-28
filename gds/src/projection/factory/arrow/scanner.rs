@@ -135,7 +135,7 @@ pub trait BatchScanner: Send + Sync {
 
     /// Returns the number of batches (ceiling division).
     fn batch_count(&self) -> usize {
-        (self.total_rows() + self.batch_size() - 1) / self.batch_size()
+        self.total_rows().div_ceil(self.batch_size())
     }
 }
 
