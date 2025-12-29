@@ -77,7 +77,6 @@
 
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use std::sync::Arc;
 
 use crate::projection::RelationshipType;
 

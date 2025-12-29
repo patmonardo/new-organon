@@ -1,7 +1,7 @@
 // Phase 4.2: LinkPredictionPredictPipeline - Prediction pipeline for link prediction
 
 use super::LinkFeatureStep;
-use crate::projection::eval::ml::pipeline::{ExecutableNodePropertyStep, Pipeline};
+use crate::projection::eval::ml::pipeline::ExecutableNodePropertyStep;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
@@ -181,12 +181,15 @@ impl Default for LinkPredictionPredictPipeline {
 }
 
 // TODO: Implement Pipeline trait when associated types are properly configured
-// For now, LinkPredictionPredictPipeline provides its own interface#[cfg(test)]
+// For now, LinkPredictionPredictPipeline provides its own interface
+#[cfg(test)]
 mod tests {
-    use super::*;
+    use super::LinkPredictionPredictPipeline;
     use crate::projection::eval::ml::pipeline::link_pipeline::linkfunctions::{
         CosineFeatureStep, HadamardFeatureStep,
     };
+    use crate::projection::eval::ml::pipeline::link_pipeline::LinkFeatureStep;
+    use std::marker::PhantomData;
 
     #[test]
     fn test_empty_pipeline() {

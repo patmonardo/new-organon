@@ -18,10 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-use super::node_classification_model_result::NodeClassificationModelResult;
 use super::node_classification_pipeline_train_config::NodeClassificationPipelineTrainConfig;
 use super::node_classification_to_model_converter::NodeClassificationToModelConverter;
-use super::node_classification_train_result::NodeClassificationTrainResult;
 use super::node_classification_training_pipeline::NodeClassificationTrainingPipeline;
 use crate::types::graph_store::DefaultGraphStore;
 use std::sync::Arc;

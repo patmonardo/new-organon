@@ -2,7 +2,7 @@
 
 use super::{FeaturesAndLabels, LinkPredictionTrainConfig, LinkPredictionTrainResult};
 use crate::projection::eval::ml::pipeline::link_pipeline::{
-    LinkFeatureStep, LinkPredictionSplitConfig, LinkPredictionTrainingPipeline,
+    LinkPredictionSplitConfig, LinkPredictionTrainingPipeline,
 };
 use std::marker::PhantomData;
 
@@ -80,7 +80,7 @@ pub struct LinkPredictionTrain {
 
     /// Training configuration
     /// **Prim and Proper**: Config duality
-    config: LinkPredictionTrainConfig,
+    _config: LinkPredictionTrainConfig,
 
     /// Class ID map (NEGATIVE=0, POSITIVE=1)
     /// **Prim**: Binary classification mapping
@@ -129,7 +129,7 @@ impl LinkPredictionTrain {
             train_graph: PhantomData,
             validation_graph: PhantomData,
             pipeline: PhantomData,
-            config,
+            _config: config,
             class_id_map: PhantomData,
             progress_tracker: PhantomData,
             termination_flag: PhantomData,

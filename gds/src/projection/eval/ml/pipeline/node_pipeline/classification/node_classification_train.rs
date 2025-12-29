@@ -18,7 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-use super::labels_and_class_counts_extractor::LabelsAndClassCountsExtractor;
 use super::node_classification_pipeline_train_config::NodeClassificationPipelineTrainConfig;
 use super::node_classification_train_result::NodeClassificationTrainResult;
 use super::node_classification_training_pipeline::NodeClassificationTrainingPipeline;
@@ -61,16 +60,16 @@ pub type ModelSpecificMetricsHandler = ();
 /// 6. Retrain best model on full training set
 /// 7. Return trained model with statistics
 pub struct NodeClassificationTrain {
-    pipeline: NodeClassificationTrainingPipeline,
-    train_config: NodeClassificationPipelineTrainConfig,
-    targets: HugeIntArray,
-    class_id_map: LocalIdMap,
-    node_id_map: IdMap,
-    metrics: Vec<Metric>,
-    classification_metrics: Vec<ClassificationMetric>,
-    class_counts: LongMultiSet,
-    node_feature_producer: NodeFeatureProducer<NodeClassificationPipelineTrainConfig>,
-    progress_tracker: ProgressTracker,
+    _pipeline: NodeClassificationTrainingPipeline,
+    _train_config: NodeClassificationPipelineTrainConfig,
+    _targets: HugeIntArray,
+    _class_id_map: LocalIdMap,
+    _node_id_map: IdMap,
+    _metrics: Vec<Metric>,
+    _classification_metrics: Vec<ClassificationMetric>,
+    _class_counts: LongMultiSet,
+    _node_feature_producer: NodeFeatureProducer<NodeClassificationPipelineTrainConfig>,
+    _progress_tracker: ProgressTracker,
     termination_flag: TerminationFlag,
 }
 
@@ -120,7 +119,7 @@ impl NodeClassificationTrain {
 
     /// Create a new NodeClassificationTrain instance.
     pub fn create(
-        graph_store: Arc<DefaultGraphStore>,
+        _graph_store: Arc<DefaultGraphStore>,
         pipeline: NodeClassificationTrainingPipeline,
         config: NodeClassificationPipelineTrainConfig,
         node_feature_producer: NodeFeatureProducer<NodeClassificationPipelineTrainConfig>,
@@ -152,16 +151,16 @@ impl NodeClassificationTrain {
         let termination_flag = ();
 
         Self {
-            pipeline,
-            train_config: config,
-            targets,
-            class_id_map,
-            node_id_map,
-            metrics,
-            classification_metrics,
-            class_counts,
-            node_feature_producer,
-            progress_tracker,
+            _pipeline: pipeline,
+            _train_config: config,
+            _targets: targets,
+            _class_id_map: class_id_map,
+            _node_id_map: node_id_map,
+            _metrics: metrics,
+            _classification_metrics: classification_metrics,
+            _class_counts: class_counts,
+            _node_feature_producer: node_feature_producer,
+            _progress_tracker: progress_tracker,
             termination_flag,
         }
     }
@@ -235,12 +234,13 @@ impl NodeClassificationTrain {
         NodeClassificationTrainResult::new(
             (),
             (),
-            self.class_id_map.clone(),
-            self.class_counts.clone(),
+            self._class_id_map.clone(),
+            self._class_counts.clone(),
         )
     }
 
     /// Find the best model candidate via cross-validation.
+    #[allow(dead_code)]
     fn find_best_model_candidate(
         &mut self,
         _train_node_ids: &ReadOnlyHugeLongArray,
@@ -286,6 +286,7 @@ impl NodeClassificationTrain {
     }
 
     /// Register metric scores for a classifier.
+    #[allow(dead_code)]
     fn register_metric_scores(
         &self,
         _evaluation_set: &ReadOnlyHugeLongArray,
@@ -311,6 +312,7 @@ impl NodeClassificationTrain {
     }
 
     /// Evaluate the best model on train and test sets.
+    #[allow(dead_code)]
     fn evaluate_best_model(
         &mut self,
         _outer_split: &TrainingExamplesSplit,
@@ -367,6 +369,7 @@ impl NodeClassificationTrain {
     }
 
     /// Retrain the best model on the full training set.
+    #[allow(dead_code)]
     fn retrain_best_model(
         &mut self,
         _train_set: &ReadOnlyHugeLongArray,
@@ -390,6 +393,7 @@ impl NodeClassificationTrain {
     }
 
     /// Train a single model with given parameters.
+    #[allow(dead_code)]
     fn train_model(
         &self,
         _train_set: &ReadOnlyHugeLongArray,

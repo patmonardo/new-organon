@@ -30,7 +30,7 @@ polars = { version = "0.32", features = [
     "serde",
 ] }
 memmap2 = "0.5"
-arrow2 = "0.15"
+arrow2 = { version = "0.15", features = ["io_ipc", "io_parquet"] }
 rand = { version = "0.8", features = ["std", "std_rng"] }
 rand_chacha = "0.3"
 num_cpus = "1.16"
@@ -48,17 +48,11 @@ log = "0.4.28"
 napi-build = "2"
 
 [features]
-default = []
+default = ["arrow", "rayon", "serde", "procedures", "ml"]
 node = ["dep:napi", "dep:napi-derive"]
-cursor = []
-core = ["cursor"]
+full = ["default", "node"]
 arrow = []
-io = []
-pipeline = []
-# Config system optional features
-serde = []        # Enables config serialization (serde already in deps)
-config-files = [] # Future: YAML/JSON file loading
-# Additional features referenced in code
-rayon = []        # Parallel computation support
-procedures = []   # Procedure execution system
-ml = []           # Machine learning features
+serde = []      # Enables config serialization (serde already in deps)
+rayon = []      # Parallel computation support
+procedures = [] # Procedure execution system
+ml = []         # Machine learning features

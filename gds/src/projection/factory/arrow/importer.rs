@@ -118,11 +118,13 @@ impl PropertyAccumulator {
     }
 
     /// Adds or updates a property value for an entity.
+    #[allow(dead_code)]
     fn set(&mut self, entity_id: OriginalNodeId, value: PropertyValue) {
         self.values.insert(entity_id, value);
     }
 
     /// Returns the number of accumulated property values.
+    #[allow(dead_code)]
     pub fn value_count(&self) -> usize {
         self.values.len()
     }
@@ -308,6 +310,7 @@ impl NodeAccumulator {
     ///
     /// # Returns
     /// The insertion index (will become mapped node ID)
+    #[cfg_attr(not(test), allow(dead_code))]
     fn add_node_with_properties(
         &mut self,
         original_id: OriginalNodeId,

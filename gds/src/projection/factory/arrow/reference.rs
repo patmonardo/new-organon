@@ -119,6 +119,7 @@ pub trait ArrowReference {
 /// let id_col = node_table.id_column_index();
 /// let label_col = node_table.label_column_index();
 /// ```
+#[derive(Debug)]
 pub struct NodeTableReference {
     table_name: String,
     chunk: Chunk<Box<dyn Array>>,
@@ -267,6 +268,7 @@ impl ArrowReference for NodeTableReference {
 /// let source_col = edge_table.source_column_index();
 /// let target_col = edge_table.target_column_index();
 /// ```
+#[derive(Debug)]
 pub struct EdgeTableReference {
     table_name: String,
     chunk: Chunk<Box<dyn Array>>,

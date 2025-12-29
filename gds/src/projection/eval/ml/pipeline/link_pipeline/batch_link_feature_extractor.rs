@@ -1,7 +1,6 @@
 // Phase 3.3: BatchLinkFeatureExtractor - Parallel worker for link feature extraction
 
 use super::LinkFeatureExtractor;
-use crate::types::graph::Graph;
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -63,7 +62,7 @@ use std::sync::Arc;
 /// ```
 pub struct BatchLinkFeatureExtractor {
     /// The feature extractor (orchestrator)
-    extractor: Arc<LinkFeatureExtractor>,
+    _extractor: Arc<LinkFeatureExtractor>,
 
     /// The partition of nodes to process
     /// TODO: Replace with actual DegreePartition
@@ -114,7 +113,7 @@ impl BatchLinkFeatureExtractor {
         _progress_tracker: PhantomData<()>,
     ) -> Self {
         Self {
-            extractor,
+            _extractor: extractor,
             partition: PhantomData,
             graph: PhantomData,
             relationship_offset: Arc::new(AtomicU64::new(relationship_offset)),

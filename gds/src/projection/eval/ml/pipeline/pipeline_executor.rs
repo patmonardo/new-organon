@@ -11,7 +11,7 @@ use std::sync::Arc;
 use crate::projection::eval::ml::pipeline::{
     NodePropertyStepExecutor, Pipeline, PipelineGraphFilter,
 };
-use crate::types::graph_store::{DefaultGraphStore, GraphStore};
+use crate::types::graph_store::DefaultGraphStore;
 use crate::types::schema::GraphSchema;
 
 /// Dataset split types for training and evaluation pipelines.

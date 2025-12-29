@@ -1,7 +1,7 @@
 // Phase 4.1: LinkPredictionTrainingPipeline - Training pipeline for link prediction
 
 use super::{LinkFeatureStep, LinkPredictionSplitConfig};
-use crate::projection::eval::ml::pipeline::{ExecutableNodePropertyStep, TrainingPipeline};
+use crate::projection::eval::ml::pipeline::ExecutableNodePropertyStep;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
@@ -66,7 +66,7 @@ pub struct LinkPredictionTrainingPipeline {
 
     /// Training type (always CLASSIFICATION for link prediction)
     /// TODO: Use TrainingType enum
-    training_type: String,
+    _training_type: String,
 
     /// Parameter space for hyperparameter search
     /// TODO: Use TrainerConfig type
@@ -97,7 +97,7 @@ impl LinkPredictionTrainingPipeline {
             node_property_steps: PhantomData,
             feature_steps: Vec::new(),
             split_config: LinkPredictionSplitConfig::default(),
-            training_type: "CLASSIFICATION".to_string(),
+            _training_type: "CLASSIFICATION".to_string(),
             parameter_space: PhantomData,
         }
     }

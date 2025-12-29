@@ -43,6 +43,10 @@ pub struct ArrowProjectionConfig {
     /// Batch size for parallel processing
     /// Default: 10,000 rows per batch
     pub batch_size: usize,
+
+    /// Preferred collections backend for properties/topology storage
+    /// Default: Arrow
+    pub collections_backend: crate::config::CollectionsBackend,
 }
 
 impl ArrowProjectionConfig {
@@ -95,6 +99,7 @@ impl Default for ArrowProjectionConfig {
             validate_schema: true,
             log_progress: false,
             batch_size: 10_000,
+            collections_backend: crate::config::CollectionsBackend::Arrow,
         }
     }
 }
@@ -108,6 +113,7 @@ pub struct ArrowProjectionConfigBuilder {
     validate_schema: Option<bool>,
     log_progress: Option<bool>,
     batch_size: Option<usize>,
+    collections_backend: Option<crate::config::CollectionsBackend>,
 }
 
 impl ArrowProjectionConfigBuilder {
@@ -147,6 +153,15 @@ impl ArrowProjectionConfigBuilder {
         self
     }
 
+    /// Set the preferred collections backend (Arrow, Huge, Vec).
+    pub fn collections_backend(
+        mut self,
+        backend: crate::config::CollectionsBackend,
+    ) -> Self {
+        self.collections_backend = Some(backend);
+        self
+    }
+
     /// Build the configuration.
     ///
     /// Uses defaults for unset fields, then validates.
@@ -158,6 +173,9 @@ impl ArrowProjectionConfigBuilder {
             validate_schema: self.validate_schema.unwrap_or(true),
             log_progress: self.log_progress.unwrap_or(false),
             batch_size: self.batch_size.unwrap_or(10_000),
+            collections_backend: self
+                .collections_backend
+                .unwrap_or(crate::config::CollectionsBackend::Arrow),
         };
 
         config.validate()?;

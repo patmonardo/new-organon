@@ -133,7 +133,7 @@ impl<C: NodePropertyPipelineBaseTrainConfig> NodeFeatureProducer<C> {
             .map_err(NodeFeatureProducerError::StepExecutionFailed)?;
 
         // Get target node labels
-        let target_node_labels = self
+        let _target_node_labels = self
             .train_config
             .target_node_label_identifiers(&self.graph_store);
 

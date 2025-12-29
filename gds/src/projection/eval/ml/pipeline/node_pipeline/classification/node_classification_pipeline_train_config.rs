@@ -68,7 +68,7 @@ impl NodeClassificationPipelineTrainConfig {
     }
 
     /// Filter classification metrics (non-model-specific).
-    pub fn classification_metrics(metrics: &[Metric]) -> Vec<ClassificationMetric> {
+    pub fn classification_metrics(_metrics: &[Metric]) -> Vec<ClassificationMetric> {
         // TODO: Implement when Metric trait is translated
         // metrics.iter().filter(|m| !m.is_model_specific()).map(|m| m as ClassificationMetric).collect()
         vec![]

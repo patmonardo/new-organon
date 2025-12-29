@@ -7,9 +7,7 @@
 use std::collections::HashMap;
 use std::error::Error as StdError;
 
-use crate::projection::eval::ml::pipeline::{
-    AutoTuningConfig, ExecutableNodePropertyStep, FeatureStep, Pipeline,
-};
+use crate::projection::eval::ml::pipeline::{AutoTuningConfig, ExecutableNodePropertyStep, Pipeline};
 
 /// Training type: classification or regression.
 ///

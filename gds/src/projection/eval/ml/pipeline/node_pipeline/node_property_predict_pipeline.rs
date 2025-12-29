@@ -21,7 +21,6 @@ use crate::projection::eval::ml::pipeline::{ExecutableNodePropertyStep, Pipeline
 use crate::types::graph_store::DefaultGraphStore;
 use serde_json::Value;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 /// A prediction pipeline for node property prediction.
 ///
@@ -53,7 +52,7 @@ impl NodePropertyPredictPipeline {
     }
 
     /// Creates a predict pipeline from a training pipeline.
-    pub fn from_pipeline<P: Pipeline<FeatureStep = NodeFeatureStep>>(pipeline: &P) -> Self {
+    pub fn from_pipeline<P: Pipeline<FeatureStep = NodeFeatureStep>>(_pipeline: &P) -> Self {
         // Note: This requires cloning the Box contents, which may not be possible
         // for all ExecutableNodePropertyStep implementations
         unimplemented!("from_pipeline needs Box cloning strategy")

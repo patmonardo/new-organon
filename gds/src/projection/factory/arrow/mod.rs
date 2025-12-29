@@ -47,6 +47,8 @@ mod importer; // Phase 5: NodeImportTask, EdgeImportTask, accumulators (GAMMA ST
 mod reference; // Phase 2: TableReference, BatchReference (IMPLEMENTED with arrow2)
 mod scanner; // Phase 3: BatchScanner trait + NodeBatchScanner + EdgeBatchScanner
 mod task; // Phase 4: ImportTask trait + TaskRunner + parallel orchestration
+#[cfg(test)]
+mod test_utils;
 
 #[cfg(test)]
 mod tests {

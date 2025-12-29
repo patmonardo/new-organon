@@ -66,6 +66,11 @@ impl NodeBatchBuffer {
         self.current_size = 0;
     }
 
+    #[allow(dead_code)]
+    #[allow(dead_code)]
+    #[allow(dead_code)]
+    #[allow(dead_code)]
+    #[allow(dead_code)]
     fn size(&self) -> usize {
         self.current_size
     }
@@ -105,6 +110,7 @@ impl BufferedNodeConsumer {
     }
 
     /// Get the internal buffer (for flushing)
+    #[allow(dead_code)]
     fn buffer(&self) -> &NodeBatchBuffer {
         &self.buffer
     }
@@ -214,6 +220,7 @@ impl RelationshipBatchBuffer {
         self.current_size = 0;
     }
 
+    #[allow(dead_code)]
     fn size(&self) -> usize {
         self.current_size
     }
@@ -252,6 +259,7 @@ impl BufferedEdgeConsumer {
     }
 
     /// Get the internal buffer (for flushing)
+    #[allow(dead_code)]
     fn buffer(&self) -> &RelationshipBatchBuffer {
         &self.buffer
     }

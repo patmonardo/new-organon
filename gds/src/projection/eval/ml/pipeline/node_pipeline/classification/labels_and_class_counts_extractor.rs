@@ -18,7 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-use crate::ml::core::subgraph::LocalIdMap;
 use std::collections::HashMap;
 
 // Placeholder types until property values and huge arrays are translated

@@ -21,7 +21,6 @@
 use super::node_classification_pipeline_train_config::NodeClassificationPipelineTrainConfig;
 use super::node_classification_train_algorithm::NodeClassificationTrainAlgorithm;
 use super::node_classification_training_pipeline::NodeClassificationTrainingPipeline;
-use crate::projection::eval::ml::pipeline::node_pipeline::NodeFeatureProducer;
 use crate::types::graph_store::DefaultGraphStore;
 use std::sync::Arc;
 

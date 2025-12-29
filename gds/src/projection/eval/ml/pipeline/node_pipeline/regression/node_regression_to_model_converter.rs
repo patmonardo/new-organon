@@ -19,8 +19,8 @@
  */
 
 use super::{
-    NodeRegressionPipelineModelInfo, NodeRegressionPipelineTrainConfig,
-    NodeRegressionTrainPipelineResult, NodeRegressionTrainResult, NodeRegressionTrainingPipeline,
+    NodeRegressionPipelineTrainConfig, NodeRegressionTrainPipelineResult, NodeRegressionTrainResult,
+    NodeRegressionTrainingPipeline,
 };
 
 // Placeholder types until model system is translated
@@ -50,7 +50,7 @@ pub type ResultToModelConverter = ();
 /// - Model info (custom metadata, feature importance)
 #[derive(Debug, Clone)]
 pub struct NodeRegressionToModelConverter {
-    pipeline: NodeRegressionTrainingPipeline,
+    _pipeline: NodeRegressionTrainingPipeline,
     config: NodeRegressionPipelineTrainConfig,
 }
 
@@ -59,7 +59,10 @@ impl NodeRegressionToModelConverter {
         pipeline: NodeRegressionTrainingPipeline,
         config: NodeRegressionPipelineTrainConfig,
     ) -> Self {
-        Self { pipeline, config }
+        Self {
+            _pipeline: pipeline,
+            config,
+        }
     }
 
     /// Convert training result to catalog model.
@@ -81,8 +84,8 @@ impl NodeRegressionToModelConverter {
     /// ```
     pub fn to_model(
         &self,
-        train_result: NodeRegressionTrainResult,
-        original_schema: GraphSchema,
+        _train_result: NodeRegressionTrainResult,
+        _original_schema: GraphSchema,
     ) -> NodeRegressionTrainPipelineResult {
         // TODO: Implement when Model system is translated
         // let catalog_model = Model::of(

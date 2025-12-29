@@ -30,7 +30,7 @@ use crate::types::graph_store::GraphStore;
 pub struct NodePropertyStepExecutor {
     node_labels: Vec<String>,
     relationship_types: Vec<String>,
-    available_relationship_types_for_node_properties: HashSet<String>,
+    _available_relationship_types_for_node_properties: HashSet<String>,
     concurrency: usize,
 }
 
@@ -52,7 +52,7 @@ impl NodePropertyStepExecutor {
         Self {
             node_labels,
             relationship_types,
-            available_relationship_types_for_node_properties,
+            _available_relationship_types_for_node_properties: available_relationship_types_for_node_properties,
             concurrency,
         }
     }

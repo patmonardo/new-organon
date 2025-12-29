@@ -63,10 +63,6 @@
 //      Phase 5.3 (LinkPredictionRelationshipSampler)
 
 use std::marker::PhantomData;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
-
-use crate::projection::RelationshipType;
 
 // ============================================================================
 // BIJA (SEED) CONSTANTS - Points of Future Manifestation
@@ -153,6 +149,7 @@ pub fn extract_features_and_labels(
 ///      → Global label array (shared, offset-based writes)
 ///      → Progress tracking (atomic updates)
 /// ```
+#[allow(dead_code)]
 fn extract_labels(
     _graph: PhantomData<()>, // TODO: actual Graph - Bija!
     _number_of_targets: usize,

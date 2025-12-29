@@ -69,11 +69,11 @@ pub struct LinkPredictionRelationshipSampler {
 
     /// Split configuration
     /// **Prim and Proper**: Fractions (Prim) + Types (Proper)
-    split_config: LinkPredictionSplitConfig,
+    _split_config: LinkPredictionSplitConfig,
 
     /// Training configuration
     /// **Prim and Proper**: Config duality
-    train_config: LinkPredictionTrainConfig,
+    _train_config: LinkPredictionTrainConfig,
 
     /// Progress tracker
     /// **Proper**: Sampling progress manifestation
@@ -107,8 +107,8 @@ impl LinkPredictionRelationshipSampler {
     ) -> Self {
         Self {
             graph_store: PhantomData,
-            split_config,
-            train_config,
+            _split_config: split_config,
+            _train_config: train_config,
             progress_tracker: PhantomData,
             termination_flag: PhantomData,
         }

@@ -9,8 +9,13 @@
 // - Database I/O → In-memory columnar data
 
 use super::config::{ArrowProjectionConfig, ArrowProjectionError};
+use super::reference::{EdgeTableReference, NodeTableReference};
 use crate::projection::factory::GraphStoreFactory;
+use crate::projection::factory::arrow::reference::ArrowReference;
 use crate::types::graph_store::DefaultGraphStore;
+use crate::types::graph::{id_map::PartialIdMap, id_map::SimpleIdMap, RelationshipTopology};
+use crate::types::schema::GraphSchema;
+use std::sync::Arc;
 
 /// Arrow-native factory for creating GraphStores.
 ///
@@ -70,6 +75,12 @@ pub struct ArrowNativeFactory {
     /// Marker to indicate this is a placeholder
     /// Will be replaced in Phase 2+ with actual table references
     _placeholder: (),
+    /// Preferred collections backend (Arrow default; Huge/Vec allowed for testing)
+    collections_backend: crate::config::CollectionsBackend,
+    /// Optional in-memory node table reference
+    node_table: Option<Arc<NodeTableReference>>,
+    /// Optional in-memory edge table reference
+    edge_table: Option<Arc<EdgeTableReference>>,
 }
 
 impl ArrowNativeFactory {
@@ -84,7 +95,37 @@ impl ArrowNativeFactory {
     ///
     /// For now, just creates an empty factory for testing.
     pub fn new() -> Self {
-        Self { _placeholder: () }
+        Self {
+            _placeholder: (),
+            collections_backend: crate::config::CollectionsBackend::Arrow,
+            node_table: None,
+            edge_table: None,
+        }
+    }
+
+    /// Create a new factory with an explicit collections backend preference.
+    pub fn with_collections_backend(
+        backend: crate::config::CollectionsBackend,
+    ) -> Self {
+        Self {
+            _placeholder: (),
+            collections_backend: backend,
+            node_table: None,
+            edge_table: None,
+        }
+    }
+
+    /// Create a factory from in-memory Arrow table references.
+    pub fn from_tables(
+        node_table: Arc<NodeTableReference>,
+        edge_table: Arc<EdgeTableReference>,
+    ) -> Self {
+        Self {
+            _placeholder: (),
+            collections_backend: crate::config::CollectionsBackend::Arrow,
+            node_table: Some(node_table),
+            edge_table: Some(edge_table),
+        }
     }
 }
 
@@ -133,6 +174,13 @@ impl GraphStoreFactory for ArrowNativeFactory {
     fn build_graph_store(&self, config: &Self::Config) -> Result<DefaultGraphStore, Self::Error> {
         // Phase 1: Validate config at least
         config.validate()?;
+
+        // Placeholder: acknowledge the configured backend to avoid dead code warnings
+        let _backend = config.collections_backend;
+        let _factory_backend = self.collections_backend;
+        if let (Some(node_table), Some(edge_table)) = (&self.node_table, &self.edge_table) {
+            return self.build_from_tables(node_table, edge_table, config);
+        }
 
         // TODO Phase 2+: Actual implementation
         // - Infer schema from Arrow tables
@@ -218,6 +266,117 @@ impl crate::projection::factory::GraphStoreFactoryTyped for ArrowNativeFactory {
     }
 }
 
+impl ArrowNativeFactory {
+    fn build_from_tables(
+        &self,
+        node_table: &Arc<NodeTableReference>,
+        edge_table: &Arc<EdgeTableReference>,
+        _config: &ArrowProjectionConfig,
+    ) -> Result<DefaultGraphStore, ArrowProjectionError> {
+        // Build id map from node ids (assume dense i64 ids)
+        let node_ids: Vec<i64> = node_table.id_column().values().to_vec();
+        let id_map = SimpleIdMap::from_original_ids(node_ids.clone());
+
+        // Build topology (outgoing adjacency) from source/target columns
+        let source = edge_table.source_column();
+        let target = edge_table.target_column();
+        let node_count = node_ids.len();
+        let mut outgoing: Vec<Vec<i64>> = vec![Vec::new(); node_count];
+        for (&s, &t) in source.values().iter().zip(target.values().iter()) {
+            let mapped_source = id_map.to_mapped_node_id(s).ok_or_else(|| {
+                ArrowProjectionError::Import(format!("source id {s} missing in nodes"))
+            })?;
+            let mapped_target = id_map.to_mapped_node_id(t).ok_or_else(|| {
+                ArrowProjectionError::Import(format!("target id {t} missing in nodes"))
+            })?;
+            outgoing[mapped_source as usize].push(mapped_target);
+        }
+        let topology = RelationshipTopology::new(outgoing, None);
+
+        // Schema: basic node/relationship schemas
+        let schema = GraphSchema::empty();
+
+        // Backend selection for properties
+        // Assemble DefaultGraphStore
+        let graph_name = crate::types::graph_store::GraphName::new("arrow_graph");
+        let database_info = crate::types::graph_store::DatabaseInfo::new(
+            crate::types::graph_store::DatabaseId::new("arrow"),
+            crate::types::graph_store::DatabaseLocation::remote(
+                "local",
+                0,
+                None::<String>,
+                None::<String>,
+            ),
+        );
+        let capabilities = crate::types::graph_store::Capabilities::default();
+        let relationship_topologies = {
+            let mut m = std::collections::HashMap::new();
+            m.insert(
+                crate::projection::relationship_type::RelationshipType::of("REL"),
+                topology,
+            );
+            m
+        };
+
+        let mut store = DefaultGraphStore::new(
+            crate::config::GraphStoreConfig::default(),
+            graph_name,
+            database_info,
+            schema,
+            capabilities,
+            id_map,
+            relationship_topologies,
+        );
+
+        // Node properties: id column (required)
+        store
+            .add_node_property_i64("id".to_string(), node_ids.clone())
+            .map_err(|e| ArrowProjectionError::Import(e.to_string()))?;
+
+        // Additional node properties: infer numeric columns
+        for idx in node_table.property_column_indices() {
+            let field = &node_table.schema().fields[idx];
+            match field.data_type() {
+                arrow2::datatypes::DataType::Int64 => {
+                    if let Some(arr) = node_table
+                        .chunk()
+                        .arrays()
+                        .get(idx)
+                        .and_then(|a| a.as_any().downcast_ref::<arrow2::array::Int64Array>())
+                    {
+                        let vals = arr.values().to_vec();
+                        store
+                            .add_node_property_i64(field.name.clone(), vals)
+                            .map_err(|e| ArrowProjectionError::Import(e.to_string()))?;
+                    }
+                }
+                arrow2::datatypes::DataType::Float64 => {
+                    if let Some(arr) = node_table
+                        .chunk()
+                        .arrays()
+                        .get(idx)
+                        .and_then(|a| a.as_any().downcast_ref::<arrow2::array::Float64Array>())
+                    {
+                        let vals = arr.values().to_vec();
+                        store
+                            .add_node_property_f64(field.name.clone(), vals)
+                            .map_err(|e| ArrowProjectionError::Import(e.to_string()))?;
+                    }
+                }
+                _ => {
+                    // Skip unsupported types for now
+                }
+            }
+        }
+
+        store
+            .add_graph_property_i64("node_count".to_string(), vec![node_count as i64])
+            .map_err(|e| ArrowProjectionError::Import(e.to_string()))?;
+
+        Ok(store)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -299,5 +458,24 @@ mod tests {
         let result = factory.edge_count(&config);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), 0);
+    }
+
+    #[test]
+    fn build_from_in_memory_tables() {
+        use crate::projection::factory::arrow::test_utils::{sample_edge_table, sample_node_table};
+        use crate::types::graph_store::GraphStore;
+
+        let nodes = Arc::new(sample_node_table());
+        let edges = Arc::new(sample_edge_table());
+
+        let mut config = ArrowProjectionConfig::default();
+        config.collections_backend = crate::config::CollectionsBackend::Arrow;
+
+        let factory = ArrowNativeFactory::from_tables(nodes, edges);
+        let store = factory.build_graph_store(&config).expect("build graph store");
+
+        assert_eq!(store.node_count(), 3);
+        assert_eq!(store.relationship_count(), 2);
+        assert!(store.has_node_property("id"));
     }
 }

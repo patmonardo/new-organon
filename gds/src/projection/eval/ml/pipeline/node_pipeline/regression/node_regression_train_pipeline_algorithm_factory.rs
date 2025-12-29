@@ -45,7 +45,7 @@ pub type NodeRegressionTrain = ();
 /// Java source: `NodeRegressionTrainPipelineAlgorithmFactory.java`
 #[derive(Debug, Clone)]
 pub struct NodeRegressionTrainPipelineAlgorithmFactory {
-    execution_context: ExecutionContext,
+    _execution_context: ExecutionContext,
 }
 
 impl NodeRegressionTrainPipelineAlgorithmFactory {
@@ -58,7 +58,9 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
     /// }
     /// ```
     pub fn new(execution_context: ExecutionContext) -> Self {
-        Self { execution_context }
+        Self {
+            _execution_context: execution_context,
+        }
     }
 
     /// Builds a training algorithm by retrieving the pipeline from the catalog.
@@ -202,6 +204,7 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
     /// Validates that the main metric is supported by the pipeline.
     ///
     /// Java source: `PipelineCompanion.validateMainMetric(pipeline, metric)`
+    #[allow(dead_code)]
     fn validate_main_metric(_pipeline: &NodeRegressionTrainingPipeline, _metric: &str) {
         // TODO: Implement metric validation
         // Checks that the first metric in config is compatible with pipeline training type

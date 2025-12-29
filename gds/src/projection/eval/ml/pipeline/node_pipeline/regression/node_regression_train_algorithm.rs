@@ -28,7 +28,7 @@ use super::{
 
 // Placeholder types until algorithm framework is complete
 pub type PipelineTrainer<T> = std::marker::PhantomData<T>;
-pub type PipelineTrainAlgorithm<T, R, C, F> = (std::marker::PhantomData<(T, R, C, F)>);
+pub type PipelineTrainAlgorithm<T, R, C, F> = std::marker::PhantomData<(T, R, C, F)>;
 pub type ProgressTracker = ();
 
 /// Algorithm wrapper for node regression pipeline training.
@@ -62,7 +62,7 @@ pub struct NodeRegressionTrainAlgorithm {
     model_converter: NodeRegressionToModelConverter,
     graph_store: Arc<DefaultGraphStore>,
     config: NodeRegressionPipelineTrainConfig,
-    progress_tracker: ProgressTracker,
+    _progress_tracker: ProgressTracker,
 }
 
 impl NodeRegressionTrainAlgorithm {
@@ -93,7 +93,7 @@ impl NodeRegressionTrainAlgorithm {
             model_converter,
             graph_store,
             config,
-            progress_tracker: (),
+            _progress_tracker: (),
         }
     }
 
