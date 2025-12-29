@@ -89,7 +89,7 @@ impl WriteToDatabase for DefaultWriteToDatabase {
         job_id: JobId,
         node_properties: Box<dyn NodePropertyValues>,
     ) -> NodePropertiesWritten {
-        // TODO: Implement actual database writing
+        // TODO(gds,2025-01-31): Implement actual database writing
         // This would typically involve:
         // 1. Getting the target node labels from the config
         // 2. Getting the property name from the config
@@ -112,7 +112,7 @@ impl WriteToDatabase for DefaultWriteToDatabase {
         job_id: JobId,
         node_properties: Box<dyn NodePropertyValues>,
     ) -> NodePropertiesWritten {
-        // TODO: Implement actual database writing with explicit config
+        // TODO(gds,2025-01-31): Implement actual database writing with explicit config
         // This would typically involve:
         // 1. Using the write config for target node labels and property names
         // 2. Writing the properties to the database

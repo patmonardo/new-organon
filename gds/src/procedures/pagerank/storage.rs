@@ -95,7 +95,7 @@ impl<'a, G: GraphStore> PageRankStorageRuntime<'a, G> {
             return Ok(1.0);
         }
 
-        // TODO: Implement actual weight lookup from GraphStore
+        // TODO(gds,2025-01-31): Implement actual weight lookup from GraphStore
         // For now: placeholder implementation returns 1.0
         // This simulates the Functor: GraphStore → f64
 
@@ -150,7 +150,7 @@ impl<'a, G: GraphStore> PageRankStorageRuntime<'a, G> {
 
     /// Get the number of relationships in the graph
     pub fn relationship_count(&self) -> usize {
-        // TODO: Implement actual relationship count from GraphStore
+        // TODO(gds,2025-01-31): Implement actual relationship count from GraphStore
         // For now: placeholder implementation
         0
     }

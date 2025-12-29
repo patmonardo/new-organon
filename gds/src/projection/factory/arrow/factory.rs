@@ -182,15 +182,9 @@ impl GraphStoreFactory for ArrowNativeFactory {
             return self.build_from_tables(node_table, edge_table, config);
         }
 
-        // TODO Phase 2+: Actual implementation
-        // - Infer schema from Arrow tables
-        // - Create table references
-        // - Set up batch scanners
-        // - Execute parallel import
-        // - Construct GraphStore
-
-        Err(ArrowProjectionError::Other(
-            "ArrowNativeFactory.build_graph_store() not yet implemented (Phase 1 skeleton)"
+        // TODO(gds,2025-01-31): Add support for loading tables from config-driven references
+        Err(ArrowProjectionError::InvalidConfig(
+            "ArrowNativeFactory needs in-memory node/edge tables (use from_tables())"
                 .to_string(),
         ))
     }
@@ -199,16 +193,21 @@ impl GraphStoreFactory for ArrowNativeFactory {
     ///
     /// # Phase 1 Status
     ///
-    /// Placeholder! Returns (0, 0).
+    /// Placeholder! Uses simple counts when tables exist.
     /// Future phases will calculate:
     /// - Buffer sizes for parallel import
     /// - Temporary structures (ID maps, property buffers)
     /// - GraphStore final size estimate
-    fn estimate_memory(&self, _config: &Self::Config) -> Result<(usize, usize), Self::Error> {
-        // TODO Phase 2+: Actual memory estimation
-        // - Calculate node/edge counts from Arrow metadata
-        // - Estimate property storage size
-        // - Account for parallel import buffers
+    fn estimate_memory(&self, config: &Self::Config) -> Result<(usize, usize), Self::Error> {
+        if let (Some(node_table), Some(edge_table)) = (&self.node_table, &self.edge_table) {
+            let nodes = node_table.row_count();
+            let edges = edge_table.row_count();
+            // Crude estimate: counts as proxies for now
+            return Ok((nodes, edges));
+        }
+
+        // TODO(gds,2025-01-31): Use Arrow metadata to estimate buffers even without in-memory tables
+        let _ = config;
         Ok((0, 0))
     }
 
@@ -219,8 +218,14 @@ impl GraphStoreFactory for ArrowNativeFactory {
     /// Placeholder! Returns 0.
     /// Future phases will read Arrow table metadata.
     fn node_count(&self, _config: &Self::Config) -> Result<usize, Self::Error> {
-        // TODO Phase 2+: Read from Arrow table metadata
-        Ok(0)
+        if let Some(node_table) = &self.node_table {
+            return Ok(node_table.row_count());
+        }
+
+        // TODO(gds,2025-01-31): Support node counts from Arrow metadata when tables are not in memory
+        Err(ArrowProjectionError::InvalidConfig(
+            "node table missing; provide via ArrowNativeFactory::from_tables()".to_string(),
+        ))
     }
 
     /// Get edge count from Arrow table.
@@ -230,8 +235,14 @@ impl GraphStoreFactory for ArrowNativeFactory {
     /// Placeholder! Returns 0.
     /// Future phases will read Arrow table metadata.
     fn edge_count(&self, _config: &Self::Config) -> Result<usize, Self::Error> {
-        // TODO Phase 2+: Read from Arrow table metadata
-        Ok(0)
+        if let Some(edge_table) = &self.edge_table {
+            return Ok(edge_table.row_count());
+        }
+
+        // TODO(gds,2025-01-31): Support edge counts from Arrow metadata when tables are not in memory
+        Err(ArrowProjectionError::InvalidConfig(
+            "edge table missing; provide via ArrowNativeFactory::from_tables()".to_string(),
+        ))
     }
 }
 
@@ -403,10 +414,10 @@ mod tests {
         let result = factory.build_graph_store(&config);
         assert!(result.is_err());
         match result {
-            Err(ArrowProjectionError::Other(msg)) => {
-                assert!(msg.contains("not yet implemented"));
+            Err(ArrowProjectionError::InvalidConfig(msg)) => {
+                assert!(msg.contains("needs in-memory node/edge tables"));
             }
-            _ => panic!("Expected Other error with 'not yet implemented'"),
+            _ => panic!("Expected InvalidConfig error"),
         }
     }
 
@@ -441,23 +452,37 @@ mod tests {
     }
 
     #[test]
-    fn test_node_count_placeholder() {
+    fn test_node_and_edge_count_require_tables() {
         let factory = ArrowNativeFactory::new();
         let config = ArrowProjectionConfig::default();
 
-        let result = factory.node_count(&config);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 0);
+        assert!(factory.node_count(&config).is_err());
+        assert!(factory.edge_count(&config).is_err());
     }
 
     #[test]
-    fn test_edge_count_placeholder() {
-        let factory = ArrowNativeFactory::new();
+    fn test_node_and_edge_count_from_tables() {
+        use crate::projection::factory::arrow::test_utils::{sample_edge_table, sample_node_table};
+
+        let nodes = Arc::new(sample_node_table());
+        let edges = Arc::new(sample_edge_table());
+        let factory = ArrowNativeFactory::from_tables(nodes, edges);
         let config = ArrowProjectionConfig::default();
 
-        let result = factory.edge_count(&config);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 0);
+        assert_eq!(factory.node_count(&config).unwrap(), 3);
+        assert_eq!(factory.edge_count(&config).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_estimate_memory_from_tables() {
+        use crate::projection::factory::arrow::test_utils::{sample_edge_table, sample_node_table};
+
+        let nodes = Arc::new(sample_node_table());
+        let edges = Arc::new(sample_edge_table());
+        let factory = ArrowNativeFactory::from_tables(nodes, edges);
+        let config = ArrowProjectionConfig::default();
+
+        assert_eq!(factory.estimate_memory(&config).unwrap(), (3, 2));
     }
 
     #[test]
