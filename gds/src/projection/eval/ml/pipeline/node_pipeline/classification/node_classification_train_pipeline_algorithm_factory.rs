@@ -189,7 +189,6 @@ mod tests {
     use super::*;
     use crate::types::graph_store::DefaultGraphStore;
     use crate::types::random::RandomGraphConfig;
-    use std::sync::Arc;
 
     #[test]
     fn test_new_factory() {
@@ -217,10 +216,11 @@ mod tests {
             seed: Some(42),
             ..RandomGraphConfig::default()
         };
-        let graph_store =
+        let _graph_store =
             DefaultGraphStore::random(&config).expect("Failed to generate random graph");
-        let factory = NodeClassificationTrainPipelineAlgorithmFactory::new((), "2.5.0".to_string());
-        let train_config = NodeClassificationPipelineTrainConfig::default();
+        let _factory =
+            NodeClassificationTrainPipelineAlgorithmFactory::new((), "2.5.0".to_string());
+        let _train_config = NodeClassificationPipelineTrainConfig::default();
 
         // Placeholder: build method not yet fully implemented
         // let _algorithm = factory.build(&graph_store, &train_config);

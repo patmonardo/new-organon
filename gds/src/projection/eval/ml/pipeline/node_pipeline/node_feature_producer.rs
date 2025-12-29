@@ -254,7 +254,6 @@ impl NodeFeatureProducer<PlaceholderNodePropertyConfig> {
 mod tests {
     use super::*;
     use crate::types::random::RandomGraphConfig;
-    use std::collections::HashSet;
     use std::sync::Arc;
 
     // Mock config for testing

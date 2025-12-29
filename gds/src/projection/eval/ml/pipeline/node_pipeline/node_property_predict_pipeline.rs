@@ -124,7 +124,6 @@ impl Pipeline for NodePropertyPredictPipeline {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::projection::eval::ml::pipeline::ExecutableNodePropertyStep;
     use crate::projection::eval::ml::pipeline::PipelineValidationError;
 
     #[test]

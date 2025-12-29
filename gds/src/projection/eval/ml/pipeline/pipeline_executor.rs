@@ -330,8 +330,8 @@ mod tests {
         // Test enum variants exist
         let train = DatasetSplits::Train;
         let test = DatasetSplits::Test;
-        let test_complement = DatasetSplits::TestComplement;
-        let feature_input = DatasetSplits::FeatureInput;
+        let _test_complement = DatasetSplits::TestComplement;
+        let _feature_input = DatasetSplits::FeatureInput;
 
         // Test equality
         assert_eq!(train, DatasetSplits::Train);

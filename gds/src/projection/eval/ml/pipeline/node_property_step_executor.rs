@@ -267,7 +267,7 @@ mod tests {
     use super::*;
     use crate::projection::eval::ml::pipeline::NodePropertyStep;
     use crate::types::graph_store::DefaultGraphStore;
-    use crate::types::random::{RandomGraphConfig, Randomizable};
+    use crate::types::random::RandomGraphConfig;
     use std::collections::HashMap;
 
     fn create_test_graph_store() -> Arc<DefaultGraphStore> {

@@ -41,7 +41,7 @@ mod tests {
 
     struct MockModel {
         name: String,
-        schema: GraphSchema,
+        _schema: GraphSchema,
     }
 
     struct MockResult {
@@ -54,7 +54,7 @@ mod tests {
         fn to_model(&self, result: MockResult, original_schema: &GraphSchema) -> MockModel {
             MockModel {
                 name: format!("model_with_accuracy_{}", result.accuracy),
-                schema: original_schema.clone(),
+                _schema: original_schema.clone(),
             }
         }
     }
