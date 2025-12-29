@@ -23,7 +23,7 @@ mod raw_features_task;
 pub mod algo;
 
 pub use algo::{
-	BinarizeFeaturesConfig, GenerateFeaturesConfig, HashGNNAlgorithmSpec, HashGNNConfig,
-	HashGNNComputationRuntime, HashGNNEmbeddings, HashGNNResult, HashGNNStorageRuntime,
+    BinarizeFeaturesConfig, GenerateFeaturesConfig, HashGNNAlgorithmSpec,
+    HashGNNComputationRuntime, HashGNNConfig, HashGNNEmbeddings, HashGNNResult,
+    HashGNNStorageRuntime,
 };
-

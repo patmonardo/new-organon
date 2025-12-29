@@ -3,7 +3,9 @@
 //! Handles JSON requests for Articulation Points operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::centrality::articulation_points::{ArticulationPointRow, ArticulationPointsFacade};
+use crate::procedures::facades::centrality::articulation_points::{
+    ArticulationPointRow, ArticulationPointsFacade,
+};
 use crate::procedures::facades::traits::{StatsResults, StreamResults};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
@@ -27,7 +29,13 @@ pub fn handle_articulation_points(request: &Value, catalog: Arc<dyn GraphCatalog
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create facade
@@ -44,7 +52,11 @@ pub fn handle_articulation_points(request: &Value, catalog: Arc<dyn GraphCatalog
                     "data": rows
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Articulation Points execution failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Articulation Points execution failed: {:?}", e),
+            ),
         },
         "stats" => match facade.stats() {
             Ok(stats) => json!({
@@ -52,7 +64,11 @@ pub fn handle_articulation_points(request: &Value, catalog: Arc<dyn GraphCatalog
                 "op": op,
                 "data": stats
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Articulation Points stats failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Articulation Points stats failed: {:?}", e),
+            ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

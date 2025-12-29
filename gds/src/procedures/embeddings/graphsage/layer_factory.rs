@@ -78,5 +78,3 @@ pub fn generate_weights(rows: usize, cols: usize, weight_bound: f64, random_seed
     }
     Weights::new(Box::new(Matrix::new(data, rows, cols)))
 }
-
-

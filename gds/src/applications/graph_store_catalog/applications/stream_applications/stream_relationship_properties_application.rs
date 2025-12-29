@@ -50,10 +50,14 @@ impl StreamRelationshipPropertiesApplication {
 
                 let node_count = graph.node_count() as i64;
                 for mapped_source in 0..node_count {
-                    let original_source = graph.to_original_node_id(mapped_source).unwrap_or(mapped_source);
+                    let original_source = graph
+                        .to_original_node_id(mapped_source)
+                        .unwrap_or(mapped_source);
                     for cursor in graph.stream_relationships(mapped_source, f64::NAN) {
                         let mapped_target = cursor.target_id();
-                        let original_target = graph.to_original_node_id(mapped_target).unwrap_or(mapped_target);
+                        let original_target = graph
+                            .to_original_node_id(mapped_target)
+                            .unwrap_or(mapped_target);
                         let pv = cursor.property();
 
                         let value = match value_type {

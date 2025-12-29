@@ -23,5 +23,3 @@ impl AggregatorMemoryEstimator for MeanAggregatorMemoryEstimator {
         MemoryRange::of_range(min_bound, max_bound)
     }
 }
-
-

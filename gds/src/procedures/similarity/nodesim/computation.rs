@@ -154,7 +154,7 @@ impl NodeSimilarityComputationRuntime {
                         if heap.len() < limit {
                             heap.push(item);
                         } else if let Some(min_top) = heap.peek() {
-                            if sim > min_top.0.0 {
+                            if sim > min_top.0 .0 {
                                 heap.pop();
                                 heap.push(item);
                             }
@@ -165,11 +165,13 @@ impl NodeSimilarityComputationRuntime {
                 // Extract from heap
                 heap.into_sorted_vec()
                     .into_iter()
-                    .map(|Reverse(ScoredNode(sim, target))| NodeSimilarityComputationResult {
-                        source,
-                        target,
-                        similarity: sim,
-                    })
+                    .map(
+                        |Reverse(ScoredNode(sim, target))| NodeSimilarityComputationResult {
+                            source,
+                            target,
+                            similarity: sim,
+                        },
+                    )
                     .collect::<Vec<_>>()
             })
             .collect()

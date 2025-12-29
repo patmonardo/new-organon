@@ -49,7 +49,8 @@ impl FilteredKnnComputationRuntime {
                 }
 
                 let source = i as u64;
-                let mut rows: Vec<FilteredKnnComputationResult> = Vec::with_capacity(k.min(node_count.saturating_sub(1)));
+                let mut rows: Vec<FilteredKnnComputationResult> =
+                    Vec::with_capacity(k.min(node_count.saturating_sub(1)));
 
                 for j in 0..node_count {
                     if i == j {

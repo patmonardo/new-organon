@@ -41,8 +41,11 @@ impl Sigmoid {
     pub fn new_ref(parent: VariableRef) -> Self {
         let dimensions = parent.dimensions().to_vec();
         let require_gradient = parent.require_gradient();
-        let base =
-            AbstractVariable::with_gradient_requirement(vec![parent.clone()], dimensions, require_gradient);
+        let base = AbstractVariable::with_gradient_requirement(
+            vec![parent.clone()],
+            dimensions,
+            require_gradient,
+        );
         Self { base, parent }
     }
 

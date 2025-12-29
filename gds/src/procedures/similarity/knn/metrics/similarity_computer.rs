@@ -109,13 +109,21 @@ impl dyn SimilarityComputer {
         match value_type {
             ValueType::Double => {
                 if metric != SimilarityMetric::Default {
-                    return Err(unsupported_similarity_metric(property_name, value_type, metric));
+                    return Err(unsupported_similarity_metric(
+                        property_name,
+                        value_type,
+                        metric,
+                    ));
                 }
                 Ok(Arc::new(DoublePropertySimilarityComputer::new(values)))
             }
             ValueType::Long => {
                 if metric != SimilarityMetric::Default {
-                    return Err(unsupported_similarity_metric(property_name, value_type, metric));
+                    return Err(unsupported_similarity_metric(
+                        property_name,
+                        value_type,
+                        metric,
+                    ));
                 }
                 Ok(Arc::new(LongPropertySimilarityComputer::new(values)))
             }
@@ -130,7 +138,11 @@ impl dyn SimilarityComputer {
                     | SimilarityMetric::Pearson => Ok(Arc::new(
                         FloatArrayPropertySimilarityComputer::new(values, effective),
                     )),
-                    _ => Err(unsupported_similarity_metric(property_name, value_type, metric)),
+                    _ => Err(unsupported_similarity_metric(
+                        property_name,
+                        value_type,
+                        metric,
+                    )),
                 }
             }
             ValueType::DoubleArray => {
@@ -144,7 +156,11 @@ impl dyn SimilarityComputer {
                     | SimilarityMetric::Pearson => Ok(Arc::new(
                         DoubleArrayPropertySimilarityComputer::new(values, effective),
                     )),
-                    _ => Err(unsupported_similarity_metric(property_name, value_type, metric)),
+                    _ => Err(unsupported_similarity_metric(
+                        property_name,
+                        value_type,
+                        metric,
+                    )),
                 }
             }
             ValueType::LongArray => {
@@ -156,7 +172,11 @@ impl dyn SimilarityComputer {
                     SimilarityMetric::Jaccard | SimilarityMetric::Overlap => Ok(Arc::new(
                         LongArrayPropertySimilarityComputer::new(values, effective),
                     )),
-                    _ => Err(unsupported_similarity_metric(property_name, value_type, metric)),
+                    _ => Err(unsupported_similarity_metric(
+                        property_name,
+                        value_type,
+                        metric,
+                    )),
                 }
             }
             _ => Err(SimilarityComputerBuildError::new(format!(

@@ -14,17 +14,17 @@
 // The remainder of the Java-parity facades (centrality/community/...) are present in the
 // repo but not yet compiled/wired, to avoid pulling in unfinished placeholders.
 
-pub mod machinery;
-pub mod metadata;
-pub mod pathfinding;
 pub mod centrality;
 pub mod community;
 pub mod embeddings;
+pub mod machinery;
+pub mod metadata;
+pub mod pathfinding;
 pub mod similarity;
 
+pub use centrality::*;
+pub use embeddings::*;
 pub use machinery::*;
 pub use metadata::*;
 pub use pathfinding::*;
-pub use centrality::*;
-pub use embeddings::*;
 pub use similarity::*;

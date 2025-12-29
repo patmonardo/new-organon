@@ -10,7 +10,7 @@ use std::sync::Arc;
 use super::densify_task::DensifyTask;
 use super::embeddings_to_node_property_values::EmbeddingsToNodePropertyValues;
 use super::generate_features_task::GenerateFeaturesTask;
-use super::hash_gnn_parameters::{HashGNNParameters};
+use super::hash_gnn_parameters::HashGNNParameters;
 use super::hash_gnn_result::HashGNNResult;
 use super::hash_task::HashTask;
 use super::min_hash_task::MinHashTask;
@@ -56,7 +56,9 @@ impl HashGNN {
         let degree_partitions: Vec<DegreePartition> = PartitionUtils::degree_partition(
             node_count,
             self.graph.relationship_count(),
-            Box::new(GraphDegrees { graph: Arc::clone(&self.graph) }),
+            Box::new(GraphDegrees {
+                graph: Arc::clone(&self.graph),
+            }),
             decreased_concurrency,
             |p| p,
             Some(1),
@@ -106,8 +108,7 @@ impl HashGNN {
             1.0
         } else {
             embedding_dimension as f64
-                * (1.0f64
-                    - (1.0f64 - (1.0f64 / embedding_dimension as f64)).powf(avg_degree))
+                * (1.0f64 - (1.0f64 - (1.0f64 / embedding_dimension as f64)).powf(avg_degree))
         };
 
         for iteration in 0..self.parameters.iterations {
@@ -161,15 +162,20 @@ impl HashGNN {
             current_total_feature_count += added;
         }
 
-        let binary_output_vectors = if (self.parameters.iterations.saturating_sub(1)).is_multiple_of(2) {
-            embeddings_a
-        } else {
-            embeddings_b
-        };
+        let binary_output_vectors =
+            if (self.parameters.iterations.saturating_sub(1)).is_multiple_of(2) {
+                embeddings_a
+            } else {
+                embeddings_b
+            };
 
         let embeddings = if let Some(out_dim) = self.parameters.output_dimension {
-            let dense =
-                DensifyTask::compute(range_partitions, out_dim, random_seed, &binary_output_vectors);
+            let dense = DensifyTask::compute(
+                range_partitions,
+                out_dim,
+                random_seed,
+                &binary_output_vectors,
+            );
             EmbeddingsToNodePropertyValues::from_dense(dense)
         } else {
             EmbeddingsToNodePropertyValues::from_binary(binary_output_vectors, embedding_dimension)
@@ -223,15 +229,15 @@ impl HashGNN {
 
 #[cfg(test)]
 mod tests {
+    use super::super::hash_gnn_parameters::GenerateFeaturesConfig;
     use super::*;
+    use crate::collections::backends::vec::VecLong;
     use crate::core::utils::progress::{ProgressTracker, Tasks};
     use crate::types::concurrency::Concurrency;
-    use super::super::hash_gnn_parameters::GenerateFeaturesConfig;
-    use crate::types::properties::node::DefaultLongNodePropertyValues;
     use crate::types::graph_store::DefaultGraphStore;
     use crate::types::graph_store::GraphStore;
+    use crate::types::properties::node::DefaultLongNodePropertyValues;
     use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
-    use crate::collections::backends::vec::VecLong;
     use crate::types::schema::NodeLabel;
     use std::collections::HashSet;
 
@@ -283,11 +289,7 @@ mod tests {
                 assert_eq!(embedding_dimension, 64);
                 // At least the structures exist; density depends on random + propagation.
                 assert_eq!(
-                    embeddings
-                        .get(0)
-                        .as_ref()
-                        .expect("bitset missing")
-                        .size(),
+                    embeddings.get(0).as_ref().expect("bitset missing").size(),
                     64
                 );
             }
@@ -366,5 +368,3 @@ impl DegreeFunction for GraphDegrees {
         self.graph.degree(node_id as i64)
     }
 }
-
-

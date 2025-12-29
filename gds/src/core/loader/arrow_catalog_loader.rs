@@ -8,13 +8,13 @@ use std::sync::Arc;
 
 use crate::config::CollectionsBackend;
 use crate::core::io::arrow::reader::read_parquet_file;
-use crate::projection::factory::GraphStoreFactory;
+use crate::core::loader::LoaderError;
 use crate::projection::factory::arrow::{
     ArrowNativeFactory, ArrowProjectionConfig, ArrowReferenceError, EdgeTableReference,
     NodeTableReference,
 };
+use crate::projection::factory::GraphStoreFactory;
 use crate::types::graph_store::DefaultGraphStore;
-use crate::core::loader::LoaderError;
 
 /// Loader for a single graph stored under a directory with `nodes.parquet` and `edges.parquet`.
 #[derive(Debug, Clone)]

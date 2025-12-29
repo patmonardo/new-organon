@@ -30,5 +30,3 @@ pub struct HashGNNParameters {
     pub generate_features: Option<GenerateFeaturesConfig>,
     pub random_seed: Option<u64>,
 }
-
-

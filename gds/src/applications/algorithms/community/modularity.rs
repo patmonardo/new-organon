@@ -25,13 +25,25 @@ pub fn handle_modularity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
 
     let community_property = match request.get("communityProperty").and_then(|v| v.as_str()) {
         Some(prop) => prop,
-        None => return err(op, "INVALID_REQUEST", "Missing 'communityProperty' parameter"),
+        None => {
+            return err(
+                op,
+                "INVALID_REQUEST",
+                "Missing 'communityProperty' parameter",
+            )
+        }
     };
 
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create builder
@@ -48,7 +60,11 @@ pub fn handle_modularity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
                     "data": rows
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Modularity execution failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Modularity execution failed: {:?}", e),
+            ),
         },
         "stats" => match builder.stats() {
             Ok(stats) => json!({
@@ -56,7 +72,11 @@ pub fn handle_modularity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
                 "op": op,
                 "data": stats
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Modularity stats failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Modularity stats failed: {:?}", e),
+            ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

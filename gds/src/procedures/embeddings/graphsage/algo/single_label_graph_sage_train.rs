@@ -13,7 +13,9 @@ use crate::procedures::embeddings::graphsage::graphsage_model_trainer::{
 };
 use crate::procedures::embeddings::graphsage::single_label_feature_function::SingleLabelFeatureFunction;
 use crate::procedures::embeddings::graphsage::train_config_transformer::TrainConfigTransformer;
-use crate::procedures::embeddings::graphsage::types::{AggregatorType, GraphSageTrainConfig, GraphSageTrainParameters};
+use crate::procedures::embeddings::graphsage::types::{
+    AggregatorType, GraphSageTrainConfig, GraphSageTrainParameters,
+};
 use crate::types::graph::Graph;
 use std::sync::Arc;
 
@@ -63,11 +65,7 @@ impl GraphSageTrain for SingleLabelGraphSageTrain {
             self.termination_flag.clone(),
         );
 
-        let train_result = trainer.train(
-            Arc::clone(&self.graph),
-            Arc::new(features),
-            feature_dim,
-        );
+        let train_result = trainer.train(Arc::clone(&self.graph), Arc::new(features), feature_dim);
 
         // Serialize layers from runtime weights (minimal: read out weight tensors).
         let model_data = GraphSageModelData {
@@ -162,5 +160,3 @@ pub(super) fn serialize_layers(
     }
     out
 }
-
-

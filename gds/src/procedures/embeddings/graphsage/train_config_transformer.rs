@@ -1,9 +1,9 @@
 //! Java: `TrainConfigTransformer`.
 
+use super::graphsage_helper;
 use super::types::{
     GraphSageTrainConfig, GraphSageTrainMemoryEstimateParameters, GraphSageTrainParameters,
 };
-use super::graphsage_helper;
 
 pub struct TrainConfigTransformer;
 
@@ -57,5 +57,3 @@ impl TrainConfigTransformer {
         }
     }
 }
-
-

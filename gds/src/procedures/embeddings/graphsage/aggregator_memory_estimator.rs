@@ -13,5 +13,3 @@ pub trait AggregatorMemoryEstimator {
         embedding_dimension: usize,
     ) -> MemoryRange;
 }
-
-

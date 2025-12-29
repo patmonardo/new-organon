@@ -38,7 +38,10 @@ impl FastRPStorageRuntime {
 
         // Now safe to use the translated helper.
         extractors.extend(
-            crate::ml::core::features::feature_extraction::property_extractors(graph, feature_properties),
+            crate::ml::core::features::feature_extraction::property_extractors(
+                graph,
+                feature_properties,
+            ),
         );
 
         Ok(extractors)

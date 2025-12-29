@@ -4,5 +4,3 @@
 //! the Java package layout.
 
 pub use super::types::LayerConfig;
-
-

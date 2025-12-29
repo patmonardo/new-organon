@@ -28,15 +28,11 @@ impl KnnStorageRuntime {
             .node_property_values(node_property)
             .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
 
-        let similarity = <dyn SimilarityComputer>::of_property_values(node_property, values, metric)
-            .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
+        let similarity =
+            <dyn SimilarityComputer>::of_property_values(node_property, values, metric)
+                .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
 
-        Ok(computation.compute(
-            graph_store.node_count(),
-            k,
-            similarity_cutoff,
-            similarity,
-        ))
+        Ok(computation.compute(graph_store.node_count(), k, similarity_cutoff, similarity))
     }
 
     pub fn compute_multi(
@@ -53,8 +49,11 @@ impl KnnStorageRuntime {
             ));
         }
 
-        let mut props: Vec<(String, Arc<dyn crate::types::properties::node::NodePropertyValues>, SimilarityMetric)> =
-            Vec::with_capacity(node_properties.len());
+        let mut props: Vec<(
+            String,
+            Arc<dyn crate::types::properties::node::NodePropertyValues>,
+            SimilarityMetric,
+        )> = Vec::with_capacity(node_properties.len());
 
         for spec in node_properties {
             let name = spec.name.trim();
@@ -72,12 +71,6 @@ impl KnnStorageRuntime {
         let similarity = <dyn SimilarityComputer>::of_properties(props)
             .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
 
-        Ok(computation.compute(
-            graph_store.node_count(),
-            k,
-            similarity_cutoff,
-            similarity,
-        ))
+        Ok(computation.compute(graph_store.node_count(), k, similarity_cutoff, similarity))
     }
 }
-

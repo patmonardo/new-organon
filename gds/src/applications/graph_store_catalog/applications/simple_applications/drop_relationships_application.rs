@@ -37,9 +37,10 @@ impl DropRelationshipsApplication {
                 ));
                 Ok((modified_store, deletion_result))
             }
-            Err(e) => {
-                Err(format!("Failed to delete relationships of type '{}': {}", relationship_type, e))
-            }
+            Err(e) => Err(format!(
+                "Failed to delete relationships of type '{}': {}",
+                relationship_type, e
+            )),
         }
     }
 }

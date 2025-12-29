@@ -107,12 +107,15 @@ impl SteinerTreeBuilder {
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
-            return Ok((Vec::new(), SteinerTreeStats {
-                effective_node_count: 0,
-                effective_target_nodes_count: 0,
-                total_cost: 0.0,
-                computation_time_ms: start.elapsed().as_millis() as u64,
-            }));
+            return Ok((
+                Vec::new(),
+                SteinerTreeStats {
+                    effective_node_count: 0,
+                    effective_target_nodes_count: 0,
+                    total_cost: 0.0,
+                    computation_time_ms: start.elapsed().as_millis() as u64,
+                },
+            ));
         }
 
         let fallback = graph_view.default_property_value();

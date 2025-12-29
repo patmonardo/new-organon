@@ -61,7 +61,8 @@ impl GraphSageLoss {
         let cols = embedding_data.cols();
         let mut sum = 0.0;
         for col in 0..cols {
-            sum += embedding_data.data_at(batch_idx, col) * embedding_data.data_at(other_batch_idx, col);
+            sum += embedding_data.data_at(batch_idx, col)
+                * embedding_data.data_at(other_batch_idx, col);
         }
         sum
     }
@@ -90,7 +91,8 @@ impl Variable for GraphSageLoss {
             let pos_aff = Self::affinity(embeddings, bucket_idx, positive_node_idx);
             let neg_aff = Self::affinity(embeddings, bucket_idx, negative_node_idx);
 
-            let weight = self.relationship_weight_factor(self.batch[bucket_idx], self.batch[positive_node_idx]);
+            let weight = self
+                .relationship_weight_factor(self.batch[bucket_idx], self.batch[positive_node_idx]);
             loss += -weight * (crate::ml::core::functions::Sigmoid::sigmoid(pos_aff)).ln()
                 - (self.negative_sampling_factor as f64)
                     * (crate::ml::core::functions::Sigmoid::sigmoid(-neg_aff)).ln();
@@ -121,14 +123,17 @@ impl Variable for GraphSageLoss {
             let pos_aff = Self::affinity(embeddings, bucket_idx, positive_node_idx);
             let neg_aff = Self::affinity(embeddings, bucket_idx, negative_node_idx);
 
-            let weight = self.relationship_weight_factor(self.batch[bucket_idx], self.batch[positive_node_idx]);
+            let weight = self
+                .relationship_weight_factor(self.batch[bucket_idx], self.batch[positive_node_idx]);
             let weighted_positive_logistic = weight * Self::logistic_function(pos_aff);
             let weighted_negative_logistic =
                 (self.negative_sampling_factor as f64) * Self::logistic_function(-neg_aff);
 
             for emb_idx in 0..cols {
-                let scaled_pos = -embeddings.data_at(positive_node_idx, emb_idx) * weighted_positive_logistic;
-                let scaled_neg = weighted_negative_logistic * embeddings.data_at(negative_node_idx, emb_idx);
+                let scaled_pos =
+                    -embeddings.data_at(positive_node_idx, emb_idx) * weighted_positive_logistic;
+                let scaled_neg =
+                    weighted_negative_logistic * embeddings.data_at(negative_node_idx, emb_idx);
                 grad.set_data_at(bucket_idx, emb_idx, scaled_pos + scaled_neg);
 
                 let current = embeddings.data_at(bucket_idx, emb_idx);
@@ -167,5 +172,3 @@ impl fmt::Display for GraphSageLoss {
         write!(f, "GraphSageLoss")
     }
 }
-
-

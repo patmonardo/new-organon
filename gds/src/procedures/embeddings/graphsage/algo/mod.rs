@@ -38,5 +38,3 @@ pub use single_label_graph_sage_train::SingleLabelGraphSageTrain;
 
 #[cfg(test)]
 mod tests;
-
-

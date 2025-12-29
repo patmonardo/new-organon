@@ -14,5 +14,8 @@ mod tests;
 
 pub use computation::{NodeSimilarityComputationResult, NodeSimilarityComputationRuntime};
 pub use similarity_metric::{NodeSimilarityMetric, SimilarityMetric};
-pub use spec::{NodeSimilarityAlgorithmResult, NodeSimilarityAlgorithmSpec, NodeSimilarityConfig, NodeSimilarityResult};
+pub use spec::{
+    NodeSimilarityAlgorithmResult, NodeSimilarityAlgorithmSpec, NodeSimilarityConfig,
+    NodeSimilarityResult,
+};
 pub use storage::NodeSimilarityStorageRuntime;

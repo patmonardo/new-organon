@@ -46,7 +46,8 @@ impl Node2VecModel {
         };
 
         // Initialize embeddings
-        let mut embeddings = vec![vec![0.0; self.train_params.embedding_dimension]; self.node_count];
+        let mut embeddings =
+            vec![vec![0.0; self.train_params.embedding_dimension]; self.node_count];
         for embedding in &mut embeddings {
             for val in embedding {
                 *val = rng.gen_range(-0.1..0.1);
@@ -93,7 +94,11 @@ impl Node2VecModel {
                 }
             }
 
-            let avg_loss = if sample_count > 0 { total_loss / sample_count as f64 } else { 0.0 };
+            let avg_loss = if sample_count > 0 {
+                total_loss / sample_count as f64
+            } else {
+                0.0
+            };
             loss_per_iteration.push(avg_loss);
 
             // Progress tracking is a no-op for now

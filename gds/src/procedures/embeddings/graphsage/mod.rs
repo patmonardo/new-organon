@@ -12,8 +12,8 @@ pub mod types;
 pub mod activation_function;
 pub mod activation_function_factory;
 pub mod activation_function_wrapper;
-pub mod sigmoid_wrapper;
 pub mod relu_wrapper;
+pub mod sigmoid_wrapper;
 
 pub mod aggregator;
 pub mod aggregator_memory_estimator;
@@ -28,12 +28,12 @@ pub mod layer;
 pub mod layer_config;
 pub mod layer_factory;
 
-pub mod mean_aggregator;
 pub mod mean_aggregating_layer;
+pub mod mean_aggregator;
 pub mod mean_aggregator_memory_estimator;
 
-pub mod max_pooling_aggregator;
 pub mod max_pool_aggregating_layer;
+pub mod max_pooling_aggregator;
 pub mod pool_aggregator_memory_estimator;
 
 pub mod algo;
@@ -47,5 +47,3 @@ pub mod train_config_transformer;
 pub use graphsage_embeddings_generator::GraphSageEmbeddingsGenerator;
 pub use graphsage_model_trainer::GraphSageModelTrainer;
 pub use types::*;
-
-

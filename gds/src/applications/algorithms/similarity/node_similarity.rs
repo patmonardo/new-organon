@@ -38,10 +38,7 @@ pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -
         .and_then(|v| v.as_u64())
         .map(|d| d as usize);
 
-    let top_k = request
-        .get("topK")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(10) as usize;
+    let top_k = request.get("topK").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
 
     let bottom_k = request
         .get("bottomK")
@@ -71,7 +68,13 @@ pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create builder
@@ -104,7 +107,11 @@ pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -
                     "data": result_rows
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Node Similarity execution failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Node Similarity execution failed: {:?}", e),
+            ),
         },
         "stats" => match builder.stats() {
             Ok(_) => json!({
@@ -115,12 +122,22 @@ pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -
                     "similarityPairs": 0
                 }
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Node Similarity stats failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Node Similarity stats failed: {:?}", e),
+            ),
         },
         "mutate" => {
             let property_name = match request.get("property_name").and_then(|v| v.as_str()) {
                 Some(name) => name,
-                None => return err(op, "INVALID_REQUEST", "Missing 'property_name' for mutate mode"),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'property_name' for mutate mode",
+                    )
+                }
             };
             match builder.mutate(property_name) {
                 Ok(_) => json!({
@@ -128,13 +145,23 @@ pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -
                     "op": op,
                     "data": { "nodesWritten": 0 }
                 }),
-                Err(e) => err(op, "EXECUTION_ERROR", &format!("Node Similarity mutate failed: {:?}", e)),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Node Similarity mutate failed: {:?}", e),
+                ),
             }
         }
         "write" => {
             let property_name = match request.get("property_name").and_then(|v| v.as_str()) {
                 Some(name) => name,
-                None => return err(op, "INVALID_REQUEST", "Missing 'property_name' for write mode"),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'property_name' for write mode",
+                    )
+                }
             };
             match builder.write(property_name) {
                 Ok(_) => json!({
@@ -142,7 +169,11 @@ pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -
                     "op": op,
                     "data": { "nodesWritten": 0 }
                 }),
-                Err(e) => err(op, "EXECUTION_ERROR", &format!("Node Similarity write failed: {:?}", e)),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Node Similarity write failed: {:?}", e),
+                ),
             }
         }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),

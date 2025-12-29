@@ -31,7 +31,13 @@ pub fn handle_louvain(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create builder
@@ -48,7 +54,11 @@ pub fn handle_louvain(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
                     "data": rows
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Louvain execution failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Louvain execution failed: {:?}", e),
+            ),
         },
         "stats" => match builder.stats() {
             Ok(stats) => json!({
@@ -56,7 +66,11 @@ pub fn handle_louvain(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
                 "op": op,
                 "data": stats
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Louvain stats failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Louvain stats failed: {:?}", e),
+            ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

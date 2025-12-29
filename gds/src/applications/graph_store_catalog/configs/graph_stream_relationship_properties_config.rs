@@ -3,7 +3,8 @@
 //! Mirrors Java GraphStreamRelationshipPropertiesConfig interface and integrates with the Rust config system.
 
 // Type alias for cleaner code
-type GraphStreamRelationshipsConfig = crate::applications::graph_store_catalog::configs::GraphStreamRelationshipsConfig;
+type GraphStreamRelationshipsConfig =
+    crate::applications::graph_store_catalog::configs::GraphStreamRelationshipsConfig;
 
 #[derive(Debug, Clone)]
 pub struct GraphStreamRelationshipPropertiesConfig {
@@ -57,7 +58,8 @@ impl GraphStreamRelationshipPropertiesConfig {
         relationship_types: Vec<String>,
         relationship_properties: Vec<String>,
     ) -> Result<Self, String> {
-        let relationships_config = GraphStreamRelationshipsConfig::of(graph_name, relationship_types)?;
+        let relationships_config =
+            GraphStreamRelationshipsConfig::of(graph_name, relationship_types)?;
 
         let config = Self::builder()
             .relationships_config(relationships_config)
@@ -72,12 +74,16 @@ impl GraphStreamRelationshipPropertiesConfig {
     pub fn from_json(json: &serde_json::Value) -> Result<Self, String> {
         let relationships_config = GraphStreamRelationshipsConfig::from_json(json)?;
 
-        let relationship_properties = json.get("relationshipProperties")
+        let relationship_properties = json
+            .get("relationshipProperties")
             .ok_or("relationshipProperties is required")?
             .as_array()
             .ok_or("relationshipProperties must be an array")?
             .iter()
-            .map(|v| v.as_str().ok_or("relationshipProperties must contain strings"))
+            .map(|v| {
+                v.as_str()
+                    .ok_or("relationshipProperties must contain strings")
+            })
             .collect::<Result<Vec<_>, _>>()?
             .into_iter()
             .map(|s| s.to_string())
@@ -108,7 +114,10 @@ pub struct GraphStreamRelationshipPropertiesConfigBuilder {
 }
 
 impl GraphStreamRelationshipPropertiesConfigBuilder {
-    pub fn relationships_config(mut self, relationships_config: GraphStreamRelationshipsConfig) -> Self {
+    pub fn relationships_config(
+        mut self,
+        relationships_config: GraphStreamRelationshipsConfig,
+    ) -> Self {
         self.relationships_config = Some(relationships_config);
         self
     }

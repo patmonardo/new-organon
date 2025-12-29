@@ -15,11 +15,11 @@ Run: cargo run -p gds --example gnn_pipeline_demo --features ml"
 
 #[cfg(feature = "ml")]
 mod enabled {
-    use std::sync::Arc;
-    use gds::procedures::facades::Graph;
     use gds::procedures::embeddings::hashgnn::GenerateFeaturesConfig;
-    use gds::types::random::{RandomGraphConfig, RandomRelationshipConfig};
+    use gds::procedures::facades::Graph;
     use gds::types::graph_store::{DefaultGraphStore, GraphStore};
+    use gds::types::random::{RandomGraphConfig, RandomRelationshipConfig};
+    use std::sync::Arc;
 
     pub fn main() {
         println!("=== GNN Pipeline Demo: HashGNN Embeddings ===\n");
@@ -38,21 +38,24 @@ mod enabled {
         let graph = Graph::new(store.clone());
 
         println!("Created graph with {} nodes", store.node_count());
-        println!("Created graph with {} relationships", store.relationship_count());
+        println!(
+            "Created graph with {} relationships",
+            store.relationship_count()
+        );
         println!();
 
         // Step 2: Configure HashGNN
         println!("Step 2: Configuring HashGNN embeddings...");
         let hashgnn = graph
             .hash_gnn()
-            .iterations(3)               // 3 message-passing steps
-            .embedding_density(8)        // 8 non-zero entries per hash bucket
-            .neighbor_influence(1.0)     // neighbor contribution weight
+            .iterations(3) // 3 message-passing steps
+            .embedding_density(8) // 8 non-zero entries per hash bucket
+            .neighbor_influence(1.0) // neighbor contribution weight
             .generate_features(Some(GenerateFeaturesConfig {
-                dimension: 128,          // base feature dimension
-                density_level: 2,        // feature sparsity
+                dimension: 128,   // base feature dimension
+                density_level: 2, // feature sparsity
             }))
-            .output_dimension(Some(64))  // densify to 64-dim f32 vectors
+            .output_dimension(Some(64)) // densify to 64-dim f32 vectors
             .random_seed(Some(123));
 
         println!("HashGNN config:");
@@ -84,7 +87,8 @@ mod enabled {
                 println!("Sample embeddings (first 5 nodes):");
                 for node_id in 0..5.min(embeddings.len()) {
                     let embedding = &embeddings[node_id];
-                    println!("  Node {}: [{:.3}, {:.3}, {:.3}, ...] (dim={})",
+                    println!(
+                        "  Node {}: [{:.3}, {:.3}, {:.3}, ...] (dim={})",
                         node_id,
                         embedding[0],
                         embedding[1],
@@ -93,7 +97,10 @@ mod enabled {
                     );
                 }
             }
-            gds::procedures::embeddings::hashgnn::algo::HashGNNEmbeddings::BinaryIndices { embeddings, embedding_dimension } => {
+            gds::procedures::embeddings::hashgnn::algo::HashGNNEmbeddings::BinaryIndices {
+                embeddings,
+                embedding_dimension,
+            } => {
                 println!("Binary embeddings generated");
                 println!("Embedding dimension: {}", embedding_dimension);
                 println!("Total nodes: {}", embeddings.len());

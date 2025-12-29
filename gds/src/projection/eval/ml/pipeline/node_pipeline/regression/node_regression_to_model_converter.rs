@@ -19,8 +19,8 @@
  */
 
 use super::{
-    NodeRegressionPipelineTrainConfig, NodeRegressionTrainPipelineResult, NodeRegressionTrainResult,
-    NodeRegressionTrainingPipeline,
+    NodeRegressionPipelineTrainConfig, NodeRegressionTrainPipelineResult,
+    NodeRegressionTrainResult, NodeRegressionTrainingPipeline,
 };
 
 // Placeholder types until model system is translated

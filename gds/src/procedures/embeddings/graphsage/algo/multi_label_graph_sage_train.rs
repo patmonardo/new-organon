@@ -3,20 +3,24 @@
 use crate::concurrency::TerminationFlag;
 use crate::core::model::Model;
 use crate::ml::core::functions::Weights;
+use crate::ml::core::tensor::Tensor;
 use crate::procedures::embeddings::graphsage::algo::graph_sage::MODEL_TYPE;
 use crate::procedures::embeddings::graphsage::algo::graph_sage_model_data::{
     FeatureFunctionData, GraphSageModelData, MatrixData,
 };
+use crate::procedures::embeddings::graphsage::feature_function::FeatureFunction;
 use crate::procedures::embeddings::graphsage::graphsage_helper;
-use crate::procedures::embeddings::graphsage::graphsage_model_trainer::{GraphSageModelTrainer, GraphSageTrainMetrics};
+use crate::procedures::embeddings::graphsage::graphsage_model_trainer::{
+    GraphSageModelTrainer, GraphSageTrainMetrics,
+};
 use crate::procedures::embeddings::graphsage::layer_factory::generate_weights;
 use crate::procedures::embeddings::graphsage::multi_label_feature_function::MultiLabelFeatureFunction;
-use crate::procedures::embeddings::graphsage::feature_function::FeatureFunction;
 use crate::procedures::embeddings::graphsage::train_config_transformer::TrainConfigTransformer;
-use crate::procedures::embeddings::graphsage::types::{GraphSageTrainConfig, GraphSageTrainParameters};
+use crate::procedures::embeddings::graphsage::types::{
+    GraphSageTrainConfig, GraphSageTrainParameters,
+};
 use crate::types::graph::Graph;
 use crate::types::schema::NodeLabel;
-use crate::ml::core::tensor::Tensor;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -75,8 +79,10 @@ impl GraphSageTrain for MultiLabelGraphSageTrain {
             weights_by_label.insert(label.clone(), w);
         }
 
-        let feature_fn: Arc<dyn FeatureFunction> =
-            Arc::new(MultiLabelFeatureFunction::new(weights_by_label.clone(), projected_dim));
+        let feature_fn: Arc<dyn FeatureFunction> = Arc::new(MultiLabelFeatureFunction::new(
+            weights_by_label.clone(),
+            projected_dim,
+        ));
 
         let label_projection_weights: Vec<Arc<Weights>> =
             weights_by_label.values().cloned().collect();
@@ -93,11 +99,8 @@ impl GraphSageTrain for MultiLabelGraphSageTrain {
             self.termination_flag.clone(),
         );
 
-        let train_result = trainer.train(
-            Arc::clone(&self.graph),
-            Arc::new(features),
-            projected_dim,
-        );
+        let train_result =
+            trainer.train(Arc::clone(&self.graph), Arc::new(features), projected_dim);
 
         let mut weights_ser: Vec<(String, MatrixData)> = Vec::new();
         for (label, w) in weights_by_label {
@@ -138,5 +141,3 @@ impl GraphSageTrain for MultiLabelGraphSageTrain {
         )
     }
 }
-
-

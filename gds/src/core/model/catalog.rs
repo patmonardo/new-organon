@@ -187,8 +187,7 @@ impl ModelCatalog for InMemoryModelCatalog {
             .cloned()
             .ok_or_else(|| anyhow::anyhow!("Model not found"))?;
 
-        Arc::downcast::<Model<D, C, I>>(arc)
-            .map_err(|_| anyhow::anyhow!("Model type mismatch"))
+        Arc::downcast::<Model<D, C, I>>(arc).map_err(|_| anyhow::anyhow!("Model type mismatch"))
     }
 
     fn get_untyped(&self, username: &str, model_name: &str) -> Result<Arc<dyn Any + Send + Sync>> {

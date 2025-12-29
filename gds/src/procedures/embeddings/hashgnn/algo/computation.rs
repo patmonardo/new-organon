@@ -35,20 +35,18 @@ impl HashGNNComputationRuntime {
             feature_properties: config.feature_properties.clone(),
             heterogeneous: config.heterogeneous,
             output_dimension: config.output_dimension,
-            binarize_features: config
-                .binarize_features
-                .clone()
-                .map(|cfg| super::super::hash_gnn_parameters::BinarizeFeaturesConfig {
+            binarize_features: config.binarize_features.clone().map(|cfg| {
+                super::super::hash_gnn_parameters::BinarizeFeaturesConfig {
                     dimension: cfg.dimension,
                     threshold: cfg.threshold,
-                }),
-            generate_features: config
-                .generate_features
-                .clone()
-                .map(|cfg| super::super::hash_gnn_parameters::GenerateFeaturesConfig {
+                }
+            }),
+            generate_features: config.generate_features.clone().map(|cfg| {
+                super::super::hash_gnn_parameters::GenerateFeaturesConfig {
                     dimension: cfg.dimension,
                     density_level: cfg.density_level,
-                }),
+                }
+            }),
             random_seed: config.random_seed,
         };
 

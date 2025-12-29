@@ -1,12 +1,12 @@
 //! Java: `GraphSageAlgorithmFactory`.
 
 use crate::concurrency::Concurrency;
+use crate::concurrency::TerminationFlag;
 use crate::core::model::ModelCatalog;
 use crate::core::utils::progress::ProgressTracker;
 use crate::procedures::embeddings::graphsage::algo::graph_sage::GraphSage;
 use crate::procedures::embeddings::graphsage::algo::graph_sage_model_resolver::GraphSageModelResolver;
 use crate::types::graph::Graph;
-use crate::concurrency::TerminationFlag;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -33,8 +33,9 @@ impl<MC: ModelCatalog> GraphSageAlgorithmFactory<MC> {
             validate_relationship_weight_property_value(graph.as_ref());
         }
 
-        let model = GraphSageModelResolver::resolve_model(&*self.model_catalog, model_user, model_name)
-            .expect("resolve GraphSage model");
+        let model =
+            GraphSageModelResolver::resolve_model(&*self.model_catalog, model_user, model_name)
+                .expect("resolve GraphSage model");
 
         GraphSage::new(
             graph,
@@ -58,5 +59,3 @@ fn validate_relationship_weight_property_value(graph: &dyn Graph) {
         }
     }
 }
-
-

@@ -16,14 +16,14 @@ impl AggregatorMemoryEstimator for PoolAggregatorMemoryEstimator {
         _input_dimension: usize,
         embedding_dimension: usize,
     ) -> MemoryRange {
-        let min_bound = 3
-            * Estimate::size_of_double_array(min_previous_node_count as usize * embedding_dimension)
-            + 6 * Estimate::size_of_double_array(min_node_count as usize * embedding_dimension);
-        let max_bound = 3
-            * Estimate::size_of_double_array(max_previous_node_count as usize * embedding_dimension)
-            + 6 * Estimate::size_of_double_array(max_node_count as usize * embedding_dimension);
+        let min_bound =
+            3 * Estimate::size_of_double_array(
+                min_previous_node_count as usize * embedding_dimension,
+            ) + 6 * Estimate::size_of_double_array(min_node_count as usize * embedding_dimension);
+        let max_bound =
+            3 * Estimate::size_of_double_array(
+                max_previous_node_count as usize * embedding_dimension,
+            ) + 6 * Estimate::size_of_double_array(max_node_count as usize * embedding_dimension);
         MemoryRange::of_range(min_bound, max_bound)
     }
 }
-
-

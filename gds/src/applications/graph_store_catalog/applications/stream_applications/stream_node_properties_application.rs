@@ -2,8 +2,8 @@ use crate::applications::graph_store_catalog::results::GraphStreamNodeProperties
 use crate::projection::NodeLabel;
 use crate::types::graph::id_map::IdMap;
 use crate::types::graph_store::DefaultGraphStore;
-use crate::types::properties::node::NodePropertyValues;
 use crate::types::properties::node::traits::node_property_container::NodePropertyContainer;
+use crate::types::properties::node::NodePropertyValues;
 use crate::types::properties::PropertyValues;
 use crate::types::ValueType;
 use std::collections::HashSet;
@@ -28,8 +28,8 @@ impl StreamNodePropertiesApplication {
         let label_filter: HashSet<NodeLabel> = node_labels.iter().cloned().collect();
         // Java parity: ElementProjection.PROJECT_ALL is "*".
         // We also treat NodeLabel::all_nodes() ("__ALL__") as wildcard.
-        let filter_all =
-            label_filter.contains(&NodeLabel::all_nodes()) || label_filter.contains(&NodeLabel::of("*"));
+        let filter_all = label_filter.contains(&NodeLabel::all_nodes())
+            || label_filter.contains(&NodeLabel::of("*"));
 
         let node_count = graph.node_count() as i64;
         for mapped_node_id in 0..node_count {
@@ -46,7 +46,8 @@ impl StreamNodePropertiesApplication {
                 .unwrap_or(mapped_node_id);
 
             let node_labels: Vec<String> = if list_node_labels {
-                graph.node_labels(mapped_node_id)
+                graph
+                    .node_labels(mapped_node_id)
                     .into_iter()
                     .map(|l: NodeLabel| l.name().to_string())
                     .collect()
@@ -68,7 +69,9 @@ impl StreamNodePropertiesApplication {
                         ValueType::Double => values
                             .double_value(mapped_node_id as u64)
                             .ok()
-                            .and_then(|v| serde_json::Number::from_f64(v).map(serde_json::Value::Number))
+                            .and_then(|v| {
+                                serde_json::Number::from_f64(v).map(serde_json::Value::Number)
+                            })
                             .unwrap_or(serde_json::Value::Null),
                         _ => {
                             // TODO: support array/object node property values once we have a stable JSON encoding.

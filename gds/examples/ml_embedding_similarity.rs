@@ -29,10 +29,16 @@ fn main() {
     let vc = hashing_embed(c, dims);
 
     println!("dims={dims}");
-    println!("cos(a,b) = {:.4}", cosine_similarity(va.as_slice(), vb.as_slice()));
-    println!("cos(a,c) = {:.4}", cosine_similarity(va.as_slice(), vc.as_slice()));
-    println!("cos(b,c) = {:.4}", cosine_similarity(vb.as_slice(), vc.as_slice()));
+    println!(
+        "cos(a,b) = {:.4}",
+        cosine_similarity(va.as_slice(), vb.as_slice())
+    );
+    println!(
+        "cos(a,c) = {:.4}",
+        cosine_similarity(va.as_slice(), vc.as_slice())
+    );
+    println!(
+        "cos(b,c) = {:.4}",
+        cosine_similarity(vb.as_slice(), vc.as_slice())
+    );
 }
-
-
-

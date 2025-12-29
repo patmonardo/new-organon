@@ -26,7 +26,13 @@ pub fn handle_dag_longest_path(request: &Value, catalog: Arc<dyn GraphCatalog>) 
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create builder
@@ -43,7 +49,11 @@ pub fn handle_dag_longest_path(request: &Value, catalog: Arc<dyn GraphCatalog>) 
                     "data": rows
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("DAG Longest Path execution failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("DAG Longest Path execution failed: {:?}", e),
+            ),
         },
         "stats" => match builder.stats() {
             Ok(stats) => json!({
@@ -51,7 +61,11 @@ pub fn handle_dag_longest_path(request: &Value, catalog: Arc<dyn GraphCatalog>) 
                 "op": op,
                 "data": stats
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("DAG Longest Path stats failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("DAG Longest Path stats failed: {:?}", e),
+            ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

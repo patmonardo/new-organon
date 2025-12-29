@@ -112,6 +112,7 @@ pub mod degree_centrality;
 pub mod delta_stepping;
 pub mod dfs;
 pub mod dijkstra;
+pub mod embeddings;
 pub mod harmonic;
 pub mod hits;
 pub mod k1coloring;
@@ -136,7 +137,6 @@ pub mod traversal;
 pub mod triangle_count;
 pub mod wcc;
 pub mod yens;
-pub mod embeddings;
 
 // Future modules (to be implemented)
 // pub mod facade;      // Public API facades
@@ -188,7 +188,9 @@ pub use harmonic::{
     HarmonicAlgorithmSpec, HarmonicComputationRuntime, HarmonicConfig, HarmonicResult,
     HarmonicStorageRuntime,
 };
-pub use hits::{HITSAlgorithmSpec, HitsConfig, HitsResult, HitsRunResult, HitsStorageRuntime, run_hits};
+pub use hits::{
+    run_hits, HITSAlgorithmSpec, HitsConfig, HitsResult, HitsRunResult, HitsStorageRuntime,
+};
 pub use k1coloring::{
     K1ColoringAlgorithmSpec, K1ColoringComputationRuntime, K1ColoringConfig, K1ColoringResult,
     K1ColoringStorageRuntime,

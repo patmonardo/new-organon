@@ -5,4 +5,3 @@
 //! readers/writers (e.g., Arrow IPC/Parquet) without coupling to factory logic.
 
 pub mod arrow;
-

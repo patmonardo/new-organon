@@ -39,5 +39,3 @@ impl Layer for MeanAggregatingLayer {
         ))
     }
 }
-
-

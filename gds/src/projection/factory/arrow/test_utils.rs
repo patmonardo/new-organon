@@ -36,13 +36,9 @@ pub fn sample_edge_table() -> EdgeTableReference {
     ];
     let schema = Arc::new(Schema::from(fields));
 
-    let chunk: Chunk<Box<dyn Array>> = Chunk::new(vec![
-        Box::new(sources),
-        Box::new(targets),
-        Box::new(types),
-    ]);
+    let chunk: Chunk<Box<dyn Array>> =
+        Chunk::new(vec![Box::new(sources), Box::new(targets), Box::new(types)]);
 
     EdgeTableReference::new("edges", chunk, Arc::clone(&schema))
         .expect("sample edge table schema should be valid")
 }
-

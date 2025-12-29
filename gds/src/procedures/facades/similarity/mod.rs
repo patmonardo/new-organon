@@ -6,4 +6,3 @@ pub use knn::KnnBuilder;
 
 pub mod filtered_knn;
 pub use filtered_knn::FilteredKnnBuilder;
-

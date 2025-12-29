@@ -194,5 +194,3 @@ impl fmt::Display for LabelwiseFeatureProjection {
         write!(f, "LabelwiseFeatureProjection")
     }
 }
-
-

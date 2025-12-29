@@ -1,28 +1,33 @@
 use once_cell::sync::Lazy;
 
-use crate::core::User;
-use crate::types::graph_store::{DatabaseId, DatabaseInfo, DatabaseLocation, GraphStore, GraphName, DefaultGraphStore, Capabilities};
-use crate::config::GraphStoreConfig;
-use crate::types::graph::id_map::SimpleIdMap;
-use crate::types::graph::RelationshipTopology;
-use crate::types::schema::GraphSchema;
-use crate::projection::RelationshipType;
-use crate::collections::backends::{vec::{VecLong, VecDouble}};
-use crate::types::properties::node::impls::default_node_property_values::{DefaultLongNodePropertyValues, DefaultDoubleNodePropertyValues};
-use crate::types::properties::relationship::impls::default_relationship_property_values::{DefaultLongRelationshipPropertyValues, DefaultDoubleRelationshipPropertyValues};
-use crate::types::properties::relationship::RelationshipPropertyValues;
-use crate::types::properties::node::NodePropertyValues;
-use crate::applications::services::logging::Log;
-use crate::applications::graph_store_catalog::facade::{
-    ApplicationsFacade,
-};
+use crate::applications::graph_store_catalog::facade::ApplicationsFacade;
 use crate::applications::graph_store_catalog::facade::DefaultGraphCatalogApplicationsBuilder;
 use crate::applications::graph_store_catalog::loaders::{
     GraphStoreCatalogService, PerUserDbGraphStoreCatalogService,
 };
+use crate::applications::services::logging::Log;
+use crate::collections::backends::vec::{VecDouble, VecLong};
+use crate::config::GraphStoreConfig;
+use crate::core::User;
+use crate::projection::RelationshipType;
+use crate::types::graph::id_map::SimpleIdMap;
+use crate::types::graph::RelationshipTopology;
+use crate::types::graph_store::{
+    Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
+    GraphStore,
+};
+use crate::types::properties::node::impls::default_node_property_values::{
+    DefaultDoubleNodePropertyValues, DefaultLongNodePropertyValues,
+};
+use crate::types::properties::node::NodePropertyValues;
+use crate::types::properties::relationship::impls::default_relationship_property_values::{
+    DefaultDoubleRelationshipPropertyValues, DefaultLongRelationshipPropertyValues,
+};
+use crate::types::properties::relationship::RelationshipPropertyValues;
+use crate::types::schema::GraphSchema;
 
-use std::sync::Arc;
 use std::collections::HashMap;
+use std::sync::Arc;
 
 static TSJSON_CATALOG_SERVICE: Lazy<Arc<PerUserDbGraphStoreCatalogService>> =
     Lazy::new(|| Arc::new(PerUserDbGraphStoreCatalogService::new()));
@@ -38,7 +43,11 @@ impl TsjsonUser {
     fn new(username: String, is_admin: bool) -> Self {
         Self {
             username,
-            roles: if is_admin { vec!["admin".to_string()] } else { vec![] },
+            roles: if is_admin {
+                vec!["admin".to_string()]
+            } else {
+                vec![]
+            },
             permissions: vec![],
         }
     }
@@ -115,21 +124,34 @@ fn handle_graph_store(request: &serde_json::Value) -> serde_json::Value {
 
             let nodes_value = snapshot.get("nodes").and_then(|v| v.as_array());
             let Some(nodes) = nodes_value else {
-                return err(op, "INVALID_REQUEST", "snapshot.nodes must be a non-empty integer array");
+                return err(
+                    op,
+                    "INVALID_REQUEST",
+                    "snapshot.nodes must be a non-empty integer array",
+                );
             };
             if nodes.is_empty() {
-                return err(op, "INVALID_REQUEST", "snapshot.nodes must be a non-empty integer array");
+                return err(
+                    op,
+                    "INVALID_REQUEST",
+                    "snapshot.nodes must be a non-empty integer array",
+                );
             }
 
             let mut original_node_ids: Vec<i64> = Vec::with_capacity(nodes.len());
             for v in nodes.iter() {
                 let Some(n) = v.as_i64() else {
-                    return err(op, "INVALID_REQUEST", "snapshot.nodes must be a non-empty integer array");
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "snapshot.nodes must be a non-empty integer array",
+                    );
                 };
                 original_node_ids.push(n);
             }
 
-            let mut index_by_original: HashMap<i64, i64> = HashMap::with_capacity(original_node_ids.len());
+            let mut index_by_original: HashMap<i64, i64> =
+                HashMap::with_capacity(original_node_ids.len());
             for (idx, original) in original_node_ids.iter().copied().enumerate() {
                 index_by_original.insert(original, idx as i64);
             }
@@ -144,23 +166,49 @@ fn handle_graph_store(request: &serde_json::Value) -> serde_json::Value {
             if let Some(rels) = snapshot.get("relationships").and_then(|v| v.as_array()) {
                 for rel in rels.iter() {
                     let Some(rel_type) = rel.get("type").and_then(|v| v.as_str()) else {
-                        return err(op, "INVALID_REQUEST", "snapshot.relationships[*].type must be a non-empty string");
+                        return err(
+                            op,
+                            "INVALID_REQUEST",
+                            "snapshot.relationships[*].type must be a non-empty string",
+                        );
                     };
                     if rel_type.trim().is_empty() {
-                        return err(op, "INVALID_REQUEST", "snapshot.relationships[*].type must be a non-empty string");
+                        return err(
+                            op,
+                            "INVALID_REQUEST",
+                            "snapshot.relationships[*].type must be a non-empty string",
+                        );
                     }
                     let Some(source_original) = rel.get("source").and_then(|v| v.as_i64()) else {
-                        return err(op, "INVALID_REQUEST", "snapshot.relationships[*].source must be an integer");
+                        return err(
+                            op,
+                            "INVALID_REQUEST",
+                            "snapshot.relationships[*].source must be an integer",
+                        );
                     };
                     let Some(target_original) = rel.get("target").and_then(|v| v.as_i64()) else {
-                        return err(op, "INVALID_REQUEST", "snapshot.relationships[*].target must be an integer");
+                        return err(
+                            op,
+                            "INVALID_REQUEST",
+                            "snapshot.relationships[*].target must be an integer",
+                        );
                     };
 
-                    let Some(source_mapped) = index_by_original.get(&source_original).copied() else {
-                        return err(op, "INVALID_REQUEST", "snapshot.relationships[*].source not found in snapshot.nodes");
+                    let Some(source_mapped) = index_by_original.get(&source_original).copied()
+                    else {
+                        return err(
+                            op,
+                            "INVALID_REQUEST",
+                            "snapshot.relationships[*].source not found in snapshot.nodes",
+                        );
                     };
-                    let Some(target_mapped) = index_by_original.get(&target_original).copied() else {
-                        return err(op, "INVALID_REQUEST", "snapshot.relationships[*].target not found in snapshot.nodes");
+                    let Some(target_mapped) = index_by_original.get(&target_original).copied()
+                    else {
+                        return err(
+                            op,
+                            "INVALID_REQUEST",
+                            "snapshot.relationships[*].target not found in snapshot.nodes",
+                        );
                     };
 
                     rels_by_type
@@ -179,7 +227,10 @@ fn handle_graph_store(request: &serde_json::Value) -> serde_json::Value {
             }
 
             let mut relationship_topologies = HashMap::new();
-            let mut rel_props_by_type: HashMap<String, HashMap<String, Vec<Vec<serde_json::Value>>>> = HashMap::new();
+            let mut rel_props_by_type: HashMap<
+                String,
+                HashMap<String, Vec<Vec<serde_json::Value>>>,
+            > = HashMap::new();
 
             for (rel_type, edges) in rels_by_type.into_iter() {
                 let mut adjacency: Vec<Vec<i64>> = vec![Vec::new(); original_node_ids.len()];
@@ -236,7 +287,9 @@ fn handle_graph_store(request: &serde_json::Value) -> serde_json::Value {
                     for src in per_source.into_iter() {
                         flat.extend(src);
                     }
-                    if flat.is_empty() { continue; }
+                    if flat.is_empty() {
+                        continue;
+                    }
 
                     let mut all_longs: Vec<i64> = Vec::with_capacity(flat.len());
                     let mut all_doubles: Vec<f64> = Vec::with_capacity(flat.len());
@@ -257,13 +310,25 @@ fn handle_graph_store(request: &serde_json::Value) -> serde_json::Value {
                     let element_count = all_doubles.len();
                     let pv: Arc<dyn RelationshipPropertyValues> = if is_all_longs {
                         let backend = VecLong::from(all_longs);
-                        Arc::new(DefaultLongRelationshipPropertyValues::<VecLong>::from_collection(backend, element_count))
+                        Arc::new(
+                            DefaultLongRelationshipPropertyValues::<VecLong>::from_collection(
+                                backend,
+                                element_count,
+                            ),
+                        )
                     } else {
                         let backend = VecDouble::from(all_doubles);
-                        Arc::new(DefaultDoubleRelationshipPropertyValues::<VecDouble>::from_collection(backend, element_count))
+                        Arc::new(
+                            DefaultDoubleRelationshipPropertyValues::<VecDouble>::from_collection(
+                                backend,
+                                element_count,
+                            ),
+                        )
                     };
 
-                    if let Err(e) = store.add_relationship_property(rel_type_id.clone(), key.clone(), pv) {
+                    if let Err(e) =
+                        store.add_relationship_property(rel_type_id.clone(), key.clone(), pv)
+                    {
                         return err(op, "ERROR", &format!("Failed to add relationship property '{key}' for type '{rel_type}': {e}"));
                     }
                 }
@@ -274,10 +339,18 @@ fn handle_graph_store(request: &serde_json::Value) -> serde_json::Value {
                 let node_count = GraphStore::node_count(&store);
                 for (key, val) in props_obj.iter() {
                     let Some(arr) = val.as_array() else {
-                        return err(op, "INVALID_REQUEST", "snapshot.nodeProperties values must be arrays");
+                        return err(
+                            op,
+                            "INVALID_REQUEST",
+                            "snapshot.nodeProperties values must be arrays",
+                        );
                     };
                     if arr.len() != node_count {
-                        return err(op, "INVALID_REQUEST", "snapshot.nodeProperties[*] arrays must match snapshot.nodes length");
+                        return err(
+                            op,
+                            "INVALID_REQUEST",
+                            "snapshot.nodeProperties[*] arrays must match snapshot.nodes length",
+                        );
                     }
 
                     let mut all_longs = Vec::with_capacity(arr.len());
@@ -297,18 +370,37 @@ fn handle_graph_store(request: &serde_json::Value) -> serde_json::Value {
                         }
                     }
                     if !is_all_numbers {
-                        return err(op, "INVALID_REQUEST", "snapshot.nodeProperties arrays must contain only numbers");
+                        return err(
+                            op,
+                            "INVALID_REQUEST",
+                            "snapshot.nodeProperties arrays must contain only numbers",
+                        );
                     }
 
                     let pv: Arc<dyn NodePropertyValues> = if is_all_longs {
-                        Arc::new(DefaultLongNodePropertyValues::<VecLong>::from_collection(VecLong::from(all_longs), node_count))
+                        Arc::new(DefaultLongNodePropertyValues::<VecLong>::from_collection(
+                            VecLong::from(all_longs),
+                            node_count,
+                        ))
                     } else {
-                        Arc::new(DefaultDoubleNodePropertyValues::<VecDouble>::from_collection(VecDouble::from(all_doubles), node_count))
+                        Arc::new(
+                            DefaultDoubleNodePropertyValues::<VecDouble>::from_collection(
+                                VecDouble::from(all_doubles),
+                                node_count,
+                            ),
+                        )
                     };
 
-                    let labels = std::collections::HashSet::from([crate::projection::NodeLabel::all_nodes()]);
+                    let labels =
+                        std::collections::HashSet::from(
+                            [crate::projection::NodeLabel::all_nodes()],
+                        );
                     if let Err(e) = store.add_node_property(labels, key.to_string(), pv) {
-                        return err(op, "ERROR", &format!("Failed to add node property '{key}': {e}"));
+                        return err(
+                            op,
+                            "ERROR",
+                            &format!("Failed to add node property '{key}': {e}"),
+                        );
                     }
                 }
             }
@@ -318,7 +410,10 @@ fn handle_graph_store(request: &serde_json::Value) -> serde_json::Value {
 
             catalog.set(graph_name, Arc::new(store));
 
-            ok(op, serde_json::json!({ "graphName": graph_name, "nodeCount": node_count, "relationshipCount": relationship_count_actual }))
+            ok(
+                op,
+                serde_json::json!({ "graphName": graph_name, "nodeCount": node_count, "relationshipCount": relationship_count_actual }),
+            )
         }
         _ => err(op, "UNSUPPORTED_OP", "Unsupported graph_store operation."),
     }
@@ -491,8 +586,8 @@ pub fn version() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
     use crate::types::catalog::GraphCatalog;
+    use std::sync::Arc;
 
     use crate::types::graph_store::{DefaultGraphStore, GraphStore};
     use crate::types::random::{RandomGraphConfig, Randomizable};
@@ -637,9 +732,9 @@ mod tests {
             .and_then(|v| v.get("entries"))
             .and_then(|v| v.as_array())
             .unwrap();
-        assert!(
-            !entries.iter().any(|e| e.get("name").and_then(|v| v.as_str()) == Some("graph_drop_1"))
-        );
+        assert!(!entries
+            .iter()
+            .any(|e| e.get("name").and_then(|v| v.as_str()) == Some("graph_drop_1")));
     }
 
     #[test]
@@ -680,6 +775,4 @@ mod tests {
             .unwrap();
         assert_eq!(dropped.len(), 2);
     }
-
-
 }

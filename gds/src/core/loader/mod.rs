@@ -2,10 +2,10 @@
 //!
 //! Keep IO reading and projection factories decoupled; loaders bridge them.
 
-pub mod loader;
 #[cfg(feature = "arrow")]
 pub mod arrow_catalog_loader;
+pub mod loader;
 
-pub use loader::*;
 #[cfg(feature = "arrow")]
 pub use arrow_catalog_loader::*;
+pub use loader::*;

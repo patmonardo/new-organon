@@ -61,17 +61,16 @@ impl StreamProcessingTemplate {
         C: Config,
     {
         // Step 1: Load graph from catalog
-        let resources = CatalogLoader::load_or_err(catalog, graph_name)
-            .map_err(StreamProcessingError::Load)?;
+        let resources =
+            CatalogLoader::load_or_err(catalog, graph_name).map_err(StreamProcessingError::Load)?;
 
         // Step 2: Memory guard (placeholder - currently always passes)
         // Future: self.memory_guard.assert_can_run(...)
 
         // Step 3: Create progress tracker
-        let _progress_tracker = self.progress_tracker_creator.create_progress_tracker(
-            config,
-            Tasks::leaf(algorithm.as_string(), 0),
-        );
+        let _progress_tracker = self
+            .progress_tracker_creator
+            .create_progress_tracker(config, Tasks::leaf(algorithm.as_string(), 0));
 
         // Step 4: Run computation
         let raw_result = compute(&resources);
@@ -98,4 +97,3 @@ pub enum StreamProcessingError {
     #[error("Computation failed: {0}")]
     Computation(String),
 }
-

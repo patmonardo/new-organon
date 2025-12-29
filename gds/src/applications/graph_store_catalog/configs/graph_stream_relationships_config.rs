@@ -73,13 +73,19 @@ impl GraphStreamRelationshipsConfig {
 
     /// Create from JSON value (for wire protocol deserialization)
     pub fn from_json(json: &serde_json::Value) -> Result<Self, String> {
-        let graph_name = json.get("graphName")
+        let graph_name = json
+            .get("graphName")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let relationship_types = json.get("relationshipTypes")
+        let relationship_types = json
+            .get("relationshipTypes")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect::<Vec<_>>())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect::<Vec<_>>()
+            })
             .unwrap_or_else(|| vec!["*".to_string()]);
 
         Self::of(graph_name, relationship_types)

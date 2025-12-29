@@ -16,17 +16,25 @@ impl GATLayer {
         }
     }
 
-    pub fn forward(&mut self, graph: &dyn crate::graph::Graph, features: &mut HashMap<NodeId, Vec<f64>>) {
+    pub fn forward(
+        &mut self,
+        graph: &dyn crate::graph::Graph,
+        features: &mut HashMap<NodeId, Vec<f64>>,
+    ) {
         // For each node, compute attention and aggregate
         let nodes: Vec<NodeId> = graph.iter().collect();
 
         for &node in &nodes {
-            let neighbors: Vec<NodeId> = graph.stream_relationships(node, 0.0).map(|cursor| cursor.target_id()).collect();
+            let neighbors: Vec<NodeId> = graph
+                .stream_relationships(node, 0.0)
+                .map(|cursor| cursor.target_id())
+                .collect();
             if neighbors.is_empty() {
                 continue;
             }
 
-            self.attention.compute_attention(node, &neighbors, features, &self.config);
+            self.attention
+                .compute_attention(node, &neighbors, features, &self.config);
 
             if let Some(weights) = self.attention.get_weights(node) {
                 let mut new_embedding = vec![0.0; self.config.embedding_dimension];

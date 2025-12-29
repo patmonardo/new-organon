@@ -5,10 +5,10 @@ use crate::projection::eval::procedure::ExecutionContext;
 use crate::substrate::FormStoreSurface;
 
 use super::form_spec::{
-    time_form_eval, CommitSubgraphOperator, FormError, FormInput, FormOperator, FormOperatorOutput,
-    FormRequest, FormResult, MaterializeNodePropertiesOperator,
-    MaterializeRelationshipPropertiesOperator, PassThroughFormOperator,
-    CitFormOperator, EssenceFormOperator, ReflectionFormOperator, ShineFormOperator,
+    time_form_eval, CitFormOperator, CommitSubgraphOperator, EssenceFormOperator, FormError,
+    FormInput, FormOperator, FormOperatorOutput, FormRequest, FormResult,
+    MaterializeNodePropertiesOperator, MaterializeRelationshipPropertiesOperator,
+    PassThroughFormOperator, ReflectionFormOperator, ShineFormOperator,
 };
 
 /// A registry of Form operators, monomorphized for a particular store type.
@@ -153,7 +153,10 @@ where
                 }));
 
                 current_graph = graph;
-                last_proof = step_proofs.last().cloned().unwrap_or(serde_json::Value::Null);
+                last_proof = step_proofs
+                    .last()
+                    .cloned()
+                    .unwrap_or(serde_json::Value::Null);
             }
 
             Ok((current_graph, last_proof))

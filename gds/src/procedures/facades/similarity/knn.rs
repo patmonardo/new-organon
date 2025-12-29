@@ -1,5 +1,7 @@
 use crate::procedures::facades::traits::Result;
-use crate::procedures::similarity::knn::{KnnConfig, KnnNodePropertySpec, KnnResultRow, SimilarityMetric};
+use crate::procedures::similarity::knn::{
+    KnnConfig, KnnNodePropertySpec, KnnResultRow, SimilarityMetric,
+};
 use crate::types::prelude::DefaultGraphStore;
 use std::sync::Arc;
 
@@ -26,7 +28,11 @@ impl KnnBuilder {
         }
     }
 
-    pub fn add_property(mut self, node_property: impl Into<String>, metric: SimilarityMetric) -> Self {
+    pub fn add_property(
+        mut self,
+        node_property: impl Into<String>,
+        metric: SimilarityMetric,
+    ) -> Self {
         self.node_properties
             .push(KnnNodePropertySpec::new(node_property, metric));
         self
@@ -71,7 +77,8 @@ impl KnnBuilder {
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = KnnResultRow>>> {
         let config = self.build_config();
         let computation = crate::procedures::similarity::knn::KnnComputationRuntime::new();
-        let storage = crate::procedures::similarity::knn::KnnStorageRuntime::new(config.concurrency);
+        let storage =
+            crate::procedures::similarity::knn::KnnStorageRuntime::new(config.concurrency);
 
         let results = if config.node_properties.is_empty() {
             storage.compute_single(

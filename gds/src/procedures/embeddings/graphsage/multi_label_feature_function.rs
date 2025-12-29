@@ -78,5 +78,3 @@ fn single_label_of(graph: &dyn Graph, node_id: u64) -> NodeLabel {
 
     label_ref.expect("label missing")
 }
-
-

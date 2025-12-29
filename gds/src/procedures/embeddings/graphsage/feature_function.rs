@@ -13,5 +13,3 @@ pub trait FeatureFunction: Send + Sync {
         features: Arc<HugeObjectArray<Vec<f64>>>,
     ) -> VariableRef;
 }
-
-

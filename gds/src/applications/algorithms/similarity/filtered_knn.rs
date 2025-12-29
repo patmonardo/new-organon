@@ -28,17 +28,18 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
                 }
             }
             if properties.is_empty() {
-                return err(op, "INVALID_REQUEST", "nodeProperties array cannot be empty");
+                return err(
+                    op,
+                    "INVALID_REQUEST",
+                    "nodeProperties array cannot be empty",
+                );
             }
             properties
         }
         None => return err(op, "INVALID_REQUEST", "Missing 'nodeProperties' parameter"),
     };
 
-    let top_k = request
-        .get("topK")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(10) as usize;
+    let top_k = request.get("topK").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
 
     let _sample_rate = request
         .get("sampleRate")
@@ -93,7 +94,13 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create builder - use first property as primary, add others
@@ -104,7 +111,10 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
 
     // Add additional properties if any
     for prop in &node_properties[1..] {
-        builder = builder.add_property(prop, crate::procedures::similarity::knn::metrics::SimilarityMetric::Default);
+        builder = builder.add_property(
+            prop,
+            crate::procedures::similarity::knn::metrics::SimilarityMetric::Default,
+        );
     }
 
     // Add node label filters
@@ -136,8 +146,12 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
         "stream" => {
             // Note: FilteredKnnBuilder doesn't have stream method yet
             // This would need to be implemented
-            err(op, "NOT_IMPLEMENTED", "stream mode not yet implemented for Filtered KNN")
-        },
+            err(
+                op,
+                "NOT_IMPLEMENTED",
+                "stream mode not yet implemented for Filtered KNN",
+            )
+        }
         "stats" => {
             // For now, just return success - stats computation would need to be implemented
             json!({
@@ -152,18 +166,38 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
         "mutate" => {
             let _property_name = match request.get("property_name").and_then(|v| v.as_str()) {
                 Some(name) => name,
-                None => return err(op, "INVALID_REQUEST", "Missing 'property_name' for mutate mode"),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'property_name' for mutate mode",
+                    )
+                }
             };
             // Note: mutate not implemented in FilteredKnnBuilder yet
-            err(op, "NOT_IMPLEMENTED", "mutate mode not yet implemented for Filtered KNN")
+            err(
+                op,
+                "NOT_IMPLEMENTED",
+                "mutate mode not yet implemented for Filtered KNN",
+            )
         }
         "write" => {
             let _property_name = match request.get("property_name").and_then(|v| v.as_str()) {
                 Some(name) => name,
-                None => return err(op, "INVALID_REQUEST", "Missing 'property_name' for write mode"),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'property_name' for write mode",
+                    )
+                }
             };
             // Note: write not implemented in FilteredKnnBuilder yet
-            err(op, "NOT_IMPLEMENTED", "write mode not yet implemented for Filtered KNN")
+            err(
+                op,
+                "NOT_IMPLEMENTED",
+                "write mode not yet implemented for Filtered KNN",
+            )
         }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

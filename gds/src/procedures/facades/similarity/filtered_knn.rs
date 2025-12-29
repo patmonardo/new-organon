@@ -1,6 +1,7 @@
 use crate::procedures::facades::traits::Result;
 use crate::procedures::similarity::filteredknn::{
-    FilteredKnnComputationRuntime, FilteredKnnConfig, FilteredKnnResultRow, FilteredKnnStorageRuntime,
+    FilteredKnnComputationRuntime, FilteredKnnConfig, FilteredKnnResultRow,
+    FilteredKnnStorageRuntime,
 };
 use crate::procedures::similarity::knn::metrics::{KnnNodePropertySpec, SimilarityMetric};
 use crate::projection::NodeLabel;
@@ -34,7 +35,11 @@ impl FilteredKnnBuilder {
         }
     }
 
-    pub fn add_property(mut self, node_property: impl Into<String>, metric: SimilarityMetric) -> Self {
+    pub fn add_property(
+        mut self,
+        node_property: impl Into<String>,
+        metric: SimilarityMetric,
+    ) -> Self {
         self.node_properties
             .push(KnnNodePropertySpec::new(node_property, metric));
         self
@@ -116,7 +121,10 @@ impl FilteredKnnBuilder {
             )?
         };
 
-        let rows: Vec<FilteredKnnResultRow> = results.into_iter().map(FilteredKnnResultRow::from).collect();
+        let rows: Vec<FilteredKnnResultRow> = results
+            .into_iter()
+            .map(FilteredKnnResultRow::from)
+            .collect();
         Ok(Box::new(rows.into_iter()))
     }
 }

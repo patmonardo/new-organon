@@ -54,6 +54,3 @@ mod tests {
         assert!((sim - 1.0).abs() < 1e-12);
     }
 }
-
-
-

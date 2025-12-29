@@ -80,5 +80,3 @@ fn compute_random_entry<R: Rng>(rng: &mut R, entry_value: f32) -> f32 {
         0.0
     }
 }
-
-

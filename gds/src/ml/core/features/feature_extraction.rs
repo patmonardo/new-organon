@@ -115,7 +115,10 @@ pub fn feature_count(extractors: &[AnyFeatureExtractor]) -> usize {
 /// Create feature extractors backed by node properties (Java: FeatureExtraction.propertyExtractors()).
 ///
 /// Panics if a requested property is missing.
-pub fn property_extractors(graph: &dyn Graph, feature_properties: &[String]) -> Vec<AnyFeatureExtractor> {
+pub fn property_extractors(
+    graph: &dyn Graph,
+    feature_properties: &[String],
+) -> Vec<AnyFeatureExtractor> {
     property_extractors_with_init(graph, feature_properties, 0)
 }
 

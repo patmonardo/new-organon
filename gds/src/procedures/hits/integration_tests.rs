@@ -46,10 +46,7 @@ mod tests {
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
         let graph = Graph::new(store);
 
-        let rows = graph
-            .hits()
-            .stream()
-            .expect("HITS stream should succeed");
+        let rows = graph.hits().stream().expect("HITS stream should succeed");
 
         assert_eq!(rows.len(), 4);
 

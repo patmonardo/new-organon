@@ -33,7 +33,9 @@ impl GraphMemoryUsageApplication {
         graph_name: &str,
     ) -> GraphMemoryUsage {
         // For now we route through the catalog substrate.
-        let catalog = self.graph_store_catalog_service.graph_catalog(user, database_id);
+        let catalog = self
+            .graph_store_catalog_service
+            .graph_catalog(user, database_id);
         match GraphCatalog::size_of(catalog.as_ref(), graph_name) {
             Ok(mu) => GraphMemoryUsage::new(
                 graph_name.to_string(),

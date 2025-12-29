@@ -39,5 +39,3 @@ fn main() {
     let response_json = gds::applications::services::tsjson::invoke(request_json);
     print!("{response_json}");
 }
-
-

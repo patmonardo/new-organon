@@ -17,9 +17,7 @@ pub struct RandomWalkProbabilitiesBuilder {
 }
 
 impl RandomWalkProbabilitiesBuilder {
-    pub fn new(
-        concurrency: Concurrency,
-    ) -> Self {
+    pub fn new(concurrency: Concurrency) -> Self {
         Self {
             _concurrency: concurrency,
             node_frequencies: HashMap::new(),

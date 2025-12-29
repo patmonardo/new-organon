@@ -125,11 +125,7 @@ pub struct HitsRunResult {
 }
 
 /// Run HITS on a given graph using the Pregel runtime with bidirectional message passing.
-pub fn run_hits(
-    graph: Arc<dyn Graph>,
-    max_iterations: usize,
-    tolerance: f64,
-) -> HitsRunResult {
+pub fn run_hits(graph: Arc<dyn Graph>, max_iterations: usize, tolerance: f64) -> HitsRunResult {
     let shared_state = Arc::new(HitsSharedState::new(max_iterations, tolerance));
 
     let schema = PregelSchema::builder()

@@ -97,9 +97,9 @@ pub use huge_sparse_array::HugeSparseLongArray;
 // Backend selection
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CollectionsBackend {
-    Huge,  // Paged arrays
+    Huge, // Paged arrays
     #[default]
-    Vec,   // Enhanced vectors
+    Vec, // Enhanced vectors
     Arrow, // Apache Arrow
-    Std,   // Standard library
+    Std,  // Standard library
 }

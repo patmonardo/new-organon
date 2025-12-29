@@ -3,7 +3,8 @@
 //! Mirrors Java GraphWriteNodePropertiesConfig interface and integrates with the Rust config system.
 
 // Type alias for cleaner code
-type GraphNodePropertiesConfig = crate::applications::graph_store_catalog::configs::GraphNodePropertiesConfig;
+type GraphNodePropertiesConfig =
+    crate::applications::graph_store_catalog::configs::GraphNodePropertiesConfig;
 
 #[derive(Debug, Clone)]
 pub struct GraphWriteNodePropertiesConfig {
@@ -57,8 +58,8 @@ impl GraphWriteNodePropertiesConfig {
         node_labels: Vec<String>,
         node_properties: Vec<NodePropertySpec>,
     ) -> Result<Self, String> {
-        let node_config = GraphNodePropertiesConfig::of(graph_name, node_labels)
-            .map_err(|e| e.to_string())?;
+        let node_config =
+            GraphNodePropertiesConfig::of(graph_name, node_labels).map_err(|e| e.to_string())?;
 
         let config = Self::builder()
             .node_config(node_config)
@@ -75,9 +76,17 @@ impl GraphWriteNodePropertiesConfig {
 
         // Parse node properties - this would need more complex parsing in real implementation
         // For now, assume it's an array of strings
-        let node_properties = json.get("nodeProperties")
+        let node_properties = json
+            .get("nodeProperties")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| NodePropertySpec::new(s.to_string(), None))).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| {
+                        v.as_str()
+                            .map(|s| NodePropertySpec::new(s.to_string(), None))
+                    })
+                    .collect()
+            })
             .unwrap_or_default();
 
         Self::of(

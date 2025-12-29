@@ -87,9 +87,8 @@ impl GraphSage {
             )
         };
 
-        let embeddings = embeddings_generator.make_embeddings(Arc::clone(&self.graph), Arc::new(features));
+        let embeddings =
+            embeddings_generator.make_embeddings(Arc::clone(&self.graph), Arc::new(features));
         GraphSageResult { embeddings }
     }
 }
-
-

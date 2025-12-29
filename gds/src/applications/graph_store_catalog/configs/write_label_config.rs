@@ -23,16 +23,15 @@ define_config!(
 impl WriteLabelConfig {
     /// Factory method to create config from components.
     pub fn of(node_filter: String) -> Result<Self, String> {
-        let config = Self::builder()
-            .node_filter(node_filter)
-            .build()?;
+        let config = Self::builder().node_filter(node_filter).build()?;
 
         Ok(config)
     }
 
     /// Create from JSON value (for wire protocol deserialization)
     pub fn from_json(json: &serde_json::Value) -> Result<Self, String> {
-        let node_filter = json.get("nodeFilter")
+        let node_filter = json
+            .get("nodeFilter")
             .ok_or("nodeFilter is required")?
             .as_str()
             .ok_or("nodeFilter must be a string")?

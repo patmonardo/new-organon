@@ -20,7 +20,9 @@ use super::community::{
     SccBuilder, TriangleCountBuilder, WccBuilder,
 };
 
-use super::embeddings::{FastRPBuilder, GATBuilder, GraphSageBuilder, HashGNNBuilder, Node2VecBuilder};
+use super::embeddings::{
+    FastRPBuilder, GATBuilder, GraphSageBuilder, HashGNNBuilder, Node2VecBuilder,
+};
 
 /// User-facing graph handle for running algorithms against a live `DefaultGraphStore`.
 ///

@@ -38,10 +38,7 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
         .and_then(|v| v.as_u64())
         .map(|d| d as usize);
 
-    let top_k = request
-        .get("topK")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(10) as usize;
+    let top_k = request.get("topK").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
 
     let bottom_k = request
         .get("bottomK")
@@ -63,13 +60,9 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
         .and_then(|v| v.as_u64())
         .unwrap_or(4) as usize;
 
-    let _source_node_label = request
-        .get("sourceNodeLabel")
-        .and_then(|v| v.as_str());
+    let _source_node_label = request.get("sourceNodeLabel").and_then(|v| v.as_str());
 
-    let _target_node_label = request
-        .get("targetNodeLabel")
-        .and_then(|v| v.as_str());
+    let _target_node_label = request.get("targetNodeLabel").and_then(|v| v.as_str());
 
     let mode = request
         .get("mode")
@@ -79,7 +72,13 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create builder
@@ -115,7 +114,11 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
                     "data": result_rows
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Filtered Node Similarity execution failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Filtered Node Similarity execution failed: {:?}", e),
+            ),
         },
         "stats" => match builder.stats() {
             Ok(_) => json!({
@@ -126,12 +129,22 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
                     "similarityPairs": 0
                 }
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Filtered Node Similarity stats failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Filtered Node Similarity stats failed: {:?}", e),
+            ),
         },
         "mutate" => {
             let property_name = match request.get("property_name").and_then(|v| v.as_str()) {
                 Some(name) => name,
-                None => return err(op, "INVALID_REQUEST", "Missing 'property_name' for mutate mode"),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'property_name' for mutate mode",
+                    )
+                }
             };
             match builder.mutate(property_name) {
                 Ok(_) => json!({
@@ -139,13 +152,23 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
                     "op": op,
                     "data": { "nodesWritten": 0 }
                 }),
-                Err(e) => err(op, "EXECUTION_ERROR", &format!("Filtered Node Similarity mutate failed: {:?}", e)),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Filtered Node Similarity mutate failed: {:?}", e),
+                ),
             }
         }
         "write" => {
             let property_name = match request.get("property_name").and_then(|v| v.as_str()) {
                 Some(name) => name,
-                None => return err(op, "INVALID_REQUEST", "Missing 'property_name' for write mode"),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'property_name' for write mode",
+                    )
+                }
             };
             match builder.write(property_name) {
                 Ok(_) => json!({
@@ -153,7 +176,11 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
                     "op": op,
                     "data": { "nodesWritten": 0 }
                 }),
-                Err(e) => err(op, "EXECUTION_ERROR", &format!("Filtered Node Similarity write failed: {:?}", e)),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Filtered Node Similarity write failed: {:?}", e),
+                ),
             }
         }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),

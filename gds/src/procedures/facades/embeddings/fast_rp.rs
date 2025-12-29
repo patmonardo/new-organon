@@ -1,9 +1,11 @@
 //! FastRP facade (builder API).
 
-use crate::procedures::embeddings::fastrp::{FastRPComputationRuntime, FastRPConfig, FastRPResult, FastRPStorageRuntime};
+use crate::prints::{PrintEnvelope, PrintKind, PrintProvenance};
+use crate::procedures::embeddings::fastrp::{
+    FastRPComputationRuntime, FastRPConfig, FastRPResult, FastRPStorageRuntime,
+};
 use crate::procedures::facades::builder_base::ConfigValidator;
 use crate::procedures::facades::traits::Result;
-use crate::prints::{PrintEnvelope, PrintKind, PrintProvenance};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
@@ -53,7 +55,10 @@ impl FastRPBuilder {
         self
     }
 
-    pub fn relationship_weight_property(mut self, relationship_weight_property: Option<String>) -> Self {
+    pub fn relationship_weight_property(
+        mut self,
+        relationship_weight_property: Option<String>,
+    ) -> Self {
         self.config.relationship_weight_property = relationship_weight_property;
         self
     }
@@ -85,7 +90,9 @@ impl FastRPBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.config.embedding_dimension == 0 {
-            return Err(AlgorithmError::Execution("embedding_dimension must be > 0".into()));
+            return Err(AlgorithmError::Execution(
+                "embedding_dimension must be > 0".into(),
+            ));
         }
         if self.config.property_dimension > self.config.embedding_dimension {
             return Err(AlgorithmError::Execution(
@@ -93,9 +100,16 @@ impl FastRPBuilder {
             ));
         }
         if self.config.iteration_weights.is_empty() {
-            return Err(AlgorithmError::Execution("iteration_weights must be non-empty".into()));
+            return Err(AlgorithmError::Execution(
+                "iteration_weights must be non-empty".into(),
+            ));
         }
-        ConfigValidator::in_range(self.config.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
+        ConfigValidator::in_range(
+            self.config.concurrency as f64,
+            1.0,
+            1_000_000.0,
+            "concurrency",
+        )?;
         Ok(())
     }
 

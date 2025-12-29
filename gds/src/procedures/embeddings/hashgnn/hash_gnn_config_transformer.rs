@@ -12,5 +12,3 @@ impl HashGNNConfigTransformer {
         config
     }
 }
-
-

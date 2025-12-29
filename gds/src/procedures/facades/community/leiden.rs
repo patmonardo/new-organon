@@ -136,7 +136,11 @@ impl LeidenBuilder {
         }
 
         // Run Leiden algorithm
-        let storage = leiden_fn(node_count, |node: usize| adjacency_list[node].clone(), &self.config);
+        let storage = leiden_fn(
+            node_count,
+            |node: usize| adjacency_list[node].clone(),
+            &self.config,
+        );
         let result = storage.into_result();
 
         Ok((result, start.elapsed().as_millis() as u64))

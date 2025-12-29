@@ -71,8 +71,8 @@ impl HashTask {
     }
 
     pub fn run(&mut self) {
-        let final_influence = (self.scaled_neighbor_influence)
-            .clamp(1.0 / MAX_FINAL_INFLUENCE, MAX_FINAL_INFLUENCE);
+        let final_influence =
+            (self.scaled_neighbor_influence).clamp(1.0 / MAX_FINAL_INFLUENCE, MAX_FINAL_INFLUENCE);
 
         // Java: primeSeed in [PRIME_LOWER_BOUND, MAX_INT/(max(1, finalInfluence)*1.001)]
         let upper = ((i32::MAX as f64) / (final_influence.max(1.0) * 1.001)).round() as i32;
@@ -114,5 +114,3 @@ impl HashTask {
         }
     }
 }
-
-

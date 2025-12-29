@@ -39,17 +39,12 @@ pub fn handle_random_walk(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
         .unwrap_or(1.0);
 
     let source_nodes = if let Some(nodes) = request.get("sourceNodes").and_then(|v| v.as_array()) {
-        nodes
-            .iter()
-            .filter_map(|v| v.as_u64())
-            .collect::<Vec<_>>()
+        nodes.iter().filter_map(|v| v.as_u64()).collect::<Vec<_>>()
     } else {
         vec![]
     };
 
-    let random_seed = request
-        .get("randomSeed")
-        .and_then(|v| v.as_u64());
+    let random_seed = request.get("randomSeed").and_then(|v| v.as_u64());
 
     let mode = request
         .get("mode")
@@ -59,7 +54,13 @@ pub fn handle_random_walk(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create builder
@@ -85,7 +86,11 @@ pub fn handle_random_walk(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
                     "data": rows
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Random Walk execution failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Random Walk execution failed: {:?}", e),
+            ),
         },
         "stats" => match builder.stats() {
             Ok(stats) => json!({
@@ -93,7 +98,11 @@ pub fn handle_random_walk(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
                 "op": op,
                 "data": stats
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Random Walk stats failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Random Walk stats failed: {:?}", e),
+            ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

@@ -153,5 +153,3 @@ pub struct GraphSageTrainMemoryEstimateParameters {
     pub batch_size: usize,
     pub embedding_dimension: usize,
 }
-
-

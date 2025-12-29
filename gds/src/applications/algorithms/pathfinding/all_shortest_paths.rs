@@ -23,15 +23,16 @@ pub fn handle_all_shortest_paths(request: &Value, catalog: Arc<dyn GraphCatalog>
         .and_then(|v| v.as_str())
         .unwrap_or("unweighted");
 
-    let relationship_types = if let Some(types) = request.get("relationshipTypes").and_then(|v| v.as_array()) {
-        types
-            .iter()
-            .filter_map(|v| v.as_str())
-            .map(|s| s.to_string())
-            .collect::<Vec<_>>()
-    } else {
-        vec![]
-    };
+    let relationship_types =
+        if let Some(types) = request.get("relationshipTypes").and_then(|v| v.as_array()) {
+            types
+                .iter()
+                .filter_map(|v| v.as_str())
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>()
+        } else {
+            vec![]
+        };
 
     let direction = request
         .get("direction")
@@ -61,7 +62,13 @@ pub fn handle_all_shortest_paths(request: &Value, catalog: Arc<dyn GraphCatalog>
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create builder
@@ -95,7 +102,11 @@ pub fn handle_all_shortest_paths(request: &Value, catalog: Arc<dyn GraphCatalog>
                     "data": rows
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("All Shortest Paths execution failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("All Shortest Paths execution failed: {:?}", e),
+            ),
         },
         "stats" => match builder.stats() {
             Ok(stats) => json!({
@@ -103,7 +114,11 @@ pub fn handle_all_shortest_paths(request: &Value, catalog: Arc<dyn GraphCatalog>
                 "op": op,
                 "data": stats
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("All Shortest Paths stats failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("All Shortest Paths stats failed: {:?}", e),
+            ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

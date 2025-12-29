@@ -1,7 +1,7 @@
 use super::computation::{NodeSimilarityComputationResult, NodeSimilarityComputationRuntime};
+use super::similarity_metric::NodeSimilarityMetric;
 use super::storage::NodeSimilarityStorageRuntime;
 use crate::define_algorithm_spec;
-use super::similarity_metric::NodeSimilarityMetric;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
@@ -137,4 +137,3 @@ impl NodeSimilarityAlgorithmResult {
 // The `define_algorithm_spec!` macro generates `NODE_SIMILARITYAlgorithmSpec`.
 // Provide a stable alias that matches the naming used across the codebase.
 pub type NodeSimilarityAlgorithmSpec = NODE_SIMILARITYAlgorithmSpec;
-

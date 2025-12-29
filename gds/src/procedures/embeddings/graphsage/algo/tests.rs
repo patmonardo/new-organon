@@ -3,8 +3,8 @@ use crate::core::graph_dimensions::ConcreteGraphDimensions;
 use crate::core::model::{InMemoryModelCatalog, ModelCatalog};
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::mem::MemoryEstimation;
-use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 use crate::types::graph_store::DefaultGraphStore;
+use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 
 #[test]
 fn graphsage_train_then_infer_via_catalog() {
@@ -39,7 +39,8 @@ fn graphsage_train_then_infer_via_catalog() {
         maybe_batch_sampling_ratio: None,
         random_seed: Some(42),
         aggregator: crate::procedures::embeddings::graphsage::types::AggregatorType::Mean,
-        activation_function: crate::procedures::embeddings::graphsage::types::ActivationFunctionType::Relu,
+        activation_function:
+            crate::procedures::embeddings::graphsage::types::ActivationFunctionType::Relu,
         is_multi_label: true,
         projected_feature_dimension: Some(4),
     };
@@ -91,7 +92,8 @@ fn graphsage_memory_estimation_smoke() {
         maybe_batch_sampling_ratio: None,
         random_seed: Some(42),
         aggregator: crate::procedures::embeddings::graphsage::types::AggregatorType::Mean,
-        activation_function: crate::procedures::embeddings::graphsage::types::ActivationFunctionType::Relu,
+        activation_function:
+            crate::procedures::embeddings::graphsage::types::ActivationFunctionType::Relu,
         is_multi_label: false,
         projected_feature_dimension: None,
     };
@@ -100,5 +102,3 @@ fn graphsage_memory_estimation_smoke() {
     assert!(!tree.description().is_empty());
     assert!(tree.memory_usage().max() > 0);
 }
-
-

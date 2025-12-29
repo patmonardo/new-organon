@@ -43,14 +43,9 @@ pub fn handle_gat(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         .and_then(|v| v.as_f64())
         .unwrap_or(0.6);
 
-    let alpha = request
-        .get("alpha")
-        .and_then(|v| v.as_f64())
-        .unwrap_or(0.2);
+    let alpha = request.get("alpha").and_then(|v| v.as_f64()).unwrap_or(0.2);
 
-    let random_seed = request
-        .get("randomSeed")
-        .and_then(|v| v.as_u64());
+    let random_seed = request.get("randomSeed").and_then(|v| v.as_u64());
 
     let concurrency = request
         .get("concurrency")
@@ -65,7 +60,13 @@ pub fn handle_gat(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create and configure builder
@@ -95,11 +96,27 @@ pub fn handle_gat(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                     }
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Failed to compute embeddings: {}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Failed to compute embeddings: {}", e),
+            ),
         },
-        "stream" => err(op, "NOT_IMPLEMENTED", "stream mode not yet implemented for GAT"),
-        "mutate" => err(op, "NOT_IMPLEMENTED", "mutate mode not yet implemented for GAT"),
-        "write" => err(op, "NOT_IMPLEMENTED", "write mode not yet implemented for GAT"),
+        "stream" => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "stream mode not yet implemented for GAT",
+        ),
+        "mutate" => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "mutate mode not yet implemented for GAT",
+        ),
+        "write" => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "write mode not yet implemented for GAT",
+        ),
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
 }

@@ -21,8 +21,7 @@ pub fn read_ipc_file(
     let mut reader = BufReader::new(file);
     let metadata = read_file_metadata(&mut reader)?;
     let schema = metadata.schema.clone();
-    let batches =
-        FileReader::new(reader, metadata, None, None).collect::<Result<Vec<_>, _>>()?;
+    let batches = FileReader::new(reader, metadata, None, None).collect::<Result<Vec<_>, _>>()?;
     Ok((schema, batches))
 }
 
@@ -34,14 +33,8 @@ pub fn read_parquet_file(
     let metadata = parquet_read::read_metadata(&mut reader)?;
     let arrow_schema = parquet_read::infer_schema(&metadata)?;
     let row_groups = metadata.row_groups;
-    let chunks = parquet_read::FileReader::new(
-        reader,
-        row_groups,
-        arrow_schema.clone(),
-        None,
-        None,
-        None,
-    )
-    .collect::<Result<Vec<_>, _>>()?;
+    let chunks =
+        parquet_read::FileReader::new(reader, row_groups, arrow_schema.clone(), None, None, None)
+            .collect::<Result<Vec<_>, _>>()?;
     Ok((arrow_schema, chunks))
 }

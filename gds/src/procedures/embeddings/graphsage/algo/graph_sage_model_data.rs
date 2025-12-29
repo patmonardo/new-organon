@@ -80,8 +80,10 @@ impl GraphSageModelData {
                     activation,
                     weights,
                 } => {
-                    let activation_wrapper = ActivationFunctionFactory::activation_function_wrapper(*activation);
-                    let activation_wrapper: Arc<dyn ActivationFunctionWrapper> = Arc::from(activation_wrapper);
+                    let activation_wrapper =
+                        ActivationFunctionFactory::activation_function_wrapper(*activation);
+                    let activation_wrapper: Arc<dyn ActivationFunctionWrapper> =
+                        Arc::from(activation_wrapper);
                     let w = Arc::new(Weights::new(Box::new(Matrix::new(
                         weights.data.clone(),
                         weights.rows,
@@ -101,8 +103,10 @@ impl GraphSageModelData {
                     neighbors_weights,
                     bias,
                 } => {
-                    let activation_wrapper = ActivationFunctionFactory::activation_function_wrapper(*activation);
-                    let activation_wrapper: Arc<dyn ActivationFunctionWrapper> = Arc::from(activation_wrapper);
+                    let activation_wrapper =
+                        ActivationFunctionFactory::activation_function_wrapper(*activation);
+                    let activation_wrapper: Arc<dyn ActivationFunctionWrapper> =
+                        Arc::from(activation_wrapper);
                     let pw = Arc::new(Weights::new(Box::new(Matrix::new(
                         pool_weights.data.clone(),
                         pool_weights.rows,
@@ -165,5 +169,3 @@ impl CatalogModelData for GraphSageModelData {
         self
     }
 }
-
-

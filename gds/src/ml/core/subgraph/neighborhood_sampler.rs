@@ -34,7 +34,8 @@ impl NeighborhoodSampler {
         }
 
         let mut sampler = UniformSampler::new(self.random_seed ^ node_id);
-        let iter = (0..degree).filter_map(|i| graph.nth_target(node_id as i64, i).map(|t| t as u64));
+        let iter =
+            (0..degree).filter_map(|i| graph.nth_target(node_id as i64, i).map(|t| t as u64));
         sampler.sample(iter, degree as u64, sample_size.min(degree))
     }
 }

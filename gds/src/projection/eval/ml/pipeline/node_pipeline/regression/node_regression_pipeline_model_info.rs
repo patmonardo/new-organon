@@ -182,8 +182,7 @@ mod tests {
 
     #[test]
     fn test_model_info_new() {
-        let info =
-            NodeRegressionPipelineModelInfo::new(HashMap::new(), HashMap::new(), (), ());
+        let info = NodeRegressionPipelineModelInfo::new(HashMap::new(), HashMap::new(), (), ());
 
         assert!(info.test_metrics().is_empty());
         assert!(info.outer_train_metrics().is_empty());
@@ -213,8 +212,7 @@ mod tests {
 
     #[test]
     fn test_to_map_structure() {
-        let info =
-            NodeRegressionPipelineModelInfo::new(HashMap::new(), HashMap::new(), (), ());
+        let info = NodeRegressionPipelineModelInfo::new(HashMap::new(), HashMap::new(), (), ());
 
         let map = info.to_map();
         assert!(map.contains_key("bestParameters"));

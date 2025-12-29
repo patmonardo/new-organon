@@ -111,7 +111,11 @@ mod tests {
 
         let value = serde_json::to_value(&print).expect("serialize");
 
-        assert!(value.get("id").and_then(|v| v.as_str()).unwrap().starts_with("print-"));
+        assert!(value
+            .get("id")
+            .and_then(|v| v.as_str())
+            .unwrap()
+            .starts_with("print-"));
         assert_eq!(value["kind"], "graph");
         assert_eq!(value["provenance"]["source"], "gds::pagerank");
         assert_eq!(value["provenance"]["run_id"], "run-42");

@@ -136,15 +136,19 @@ mod tests {
     fn test_inference_path_creation() {
         let path = InferencePath {
             nodes: vec![
-                NodeId { domain: "sdsl1".to_string(), local_id: "a".to_string() },
-                NodeId { domain: "sdsl2".to_string(), local_id: "b".to_string() },
+                NodeId {
+                    domain: "sdsl1".to_string(),
+                    local_id: "a".to_string(),
+                },
+                NodeId {
+                    domain: "sdsl2".to_string(),
+                    local_id: "b".to_string(),
+                },
             ],
-            edges: vec![
-                EdgeType { name: "relates_to".to_string() },
-            ],
-            constraint_proofs: HashMap::from([
-                ("reversibility".to_string(), "valid".to_string()),
-            ]),
+            edges: vec![EdgeType {
+                name: "relates_to".to_string(),
+            }],
+            constraint_proofs: HashMap::from([("reversibility".to_string(), "valid".to_string())]),
         };
         assert_eq!(path.nodes.len(), 2);
         assert_eq!(path.edges.len(), 1);

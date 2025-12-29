@@ -60,11 +60,19 @@ impl GraphSageBuilder {
         self.validate()?;
 
         // Directly call the storage runtime
-        let storage = crate::procedures::embeddings::graphsage::algo::storage::GraphSageStorageRuntime::new();
+        let storage =
+            crate::procedures::embeddings::graphsage::algo::storage::GraphSageStorageRuntime::new();
         let rel_types = std::collections::HashSet::new();
-        let graph = self.graph_store
-            .get_graph_with_types_selectors_and_orientation(&rel_types, &std::collections::HashMap::new(), crate::projection::orientation::Orientation::Natural)
-            .map_err(|e: Box<dyn std::error::Error + Send + Sync>| AlgorithmError::Graph(e.to_string()))?;
+        let graph = self
+            .graph_store
+            .get_graph_with_types_selectors_and_orientation(
+                &rel_types,
+                &std::collections::HashMap::new(),
+                crate::projection::orientation::Orientation::Natural,
+            )
+            .map_err(|e: Box<dyn std::error::Error + Send + Sync>| {
+                AlgorithmError::Graph(e.to_string())
+            })?;
 
         let graphsage_config = crate::procedures::embeddings::GraphSageConfig {
             model_user: self.model_user,

@@ -5,9 +5,11 @@ use crate::concurrency::virtual_threads::RunWithConcurrency;
 use crate::concurrency::TerminationFlag;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::functions::{ConstantScale, ElementSum, L2NormSquared, Weights};
-use crate::ml::core::optimizer::Updater;
 use crate::ml::core::optimizer::AdamOptimizer;
-use crate::ml::core::relationship_weights::{ClosureRelationshipWeights, RelationshipWeights, UNWEIGHTED};
+use crate::ml::core::optimizer::Updater;
+use crate::ml::core::relationship_weights::{
+    ClosureRelationshipWeights, RelationshipWeights, UNWEIGHTED,
+};
 use crate::ml::core::tensor::{Scalar, Tensor};
 use crate::ml::core::variable::VariableRef;
 use crate::types::graph::Graph;
@@ -85,12 +87,25 @@ mod tests {
         let feature_dim_with_bias = 2; // random_score + bias
 
         let mut weights_by_label = HashMap::new();
-        let w_a = Arc::new(generate_weights(projected_dim, feature_dim_with_bias, 0.5, 3));
-        let w_b = Arc::new(generate_weights(projected_dim, feature_dim_with_bias, 0.5, 5));
+        let w_a = Arc::new(generate_weights(
+            projected_dim,
+            feature_dim_with_bias,
+            0.5,
+            3,
+        ));
+        let w_b = Arc::new(generate_weights(
+            projected_dim,
+            feature_dim_with_bias,
+            0.5,
+            5,
+        ));
         weights_by_label.insert(NodeLabel::of("A"), Arc::clone(&w_a));
         weights_by_label.insert(NodeLabel::of("B"), Arc::clone(&w_b));
 
-        let feature_fn = Arc::new(MultiLabelFeatureFunction::new(weights_by_label, projected_dim));
+        let feature_fn = Arc::new(MultiLabelFeatureFunction::new(
+            weights_by_label,
+            projected_dim,
+        ));
 
         // Minimal training config.
         let train_cfg = GraphSageTrainConfig {
@@ -189,15 +204,15 @@ impl GraphSageModelTrainer {
         let mut prev_epoch_loss = f64::NAN;
         let mut converged = false;
 
-        let relationship_weights: Arc<dyn RelationshipWeights> = if graph.has_relationship_property()
-        {
-            let g = Arc::clone(&graph);
-            Arc::new(ClosureRelationshipWeights::new(move |s, t, default| {
-                g.relationship_property(s as i64, t as i64, default)
-            }))
-        } else {
-            Arc::new(UNWEIGHTED)
-        };
+        let relationship_weights: Arc<dyn RelationshipWeights> =
+            if graph.has_relationship_property() {
+                let g = Arc::clone(&graph);
+                Arc::new(ClosureRelationshipWeights::new(move |s, t, default| {
+                    g.relationship_property(s as i64, t as i64, default)
+                }))
+            } else {
+                Arc::new(UNWEIGHTED)
+            };
 
         for _epoch in 1..=self.parameters.epochs {
             self.termination_flag.assert_running();
@@ -209,7 +224,7 @@ impl GraphSageModelTrainer {
                 self.parameters.learning_rate,
             );
 
-                let mut prev_loss = prev_epoch_loss;
+            let mut prev_loss = prev_epoch_loss;
             let mut epoch_losses = Vec::new();
 
             for _iteration in 0..self.parameters.max_iterations {
@@ -270,10 +285,12 @@ impl GraphSageModelTrainer {
                     Ok(mutex) => mutex.into_inner(),
                     Err(_) => panic!("results still referenced"),
                 };
-                let avg_loss = results.iter().map(|r| r.loss).sum::<f64>() / results.len().max(1) as f64;
+                let avg_loss =
+                    results.iter().map(|r| r.loss).sum::<f64>() / results.len().max(1) as f64;
                 epoch_losses.push(avg_loss);
 
-                if prev_loss.is_finite() && (prev_loss - avg_loss).abs() < self.parameters.tolerance {
+                if prev_loss.is_finite() && (prev_loss - avg_loss).abs() < self.parameters.tolerance
+                {
                     converged = true;
                     break;
                 }
@@ -332,8 +349,10 @@ fn run_batch(
         .map(|s| s.original_node_ids())
         .unwrap_or(&batch);
 
-    let batched_features = feature_function.apply(Arc::clone(&graph), deepest, Arc::clone(&features));
-    let embedding_var = graphsage_helper::embeddings_computation_graph(&sub_graphs, &layers, batched_features);
+    let batched_features =
+        feature_function.apply(Arc::clone(&graph), deepest, Arc::clone(&features));
+    let embedding_var =
+        graphsage_helper::embeddings_computation_graph(&sub_graphs, &layers, batched_features);
 
     let loss_without_penalty: VariableRef = Arc::new(GraphSageLoss::new(
         relationship_weights,
@@ -347,7 +366,9 @@ fn run_batch(
         let mut l2_terms: Vec<VariableRef> = Vec::new();
 
         for w in weights.iter().take(label_projection_weight_count) {
-            l2_terms.push(Arc::new(L2NormSquared::new_ref(Arc::clone(w) as VariableRef)));
+            l2_terms.push(Arc::new(L2NormSquared::new_ref(
+                Arc::clone(w) as VariableRef
+            )));
         }
         for layer in &layers {
             for w in layer.aggregator().weights_without_bias() {
@@ -360,12 +381,12 @@ fn run_batch(
         // Java scales by originalBatchSize / nodeCount.
         let original_batch_size = batch.len() / 3;
         let scale = penalty_l2 * (original_batch_size as f64) / (graph_node_count as f64);
-        let scaled_penalty: VariableRef = Arc::new(ConstantScale::new_ref(
-            penalty_sum,
-            scale,
-        ));
+        let scaled_penalty: VariableRef = Arc::new(ConstantScale::new_ref(penalty_sum, scale));
 
-        Arc::new(ElementSum::new_ref(vec![loss_without_penalty, scaled_penalty]))
+        Arc::new(ElementSum::new_ref(vec![
+            loss_without_penalty,
+            scaled_penalty,
+        ]))
     } else {
         loss_without_penalty
     };
@@ -381,7 +402,10 @@ fn run_batch(
     ctx.backward(loss.as_ref());
     let gradients: Vec<Box<dyn Tensor>> = weights
         .iter()
-        .map(|w| ctx.gradient((w.as_ref()) as &dyn crate::ml::core::variable::Variable).unwrap())
+        .map(|w| {
+            ctx.gradient((w.as_ref()) as &dyn crate::ml::core::variable::Variable)
+                .unwrap()
+        })
         .collect();
 
     BatchResult {
@@ -395,13 +419,14 @@ fn average_gradients(results: &[BatchResult]) -> Vec<Box<dyn Tensor>> {
         return Vec::new();
     }
     let n = results.len() as f64;
-    let mut acc: Vec<Box<dyn Tensor>> = results[0].gradients.iter().map(|g| g.clone_box()).collect();
+    let mut acc: Vec<Box<dyn Tensor>> =
+        results[0].gradients.iter().map(|g| g.clone_box()).collect();
     for r in &results[1..] {
         for (i, g) in r.gradients.iter().enumerate() {
             acc[i].add_inplace(g.as_ref());
         }
     }
-    acc.into_iter().map(|t| t.scalar_multiply(1.0 / n)).collect()
+    acc.into_iter()
+        .map(|t| t.scalar_multiply(1.0 / n))
+        .collect()
 }
-
-

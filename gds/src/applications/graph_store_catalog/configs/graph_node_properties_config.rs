@@ -78,13 +78,19 @@ impl GraphNodePropertiesConfig {
 
     /// Create from JSON value (for wire protocol deserialization)
     pub fn from_json(json: &serde_json::Value) -> Result<Self, String> {
-        let graph_name = json.get("graphName")
+        let graph_name = json
+            .get("graphName")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let node_labels = json.get("nodeLabels")
+        let node_labels = json
+            .get("nodeLabels")
             .and_then(|v| v.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect::<Vec<_>>())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect::<Vec<_>>()
+            })
             .unwrap_or_else(|| vec!["*".to_string()]);
 
         Self::of(graph_name, node_labels)

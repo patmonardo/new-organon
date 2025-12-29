@@ -63,5 +63,3 @@ impl Aggregator for MeanAggregator {
         self.activation_function_wrapper.activation_function_type()
     }
 }
-
-

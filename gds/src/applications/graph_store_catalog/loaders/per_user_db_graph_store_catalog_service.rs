@@ -2,7 +2,9 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use crate::core::User;
-use crate::types::catalog::{CatalogError, Dropped, GraphCatalog, GraphMemoryUsage, InMemoryGraphCatalog, ListEntry};
+use crate::types::catalog::{
+    CatalogError, Dropped, GraphCatalog, GraphMemoryUsage, InMemoryGraphCatalog, ListEntry,
+};
 use crate::types::graph_store::DatabaseId;
 
 use super::GraphStoreCatalogService;
@@ -38,7 +40,10 @@ impl PerUserDbGraphStoreCatalogService {
         username: &str,
         database_id: &DatabaseId,
     ) -> Arc<InMemoryGraphCatalog> {
-        let key = (username.to_string(), database_id.database_name().to_string());
+        let key = (
+            username.to_string(),
+            database_id.database_name().to_string(),
+        );
         // Fast path: read lock.
         if let Ok(map) = catalogs.read() {
             if let Some(existing) = map.get(&key) {
@@ -160,5 +165,3 @@ impl GraphCatalog for MergedDbCatalog {
         Err(CatalogError::NotFound(name.to_string()))
     }
 }
-
-

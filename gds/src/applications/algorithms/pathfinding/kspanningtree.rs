@@ -20,22 +20,23 @@ pub fn handle_kspanningtree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
 
     let source_node = match request.get("sourceNode").and_then(|v| v.as_u64()) {
         Some(s) => s,
-        None => return err(op, "INVALID_REQUEST", "Missing or invalid 'sourceNode' parameter"),
+        None => {
+            return err(
+                op,
+                "INVALID_REQUEST",
+                "Missing or invalid 'sourceNode' parameter",
+            )
+        }
     };
 
-    let k = request
-        .get("k")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(1);
+    let k = request.get("k").and_then(|v| v.as_u64()).unwrap_or(1);
 
     let objective = request
         .get("objective")
         .and_then(|v| v.as_str())
         .unwrap_or("min");
 
-    let weight_property = request
-        .get("weightProperty")
-        .and_then(|v| v.as_str());
+    let weight_property = request.get("weightProperty").and_then(|v| v.as_str());
 
     let mode = request
         .get("mode")
@@ -45,7 +46,13 @@ pub fn handle_kspanningtree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create builder
@@ -69,7 +76,11 @@ pub fn handle_kspanningtree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
                     "data": rows
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("K-Spanning Tree execution failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("K-Spanning Tree execution failed: {:?}", e),
+            ),
         },
         "stats" => match builder.stats() {
             Ok(stats) => json!({
@@ -77,7 +88,11 @@ pub fn handle_kspanningtree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
                 "op": op,
                 "data": stats
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("K-Spanning Tree stats failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("K-Spanning Tree stats failed: {:?}", e),
+            ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

@@ -111,11 +111,8 @@ impl GraphSageEmbeddingsGenerator {
                         .map(|s| s.original_node_ids())
                         .unwrap_or(&node_ids);
 
-                    let batched_features = feature_function.apply(
-                        Arc::clone(&graph),
-                        deepest,
-                        Arc::clone(&features),
-                    );
+                    let batched_features =
+                        feature_function.apply(Arc::clone(&graph), deepest, Arc::clone(&features));
 
                     let embedding_var = graphsage_helper::embeddings_computation_graph(
                         &sub_graphs,
@@ -123,7 +120,8 @@ impl GraphSageEmbeddingsGenerator {
                         batched_features,
                     );
 
-                    let embeddings_tensor = ComputationContext::new().forward(embedding_var.as_ref());
+                    let embeddings_tensor =
+                        ComputationContext::new().forward(embedding_var.as_ref());
                     let embeddings = embeddings_tensor
                         .as_any()
                         .downcast_ref::<Matrix>()
@@ -159,17 +157,19 @@ mod tests {
     use crate::collections::backends::vec::VecDouble;
     use crate::core::utils::progress::{ProgressTracker, Tasks};
     use crate::procedures::embeddings::graphsage::graphsage_helper;
-    use crate::procedures::embeddings::graphsage::layer_factory::LayerFactory;
     use crate::procedures::embeddings::graphsage::layer_factory::generate_weights;
+    use crate::procedures::embeddings::graphsage::layer_factory::LayerFactory;
     use crate::procedures::embeddings::graphsage::multi_label_feature_function::MultiLabelFeatureFunction;
     use crate::procedures::embeddings::graphsage::single_label_feature_function::SingleLabelFeatureFunction;
-    use crate::procedures::embeddings::graphsage::types::{ActivationFunctionType, AggregatorType, LayerConfig};
+    use crate::procedures::embeddings::graphsage::types::{
+        ActivationFunctionType, AggregatorType, LayerConfig,
+    };
     use crate::types::graph_store::{DefaultGraphStore, GraphStore};
     use crate::types::properties::node::DefaultDoubleNodePropertyValues;
     use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
     use crate::types::schema::NodeLabel;
-    use std::collections::HashSet;
     use std::collections::HashMap;
+    use std::collections::HashSet;
 
     #[test]
     fn graphsage_smoke_single_label_embeddings() {
@@ -187,10 +187,15 @@ mod tests {
 
         // Add a numeric node feature property.
         let values: Vec<f64> = (0..config.node_count).map(|i| i as f64).collect();
-        let prop = DefaultDoubleNodePropertyValues::from_collection(VecDouble::from(values), config.node_count);
+        let prop = DefaultDoubleNodePropertyValues::from_collection(
+            VecDouble::from(values),
+            config.node_count,
+        );
         let mut labels = HashSet::new();
         labels.insert(NodeLabel::of("N"));
-        store.add_node_property(labels, "x", Arc::new(prop)).unwrap();
+        store
+            .add_node_property(labels, "x", Arc::new(prop))
+            .unwrap();
 
         let graph = store.graph();
         let feature_properties = vec!["x".to_string()];
@@ -257,14 +262,27 @@ mod tests {
         let mut weights_by_label = HashMap::new();
         weights_by_label.insert(
             NodeLabel::of("A"),
-            Arc::new(generate_weights(projected_dim, feature_dim_with_bias, 0.5, 7)),
+            Arc::new(generate_weights(
+                projected_dim,
+                feature_dim_with_bias,
+                0.5,
+                7,
+            )),
         );
         weights_by_label.insert(
             NodeLabel::of("B"),
-            Arc::new(generate_weights(projected_dim, feature_dim_with_bias, 0.5, 11)),
+            Arc::new(generate_weights(
+                projected_dim,
+                feature_dim_with_bias,
+                0.5,
+                11,
+            )),
         );
 
-        let feature_fn = Arc::new(MultiLabelFeatureFunction::new(weights_by_label, projected_dim));
+        let feature_fn = Arc::new(MultiLabelFeatureFunction::new(
+            weights_by_label,
+            projected_dim,
+        ));
 
         // One mean layer that maps projected_dim -> embedding_dim.
         let embedding_dim = 8;
@@ -294,5 +312,3 @@ mod tests {
         assert_eq!(embeddings.get(0).len(), embedding_dim);
     }
 }
-
-

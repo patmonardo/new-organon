@@ -1,6 +1,6 @@
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::num::NonZeroUsize;
-use serde::{Deserialize, Serialize};
 
 /// Represents a concurrency level (number of threads/workers) for parallel processing.
 ///

@@ -31,11 +31,21 @@ impl BatchSampler {
         search_depth: usize,
         random_seed: u64,
     ) -> Vec<Vec<u64>> {
-        PartitionUtils::range_partition_with_batch_size(self.graph.node_count(), batch_size, |batch| {
-            self.termination_flag.assert_running();
-            let local_seed = (batch.start_node() as u64 / self.graph.node_count().max(1) as u64) + random_seed;
-            self.sample_neighbor_and_negative_node_per_batch_node(batch, search_depth, local_seed)
-        })
+        PartitionUtils::range_partition_with_batch_size(
+            self.graph.node_count(),
+            batch_size,
+            |batch| {
+                self.termination_flag.assert_running();
+                let local_seed = (batch.start_node() as u64
+                    / self.graph.node_count().max(1) as u64)
+                    + random_seed;
+                self.sample_neighbor_and_negative_node_per_batch_node(
+                    batch,
+                    search_depth,
+                    local_seed,
+                )
+            },
+        )
     }
 
     /// For each node in the batch we sample one neighbor node and one negative node from the graph.
@@ -55,7 +65,12 @@ impl BatchSampler {
         out
     }
 
-    fn neighbor_batch(&self, batch: Partition, batch_local_seed: u64, search_depth: usize) -> Vec<u64> {
+    fn neighbor_batch(
+        &self,
+        batch: Partition,
+        batch_local_seed: u64,
+        search_depth: usize,
+    ) -> Vec<u64> {
         let mut rng = ChaCha8Rng::seed_from_u64(batch_local_seed);
         let mut neighbors = Vec::with_capacity(batch.node_count());
 
@@ -84,7 +99,12 @@ impl BatchSampler {
         neighbors
     }
 
-    fn negative_batch(&self, batch_size: usize, batch_neighbors: &[u64], batch_local_seed: u64) -> Vec<u64> {
+    fn negative_batch(
+        &self,
+        batch_size: usize,
+        batch_neighbors: &[u64],
+        batch_local_seed: u64,
+    ) -> Vec<u64> {
         let node_count = self.graph.node_count();
         let mut sampler = WeightedUniformSampler::new(batch_local_seed);
 
@@ -95,8 +115,8 @@ impl BatchSampler {
             (node_id, degree.powf(Self::DEGREE_SMOOTHING_FACTOR))
         });
 
-        sampler.sample_filtered(input, node_count, batch_size, |sample| !neighbor_set.contains(&sample))
+        sampler.sample_filtered(input, node_count, batch_size, |sample| {
+            !neighbor_set.contains(&sample)
+        })
     }
 }
-
-

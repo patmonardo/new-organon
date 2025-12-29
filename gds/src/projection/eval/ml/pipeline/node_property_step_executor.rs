@@ -52,7 +52,8 @@ impl NodePropertyStepExecutor {
         Self {
             node_labels,
             relationship_types,
-            _available_relationship_types_for_node_properties: available_relationship_types_for_node_properties,
+            _available_relationship_types_for_node_properties:
+                available_relationship_types_for_node_properties,
             concurrency,
         }
     }

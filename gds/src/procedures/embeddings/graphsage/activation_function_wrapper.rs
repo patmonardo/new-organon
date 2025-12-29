@@ -8,5 +8,3 @@ pub trait ActivationFunctionWrapper: Send + Sync {
     fn weight_init_bound(&self, rows: usize, cols: usize) -> f64;
     fn activation_function_type(&self) -> ActivationFunctionType;
 }
-
-

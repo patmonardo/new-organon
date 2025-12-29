@@ -3,12 +3,12 @@
 //! Depends on the `FeatureExtraction` subsystem (property extractors + consumers) which is
 //! not fully wired in Rust GDS yet.
 
+use super::hash_gnn_parameters::BinarizeFeaturesConfig;
 use crate::collections::HugeObjectArray;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::paged::HugeAtomicBitSet;
 use crate::core::utils::partition::Partition;
 use crate::ml::core::features::{self, FeatureConsumer};
-use super::hash_gnn_parameters::BinarizeFeaturesConfig;
 use crate::types::graph::Graph;
 use rand::Rng;
 use rand::SeedableRng;
@@ -115,5 +115,3 @@ fn next_gaussian_f32(rng: &mut impl Rng) -> f32 {
     let z0 = (-2.0 * u1.ln()).sqrt() * (2.0 * PI * u2).cos();
     z0 as f32
 }
-
-

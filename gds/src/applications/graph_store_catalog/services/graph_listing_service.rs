@@ -1,8 +1,8 @@
 use crate::applications::graph_store_catalog::facade::GraphStoreCatalogEntry;
-use crate::core::User;
-use crate::types::graph_store::DatabaseId;
-use crate::types::catalog::GraphCatalog;
 use crate::applications::graph_store_catalog::loaders::GraphStoreCatalogService;
+use crate::core::User;
+use crate::types::catalog::GraphCatalog;
+use crate::types::graph_store::DatabaseId;
 use std::sync::Arc;
 
 /// Service for listing graphs in the catalog.
@@ -31,11 +31,18 @@ impl GraphListingService {
         graph_name: Option<&str>,
         include_degree_distribution: bool,
     ) -> Vec<GraphStoreCatalogEntry> {
-        let catalog = self.graph_store_catalog_service.graph_catalog(user, database_id);
+        let catalog = self
+            .graph_store_catalog_service
+            .graph_catalog(user, database_id);
         GraphCatalog::list(catalog.as_ref(), graph_name, include_degree_distribution)
             .into_iter()
             .map(|e| {
-                GraphStoreCatalogEntry::new(e.name, e.node_count, e.relationship_count, e.degree_distribution)
+                GraphStoreCatalogEntry::new(
+                    e.name,
+                    e.node_count,
+                    e.relationship_count,
+                    e.degree_distribution,
+                )
             })
             .collect()
     }

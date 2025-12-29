@@ -101,11 +101,13 @@ impl GraphDropNodePropertiesConfig {
 
     /// Create from JSON value (for wire protocol deserialization)
     pub fn from_json(json: &serde_json::Value) -> Result<Self, String> {
-        let graph_name = json.get("graphName")
+        let graph_name = json
+            .get("graphName")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let node_properties = json.get("nodeProperties")
+        let node_properties = json
+            .get("nodeProperties")
             .ok_or("nodeProperties is required")?
             .as_array()
             .ok_or("nodeProperties must be an array")?
@@ -116,11 +118,13 @@ impl GraphDropNodePropertiesConfig {
             .map(|s| s.to_string())
             .collect();
 
-        let fail_if_missing = json.get("failIfMissing")
+        let fail_if_missing = json
+            .get("failIfMissing")
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
 
-        let concurrency = json.get("concurrency")
+        let concurrency = json
+            .get("concurrency")
             .and_then(|v| v.as_u64())
             .unwrap_or(4) as usize;
 

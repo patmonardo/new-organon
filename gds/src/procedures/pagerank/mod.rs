@@ -34,9 +34,9 @@ pub mod memory_estimation;
 pub mod spec;
 pub mod storage;
 
+pub use computation::{run_pagerank, PageRankRunResult, PAGE_RANK};
 pub use degree_functions::{
     average_degree, eigenvector_degree_function, pagerank_degree_function, DegreeFunction,
 };
 pub use memory_estimation::{estimate_pagerank_memory, PageRankMemoryEstimation};
-pub use computation::{run_pagerank, PageRankRunResult, PAGE_RANK};
 pub use spec::{PageRankAlgorithmSpec, PageRankComputationResult};

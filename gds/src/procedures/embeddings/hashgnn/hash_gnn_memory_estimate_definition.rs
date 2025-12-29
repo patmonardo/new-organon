@@ -27,7 +27,12 @@ impl HashGNNMemoryEstimateDefinition {
             .generate_features
             .as_ref()
             .map(|c| c.dimension)
-            .or_else(|| self.parameters.binarize_features.as_ref().map(|c| c.dimension))
+            .or_else(|| {
+                self.parameters
+                    .binarize_features
+                    .as_ref()
+                    .map(|c| c.dimension)
+            })
             .unwrap_or(1024);
 
         let cache = node_count * Estimate::size_of_bitset(binary_dimension) * 2;
@@ -39,5 +44,3 @@ impl HashGNNMemoryEstimateDefinition {
         cache + hashes_cache + output_dense
     }
 }
-
-

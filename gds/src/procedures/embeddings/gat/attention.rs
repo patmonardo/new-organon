@@ -12,7 +12,13 @@ impl AttentionMechanism {
         }
     }
 
-    pub fn compute_attention(&mut self, node: NodeId, neighbors: &[NodeId], features: &HashMap<NodeId, Vec<f64>>, config: &super::config::GATConfig) {
+    pub fn compute_attention(
+        &mut self,
+        node: NodeId,
+        neighbors: &[NodeId],
+        features: &HashMap<NodeId, Vec<f64>>,
+        config: &super::config::GATConfig,
+    ) {
         // Simplified attention: dot product with leaky relu
         let node_feat = &features[&node];
         let mut weights = Vec::new();
@@ -24,7 +30,11 @@ impl AttentionMechanism {
                 score += node_feat[i] * neigh_feat[i];
             }
             // LeakyReLU
-            score = if score > 0.0 { score } else { config.alpha * score };
+            score = if score > 0.0 {
+                score
+            } else {
+                config.alpha * score
+            };
             weights.push(score);
         }
 

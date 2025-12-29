@@ -83,11 +83,7 @@ impl MultiMean {
                     let neighbor_gradient =
                         multi_mean_gradient.data_at(batch_idx, col) * relationship_weight;
                     // add_data_at takes (row, col, value) for 2D indexing
-                    result_matrix.add_data_at(
-                        neighbor,
-                        col,
-                        neighbor_gradient / denom,
-                    );
+                    result_matrix.add_data_at(neighbor, col, neighbor_gradient / denom);
                 }
             }
         }
@@ -120,11 +116,7 @@ impl Variable for MultiMean {
             // Initialize mean row with parent row for nodeId in batch
             for col in 0..cols {
                 let source_col_entry = parent_data.data_at(batch_node_id, col);
-                result_means.add_data_at(
-                    batch_idx,
-                    col,
-                    source_col_entry / denom,
-                );
+                result_means.add_data_at(batch_idx, col, source_col_entry / denom);
             }
 
             // Fetch rows from neighbors and update mean
@@ -134,11 +126,7 @@ impl Variable for MultiMean {
                 for col in 0..cols {
                     let neighbor_col_data =
                         parent_data.data_at(neighbor, col) * relationship_weight;
-                    result_means.add_data_at(
-                        batch_idx,
-                        col,
-                        neighbor_col_data / denom,
-                    );
+                    result_means.add_data_at(batch_idx, col, neighbor_col_data / denom);
                 }
             }
         }

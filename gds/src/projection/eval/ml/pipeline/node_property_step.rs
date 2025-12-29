@@ -239,14 +239,12 @@ impl ExecutableNodePropertyStep for NodePropertyStep {
                     .map(|t| RelationshipType::of(t.clone()))
                     .collect();
 
-                let graph = graph_store
-                    .get_graph_with_types(&rel_types)
-                    .map_err(|e| {
-                        Box::new(NodePropertyStepError::ExecutionFailed {
-                            algorithm: self.algorithm_name.clone(),
-                            message: format!("failed to build graph view: {e}"),
-                        }) as Box<dyn StdError>
-                    })?;
+                let graph = graph_store.get_graph_with_types(&rel_types).map_err(|e| {
+                    Box::new(NodePropertyStepError::ExecutionFailed {
+                        algorithm: self.algorithm_name.clone(),
+                        message: format!("failed to build graph view: {e}"),
+                    }) as Box<dyn StdError>
+                })?;
 
                 let result = run_pagerank(graph, config, None);
 

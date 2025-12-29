@@ -84,7 +84,9 @@ impl HashGNNBuilder {
             return Err(AlgorithmError::Execution("iterations must be > 0".into()));
         }
         if self.config.embedding_density == 0 {
-            return Err(AlgorithmError::Execution("embedding_density must be > 0".into()));
+            return Err(AlgorithmError::Execution(
+                "embedding_density must be > 0".into(),
+            ));
         }
         ConfigValidator::in_range(
             self.config.neighbor_influence,

@@ -3,7 +3,9 @@
 //! Handles JSON requests for ApproxMaxKCut community detection operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::approx_max_k_cut::{ApproxMaxKCutBuilder, ApproxMaxKCutRow};
+use crate::procedures::facades::community::approx_max_k_cut::{
+    ApproxMaxKCutBuilder, ApproxMaxKCutRow,
+};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -23,10 +25,7 @@ pub fn handle_approx_max_k_cut(request: &Value, catalog: Arc<dyn GraphCatalog>) 
         .and_then(|v| v.as_str())
         .unwrap_or("stream");
 
-    let k = request
-        .get("k")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(2) as u8;
+    let k = request.get("k").and_then(|v| v.as_u64()).unwrap_or(2) as u8;
 
     let iterations = request
         .get("iterations")
@@ -51,13 +50,24 @@ pub fn handle_approx_max_k_cut(request: &Value, catalog: Arc<dyn GraphCatalog>) 
     let min_community_sizes = request
         .get("minCommunitySizes")
         .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_u64()).map(|v| v as usize).collect())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_u64())
+                .map(|v| v as usize)
+                .collect()
+        })
         .unwrap_or(vec![0; k as usize]);
 
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create builder
@@ -83,7 +93,11 @@ pub fn handle_approx_max_k_cut(request: &Value, catalog: Arc<dyn GraphCatalog>) 
                     "data": rows
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("ApproxMaxKCut execution failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("ApproxMaxKCut execution failed: {:?}", e),
+            ),
         },
         "stats" => match builder.stats() {
             Ok(stats) => json!({
@@ -91,7 +105,11 @@ pub fn handle_approx_max_k_cut(request: &Value, catalog: Arc<dyn GraphCatalog>) 
                 "op": op,
                 "data": stats
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("ApproxMaxKCut stats failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("ApproxMaxKCut stats failed: {:?}", e),
+            ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

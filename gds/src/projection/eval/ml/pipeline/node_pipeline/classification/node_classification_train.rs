@@ -482,12 +482,7 @@ mod tests {
         let model_catalog = ();
         let algorithms_facade = ();
 
-        NodeClassificationTrain::estimate(
-            &pipeline,
-            &config,
-            &model_catalog,
-            &algorithms_facade,
-        );
+        NodeClassificationTrain::estimate(&pipeline, &config, &model_catalog, &algorithms_facade);
 
         // Should return placeholder for now
     }

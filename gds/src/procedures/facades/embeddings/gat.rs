@@ -1,8 +1,8 @@
 use crate::prelude::DefaultGraphStore;
 use crate::prelude::GraphStore;
+use crate::procedures::embeddings::gat::storage::GATStorageRuntime;
 use crate::procedures::embeddings::GATConfig;
 use crate::procedures::embeddings::GATResult;
-use crate::procedures::embeddings::gat::storage::GATStorageRuntime;
 use crate::procedures::facades::traits as facade;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -64,9 +64,16 @@ impl GATBuilder {
         let storage = GATStorageRuntime::new();
         // For now, assume natural orientation, empty rel types
         let rel_types = std::collections::HashSet::new();
-        let graph = self.graph_store
-            .get_graph_with_types_selectors_and_orientation(&rel_types, &HashMap::new(), crate::projection::orientation::Orientation::Natural)
-            .map_err(|e: Box<dyn std::error::Error + Send + Sync>| crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string()))?;
+        let graph = self
+            .graph_store
+            .get_graph_with_types_selectors_and_orientation(
+                &rel_types,
+                &HashMap::new(),
+                crate::projection::orientation::Orientation::Natural,
+            )
+            .map_err(|e: Box<dyn std::error::Error + Send + Sync>| {
+                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+            })?;
         Ok(storage.compute(graph.as_ref(), &self.config))
     }
 }

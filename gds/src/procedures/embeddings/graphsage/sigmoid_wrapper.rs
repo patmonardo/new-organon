@@ -31,5 +31,3 @@ impl ActivationFunctionWrapper for SigmoidWrapper {
         ActivationFunctionType::Sigmoid
     }
 }
-
-

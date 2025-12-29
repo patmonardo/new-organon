@@ -3,7 +3,9 @@
 //! Handles JSON requests for Label Propagation community detection operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::label_propagation::{LabelPropagationBuilder, LabelPropagationRow};
+use crate::procedures::facades::community::label_propagation::{
+    LabelPropagationBuilder, LabelPropagationRow,
+};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -46,7 +48,13 @@ pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>)
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create builder
@@ -73,7 +81,11 @@ pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>)
                     "data": rows
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Label Propagation execution failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Label Propagation execution failed: {:?}", e),
+            ),
         },
         "stats" => match builder.stats() {
             Ok(stats) => json!({
@@ -81,7 +93,11 @@ pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>)
                 "op": op,
                 "data": stats
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Label Propagation stats failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Label Propagation stats failed: {:?}", e),
+            ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

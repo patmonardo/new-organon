@@ -34,7 +34,8 @@ impl KnnComputationRuntime {
             .into_par_iter()
             .flat_map_iter(|i| {
                 let source = i as u64;
-                let mut rows: Vec<KnnComputationResult> = Vec::with_capacity(k.min(node_count.saturating_sub(1)));
+                let mut rows: Vec<KnnComputationResult> =
+                    Vec::with_capacity(k.min(node_count.saturating_sub(1)));
 
                 for j in 0..node_count {
                     if i == j {
@@ -51,7 +52,11 @@ impl KnnComputationRuntime {
                     }
                 }
 
-                rows.sort_by(|a, b| b.similarity.partial_cmp(&a.similarity).unwrap_or(std::cmp::Ordering::Equal));
+                rows.sort_by(|a, b| {
+                    b.similarity
+                        .partial_cmp(&a.similarity)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                });
                 rows.truncate(k);
                 rows
             })

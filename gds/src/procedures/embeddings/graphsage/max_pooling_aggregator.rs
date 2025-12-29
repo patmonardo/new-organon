@@ -111,5 +111,3 @@ impl Aggregator for MaxPoolingAggregator {
         self.activation_function_wrapper.activation_function_type()
     }
 }
-
-

@@ -11,10 +11,10 @@ use crate::projection::eval::procedure::ExecutionContext;
 use crate::substrate::{RealityFabric, WitnessFabric};
 
 use super::form_spec::{
-    time_form_eval, CommitSubgraphOperator, FormError, FormInput, FormOperator, FormOperatorOutput,
-    FormRequest, FormResult, MaterializeNodePropertiesOperator,
-    MaterializeRelationshipPropertiesOperator, PassThroughFormOperator,
-    CitFormOperator, EssenceFormOperator, ReflectionFormOperator, ShineFormOperator,
+    time_form_eval, CitFormOperator, CommitSubgraphOperator, EssenceFormOperator, FormError,
+    FormInput, FormOperator, FormOperatorOutput, FormRequest, FormResult,
+    MaterializeNodePropertiesOperator, MaterializeRelationshipPropertiesOperator,
+    PassThroughFormOperator, ReflectionFormOperator, ShineFormOperator,
 };
 
 /// A registry of Form operators.
@@ -157,7 +157,10 @@ impl FormProcessor {
                 }
 
                 current_graph = graph;
-                last_proof = step_proofs.last().cloned().unwrap_or(serde_json::Value::Null);
+                last_proof = step_proofs
+                    .last()
+                    .cloned()
+                    .unwrap_or(serde_json::Value::Null);
             }
 
             Ok((current_graph, last_proof))
@@ -405,11 +408,9 @@ mod tests {
         assert!(events.iter().any(|e| e["kind"] == "form.eval.start"));
         assert!(events.iter().any(|e| e["kind"] == "form.eval.step"));
         assert!(events.iter().any(|e| e["kind"] == "form.eval.end"));
-        assert!(
-            events
-                .iter()
-                .any(|e| e["kind"] == "facttrace" && e["payload"]["kind"] == "form.eval")
-        );
+        assert!(events
+            .iter()
+            .any(|e| e["kind"] == "facttrace" && e["payload"]["kind"] == "form.eval"));
         assert!(
             events
                 .iter()

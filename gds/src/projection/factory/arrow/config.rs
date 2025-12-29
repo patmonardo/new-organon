@@ -154,10 +154,7 @@ impl ArrowProjectionConfigBuilder {
     }
 
     /// Set the preferred collections backend (Arrow, Huge, Vec).
-    pub fn collections_backend(
-        mut self,
-        backend: crate::config::CollectionsBackend,
-    ) -> Self {
+    pub fn collections_backend(mut self, backend: crate::config::CollectionsBackend) -> Self {
         self.collections_backend = Some(backend);
         self
     }

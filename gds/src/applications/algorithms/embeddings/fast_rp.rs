@@ -46,7 +46,13 @@ pub fn handle_fast_rp(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create and configure builder
@@ -73,7 +79,11 @@ pub fn handle_fast_rp(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
                     "data": embeddings
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Failed to compute embeddings: {}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Failed to compute embeddings: {}", e),
+            ),
         },
         "stats" => {
             // For stats mode, we compute all embeddings and return summary
@@ -81,7 +91,10 @@ pub fn handle_fast_rp(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
                 Ok(iter) => {
                     let embeddings: Vec<_> = iter.collect();
                     let node_count = embeddings.len();
-                    let embedding_dim = embeddings.first().map(|row| row.embedding.len()).unwrap_or(0);
+                    let embedding_dim = embeddings
+                        .first()
+                        .map(|row| row.embedding.len())
+                        .unwrap_or(0);
                     json!({
                         "op": op,
                         "success": true,
@@ -91,11 +104,23 @@ pub fn handle_fast_rp(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
                         }
                     })
                 }
-                Err(e) => err(op, "EXECUTION_ERROR", &format!("Failed to compute embeddings: {}", e)),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Failed to compute embeddings: {}", e),
+                ),
             }
         }
-        "mutate" => err(op, "NOT_IMPLEMENTED", "mutate mode not yet implemented for FastRP"),
-        "write" => err(op, "NOT_IMPLEMENTED", "write mode not yet implemented for FastRP"),
+        "mutate" => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "mutate mode not yet implemented for FastRP",
+        ),
+        "write" => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "write mode not yet implemented for FastRP",
+        ),
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
 }

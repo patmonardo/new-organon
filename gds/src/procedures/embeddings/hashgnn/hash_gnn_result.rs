@@ -19,5 +19,3 @@ pub enum HashGNNEmbeddings {
 pub struct HashGNNResult {
     pub embeddings: HashGNNEmbeddings,
 }
-
-

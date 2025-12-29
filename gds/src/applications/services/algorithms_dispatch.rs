@@ -63,7 +63,9 @@ pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
 }
 
 pub fn handle_articulation_points(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
-    crate::applications::algorithms::centrality::articulation_points::handle_articulation_points(request, catalog)
+    crate::applications::algorithms::centrality::articulation_points::handle_articulation_points(
+        request, catalog,
+    )
 }
 
 pub fn handle_betweenness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
@@ -83,7 +85,9 @@ pub fn handle_closeness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Valu
 }
 
 pub fn handle_degree_centrality(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
-    crate::applications::algorithms::centrality::degree_centrality::handle_degree_centrality(request, catalog)
+    crate::applications::algorithms::centrality::degree_centrality::handle_degree_centrality(
+        request, catalog,
+    )
 }
 
 pub fn handle_harmonic(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
@@ -95,7 +99,9 @@ pub fn handle_hits(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 }
 
 pub fn handle_approx_max_k_cut(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
-    crate::applications::algorithms::community::approx_max_k_cut::handle_approx_max_k_cut(request, catalog)
+    crate::applications::algorithms::community::approx_max_k_cut::handle_approx_max_k_cut(
+        request, catalog,
+    )
 }
 
 pub fn handle_conductance(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
@@ -115,14 +121,19 @@ pub fn handle_kmeans(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 }
 
 pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
-    crate::applications::algorithms::community::label_propagation::handle_label_propagation(request, catalog)
+    crate::applications::algorithms::community::label_propagation::handle_label_propagation(
+        request, catalog,
+    )
 }
 
 pub fn handle_leiden(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::algorithms::community::leiden::handle_leiden(request, catalog)
 }
 
-pub fn handle_local_clustering_coefficient(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+pub fn handle_local_clustering_coefficient(
+    request: &Value,
+    catalog: Arc<dyn GraphCatalog>,
+) -> Value {
     crate::applications::algorithms::community::local_clustering_coefficient::handle_local_clustering_coefficient(request, catalog)
 }
 
@@ -139,7 +150,9 @@ pub fn handle_scc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 }
 
 pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
-    crate::applications::algorithms::community::triangle_count::handle_triangle_count(request, catalog)
+    crate::applications::algorithms::community::triangle_count::handle_triangle_count(
+        request, catalog,
+    )
 }
 
 pub fn handle_wcc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
@@ -151,7 +164,9 @@ pub fn handle_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 }
 
 pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
-    crate::applications::algorithms::similarity::node_similarity::handle_node_similarity(request, catalog)
+    crate::applications::algorithms::similarity::node_similarity::handle_node_similarity(
+        request, catalog,
+    )
 }
 
 pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {

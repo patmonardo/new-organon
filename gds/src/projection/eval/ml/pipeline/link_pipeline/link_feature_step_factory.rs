@@ -1,6 +1,8 @@
 // LinkFeatureStepFactory - Factory enum for creating LinkFeatureStep instances
 
-use super::linkfunctions::{CosineFeatureStep, HadamardFeatureStep, L2FeatureStep, SameCategoryStep};
+use super::linkfunctions::{
+    CosineFeatureStep, HadamardFeatureStep, L2FeatureStep, SameCategoryStep,
+};
 use super::LinkFeatureStep;
 use serde_json::Value;
 use std::fmt;

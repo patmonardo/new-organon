@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use crate::applications::graph_store_catalog::loaders::GraphStoreCatalogService;
 use crate::applications::graph_store_catalog::facade::{NativeProjectionConfig, ProjectionResult};
+use crate::applications::graph_store_catalog::loaders::GraphStoreCatalogService;
 use crate::core::User;
 use crate::projection::{NodeLabel, RelationshipType};
 use crate::types::graph_store::{DatabaseId, DefaultGraphStore, GraphStore as _};
@@ -46,7 +46,9 @@ impl NativeProjectApplication {
                     graph_name: cfg.graph_name.clone(),
                     database_name: database_id.to_string(),
                     node_count: 64,
-                    relationships: vec![crate::types::random::RandomRelationshipConfig::new("REL", 0.1)],
+                    relationships: vec![crate::types::random::RandomRelationshipConfig::new(
+                        "REL", 0.1,
+                    )],
                     ..Default::default()
                 };
                 let mut rng = StdRng::seed_from_u64(0);
@@ -67,7 +69,9 @@ impl NativeProjectApplication {
                 }
                 let label = NodeLabel::of(t);
                 if !store.has_node_label(&label) {
-                    return Err(format!("Unknown node label '{t}' in projectionConfig.nodeLabels"));
+                    return Err(format!(
+                        "Unknown node label '{t}' in projectionConfig.nodeLabels"
+                    ));
                 }
             }
         }
@@ -75,10 +79,7 @@ impl NativeProjectApplication {
         // Minimal “projection vocabulary” (pass-1):
         // - relationshipTypes filter: remove relationship types not included.
         // Java parity: "*" means PROJECT_ALL.
-        let has_wildcard = cfg
-            .relationship_types
-            .iter()
-            .any(|s| s.trim() == "*");
+        let has_wildcard = cfg.relationship_types.iter().any(|s| s.trim() == "*");
         if !cfg.relationship_types.is_empty() && !has_wildcard {
             let keep: std::collections::HashSet<RelationshipType> = cfg
                 .relationship_types
@@ -96,9 +97,9 @@ impl NativeProjectApplication {
             let all_types = store.relationship_types();
             for t in all_types.into_iter() {
                 if !keep.contains(&t) {
-                    store
-                        .delete_relationships(&t)
-                        .map_err(|e| format!("Failed to filter relationship type '{}': {e}", t.name()))?;
+                    store.delete_relationships(&t).map_err(|e| {
+                        format!("Failed to filter relationship type '{}': {e}", t.name())
+                    })?;
                 }
             }
         }
@@ -123,10 +124,7 @@ impl NativeProjectApplication {
         }
 
         // Minimal “projection vocabulary” (pass-1): relationshipProperties pruning.
-        let rel_prop_has_wildcard = cfg
-            .relationship_properties
-            .iter()
-            .any(|s| s.trim() == "*");
+        let rel_prop_has_wildcard = cfg.relationship_properties.iter().any(|s| s.trim() == "*");
         if !cfg.relationship_properties.is_empty() && !rel_prop_has_wildcard {
             let mut keep: std::collections::HashSet<String> = cfg
                 .relationship_properties
@@ -152,15 +150,13 @@ impl NativeProjectApplication {
                 let keys = store.relationship_property_keys_for_type(&t);
                 for k in keys {
                     if !keep.contains(&k) {
-                        store
-                            .remove_relationship_property(&t, &k)
-                            .map_err(|e| {
-                                format!(
-                                    "Failed to prune relationship property '{}' for type '{}': {e}",
-                                    k,
-                                    t.name()
-                                )
-                            })?;
+                        store.remove_relationship_property(&t, &k).map_err(|e| {
+                            format!(
+                                "Failed to prune relationship property '{}' for type '{}': {e}",
+                                k,
+                                t.name()
+                            )
+                        })?;
                     }
                 }
             }

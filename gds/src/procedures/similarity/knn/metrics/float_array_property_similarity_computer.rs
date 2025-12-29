@@ -27,7 +27,9 @@ impl SimilarityComputer for FloatArrayPropertySimilarityComputer {
         };
 
         match self.metric {
-            SimilarityMetric::Cosine | SimilarityMetric::Default => cosine::float_metric(&left, &right),
+            SimilarityMetric::Cosine | SimilarityMetric::Default => {
+                cosine::float_metric(&left, &right)
+            }
             SimilarityMetric::Euclidean => euclidean::float_metric(&left, &right),
             SimilarityMetric::Pearson => pearson::float_metric(&left, &right),
             _ => 0.0,

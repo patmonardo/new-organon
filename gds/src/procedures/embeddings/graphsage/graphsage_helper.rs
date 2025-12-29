@@ -36,7 +36,9 @@ pub fn embeddings_computation_graph(
     for layer_nr in (0..layers.len()).rev() {
         let layer_idx = layers.len() - layer_nr - 1;
         let layer = &layers[layer_idx];
-        previous_layer = layer.aggregator().aggregate(previous_layer, &sub_graphs[layer_nr]);
+        previous_layer = layer
+            .aggregator()
+            .aggregate(previous_layer, &sub_graphs[layer_nr]);
     }
 
     Arc::new(NormalizeRows::new_ref(previous_layer))
@@ -127,24 +129,28 @@ pub fn multi_label_feature_extractors(
     for node_id in 0..graph.node_count() {
         let node_label = label_of(graph, node_id as u64);
 
-        extractors_per_label.entry(node_label.clone()).or_insert_with(|| {
-            let property_keys = filtered_keys_per_label
-                .get(&node_label)
-                .cloned()
-                .unwrap_or_default()
-                .into_iter()
-                .collect::<Vec<_>>();
+        extractors_per_label
+            .entry(node_label.clone())
+            .or_insert_with(|| {
+                let property_keys = filtered_keys_per_label
+                    .get(&node_label)
+                    .cloned()
+                    .unwrap_or_default()
+                    .into_iter()
+                    .collect::<Vec<_>>();
 
-            let mut extractors =
-                features::property_extractors_with_init(graph, &property_keys, node_id as u64);
-            extractors.push(features::AnyFeatureExtractor::Scalar(Box::new(BiasFeature)));
-            extractors
-        });
+                let mut extractors =
+                    features::property_extractors_with_init(graph, &property_keys, node_id as u64);
+                extractors.push(features::AnyFeatureExtractor::Scalar(Box::new(BiasFeature)));
+                extractors
+            });
 
-        feature_count_per_label.entry(node_label.clone()).or_insert_with(|| {
-            let xs = extractors_per_label.get(&node_label).unwrap();
-            features::feature_count(xs)
-        });
+        feature_count_per_label
+            .entry(node_label.clone())
+            .or_insert_with(|| {
+                let xs = extractors_per_label.get(&node_label).unwrap();
+                features::feature_count(xs)
+            });
     }
 
     MultiLabelFeatureExtractors {
@@ -207,7 +213,11 @@ pub fn layer_configs(
 
     let mut result = Vec::with_capacity(sample_sizes.len());
     for (i, &sample_size) in sample_sizes.iter().enumerate() {
-        let cols = if i == 0 { feature_dimension } else { embedding_dimension };
+        let cols = if i == 0 {
+            feature_dimension
+        } else {
+            embedding_dimension
+        };
         result.push(LayerConfig {
             rows: embedding_dimension,
             cols,
@@ -233,7 +243,9 @@ struct GraphNeighborhoodFunction {
 
 impl NeighborhoodFunction for GraphNeighborhoodFunction {
     fn sample(&self, node_id: u64) -> Box<dyn Iterator<Item = u64> + '_> {
-        let sampled = self.sampler.sample(self.graph.as_ref(), node_id, self.sample_size);
+        let sampled = self
+            .sampler
+            .sample(self.graph.as_ref(), node_id, self.sample_size);
         Box::new(sampled.into_iter())
     }
 }
@@ -251,8 +263,11 @@ fn build_sub_graphs(node_ids: &[u64], samplers: &[GraphNeighborhoodFunction]) ->
 
         let mut neighbors_local: Vec<Vec<usize>> = Vec::with_capacity(current_batch.len());
         let weighted = sampler.graph.has_relationship_property();
-        let mut neighbor_weights: Option<Vec<Vec<f64>>> =
-            if weighted { Some(Vec::with_capacity(current_batch.len())) } else { None };
+        let mut neighbor_weights: Option<Vec<Vec<f64>>> = if weighted {
+            Some(Vec::with_capacity(current_batch.len()))
+        } else {
+            None
+        };
 
         for &src in &current_batch {
             let src_local = map.to_mapped(src);
@@ -263,7 +278,9 @@ fn build_sub_graphs(node_ids: &[u64], samplers: &[GraphNeighborhoodFunction]) ->
 
             for nbr in sampler.sample(src) {
                 if weighted {
-                    let w = sampler.graph.relationship_property(src as i64, nbr as i64, 1.0);
+                    let w = sampler
+                        .graph
+                        .relationship_property(src as i64, nbr as i64, 1.0);
                     weights.push(w);
                 }
                 let n_local = map.to_mapped(nbr);
@@ -289,5 +306,3 @@ fn build_sub_graphs(node_ids: &[u64], samplers: &[GraphNeighborhoodFunction]) ->
 
     result
 }
-
-

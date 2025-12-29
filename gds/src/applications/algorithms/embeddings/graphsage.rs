@@ -46,7 +46,13 @@ pub fn handle_graphsage(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Valu
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create and configure builder
@@ -77,7 +83,11 @@ pub fn handle_graphsage(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Valu
                     "data": embeddings
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Failed to compute embeddings: {}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Failed to compute embeddings: {}", e),
+            ),
         },
         "stats" => match builder.run() {
             Ok(result) => {
@@ -90,10 +100,22 @@ pub fn handle_graphsage(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Valu
                     }
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Failed to compute embeddings: {}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Failed to compute embeddings: {}", e),
+            ),
         },
-        "mutate" => err(op, "NOT_IMPLEMENTED", "mutate mode not yet implemented for GraphSAGE"),
-        "write" => err(op, "NOT_IMPLEMENTED", "write mode not yet implemented for GraphSAGE"),
+        "mutate" => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "mutate mode not yet implemented for GraphSAGE",
+        ),
+        "write" => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "write mode not yet implemented for GraphSAGE",
+        ),
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
 }

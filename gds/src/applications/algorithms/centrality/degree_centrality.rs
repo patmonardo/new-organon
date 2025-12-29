@@ -45,13 +45,25 @@ pub fn handle_degree_centrality(request: &Value, catalog: Arc<dyn GraphCatalog>)
         "natural" => Orientation::Natural,
         "reverse" => Orientation::Reverse,
         "undirected" => Orientation::Undirected,
-        _ => return err(op, "INVALID_REQUEST", "Invalid orientation. Use 'natural', 'reverse', or 'undirected'"),
+        _ => {
+            return err(
+                op,
+                "INVALID_REQUEST",
+                "Invalid orientation. Use 'natural', 'reverse', or 'undirected'",
+            )
+        }
     };
 
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create facade
@@ -71,7 +83,11 @@ pub fn handle_degree_centrality(request: &Value, catalog: Arc<dyn GraphCatalog>)
                     "data": rows
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Degree centrality execution failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Degree centrality execution failed: {:?}", e),
+            ),
         },
         "stats" => match facade.stats() {
             Ok(stats) => json!({
@@ -79,7 +95,11 @@ pub fn handle_degree_centrality(request: &Value, catalog: Arc<dyn GraphCatalog>)
                 "op": op,
                 "data": stats
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Degree centrality stats failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Degree centrality stats failed: {:?}", e),
+            ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

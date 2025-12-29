@@ -32,11 +32,15 @@ impl DropNodePropertiesApplication {
                 Ok(()) => {
                     removed_count += 1;
                     // Log successful removal
-                    self.log.info(&format!("Removed node property: {}", property_key));
+                    self.log
+                        .info(&format!("Removed node property: {}", property_key));
                 }
                 Err(e) => {
                     // Log the error but continue with other properties
-                    self.log.warn(&format!("Failed to remove node property '{}': {}", property_key, e));
+                    self.log.warn(&format!(
+                        "Failed to remove node property '{}': {}",
+                        property_key, e
+                    ));
                 }
             }
         }

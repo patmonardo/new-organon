@@ -78,5 +78,3 @@ impl RawFeaturesTask {
         (out, total_feature_count)
     }
 }
-
-

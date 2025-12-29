@@ -28,20 +28,27 @@ impl MemoryEstimation for GraphSageMemoryEstimateDefinition {
 
     fn estimate(&self, dimensions: &dyn GraphDimensions, concurrency: usize) -> MemoryTree {
         let node_count = dimensions.node_count();
-        let train_params = TrainConfigTransformer::to_memory_estimate_parameters(&self.train_config);
+        let train_params =
+            TrainConfigTransformer::to_memory_estimate_parameters(&self.train_config);
 
         // initialFeatures: per node double[] of estimationFeatureDimension
-        let initial_features = node_count * Estimate::size_of_double_array(train_params.estimation_feature_dimension);
+        let initial_features =
+            node_count * Estimate::size_of_double_array(train_params.estimation_feature_dimension);
 
         // resultFeatures: per node double[] of embeddingDimension (resident if mutating, otherwise temporary in Java)
-        let result_features = node_count * Estimate::size_of_double_array(train_params.embedding_dimension);
+        let result_features =
+            node_count * Estimate::size_of_double_array(train_params.embedding_dimension);
 
         // A coarse per-thread estimate: embeddings computation graph allocs roughly scale with batchSize.
         let per_thread_batch = (3 * train_params.batch_size).max(1);
-        let per_thread = per_thread_batch * Estimate::size_of_double_array(train_params.embedding_dimension);
+        let per_thread =
+            per_thread_batch * Estimate::size_of_double_array(train_params.embedding_dimension);
 
         let mut temporary_components = vec![
-            MemoryTree::leaf("this.instance".into(), MemoryRange::of(Estimate::BYTES_OBJECT_HEADER)),
+            MemoryTree::leaf(
+                "this.instance".into(),
+                MemoryRange::of(Estimate::BYTES_OBJECT_HEADER),
+            ),
             MemoryTree::leaf("initialFeatures".into(), MemoryRange::of(initial_features)),
             MemoryTree::leaf(
                 "concurrentBatches".into(),
@@ -87,5 +94,3 @@ fn sum_ranges(children: &[MemoryTree]) -> MemoryRange {
         .iter()
         .fold(MemoryRange::empty(), |acc, t| acc.add(t.memory_usage()))
 }
-
-

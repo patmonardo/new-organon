@@ -13,5 +13,3 @@ pub fn invoke(request_json: String) -> napi::Result<String> {
 pub fn version() -> String {
     crate::applications::services::tsjson::version()
 }
-
-

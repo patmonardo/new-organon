@@ -2,7 +2,9 @@
 
 use crate::core::graph_dimensions::GraphDimensions;
 use crate::mem::{Estimate, MemoryEstimation, MemoryRange, MemoryTree};
-use crate::procedures::embeddings::graphsage::types::{AggregatorType, GraphSageTrainMemoryEstimateParameters};
+use crate::procedures::embeddings::graphsage::types::{
+    AggregatorType, GraphSageTrainMemoryEstimateParameters,
+};
 
 #[derive(Debug, Clone)]
 pub struct GraphSageTrainEstimateDefinition {
@@ -50,16 +52,21 @@ impl MemoryEstimation for GraphSageTrainEstimateDefinition {
         // Multi-label: weightsByLabel (range per label count) - we don't have labelCount in GraphDimensions.
         // We conservatively assume 1 label in estimation dimensions.
         let label_count = 1usize;
-        let mut temp_components = vec![
-            MemoryTree::leaf("this.instance".into(), MemoryRange::of(Estimate::BYTES_OBJECT_HEADER)),
-        ];
+        let mut temp_components = vec![MemoryTree::leaf(
+            "this.instance".into(),
+            MemoryRange::of(Estimate::BYTES_OBJECT_HEADER),
+        )];
 
         if self.parameters.is_multi_label {
             let min_num_properties = 1usize;
             let max_num_properties = self.parameters.feature_property_count + 1; // +1 bias
 
-            let min_mem = Estimate::size_of_double_array(self.parameters.estimation_feature_dimension * min_num_properties);
-            let max_mem = Estimate::size_of_double_array(self.parameters.estimation_feature_dimension * max_num_properties);
+            let min_mem = Estimate::size_of_double_array(
+                self.parameters.estimation_feature_dimension * min_num_properties,
+            );
+            let max_mem = Estimate::size_of_double_array(
+                self.parameters.estimation_feature_dimension * max_num_properties,
+            );
             temp_components.push(MemoryTree::leaf(
                 "weightsByLabel".into(),
                 MemoryRange::of_range(min_mem, max_mem).times(label_count),
@@ -67,7 +74,11 @@ impl MemoryEstimation for GraphSageTrainEstimateDefinition {
         }
 
         // initialFeatures: range per node (multi-label min is 1 feature, max is estimationFeatureDimension)
-        let min_init = Estimate::size_of_double_array(if self.parameters.is_multi_label { 1 } else { self.parameters.estimation_feature_dimension });
+        let min_init = Estimate::size_of_double_array(if self.parameters.is_multi_label {
+            1
+        } else {
+            self.parameters.estimation_feature_dimension
+        });
         let max_init = Estimate::size_of_double_array(self.parameters.estimation_feature_dimension);
         temp_components.push(MemoryTree::leaf(
             "initialFeatures".into(),
@@ -76,7 +87,8 @@ impl MemoryEstimation for GraphSageTrainEstimateDefinition {
 
         // trainOnEpoch -> per thread trainOnBatch estimate:
         let per_thread_batch = (3 * self.parameters.batch_size).max(1);
-        let per_thread = per_thread_batch * Estimate::size_of_double_array(self.parameters.embedding_dimension)
+        let per_thread = per_thread_batch
+            * Estimate::size_of_double_array(self.parameters.embedding_dimension)
             + adam_update;
         temp_components.push(MemoryTree::leaf(
             "initialAdamOptimizer".into(),
@@ -115,5 +127,3 @@ fn sum_ranges(children: &[MemoryTree]) -> MemoryRange {
         .iter()
         .fold(MemoryRange::empty(), |acc, t| acc.add(t.memory_usage()))
 }
-
-

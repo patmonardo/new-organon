@@ -7,5 +7,3 @@ pub struct GraphSageModel {
     pub layers: Vec<crate::procedures::embeddings::graphsage::types::LayerConfig>,
     pub config: GraphSageTrainConfig,
 }
-
-

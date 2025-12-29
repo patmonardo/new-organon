@@ -110,7 +110,8 @@ impl FastRP {
         let _ = self.min_batch_size;
 
         let embedding_dimension = self.parameters.embedding_dimension;
-        let base_embedding_dimension = embedding_dimension.saturating_sub(self.parameters.property_dimension);
+        let base_embedding_dimension =
+            embedding_dimension.saturating_sub(self.parameters.property_dimension);
 
         let feature_dim = feature_extraction::feature_count(&self.feature_extractors);
         let property_vectors = self.init_property_vectors(feature_dim);
@@ -140,11 +141,12 @@ impl FastRP {
             return vec![vec![]; feature_dim];
         }
 
-        let entry_value = ((Self::SPARSITY as f32).sqrt())
-            / (self.parameters.embedding_dimension as f32).sqrt();
+        let entry_value =
+            ((Self::SPARSITY as f32).sqrt()) / (self.parameters.embedding_dimension as f32).sqrt();
 
         let mut random = HighQualityRandom::new(self.random_seed);
-        let mut property_vectors: Vec<Vec<f32>> = vec![vec![0.0f32; property_dimension]; feature_dim];
+        let mut property_vectors: Vec<Vec<f32>> =
+            vec![vec![0.0f32; property_dimension]; feature_dim];
 
         for d in 0..property_dimension {
             for pv in property_vectors.iter_mut().take(feature_dim) {
@@ -168,7 +170,11 @@ impl FastRP {
         // Per-node deterministic reseeding to match Java behaviour.
         let mut random = HighQualityRandom::new(self.random_seed);
 
-        for (node_usize, embedding_slot) in embedding_b.iter_mut().enumerate().take(self.graph.node_count()) {
+        for (node_usize, embedding_slot) in embedding_b
+            .iter_mut()
+            .enumerate()
+            .take(self.graph.node_count())
+        {
             self.termination_flag.assert_running();
             let node_id = node_usize as i64;
 
@@ -196,14 +202,23 @@ impl FastRP {
                     property_vectors,
                     &mut vec,
                 );
-                feature_extraction::extract(node_id as u64, 0, &self.feature_extractors, &mut adder);
+                feature_extraction::extract(
+                    node_id as u64,
+                    0,
+                    &self.feature_extractors,
+                    &mut adder,
+                );
             }
 
             *embedding_slot = vec;
         }
     }
 
-    fn add_initial_vectors_to_embedding(&self, embedding_b: &[Vec<f32>], embeddings: &mut [Vec<f32>]) {
+    fn add_initial_vectors_to_embedding(
+        &self,
+        embedding_b: &[Vec<f32>],
+        embeddings: &mut [Vec<f32>],
+    ) {
         if self.parameters.node_self_influence == 0.0 {
             return;
         }
@@ -227,7 +242,8 @@ impl FastRP {
         embedding_a: &mut [Vec<f32>],
         embedding_b: &mut [Vec<f32>],
     ) -> Result<(), AlgorithmError> {
-        let relationship_weight_fallback = if self.parameters.relationship_weight_property.is_some() {
+        let relationship_weight_fallback = if self.parameters.relationship_weight_property.is_some()
+        {
             f64::NAN
         } else {
             1.0
@@ -251,13 +267,18 @@ impl FastRP {
                 current_vec.fill(0.0);
 
                 if self.graph.has_relationship_property() {
-                    for cursor in self.graph.stream_relationships_weighted(node_id, relationship_weight_fallback) {
+                    for cursor in self
+                        .graph
+                        .stream_relationships_weighted(node_id, relationship_weight_fallback)
+                    {
                         let weight = cursor.weight();
                         if first_iteration && weight.is_nan() {
                             let source = cursor.source_id();
                             let target = cursor.target_id();
-                            let source_orig = self.graph.to_original_node_id(source).unwrap_or(source);
-                            let target_orig = self.graph.to_original_node_id(target).unwrap_or(target);
+                            let source_orig =
+                                self.graph.to_original_node_id(source).unwrap_or(source);
+                            let target_orig =
+                                self.graph.to_original_node_id(target).unwrap_or(target);
 
                             return Err(AlgorithmError::InvalidGraph(format!(
                                 "Missing relationship property `{}` on relationship between nodes with ids `{}` and `{}`.",
@@ -271,10 +292,17 @@ impl FastRP {
                         }
 
                         let target_idx = cursor.target_id() as usize;
-                        add_weighted_in_place_f32(current_vec, &previous[target_idx], weight as f32);
+                        add_weighted_in_place_f32(
+                            current_vec,
+                            &previous[target_idx],
+                            weight as f32,
+                        );
                     }
                 } else {
-                    for cursor in self.graph.stream_relationships(node_id, relationship_weight_fallback) {
+                    for cursor in self
+                        .graph
+                        .stream_relationships(node_id, relationship_weight_fallback)
+                    {
                         let target_idx = cursor.target_id() as usize;
                         add_in_place_f32(current_vec, &previous[target_idx]);
                     }

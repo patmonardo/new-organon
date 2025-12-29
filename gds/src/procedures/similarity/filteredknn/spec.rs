@@ -2,8 +2,8 @@ use super::computation::{FilteredKnnComputationResult, FilteredKnnComputationRun
 use super::storage::FilteredKnnStorageRuntime;
 use crate::define_algorithm_spec;
 use crate::procedures::similarity::knn::metrics::{KnnNodePropertySpec, SimilarityMetric};
-use crate::projection::NodeLabel;
 use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::NodeLabel;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

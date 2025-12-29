@@ -24,4 +24,3 @@ impl NodeSimilarityStorageRuntime {
         computation.compute(graph, config, self.concurrency)
     }
 }
-

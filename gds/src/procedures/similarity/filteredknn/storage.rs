@@ -1,7 +1,9 @@
 use super::computation::{FilteredKnnComputationResult, FilteredKnnComputationRuntime};
-use crate::procedures::similarity::knn::metrics::{KnnNodePropertySpec, SimilarityComputer, SimilarityMetric};
-use crate::projection::NodeLabel;
+use crate::procedures::similarity::knn::metrics::{
+    KnnNodePropertySpec, SimilarityComputer, SimilarityMetric,
+};
 use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::NodeLabel;
 use crate::types::graph_store::GraphStore;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -32,8 +34,9 @@ impl FilteredKnnStorageRuntime {
             .node_property_values(node_property)
             .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
 
-        let similarity = <dyn SimilarityComputer>::of_property_values(node_property, values, metric)
-            .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
+        let similarity =
+            <dyn SimilarityComputer>::of_property_values(node_property, values, metric)
+                .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
 
         let (source_allowed, target_allowed) =
             Self::build_filters(graph_store, source_node_labels, target_node_labels)?;
@@ -64,8 +67,11 @@ impl FilteredKnnStorageRuntime {
             ));
         }
 
-        let mut props: Vec<(String, Arc<dyn crate::types::properties::node::NodePropertyValues>, SimilarityMetric)> =
-            Vec::with_capacity(node_properties.len());
+        let mut props: Vec<(
+            String,
+            Arc<dyn crate::types::properties::node::NodePropertyValues>,
+            SimilarityMetric,
+        )> = Vec::with_capacity(node_properties.len());
 
         for spec in node_properties {
             let name = spec.name.trim();

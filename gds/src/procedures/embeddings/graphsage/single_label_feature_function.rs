@@ -37,5 +37,3 @@ impl FeatureFunction for SingleLabelFeatureFunction {
         ))
     }
 }
-
-

@@ -20,14 +20,17 @@ pub fn handle_steiner_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
 
     let source_node = match request.get("sourceNode").and_then(|v| v.as_u64()) {
         Some(s) => s,
-        None => return err(op, "INVALID_REQUEST", "Missing or invalid 'sourceNode' parameter"),
+        None => {
+            return err(
+                op,
+                "INVALID_REQUEST",
+                "Missing or invalid 'sourceNode' parameter",
+            )
+        }
     };
 
     let target_nodes = if let Some(nodes) = request.get("targetNodes").and_then(|v| v.as_array()) {
-        nodes
-            .iter()
-            .filter_map(|v| v.as_u64())
-            .collect::<Vec<_>>()
+        nodes.iter().filter_map(|v| v.as_u64()).collect::<Vec<_>>()
     } else {
         return err(op, "INVALID_REQUEST", "Missing 'targetNodes' parameter");
     };
@@ -40,10 +43,7 @@ pub fn handle_steiner_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
         .get("relationshipWeightProperty")
         .and_then(|v| v.as_str());
 
-    let delta = request
-        .get("delta")
-        .and_then(|v| v.as_f64())
-        .unwrap_or(1.0);
+    let delta = request.get("delta").and_then(|v| v.as_f64()).unwrap_or(1.0);
 
     let apply_rerouting = request
         .get("applyRerouting")
@@ -58,7 +58,13 @@ pub fn handle_steiner_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create builder
@@ -83,7 +89,11 @@ pub fn handle_steiner_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
                     "data": rows
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Steiner Tree execution failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Steiner Tree execution failed: {:?}", e),
+            ),
         },
         "stats" => match builder.stats() {
             Ok(stats) => json!({
@@ -91,7 +101,11 @@ pub fn handle_steiner_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
                 "op": op,
                 "data": stats
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("Steiner Tree stats failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Steiner Tree stats failed: {:?}", e),
+            ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

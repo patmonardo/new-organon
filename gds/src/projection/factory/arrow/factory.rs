@@ -10,10 +10,10 @@
 
 use super::config::{ArrowProjectionConfig, ArrowProjectionError};
 use super::reference::{EdgeTableReference, NodeTableReference};
-use crate::projection::factory::GraphStoreFactory;
 use crate::projection::factory::arrow::reference::ArrowReference;
-use crate::types::graph_store::DefaultGraphStore;
+use crate::projection::factory::GraphStoreFactory;
 use crate::types::graph::{id_map::PartialIdMap, id_map::SimpleIdMap, RelationshipTopology};
+use crate::types::graph_store::DefaultGraphStore;
 use crate::types::schema::GraphSchema;
 use std::sync::Arc;
 
@@ -104,9 +104,7 @@ impl ArrowNativeFactory {
     }
 
     /// Create a new factory with an explicit collections backend preference.
-    pub fn with_collections_backend(
-        backend: crate::config::CollectionsBackend,
-    ) -> Self {
+    pub fn with_collections_backend(backend: crate::config::CollectionsBackend) -> Self {
         Self {
             _placeholder: (),
             collections_backend: backend,
@@ -184,8 +182,7 @@ impl GraphStoreFactory for ArrowNativeFactory {
 
         // TODO(gds,2025-01-31): Add support for loading tables from config-driven references
         Err(ArrowProjectionError::InvalidConfig(
-            "ArrowNativeFactory needs in-memory node/edge tables (use from_tables())"
-                .to_string(),
+            "ArrowNativeFactory needs in-memory node/edge tables (use from_tables())".to_string(),
         ))
     }
 
@@ -497,7 +494,9 @@ mod tests {
         config.collections_backend = crate::config::CollectionsBackend::Arrow;
 
         let factory = ArrowNativeFactory::from_tables(nodes, edges);
-        let store = factory.build_graph_store(&config).expect("build graph store");
+        let store = factory
+            .build_graph_store(&config)
+            .expect("build graph store");
 
         assert_eq!(store.node_count(), 3);
         assert_eq!(store.relationship_count(), 2);

@@ -15,8 +15,8 @@ impl GraphSageModelResolver {
         username: &str,
         model_name: &str,
     ) -> Result<Arc<Model<GraphSageModelData, GraphSageTrainConfig, GraphSageTrainMetrics>>> {
-        model_catalog.get::<GraphSageModelData, GraphSageTrainConfig, GraphSageTrainMetrics>(username, model_name)
+        model_catalog.get::<GraphSageModelData, GraphSageTrainConfig, GraphSageTrainMetrics>(
+            username, model_name,
+        )
     }
 }
-
-

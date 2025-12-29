@@ -38,10 +38,14 @@ impl StreamRelationshipsApplication {
             // Stream outgoing relationships for each mapped node id.
             let node_count = graph.node_count() as i64;
             for mapped_source in 0..node_count {
-                let source_original = graph.to_original_node_id(mapped_source).unwrap_or(mapped_source);
+                let source_original = graph
+                    .to_original_node_id(mapped_source)
+                    .unwrap_or(mapped_source);
                 for cursor in graph.stream_relationships(mapped_source, f64::NAN) {
                     let target_mapped = cursor.target_id();
-                    let target_original = graph.to_original_node_id(target_mapped).unwrap_or(target_mapped);
+                    let target_original = graph
+                        .to_original_node_id(target_mapped)
+                        .unwrap_or(target_mapped);
                     out.push(TopologyResult::new(
                         source_original,
                         target_original,

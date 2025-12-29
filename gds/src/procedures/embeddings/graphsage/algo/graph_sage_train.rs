@@ -8,5 +8,3 @@ use crate::procedures::embeddings::graphsage::types::GraphSageTrainConfig;
 pub trait GraphSageTrain {
     fn compute(&self) -> Model<GraphSageModelData, GraphSageTrainConfig, GraphSageTrainMetrics>;
 }
-
-

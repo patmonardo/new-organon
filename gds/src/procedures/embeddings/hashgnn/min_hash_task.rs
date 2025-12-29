@@ -93,8 +93,7 @@ impl MinHashTask {
                         self_min_and_arg_min.arg_min
                     };
 
-                    if arg_min != -1
-                        && !current_embedding.get_and_set(arg_min as usize) {
+                    if arg_min != -1 && !current_embedding.get_and_set(arg_min as usize) {
                         total_feature_count += 1;
                     }
                 });
@@ -104,5 +103,3 @@ impl MinHashTask {
         total_feature_count
     }
 }
-
-

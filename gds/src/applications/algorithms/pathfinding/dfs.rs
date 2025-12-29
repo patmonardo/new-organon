@@ -20,7 +20,13 @@ pub fn handle_dfs(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 
     let source = match request.get("sourceNode").and_then(|v| v.as_u64()) {
         Some(s) => s,
-        None => return err(op, "INVALID_REQUEST", "Missing or invalid 'sourceNode' parameter"),
+        None => {
+            return err(
+                op,
+                "INVALID_REQUEST",
+                "Missing or invalid 'sourceNode' parameter",
+            )
+        }
     };
 
     let targets = if let Some(target) = request.get("targetNode").and_then(|v| v.as_u64()) {
@@ -57,7 +63,13 @@ pub fn handle_dfs(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
-        None => return err(op, "GRAPH_NOT_FOUND", &format!("Graph '{}' not found", graph_name)),
+        None => {
+            return err(
+                op,
+                "GRAPH_NOT_FOUND",
+                &format!("Graph '{}' not found", graph_name),
+            )
+        }
     };
 
     // Create builder
@@ -86,7 +98,11 @@ pub fn handle_dfs(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                     "data": path_results
                 })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("DFS execution failed: {:?}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("DFS execution failed: {:?}", e),
+            ),
         },
         "stats" => match builder.stats() {
             Ok(stats) => json!({
@@ -99,7 +115,13 @@ pub fn handle_dfs(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         "mutate" => {
             let property_name = match request.get("property_name").and_then(|v| v.as_str()) {
                 Some(name) => name,
-                None => return err(op, "INVALID_REQUEST", "Missing 'property_name' for mutate mode"),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'property_name' for mutate mode",
+                    )
+                }
             };
             match builder.mutate(property_name) {
                 Ok(result) => json!({
@@ -107,13 +129,23 @@ pub fn handle_dfs(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                     "op": op,
                     "data": result
                 }),
-                Err(e) => err(op, "EXECUTION_ERROR", &format!("DFS mutate failed: {:?}", e)),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("DFS mutate failed: {:?}", e),
+                ),
             }
         }
         "write" => {
             let property_name = match request.get("property_name").and_then(|v| v.as_str()) {
                 Some(name) => name,
-                None => return err(op, "INVALID_REQUEST", "Missing 'property_name' for write mode"),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'property_name' for write mode",
+                    )
+                }
             };
             match builder.write(property_name) {
                 Ok(result) => json!({

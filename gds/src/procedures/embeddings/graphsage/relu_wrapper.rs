@@ -31,5 +31,3 @@ impl ActivationFunctionWrapper for ReluWrapper {
         ActivationFunctionType::Relu
     }
 }
-
-

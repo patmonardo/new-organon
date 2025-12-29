@@ -101,5 +101,3 @@ impl GenerateFeaturesTask {
         self.total_feature_count
     }
 }
-
-

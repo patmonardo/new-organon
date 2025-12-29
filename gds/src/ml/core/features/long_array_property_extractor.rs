@@ -36,9 +36,10 @@ impl FeatureExtractor for LongArrayPropertyExtractor {
 
 impl ArrayFeatureExtractor for LongArrayPropertyExtractor {
     fn extract(&self, node_id: u64) -> Vec<f64> {
-        let values = self.node_property_values.long_array_value(node_id).unwrap_or_else(|e| {
-            panic!("Failed reading property `{}`: {e}", self.property_key)
-        });
+        let values = self
+            .node_property_values
+            .long_array_value(node_id)
+            .unwrap_or_else(|e| panic!("Failed reading property `{}`: {e}", self.property_key));
 
         if values.len() != self.dimension {
             panic!(

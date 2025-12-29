@@ -33,13 +33,13 @@
 //! # Ok::<(), gds::projection::eval::procedure::AlgorithmError>(())
 //! ```
 
+use crate::prints::{PrintEnvelope, PrintKind, PrintProvenance};
 use crate::procedures::embeddings::node2vec::{
     EmbeddingInitializerConfig, Node2VecComputationRuntime, Node2VecConfig, Node2VecResult,
     Node2VecStorageRuntime,
 };
 use crate::procedures::facades::builder_base::ConfigValidator;
 use crate::procedures::facades::traits::Result;
-use crate::prints::{PrintEnvelope, PrintKind, PrintProvenance};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
@@ -129,7 +129,10 @@ impl Node2VecBuilder {
         self
     }
 
-    pub fn embedding_initializer(mut self, embedding_initializer: EmbeddingInitializerConfig) -> Self {
+    pub fn embedding_initializer(
+        mut self,
+        embedding_initializer: EmbeddingInitializerConfig,
+    ) -> Self {
         self.config.embedding_initializer = embedding_initializer;
         self
     }
@@ -156,13 +159,17 @@ impl Node2VecBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.config.walks_per_node == 0 {
-            return Err(AlgorithmError::Execution("walks_per_node must be > 0".into()));
+            return Err(AlgorithmError::Execution(
+                "walks_per_node must be > 0".into(),
+            ));
         }
         if self.config.walk_length == 0 {
             return Err(AlgorithmError::Execution("walk_length must be > 0".into()));
         }
         if self.config.embedding_dimension == 0 {
-            return Err(AlgorithmError::Execution("embedding_dimension must be > 0".into()));
+            return Err(AlgorithmError::Execution(
+                "embedding_dimension must be > 0".into(),
+            ));
         }
         if self.config.window_size == 0 {
             return Err(AlgorithmError::Execution("window_size must be > 0".into()));
@@ -171,8 +178,18 @@ impl Node2VecBuilder {
             return Err(AlgorithmError::Execution("iterations must be > 0".into()));
         }
 
-        ConfigValidator::in_range(self.config.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
-        ConfigValidator::in_range(self.config.walk_buffer_size as f64, 1.0, 1_000_000_000.0, "walk_buffer_size")?;
+        ConfigValidator::in_range(
+            self.config.concurrency as f64,
+            1.0,
+            1_000_000.0,
+            "concurrency",
+        )?;
+        ConfigValidator::in_range(
+            self.config.walk_buffer_size as f64,
+            1.0,
+            1_000_000_000.0,
+            "walk_buffer_size",
+        )?;
 
         Ok(())
     }
@@ -213,7 +230,10 @@ impl Node2VecBuilder {
     ///
     /// This keeps the kernel output structurally inspectable without stuffing large
     /// embedding matrices into the print payload.
-    pub fn run_with_print(&self, run_id: Option<String>) -> Result<(Node2VecResult, PrintEnvelope)> {
+    pub fn run_with_print(
+        &self,
+        run_id: Option<String>,
+    ) -> Result<(Node2VecResult, PrintEnvelope)> {
         let result = self.compute()?;
 
         let node_count = result.embeddings.len();

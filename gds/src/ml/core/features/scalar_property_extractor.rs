@@ -23,7 +23,10 @@ impl ScalarPropertyExtractor {
     ///
     /// Package-private in Java (no pub visibility modifier).
     #[allow(dead_code)]
-    pub(crate) fn new(property_key: String, node_property_values: Arc<dyn NodePropertyValues>) -> Self {
+    pub(crate) fn new(
+        property_key: String,
+        node_property_values: Arc<dyn NodePropertyValues>,
+    ) -> Self {
         let value_type = node_property_values.value_type();
         Self {
             property_key,

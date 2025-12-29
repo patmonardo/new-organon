@@ -33,10 +33,7 @@ impl ArrayPropertyExtractor {
 
     fn fetch_property_value(&self, node_id: u64) -> Option<Vec<f64>> {
         match self.value_type {
-            ValueType::DoubleArray => self
-                .node_property_values
-                .double_array_value(node_id)
-                .ok(),
+            ValueType::DoubleArray => self.node_property_values.double_array_value(node_id).ok(),
             ValueType::FloatArray => self
                 .node_property_values
                 .float_array_value(node_id)
@@ -80,8 +77,7 @@ impl ArrayFeatureExtractor for ArrayPropertyExtractor {
         if property_value.iter().any(|val| val.is_nan()) {
             panic!(
                 "Node with ID `{}` has invalid feature property value NaN for property `{}`",
-                node_id,
-                &self.property_key
+                node_id, &self.property_key
             );
         }
 

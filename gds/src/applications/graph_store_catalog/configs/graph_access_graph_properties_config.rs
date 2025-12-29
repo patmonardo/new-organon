@@ -40,11 +40,13 @@ impl GraphAccessGraphPropertiesConfig {
 
     /// Create from JSON value (for wire protocol deserialization)
     pub fn from_json(json: &serde_json::Value) -> Result<Self, String> {
-        let graph_name = json.get("graphName")
+        let graph_name = json
+            .get("graphName")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        let graph_property = json.get("graphProperty")
+        let graph_property = json
+            .get("graphProperty")
             .ok_or("graphProperty is required")?
             .as_str()
             .ok_or("graphProperty must be a string")?
@@ -60,7 +62,10 @@ impl GraphAccessGraphPropertiesConfig {
             let message = if !candidates.is_empty() {
                 format!("Did you mean: {}.", candidates.join(", "))
             } else {
-                format!("The following properties exist in the graph: {}.", store.graph_property_keys().join(", "))
+                format!(
+                    "The following properties exist in the graph: {}.",
+                    store.graph_property_keys().join(", ")
+                )
             };
             return Err(format!(
                 "The specified graph property '{}' does not exist. {}",

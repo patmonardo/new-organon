@@ -14,6 +14,6 @@ pub mod sampling_walk_parameters;
 pub mod train_parameters;
 
 pub use algo::{
-    EmbeddingInitializerConfig, Node2VecAlgorithmSpec, Node2VecComputationRuntime,
-    Node2VecConfig, Node2VecResult, Node2VecStorageRuntime,
+    EmbeddingInitializerConfig, Node2VecAlgorithmSpec, Node2VecComputationRuntime, Node2VecConfig,
+    Node2VecResult, Node2VecStorageRuntime,
 };

@@ -3,7 +3,8 @@
 //! Mirrors Java GraphStreamGraphPropertiesConfig interface and integrates with the Rust config system.
 
 // Type alias for cleaner code
-type GraphAccessGraphPropertiesConfig = crate::applications::graph_store_catalog::configs::GraphAccessGraphPropertiesConfig;
+type GraphAccessGraphPropertiesConfig =
+    crate::applications::graph_store_catalog::configs::GraphAccessGraphPropertiesConfig;
 
 #[derive(Debug, Clone, Default)]
 pub struct GraphStreamGraphPropertiesConfig {

@@ -6,8 +6,8 @@
 use std::sync::Arc;
 
 use crate::procedures::facades::Graph as FacadeGraph;
-use crate::types::graph_store::DefaultGraphStore;
 use crate::types::catalog::GraphCatalog;
+use crate::types::graph_store::DefaultGraphStore;
 
 /// Graph resources needed by algorithms.
 ///
@@ -52,10 +52,7 @@ impl CatalogLoader {
     /// Load GraphResources from a named graph in the catalog.
     ///
     /// Returns `None` if the graph doesn't exist.
-    pub fn load(
-        catalog: &dyn GraphCatalog,
-        graph_name: &str,
-    ) -> Option<GraphResources> {
+    pub fn load(catalog: &dyn GraphCatalog, graph_name: &str) -> Option<GraphResources> {
         catalog.get(graph_name).map(GraphResources::new)
     }
 
@@ -64,8 +61,7 @@ impl CatalogLoader {
         catalog: &dyn GraphCatalog,
         graph_name: &str,
     ) -> Result<GraphResources, LoadError> {
-        Self::load(catalog, graph_name)
-            .ok_or_else(|| LoadError::NotFound(graph_name.to_string()))
+        Self::load(catalog, graph_name).ok_or_else(|| LoadError::NotFound(graph_name.to_string()))
     }
 }
 
@@ -85,4 +81,3 @@ pub trait PostLoadValidationHook: Send + Sync {
 pub trait PostLoadETLHook: Send + Sync {
     fn transform(&self, resources: &mut GraphResources) -> Result<(), String>;
 }
-

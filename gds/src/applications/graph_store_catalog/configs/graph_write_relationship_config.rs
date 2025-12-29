@@ -24,7 +24,10 @@ define_config!(
 
 impl GraphWriteRelationshipConfig {
     /// Factory method to create config from components.
-    pub fn of(relationship_type: String, relationship_property: Option<String>) -> Result<Self, String> {
+    pub fn of(
+        relationship_type: String,
+        relationship_property: Option<String>,
+    ) -> Result<Self, String> {
         let config = Self::builder()
             .relationship_type(relationship_type)
             .relationship_property(relationship_property)
@@ -35,13 +38,15 @@ impl GraphWriteRelationshipConfig {
 
     /// Create from JSON value (for wire protocol deserialization)
     pub fn from_json(json: &serde_json::Value) -> Result<Self, String> {
-        let relationship_type = json.get("relationshipType")
+        let relationship_type = json
+            .get("relationshipType")
             .ok_or("relationshipType is required")?
             .as_str()
             .ok_or("relationshipType must be a string")?
             .to_string();
 
-        let relationship_property = json.get("relationshipProperty")
+        let relationship_property = json
+            .get("relationshipProperty")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 

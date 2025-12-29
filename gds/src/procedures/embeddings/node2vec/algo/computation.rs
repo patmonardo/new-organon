@@ -28,14 +28,14 @@ use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::Graph;
 use std::sync::Arc;
 
-use super::spec::{EmbeddingInitializerConfig, Node2VecConfig, Node2VecResult};
-use super::storage::Node2VecStorageRuntime;
 use super::super::compressed_random_walks::CompressedRandomWalks;
 use super::super::node2vec_model::Node2VecModel;
 use super::super::node2vec_parameters::Node2VecParameters;
 use super::super::random_walk_probabilities::RandomWalkProbabilitiesBuilder;
 use super::super::sampling_walk_parameters::SamplingWalkParameters;
 use super::super::train_parameters::{EmbeddingInitializer, TrainParameters};
+use super::spec::{EmbeddingInitializerConfig, Node2VecConfig, Node2VecResult};
+use super::storage::Node2VecStorageRuntime;
 
 #[derive(Debug, Default, Clone)]
 pub struct Node2VecComputationRuntime;
@@ -79,11 +79,11 @@ impl Node2VecComputationRuntime {
 
         // Build walk corpus + sampling probabilities (mirrors translated wrapper).
         let node_count = graph.node_count();
-        let mut probabilities_builder = RandomWalkProbabilitiesBuilder::new(
-            Concurrency::of(config.concurrency.max(1)),
-        );
+        let mut probabilities_builder =
+            RandomWalkProbabilitiesBuilder::new(Concurrency::of(config.concurrency.max(1)));
 
-        let max_walk_count = node_count.saturating_mul(parameters.sampling_walk_parameters.walks_per_node);
+        let max_walk_count =
+            node_count.saturating_mul(parameters.sampling_walk_parameters.walks_per_node);
         let mut walks = CompressedRandomWalks::new(max_walk_count);
 
         let random_seed = config.random_seed.unwrap_or(42);
@@ -150,9 +150,14 @@ impl Node2VecComputationRuntime {
         let _probabilities = probabilities_builder.build();
 
         let graph_for_mapping = Arc::clone(&graph);
-        let _to_original = move |mapped: i64| graph_for_mapping.to_original_node_id(mapped).unwrap_or(mapped);
+        let _to_original = move |mapped: i64| {
+            graph_for_mapping
+                .to_original_node_id(mapped)
+                .unwrap_or(mapped)
+        };
 
-        let _progress_tracker = ProgressTracker::new(Tasks::Leaf("Node2Vec".to_string(), config.iterations));
+        let _progress_tracker =
+            ProgressTracker::new(Tasks::Leaf("Node2Vec".to_string(), config.iterations));
 
         let model = Node2VecModel::new(
             node_count,
@@ -166,7 +171,11 @@ impl Node2VecComputationRuntime {
         let trained = model.train();
 
         Ok(Node2VecResult {
-            embeddings: trained.embeddings.into_iter().map(|emb| emb.into_iter().map(|v| v as f32).collect()).collect(),
+            embeddings: trained
+                .embeddings
+                .into_iter()
+                .map(|emb| emb.into_iter().map(|v| v as f32).collect())
+                .collect(),
             loss_per_iteration: trained.loss_per_iteration,
             embedding_dimension: config.embedding_dimension,
             node_count,
@@ -218,7 +227,10 @@ mod tests {
         let storage = Node2VecStorageRuntime::new();
         let result = Node2VecComputationRuntime::run(graph, &cfg, &storage).unwrap();
         assert_eq!(result.loss_per_iteration.len(), 1);
-        assert_eq!(result.embeddings.len(), cfg.source_nodes.len().max(config.node_count));
+        assert_eq!(
+            result.embeddings.len(),
+            cfg.source_nodes.len().max(config.node_count)
+        );
         assert_eq!(result.embeddings[0].len(), 8);
     }
 }

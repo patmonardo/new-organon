@@ -27,5 +27,3 @@ impl ModelData {
         Arc::clone(&self.feature_function)
     }
 }
-
-

@@ -3,7 +3,8 @@
 //! Mirrors Java GraphExportNodePropertiesConfig interface and integrates with the Rust config system.
 
 // Type alias for cleaner code
-type GraphNodePropertiesConfig = crate::applications::graph_store_catalog::configs::GraphNodePropertiesConfig;
+type GraphNodePropertiesConfig =
+    crate::applications::graph_store_catalog::configs::GraphNodePropertiesConfig;
 
 #[derive(Debug, Clone)]
 pub struct GraphExportNodePropertiesConfig {
@@ -96,7 +97,10 @@ impl GraphExportNodePropertiesConfig {
                 let message = if !candidates.is_empty() {
                     format!("Did you mean: {}.", candidates.join(", "))
                 } else {
-                    format!("Available node properties: {}.", store.node_property_keys().join(", "))
+                    format!(
+                        "Available node properties: {}.",
+                        store.node_property_keys().join(", ")
+                    )
                 };
                 return Err(format!(
                     "Node property '{}' does not exist. {}",
@@ -113,7 +117,10 @@ impl GraphExportNodePropertiesConfig {
                     let message = if !candidates.is_empty() {
                         format!("Did you mean: {}.", candidates.join(", "))
                     } else {
-                        format!("Available node labels: {}.", store.node_label_keys().join(", "))
+                        format!(
+                            "Available node labels: {}.",
+                            store.node_label_keys().join(", ")
+                        )
                     };
                     return Err(format!(
                         "Node label '{}' does not exist. {}",
@@ -133,8 +140,8 @@ impl GraphExportNodePropertiesConfig {
         node_properties: Vec<String>,
         list_node_labels: bool,
     ) -> Result<Self, String> {
-        let node_config = GraphNodePropertiesConfig::of(graph_name, node_labels)
-            .map_err(|e| e.to_string())?;
+        let node_config =
+            GraphNodePropertiesConfig::of(graph_name, node_labels).map_err(|e| e.to_string())?;
 
         let config = Self::builder()
             .node_config(node_config)
@@ -150,7 +157,8 @@ impl GraphExportNodePropertiesConfig {
     pub fn from_json(json: &serde_json::Value) -> Result<Self, String> {
         let node_config = GraphNodePropertiesConfig::from_json(json)?;
 
-        let node_properties = json.get("nodeProperties")
+        let node_properties = json
+            .get("nodeProperties")
             .ok_or("nodeProperties is required")?
             .as_array()
             .ok_or("nodeProperties must be an array")?
@@ -161,7 +169,8 @@ impl GraphExportNodePropertiesConfig {
             .map(|s| s.to_string())
             .collect();
 
-        let list_node_labels = json.get("listNodeLabels")
+        let list_node_labels = json
+            .get("listNodeLabels")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
