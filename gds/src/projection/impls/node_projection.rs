@@ -70,7 +70,7 @@ impl NodeProjection {
     pub fn with_additional_property_mappings(&self, mappings: PropertyMappings) -> Self {
         NodeProjection {
             label: self.label.clone(),
-            properties: self.properties.merge(&mappings),
+            properties: self.properties.merge_with(&mappings),
         }
     }
 
@@ -106,7 +106,7 @@ impl ElementProjection for NodeProjection {
     ) -> Box<dyn ElementProjection> {
         Box::new(NodeProjection {
             label: self.label.clone(),
-            properties: self.properties.merge(&mappings),
+            properties: self.properties.merge_with(&mappings),
         })
     }
 

@@ -128,7 +128,7 @@ impl RelationshipProjection {
             orientation: self.orientation,
             aggregation: self.aggregation,
             index_inverse: self.index_inverse,
-            properties: self.properties.merge(&mappings),
+            properties: self.properties.merge_with(&mappings),
         }
     }
 

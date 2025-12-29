@@ -4,7 +4,9 @@
 //! for nodes and relationships in graph data science operations.
 
 pub mod node_projection;
+pub mod property_mappings;
 pub mod relationship_projection;
 
 pub use node_projection::*;
+pub use property_mappings::*;
 pub use relationship_projection::*;

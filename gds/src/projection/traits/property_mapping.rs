@@ -1,4 +1,5 @@
 use crate::types::DefaultValue;
+use serde_json::{Map as JsonMap, Value as JsonValue};
 use std::fmt;
 
 /// Aggregation strategy for relationship properties.
@@ -80,7 +81,7 @@ impl fmt::Display for Aggregation {
 ///
 /// Maps a property from the source graph to a projected property,
 /// with support for default values and aggregation strategies.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PropertyMapping {
     /// Property key in the result (e.g., Graph.nodeProperties(`propertyKey`))
     property_key: String,
@@ -210,22 +211,33 @@ impl PropertyMapping {
 
     /// Converts this mapping to a tuple for serialization.
     ///
-    /// Returns (property_key, serialized_value) where value contains
-    /// the source property, default value, and optionally aggregation.
+    /// Returns (property_key, object) where the object contains the source property,
+    /// default value, and optionally aggregation—mirroring the Java API shape.
     ///
     /// # Arguments
     /// * `include_aggregation` - Whether to include aggregation in the output
-    pub fn to_object(&self, include_aggregation: bool) -> (String, String) {
-        let mut parts = vec![
-            format!("property={}", self.neo_property_key()),
-            format!("default={:?}", self.default_value),
-        ];
+    pub fn to_object(&self, include_aggregation: bool) -> (String, JsonValue) {
+        let mut value = JsonMap::new();
+        value.insert(
+            Self::PROPERTY_KEY.to_string(),
+            JsonValue::String(self.neo_property_key().to_string()),
+        );
+        value.insert(
+            Self::DEFAULT_VALUE_KEY.to_string(),
+            self.default_value
+                .get_object()
+                .cloned()
+                .unwrap_or(JsonValue::Null),
+        );
 
         if include_aggregation {
-            parts.push(format!("aggregation={:?}", self.aggregation));
+            value.insert(
+                "aggregation".to_string(),
+                JsonValue::String(self.aggregation.as_str().to_string()),
+            );
         }
 
-        (self.property_key.clone(), parts.join(", "))
+        (self.property_key.clone(), JsonValue::Object(value))
     }
 
     /// Validates the property key.

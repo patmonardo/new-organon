@@ -7,7 +7,8 @@
 //! - Fluent builder API for construction
 
 use crate::projection::{Aggregation, PropertyMapping};
-use std::collections::HashSet;
+use serde_json::{Map as JsonMap, Value as JsonValue};
+use std::collections::{HashMap, HashSet};
 
 /// A collection of property mappings for configuring property filtering and aggregation.
 ///
@@ -32,7 +33,26 @@ impl PropertyMappings {
     ///
     /// Returns an error if there is mixing of NONE aggregation with other types.
     pub fn new(mappings: Vec<PropertyMapping>) -> Result<Self, String> {
-        let result = Self { mappings };
+        let mut seen: HashMap<String, PropertyMapping> = HashMap::new();
+        let mut deduped = Vec::new();
+
+        for mapping in mappings {
+            let key = mapping.property_key().to_string();
+            match seen.get(&key) {
+                Some(existing) if existing != &mapping => {
+                    return Err(format!("Duplicate property key `{}`", key));
+                }
+                Some(_) => {
+                    // identical mapping, skip
+                }
+                None => {
+                    seen.insert(key, mapping.clone());
+                    deduped.push(mapping);
+                }
+            }
+        }
+
+        let result = Self { mappings: deduped };
         result.check_for_aggregation_mixing()?;
         Ok(result)
     }
@@ -50,7 +70,7 @@ impl PropertyMappings {
     ///
     /// Panics if there is mixing of NONE aggregation with other types.
     pub fn of(mappings: Vec<PropertyMapping>) -> Self {
-        Self::new(mappings).expect("Invalid aggregation mixing")
+        Self::new(mappings).unwrap_or_else(|err| panic!("{}", err))
     }
 
     /// Returns the underlying mappings as a slice.
@@ -101,24 +121,25 @@ impl PropertyMappings {
     ///
     /// # Returns
     ///
-    /// A vector of tuples (key, value) where value is the mapping's object representation.
+    /// A map keyed by property key containing each mapping's object representation.
     ///
     /// # Errors
     ///
     /// Returns an error if there are duplicate keys.
-    pub fn to_object(&self, include_aggregation: bool) -> Result<Vec<(String, String)>, String> {
-        let mut result = Vec::new();
-        let mut seen_keys = HashSet::new();
+    pub fn to_object(
+        &self,
+        include_aggregation: bool,
+    ) -> Result<JsonMap<String, JsonValue>, String> {
+        let mut result = JsonMap::new();
 
         for mapping in &self.mappings {
             let (key, value) = mapping.to_object(include_aggregation);
 
-            if seen_keys.contains(&key) {
-                return Err(format!("Duplicate key: {}", key));
+            if result.contains_key(&key) {
+                return Err(format!("Duplicate property key `{}`", key));
             }
 
-            seen_keys.insert(key.clone());
-            result.push((key, value));
+            result.insert(key, value);
         }
 
         Ok(result)
@@ -147,22 +168,13 @@ impl PropertyMappings {
 
         let mut builder = PropertyMappingsBuilder::new();
 
-        // Track seen keys
-        let mut seen = HashSet::new();
-
         // Add all mappings from this collection
         for mapping in &self.mappings {
-            let key = mapping.property_key();
-            seen.insert(key.to_string());
             builder = builder.add_mapping(mapping.clone());
         }
 
-        // Add unique mappings from other collection
+        // Add mappings from other collection; duplicates are checked during build
         for mapping in other.mappings() {
-            let key = mapping.property_key();
-            if seen.contains(key) {
-                continue; // Skip duplicates
-            }
             builder = builder.add_mapping(mapping.clone());
         }
 
@@ -251,6 +263,12 @@ impl PropertyMappingsBuilder {
         self
     }
 
+    /// Adds a property mapping by mutable reference (convenience for inline builders).
+    pub fn add_mapping_ref(&mut self, mapping: PropertyMapping) -> &mut Self {
+        self.mappings.push(mapping);
+        self
+    }
+
     /// Adds multiple property mappings from an iterator.
     pub fn add_mappings(mut self, mappings: impl IntoIterator<Item = PropertyMapping>) -> Self {
         self.mappings.extend(mappings);
@@ -304,7 +322,8 @@ impl PropertyMappingsBuilder {
                 .collect();
         }
 
-        PropertyMappings::new(self.mappings).expect("Invalid aggregation mixing")
+        PropertyMappings::new(self.mappings)
+            .unwrap_or_else(|err| panic!("{}", err))
     }
 }
 
@@ -323,10 +342,8 @@ mod tests {
 
     #[test]
     fn test_property_mappings_of() {
-        let mapping1 =
-            PropertyMapping::new("prop1", "prop1", DefaultValue::null(), Aggregation::Default);
-        let mapping2 =
-            PropertyMapping::new("prop2", "prop2", DefaultValue::null(), Aggregation::Default);
+        let mapping1 = PropertyMapping::new("prop1", Some("prop1".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
+        let mapping2 = PropertyMapping::new("prop2", Some("prop2".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
 
         let mappings = PropertyMappings::of(vec![mapping1, mapping2]);
 
@@ -337,10 +354,8 @@ mod tests {
 
     #[test]
     fn test_property_mappings_property_keys() {
-        let mapping1 =
-            PropertyMapping::new("prop1", "prop1", DefaultValue::null(), Aggregation::Default);
-        let mapping2 =
-            PropertyMapping::new("prop2", "prop2", DefaultValue::null(), Aggregation::Default);
+        let mapping1 = PropertyMapping::new("prop1", Some("prop1".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
+        let mapping2 = PropertyMapping::new("prop2", Some("prop2".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
 
         let mappings = PropertyMappings::of(vec![mapping1, mapping2]);
         let keys = mappings.property_keys();
@@ -352,12 +367,9 @@ mod tests {
 
     #[test]
     fn test_property_mappings_merge() {
-        let mapping1 =
-            PropertyMapping::new("prop1", "prop1", DefaultValue::null(), Aggregation::Default);
-        let mapping2 =
-            PropertyMapping::new("prop2", "prop2", DefaultValue::null(), Aggregation::Default);
-        let mapping3 =
-            PropertyMapping::new("prop3", "prop3", DefaultValue::null(), Aggregation::Default);
+        let mapping1 = PropertyMapping::new("prop1", Some("prop1".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
+        let mapping2 = PropertyMapping::new("prop2", Some("prop2".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
+        let mapping3 = PropertyMapping::new("prop3", Some("prop3".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
 
         let mappings1 = PropertyMappings::of(vec![mapping1.clone(), mapping2.clone()]);
         let mappings2 = PropertyMappings::of(vec![mapping2, mapping3]);
@@ -374,8 +386,7 @@ mod tests {
 
     #[test]
     fn test_property_mappings_merge_empty() {
-        let mapping1 =
-            PropertyMapping::new("prop1", "prop1", DefaultValue::null(), Aggregation::Default);
+        let mapping1 = PropertyMapping::new("prop1", Some("prop1".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
         let mappings1 = PropertyMappings::of(vec![mapping1]);
         let mappings2 = PropertyMappings::empty();
 
@@ -387,12 +398,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Invalid aggregation mixing")]
+    #[should_panic(expected = "Conflicting relationship property aggregations")]
     fn test_aggregation_mixing_rejected() {
-        let mapping1 =
-            PropertyMapping::new("prop1", "prop1", DefaultValue::null(), Aggregation::None);
-        let mapping2 =
-            PropertyMapping::new("prop2", "prop2", DefaultValue::null(), Aggregation::Sum);
+        let mapping1 = PropertyMapping::new("prop1", Some("prop1".to_string()), DefaultValue::null(), Aggregation::None).unwrap();
+        let mapping2 = PropertyMapping::new("prop2", Some("prop2".to_string()), DefaultValue::null(), Aggregation::Sum).unwrap();
 
         // This should panic due to mixing NONE with other aggregations
         PropertyMappings::of(vec![mapping1, mapping2]);
@@ -400,10 +409,8 @@ mod tests {
 
     #[test]
     fn test_aggregation_all_none_allowed() {
-        let mapping1 =
-            PropertyMapping::new("prop1", "prop1", DefaultValue::null(), Aggregation::None);
-        let mapping2 =
-            PropertyMapping::new("prop2", "prop2", DefaultValue::null(), Aggregation::None);
+        let mapping1 = PropertyMapping::new("prop1", Some("prop1".to_string()), DefaultValue::null(), Aggregation::None).unwrap();
+        let mapping2 = PropertyMapping::new("prop2", Some("prop2".to_string()), DefaultValue::null(), Aggregation::None).unwrap();
 
         // All NONE is allowed
         let mappings = PropertyMappings::of(vec![mapping1, mapping2]);
@@ -412,10 +419,8 @@ mod tests {
 
     #[test]
     fn test_aggregation_no_none_allowed() {
-        let mapping1 =
-            PropertyMapping::new("prop1", "prop1", DefaultValue::null(), Aggregation::Sum);
-        let mapping2 =
-            PropertyMapping::new("prop2", "prop2", DefaultValue::null(), Aggregation::Max);
+        let mapping1 = PropertyMapping::new("prop1", Some("prop1".to_string()), DefaultValue::null(), Aggregation::Sum).unwrap();
+        let mapping2 = PropertyMapping::new("prop2", Some("prop2".to_string()), DefaultValue::null(), Aggregation::Max).unwrap();
 
         // No NONE is allowed
         let mappings = PropertyMappings::of(vec![mapping1, mapping2]);
@@ -424,10 +429,8 @@ mod tests {
 
     #[test]
     fn test_property_mappings_builder() {
-        let mapping1 =
-            PropertyMapping::new("prop1", "prop1", DefaultValue::null(), Aggregation::Default);
-        let mapping2 =
-            PropertyMapping::new("prop2", "prop2", DefaultValue::null(), Aggregation::Default);
+        let mapping1 = PropertyMapping::new("prop1", Some("prop1".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
+        let mapping2 = PropertyMapping::new("prop2", Some("prop2".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
 
         let mappings = PropertyMappings::builder()
             .add_mapping(mapping1)
@@ -439,10 +442,8 @@ mod tests {
 
     #[test]
     fn test_property_mappings_builder_with_default_aggregation() {
-        let mapping1 =
-            PropertyMapping::new("prop1", "prop1", DefaultValue::null(), Aggregation::Default);
-        let mapping2 =
-            PropertyMapping::new("prop2", "prop2", DefaultValue::null(), Aggregation::Default);
+        let mapping1 = PropertyMapping::new("prop1", Some("prop1".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
+        let mapping2 = PropertyMapping::new("prop2", Some("prop2".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
 
         let mappings = PropertyMappings::builder()
             .with_default_aggregation(Aggregation::Sum)
@@ -459,12 +460,10 @@ mod tests {
 
     #[test]
     fn test_property_mappings_builder_from() {
-        let mapping1 =
-            PropertyMapping::new("prop1", "prop1", DefaultValue::null(), Aggregation::Default);
+        let mapping1 = PropertyMapping::new("prop1", Some("prop1".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
         let existing = PropertyMappings::of(vec![mapping1]);
 
-        let mapping2 =
-            PropertyMapping::new("prop2", "prop2", DefaultValue::null(), Aggregation::Default);
+        let mapping2 = PropertyMapping::new("prop2", Some("prop2".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
 
         let mappings = PropertyMappings::builder()
             .from(&existing)
@@ -476,8 +475,7 @@ mod tests {
 
     #[test]
     fn test_property_mappings_builder_has_key() {
-        let mapping1 =
-            PropertyMapping::new("prop1", "prop1", DefaultValue::null(), Aggregation::Default);
+        let mapping1 = PropertyMapping::new("prop1", Some("prop1".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
 
         let builder = PropertyMappings::builder().add_mapping(mapping1);
 
@@ -487,10 +485,8 @@ mod tests {
 
     #[test]
     fn test_property_mappings_iterator() {
-        let mapping1 =
-            PropertyMapping::new("prop1", "prop1", DefaultValue::null(), Aggregation::Default);
-        let mapping2 =
-            PropertyMapping::new("prop2", "prop2", DefaultValue::null(), Aggregation::Default);
+        let mapping1 = PropertyMapping::new("prop1", Some("prop1".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
+        let mapping2 = PropertyMapping::new("prop2", Some("prop2".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
 
         let mappings = PropertyMappings::of(vec![mapping1, mapping2]);
 
@@ -503,18 +499,83 @@ mod tests {
 
     #[test]
     fn test_to_object() {
-        let mapping1 = PropertyMapping::new(
-            "prop1",
-            "source1",
-            DefaultValue::null(),
-            Aggregation::Default,
-        );
-        let mapping2 =
-            PropertyMapping::new("prop2", "source2", DefaultValue::null(), Aggregation::Sum);
+        let mapping1 = PropertyMapping::new("prop1", Some("source1".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
+        let mapping2 = PropertyMapping::new("prop2", Some("source2".to_string()), DefaultValue::null(), Aggregation::Sum).unwrap();
 
         let mappings = PropertyMappings::of(vec![mapping1, mapping2]);
         let object = mappings.to_object(true).expect("Should convert to object");
 
         assert_eq!(object.len(), 2);
+        assert!(object.contains_key("prop1"));
+        assert!(object.contains_key("prop2"));
+
+        let prop1 = object.get("prop1").unwrap().as_object().unwrap();
+        assert_eq!(prop1.get("property"), Some(&serde_json::Value::String("source1".to_string())));
+        assert_eq!(prop1.get("defaultValue"), Some(&serde_json::Value::Null));
+        assert_eq!(
+            prop1.get("aggregation"),
+            Some(&serde_json::Value::String(Aggregation::Default.as_str().to_string()))
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Duplicate property key `prop1`")]
+    fn test_duplicate_property_key_rejected() {
+        let mapping1 = PropertyMapping::new("prop1", Some("prop1".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
+        let mapping2 = PropertyMapping::new("prop1", Some("other".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
+
+        // identical duplicates collapse, so create a conflicting duplicate to trigger the panic
+        PropertyMappings::of(vec![mapping1, mapping2]);
+    }
+
+    #[test]
+    fn test_identical_duplicates_are_collapsed() {
+        let mapping1 = PropertyMapping::new("prop1", Some("prop1".to_string()), DefaultValue::null(), Aggregation::Default).unwrap();
+        let mapping2 = mapping1.clone();
+
+        let mappings = PropertyMappings::of(vec![mapping1, mapping2]);
+        assert_eq!(mappings.size(), 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "Duplicate property key `prop1`")]
+    fn test_merge_conflicting_duplicates_rejected() {
+        let left = PropertyMappings::of(vec![PropertyMapping::new(
+            "prop1",
+            Some("left".to_string()),
+            DefaultValue::null(),
+            Aggregation::Default,
+        )
+        .unwrap()]);
+        let right = PropertyMappings::of(vec![PropertyMapping::new(
+            "prop1",
+            Some("right".to_string()),
+            DefaultValue::null(),
+            Aggregation::Default,
+        )
+        .unwrap()]);
+
+        let _ = left.merge_with(&right);
+    }
+
+    #[test]
+    fn test_merge_identical_duplicates_collapses() {
+        let left = PropertyMappings::of(vec![PropertyMapping::new(
+            "prop1",
+            Some("same".to_string()),
+            DefaultValue::null(),
+            Aggregation::Default,
+        )
+        .unwrap()]);
+        let right = PropertyMappings::of(vec![PropertyMapping::new(
+            "prop1",
+            Some("same".to_string()),
+            DefaultValue::null(),
+            Aggregation::Default,
+        )
+        .unwrap()]);
+
+        let merged = left.merge_with(&right);
+        assert_eq!(merged.size(), 1);
     }
 }

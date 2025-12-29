@@ -1,4 +1,5 @@
 use super::property_mapping::PropertyMapping;
+use crate::projection::{PropertyMappings, PropertyMappingsBuilder};
 use std::collections::HashMap;
 
 /// Wildcard symbol to project all properties.
@@ -30,162 +31,9 @@ pub trait ElementProjection: Send + Sync {
     fn to_config(&self) -> HashMap<String, serde_json::Value>;
 }
 
-/// Collection of property mappings for an element projection.
-///
-/// Manages multiple PropertyMapping instances with efficient lookup.
-#[derive(Debug, Clone)]
-pub struct PropertyMappings {
-    mappings: HashMap<String, PropertyMapping>,
-}
-
-impl PropertyMappings {
-    /// Creates an empty PropertyMappings.
-    pub fn empty() -> Self {
-        PropertyMappings {
-            mappings: HashMap::new(),
-        }
-    }
-
-    /// Creates a new PropertyMappings from a map.
-    pub fn new(mappings: HashMap<String, PropertyMapping>) -> Self {
-        PropertyMappings { mappings }
-    }
-
-    /// Returns a builder for PropertyMappings.
-    pub fn builder() -> PropertyMappingsBuilder {
-        PropertyMappingsBuilder::new()
-    }
-
-    /// Returns all property mappings.
-    pub fn mappings(&self) -> impl Iterator<Item = &PropertyMapping> {
-        self.mappings.values()
-    }
-
-    /// Returns the number of mappings.
-    pub fn len(&self) -> usize {
-        self.mappings.len()
-    }
-
-    /// Checks if there are no mappings.
-    pub fn is_empty(&self) -> bool {
-        self.mappings.is_empty()
-    }
-
-    /// Gets a mapping by property key.
-    pub fn get(&self, key: &str) -> Option<&PropertyMapping> {
-        self.mappings.get(key)
-    }
-
-    /// Checks if a property key exists.
-    pub fn contains_key(&self, key: &str) -> bool {
-        self.mappings.contains_key(key)
-    }
-
-    /// Returns all property keys.
-    pub fn keys(&self) -> impl Iterator<Item = &String> {
-        self.mappings.keys()
-    }
-
-    /// Merges with another PropertyMappings, preferring this one's values on conflict.
-    pub fn merge(&self, other: &PropertyMappings) -> Self {
-        let mut mappings = self.mappings.clone();
-        for (key, mapping) in &other.mappings {
-            mappings
-                .entry(key.clone())
-                .or_insert_with(|| mapping.clone());
-        }
-        PropertyMappings { mappings }
-    }
-}
-
-impl Default for PropertyMappings {
-    fn default() -> Self {
-        Self::empty()
-    }
-}
-
-/// Builder for PropertyMappings with fluent API.
-#[derive(Debug, Clone)]
-pub struct PropertyMappingsBuilder {
-    mappings: HashMap<String, PropertyMapping>,
-}
-
-impl PropertyMappingsBuilder {
-    /// Creates a new empty builder.
-    pub fn new() -> Self {
-        PropertyMappingsBuilder {
-            mappings: HashMap::new(),
-        }
-    }
-
-    /// Adds a property mapping.
-    pub fn add_mapping(mut self, mapping: PropertyMapping) -> Self {
-        self.mappings
-            .insert(mapping.property_key().to_string(), mapping);
-        self
-    }
-
-    /// Adds a property mapping by reference.
-    pub fn add_mapping_ref(&mut self, mapping: PropertyMapping) -> &mut Self {
-        self.mappings
-            .insert(mapping.property_key().to_string(), mapping);
-        self
-    }
-
-    /// Adds a simple property by key.
-    pub fn add_property(mut self, property_key: impl Into<String>) -> Result<Self, String> {
-        let mapping = PropertyMapping::of(property_key)?;
-        self.mappings
-            .insert(mapping.property_key().to_string(), mapping);
-        Ok(self)
-    }
-
-    /// Adds a property with source name.
-    pub fn add_property_with_source(
-        mut self,
-        property_key: impl Into<String>,
-        neo_property_key: impl Into<String>,
-    ) -> Result<Self, String> {
-        let mapping = PropertyMapping::with_source(property_key, neo_property_key)?;
-        self.mappings
-            .insert(mapping.property_key().to_string(), mapping);
-        Ok(self)
-    }
-
-    /// Adds multiple mappings.
-    pub fn add_all(mut self, mappings: impl IntoIterator<Item = PropertyMapping>) -> Self {
-        for mapping in mappings {
-            self.mappings
-                .insert(mapping.property_key().to_string(), mapping);
-        }
-        self
-    }
-
-    /// Copies mappings from another PropertyMappings.
-    pub fn from(&mut self, other: &PropertyMappings) -> &mut Self {
-        for (key, mapping) in &other.mappings {
-            self.mappings.insert(key.clone(), mapping.clone());
-        }
-        self
-    }
-
-    /// Builds the PropertyMappings.
-    pub fn build(self) -> PropertyMappings {
-        PropertyMappings {
-            mappings: self.mappings,
-        }
-    }
-}
-
-impl Default for PropertyMappingsBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 /// Trait for types that support inline property addition.
 ///
-/// Enables fluent API for adding properties during projection building.
+/// Mirrors the Java GDS inline projection API while delegating to the shared PropertyMappings builder.
 pub trait InlineProperties: Sized {
     /// Gets the inline properties builder.
     fn inline_builder(&mut self) -> &mut InlinePropertiesBuilder;
@@ -263,11 +111,12 @@ impl InlinePropertiesBuilder {
     /// Gets or creates the properties builder.
     pub fn properties_builder(&mut self) -> &mut PropertyMappingsBuilder {
         if self.properties_builder.is_none() {
-            let mut builder = PropertyMappingsBuilder::new();
-            if let Some(ref properties) = self.properties {
-                builder.from(properties);
-                self.properties = None;
-            }
+            let builder = if let Some(ref properties) = self.properties {
+                PropertyMappingsBuilder::new().from(properties)
+            } else {
+                PropertyMappingsBuilder::new()
+            };
+            self.properties = None;
             self.properties_builder = Some(builder);
         }
         self.properties_builder.as_mut().unwrap()
@@ -314,39 +163,37 @@ mod tests {
     fn test_property_mappings_empty() {
         let mappings = PropertyMappings::empty();
         assert!(mappings.is_empty());
-        assert_eq!(mappings.len(), 0);
+        assert_eq!(mappings.size(), 0);
     }
 
     #[test]
     fn test_property_mappings_builder() {
         let mappings = PropertyMappings::builder()
-            .add_property("age")
-            .unwrap()
-            .add_property_with_source("score", "user_score")
-            .unwrap()
+            .add_mapping(PropertyMapping::of("age").unwrap())
+            .add_mapping(PropertyMapping::with_source("score", "user_score").unwrap())
             .build();
 
-        assert_eq!(mappings.len(), 2);
-        assert!(mappings.contains_key("age"));
-        assert!(mappings.contains_key("score"));
+        assert_eq!(mappings.size(), 2);
+        let keys = mappings.property_keys();
+        assert!(keys.contains("age"));
+        assert!(keys.contains("score"));
     }
 
     #[test]
     fn test_property_mappings_merge() {
         let mappings1 = PropertyMappings::builder()
-            .add_property("age")
-            .unwrap()
+            .add_mapping(PropertyMapping::of("age").unwrap())
             .build();
 
         let mappings2 = PropertyMappings::builder()
-            .add_property("score")
-            .unwrap()
+            .add_mapping(PropertyMapping::of("score").unwrap())
             .build();
 
-        let merged = mappings1.merge(&mappings2);
-        assert_eq!(merged.len(), 2);
-        assert!(merged.contains_key("age"));
-        assert!(merged.contains_key("score"));
+        let merged = mappings1.merge_with(&mappings2);
+        assert_eq!(merged.size(), 2);
+        let keys = merged.property_keys();
+        assert!(keys.contains("age"));
+        assert!(keys.contains("score"));
     }
 
     #[test]
@@ -357,7 +204,7 @@ mod tests {
             .add_mapping_ref(PropertyMapping::of("age").unwrap());
 
         let properties = builder.build().unwrap();
-        assert_eq!(properties.len(), 1);
-        assert!(properties.contains_key("age"));
+        assert_eq!(properties.size(), 1);
+        assert!(properties.property_keys().contains("age"));
     }
 }
