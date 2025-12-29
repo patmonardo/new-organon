@@ -4,10 +4,13 @@ use super::{
 };
 use crate::collections::backends::arrow::{ArrowDoubleArray, ArrowLongArray};
 use crate::collections::backends::factory::{
-    create_double_backend_from_config, create_long_backend_from_config, DoubleCollection,
+    create_double_backend_from_config, create_float_backend_from_config,
+    create_int_backend_from_config, create_long_backend_from_config, DoubleCollection,
     LongCollection,
 };
-use crate::collections::backends::vec::{VecDouble, VecLong};
+use crate::collections::backends::vec::{
+    VecDouble, VecDoubleArray, VecFloat, VecInt, VecLong, VecLongArray,
+};
 use crate::config::GraphStoreConfig;
 use crate::projection::orientation::Orientation;
 use crate::projection::{NodeLabel, RelationshipType};
@@ -21,10 +24,15 @@ use crate::types::properties::graph::impls::default_graph_property_values::{
 };
 use crate::types::properties::graph::GraphPropertyValues;
 use crate::types::properties::node::impls::default_node_property_values::{
-    DefaultDoubleNodePropertyValues, DefaultLongNodePropertyValues,
+    DefaultDoubleNodePropertyValues, DefaultFloatNodePropertyValues, DefaultIntNodePropertyValues,
+    DefaultLongNodePropertyValues,
 };
 use crate::types::properties::node::NodePropertyValues;
 use crate::types::properties::relationship::default_relationship_property_store::DefaultRelationshipPropertyStore;
+use crate::types::properties::relationship::impls::default_relationship_property_values::{
+    DefaultDoubleRelationshipPropertyValues, DefaultIntRelationshipPropertyValues,
+    DefaultLongRelationshipPropertyValues,
+};
 use crate::types::properties::relationship::relationship_property::RelationshipProperty;
 use crate::types::properties::relationship::RelationshipPropertyValues;
 use crate::types::properties::relationship::{
@@ -184,6 +192,9 @@ impl DefaultGraphStore {
             old_mapped_to_new.insert(old_mapped, new_mapped);
         }
 
+        let (node_properties, node_properties_by_label) =
+            self.project_node_properties(&selected_ordered_old_mapped)?;
+
         // Build new IdMap, preserving labels.
         let mut new_id_map =
             SimpleIdMap::from_original_ids(selected_original_node_ids.iter().copied());
@@ -248,6 +259,12 @@ impl DefaultGraphStore {
             }
         }
 
+        let relationship_property_stores = self.project_relationship_properties(
+            &selected_ordered_old_mapped,
+            &old_mapped_to_new,
+            &relationship_topologies,
+        )?;
+
         let store = DefaultGraphStore::new(
             self.config.as_ref().clone(),
             graph_name,
@@ -258,7 +275,272 @@ impl DefaultGraphStore {
             relationship_topologies,
         );
 
+        let mut store = store;
+        store.node_properties = node_properties;
+        store.node_properties_by_label = node_properties_by_label;
+        store.graph_properties = self.graph_properties.clone();
+        store.relationship_property_stores = relationship_property_stores;
+        store.refresh_relationship_property_state();
+        store.set_modified();
+
         Ok((store, old_mapped_to_new, kept_by_type))
+    }
+
+    fn project_node_properties(
+        &self,
+        selected_ordered_old_mapped: &[MappedNodeId],
+    ) -> GraphStoreResult<(
+        HashMap<String, Arc<dyn NodePropertyValues>>,
+        HashMap<String, HashSet<String>>,
+    )> {
+        let node_count = selected_ordered_old_mapped.len();
+        let mut projected: HashMap<String, Arc<dyn NodePropertyValues>> = HashMap::new();
+
+        for (key, values) in &self.node_properties {
+            match values.value_type() {
+                ValueType::Double => {
+                    let mut data = Vec::with_capacity(node_count);
+                    for &old_id in selected_ordered_old_mapped {
+                        let v = values
+                            .double_value(old_id as u64)
+                            .map_err(|err| GraphStoreError::InvalidOperation(format!("{err}")))?;
+                        data.push(v);
+                    }
+                    let cfg = self.config.node_collections_config::<f64>(node_count);
+                    let backend = create_double_backend_from_config(&cfg, data);
+                    let pv = build_node_double_property_values(backend, node_count);
+                    projected.insert(key.clone(), pv);
+                }
+                ValueType::Long => {
+                    let mut data = Vec::with_capacity(node_count);
+                    for &old_id in selected_ordered_old_mapped {
+                        let v = values
+                            .long_value(old_id as u64)
+                            .map_err(|err| GraphStoreError::InvalidOperation(format!("{err}")))?;
+                        data.push(v);
+                    }
+                    let cfg = self.config.node_collections_config::<i64>(node_count);
+                    let backend = create_long_backend_from_config(&cfg, data);
+                    let pv = build_node_long_property_values(backend, node_count);
+                    projected.insert(key.clone(), pv);
+                }
+                ValueType::Float => {
+                    let mut data = Vec::with_capacity(node_count);
+                    for &old_id in selected_ordered_old_mapped {
+                        let v = values
+                            .double_value(old_id as u64)
+                            .map_err(|err| GraphStoreError::InvalidOperation(format!("{err}")))?;
+                        data.push(v as f32);
+                    }
+                    let cfg = self.config.node_collections_config::<f32>(node_count);
+                    let backend = create_float_backend_from_config(&cfg, data);
+                    let pv = build_node_float_property_values(backend, node_count);
+                    projected.insert(key.clone(), pv);
+                }
+                ValueType::Int => {
+                    let mut data = Vec::with_capacity(node_count);
+                    for &old_id in selected_ordered_old_mapped {
+                        let v = values
+                            .long_value(old_id as u64)
+                            .map_err(|err| GraphStoreError::InvalidOperation(format!("{err}")))?;
+                        data.push(v as i32);
+                    }
+                    let cfg = self.config.node_collections_config::<i32>(node_count);
+                    let backend = create_int_backend_from_config(&cfg, data);
+                    let pv = build_node_int_property_values(backend, node_count);
+                    projected.insert(key.clone(), pv);
+                }
+                ValueType::DoubleArray => {
+                    let mut data: Vec<Option<Vec<f64>>> = Vec::with_capacity(node_count);
+                    for &old_id in selected_ordered_old_mapped {
+                        let v = values
+                            .double_array_value(old_id as u64)
+                            .ok()
+                            .map(Some)
+                            .unwrap_or(None);
+                        data.push(v);
+                    }
+                    let backend = VecDoubleArray::from(data);
+                    let pv =
+                        build_node_double_array_property_values(backend, node_count);
+                    projected.insert(key.clone(), pv);
+                }
+                ValueType::LongArray => {
+                    let mut data: Vec<Option<Vec<i64>>> = Vec::with_capacity(node_count);
+                    for &old_id in selected_ordered_old_mapped {
+                        let v = values
+                            .long_array_value(old_id as u64)
+                            .ok()
+                            .map(Some)
+                            .unwrap_or(None);
+                        data.push(v);
+                    }
+                    let backend = VecLongArray::from(data);
+                    let pv = build_node_long_array_property_values(backend, node_count);
+                    projected.insert(key.clone(), pv);
+                }
+                _ => {
+                    // Skip unsupported projection types for now.
+                    continue;
+                }
+            }
+        }
+
+        let mut projected_by_label: HashMap<String, HashSet<String>> = HashMap::new();
+        for (label_key, keys) in &self.node_properties_by_label {
+            for key in keys {
+                if projected.contains_key(key) {
+                    projected_by_label
+                        .entry(label_key.clone())
+                        .or_default()
+                        .insert(key.clone());
+                }
+            }
+        }
+
+        Ok((projected, projected_by_label))
+    }
+
+    fn project_relationship_properties(
+        &self,
+        selected_ordered_old_mapped: &[MappedNodeId],
+        old_mapped_to_new: &HashMap<MappedNodeId, MappedNodeId>,
+        new_relationship_topologies: &HashMap<RelationshipType, RelationshipTopology>,
+    ) -> GraphStoreResult<HashMap<RelationshipType, DefaultRelationshipPropertyStore>> {
+        let mut projected = HashMap::new();
+
+        for (rel_type, new_topology) in new_relationship_topologies {
+            let old_topology = match self.relationship_topologies.get(rel_type) {
+                Some(t) => t,
+                None => continue,
+            };
+            let old_offsets = relationship_prefix_offsets(old_topology);
+            let new_count = new_topology.relationship_count();
+            if new_count == 0 {
+                continue;
+            }
+
+            let old_store = match self.relationship_property_stores.get(rel_type) {
+                Some(store) if !store.is_empty() => store,
+                _ => continue,
+            };
+
+            let mut builder = DefaultRelationshipPropertyStore::builder();
+
+            for (key, property) in old_store.relationship_properties() {
+                let values = property.values();
+                match values.value_type() {
+                    ValueType::Double => {
+                        let mut data = Vec::with_capacity(new_count);
+                        for &old_source in selected_ordered_old_mapped {
+                            if let Some(old_neighbors) = old_topology.outgoing(old_source) {
+                                for (neighbor_idx, &old_target) in old_neighbors.iter().enumerate() {
+                                    if old_mapped_to_new.contains_key(&old_target) {
+                                        let old_index =
+                                            old_offsets[old_source as usize] + neighbor_idx;
+                                        let v = values
+                                            .double_value(old_index as u64)
+                                            .map_err(|err| {
+                                                GraphStoreError::InvalidOperation(format!("{err}"))
+                                            })?;
+                                        data.push(v);
+                                    }
+                                }
+                            }
+                        }
+
+                        if data.is_empty() {
+                            continue;
+                        }
+
+                        let cfg =
+                            self.config.relationship_collections_config::<f64>(data.len());
+                        let backend = create_double_backend_from_config(&cfg, data);
+                        let pv =
+                            build_relationship_double_property_values(backend, new_count);
+                        let projected_property = RelationshipProperty::with_schema(
+                            property.property_schema().clone(),
+                            pv,
+                        );
+                        builder = builder.put(key.clone(), projected_property);
+                    }
+                    ValueType::Long => {
+                        let mut data = Vec::with_capacity(new_count);
+                        for &old_source in selected_ordered_old_mapped {
+                            if let Some(old_neighbors) = old_topology.outgoing(old_source) {
+                                for (neighbor_idx, &old_target) in old_neighbors.iter().enumerate() {
+                                    if old_mapped_to_new.contains_key(&old_target) {
+                                        let old_index =
+                                            old_offsets[old_source as usize] + neighbor_idx;
+                                        let v = values
+                                            .long_value(old_index as u64)
+                                            .map_err(|err| {
+                                                GraphStoreError::InvalidOperation(format!("{err}"))
+                                            })?;
+                                        data.push(v);
+                                    }
+                                }
+                            }
+                        }
+
+                        if data.is_empty() {
+                            continue;
+                        }
+
+                        let cfg =
+                            self.config.relationship_collections_config::<i64>(data.len());
+                        let backend = create_long_backend_from_config(&cfg, data);
+                        let pv = build_relationship_long_property_values(backend, new_count);
+                        let projected_property = RelationshipProperty::with_schema(
+                            property.property_schema().clone(),
+                            pv,
+                        );
+                        builder = builder.put(key.clone(), projected_property);
+                    }
+                    ValueType::Int => {
+                        let mut data = Vec::with_capacity(new_count);
+                        for &old_source in selected_ordered_old_mapped {
+                            if let Some(old_neighbors) = old_topology.outgoing(old_source) {
+                                for (neighbor_idx, &old_target) in old_neighbors.iter().enumerate() {
+                                    if old_mapped_to_new.contains_key(&old_target) {
+                                        let old_index =
+                                            old_offsets[old_source as usize] + neighbor_idx;
+                                        let v = values
+                                            .long_value(old_index as u64)
+                                            .map_err(|err| {
+                                                GraphStoreError::InvalidOperation(format!("{err}"))
+                                            })?;
+                                        data.push(v as i32);
+                                    }
+                                }
+                            }
+                        }
+
+                        if data.is_empty() {
+                            continue;
+                        }
+
+                        let cfg =
+                            self.config.relationship_collections_config::<i32>(data.len());
+                        let backend = create_int_backend_from_config(&cfg, data);
+                        let pv = build_relationship_int_property_values(backend, new_count);
+                        let projected_property = RelationshipProperty::with_schema(
+                            property.property_schema().clone(),
+                            pv,
+                        );
+                        builder = builder.put(key.clone(), projected_property);
+                    }
+                    _ => continue,
+                }
+            }
+
+            let projected_store = builder.build();
+            if !projected_store.is_empty() {
+                projected.insert(rel_type.clone(), projected_store);
+            }
+        }
+
+        Ok(projected)
     }
 
     fn set_modified(&mut self) {
@@ -974,11 +1256,53 @@ fn build_node_double_property_values(
             )
         }
         DoubleCollection::Arrow(collection) => Arc::new(DefaultDoubleNodePropertyValues::<
-            ArrowDoubleArray,
-        >::from_collection(
-            collection, node_count
-        )),
+        ArrowDoubleArray,
+    >::from_collection(
+        collection, node_count
+    )),
     }
+}
+
+fn build_node_float_property_values(
+    backend: VecFloat,
+    node_count: usize,
+) -> Arc<dyn NodePropertyValues> {
+    Arc::new(DefaultFloatNodePropertyValues::<VecFloat>::from_collection(
+        backend,
+        node_count,
+    ))
+}
+
+fn build_node_int_property_values(
+    backend: VecInt,
+    node_count: usize,
+) -> Arc<dyn NodePropertyValues> {
+    Arc::new(DefaultIntNodePropertyValues::<VecInt>::from_collection(
+        backend,
+        node_count,
+    ))
+}
+
+fn build_node_double_array_property_values(
+    backend: VecDoubleArray,
+    node_count: usize,
+) -> Arc<dyn NodePropertyValues> {
+    Arc::new(
+        crate::types::properties::node::impls::default_node_property_values::DefaultDoubleArrayNodePropertyValues::<
+            VecDoubleArray,
+        >::from_collection(backend, node_count),
+    )
+}
+
+fn build_node_long_array_property_values(
+    backend: VecLongArray,
+    node_count: usize,
+) -> Arc<dyn NodePropertyValues> {
+    Arc::new(
+        crate::types::properties::node::impls::default_node_property_values::DefaultLongArrayNodePropertyValues::<
+            VecLongArray,
+        >::from_collection(backend, node_count),
+    )
 }
 
 fn build_graph_long_property_values(backend: LongCollection) -> Arc<dyn GraphPropertyValues> {
@@ -1008,9 +1332,87 @@ fn build_graph_double_property_values(backend: DoubleCollection) -> Arc<dyn Grap
             Arc::new(DefaultDoubleGraphPropertyValues::<VecDouble>::from_collection(vec_backend))
         }
         DoubleCollection::Arrow(collection) => Arc::new(DefaultDoubleGraphPropertyValues::<
-            ArrowDoubleArray,
-        >::from_collection(collection)),
+        ArrowDoubleArray,
+    >::from_collection(collection)),
     }
+}
+
+fn build_relationship_long_property_values(
+    backend: LongCollection,
+    relationship_count: usize,
+) -> Arc<dyn RelationshipPropertyValues> {
+    match backend {
+        LongCollection::Vec(collection) => Arc::new(
+            DefaultLongRelationshipPropertyValues::<VecLong>::from_collection(
+                collection,
+                relationship_count,
+            ),
+        ),
+        LongCollection::Huge(collection) => {
+            let vec_backend = VecLong::from(collection.to_vec());
+            Arc::new(DefaultLongRelationshipPropertyValues::<VecLong>::from_collection(
+                vec_backend,
+                relationship_count,
+            ))
+        }
+        LongCollection::Arrow(collection) => Arc::new(
+            DefaultLongRelationshipPropertyValues::<ArrowLongArray>::from_collection(
+                collection,
+                relationship_count,
+            ),
+        ),
+    }
+}
+
+fn build_relationship_double_property_values(
+    backend: DoubleCollection,
+    relationship_count: usize,
+) -> Arc<dyn RelationshipPropertyValues> {
+    match backend {
+        DoubleCollection::Vec(collection) => Arc::new(
+            DefaultDoubleRelationshipPropertyValues::<VecDouble>::from_collection(
+                collection,
+                relationship_count,
+            ),
+        ),
+        DoubleCollection::Huge(collection) => {
+            let vec_backend = VecDouble::from(collection.to_vec());
+            Arc::new(DefaultDoubleRelationshipPropertyValues::<VecDouble>::from_collection(
+                vec_backend,
+                relationship_count,
+            ))
+        }
+        DoubleCollection::Arrow(collection) => Arc::new(
+            DefaultDoubleRelationshipPropertyValues::<ArrowDoubleArray>::from_collection(
+                collection,
+                relationship_count,
+            ),
+        ),
+    }
+}
+
+fn build_relationship_int_property_values(
+    backend: VecInt,
+    relationship_count: usize,
+) -> Arc<dyn RelationshipPropertyValues> {
+    Arc::new(DefaultIntRelationshipPropertyValues::<VecInt>::from_collection(
+        backend,
+        relationship_count,
+    ))
+}
+fn relationship_prefix_offsets(topology: &RelationshipTopology) -> Vec<usize> {
+    let mut prefix = Vec::with_capacity(topology.node_capacity() + 1);
+    let mut total = 0usize;
+    prefix.push(total);
+    for node in 0..topology.node_capacity() {
+        let degree = topology
+            .outgoing(node as MappedNodeId)
+            .map(|neighbors| neighbors.len())
+            .unwrap_or(0);
+        total += degree;
+        prefix.push(total);
+    }
+    prefix
 }
 
 #[cfg(test)]

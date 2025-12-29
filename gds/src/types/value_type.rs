@@ -119,9 +119,9 @@ impl ValueType {
             ValueType::DateArray => Ok("date[]"),
             ValueType::DateTimeArray => Ok("datetime[]"),
             ValueType::UntypedArray => Ok("Any[]"),
-            ValueType::Unknown => Err("ValueType::UNKNOWN has no CSV name"), // Changed
-            ValueType::StringMap => Ok("string{}"),                          // Added
-            ValueType::LongMap => Ok("long{}"),                              // Added
+            ValueType::Unknown => Err("ValueType::UNKNOWN has no CSV name"),
+            ValueType::StringMap => Ok("string{}"),
+            ValueType::LongMap => Ok("long{}"),
             ValueType::DoubleMap => Ok("double{}"),
             ValueType::BooleanMap => Ok("boolean{}"),
             ValueType::StringMapArray => Ok("string{}[]"),

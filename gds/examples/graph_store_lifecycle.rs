@@ -20,6 +20,7 @@ mod enabled {
     use gds::config::{GraphStoreConfig, GraphStorePropertiesConfig};
     use gds::mem::graph_store_memory_container::GraphStoreMemoryContainer;
     use gds::procedures::facades::centrality::pagerank::PageRankFacade;
+    use gds::procedures::facades::community::TriangleCountBuilder;
     use gds::projection::orientation::Orientation;
     use gds::projection::{NodeLabel, RelationshipType};
     use gds::prelude::GraphStore;
@@ -173,9 +174,9 @@ mod enabled {
         );
         println!();
 
-        println!("Step 6: run a graph algorithm on the projected slice (PageRank)");
+        println!("Step 6: run graph algorithms on the projected slice (PageRank + TriangleCount)");
         let projected_arc = Arc::new(projected);
-        let stats = PageRankFacade::new(projected_arc)
+        let stats = PageRankFacade::new(projected_arc.clone())
             .iterations(8)
             .tolerance(1e-6)
             .concurrency(2)
@@ -187,6 +188,26 @@ mod enabled {
         println!(
             "- score distribution: min={:.6} mean={:.6} max={:.6} p90={:.6}",
             stats.min, stats.mean, stats.max, stats.p90
+        );
+        let topk = PageRankFacade::new(projected_arc.clone())
+            .iterations(8)
+            .tolerance(1e-6)
+            .concurrency(2)
+            .stream()?
+            .take(5)
+            .collect::<Vec<_>>();
+        println!(
+            "- top PageRank nodes (first 5): {:?}",
+            topk.iter()
+                .map(|row| format!("{}:{:.4}", row.node_id, row.score))
+                .collect::<Vec<_>>()
+        );
+        let triangle_stats = TriangleCountBuilder::new(projected_arc.clone())
+            .concurrency(2)
+            .stats()?;
+        println!(
+            "- triangle count: global={} exec={}ms (undirected view)",
+            triangle_stats.global_triangles, triangle_stats.execution_time_ms
         );
         println!();
 

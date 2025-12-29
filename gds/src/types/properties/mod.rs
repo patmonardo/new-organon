@@ -12,7 +12,3 @@ pub mod relationship;
 pub use property::*;
 pub use property_store::*;
 pub use property_values::*;
-
-// NEW: HyperPropertyStores - The Sacred Hierarchy (currently deactivated for LTS)
-// pub mod hyper;     // Monadic, Dyadic, Triadic, Tetradic, Pentadic
-// pub use hyper::*;
