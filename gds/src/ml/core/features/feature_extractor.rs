@@ -11,7 +11,7 @@
 /// **Design Pattern**: Marker trait + specialized extractors
 /// - ScalarFeatureExtractor: produces 1 feature
 /// - ArrayFeatureExtractor: produces N features
-pub trait FeatureExtractor {
+pub trait FeatureExtractor: Send + Sync {
     /// Get the dimension (number of features) this extractor produces.
     fn dimension(&self) -> usize;
 }

@@ -9,7 +9,7 @@ use super::FeatureExtractor;
 ///
 /// This corresponds to the ScalarFeatureExtractor interface in Java GDS.
 /// Scalar extractors always have dimension = 1.
-pub trait ScalarFeatureExtractor: FeatureExtractor {
+pub trait ScalarFeatureExtractor: FeatureExtractor + Send + Sync {
     /// Extract a scalar feature value from a node.
     fn extract(&self, node_id: u64) -> f64;
 }

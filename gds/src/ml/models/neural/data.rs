@@ -14,7 +14,7 @@ use std::sync::Arc;
 ///
 /// This corresponds to MLPClassifierData in Java GDS.
 /// Uses Weights objects for automatic differentiation support.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MLPClassifierData {
     /// Number of classes
     number_of_classes: usize,
@@ -139,6 +139,10 @@ impl BaseModelData for MLPClassifierData {
     fn feature_dimension(&self) -> usize {
         self.feature_dimension()
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 impl ClassifierData for MLPClassifierData {
@@ -157,7 +161,8 @@ mod tests {
 
         assert_eq!(data.number_of_classes(), 3);
         assert_eq!(data.feature_dimension(), 10);
-        assert_eq!(data.depth(), 3); // 2 hidden + 1 output
+        // Depth = biases.len() + 1 = 3 + 1 = 4 (matches Java: biases().size() + 1)
+        assert_eq!(data.depth(), 4);
         assert_eq!(data.weights().len(), 3); // 2 hidden + 1 output
         assert_eq!(data.biases().len(), 3); // 2 hidden + 1 output
 
@@ -166,9 +171,10 @@ mod tests {
         assert_eq!(data.weights()[1].dimensions(), vec![25, 50]); // 25x50
         assert_eq!(data.weights()[2].dimensions(), vec![3, 25]);  // 3x25
 
-        assert_eq!(data.biases()[0].dimensions(), vec![50]); // 50
-        assert_eq!(data.biases()[1].dimensions(), vec![25]); // 25
-        assert_eq!(data.biases()[2].dimensions(), vec![3]);  // 3
+        // Vectors are stored as column vectors: [dim, 1]
+        assert_eq!(data.biases()[0].dimensions(), vec![50, 1]); // 50x1 column vector
+        assert_eq!(data.biases()[1].dimensions(), vec![25, 1]); // 25x1 column vector
+        assert_eq!(data.biases()[2].dimensions(), vec![3, 1]);  // 3x1 column vector
     }
 
     #[test]
@@ -177,7 +183,7 @@ mod tests {
 
         // Check that weights are initialized with proper bounds
         let first_weight = data.weights()[0].snapshot();
-        let expected_bound = (2.0 / 100.0).sqrt(); // sqrt(2/100) ≈ 0.141
+        let expected_bound = (2.0f64 / 100.0).sqrt();
 
         for &value in first_weight.data() {
             assert!(value.abs() <= expected_bound + 1e-10); // Allow small floating point errors

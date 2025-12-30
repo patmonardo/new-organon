@@ -55,16 +55,16 @@ impl RandomSearch {
         }
     }
 
-    fn sample_integer(&mut self, range: &IntegerRange) -> i32 {
-        self.rng.gen_range(range.range.min..=range.range.max)
+    fn sample_integer(&mut self, range: &IntegerRangeParameter) -> i32 {
+        self.rng.gen_range(range.min()..=range.max())
     }
 
-    fn sample_double(&mut self, range: &DoubleRange) -> f64 {
-        let min = range.range.min;
-        let max = range.range.max;
+    fn sample_double(&mut self, range: &DoubleRangeParameter) -> f64 {
+        let min = range.min();
+        let max = range.max();
 
-        if range.log_scale {
-            let log_min = min.ln();
+        if range.log_scale() {
+            let log_min = if min < 1e-20 { 1e-20_f64.ln() } else { min.ln() };
             let log_max = max.ln();
             let log_value = self.rng.gen_range(log_min..=log_max);
             log_value.exp()
@@ -80,14 +80,14 @@ impl RandomSearch {
         for (key, range) in config.double_ranges() {
             params.insert(
                 key.to_string(),
-                DoubleParameter(self.sample_double(range)).into(),
+                Box::new(DoubleParameter::of(self.sample_double(range))) as Box<dyn ConcreteParameter>,
             );
         }
 
         for (key, range) in config.integer_ranges() {
             params.insert(
                 key.to_string(),
-                IntegerParameter(self.sample_integer(range)).into(),
+                Box::new(IntegerParameter::of(self.sample_integer(range))) as Box<dyn ConcreteParameter>,
             );
         }
 

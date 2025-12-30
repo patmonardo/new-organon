@@ -7,18 +7,18 @@
 //! - Dataset bootstrapping utilities
 //! - Classification implementation
 //! - Regression implementation
-//! - Trainers (TODO: translate from Java)
+//! - Trainers for both classification and regression
 
 mod bootstrapper;
 mod classifier;
+mod classifier_trainer;
 mod config;
 mod regressor;
+mod regressor_trainer;
 
 pub use bootstrapper::*;
 pub use classifier::*;
+pub use classifier_trainer::*;
 pub use config::*;
 pub use regressor::*;
-
-// TODO: Translate trainers from Java GDS:
-// - RandomForestClassifierTrainer
-// - RandomForestRegressorTrainer
+pub use regressor_trainer::*;

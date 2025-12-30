@@ -172,7 +172,6 @@ impl Variable for EWiseAddMatrixScalar {
         };
 
         // Map: add scalar to each element
-        // TODO: Once Matrix::map() is implemented, use: matrix.map(|v| v + scalar_value)
         let data = matrix.data().iter().map(|&v| v + scalar_value).collect();
         let dims = matrix.dimensions();
         let result = Matrix::new(data, dims[0], dims[1]);

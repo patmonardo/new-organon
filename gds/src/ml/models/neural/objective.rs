@@ -167,18 +167,31 @@ mod tests {
         let data = MLPClassifierData::create(3, 5, &[10], 42);
         let classifier = MLPClassifier::new(data);
 
-        struct TestFeatures;
+        struct TestFeatures {
+            data: Vec<Vec<f64>>,
+        }
+        impl TestFeatures {
+            fn new() -> Self {
+                Self {
+                    data: vec![vec![1.0, 2.0, 3.0, 4.0, 5.0]],
+                }
+            }
+        }
         impl Features for TestFeatures {
-            fn get(&self, _node_id: usize) -> Vec<f64> {
-                vec![1.0, 2.0, 3.0, 4.0, 5.0]
+            fn get(&self, node_id: usize) -> &[f64] {
+                &self.data[node_id]
             }
 
             fn feature_dimension(&self) -> usize {
                 5
             }
+
+            fn size(&self) -> usize {
+                self.data.len()
+            }
         }
 
-        let features = TestFeatures;
+        let features = TestFeatures::new();
         let labels = HugeIntArray::from_vec(vec![0, 1, 2]);
 
         let objective = MLPClassifierObjective::new(
@@ -199,18 +212,32 @@ mod tests {
         let data = MLPClassifierData::create(2, 3, &[4], 123);
         let classifier = MLPClassifier::new(data);
 
-        struct TestFeatures;
+        struct TestFeatures {
+            data: Vec<Vec<f64>>,
+        }
+        impl TestFeatures {
+            fn new() -> Self {
+                Self {
+                    // Need 2 feature vectors for batch size 2
+                    data: vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]],
+                }
+            }
+        }
         impl Features for TestFeatures {
-            fn get(&self, _node_id: usize) -> Vec<f64> {
-                vec![1.0, 2.0, 3.0]
+            fn get(&self, node_id: usize) -> &[f64] {
+                &self.data[node_id]
             }
 
             fn feature_dimension(&self) -> usize {
                 3
             }
+
+            fn size(&self) -> usize {
+                self.data.len()
+            }
         }
 
-        let features = TestFeatures;
+        let features = TestFeatures::new();
         let labels = HugeIntArray::from_vec(vec![0, 1]);
 
         let objective = MLPClassifierObjective::new(
@@ -237,18 +264,31 @@ mod tests {
         let data = MLPClassifierData::create(2, 3, &[4], 456);
         let classifier = MLPClassifier::new(data);
 
-        struct TestFeatures;
+        struct TestFeatures {
+            data: Vec<Vec<f64>>,
+        }
+        impl TestFeatures {
+            fn new() -> Self {
+                Self {
+                    data: vec![vec![1.0, 2.0, 3.0]],
+                }
+            }
+        }
         impl Features for TestFeatures {
-            fn get(&self, _node_id: usize) -> Vec<f64> {
-                vec![1.0, 2.0, 3.0]
+            fn get(&self, node_id: usize) -> &[f64] {
+                &self.data[node_id]
             }
 
             fn feature_dimension(&self) -> usize {
                 3
             }
+
+            fn size(&self) -> usize {
+                self.data.len()
+            }
         }
 
-        let features = TestFeatures;
+        let features = TestFeatures::new();
         let labels = HugeIntArray::from_vec(vec![0, 1, 2, 0]);
 
         let objective = MLPClassifierObjective::new(

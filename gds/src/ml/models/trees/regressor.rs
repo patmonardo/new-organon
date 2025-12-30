@@ -55,7 +55,7 @@ impl Regressor for RandomForestRegressor {
 
         let mut sum = 0.0;
         for i in 0..number_of_decision_trees {
-            sum += self.data.decision_trees[i].predict(features);
+            sum += *self.data.decision_trees[i].predict(features);
         }
 
         sum / number_of_decision_trees as f64
@@ -98,6 +98,10 @@ impl BaseModelData for RandomForestRegressorData {
 
     fn feature_dimension(&self) -> usize {
         self.num_features
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
 

@@ -19,20 +19,20 @@ use super::{
 };
 
 /// Trainer for MLP Classifier
-/// 
+///
 /// This corresponds to MLPClassifierTrainer in Java GDS.
 /// Uses the gradient descent system for training.
 pub struct MLPClassifierTrainer {
     number_of_classes: usize,
     train_config: MLPClassifierTrainConfig,
-    random: StdRng,
-    termination_flag: Arc<RwLock<bool>>,
+    random_seed: Option<u64>,
+    _termination_flag: Arc<RwLock<bool>>,
     concurrency: usize,
 }
 
 impl MLPClassifierTrainer {
     /// Create a new MLP classifier trainer
-    /// 
+    ///
     /// Java: `public MLPClassifierTrainer(int numberOfClasses, MLPClassifierTrainConfig trainConfig, Optional<Long> randomSeed, ...)`
     pub fn new(
         number_of_classes: usize,
@@ -40,40 +40,38 @@ impl MLPClassifierTrainer {
         random_seed: Option<u64>,
         concurrency: usize,
     ) -> Self {
-        let random = if let Some(seed) = random_seed {
-            StdRng::seed_from_u64(seed)
-        } else {
-            StdRng::from_entropy()
-        };
-        
         Self {
             number_of_classes,
             train_config,
-            random,
-            termination_flag: Arc::new(RwLock::new(false)),
+            random_seed,
+            _termination_flag: Arc::new(RwLock::new(false)),
             concurrency,
         }
     }
-    
-    /// Train the MLP classifier
-    /// 
+    ///
     /// Java: `public MLPClassifier train(Features features, HugeIntArray labels, ReadOnlyHugeLongArray trainSet)`
     pub fn train(
         &mut self,
         features: &dyn Features,
         labels: &HugeIntArray,
-        train_set: &[u64],
+        train_set: &Arc<Vec<u64>>,
     ) -> MLPClassifier {
+        let mut random = if let Some(seed) = self.random_seed {
+            StdRng::seed_from_u64(seed)
+        } else {
+            StdRng::from_entropy()
+        };
+
         // Create MLP classifier data
         let data = MLPClassifierData::create(
             self.number_of_classes,
             features.feature_dimension(),
-            self.train_config.hidden_layer_sizes,
-            self.random.next_u64(),
+            &self.train_config.hidden_layer_sizes,
+            random.next_u64(),
         );
-        
+
         let classifier = MLPClassifier::new(data);
-        
+
         // Create objective function
         let objective = MLPClassifierObjective::new(
             classifier,
@@ -81,10 +79,9 @@ impl MLPClassifierTrainer {
             labels,
             self.train_config.penalty,
             self.train_config.focus_weight,
-            vec![1.0; self.number_of_classes],
+            self.train_config.initialize_class_weights(self.number_of_classes),
         );
-        
-        // Create training instance
+
         // Create training instance
         let gradient_config = crate::ml::gradient_descent::GradientDescentConfig::builder()
             .batch_size(self.train_config.batch_size)
@@ -95,26 +92,26 @@ impl MLPClassifierTrainer {
             .learning_rate(self.train_config.learning_rate)
             .build()
             .unwrap();
-        
+
         let training = Training::new(gradient_config, train_set.len());
-        
+
         // Create batch queue supplier
         let queue_supplier = || {
             Box::new(ConsecutiveBatchQueue::new(train_set.len() as u64, self.train_config.batch_size)) as Box<dyn BatchQueue>
         };
-        
+
         // Train the model
         training.train(&objective, queue_supplier, self.concurrency);
-        
+
         // Return the trained classifier
         objective.classifier
     }
-    
+
     /// Get the training configuration
     pub fn train_config(&self) -> &MLPClassifierTrainConfig {
         &self.train_config
     }
-    
+
     /// Get the number of classes
     pub fn number_of_classes(&self) -> usize {
         self.number_of_classes
@@ -128,16 +125,22 @@ impl ClassifierTrainer for MLPClassifierTrainer {
         labels: &HugeIntArray,
         train_set: &Arc<Vec<u64>>,
     ) -> Box<dyn Classifier> {
+        let mut random = if let Some(seed) = self.random_seed {
+            StdRng::seed_from_u64(seed)
+        } else {
+            StdRng::from_entropy()
+        };
+
         // Create MLP classifier data
         let data = MLPClassifierData::create(
             self.number_of_classes,
             features.feature_dimension(),
-            self.train_config.hidden_layer_sizes,
-            self.random.next_u64(),
+            &self.train_config.hidden_layer_sizes,
+            random.next_u64(),
         );
-        
+
         let classifier = MLPClassifier::new(data);
-        
+
         // Create objective function
         let objective = MLPClassifierObjective::new(
             classifier,
@@ -145,10 +148,9 @@ impl ClassifierTrainer for MLPClassifierTrainer {
             labels,
             self.train_config.penalty,
             self.train_config.focus_weight,
-            vec![1.0; self.number_of_classes],
+            self.train_config.initialize_class_weights(self.number_of_classes),
         );
-        
-        // Create training instance
+
         // Create training instance
         let gradient_config = crate::ml::gradient_descent::GradientDescentConfig::builder()
             .batch_size(self.train_config.batch_size)
@@ -159,17 +161,17 @@ impl ClassifierTrainer for MLPClassifierTrainer {
             .learning_rate(self.train_config.learning_rate)
             .build()
             .unwrap();
-        
+
         let training = Training::new(gradient_config, train_set.len());
-        
+
         // Create batch queue supplier
         let queue_supplier = || {
             Box::new(ConsecutiveBatchQueue::new(train_set.len() as u64, self.train_config.batch_size)) as Box<dyn BatchQueue>
         };
-        
+
         // Train the model
         training.train(&objective, queue_supplier, self.concurrency);
-        
+
         // Return the trained classifier
         Box::new(objective.classifier)
     }
@@ -178,16 +180,17 @@ impl ClassifierTrainer for MLPClassifierTrainer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_trainer_creation() {
+        use crate::ml::models::TrainingMethod;
         let config = MLPClassifierTrainConfig::default();
         let trainer = MLPClassifierTrainer::new(3, config, Some(42), 1);
-        
+
         assert_eq!(trainer.number_of_classes(), 3);
-        assert_eq!(trainer.train_config().number_of_classes(), 3);
+        assert_eq!(trainer.train_config().method, TrainingMethod::MLPClassification);
     }
-    
+
     #[test]
     fn test_trainer_with_custom_config() {
         let config = MLPClassifierTrainConfig::builder()
@@ -197,58 +200,80 @@ mod tests {
             .hidden_layer_sizes(vec![64, 32])
             .build()
             .unwrap();
-        
+
         let trainer = MLPClassifierTrainer::new(2, config, Some(123), 2);
-        
+
         assert_eq!(trainer.number_of_classes(), 2);
-        assert_eq!(trainer.train_config().batch_size(), 50);
-        assert_eq!(trainer.train_config().max_epochs(), 10);
-        assert_eq!(trainer.train_config().learning_rate(), 0.01);
+        assert_eq!(trainer.train_config().batch_size, 50);
+        assert_eq!(trainer.train_config().max_epochs, 10);
+        assert_eq!(trainer.train_config().learning_rate, 0.01);
         assert_eq!(trainer.train_config().hidden_layer_sizes(), &vec![64, 32]);
     }
-    
+
     #[test]
     fn test_trainer_without_seed() {
         let config = MLPClassifierTrainConfig::default();
         let trainer = MLPClassifierTrainer::new(3, config, None, 1);
-        
+
         assert_eq!(trainer.number_of_classes(), 3);
     }
-    
+
     #[test]
     fn test_training_integration() {
         // Simple test features
-        struct TestFeatures;
-        impl Features for TestFeatures {
-            fn get(&self, _node_id: usize) -> Vec<f64> {
-                vec![1.0, 2.0, 3.0]
+        struct TestFeatures {
+            data: Vec<Vec<f64>>,
+        }
+        impl TestFeatures {
+            fn new() -> Self {
+                Self {
+                    // Need 4 feature vectors for train_set with 4 elements
+                    data: vec![
+                        vec![1.0, 2.0, 3.0],
+                        vec![4.0, 5.0, 6.0],
+                        vec![7.0, 8.0, 9.0],
+                        vec![10.0, 11.0, 12.0],
+                    ],
+                }
             }
-            
+        }
+        impl Features for TestFeatures {
+            fn get(&self, node_id: usize) -> &[f64] {
+                &self.data[node_id]
+            }
+
             fn feature_dimension(&self) -> usize {
                 3
             }
+
+            fn size(&self) -> usize {
+                self.data.len()
+            }
         }
-        
+
         let config = MLPClassifierTrainConfig::builder()
             .max_epochs(1) // Just one epoch for testing
             .batch_size(2)
             .build()
             .unwrap();
-        
-        let mut trainer = MLPClassifierTrainer::new(2, config, Some(456), 1);
-        let features = TestFeatures;
+
+        let trainer = MLPClassifierTrainer::new(2, config, Some(456), 1);
+        let features = TestFeatures::new();
         let labels = HugeIntArray::from_vec(vec![0, 1, 0, 1]);
-        let train_set = vec![0, 1, 2, 3];
-        
-        let classifier = trainer.train(&features, &labels, &train_set);
-        
+        let train_set = Arc::new(vec![0, 1, 2, 3]);
+
+        let classifier = {
+            let trainer_mut = trainer;
+            trainer_mut.train(&features, &labels, &train_set)
+        };
+
         assert_eq!(classifier.data().number_of_classes(), 2);
         assert_eq!(classifier.data().feature_dimension(), 3);
-        
+
         // Test prediction
         let test_features = vec![1.0, 2.0, 3.0];
         let probabilities = classifier.predict_probabilities(&test_features);
-        
+
         assert_eq!(probabilities.len(), 2);
         let sum: f64 = probabilities.iter().sum();
         assert!((sum - 1.0).abs() < 1e-10); // Should sum to 1.0 due to softmax

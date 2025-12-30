@@ -6,7 +6,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 /// Trainer config trait - defined here to avoid circular dependency
-pub trait TrainerConfigTrait: Send + Sync {
+pub trait TrainerConfigTrait: Send + Sync + std::any::Any {
     /// Get the training method
     fn method(&self) -> TrainingMethod;
 
@@ -22,6 +22,9 @@ pub trait BaseModelData: Send + Sync + Debug {
 
     /// Get the number of features (feature dimension)
     fn feature_dimension(&self) -> usize;
+
+    /// Get self as Any for downcasting
+    fn as_any(&self) -> &dyn std::any::Any;
 }
 
 /// Classifier data trait - extends BaseModelData

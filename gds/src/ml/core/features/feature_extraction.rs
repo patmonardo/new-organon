@@ -78,7 +78,7 @@ pub fn extract(
     }
 }
 
-// TODO: Translate these methods once dependencies are available:
+// Batch extraction helper is omitted until batch/functions/tensor modules land in Rust:
 // pub fn extract_batch(batch: &Batch, extractors: &[AnyFeatureExtractor]) -> Constant<Matrix>
 
 /// Extract features for all nodes in a graph into a HugeObjectArray of `Vec<f64>`.

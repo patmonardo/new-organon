@@ -3,6 +3,9 @@
 //! The Features trait is the core interface for accessing feature data.
 //! Moved from NodeId-based API to index-based API to match Java.
 
+use crate::collections::HugeObjectArray;
+use crate::ml::core::features::{extract, extract_graph, feature_count, property_extractors, AnyFeatureExtractor, FeatureConsumer};
+use crate::types::graph::Graph;
 use crate::ml::core::tensor::Vector;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
@@ -38,13 +41,111 @@ impl Features for DenseFeatures {
     }
 }
 
+/// Features backed by a HugeObjectArray of feature vectors.
+/// 1:1 with the anonymous Features class in FeaturesFactory.wrap(HugeObjectArray<double[]>)
+pub struct HugeArrayFeatures {
+    features: HugeObjectArray<Vec<f64>>,
+}
+
+impl HugeArrayFeatures {
+    fn new(features: HugeObjectArray<Vec<f64>>) -> Self {
+        Self { features }
+    }
+}
+
+impl Features for HugeArrayFeatures {
+    fn size(&self) -> usize {
+        self.features.size()
+    }
+
+    fn get(&self, id: usize) -> &[f64] {
+        self.features.get(id)
+    }
+
+    fn feature_dimension(&self) -> usize {
+        if self.size() > 0 {
+            self.features.get(0).len()
+        } else {
+            0
+        }
+    }
+}
+
 /// Lazy feature extraction from graph properties
-/// TODO: Implement lazy extraction following FeaturesFactory.extractLazyFeatures()
 pub struct LazyFeatures {
     size: usize,
     feature_dimension: usize,
     producer: Arc<dyn Fn(usize) -> Vec<f64> + Send + Sync>,
     cache: Vec<OnceCell<Vec<f64>>>,
+}
+
+/// Lazy feature extraction from graph node properties.
+/// 1:1 with the anonymous Features class in FeaturesFactory.extractLazyFeatures()
+pub struct LazyExtractedFeatures {
+    graph: Arc<dyn Graph>,
+    extractors: Vec<AnyFeatureExtractor>,
+    feature_dimension: usize,
+    cache: Vec<OnceCell<Vec<f64>>>,
+}
+
+impl LazyExtractedFeatures {
+    fn new(
+        graph: Arc<dyn Graph>,
+    extractors: Vec<AnyFeatureExtractor>,
+        feature_dimension: usize,
+    ) -> Self {
+        let cache = (0..graph.node_count()).map(|_| OnceCell::new()).collect();
+        Self {
+            graph,
+            extractors,
+            feature_dimension,
+            cache,
+        }
+    }
+}
+
+impl Features for LazyExtractedFeatures {
+    fn size(&self) -> usize {
+        self.graph.node_count()
+    }
+
+    fn get(&self, id: usize) -> &[f64] {
+        let cell = &self.cache[id];
+        let feature_dimension = self.feature_dimension;
+        let extractors = &self.extractors;
+        cell.get_or_init(|| {
+            let mut features = vec![0.0f64; feature_dimension];
+            let mut consumer = VecFeatureConsumer::new(&mut features);
+            extract(id as u64, id as u64, extractors, &mut consumer);
+            features
+        })
+        .as_slice()
+    }
+
+    fn feature_dimension(&self) -> usize {
+        self.feature_dimension
+    }
+}
+
+/// Simple feature consumer that writes into a Vec<f64>
+struct VecFeatureConsumer<'a> {
+    features: &'a mut Vec<f64>,
+}
+
+impl<'a> VecFeatureConsumer<'a> {
+    fn new(features: &'a mut Vec<f64>) -> Self {
+        Self { features }
+    }
+}
+
+impl<'a> FeatureConsumer for VecFeatureConsumer<'a> {
+    fn accept_scalar(&mut self, _node_offset: u64, offset: usize, value: f64) {
+        self.features[offset] = value;
+    }
+
+    fn accept_array(&mut self, _node_offset: u64, offset: usize, values: &[f64]) {
+        self.features[offset..offset + values.len()].copy_from_slice(values);
+    }
 }
 
 impl LazyFeatures {
@@ -99,8 +200,8 @@ pub struct FeaturesFactory;
 impl FeaturesFactory {
     /// Wrap a HugeObjectArray of feature vectors
     /// 1:1 with wrap(HugeObjectArray<double[]>) in Java
-    pub fn wrap_array(features: Vec<Vec<f64>>) -> Box<dyn Features> {
-        Box::new(DenseFeatures::new(features))
+    pub fn wrap_huge_array(features: HugeObjectArray<Vec<f64>>) -> Box<dyn Features> {
+        Box::new(HugeArrayFeatures::new(features))
     }
 
     /// Wrap a single feature vector
@@ -123,8 +224,30 @@ impl FeaturesFactory {
         Box::new(LazyFeatures::new(size, feature_dimension, producer))
     }
 
-    // TODO: Add extractLazyFeatures and extractEagerFeatures methods
-    // These require graph property extraction infrastructure
+    /// Extract lazy features from graph properties.
+    /// 1:1 with FeaturesFactory.extractLazyFeatures(Graph, List<String>) in Java
+    pub fn extract_lazy_features(
+        graph: Arc<dyn Graph>,
+        feature_properties: &[String],
+    ) -> Box<dyn Features> {
+        let extractors = property_extractors(&*graph, feature_properties);
+        let feature_dimension = feature_count(&extractors);
+        Box::new(LazyExtractedFeatures::new(graph, extractors, feature_dimension))
+    }
+
+    /// Extract eager features from graph properties.
+    /// 1:1 with FeaturesFactory.extractEagerFeatures(Graph, List<String>) in Java
+    pub fn extract_eager_features(
+        graph: Arc<dyn Graph>,
+        feature_properties: &[String],
+    ) -> Box<dyn Features> {
+        let extractors = property_extractors(&*graph, feature_properties);
+        let features_array = HugeObjectArray::new(graph.node_count());
+        let features_array = extract_graph(&*graph, &extractors, features_array);
+        Box::new(HugeArrayFeatures::new(features_array))
+    }
+
+    // extractLazyFeatures and extractEagerFeatures methods implemented above
 }
 
 #[cfg(test)]

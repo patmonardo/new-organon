@@ -30,6 +30,16 @@ pub struct AbstractVariable {
     require_gradient: bool,
 }
 
+impl fmt::Debug for AbstractVariable {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AbstractVariable")
+            .field("parents", &format!("<{} variables>", self.parents.len()))
+            .field("dimensions", &self.dimensions)
+            .field("require_gradient", &self.require_gradient)
+            .finish()
+    }
+}
+
 impl AbstractVariable {
     /// Java: `protected AbstractVariable(List<? extends Variable<?>> parents, int[] dimensions)`
     pub fn new(parents: Vec<VariableRef>, dimensions: Vec<usize>) -> Self {

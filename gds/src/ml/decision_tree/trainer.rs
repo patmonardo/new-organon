@@ -5,7 +5,7 @@
 
 use crate::collections::HugeLongArray;
 use crate::ml::decision_tree::{
-    DecisionTreePredictor, DecisionTreeTrainerConfig, FeatureBagger, Group, ImpurityCriterion,
+    predictor::DecisionTreePredictor, DecisionTreeTrainerConfig, FeatureBagger, Group, ImpurityCriterion,
     Splitter, StackRecord, TreeNode,
 };
 use crate::ml::models::Features;

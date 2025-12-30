@@ -5,6 +5,7 @@ use crate::{
         models::{Classifier, Features},
     },
 };
+use rayon::prelude::*;
 use std::sync::Arc;
 
 /// Computer for classification metrics
@@ -61,14 +62,12 @@ impl ClassificationMetricComputer {
     }
 }
 
-/// Simple parallel classifier stub (minimal implementation)
-///
-/// Note: Currently processes nodes one-by-one for simplicity.
-/// The `_batch_size` field is reserved for future batch processing optimization.
+/// Parallel classifier implementation with batch processing
+/// 1:1 translation of ParallelNodeClassifier.java
 struct ParallelNodeClassifier {
     classifier: Arc<dyn Classifier>,
     features: Arc<dyn Features>,
-    _batch_size: usize, // Reserved for future batch processing implementation
+    batch_size: usize,
 }
 
 impl ParallelNodeClassifier {
@@ -80,30 +79,57 @@ impl ParallelNodeClassifier {
         Self {
             classifier,
             features,
-            _batch_size: batch_size,
+            batch_size,
         }
     }
 
     fn predict(&self, evaluation_set: &[u64]) -> HugeLongArray {
         let mut predictions = HugeLongArray::new(evaluation_set.len());
 
-        // TODO: Implement batch processing using self._batch_size for better performance
-        // Currently processing nodes one-by-one for simplicity
-        for (i, &node_id) in evaluation_set.iter().enumerate() {
-            let feature_vec = self.features.get(node_id as usize);
-            let probs = self.classifier.predict_probabilities(feature_vec);
+        // Process in batches for better performance
+        // 1:1 with Java's BatchQueue.consecutive().parallelConsume()
+        let batch_predictions: Vec<(usize, i64)> = evaluation_set
+            .par_chunks(self.batch_size)
+            .enumerate()
+            .flat_map(|(batch_idx, batch)| {
+                self.process_batch(batch, batch_idx * self.batch_size)
+            })
+            .collect();
 
-            // Find class with max probability
-            let predicted_class = probs
-                .iter()
-                .enumerate()
-                .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-                .map(|(idx, _)| idx as i64)
-                .unwrap_or(0);
-
-            predictions.set(i, predicted_class);
+        // Set predictions in the array
+        for (idx, prediction) in batch_predictions {
+            predictions.set(idx, prediction);
         }
 
         predictions
+    }
+
+    /// Process a batch of node IDs and return (index, prediction) pairs
+    /// 1:1 with NodeClassificationPredictConsumer.accept() in Java
+    fn process_batch(&self, batch: &[u64], offset: usize) -> Vec<(usize, i64)> {
+        batch
+            .iter()
+            .enumerate()
+            .map(|(local_idx, &node_id)| {
+                let global_idx = offset + local_idx;
+
+                // Get feature vector for this node
+                let feature_vec = self.features.get(node_id as usize);
+
+                // Predict probabilities
+                let probs = self.classifier.predict_probabilities(feature_vec);
+
+                // Find class with maximum probability
+                // 1:1 with Java's argmax logic in NodeClassificationPredictConsumer
+                let predicted_class = probs
+                    .iter()
+                    .enumerate()
+                    .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                    .map(|(idx, _)| idx as i64)
+                    .unwrap_or(0);
+
+                (global_idx, predicted_class)
+            })
+            .collect()
     }
 }

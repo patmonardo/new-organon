@@ -26,7 +26,7 @@ pub use entropy::{Entropy, EntropyImpurityData};
 pub use feature_bagger::FeatureBagger;
 pub use gini_index::{GiniImpurityData, GiniIndex};
 pub use impurity_criterion::{ImpurityCriterion, ImpurityData, ImpurityDataAny};
-pub use predictor::DecisionTreePredictor;
+// pub use predictor::DecisionTreePredictor; // Conflicts with trees::DecisionTreePredictor trait
 pub use regressor_trainer::DecisionTreeRegressorTrainer;
 pub use split_mse::{MSEImpurityData, SplitMeanSquaredError};
 pub use splitter::Splitter;

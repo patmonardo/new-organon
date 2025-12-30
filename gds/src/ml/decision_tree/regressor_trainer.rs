@@ -11,17 +11,17 @@ use crate::ml::decision_tree::{
 use crate::ml::models::Features;
 use std::sync::Arc;
 
-pub struct DecisionTreeRegressorTrainer {
+pub struct DecisionTreeRegressorTrainer<'a> {
     targets: Arc<HugeDoubleArray>,
-    features: Box<dyn Features>,
+    features: &'a dyn Features,
     config: DecisionTreeTrainerConfig,
     feature_bagger: FeatureBagger,
 }
 
-impl DecisionTreeRegressorTrainer {
+impl<'a> DecisionTreeRegressorTrainer<'a> {
     pub fn new(
         targets: HugeDoubleArray,
-        features: Box<dyn Features>,
+        features: &'a dyn Features,
         config: DecisionTreeTrainerConfig,
         feature_bagger: FeatureBagger,
     ) -> Self {
@@ -94,14 +94,14 @@ impl DecisionTreeRegressorTrainer {
             .min(2.0 * (number_of_training_samples as f64) / (config.min_split_size() as f64))
             .ceil() as usize;
 
-        std::mem::size_of::<crate::ml::decision_tree::DecisionTreePredictor<f64>>()
+        std::mem::size_of::<crate::ml::decision_tree::predictor::DecisionTreePredictor<f64>>()
             + (1..=max_num_leaf_nodes).sum::<usize>() * leaf_node_size_in_bytes
             + (0..max_num_leaf_nodes.saturating_sub(1)).sum::<usize>()
                 * TreeNode::<f64>::split_memory_estimation()
     }
 }
 
-impl DecisionTreeTrainer<f64> for DecisionTreeRegressorTrainer {
+impl<'a> DecisionTreeTrainer<f64> for DecisionTreeRegressorTrainer<'a> {
     fn impurity_criterion(&self) -> Box<dyn ImpurityCriterion> {
         Box::new(SplitMeanSquaredError::new(self.targets.clone()))
     }

@@ -84,6 +84,10 @@ impl BaseModelData for LogisticRegressionData {
     fn feature_dimension(&self) -> usize {
         self.feature_dimension()
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 impl ClassifierData for LogisticRegressionData {

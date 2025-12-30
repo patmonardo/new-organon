@@ -113,25 +113,29 @@ impl Variable for MultiMean {
                 denom += self.sub_graph.relationship_weight(batch_node_id, neighbor);
             }
 
-            // Initialize mean row with parent row for nodeId in batch
+            // Initialize with node's own features (weighted by 1.0)
             for col in 0..cols {
                 let source_col_entry = parent_data.data_at(batch_node_id, col);
-                result_means.add_data_at(batch_idx, col, source_col_entry / denom);
+                result_means.add_data_at(batch_idx, col, source_col_entry);
             }
 
-            // Fetch rows from neighbors and update mean
+            // Add weighted neighbor features
             for &neighbor in neighbors {
                 let relationship_weight =
                     self.sub_graph.relationship_weight(batch_node_id, neighbor);
                 for col in 0..cols {
                     let neighbor_col_data =
                         parent_data.data_at(neighbor, col) * relationship_weight;
-                    result_means.add_data_at(batch_idx, col, neighbor_col_data / denom);
+                    result_means.add_data_at(batch_idx, col, neighbor_col_data);
                 }
             }
-        }
 
-        // TODO: Try to divide by numberOfEntries once instead of on every update
+            // Divide by denominator once for the entire row
+            for col in 0..cols {
+                let current_value = result_means.data_at(batch_idx, col);
+                result_means.set_data_at(batch_idx, col, current_value / denom);
+            }
+        }
 
         Box::new(result_means)
     }

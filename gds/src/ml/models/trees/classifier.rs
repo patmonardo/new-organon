@@ -30,7 +30,7 @@ use super::config::RandomForestConfig;
 /// Trait for decision tree predictors.
 /// 1:1 translation of DecisionTreePredictor<T> interface from Java GDS.
 pub trait DecisionTreePredictor<T>: Send + Sync {
-    fn predict(&self, features: &[f64]) -> T;
+    fn predict(&self, features: &[f64]) -> &T;
 }
 
 /// Random forest classifier model.
@@ -54,7 +54,7 @@ impl RandomForestClassifier {
         let mut predictions_per_class = vec![0i32; self.data.number_of_classes()];
 
         for tree in &self.data.decision_trees {
-            let predicted_class = tree.predict(features);
+            let predicted_class = *tree.predict(features);
             predictions_per_class[predicted_class] += 1;
         }
 
@@ -136,6 +136,10 @@ impl BaseModelData for RandomForestClassifierData {
 
     fn feature_dimension(&self) -> usize {
         self.num_features
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
 

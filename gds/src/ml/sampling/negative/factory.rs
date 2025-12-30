@@ -1,29 +1,12 @@
-// Copyright (c) "Neo4j"
-// Neo4j Sweden AB [http://neo4j.com]
-//
-// This file is part of Neo4j.
-//
-// Neo4j is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 //! Factory method for creating NegativeSampler instances.
 //!
 //! 1:1 translation of NegativeSampler.of() static factory method from Java GDS.
 
 use super::{NegativeSampler, RandomNegativeSampler, UserInputNegativeSampler};
-use crate::projection::NodeLabel;
+use crate::projection::{NodeLabel, RelationshipType};
 use crate::types::graph::{Graph, IdMap};
 use crate::types::graph_store::GraphStore;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Creates a NegativeSampler based on configuration.
@@ -33,7 +16,7 @@ use std::sync::Arc;
 /// Otherwise, uses RandomNegativeSampler.
 #[allow(clippy::too_many_arguments)]
 pub fn create_sampler<GS: GraphStore>(
-    _graph_store: Arc<GS>,
+    graph_store: Arc<GS>,
     graph: Arc<dyn Graph>,
     _source_and_target_node_labels: Vec<NodeLabel>,
     negative_relationship_type: Option<String>,
@@ -46,9 +29,12 @@ pub fn create_sampler<GS: GraphStore>(
     target_labels: Vec<NodeLabel>,
     random_seed: Option<u64>,
 ) -> Box<dyn NegativeSampler> {
-    if let Some(_rel_type) = negative_relationship_type {
-        // TODO: create filtered graph once GraphStore filtering API is available.
-        let negative_example_graph = Arc::clone(&graph);
+    if let Some(rel_type_str) = negative_relationship_type {
+        let rel_type = RelationshipType::of(rel_type_str.clone());
+        let relationship_types = HashSet::from([rel_type]);
+
+        let negative_example_graph = graph_store.get_graph_with_types(&relationship_types)
+            .unwrap_or_else(|_| panic!("Failed to create filtered graph for negative sampling with relationship type: {}", rel_type_str));
 
         let test_train_fraction =
             test_positive_count as f64 / (test_positive_count + train_positive_count) as f64;

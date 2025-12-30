@@ -14,11 +14,14 @@
 //! - AutoML system for hyperparameter optimization
 
 pub mod base;
+pub mod classifier_factory;
+pub mod classifier_trainer_factory;
 pub mod config;
 pub mod features;
 pub mod linear;
 pub mod logistic_regression;
-// pub mod neural;
+pub mod neural;
+pub mod regression_trainer_factory;
 pub mod training_method;
 pub mod trees;
 
@@ -27,20 +30,24 @@ pub use base::{
     BaseModelData, Classifier, ClassifierData, ClassifierTrainer, Features, LegacyBaseModelData,
     ModelData, Regressor, RegressorData, RegressorTrainer,
 };
+pub use classifier_factory::ClassifierFactory;
+pub use classifier_trainer_factory::ClassifierTrainerFactory;
 pub use config::{BaseTrainerConfig, ClassAwareTrainerConfig, PenaltyConfig, TrainerConfig};
+pub use regression_trainer_factory::RegressionTrainerFactory;
 pub use features::{DenseFeatures, FeaturesFactory, LazyFeatures};
 pub use training_method::TrainingMethod;
 
 // Model implementations
 pub use linear::{LinearRegressionData, LinearRegressor};
 pub use logistic_regression::{LogisticRegressionClassifier, LogisticRegressionData};
-// pub use neural::{
-//     MLPClassifier, MLPClassifierData, MLPClassifierObjective, MLPClassifierTrainConfig,
-//     MLPClassifierTrainer,
-// };
+pub use neural::{
+    MLPClassifier, MLPClassifierData, MLPClassifierObjective, MLPClassifierTrainConfig,
+    MLPClassifierTrainer,
+};
 pub use trees::{
     DatasetBootstrapper, DecisionTreePredictor, RandomForestClassifier,
-    RandomForestClassifierConfig, RandomForestClassifierData, RandomForestClassifierTrainerConfig,
-    RandomForestConfig, RandomForestRegressor, RandomForestRegressorConfig,
-    RandomForestRegressorData, RandomForestRegressorTrainerConfig,
+    RandomForestClassifierConfig, RandomForestClassifierData, RandomForestClassifierTrainer,
+    RandomForestClassifierTrainerConfig, RandomForestConfig, RandomForestRegressor,
+    RandomForestRegressorConfig, RandomForestRegressorData, RandomForestRegressorTrainer,
+    RandomForestRegressorTrainerConfig,
 };

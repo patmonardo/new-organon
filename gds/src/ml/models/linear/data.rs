@@ -59,6 +59,10 @@ impl BaseModelData for LinearRegressionData {
     fn feature_dimension(&self) -> usize {
         self.feature_dimension
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 impl RegressorData for LinearRegressionData {}

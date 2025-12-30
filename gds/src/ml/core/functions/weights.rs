@@ -30,6 +30,15 @@ pub struct Weights {
     data: Arc<RwLock<Box<dyn Tensor>>>, // Shared trainable tensor
 }
 
+impl fmt::Debug for Weights {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Weights")
+            .field("base", &self.base)
+            .field("data", &"<tensor>")
+            .finish()
+    }
+}
+
 impl Weights {
     // ========================================================================
     // Constructors - match Java's constructor pattern

@@ -88,7 +88,7 @@ pub struct ConsecutiveBatchQueue {
 }
 
 impl ConsecutiveBatchQueue {
-    fn new(total_size: u64, batch_size: usize) -> Self {
+    pub fn new(total_size: u64, batch_size: usize) -> Self {
         Self {
             total_size,
             batch_size,

@@ -12,8 +12,8 @@ use crate::ml::core::{
         relu::Relu,
         softmax::Softmax,
     },
-    tensor::Matrix,
-    variable::{Variable, VariableRef},
+    tensor::{Matrix, Tensor},
+    variable::{VariableRef},
 };
 use crate::ml::gradient_descent::batch_feature_matrix;
 use crate::ml::models::{Classifier, ClassifierData, Features};
@@ -115,7 +115,7 @@ impl Classifier for MLPClassifier {
 
     fn predict_probabilities_batch(&self, batch: &[usize], features: &dyn Features) -> Matrix {
         use crate::ml::core::batch::RangeBatch;
-        let range_batch = RangeBatch::new(0, batch.len() as u64, batch.len() as u64);
+        let range_batch = RangeBatch::new(0, batch.len(), batch.len() as u64);
         self.predict_probabilities_batch(&range_batch, features)
     }
 }
@@ -159,7 +159,7 @@ mod tests {
         let data = MLPClassifierData::create(2, 3, &[4], 456);
         let classifier = MLPClassifier::new(data);
 
-        let features = Matrix::from_row(&[1.0, 2.0, 3.0]);
+        let features = Matrix::new(vec![1.0, 2.0, 3.0], 1, 3);
         let features_var: VariableRef = Arc::new(Constant::new(Box::new(features)));
 
         let predictions_var = classifier.predictions_variable(features_var);
@@ -168,8 +168,9 @@ mod tests {
         let ctx = ComputationContext::new();
         let result = ctx.forward(predictions_var.as_ref());
 
-        assert_eq!(result.rows(), 1);
-        assert_eq!(result.cols(), 2);
+        let result_matrix = result.as_any().downcast_ref::<Matrix>().unwrap();
+        assert_eq!(result_matrix.rows(), 1);
+        assert_eq!(result_matrix.cols(), 2);
     }
 
     #[test]
@@ -178,23 +179,37 @@ mod tests {
         let classifier = MLPClassifier::new(data);
 
         // Simple test features
-        struct TestFeatures;
+        struct TestFeatures {
+            data: Vec<Vec<f64>>,
+        }
+        impl TestFeatures {
+            fn new() -> Self {
+                Self {
+                    data: vec![vec![1.0, 2.0, 3.0]],
+                }
+            }
+        }
         impl Features for TestFeatures {
-            fn get(&self, _node_id: usize) -> Vec<f64> {
-                vec![1.0, 2.0, 3.0]
+            fn get(&self, node_id: usize) -> &[f64] {
+                &self.data[node_id]
             }
 
             fn feature_dimension(&self) -> usize {
                 3
             }
+
+            fn size(&self) -> usize {
+                self.data.len()
+            }
         }
 
-        let features = TestFeatures;
-        let batch = RangeBatch::new(0, 2, 2);
+        let features = TestFeatures::new();
+        let batch = RangeBatch::new(0, 1, 1);
 
         let predictions = classifier.predict_probabilities_batch(&batch, &features);
 
-        assert_eq!(predictions.rows(), 2);
+        // Batch size is 1, so 1 row; 2 classes, so 2 cols
+        assert_eq!(predictions.rows(), 1);
         assert_eq!(predictions.cols(), 2);
 
         // Each row should sum to 1.0 (softmax)

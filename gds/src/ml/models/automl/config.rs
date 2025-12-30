@@ -71,11 +71,11 @@ impl TunableTrainerConfig {
                     let min = range_values[0].as_f64().unwrap();
                     let max = range_values[1].as_f64().unwrap();
                     let log_scale = LOG_SCALE_PARAMETERS.contains(&key.as_str());
-                    double_ranges.insert(key.clone(), DoubleRange::new(min, max, log_scale));
+                    double_ranges.insert(key.clone(), DoubleRangeParameter::of_with_log_scale(min, max, log_scale));
                 } else if range_values[0].is_i64() {
                     let min = range_values[0].as_i64().unwrap() as i32;
                     let max = range_values[1].as_i64().unwrap() as i32;
-                    integer_ranges.insert(key.clone(), IntegerRange::new(min, max));
+                    integer_ranges.insert(key.clone(), IntegerRangeParameter::of(min, max));
                 }
             } else {
                 // Parse concrete parameters
@@ -84,25 +84,28 @@ impl TunableTrainerConfig {
                         if n.is_i64() {
                             concrete_params.insert(
                                 key.clone(),
-                                Box::new(IntegerParameter(n.as_i64().unwrap() as i32)),
+                                Box::new(IntegerParameter::of(n.as_i64().unwrap() as i32)) as Box<dyn ConcreteParameter>,
                             );
                         } else if n.is_f64() {
                             concrete_params.insert(
                                 key.clone(),
-                                Box::new(DoubleParameter(n.as_f64().unwrap())),
+                                Box::new(DoubleParameter::of(n.as_f64().unwrap())) as Box<dyn ConcreteParameter>,
                             );
                         }
                     }
                     serde_json::Value::String(s) => {
-                        concrete_params.insert(key.clone(), Box::new(StringParameter(s.clone())));
+                        concrete_params.insert(
+                            key.clone(),
+                            Box::new(StringParameter::of(s.clone())) as Box<dyn ConcreteParameter>,
+                        );
                     }
                     serde_json::Value::Array(arr) => {
                         if arr.iter().all(|v| v.is_i64()) {
                             concrete_params.insert(
                                 key.clone(),
-                                Box::new(ListParameter(
+                                Box::new(ListParameter::of(
                                     arr.iter().map(|v| v.as_i64().unwrap() as i32).collect(),
-                                )),
+                                )) as Box<dyn ConcreteParameter>,
                             );
                         }
                     }

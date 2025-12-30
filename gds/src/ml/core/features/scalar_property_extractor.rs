@@ -71,7 +71,6 @@ impl ScalarFeatureExtractor for ScalarPropertyExtractor {
     }
 }
 
-// TODO: Add tests when Graph mock is available
 #[cfg(test)]
 mod tests {
     use super::*;

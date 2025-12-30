@@ -10,19 +10,19 @@ use crate::ml::decision_tree::{
 };
 use std::sync::Arc;
 
-pub struct DecisionTreeClassifierTrainer {
+pub struct DecisionTreeClassifierTrainer<'a> {
     impurity_criterion: Box<dyn ImpurityCriterion>,
-    features: Box<dyn Features>,
+    features: &'a dyn Features,
     all_labels: Arc<HugeIntArray>,
     number_of_classes: usize,
     config: DecisionTreeTrainerConfig,
     feature_bagger: FeatureBagger,
 }
 
-impl DecisionTreeClassifierTrainer {
+impl<'a> DecisionTreeClassifierTrainer<'a> {
     pub fn new(
         impurity_criterion: Box<dyn ImpurityCriterion>,
-        features: Box<dyn Features>,
+        features: &'a dyn Features,
         labels: Arc<HugeIntArray>,
         number_of_classes: usize,
         config: DecisionTreeTrainerConfig,
@@ -77,7 +77,7 @@ impl DecisionTreeClassifierTrainer {
     }
 }
 
-impl DecisionTreeTrainer<usize> for DecisionTreeClassifierTrainer {
+impl<'a> DecisionTreeTrainer<usize> for DecisionTreeClassifierTrainer<'a> {
     fn impurity_criterion(&self) -> Box<dyn ImpurityCriterion> {
         self.impurity_criterion.clone()
     }
