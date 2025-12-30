@@ -5,14 +5,15 @@
 
 use crate::collections::HugeLongArray;
 use crate::ml::decision_tree::{
-    splitter::Features, DecisionTreePredictor, DecisionTreeTrainerConfig, FeatureBagger, Group,
-    ImpurityCriterion, Splitter, StackRecord, TreeNode,
+    DecisionTreePredictor, DecisionTreeTrainerConfig, FeatureBagger, Group, ImpurityCriterion,
+    Splitter, StackRecord, TreeNode,
 };
+use crate::ml::models::Features;
 use std::collections::VecDeque;
 
 pub trait DecisionTreeTrainer<P: Clone> {
     fn impurity_criterion(&self) -> Box<dyn ImpurityCriterion>;
-    fn features(&self) -> Features;
+    fn features(&self) -> &dyn Features;
     fn config(&self) -> &DecisionTreeTrainerConfig;
     fn feature_bagger(&self) -> &FeatureBagger;
     fn to_terminal(&self, group: &Group) -> P;

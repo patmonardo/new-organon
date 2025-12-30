@@ -6,6 +6,12 @@
 use crate::collections::HugeLongArray;
 use std::any::Any;
 
+impl Clone for Box<dyn ImpurityCriterion> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
 /// Trait for computing impurity of decision tree node splits.
 pub trait ImpurityCriterion: Send + Sync {
     /// Compute the impurity of a group of samples.
@@ -21,6 +27,9 @@ pub trait ImpurityCriterion: Send + Sync {
 
     /// Update impurity data incrementally when removing a feature vector.
     fn decremental_impurity(&self, feature_vector_idx: usize, impurity_data: &mut dyn ImpurityData);
+
+    /// Clone this impurity criterion into a Box.
+    fn clone_box(&self) -> Box<dyn ImpurityCriterion>;
 
     /// Compute combined weighted impurity of left and right groups.
     fn combined_impurity(

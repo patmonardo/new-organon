@@ -8,6 +8,7 @@ use crate::ml::decision_tree::{ImpurityCriterion, ImpurityData, ImpurityDataAny}
 use std::any::Any;
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct SplitMeanSquaredError {
     targets: Arc<HugeDoubleArray>,
 }
@@ -98,6 +99,10 @@ impl ImpurityCriterion for SplitMeanSquaredError {
         let group_size = mse_impurity_data.group_size() - 1;
 
         Self::update_impurity_data(sum, sum_of_squares, group_size, mse_impurity_data);
+    }
+
+    fn clone_box(&self) -> Box<dyn ImpurityCriterion> {
+        Box::new(self.clone())
     }
 }
 

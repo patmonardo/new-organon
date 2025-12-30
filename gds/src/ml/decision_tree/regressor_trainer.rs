@@ -5,14 +5,15 @@
 
 use crate::collections::HugeDoubleArray;
 use crate::ml::decision_tree::{
-    splitter::Features, DecisionTreeTrainer, DecisionTreeTrainerConfig, FeatureBagger, Group,
-    ImpurityCriterion, MSEImpurityData, SplitMeanSquaredError, TreeNode,
+    DecisionTreeTrainer, DecisionTreeTrainerConfig, FeatureBagger, Group, ImpurityCriterion,
+    MSEImpurityData, SplitMeanSquaredError, TreeNode,
 };
+use crate::ml::models::Features;
 use std::sync::Arc;
 
 pub struct DecisionTreeRegressorTrainer {
     targets: Arc<HugeDoubleArray>,
-    features: Features,
+    features: Box<dyn Features>,
     config: DecisionTreeTrainerConfig,
     feature_bagger: FeatureBagger,
 }
@@ -20,7 +21,7 @@ pub struct DecisionTreeRegressorTrainer {
 impl DecisionTreeRegressorTrainer {
     pub fn new(
         targets: HugeDoubleArray,
-        features: Features,
+        features: Box<dyn Features>,
         config: DecisionTreeTrainerConfig,
         feature_bagger: FeatureBagger,
     ) -> Self {
@@ -105,8 +106,8 @@ impl DecisionTreeTrainer<f64> for DecisionTreeRegressorTrainer {
         Box::new(SplitMeanSquaredError::new(self.targets.clone()))
     }
 
-    fn features(&self) -> Features {
-        self.features.clone()
+    fn features(&self) -> &dyn Features {
+        &*self.features
     }
 
     fn config(&self) -> &DecisionTreeTrainerConfig {

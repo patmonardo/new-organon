@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use gds::collections::backends::vec::{VecFloat, VecInt};
 use gds::config::GraphStoreConfig;
 use gds::projection::{NodeLabel, RelationshipType};
 use gds::types::graph::id_map::{IdMap, SimpleIdMap};
@@ -8,13 +9,12 @@ use gds::types::graph::RelationshipTopology;
 use gds::types::graph_store::{
     Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
 };
+use gds::types::prelude::GraphStore;
 use gds::types::properties::node::impls::default_node_property_values::DefaultFloatNodePropertyValues;
-use gds::types::properties::relationship::impls::default_relationship_property_values::DefaultRelationshipPropertyValues;
 use gds::types::properties::relationship::impls::default_relationship_property_values::DefaultIntRelationshipPropertyValues;
+use gds::types::properties::relationship::impls::default_relationship_property_values::DefaultRelationshipPropertyValues;
 use gds::types::schema::{Direction, MutableGraphSchema};
 use gds::types::ValueType;
-use gds::types::prelude::GraphStore;
-use gds::collections::backends::vec::{VecFloat, VecInt};
 
 #[test]
 fn projection_factory_induces_subgraph_and_preserves_labels() {
@@ -26,18 +26,8 @@ fn projection_factory_induces_subgraph_and_preserves_labels() {
     // 1 -> 2,3
     // 2 -> 3
     // 3 -> 0
-    let outgoing = vec![
-        vec![1, 2],
-        vec![2, 3],
-        vec![3],
-        vec![0],
-    ];
-    let incoming = vec![
-        vec![3],
-        vec![0],
-        vec![0, 1],
-        vec![1, 2],
-    ];
+    let outgoing = vec![vec![1, 2], vec![2, 3], vec![3], vec![0]];
+    let incoming = vec![vec![3], vec![0], vec![0, 1], vec![1, 2]];
 
     let store = build_store(&labels, rel_type.clone(), outgoing, incoming);
 
@@ -105,8 +95,7 @@ fn projection_factory_projects_float_node_properties() {
     );
 
     let backend = VecFloat::from(vec![1.0f32, 2.0, 3.0, 4.0]);
-    let pv =
-        DefaultFloatNodePropertyValues::<VecFloat>::from_collection(backend, 4);
+    let pv = DefaultFloatNodePropertyValues::<VecFloat>::from_collection(backend, 4);
     store
         .add_node_property(store.node_labels(), "float_score", Arc::new(pv))
         .expect("add float property");
@@ -234,17 +223,18 @@ fn build_store(
     let mut schema_builder = MutableGraphSchema::empty();
     for label in labels {
         schema_builder.node_schema_mut().add_label(label.clone());
-        schema_builder
-            .node_schema_mut()
-            .add_property(label.clone(), "activity_score", ValueType::Double);
+        schema_builder.node_schema_mut().add_property(
+            label.clone(),
+            "activity_score",
+            ValueType::Double,
+        );
     }
     schema_builder
         .relationship_schema_mut()
         .add_relationship_type(rel_type.clone(), Direction::Directed);
     let schema = schema_builder.build();
 
-    let mut id_map =
-        SimpleIdMap::from_original_ids((0..node_count as i64).collect::<Vec<i64>>());
+    let mut id_map = SimpleIdMap::from_original_ids((0..node_count as i64).collect::<Vec<i64>>());
     for (mapped, label) in (0..node_count).zip(labels.iter().cycle()) {
         let mapped = mapped as i64;
         IdMap::add_node_label(&mut id_map, label.clone());
@@ -294,8 +284,7 @@ fn build_store_multi(
     }
     let schema = schema_builder.build();
 
-    let mut id_map =
-        SimpleIdMap::from_original_ids((0..node_count as i64).collect::<Vec<i64>>());
+    let mut id_map = SimpleIdMap::from_original_ids((0..node_count as i64).collect::<Vec<i64>>());
     for (mapped, label) in (0..node_count).zip(labels.iter().cycle()) {
         let mapped = mapped as i64;
         IdMap::add_node_label(&mut id_map, label.clone());

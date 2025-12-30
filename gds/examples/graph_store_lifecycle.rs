@@ -19,13 +19,13 @@ mod enabled {
     use gds::collections::backends::vec::VecDouble;
     use gds::config::{GraphStoreConfig, GraphStorePropertiesConfig};
     use gds::mem::graph_store_memory_container::GraphStoreMemoryContainer;
+    use gds::prelude::GraphStore;
     use gds::procedures::facades::centrality::pagerank::PageRankFacade;
     use gds::procedures::facades::community::TriangleCountBuilder;
     use gds::projection::orientation::Orientation;
     use gds::projection::{NodeLabel, RelationshipType};
-    use gds::prelude::GraphStore;
-    use gds::types::graph::id_map::MappedNodeId;
     use gds::types::graph::id_map::IdMap;
+    use gds::types::graph::id_map::MappedNodeId;
     use gds::types::graph::{RelationshipTopology, SimpleIdMap};
     use gds::types::graph_store::{
         Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,

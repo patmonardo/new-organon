@@ -2,54 +2,127 @@
 //!
 //! Translated from Java GDS ml-algo GiniIndex.java.
 //! This is a literal 1:1 translation following repository translation policy.
-//!
-//! NOTE: Implementation awaiting HugeIntArray from meta-macro processor.
 
-use crate::collections::HugeLongArray;
+use crate::collections::{HugeIntArray, HugeLongArray};
 use crate::ml::decision_tree::{ImpurityCriterion, ImpurityData, ImpurityDataAny};
 use std::any::Any;
+use std::sync::Arc;
 
-// TODO: Uncomment when HugeIntArray is available
-// use crate::collections::HugeIntArray;
-
+#[derive(Clone)]
 pub struct GiniIndex {
-    // expected_mapped_labels: HugeIntArray,  // Awaiting HugeIntArray
-    #[allow(dead_code)]
+    expected_mapped_labels: Arc<HugeIntArray>,
     number_of_classes: usize,
 }
 
-// Stub implementation until HugeIntArray is available
 impl GiniIndex {
-    #[allow(dead_code)]
-    pub fn memory_estimation(_number_of_training_samples: usize) -> usize {
-        todo!("GiniIndex requires HugeIntArray from meta-macro processor")
+    pub fn new(expected_mapped_labels: Arc<HugeIntArray>, number_of_classes: usize) -> Self {
+        Self {
+            expected_mapped_labels,
+            number_of_classes,
+        }
+    }
+
+    pub fn memory_estimation(number_of_training_samples: usize) -> usize {
+        HugeIntArray::memory_estimation(number_of_training_samples) + std::mem::size_of::<Self>()
     }
 }
 
 impl ImpurityCriterion for GiniIndex {
     fn group_impurity(
         &self,
-        _group: &HugeLongArray,
-        _start_index: usize,
-        _size: usize,
+        group: &HugeLongArray,
+        start_index: usize,
+        size: usize,
     ) -> Box<dyn ImpurityData> {
-        todo!("GiniIndex requires HugeIntArray from meta-macro processor")
+        if size == 0 {
+            return Box::new(GiniImpurityData::new(
+                0.0,
+                vec![0; self.number_of_classes],
+                size,
+            ));
+        }
+
+        let mut group_class_counts = vec![0i64; self.number_of_classes];
+        for i in start_index..(start_index + size) {
+            let expected_label = self.expected_mapped_labels.get(group.get(i) as usize) as usize;
+            group_class_counts[expected_label] += 1;
+        }
+
+        let mut sum_of_squares = 0i64;
+        for &count in &group_class_counts {
+            sum_of_squares += count * count;
+        }
+        let impurity = 1.0 - (sum_of_squares as f64) / ((size * size) as f64);
+
+        Box::new(GiniImpurityData::new(impurity, group_class_counts, size))
     }
 
     fn incremental_impurity(
         &self,
-        _feature_vector_idx: usize,
-        _impurity_data: &mut dyn ImpurityData,
+        feature_vector_idx: usize,
+        impurity_data: &mut dyn ImpurityData,
     ) {
-        todo!("GiniIndex requires HugeIntArray from meta-macro processor")
+        let gini_impurity_data = impurity_data
+            .as_any_mut()
+            .downcast_mut::<GiniImpurityData>()
+            .expect("Expected GiniImpurityData");
+
+        let label = self.expected_mapped_labels.get(feature_vector_idx) as usize;
+        let new_class_count = gini_impurity_data.class_counts[label] + 1;
+        let new_group_size = gini_impurity_data.group_size + 1;
+
+        Self::update_impurity_data(label, new_group_size, new_class_count, gini_impurity_data);
     }
 
     fn decremental_impurity(
         &self,
-        _feature_vector_idx: usize,
-        _impurity_data: &mut dyn ImpurityData,
+        feature_vector_idx: usize,
+        impurity_data: &mut dyn ImpurityData,
     ) {
-        todo!("GiniIndex requires HugeIntArray from meta-macro processor")
+        let gini_impurity_data = impurity_data
+            .as_any_mut()
+            .downcast_mut::<GiniImpurityData>()
+            .expect("Expected GiniImpurityData");
+
+        let label = self.expected_mapped_labels.get(feature_vector_idx) as usize;
+        let new_class_count = gini_impurity_data.class_counts[label] - 1;
+        let new_group_size = gini_impurity_data.group_size - 1;
+
+        Self::update_impurity_data(label, new_group_size, new_class_count, gini_impurity_data);
+    }
+
+    fn clone_box(&self) -> Box<dyn ImpurityCriterion> {
+        Box::new(self.clone())
+    }
+}
+
+impl GiniIndex {
+    fn update_impurity_data(
+        label: usize,
+        new_group_size: usize,
+        new_class_count: i64,
+        impurity_data: &mut GiniImpurityData,
+    ) {
+        if new_group_size == 0 {
+            impurity_data.class_counts[label] = new_class_count;
+            impurity_data.group_size = 0;
+            impurity_data.impurity = 0.0;
+            return;
+        }
+
+        let group_size_squared = (impurity_data.group_size * impurity_data.group_size) as f64;
+        let new_group_size_squared = (new_group_size * new_group_size) as f64;
+        let prev_class_count = impurity_data.class_counts[label];
+
+        let mut new_impurity = impurity_data.impurity;
+        new_impurity *= group_size_squared / new_group_size_squared;
+        new_impurity += 1.0 - (group_size_squared / new_group_size_squared);
+        new_impurity += (prev_class_count * prev_class_count) as f64 / new_group_size_squared;
+        new_impurity -= (new_class_count * new_class_count) as f64 / new_group_size_squared;
+
+        impurity_data.class_counts[label] = new_class_count;
+        impurity_data.group_size = new_group_size;
+        impurity_data.impurity = new_impurity;
     }
 }
 
@@ -83,13 +156,13 @@ impl ImpurityData for GiniImpurityData {
     }
 
     fn copy_to(&self, target: &mut dyn ImpurityData) {
-        let target_gini = target
+        let gini_target = target
             .as_any_mut()
             .downcast_mut::<GiniImpurityData>()
             .expect("Expected GiniImpurityData");
-        target_gini.impurity = self.impurity;
-        target_gini.group_size = self.group_size;
-        target_gini.class_counts.copy_from_slice(&self.class_counts);
+        gini_target.impurity = self.impurity;
+        gini_target.group_size = self.group_size;
+        gini_target.class_counts.copy_from_slice(&self.class_counts);
     }
 }
 

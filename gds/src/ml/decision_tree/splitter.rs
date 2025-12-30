@@ -4,41 +4,27 @@
 //! This is a literal 1:1 translation following repository translation policy.
 
 use crate::collections::HugeLongArray;
+use crate::core::utils::paged::HugeSerialIndirectMergeSort;
 use crate::ml::decision_tree::{
     FeatureBagger, Group, Groups, ImpurityCriterion, ImpurityData, Split,
 };
+use crate::ml::models::Features;
 
-/// Placeholder for Features until ml-models is translated.
-#[derive(Clone)]
-pub struct Features {
-    // TODO: Replace with actual Features from ml-models
-}
-
-impl Features {
-    pub fn get(&self, _idx: usize) -> &[f64] {
-        todo!("Implement when Features is available")
-    }
-
-    pub fn size(&self) -> usize {
-        todo!("Implement when Features is available")
-    }
-}
-
-pub struct Splitter {
+pub struct Splitter<'a> {
     impurity_criterion: Box<dyn ImpurityCriterion>,
-    features: Features,
+    features: &'a dyn Features,
     feature_bagger: FeatureBagger,
     min_leaf_size: usize,
     sort_cache: HugeLongArray,
     right_impurity_data: Box<dyn ImpurityData>,
 }
 
-impl Splitter {
+impl<'a> Splitter<'a> {
     pub fn new(
         train_set_size: usize,
         impurity_criterion: Box<dyn ImpurityCriterion>,
         feature_bagger: FeatureBagger,
-        features: Features,
+        features: &'a dyn Features,
         min_leaf_size: usize,
     ) -> Self {
         let sort_cache = HugeLongArray::new(train_set_size);
@@ -175,9 +161,14 @@ impl Splitter {
     }
 
     fn sort_by_feature(&mut self, array: &mut HugeLongArray, size: usize, feature_idx: usize) {
-        // TODO: Implement HugeSerialIndirectMergeSort when available
-        // For now, stub to indicate where sorting happens
-        let _ = (array, size, feature_idx, &mut self.sort_cache);
-        todo!("Implement indirect merge sort when collections module is complete")
+        // Use indirect merge sort to sort indices by feature values
+        // We need to limit the sort to the actual size we're working with
+        let sort_size = size.min(array.size());
+        HugeSerialIndirectMergeSort::sort_with_buffer(
+            array,
+            sort_size,
+            |idx| self.features.get(idx as usize)[feature_idx],
+            &mut self.sort_cache,
+        );
     }
 }

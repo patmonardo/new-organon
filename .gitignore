@@ -51,3 +51,4 @@ logic/docs/api
 doc/api
 .nojekyll
 old
+*java

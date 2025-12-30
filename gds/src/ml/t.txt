@@ -1,0 +1,14 @@
+./core/features/scalar_property_extractor.rs:// TODO: Add tests when Graph mock is available
+./core/features/feature_extraction.rs:// TODO: Translate these methods once dependencies are available:
+./core/functions/multi_mean.rs:        // TODO: Try to divide by numberOfEntries once instead of on every update
+./core/functions/ewise_add_matrix_scalar.rs:        // TODO: Once Matrix::map() is implemented, use: matrix.map(|v| v + scalar_value)
+./core/embedding_utils.rs:    todo!("Call Graph::node_properties(property_key).double_array_value(node_id) once available.");
+./core/embedding_utils.rs:    todo!("Call Graph::node_properties(property_key).long_array_value(node_id) once available.");
+./core/embedding_utils.rs:    todo!(
+./node_classification/metric_computer.rs:        // TODO: Implement batch processing using self._batch_size for better performance
+./sampling/negative/factory.rs:        // TODO: create filtered graph once GraphStore filtering API is available.
+./metrics/model_specific_handler.rs:    // TODO: Implement for_stats_builder() when we have proper Arc/Mutex patterns
+./models/trees/mod.rs://! - Trainers (TODO: translate from Java)
+./models/trees/mod.rs:// TODO: Translate trainers from Java GDS:
+./models/features.rs:/// TODO: Implement lazy extraction following FeaturesFactory.extractLazyFeatures()
+./models/features.rs:    // TODO: Add extractLazyFeatures and extractEagerFeatures methods

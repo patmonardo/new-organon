@@ -83,6 +83,15 @@ impl HugeIntArray {
         }
     }
 
+    /// Estimates memory usage for an array of the given size.
+    pub fn memory_estimation(size: usize) -> usize {
+        if size <= MAX_ARRAY_LENGTH {
+            SingleHugeIntArray::memory_estimation(size)
+        } else {
+            PagedHugeIntArray::memory_estimation(size)
+        }
+    }
+
     /// Inherent helper so callers (and doctests) can call `new_cursor()` without
     /// importing the `HugeCursorSupport` trait.
     pub fn new_cursor(&self) -> HugeIntArrayCursor<'_> {
@@ -486,6 +495,10 @@ impl SingleHugeIntArray {
         }
     }
 
+    fn memory_estimation(size: usize) -> usize {
+        std::mem::size_of::<Self>() + size * std::mem::size_of::<i32>()
+    }
+
     fn get(&self, index: usize) -> i32 {
         self.data[index]
     }
@@ -560,6 +573,15 @@ impl PagedHugeIntArray {
             page_shift,
             page_mask,
         }
+    }
+
+    fn memory_estimation(size: usize) -> usize {
+        // Calculate page size for i32 elements with 32KB pages
+        let page_size =
+            PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<i32>());
+        let num_pages = PageUtil::num_pages_for(size, page_size);
+        let total_elements = num_pages * page_size;
+        std::mem::size_of::<Self>() + total_elements * std::mem::size_of::<i32>()
     }
 
     /// Creates a PagedHugeIntArray from pre-allocated pages.

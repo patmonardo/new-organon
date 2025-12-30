@@ -141,12 +141,18 @@ mod enabled {
 
         let float_val = PrimitiveValues::of(&json!(5.0)).expect("float");
         let as_i64 = i64::from_gds_value(float_val.as_ref())?;
-        println!("- float 5.0 converted to i64 via FromGdsValue -> {}", as_i64);
+        println!(
+            "- float 5.0 converted to i64 via FromGdsValue -> {}",
+            as_i64
+        );
 
         // Boolean parsing via direct factory (json! parsing for bool isn't wired yet).
         let bool_val = PrimitiveValues::boolean_value(true);
         let as_i64 = i64::from_gds_value(bool_val.as_ref())?;
-        println!("- bool true converted to i64 via FromGdsValue -> {}", as_i64);
+        println!(
+            "- bool true converted to i64 via FromGdsValue -> {}",
+            as_i64
+        );
 
         Ok(())
     }

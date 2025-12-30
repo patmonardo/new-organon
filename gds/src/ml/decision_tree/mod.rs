@@ -20,6 +20,7 @@ mod types;
 #[cfg(test)]
 mod tests;
 
+pub use crate::ml::models::Features;
 pub use classifier_trainer::DecisionTreeClassifierTrainer;
 pub use entropy::{Entropy, EntropyImpurityData};
 pub use feature_bagger::FeatureBagger;
@@ -28,7 +29,7 @@ pub use impurity_criterion::{ImpurityCriterion, ImpurityData, ImpurityDataAny};
 pub use predictor::DecisionTreePredictor;
 pub use regressor_trainer::DecisionTreeRegressorTrainer;
 pub use split_mse::{MSEImpurityData, SplitMeanSquaredError};
-pub use splitter::{Features, Splitter};
+pub use splitter::Splitter;
 pub use trainer::DecisionTreeTrainer;
 pub use trainer_config::{DecisionTreeTrainerConfig, DecisionTreeTrainerConfigBuilder};
 pub use tree_node::TreeNode;

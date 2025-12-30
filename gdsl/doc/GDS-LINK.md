@@ -36,16 +36,14 @@ In short:
 \text{G-DSL (payload design)} \Rightarrow \text{GDS-L (application call)} \Rightarrow \text{KernelPort (transport)} \Rightarrow \text{GDS kernel}
 \]
 
-## FormDB and HyperStore (storage substrate)
+## FormDB and GraphStore (storage substrate)
 
 In this repo’s vocabulary:
 
 - **FormDB**: a client-facing KnowledgeGraph (PropertyGraph).
-- **HyperStore**: a GraphStore that embodies FormDB + FactStores.
+- **GraphStore**: a GraphStore that embodies FormDB + FactStores.
 
 At the boundary, this shows up as “handle-first” responses: the kernel persists
 results into a GraphStore and returns **graph references** (e.g. `graphName`)
 plus proof/witness metadata, rather than streaming massive payloads directly.
-
-See `gdsl/doc/FORMDB-HYPERSTORE.md`.
 

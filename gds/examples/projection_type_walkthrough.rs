@@ -44,7 +44,11 @@ mod enabled {
             .properties(relationship_properties.clone())
             .build()?;
 
-        println!("NodeProjection → label={} props={}", person_projection.label().name(), stats_properties.size());
+        println!(
+            "NodeProjection → label={} props={}",
+            person_projection.label().name(),
+            stats_properties.size()
+        );
         println!(
             "RelationshipProjection → type={} orientation={} props={} aggregation={}",
             knows_projection.rel_type().name(),
@@ -62,7 +66,10 @@ mod enabled {
 
     fn print_value_type_table() {
         println!("Available ValueTypes (macro-driven):");
-        println!("{:<16} {:<20} {:<18} {}", "ValueType", "RustType", "Category", "Default");
+        println!(
+            "{:<16} {:<20} {:<18} {}",
+            "ValueType", "RustType", "Category", "Default"
+        );
 
         macro_rules! describe_type {
             ($vt:ident, $rt:ty, $cat:ident, $dv:expr) => {
@@ -83,42 +90,38 @@ mod enabled {
 
     fn build_stat_properties() -> Result<PropertyMappings, String> {
         // Default aggregation of SUM applied to everything unless overridden.
-        Ok(
-            PropertyMappings::builder()
-                .with_default_aggregation(Aggregation::Sum)
-                .add_mapping(
-                    PropertyMappingBuilder::new("pagerank")
-                        .neo_property_key("gds.pagerank")
-                        .aggregation(Aggregation::Max) // override the builder default
-                        .build()?,
-                )
-                .add_mapping(
-                    PropertyMappingBuilder::new("community_id")
-                        .default_value(DefaultValue::long(0))
-                        .build()?,
-                )
-                .add_mapping(
-                    PropertyMappingBuilder::new("score")
-                        .default_value(DefaultValue::double(0.0))
-                        .build()?,
-                )
-                .build(),
-        )
+        Ok(PropertyMappings::builder()
+            .with_default_aggregation(Aggregation::Sum)
+            .add_mapping(
+                PropertyMappingBuilder::new("pagerank")
+                    .neo_property_key("gds.pagerank")
+                    .aggregation(Aggregation::Max) // override the builder default
+                    .build()?,
+            )
+            .add_mapping(
+                PropertyMappingBuilder::new("community_id")
+                    .default_value(DefaultValue::long(0))
+                    .build()?,
+            )
+            .add_mapping(
+                PropertyMappingBuilder::new("score")
+                    .default_value(DefaultValue::double(0.0))
+                    .build()?,
+            )
+            .build())
     }
 
     fn build_relationship_properties() -> Result<PropertyMappings, String> {
         // Relationship slice that preserves all parallel edges (Aggregation::None everywhere).
-        Ok(
-            PropertyMappings::builder()
-                .with_default_aggregation(Aggregation::None)
-                .add_mapping(
-                    PropertyMappingBuilder::new("weight")
-                        .default_value(DefaultValue::double(1.0))
-                        .build()?,
-                )
-                .add_mapping(PropertyMappingBuilder::new("timestamp").build()?)
-                .build(),
-        )
+        Ok(PropertyMappings::builder()
+            .with_default_aggregation(Aggregation::None)
+            .add_mapping(
+                PropertyMappingBuilder::new("weight")
+                    .default_value(DefaultValue::double(1.0))
+                    .build()?,
+            )
+            .add_mapping(PropertyMappingBuilder::new("timestamp").build()?)
+            .build())
     }
 
     fn serialize_projection_slice(mappings: &PropertyMappings) -> Result<(), String> {
