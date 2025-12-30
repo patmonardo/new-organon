@@ -159,6 +159,7 @@ Based on Yoga Sutra 3.44:
 
 ## Related Documentation
 
+- `doc/PROJECTION-TYPE-EXAMPLES.md` — Quick Projection + type-system recipes
 - `doc/EVAL_MACRO_SYSTEM.md` — Complete system documentation
 - `doc/adr0006_projection_as_gdsl.md` — Architectural decision record
 - `doc/EVAL_MACRO_IMPLEMENTATION_SUMMARY.md` — Implementation summary
