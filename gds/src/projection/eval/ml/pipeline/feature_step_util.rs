@@ -116,8 +116,8 @@ pub fn validate_computed_features<F>(
 ) where
     F: FnOnce(),
 {
-    for offset in start_offset..end_offset {
-        if link_features[offset].is_nan() {
+    for feature in link_features.iter().take(end_offset).skip(start_offset) {
+        if feature.is_nan() {
             throw_error();
             return;
         }

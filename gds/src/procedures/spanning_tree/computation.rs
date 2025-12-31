@@ -339,16 +339,15 @@ impl PartialEq for QueueItem {
 impl Eq for QueueItem {}
 
 impl PartialOrd for QueueItem {
-    #[allow(clippy::non_canonical_partial_ord_impl)]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        // Reverse ordering for min-heap (lower cost = higher priority)
-        other.cost.partial_cmp(&self.cost)
+        Some(self.cmp(other))
     }
 }
 
 impl std::cmp::Ord for QueueItem {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.partial_cmp(other).unwrap_or(std::cmp::Ordering::Equal)
+        // Reverse ordering for min-heap (lower cost = higher priority)
+        other.cost.partial_cmp(&self.cost).unwrap_or(std::cmp::Ordering::Equal)
     }
 }
 

@@ -4,6 +4,7 @@
 
 #[cfg(feature = "arrow")]
 pub mod arrow_catalog_loader;
+#[allow(clippy::module_inception)]
 pub mod loader;
 
 #[cfg(feature = "arrow")]

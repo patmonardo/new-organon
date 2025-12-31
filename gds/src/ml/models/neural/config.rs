@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// This corresponds to MLPClassifierTrainConfig in Java GDS.
 /// Combines gradient descent, penalty, and class-aware configurations.
-#[derive(Debug, Clone, Serialize, Deserialize, Builder)]
+#[derive(Debug, Clone, Serialize, Deserialize, Builder, Default)]
 #[builder(pattern = "mutable")]
 pub struct MLPClassifierTrainConfig {
     // Gradient Descent Configuration
@@ -57,25 +57,6 @@ impl MLPClassifierTrainConfig {
     /// Create a new MLP classifier training configuration
     pub fn builder() -> MLPClassifierTrainConfigBuilder {
         MLPClassifierTrainConfigBuilder::default()
-    }
-
-    /// Create default configuration
-    ///
-    /// Java: `MLPClassifierTrainConfig DEFAULT = of(Map.of());`
-    pub fn default() -> Self {
-        Self {
-            batch_size: 100,
-            min_epochs: 1,
-            patience: 1,
-            max_epochs: 100,
-            tolerance: 1e-3,
-            learning_rate: 0.001,
-            penalty: 0.0,
-            focus_weight: 0.0,
-            class_weights: vec![],
-            hidden_layer_sizes: vec![100],
-            method: TrainingMethod::MLPClassification,
-        }
     }
 
     /// Get hidden layer sizes

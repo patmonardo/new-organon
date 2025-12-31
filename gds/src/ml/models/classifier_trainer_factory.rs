@@ -14,6 +14,7 @@ pub struct ClassifierTrainerFactory;
 impl ClassifierTrainerFactory {
     /// Create a classifier trainer from configuration.
     /// 1:1 with ClassifierTrainerFactory.create() in Java
+    #[allow(clippy::too_many_arguments)]
     pub fn create(
         config: &dyn TrainerConfigTrait,
         number_of_classes: usize,

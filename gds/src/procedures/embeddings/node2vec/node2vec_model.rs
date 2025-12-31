@@ -72,11 +72,10 @@ impl Node2VecModel {
                     let start = i.saturating_sub(self.train_params.window_size);
                     let end = (i + self.train_params.window_size + 1).min(walk.len());
 
-                    for j in start..end {
+                    for (j, &context_node) in walk.iter().enumerate().take(end).skip(start) {
                         if i == j {
                             continue;
                         }
-                        let context_node = walk[j];
                         if context_node as usize >= self.node_count {
                             continue;
                         }

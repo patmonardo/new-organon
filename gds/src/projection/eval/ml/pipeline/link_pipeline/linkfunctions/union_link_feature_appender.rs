@@ -165,8 +165,8 @@ impl UnionLinkFeatureAppender {
         _target: u64,
     ) {
         // Check for NaN in computed range
-        for i in offset..end_offset {
-            if features[i].is_nan() {
+        for feature in features.iter().take(end_offset).skip(offset) {
+            if feature.is_nan() {
                 panic!(
                     "NaN value encountered in {} feature computation for properties {:?}",
                     self.feature_step_name, self.input_node_properties

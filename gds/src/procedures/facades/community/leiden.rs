@@ -126,12 +126,12 @@ impl LeidenBuilder {
         let node_count = graph_view.node_count();
         let mut adjacency_list = vec![Vec::new(); node_count];
 
-        for node_id in 0..node_count {
+        for (node_id, adj) in adjacency_list.iter_mut().enumerate() {
             let relationships = graph_view.stream_relationships_weighted(node_id as i64, 1.0);
             for cursor in relationships {
                 let target_id = cursor.target_id() as usize;
                 let weight = cursor.weight();
-                adjacency_list[node_id].push((target_id, weight));
+                adj.push((target_id, weight));
             }
         }
 

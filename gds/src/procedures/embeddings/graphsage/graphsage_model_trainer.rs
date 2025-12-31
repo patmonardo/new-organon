@@ -324,6 +324,7 @@ struct BatchResult {
     gradients: Vec<Box<dyn Tensor>>,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn run_batch(
     graph: Arc<dyn Graph>,
     features: Arc<HugeObjectArray<Vec<f64>>>,

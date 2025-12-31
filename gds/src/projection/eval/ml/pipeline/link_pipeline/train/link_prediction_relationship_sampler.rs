@@ -298,7 +298,7 @@ impl LinkPredictionRelationshipSampler {
     /// - Split positive examples by fraction
     /// - Add remaining relationships to graph store
     /// - Return split result
-    #[allow(dead_code)]
+    #[allow(dead_code, clippy::too_many_arguments)]
     fn split(
         &self,
         _source_nodes: PhantomData<()>, // TODO: IdMap

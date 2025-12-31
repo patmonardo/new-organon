@@ -22,16 +22,15 @@ impl PartialEq for DijkstraEntry {
 impl Eq for DijkstraEntry {}
 
 impl PartialOrd for DijkstraEntry {
-    #[allow(clippy::non_canonical_partial_ord_impl)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        // Reverse order for min-heap
-        other.cost.partial_cmp(&self.cost)
+        Some(self.cmp(other))
     }
 }
 
 impl Ord for DijkstraEntry {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.partial_cmp(other).unwrap_or(Ordering::Equal)
+        // Reverse order for min-heap
+        other.cost.partial_cmp(&self.cost).unwrap_or(Ordering::Equal)
     }
 }
 

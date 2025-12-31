@@ -19,6 +19,7 @@ impl FilteredKnnStorageRuntime {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn compute_single(
         &self,
         computation: &FilteredKnnComputationRuntime,
@@ -51,6 +52,7 @@ impl FilteredKnnStorageRuntime {
         ))
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn compute_multi(
         &self,
         computation: &FilteredKnnComputationRuntime,

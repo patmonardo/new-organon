@@ -161,17 +161,17 @@ impl AllShortestPathsStorageRuntime {
 
         impl PartialOrd for State {
             fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-                // Reverse for min-heap behavior.
-                other
-                    .cost
-                    .partial_cmp(&self.cost)
-                    .or_else(|| other.node.partial_cmp(&self.node))
+                Some(self.cmp(other))
             }
         }
 
         impl Ord for State {
             fn cmp(&self, other: &Self) -> Ordering {
-                self.partial_cmp(other).unwrap_or(Ordering::Equal)
+                // Reverse for min-heap behavior.
+                match other.cost.partial_cmp(&self.cost) {
+                    Some(ord) => ord,
+                    None => other.node.cmp(&self.node),
+                }
             }
         }
 
