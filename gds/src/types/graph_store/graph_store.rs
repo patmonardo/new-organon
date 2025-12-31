@@ -16,6 +16,26 @@ use std::sync::Arc;
 /// Result type for GraphStore operations.
 pub type GraphStoreResult<T> = Result<T, GraphStoreError>;
 
+/// Result of an induced subgraph operation
+#[derive(Debug, Clone)]
+pub struct InducedSubgraphResult<Store> {
+    /// The new graph store containing only the induced subgraph
+    pub store: Store,
+    /// Mapping from old mapped node IDs to new mapped node IDs in the subgraph
+    pub old_to_new_mapping: HashMap<MappedNodeId, MappedNodeId>,
+    /// Count of relationships kept for each relationship type
+    pub relationships_kept_by_type: HashMap<RelationshipType, usize>,
+}
+
+/// Result of projecting node properties onto a subgraph
+#[derive(Debug, Clone)]
+pub struct ProjectedPropertiesResult {
+    /// Projected node properties for the subgraph
+    pub node_properties: HashMap<String, Arc<dyn NodePropertyValues>>,
+    /// Property keys organized by some criteria (TBD)
+    pub property_keys: HashMap<String, HashSet<String>>,
+}
+
 /// Errors that can occur during GraphStore operations.
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum GraphStoreError {

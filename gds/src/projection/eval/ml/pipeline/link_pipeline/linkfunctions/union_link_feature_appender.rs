@@ -44,7 +44,7 @@ use super::super::LinkFeatureAppender;
 ///   C.append(source, target, features, 128) → writes features[128]
 ///   offset += 1
 ///   validate(features[0..129]) → check for NaN
-///   
+///
 ///   Total dimension = 64 + 64 + 1 = 129
 /// ```
 ///
