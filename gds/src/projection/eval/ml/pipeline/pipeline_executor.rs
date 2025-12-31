@@ -184,7 +184,7 @@ pub trait PipelineExecutor<PIPELINE: Pipeline, RESULT> {
         // featureInput nodeLabels contain source&target nodeLabel used in training/testing plus contextNodeLabels
         self.pipeline()
             .validate_before_execution(
-                &*self.graph_store(),
+                self.graph_store(),
                 &feature_input_graph_filter.node_labels,
             )
             .map_err(|e| PipelineExecutorError::PipelineValidationFailed(Box::new(e)))?;
@@ -200,7 +200,7 @@ pub trait PipelineExecutor<PIPELINE: Pipeline, RESULT> {
         // 4. Validate node property steps context configs
         node_property_step_executor
             .validate_node_property_steps_context_configs(
-                &*self.graph_store(),
+                self.graph_store(),
                 self.pipeline().node_property_steps(),
             )
             .map_err(|e| PipelineExecutorError::StepValidationFailed(Box::new(e)))?;
@@ -218,7 +218,7 @@ pub trait PipelineExecutor<PIPELINE: Pipeline, RESULT> {
 
         // 7. Validate feature properties
         self.pipeline()
-            .validate_feature_properties(&*self.graph_store(), self.node_labels())
+            .validate_feature_properties(self.graph_store(), self.node_labels())
             .map_err(|e| PipelineExecutorError::FeatureValidationFailed(Box::new(e)))?;
 
         // 8. Execute algorithm

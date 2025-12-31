@@ -82,7 +82,7 @@ pub trait PipelineTrainAlgorithm<RESULT, MODEL, P: TrainingPipeline + ?Sized> {
         // 1. Validate training parameter space
         self.pipeline()
             .validate_training_parameter_space()
-            .map_err(|e| PipelineTrainAlgorithmError::ValidationFailed(e))?;
+            .map_err(PipelineTrainAlgorithmError::ValidationFailed)?;
 
         // 2. Validate pipeline before execution
         self.pipeline()
@@ -111,7 +111,7 @@ pub trait PipelineTrainAlgorithm<RESULT, MODEL, P: TrainingPipeline + ?Sized> {
         let pipeline_train_result = self
             .pipeline_trainer_mut()
             .run()
-            .map_err(|e| PipelineTrainAlgorithmError::TrainingFailed(e))?;
+            .map_err(PipelineTrainAlgorithmError::TrainingFailed)?;
 
         // 5. Convert result to catalog model
         let model = self

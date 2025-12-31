@@ -1,4 +1,5 @@
 use crate::collections::HugeLongArray;
+use crate::mem::Estimate;
 
 /// Row-major matrix backed by a `HugeLongArray` for massive datasets.
 pub struct HugeLongMatrix {
@@ -8,6 +9,14 @@ pub struct HugeLongMatrix {
 }
 
 impl HugeLongMatrix {
+    /// Estimates the memory usage, in bytes, for a matrix with the provided dimensions.
+    pub fn memory_estimation(rows: usize, cols: usize) -> usize {
+        let total = match rows.checked_mul(cols) {
+            Some(value) => value,
+            None => return usize::MAX, // Overflow
+        };
+        Estimate::size_of_long_array(total) + std::mem::size_of::<Self>()
+    }
     /// Creates a matrix with the provided dimensions.
     ///
     /// # Panics
@@ -192,5 +201,13 @@ mod tests {
     #[should_panic(expected = "matrix dimensions overflow")]
     fn overflow_panics() {
         let _ = HugeLongMatrix::new(usize::MAX, 2);
+    }
+
+    #[test]
+    fn memory_estimation_accounts_for_array_and_struct() {
+        let estimated = HugeLongMatrix::memory_estimation(10, 20);
+        // Should be greater than just the array due to struct overhead
+        let array_memory = crate::mem::Estimate::size_of_long_array(200);
+        assert!(estimated > array_memory);
     }
 }

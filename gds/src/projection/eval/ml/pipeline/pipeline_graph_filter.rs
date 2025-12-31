@@ -23,6 +23,7 @@
 /// }
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default)]
 pub struct PipelineGraphFilter {
     /// Node labels to include in the filtered graph
     pub node_labels: Vec<String>,
@@ -53,11 +54,3 @@ impl PipelineGraphFilter {
     }
 }
 
-impl Default for PipelineGraphFilter {
-    fn default() -> Self {
-        Self {
-            node_labels: Vec::new(),
-            relationship_types: Vec::new(),
-        }
-    }
-}

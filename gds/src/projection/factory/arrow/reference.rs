@@ -508,8 +508,8 @@ impl<'a> ArrowBatchReference<'a> {
     }
 
     /// Gets a column by index
-    pub fn column(&self, idx: usize) -> Option<&Box<dyn Array>> {
-        self.chunk.arrays().get(idx)
+    pub fn column(&self, idx: usize) -> Option<&dyn Array> {
+        self.chunk.arrays().get(idx).map(|boxed| boxed.as_ref())
     }
 
     /// Gets a typed Int64 column

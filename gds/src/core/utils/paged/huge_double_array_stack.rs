@@ -1,4 +1,5 @@
 use crate::collections::HugeDoubleArray;
+use crate::mem::Estimate;
 
 /// LIFO stack backed by `HugeDoubleArray`.
 ///
@@ -14,6 +15,11 @@ pub struct HugeDoubleArrayStack {
 }
 
 impl HugeDoubleArrayStack {
+    /// Estimates the memory usage, in bytes, for a stack with the provided capacity.
+    pub fn memory_estimation(capacity: usize) -> usize {
+        Estimate::size_of_double_array(capacity) + std::mem::size_of::<Self>()
+    }
+
     /// Creates a new stack with the specified capacity.
     ///
     /// # Examples
@@ -219,5 +225,11 @@ mod tests {
     fn pop_empty_panics() {
         let mut stack = HugeDoubleArrayStack::new(10);
         stack.pop();
+    }
+
+    #[test]
+    fn memory_estimation_accounts_for_array_and_struct() {
+        let estimated = HugeDoubleArrayStack::memory_estimation(100);
+        assert!(estimated > 0);
     }
 }

@@ -1,4 +1,5 @@
 use crate::collections::HugeLongArray;
+use crate::mem::Estimate;
 
 use super::huge_matrices::{normalize_triangular_coordinates, triangular_index, triangular_size};
 use super::HugeLongSquareMatrix;
@@ -10,6 +11,11 @@ pub struct HugeLongTriangularMatrix {
 }
 
 impl HugeLongTriangularMatrix {
+    /// Estimates the memory usage, in bytes, for a triangular matrix with the provided order.
+    pub fn memory_estimation(order: usize) -> usize {
+        let size = triangular_size(order);
+        Estimate::size_of_long_array(size) + std::mem::size_of::<Self>()
+    }
     /// Creates a new triangular matrix with the given order.
     ///
     /// # Panics
@@ -326,5 +332,14 @@ mod tests {
         matrix.set(1, 1, 4);
         assert_eq!(matrix.count_non_zero(), 2);
         assert!((matrix.sparsity() - (1.0 - 2.0 / 6.0)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn memory_estimation_accounts_for_array_and_struct() {
+        let estimated = HugeLongTriangularMatrix::memory_estimation(10);
+        // Should be greater than just the array due to struct overhead
+        let size = crate::core::utils::paged::huge_matrices::triangular_size(10);
+        let array_memory = crate::mem::Estimate::size_of_long_array(size);
+        assert!(estimated > array_memory);
     }
 }

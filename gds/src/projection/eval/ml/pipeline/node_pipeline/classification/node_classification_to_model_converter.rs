@@ -57,9 +57,9 @@ impl NodeClassificationToModelConverter {
         // );
 
         let catalog_model = ();
-        let training_statistics = *result.training_statistics();
+        result.training_statistics();
 
-        NodeClassificationModelResult::new(catalog_model, training_statistics)
+        NodeClassificationModelResult::new(catalog_model, ())
     }
 }
 

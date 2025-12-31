@@ -68,7 +68,7 @@ impl NodeClassificationTrain {
         //     model_catalog,
         //     algorithms_procedure_facade
         // ).memory_estimation()
-        ()
+        
     }
 
     /// Create progress task for training.
@@ -94,7 +94,7 @@ impl NodeClassificationTrain {
         // Tasks::task("Node Classification Train Pipeline", tasks)
 
         let _ = (pipeline, node_count);
-        ()
+        
     }
 
     /// Create a new NodeClassificationTrain instance.
@@ -369,7 +369,7 @@ impl NodeClassificationTrain {
         // retrained_classifier
 
         // Placeholder
-        ()
+        
     }
 
     /// Train a single model with given parameters.
@@ -398,7 +398,7 @@ impl NodeClassificationTrain {
         // trainer.train(features, &self.targets, train_set)
 
         // Placeholder
-        ()
+        
     }
 }
 

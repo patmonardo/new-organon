@@ -31,6 +31,7 @@ use std::collections::HashMap;
 /// }
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Default)]
 pub struct NodePropertyStepContextConfig {
     /// Node labels to include in the context (defaults to empty = all labels)
     context_node_labels: Vec<String>,
@@ -100,11 +101,3 @@ impl NodePropertyStepContextConfig {
     }
 }
 
-impl Default for NodePropertyStepContextConfig {
-    fn default() -> Self {
-        Self {
-            context_node_labels: Vec::new(),
-            context_relationship_types: Vec::new(),
-        }
-    }
-}

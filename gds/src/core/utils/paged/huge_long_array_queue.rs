@@ -1,4 +1,5 @@
 use crate::collections::HugeLongArray;
+use crate::mem::Estimate;
 
 /// Circular FIFO queue backed by `HugeLongArray`.
 ///
@@ -15,6 +16,11 @@ pub struct HugeLongArrayQueue {
 }
 
 impl HugeLongArrayQueue {
+    /// Estimates the memory usage, in bytes, for a queue with the provided capacity.
+    pub fn memory_estimation(capacity: usize) -> usize {
+        Estimate::size_of_long_array(capacity + 1) + std::mem::size_of::<Self>()
+    }
+
     /// Creates a new queue with the specified capacity.
     ///
     /// Note: Actual storage is capacity + 1 to distinguish full vs empty
@@ -286,5 +292,11 @@ mod tests {
         assert!(!queue.is_full());
         queue.add(2);
         assert!(queue.is_full());
+    }
+
+    #[test]
+    fn memory_estimation_accounts_for_array_and_struct() {
+        let estimated = HugeLongArrayQueue::memory_estimation(100);
+        assert!(estimated > 0);
     }
 }

@@ -162,7 +162,7 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
         //     NodeRegressionTrainingPipeline::class(),
         // );
         // Self::progress_task_for_pipeline(&pipeline, graph_store.node_count())
-        ()
+        
     }
 
     /// Creates a progress task for a specific pipeline.
@@ -178,7 +178,7 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
         _node_count: u64,
     ) -> Task {
         // TODO: Delegate to NodeRegressionTrain::progress_task
-        ()
+        
     }
 
     /// Validates that the main metric is supported by the pipeline.

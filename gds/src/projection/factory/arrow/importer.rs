@@ -447,13 +447,13 @@ impl EdgeAccumulator {
 
         for (source_orig, target_orig, rel_type) in self.edges {
             // Map original IDs to mapped IDs
-            let source_mapped = id_map.safe_to_mapped_node_id(source_orig).ok_or_else(|| {
+            let source_mapped = id_map.safe_to_mapped_node_id(source_orig).ok_or({
                 ImporterError::InvalidNodeId {
                     original_id: source_orig,
                 }
             })?;
 
-            let target_mapped = id_map.safe_to_mapped_node_id(target_orig).ok_or_else(|| {
+            let target_mapped = id_map.safe_to_mapped_node_id(target_orig).ok_or({
                 ImporterError::InvalidNodeId {
                     original_id: target_orig,
                 }
@@ -628,7 +628,7 @@ fn extract_property_value(
                 Ok(PropertyValue::Double(array.value(row_index) as f64))
             }
         }
-        DataType::List(_) => extract_list_property(column.as_ref(), config, row_index),
+        DataType::List(_) => extract_list_property(column, config, row_index),
         _ => Err(ImporterError::UnsupportedPropertyType {
             property_key: config.key.clone(),
             value_type: config.value_type,

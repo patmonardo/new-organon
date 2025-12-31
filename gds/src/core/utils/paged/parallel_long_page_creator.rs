@@ -354,25 +354,27 @@ impl ParallelLongPageCreator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::collections::PageUtil;
 
     #[test]
     fn test_identity_mapping() {
         let creator = ParallelLongPageCreator::identity(Concurrency::of(2));
         let pages = creator.create_pages(10_000);
+        let page_size = creator.page_size();
 
         // Check first page
         assert_eq!(pages[0][0], 0);
         assert_eq!(pages[0][100], 100);
-        assert_eq!(pages[0][4095], 4095);
+        assert_eq!(pages[0][page_size - 1], (page_size - 1) as i64);
 
         // Check second page
-        assert_eq!(pages[1][0], 4096);
-        assert_eq!(pages[1][100], 4196);
+        assert_eq!(pages[1][0], page_size as i64);
+        assert_eq!(pages[1][100], (page_size + 100) as i64);
 
         // Check last page (partial)
         let last_page = &pages[pages.len() - 1];
         let last_index = 9999;
-        let last_page_offset = last_index % 4096;
+        let last_page_offset = last_index % page_size;
         assert_eq!(last_page[last_page_offset], last_index as i64);
     }
 
@@ -498,8 +500,14 @@ mod tests {
     #[test]
     fn test_page_size_configuration() {
         let creator = ParallelLongPageCreator::identity(Concurrency::of(4));
+        let allocator = creator.allocator_factory.new_allocator();
 
-        // Page size should be 4096 for 32KB pages with 8-byte i64s
-        assert_eq!(creator.page_size(), 4096);
+        // Verify page size matches expected for i64 elements (32KB pages)
+        let page_size = allocator.page_size();
+        let expected_page_size =
+            PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<i64>());
+
+        assert_eq!(page_size, expected_page_size);
+        assert_eq!(page_size, 4096); // 32KB / 8 bytes = 4096 elements
     }
 }

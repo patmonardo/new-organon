@@ -68,8 +68,7 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
 
     let random_seed = request
         .get("randomSeed")
-        .and_then(|v| v.as_u64())
-        .map(|s| s as u64);
+        .and_then(|v| v.as_u64());
 
     let concurrency = request
         .get("concurrency")
@@ -79,12 +78,12 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
     let source_node_label = request
         .get("sourceNodeLabel")
         .and_then(|v| v.as_str())
-        .map(|s| NodeLabel::of(s));
+        .map(NodeLabel::of);
 
     let target_node_label = request
         .get("targetNodeLabel")
         .and_then(|v| v.as_str())
-        .map(|s| NodeLabel::of(s));
+        .map(NodeLabel::of);
 
     let mode = request
         .get("mode")

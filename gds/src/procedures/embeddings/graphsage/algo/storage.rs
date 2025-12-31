@@ -6,6 +6,12 @@ use crate::graph::Graph;
 
 pub struct GraphSageStorageRuntime;
 
+impl Default for GraphSageStorageRuntime {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GraphSageStorageRuntime {
     pub fn new() -> Self {
         Self

@@ -73,11 +73,11 @@ impl NodePropertyStepExecutor {
         for step in steps {
             // Validate context node labels
             let context_node_labels = step.context_node_labels();
-            self.validate_node_labels(graph_store, &context_node_labels, &step.proc_name())?;
+            self.validate_node_labels(graph_store, context_node_labels, step.proc_name())?;
 
             // Validate context relationship types
             let context_rel_types = step.context_relationship_types();
-            self.validate_relationship_types(graph_store, &context_rel_types, &step.proc_name())?;
+            self.validate_relationship_types(graph_store, context_rel_types, step.proc_name())?;
         }
 
         Ok(())

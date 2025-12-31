@@ -137,7 +137,7 @@ pub trait TrainingPipeline: Pipeline {
         let method = config.training_method();
         self.training_parameter_space_mut()
             .entry(method)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(config);
     }
 

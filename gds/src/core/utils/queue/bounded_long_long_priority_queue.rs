@@ -1,3 +1,4 @@
+use crate::mem::Estimate;
 use std::cmp::Ordering;
 
 /// A bounded priority queue retaining the best `(i64, i64)` pairs by `f64` priority.
@@ -19,6 +20,11 @@ enum QueueOrder {
 }
 
 impl BoundedLongLongPriorityQueue {
+    /// Estimates the memory usage, in bytes, for a queue with the provided capacity.
+    pub fn memory_estimation(capacity: usize) -> usize {
+        Estimate::size_of_long_array(capacity) * 2 + Estimate::size_of_double_array(capacity)
+    }
+
     /// Creates a queue that keeps the smallest priorities (lower is better).
     pub fn min(bound: usize) -> Self {
         Self::new(bound, QueueOrder::Min)
@@ -187,5 +193,11 @@ mod tests {
         assert_eq!(queue.elements1(), vec![3, 2]);
         assert_eq!(queue.elements2(), vec![30, 20]);
         assert_eq!(queue.priorities(), vec![0.7, 0.5]);
+    }
+
+    #[test]
+    fn memory_estimation_accounts_for_both_elements_and_priorities() {
+        let estimated = BoundedLongLongPriorityQueue::memory_estimation(10);
+        assert!(estimated > 0);
     }
 }

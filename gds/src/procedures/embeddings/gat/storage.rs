@@ -5,6 +5,12 @@ use crate::graph::Graph;
 
 pub struct GATStorageRuntime;
 
+impl Default for GATStorageRuntime {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GATStorageRuntime {
     pub fn new() -> Self {
         Self

@@ -104,7 +104,7 @@ pub trait PredictPipelineExecutor<PIPELINE: Pipeline, RESULT> {
         // 2. Validate pipeline before execution
         // featureInput nodeLabels contain nodes to predict on plus contextNodeLabels
         self.pipeline()
-            .validate_before_execution(&*self.graph_store(), &node_property_step_filter.node_labels)
+            .validate_before_execution(self.graph_store(), &node_property_step_filter.node_labels)
             .map_err(|e| PredictPipelineExecutorError::PipelineValidationFailed(Box::new(e)))?;
 
         // 3. Create node property step executor
@@ -134,7 +134,7 @@ pub trait PredictPipelineExecutor<PIPELINE: Pipeline, RESULT> {
         // 5. Validate feature properties
         self.pipeline()
             .validate_feature_properties(
-                &*self.graph_store(),
+                self.graph_store(),
                 &node_property_step_filter.node_labels,
             )
             .map_err(|e| PredictPipelineExecutorError::FeatureValidationFailed(Box::new(e)))?;

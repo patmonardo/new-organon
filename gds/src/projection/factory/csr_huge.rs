@@ -13,6 +13,7 @@ use crate::types::graph_store::DefaultGraphStore;
 /// For Phase 1 we reuse ArrowProjectionConfig; in future this will include
 /// CSR-specific options (mmap paths, buffer sizes, compression flags).
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct CsrHugeFactoryConfig {
     pub inner: ArrowProjectionConfig,
 }
@@ -23,13 +24,6 @@ impl From<ArrowProjectionConfig> for CsrHugeFactoryConfig {
     }
 }
 
-impl Default for CsrHugeFactoryConfig {
-    fn default() -> Self {
-        Self {
-            inner: ArrowProjectionConfig::default(),
-        }
-    }
-}
 
 /// Error type for CSR factory - reuse ArrowProjectionError for now.
 pub type CsrHugeFactoryError = ArrowProjectionError;

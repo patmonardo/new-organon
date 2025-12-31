@@ -164,10 +164,10 @@ impl FormStoreSurface for InMemoryFormStore {
             let mut new_edges: Vec<(MappedNodeId, MappedNodeId)> = Vec::new();
 
             for (src_old, dst_old) in edges {
-                let Some(src_new) = old_mapped_to_new.get(&src_old).copied() else {
+                let Some(src_new) = old_mapped_to_new.get(src_old).copied() else {
                     continue;
                 };
-                let Some(dst_new) = old_mapped_to_new.get(&dst_old).copied() else {
+                let Some(dst_new) = old_mapped_to_new.get(dst_old).copied() else {
                     continue;
                 };
 

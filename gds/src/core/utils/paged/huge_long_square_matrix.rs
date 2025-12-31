@@ -7,6 +7,10 @@ pub struct HugeLongSquareMatrix {
 }
 
 impl HugeLongSquareMatrix {
+    /// Estimates the memory usage, in bytes, for a square matrix with the provided order.
+    pub fn memory_estimation(order: usize) -> usize {
+        HugeLongMatrix::memory_estimation(order, order) + std::mem::size_of::<Self>()
+    }
     /// Creates an `order` × `order` matrix.
     pub fn new(order: usize) -> Self {
         Self {
@@ -294,5 +298,13 @@ mod tests {
         let off: Vec<_> = matrix.off_diagonal_entries().collect();
         assert_eq!(off.len(), 6);
         assert!(off.iter().all(|&(i, j, _)| i != j));
+    }
+
+    #[test]
+    fn memory_estimation_accounts_for_matrix_and_struct() {
+        let estimated = HugeLongSquareMatrix::memory_estimation(10);
+        // Should be greater than just the matrix due to struct overhead
+        let matrix_memory = super::HugeLongMatrix::memory_estimation(10, 10);
+        assert!(estimated > matrix_memory);
     }
 }

@@ -44,7 +44,7 @@ pub fn handle_kmeans(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     let random_seed = request
         .get("randomSeed")
         .and_then(|v| v.as_u64())
-        .unwrap_or(0) as u64;
+        .unwrap_or(0);
 
     let compute_silhouette = request
         .get("computeSilhouette")

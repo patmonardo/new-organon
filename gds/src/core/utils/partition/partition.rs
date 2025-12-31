@@ -63,6 +63,13 @@ impl Partition {
     pub fn iter(&self) -> impl Iterator<Item = usize> + '_ {
         self.start_node..(self.start_node + self.node_count)
     }
+
+    /// Returns an iterator over the node IDs in this partition.
+    ///
+    /// This is equivalent to Java's `stream()` method but returns a Rust iterator.
+    pub fn stream(&self) -> impl Iterator<Item = usize> + '_ {
+        self.iter()
+    }
 }
 
 impl std::fmt::Display for Partition {
@@ -105,6 +112,13 @@ mod tests {
     fn test_partition_iter() {
         let partition = Partition::new(10, 5);
         let collected: Vec<_> = partition.iter().collect();
+        assert_eq!(collected, vec![10, 11, 12, 13, 14]);
+    }
+
+    #[test]
+    fn test_partition_stream() {
+        let partition = Partition::new(10, 5);
+        let collected: Vec<_> = partition.stream().collect();
         assert_eq!(collected, vec![10, 11, 12, 13, 14]);
     }
 

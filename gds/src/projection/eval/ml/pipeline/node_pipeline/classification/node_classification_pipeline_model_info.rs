@@ -101,7 +101,6 @@ impl NodeClassificationPipelineModelInfo {
                 self.pipeline
                     .to_map()
                     .into_iter()
-                    .map(|(k, v)| (k, v))
                     .collect(),
             ),
         );

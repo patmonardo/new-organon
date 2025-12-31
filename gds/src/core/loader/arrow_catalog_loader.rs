@@ -81,8 +81,10 @@ impl ArrowCatalogLoader {
 
         let factory = ArrowNativeFactory::from_tables(Arc::new(node_ref), Arc::new(edge_ref));
 
-        let mut cfg = ArrowProjectionConfig::default();
-        cfg.collections_backend = self.backend;
+        let cfg = ArrowProjectionConfig {
+            collections_backend: self.backend,
+            ..Default::default()
+        };
 
         factory
             .build_graph_store(&cfg)

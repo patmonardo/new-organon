@@ -5,6 +5,12 @@ pub struct AttentionMechanism {
     pub attention_weights: HashMap<NodeId, Vec<f64>>, // node -> weights to neighbors
 }
 
+impl Default for AttentionMechanism {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AttentionMechanism {
     pub fn new() -> Self {
         Self {

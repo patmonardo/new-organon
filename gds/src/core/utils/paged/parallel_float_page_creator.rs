@@ -314,11 +314,22 @@ impl ParallelFloatPageCreator {
             page.resize(page_size, 0.0);
         }
     }
+
+    /// Gets the page size used by this creator.
+    pub fn page_size(&self) -> usize {
+        self.allocator_factory.page_size()
+    }
+
+    /// Estimates memory usage for the given total size.
+    pub fn estimate_memory_usage(&self, total_size: usize) -> usize {
+        self.allocator_factory.estimate_memory_usage(total_size)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::collections::PageUtil;
 
     #[test]
     fn test_identity_creator() {
@@ -388,11 +399,11 @@ mod tests {
             .create_pages(size);
 
         // Spot check several indices across all concurrency levels
+        let page_size = PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<f32>());
         for idx in [0, 1000, 50000, 99999] {
             let expected = (idx as f32) * 0.5;
 
             // Find the page and index within that page
-            let page_size = 32 * 1024 / std::mem::size_of::<f32>(); // 32KB pages
             let page_index = idx / page_size;
             let index_in_page = idx % page_size;
 
@@ -417,7 +428,7 @@ mod tests {
         assert!(!pages.is_empty());
 
         // Check specific values
-        let page_size = 32 * 1024 / std::mem::size_of::<f32>(); // 32KB pages
+        let page_size = PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<f32>());
         let page_5m = 5_000_000 / page_size;
         let index_5m = 5_000_000 % page_size;
         assert_eq!(pages[page_5m][index_5m], 5_000_000.0);
@@ -427,10 +438,10 @@ mod tests {
     fn test_identity_mapping() {
         let creator = ParallelFloatPageCreator::identity(Concurrency::of(4));
         let pages = creator.create_pages(1000);
+        let page_size = creator.page_size();
 
         // Verify identity mapping
         for (page_index, page) in pages.iter().enumerate() {
-            let page_size = 32 * 1024 / std::mem::size_of::<f32>(); // 32KB pages
             let start_index = page_index * page_size;
 
             for (i, &value) in page.iter().enumerate() {
@@ -486,5 +497,19 @@ mod tests {
         assert_eq!(pages[0][1], -1.0);
         assert_eq!(pages[0][50], 1.0);
         assert_eq!(pages[0][51], -1.0);
+    }
+
+    #[test]
+    fn test_page_size_configuration() {
+        let creator = ParallelFloatPageCreator::identity(Concurrency::of(4));
+        let allocator = creator.allocator_factory.new_allocator();
+
+        // Verify page size matches expected for f32 elements (32KB pages)
+        let page_size = allocator.page_size();
+        let expected_page_size =
+            PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<f32>());
+
+        assert_eq!(page_size, expected_page_size);
+        assert_eq!(page_size, 8192); // 32KB / 4 bytes = 8192 elements
     }
 }

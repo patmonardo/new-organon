@@ -107,7 +107,7 @@ impl<'a> DecisionTreeTrainer<f64> for DecisionTreeRegressorTrainer<'a> {
     }
 
     fn features(&self) -> &dyn Features {
-        &*self.features
+        self.features
     }
 
     fn config(&self) -> &DecisionTreeTrainerConfig {

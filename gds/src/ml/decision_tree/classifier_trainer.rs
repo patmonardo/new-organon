@@ -83,7 +83,7 @@ impl<'a> DecisionTreeTrainer<usize> for DecisionTreeClassifierTrainer<'a> {
     }
 
     fn features(&self) -> &dyn Features {
-        &*self.features
+        self.features
     }
 
     fn config(&self) -> &DecisionTreeTrainerConfig {

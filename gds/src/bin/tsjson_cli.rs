@@ -32,7 +32,7 @@ fn main() {
                 serde_json::from_str(&resp_json).expect("invalid JSON response");
             responses.push(resp);
         }
-        print!("{}", serde_json::Value::Array(responses).to_string());
+        print!("{}", serde_json::Value::Array(responses));
         return;
     }
 

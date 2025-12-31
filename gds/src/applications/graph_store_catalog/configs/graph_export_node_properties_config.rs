@@ -7,6 +7,7 @@ type GraphNodePropertiesConfig =
     crate::applications::graph_store_catalog::configs::GraphNodePropertiesConfig;
 
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct GraphExportNodePropertiesConfig {
     /// Base node properties configuration
     pub node_config: GraphNodePropertiesConfig,
@@ -16,15 +17,6 @@ pub struct GraphExportNodePropertiesConfig {
     pub list_node_labels: bool,
 }
 
-impl Default for GraphExportNodePropertiesConfig {
-    fn default() -> Self {
-        Self {
-            node_config: GraphNodePropertiesConfig::default(),
-            node_properties: Vec::new(),
-            list_node_labels: false,
-        }
-    }
-}
 
 impl GraphExportNodePropertiesConfig {
     /// Validate the configuration

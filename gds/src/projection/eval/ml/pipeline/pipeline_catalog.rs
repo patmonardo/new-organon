@@ -262,7 +262,7 @@ impl PipelineCatalog {
         catalogs
             .get(user)
             .map(|catalog| catalog.iter().collect())
-            .unwrap_or_else(Vec::new)
+            .unwrap_or_default()
     }
 
     /// Get the number of pipelines for a user.

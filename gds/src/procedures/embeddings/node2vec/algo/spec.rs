@@ -141,16 +141,13 @@ pub struct Node2VecConfig {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[derive(Default)]
 pub enum EmbeddingInitializerConfig {
+    #[default]
     Uniform,
     Normalized,
 }
 
-impl Default for EmbeddingInitializerConfig {
-    fn default() -> Self {
-        Self::Uniform
-    }
-}
 
 impl Node2VecConfig {
     fn default_walks_per_node() -> usize {
