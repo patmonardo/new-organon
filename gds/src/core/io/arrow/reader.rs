@@ -13,28 +13,33 @@ use arrow2::error::Error as ArrowError;
 use arrow2::io::ipc::read::{read_file_metadata, FileReader};
 use arrow2::io::parquet::read as parquet_read;
 
-/// Read Arrow IPC file (Feather/Arrow) into a vector of record batches and schema.
-pub fn read_ipc_file(
-    path: &str,
-) -> Result<(Schema, Vec<Chunk<Box<dyn arrow2::array::Array>>>), ArrowError> {
+/// Arrow data read from a file, consisting of schema and record batches.
+#[derive(Debug)]
+pub struct ArrowData {
+    /// The schema describing the data structure
+    pub schema: Schema,
+    /// The record batches containing the actual data
+    pub chunks: Vec<Chunk<Box<dyn arrow2::array::Array>>>,
+}
+
+/// Read Arrow IPC file (Feather/Arrow) into arrow data.
+pub fn read_ipc_file(path: &str) -> Result<ArrowData, ArrowError> {
     let file = File::open(path)?;
     let mut reader = BufReader::new(file);
     let metadata = read_file_metadata(&mut reader)?;
     let schema = metadata.schema.clone();
-    let batches = FileReader::new(reader, metadata, None, None).collect::<Result<Vec<_>, _>>()?;
-    Ok((schema, batches))
+    let chunks = FileReader::new(reader, metadata, None, None).collect::<Result<Vec<_>, _>>()?;
+    Ok(ArrowData { schema, chunks })
 }
 
-/// Read Parquet file into a vector of record batches and schema.
-pub fn read_parquet_file(
-    path: &str,
-) -> Result<(Schema, Vec<Chunk<Box<dyn arrow2::array::Array>>>), ArrowError> {
+/// Read Parquet file into arrow data.
+pub fn read_parquet_file(path: &str) -> Result<ArrowData, ArrowError> {
     let mut reader = BufReader::new(File::open(path)?);
     let metadata = parquet_read::read_metadata(&mut reader)?;
-    let arrow_schema = parquet_read::infer_schema(&metadata)?;
+    let schema = parquet_read::infer_schema(&metadata)?;
     let row_groups = metadata.row_groups;
     let chunks =
-        parquet_read::FileReader::new(reader, row_groups, arrow_schema.clone(), None, None, None)
+        parquet_read::FileReader::new(reader, row_groups, schema.clone(), None, None, None)
             .collect::<Result<Vec<_>, _>>()?;
-    Ok((arrow_schema, chunks))
+    Ok(ArrowData { schema, chunks })
 }

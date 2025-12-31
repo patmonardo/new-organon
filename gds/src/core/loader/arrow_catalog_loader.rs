@@ -46,15 +46,16 @@ impl ArrowCatalogLoader {
             Arc<arrow2::datatypes::Schema>,
         ) -> Result<T, ArrowReferenceError>,
     ) -> Result<T, LoaderError> {
-        let (schema, chunks) = read_parquet_file(path.to_string_lossy().as_ref())
+        let arrow_data = read_parquet_file(path.to_string_lossy().as_ref())
             .map_err(|e| LoaderError::Io(e.to_string()))?;
 
-        let first = chunks
+        let first = arrow_data
+            .chunks
             .into_iter()
             .next()
             .ok_or_else(|| LoaderError::Io(format!("no record batches in {:?}", path)))?;
 
-        make_ref(Arc::new(first), Arc::new(schema))
+        make_ref(Arc::new(first), Arc::new(arrow_data.schema))
             .map_err(|e| LoaderError::Projection(e.to_string()))
     }
 

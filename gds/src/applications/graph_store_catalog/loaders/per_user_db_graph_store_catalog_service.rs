@@ -9,6 +9,10 @@ use crate::types::graph_store::DatabaseId;
 
 use super::GraphStoreCatalogService;
 
+/// Type alias for the complex catalog registry type.
+/// Maps (username, database_name) to graph catalogs in a thread-safe manner.
+type UserDbCatalogRegistry = Arc<RwLock<HashMap<(String, String), Arc<InMemoryGraphCatalog>>>>;
+
 /// In-memory `GraphStoreCatalogService` that scopes catalogs by (username, databaseId).
 ///
 /// This is an intentional **mock substrate** for the applications layer, used while the
@@ -23,7 +27,7 @@ use super::GraphStoreCatalogService;
 /// - a merged per-db `GraphCatalog` view for admin users (list/search across user catalogs)
 #[derive(Clone, Default)]
 pub struct PerUserDbGraphStoreCatalogService {
-    catalogs: Arc<RwLock<HashMap<(String, String), Arc<InMemoryGraphCatalog>>>>,
+    catalogs: UserDbCatalogRegistry,
 }
 
 impl PerUserDbGraphStoreCatalogService {
@@ -36,7 +40,7 @@ impl PerUserDbGraphStoreCatalogService {
     }
 
     fn ensure_user_catalog(
-        catalogs: &Arc<RwLock<HashMap<(String, String), Arc<InMemoryGraphCatalog>>>>,
+        catalogs: &UserDbCatalogRegistry,
         username: &str,
         database_id: &DatabaseId,
     ) -> Arc<InMemoryGraphCatalog> {
@@ -78,7 +82,7 @@ impl GraphStoreCatalogService for PerUserDbGraphStoreCatalogService {
 /// - `set(...)` writes into the *owner* user's catalog (the one that requested the view)
 /// - `get(...)`/`size_of(...)`/`drop(...)` search across all usernames for `database_id`
 struct MergedDbCatalog {
-    catalogs: Arc<RwLock<HashMap<(String, String), Arc<InMemoryGraphCatalog>>>>,
+    catalogs: UserDbCatalogRegistry,
     owner_username: String,
     database_id: DatabaseId,
 }
