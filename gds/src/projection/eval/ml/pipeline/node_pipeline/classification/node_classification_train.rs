@@ -419,7 +419,7 @@ mod tests {
     use std::sync::Arc;
 
     #[test]
-    #[ignore = "Placeholder test - waiting for full NodeFeatureProducer<NodeClassificationPipelineTrainConfig> implementation"]
+    #[ignore]
     fn test_create_train_algorithm() {
         let config = RandomGraphConfig {
             node_count: 10,
@@ -468,7 +468,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Placeholder test - waiting for full implementation"]
+    #[ignore]
     fn test_set_termination_flag() {
         let config = RandomGraphConfig {
             node_count: 10,
@@ -498,7 +498,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Placeholder test - waiting for full implementation"]
+    #[ignore]
     fn test_run_placeholder() {
         let config = RandomGraphConfig {
             node_count: 10,

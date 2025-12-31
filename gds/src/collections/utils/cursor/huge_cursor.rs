@@ -37,10 +37,12 @@
 /// }
 /// ```
 ///
+use crate::collections::PageUtil;
+
 /// Number of elements in a single page
-const PAGE_SIZE: usize = 4096;
+const PAGE_SIZE: usize = PageUtil::PAGE_SIZE_32KB;
 /// Number of bits to shift for page index calculation
-const PAGE_SHIFT: usize = 12; // log2(4096)
+const PAGE_SHIFT: usize = 15; // log2(32768)
 /// Mask to extract offset within a page
 const PAGE_MASK: usize = PAGE_SIZE - 1;
 
@@ -441,14 +443,14 @@ mod tests {
 
     #[test]
     fn test_paged_cursor_multiple_pages() {
-        // Create 3 pages of 4096 elements each
-        let page1: Vec<i64> = (0..4096).collect();
-        let page2: Vec<i64> = (4096..8192).collect();
-        let page3: Vec<i64> = (8192..12288).collect();
+        // Create 3 pages of PAGE_SIZE elements each
+        let page1: Vec<i64> = (0..PAGE_SIZE).map(|v| v as i64).collect();
+        let page2: Vec<i64> = (PAGE_SIZE..PAGE_SIZE*2).map(|v| v as i64).collect();
+        let page3: Vec<i64> = (PAGE_SIZE*2..PAGE_SIZE*3).map(|v| v as i64).collect();
         let pages = vec![page1, page2, page3];
 
-        let mut cursor = PagedCursor::new(&pages, 12288);
-        cursor.set_range(0, 12288);
+        let mut cursor = PagedCursor::new(&pages, PAGE_SIZE * 3);
+        cursor.set_range(0, PAGE_SIZE * 3);
 
         let mut page_count = 0;
         while cursor.next() {
@@ -461,32 +463,32 @@ mod tests {
 
     #[test]
     fn test_paged_cursor_range_across_pages() {
-        // Create 3 pages of 4096 elements each
-        let page1: Vec<i64> = (0..4096).collect();
-        let page2: Vec<i64> = (4096..8192).collect();
-        let page3: Vec<i64> = (8192..12288).collect();
+        // Create 3 pages of PAGE_SIZE elements each
+        let page1: Vec<i64> = (0..PAGE_SIZE).map(|v| v as i64).collect();
+        let page2: Vec<i64> = (PAGE_SIZE..PAGE_SIZE*2).map(|v| v as i64).collect();
+        let page3: Vec<i64> = (PAGE_SIZE*2..PAGE_SIZE*3).map(|v| v as i64).collect();
         let pages = vec![page1, page2, page3];
 
-        let mut cursor = PagedCursor::new(&pages, 12288);
-        cursor.set_range(100, 10000); // From first page across to third page
+        let mut cursor = PagedCursor::new(&pages, PAGE_SIZE * 3);
+        cursor.set_range(100, PAGE_SIZE * 2 + 1000); // From first page across to third page
 
         // First page
         assert!(cursor.next());
         assert_eq!(cursor.base(), 0);
         assert_eq!(cursor.offset(), 100);
-        assert_eq!(cursor.limit(), 4096);
+        assert_eq!(cursor.limit(), PAGE_SIZE);
 
         // Second page (full page)
         assert!(cursor.next());
-        assert_eq!(cursor.base(), 4096);
+        assert_eq!(cursor.base(), PAGE_SIZE);
         assert_eq!(cursor.offset(), 0);
-        assert_eq!(cursor.limit(), 4096);
+        assert_eq!(cursor.limit(), PAGE_SIZE);
 
         // Third page (partial)
         assert!(cursor.next());
-        assert_eq!(cursor.base(), 8192);
+        assert_eq!(cursor.base(), PAGE_SIZE * 2);
         assert_eq!(cursor.offset(), 0);
-        assert_eq!(cursor.limit(), 1808); // 10000 - 8192 = 1808
+        assert_eq!(cursor.limit(), 1000); // (PAGE_SIZE*2 + 1000) - PAGE_SIZE*2 = 1000
 
         assert!(!cursor.next());
     }

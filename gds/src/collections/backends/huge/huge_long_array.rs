@@ -927,7 +927,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "DANGEROUS: Allocates 1 billion elements - can crash system"]
+    #[ignore]
     fn test_with_generator_billion_elements() {
         use crate::concurrency::Concurrency;
 

@@ -42,9 +42,13 @@
 /// ```
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use crate::collections::PageUtil;
 
-const PAGE_SHIFT: u32 = 12; // 4096 elements per page (2^12)
-const PAGE_SIZE: usize = 1 << PAGE_SHIFT;
+/// Number of elements in a single page (derived from PageUtil PAGE_SIZE_32KB)
+const PAGE_SIZE: usize = PageUtil::PAGE_SIZE_32KB;
+/// Number of bits to shift for page index calculation
+const PAGE_SHIFT: usize = 15; // log2(32768)
+/// Mask to extract offset within a page
 const PAGE_MASK: usize = PAGE_SIZE - 1;
 
 /// Immutable sparse double array with memory-efficient paged storage.
@@ -333,18 +337,18 @@ mod tests {
     fn test_sparse_distribution() {
         let mut builder = HugeSparseDoubleArray::builder(0.0);
 
-        // Set widely distributed values
+        // Set widely distributed values across distinct pages
         builder.set(0, 1.1);
-        builder.set(10_000, 2.2);
-        builder.set(1_000_000, 3.3);
-        builder.set(100_000_000, 4.4);
+        builder.set(PAGE_SIZE + 10, 2.2);
+        builder.set(PAGE_SIZE * 2 + 100, 3.3);
+        builder.set(PAGE_SIZE * 3 + 1000, 4.4);
 
         let array = builder.build();
 
         assert_eq!(array.get(0), 1.1);
-        assert_eq!(array.get(10_000), 2.2);
-        assert_eq!(array.get(1_000_000), 3.3);
-        assert_eq!(array.get(100_000_000), 4.4);
+        assert_eq!(array.get(PAGE_SIZE + 10), 2.2);
+        assert_eq!(array.get(PAGE_SIZE * 2 + 100), 3.3);
+        assert_eq!(array.get(PAGE_SIZE * 3 + 1000), 4.4);
 
         // Should only have 4 pages allocated
         assert_eq!(array.page_count(), 4);
@@ -412,16 +416,16 @@ mod tests {
     fn test_page_boundaries() {
         let mut builder = HugeSparseDoubleArray::builder(0.0);
 
-        // Test around page boundary (4096 elements per page)
-        builder.set(4095, 10.5); // Last element of page 0
-        builder.set(4096, 20.5); // First element of page 1
-        builder.set(4097, 30.5); // Second element of page 1
+        // Test around page boundary (PAGE_SIZE elements per page)
+        builder.set(PAGE_SIZE - 1, 10.5); // Last element of page 0
+        builder.set(PAGE_SIZE, 20.5); // First element of page 1
+        builder.set(PAGE_SIZE + 1, 30.5); // Second element of page 1
 
         let array = builder.build();
 
-        assert_eq!(array.get(4095), 10.5);
-        assert_eq!(array.get(4096), 20.5);
-        assert_eq!(array.get(4097), 30.5);
+        assert_eq!(array.get(PAGE_SIZE - 1), 10.5);
+        assert_eq!(array.get(PAGE_SIZE), 20.5);
+        assert_eq!(array.get(PAGE_SIZE + 1), 30.5);
         assert_eq!(array.page_count(), 2);
     }
 

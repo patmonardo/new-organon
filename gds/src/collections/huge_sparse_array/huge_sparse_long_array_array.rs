@@ -41,9 +41,13 @@
 /// ```
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use crate::collections::PageUtil;
 
-const PAGE_SHIFT: u32 = 12; // 4096 elements per page (2^12)
-const PAGE_SIZE: usize = 1 << PAGE_SHIFT;
+/// Number of elements in a single page (derived from PageUtil PAGE_SIZE_32KB)
+const PAGE_SIZE: usize = PageUtil::PAGE_SIZE_32KB;
+/// Number of bits to shift for page index calculation
+const PAGE_SHIFT: usize = 15; // log2(32768)
+/// Mask to extract offset within a page
 const PAGE_MASK: usize = PAGE_SIZE - 1;
 
 /// Immutable sparse array of i64 vectors with memory-efficient paged storage.
@@ -249,6 +253,9 @@ mod tests {
         let array = builder.build();
 
         assert_eq!(array.get(0), &vec![1, 2, 3]);
+            // Test around page boundary (PAGE_SIZE elements per page)
+            builder.set(PAGE_SIZE - 1, vec![1]); // Last element of page 0
+            builder.set(PAGE_SIZE, vec![2]); // First element of page 1
         assert_eq!(array.get(100), &vec![10, 20]);
         assert_eq!(array.get(1000), &vec![100]);
         assert_eq!(array.get(50), &Vec::<i64>::new()); // Default value
@@ -275,18 +282,18 @@ mod tests {
         let default_empty = vec![];
         let mut builder = HugeSparseLongArrayArray::builder(default_empty);
 
-        // Set widely distributed adjacency lists
+        // Set widely distributed adjacency lists across distinct pages
         builder.set(0, vec![1, 2, 3]);
-        builder.set(10_000, vec![42]);
-        builder.set(1_000_000, vec![99, 100, 101]);
-        builder.set(100_000_000, vec![999]);
+        builder.set(PAGE_SIZE + 10, vec![42]);
+        builder.set(PAGE_SIZE * 2 + 100, vec![99, 100, 101]);
+        builder.set(PAGE_SIZE * 3 + 1000, vec![999]);
 
         let array = builder.build();
 
         assert_eq!(array.get(0), &vec![1, 2, 3]);
-        assert_eq!(array.get(10_000), &vec![42]);
-        assert_eq!(array.get(1_000_000), &vec![99, 100, 101]);
-        assert_eq!(array.get(100_000_000), &vec![999]);
+        assert_eq!(array.get(PAGE_SIZE + 10), &vec![42]);
+        assert_eq!(array.get(PAGE_SIZE * 2 + 100), &vec![99, 100, 101]);
+        assert_eq!(array.get(PAGE_SIZE * 3 + 1000), &vec![999]);
 
         // Should only have 4 pages allocated
         assert_eq!(array.page_count(), 4);
@@ -340,7 +347,6 @@ mod tests {
         builder.set(10, vec![1]);
         let array1 = builder.build();
         assert!(array1.capacity() >= 11);
-
         builder.set(1000, vec![2]);
         let array2 = builder.build();
         assert!(array2.capacity() >= 1001);
@@ -355,16 +361,16 @@ mod tests {
         let default_empty = vec![];
         let mut builder = HugeSparseLongArrayArray::builder(default_empty);
 
-        // Test around page boundary (4096 elements per page)
-        builder.set(4095, vec![100]); // Last element of page 0
-        builder.set(4096, vec![200]); // First element of page 1
-        builder.set(4097, vec![300]); // Second element of page 1
+        // Test around page boundary (PAGE_SIZE elements per page)
+        builder.set(PAGE_SIZE - 1, vec![100]); // Last element of page 0
+        builder.set(PAGE_SIZE, vec![200]); // First element of page 1
+        builder.set(PAGE_SIZE + 1, vec![300]); // Second element of page 1
 
         let array = builder.build();
 
-        assert_eq!(array.get(4095), &vec![100]);
-        assert_eq!(array.get(4096), &vec![200]);
-        assert_eq!(array.get(4097), &vec![300]);
+        assert_eq!(array.get(PAGE_SIZE - 1), &vec![100]);
+        assert_eq!(array.get(PAGE_SIZE), &vec![200]);
+        assert_eq!(array.get(PAGE_SIZE + 1), &vec![300]);
         assert_eq!(array.page_count(), 2);
     }
 
