@@ -9,7 +9,7 @@ use crate::concurrency::Concurrency;
 use crate::core::utils::paged::ParallelFloatPageCreator;
 
 /// Maximum size for single-page arrays
-const MAX_ARRAY_LENGTH: usize = 1 << 28;
+const MAX_ARRAY_LENGTH: usize = PageUtil::MAX_ARRAY_LENGTH;
 
 /// A long-indexable f32 array that can contain more than 2 billion elements.
 ///

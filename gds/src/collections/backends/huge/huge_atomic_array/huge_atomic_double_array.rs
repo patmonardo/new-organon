@@ -50,7 +50,7 @@
 use crate::collections::PageUtil;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-const MAX_ARRAY_LENGTH: usize = 1 << 28; // 268,435,456 elements
+const MAX_ARRAY_LENGTH: usize = PageUtil::MAX_ARRAY_LENGTH; // 268,435,456 elements
 const PAGE_SIZE_IN_BYTES: usize = 4096; // 4KB pages
 
 /// Huge atomic array supporting >2 billion f64 elements with atomic operations.

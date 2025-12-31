@@ -11,7 +11,7 @@ use crate::concurrency::Concurrency;
 use crate::core::utils::paged::ParallelIntPageCreator;
 
 /// Maximum size for single-page arrays (from PageUtil)
-const MAX_ARRAY_LENGTH: usize = 1 << 28; // ~268 million elements
+const MAX_ARRAY_LENGTH: usize = PageUtil::MAX_ARRAY_LENGTH; // ~268 million elements
 
 /// A long-indexable i32 array that can contain more than 2 billion elements.
 ///

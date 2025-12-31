@@ -7,7 +7,7 @@ use crate::collections::cursor::{HugeCursor, HugeCursorSupport, PagedCursor, Sin
 use crate::collections::PageUtil;
 
 /// Maximum size for single-page arrays
-const MAX_ARRAY_LENGTH: usize = 1 << 28;
+const MAX_ARRAY_LENGTH: usize = PageUtil::MAX_ARRAY_LENGTH;
 
 /// A long-indexable array of type T that can contain more than 2 billion elements.
 ///

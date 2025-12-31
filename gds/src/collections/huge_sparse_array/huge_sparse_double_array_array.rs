@@ -1,10 +1,11 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
+use crate::collections::PageUtil;
 
-/// Number of elements in a single page (4096 elements = 4KB for most types)
-const PAGE_SIZE: usize = 4096;
+/// Number of elements in a single page (derived from PageUtil PAGE_SIZE_32KB)
+const PAGE_SIZE: usize = PageUtil::PAGE_SIZE_32KB;
 /// Number of bits to shift for page index calculation
-const PAGE_SHIFT: usize = 12; // log2(4096)
+const PAGE_SHIFT: usize = 15; // log2(32768)
 /// Mask to extract offset within a page
 const PAGE_MASK: usize = PAGE_SIZE - 1;
 
