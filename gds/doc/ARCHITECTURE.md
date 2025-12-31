@@ -130,6 +130,11 @@ Use Facades when:
 **Location**: `gds/src/applications/algorithms/pathfinding/{algo}.rs`  
 **Purpose**: Web/NAPI invocations via "Applications Forms" - user-facing JSON API
 
+**Key Capability**: Applications Forms can call:
+- **Procedures** (via spec.rs / AlgorithmSpec)
+- **Pipelines** (as Graph Algorithms - future)
+- **Projection Native Factory** directly (e.g., `ArrowNativeFactory` via `project_native` operation)
+
 ### Control Flow
 
 ```mermaid
@@ -174,16 +179,20 @@ flowchart TD
 
 - **User-facing JSON API** for Web/NAPI invocations
 - **"Applications Forms"** - standardized request/response format
-- **Delegates to facades** (bypasses spec.rs/executor)
+- **Delegates to facades** (bypasses spec.rs/executor) for algorithms
+- **Direct Projection Factory access** - can call `ArrowNativeFactory` and other factories directly
 - **Simple parameter parsing** and mode routing
 - **Returns JSON responses**
+- **TypeScript agents** can call into the Projection engine directly from the TS layer
 
 ### Key Components
 
 - **Applications Forms**: Standardized JSON request/response format
-- **Handler Functions**: `handle_{algo}(request, catalog)` pattern
+- **Handler Functions**: `handle_{algo}(request, catalog)` pattern for algorithms
+- **Projection Handlers**: `project_native` operation for direct factory access
 - **Graph Catalog**: Provides graph stores by name
 - **Mode Routing**: Routes to appropriate facade method based on `mode` parameter
+- **Native Factory Access**: Direct access to `ArrowNativeFactory` and other projection factories
 
 ### When to Use
 
@@ -192,6 +201,8 @@ Use Applications Forms when:
 - User-facing JSON APIs
 - Simple parameter parsing needed
 - Standardized request/response format required
+- **TypeScript agents** need to call Procedures, Pipelines, or Projection Native Factory
+- Need direct access to graph projection from native data sources (Arrow, Polars, etc.)
 
 ---
 
@@ -318,6 +329,24 @@ Result
 JSON Response
 ```
 
+### Applications Forms → Projection Native Factory
+
+```
+JSON Request (project_native)
+  ↓
+NativeProjectApplication Handler
+  ↓
+ArrowNativeFactory / Other Factories
+  ↓
+GraphStore Creation
+  ↓
+Graph Catalog Storage
+  ↓
+JSON Response
+```
+
+**Key Point**: TypeScript agents can call the Projection Native Factory directly through Applications Forms, enabling direct graph creation from Arrow tables, Polars DataFrames, or other native data sources without going through Procedures or Pipelines.
+
 ### Procedure Executor → AlgorithmSpec → Algorithm Runtimes
 
 ```
@@ -399,10 +428,12 @@ let builder = AStarBuilder::new(graph_store)
 let paths: Vec<_> = builder.stream()?.collect();
 ```
 
-### Applications Form Example
+### Applications Form Example (Algorithm)
 
 ```json
 {
+  "facade": "algorithms",
+  "op": "dijkstra",
   "graphName": "my_graph",
   "sourceNode": 0,
   "targetNode": 100,
@@ -410,6 +441,23 @@ let paths: Vec<_> = builder.stream()?.collect();
   "mode": "stream"
 }
 ```
+
+### Applications Form Example (Projection Native Factory)
+
+```json
+{
+  "facade": "graph_store_catalog",
+  "op": "project_native",
+  "graphName": "my_projected_graph",
+  "projectionConfig": {
+    "sourceGraphName": "source_graph",
+    "nodeLabels": ["Person", "Company"],
+    "relationshipTypes": ["KNOWS", "WORKS_FOR"]
+  }
+}
+```
+
+**Note**: The Projection Native Factory can be called directly from TypeScript agents, enabling direct graph creation from native data sources (Arrow, Polars, etc.) through the same Applications Forms JSON API.
 
 ---
 
