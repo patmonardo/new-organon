@@ -36,6 +36,10 @@ use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::procedures::core::prelude::{PathResultBuilder, PathFindingResult};
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks};
+use crate::procedures::core::result_builders::{ExecutionMetadata, ResultBuilder};
+use crate::mem::MemoryRange;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -101,6 +105,7 @@ pub struct DfsBuilder {
     track_paths: bool,
     /// Concurrency level for parallel processing
     concurrency: usize,
+    task_registry_factory: Box<dyn TaskRegistryFactory>,
 }
 
 impl DfsBuilder {
@@ -120,6 +125,7 @@ impl DfsBuilder {
             max_depth: None,
             track_paths: false,
             concurrency: 1,
+            task_registry_factory: Box::new(EmptyTaskRegistryFactory),
         }
     }
 
@@ -132,8 +138,15 @@ impl DfsBuilder {
         })
     }
 
-    fn compute(self) -> Result<(Vec<PathResult>, DfsStats)> {
+    fn compute(self) -> Result<PathFindingResult> {
         self.validate()?;
+
+        // Set up progress tracking
+        let _task_registry_factory = self.task_registry_factory;
+
+        // Create progress tracker for DFS execution
+        let node_count = self.graph_store.node_count();
+        let _progress_tracker = ProgressTracker::new(Tasks::Leaf("DFS".to_string(), node_count));
 
         let source_u64 = self.source.expect("validate() ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -200,24 +213,14 @@ impl DfsBuilder {
         let all_targets_reached =
             !target_nodes.is_empty() && targets_found == target_nodes.len() as u64;
 
-        let stats = DfsStats {
-            nodes_visited: result.nodes_visited as u64,
-            max_depth_reached,
-            execution_time_ms: result.computation_time_ms,
-            targets_found,
-            all_targets_reached,
-            backtrack_operations: 0,
-            avg_branch_depth: 0.0,
-        };
-
-        let rows: Vec<PathResult> = result
+        let paths: Vec<crate::procedures::core::result_builders::PathResult> = result
             .visited_nodes
             .into_iter()
             .filter(|(node_id, _)| *node_id >= 0)
             .map(|(node_id, discovery_order)| {
                 let target = node_id as u64;
                 let path = path_map.get(&node_id).cloned().unwrap_or_default();
-                PathResult {
+                crate::procedures::core::result_builders::PathResult {
                     source: source_u64,
                     target,
                     path,
@@ -226,7 +229,31 @@ impl DfsBuilder {
             })
             .collect();
 
-        Ok((rows, stats))
+        // Create execution metadata
+        let mut additional = std::collections::HashMap::new();
+        additional.insert("nodes_visited".to_string(), result.nodes_visited.to_string());
+        additional.insert("max_depth_reached".to_string(), max_depth_reached.to_string());
+        additional.insert("targets_found".to_string(), targets_found.to_string());
+        additional.insert("all_targets_reached".to_string(), all_targets_reached.to_string());
+        additional.insert("track_paths".to_string(), self.track_paths.to_string());
+        additional.insert("max_depth".to_string(), self.max_depth.map_or("unlimited".to_string(), |d| d.to_string()));
+
+        let metadata = ExecutionMetadata {
+            execution_time: std::time::Duration::from_millis(result.computation_time_ms as u64),
+            iterations: None,
+            converged: None,
+            additional,
+        };
+
+        // Build result using upgraded result builder
+        let path_result = PathResultBuilder::new()
+            .with_paths(paths)
+            .with_metadata(metadata)
+            .build()
+            .map_err(|e: crate::procedures::core::result_builders::ResultBuilderError|
+                crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
+
+        Ok(path_result)
     }
 
     /// Set source node
@@ -339,8 +366,14 @@ impl DfsBuilder {
     /// }
     /// ```
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
-        let (rows, _) = self.compute()?;
-        Ok(Box::new(rows.into_iter()))
+        let result = self.compute()?;
+        let paths = result.paths.into_iter().map(|p| PathResult {
+            source: p.source,
+            target: p.target,
+            path: p.path,
+            cost: p.cost,
+        });
+        Ok(Box::new(paths))
     }
 
     /// Stats mode: Get aggregated statistics
@@ -357,8 +390,33 @@ impl DfsBuilder {
     /// println!("Visited {} nodes, backtracked {} times", stats.nodes_visited, stats.backtrack_operations);
     /// ```
     pub fn stats(self) -> Result<DfsStats> {
-        let (_, stats) = self.compute()?;
-        Ok(stats)
+        let result = self.compute()?;
+        let nodes_visited = result.metadata.additional
+            .get("nodes_visited")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+        let max_depth_reached = result.metadata.additional
+            .get("max_depth_reached")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+        let targets_found = result.metadata.additional
+            .get("targets_found")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+        let all_targets_reached = result.metadata.additional
+            .get("all_targets_reached")
+            .and_then(|s| s.parse::<bool>().ok())
+            .unwrap_or(false);
+
+        Ok(DfsStats {
+            nodes_visited,
+            max_depth_reached,
+            execution_time_ms: result.metadata.execution_time.as_millis() as u64,
+            targets_found,
+            all_targets_reached,
+            backtrack_operations: 0, // Not available in current implementation
+            avg_branch_depth: 0.0,   // Not available in current implementation
+        })
     }
 
     /// Mutate mode: Compute and store as node property
@@ -406,6 +464,35 @@ impl DfsBuilder {
                 "DFS mutate/write is not implemented yet".to_string(),
             ),
         )
+    }
+
+    /// Estimate memory requirements for DFS execution
+    ///
+    /// Returns a memory range estimate based on stack storage, visited tracking, and path storage.
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+        
+        // Stack storage (for DFS recursion/iteration)
+        let stack_memory = node_count * 8; // node_id per entry
+        
+        // Visited tracking
+        let visited_memory = node_count;
+        
+        // Path tracking (if enabled)
+        let path_memory = if self.track_paths {
+            node_count * 8
+        } else {
+            0
+        };
+        
+        // Graph structure overhead
+        let avg_degree = 10.0;
+        let relationship_count = (node_count as f64 * avg_degree) as usize;
+        let graph_overhead = relationship_count * 16;
+        
+        let total_memory = stack_memory + visited_memory + path_memory + graph_overhead;
+        let overhead = total_memory / 5;
+        MemoryRange::of_range(total_memory, total_memory + overhead)
     }
 }
 

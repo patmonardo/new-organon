@@ -9,13 +9,20 @@ use crate::procedures::delta_stepping::{
     DeltaSteppingComputationRuntime, DeltaSteppingStorageRuntime,
 };
 use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::facades::traits::{PathResult, Result};
+use crate::procedures::facades::traits::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::mem::MemoryRange;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+// Import upgraded systems
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+};
+use crate::procedures::core::prelude::*;
 
 /// Statistics about Delta Stepping execution
 #[derive(Debug, Clone, serde::Serialize)]
@@ -35,6 +42,9 @@ pub struct DeltaSteppingBuilder {
     direction: String,
     store_predecessors: bool,
     concurrency: usize,
+    /// Progress tracking components
+    task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
+    user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
 }
 
 impl DeltaSteppingBuilder {
@@ -58,6 +68,8 @@ impl DeltaSteppingBuilder {
             direction: "outgoing".to_string(),
             store_predecessors: true,
             concurrency: 4,
+            task_registry_factory: None,
+            user_log_registry_factory: None,
         }
     }
 
@@ -93,6 +105,18 @@ impl DeltaSteppingBuilder {
 
     pub fn concurrency(mut self, concurrency: usize) -> Self {
         self.concurrency = concurrency;
+        self
+    }
+
+    /// Set task registry factory for progress tracking
+    pub fn task_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.task_registry_factory = Some(factory);
+        self
+    }
+
+    /// Set user log registry factory for progress tracking
+    pub fn user_log_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.user_log_registry_factory = Some(factory);
         self
     }
 
@@ -153,8 +177,18 @@ impl DeltaSteppingBuilder {
         })
     }
 
-    fn compute(self) -> Result<(Vec<PathResult>, DeltaSteppingStats)> {
+    fn compute(self) -> Result<PathFindingResult> {
         self.validate()?;
+
+        // Set up progress tracking
+        let _task_registry_factory = self.task_registry_factory
+            .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
+        let _user_log_registry_factory = self.user_log_registry_factory
+            .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
+
+        // Create progress tracker for Delta Stepping execution
+        let node_count = self.graph_store.node_count();
+        let _progress_tracker = ProgressTracker::new(Tasks::Leaf("DeltaStepping".to_string(), node_count));
 
         let source_u64 = self.source.expect("validate ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -205,42 +239,66 @@ impl DeltaSteppingBuilder {
             direction_byte,
         )?;
 
-        let mut rows: Vec<PathResult> = Vec::new();
-        for p in result.shortest_paths.iter() {
-            let source = Self::checked_u64(p.source_node, "source")?;
-            let target = Self::checked_u64(p.target_node, "target")?;
-            let path = p
-                .node_ids
-                .iter()
-                .copied()
-                .map(|node_id| Self::checked_u64(node_id, "path"))
-                .collect::<Result<Vec<_>>>()?;
+        let paths: Vec<PathResult> = result.shortest_paths.iter()
+            .filter(|p| p.source_node >= 0 && p.target_node >= 0)
+            .map(|p| {
+                let source = Self::checked_u64(p.source_node, "source").unwrap_or(0);
+                let target = Self::checked_u64(p.target_node, "target").unwrap_or(0);
+                let path = p
+                    .node_ids
+                    .iter()
+                    .copied()
+                    .filter(|node_id| *node_id >= 0)
+                    .map(|node_id| Self::checked_u64(node_id, "path").unwrap_or(0))
+                    .collect();
 
-            rows.push(PathResult {
-                source,
-                target,
-                path,
-                cost: p.total_cost(),
-            });
-        }
+                PathResult {
+                    source,
+                    target,
+                    path,
+                    cost: p.total_cost(),
+                }
+            })
+            .collect();
 
-        let stats = DeltaSteppingStats {
-            paths_found: rows.len() as u64,
-            computation_time_ms: result.computation_time_ms,
-            execution_time_ms: start.elapsed().as_millis() as u64,
+        // Create execution metadata
+        let execution_time = start.elapsed();
+        let metadata = ExecutionMetadata {
+            execution_time,
+            iterations: None,
+            converged: None,
+            additional: std::collections::HashMap::from([
+                ("computation_time_ms".to_string(), result.computation_time_ms.to_string()),
+            ]),
         };
 
-        Ok((rows, stats))
+        // Build result using upgraded result builder
+        let path_result = PathResultBuilder::new()
+            .with_paths(paths)
+            .with_metadata(metadata)
+            .build()
+            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
+
+        Ok(path_result)
     }
 
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
-        let (rows, _) = self.compute()?;
-        Ok(Box::new(rows.into_iter()))
+        let result = self.compute()?;
+        Ok(Box::new(result.paths.into_iter()))
     }
 
     pub fn stats(self) -> Result<DeltaSteppingStats> {
-        let (_, stats) = self.compute()?;
-        Ok(stats)
+        let result = self.compute()?;
+        let computation_time_ms = result.metadata.additional
+            .get("computation_time_ms")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+
+        Ok(DeltaSteppingStats {
+            paths_found: result.paths.len() as u64,
+            computation_time_ms,
+            execution_time_ms: result.metadata.execution_time.as_millis() as u64,
+        })
     }
 
     pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
@@ -263,5 +321,34 @@ impl DeltaSteppingBuilder {
                 "Delta Stepping mutate/write is not implemented yet".to_string(),
             ),
         )
+    }
+
+    /// Estimate memory requirements for Delta Stepping execution
+    ///
+    /// Returns a memory range estimate based on bucket storage, distance arrays, and graph overhead.
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+        
+        // Bucket storage (delta stepping uses bins/buckets)
+        let bucket_memory = node_count * 16; // bucket index + node_id
+        
+        // Distance array
+        let distance_memory = node_count * 8;
+        
+        // Predecessor tracking (if enabled)
+        let predecessor_memory = if self.store_predecessors {
+            node_count * 8
+        } else {
+            0
+        };
+        
+        // Graph structure overhead
+        let avg_degree = 10.0;
+        let relationship_count = (node_count as f64 * avg_degree) as usize;
+        let graph_overhead = relationship_count * 16;
+        
+        let total_memory = bucket_memory + distance_memory + predecessor_memory + graph_overhead;
+        let overhead = total_memory / 5;
+        MemoryRange::of_range(total_memory, total_memory + overhead)
     }
 }

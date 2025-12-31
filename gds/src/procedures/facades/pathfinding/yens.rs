@@ -11,6 +11,10 @@ use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::procedures::core::prelude::{PathResultBuilder, PathFindingResult};
+use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::procedures::core::result_builders::ResultBuilder;
+use crate::mem::MemoryRange;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -165,8 +169,12 @@ impl YensBuilder {
         })
     }
 
-    fn compute(self) -> Result<(Vec<PathResult>, YensStats)> {
+    fn compute(self) -> Result<PathFindingResult> {
         self.validate()?;
+
+        // Create progress tracker for Yen's algorithm execution
+        let node_count = self.graph_store.node_count();
+        let _progress_tracker = ProgressTracker::new(Tasks::Leaf("Yens".to_string(), node_count));
 
         let source_u64 = self.source.expect("validate ensures source is set");
         let target_u64 = self.target.expect("validate ensures target is set");
@@ -218,7 +226,7 @@ impl YensBuilder {
         let result =
             storage.compute_yens(&mut computation, Some(graph_view.as_ref()), direction_byte)?;
 
-        let rows: Vec<PathResult> = result
+        let paths: Vec<crate::procedures::core::result_builders::PathResult> = result
             .paths
             .into_iter()
             .map(|p| {
@@ -230,7 +238,7 @@ impl YensBuilder {
                     .map(|node_id| Self::checked_u64(node_id, "path"))
                     .collect::<Result<Vec<_>>>()?;
 
-                Ok(PathResult {
+                Ok(crate::procedures::core::result_builders::PathResult {
                     source,
                     target,
                     path,
@@ -239,23 +247,53 @@ impl YensBuilder {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        let stats = YensStats {
-            paths_found: rows.len() as u64,
-            computation_time_ms: result.computation_time_ms,
-            execution_time_ms: start.elapsed().as_millis() as u64,
+        // Create execution metadata
+        let mut additional = std::collections::HashMap::new();
+        additional.insert("computation_time_ms".to_string(), result.computation_time_ms.to_string());
+        additional.insert("k".to_string(), self.k.to_string());
+        additional.insert("track_relationships".to_string(), self.track_relationships.to_string());
+
+        let metadata = crate::procedures::core::result_builders::ExecutionMetadata {
+            execution_time: start.elapsed(),
+            iterations: None,
+            converged: None,
+            additional,
         };
 
-        Ok((rows, stats))
+        // Build result using upgraded result builder
+        let path_result = PathResultBuilder::new()
+            .with_paths(paths)
+            .with_metadata(metadata)
+            .build()
+            .map_err(|e: crate::procedures::core::result_builders::ResultBuilderError|
+                crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
+
+        Ok(path_result)
     }
 
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
-        let (rows, _) = self.compute()?;
-        Ok(Box::new(rows.into_iter()))
+        let result = self.compute()?;
+        let paths = result.paths.into_iter().map(|p| PathResult {
+            source: p.source,
+            target: p.target,
+            path: p.path,
+            cost: p.cost,
+        });
+        Ok(Box::new(paths))
     }
 
     pub fn stats(self) -> Result<YensStats> {
-        let (_, stats) = self.compute()?;
-        Ok(stats)
+        let result = self.compute()?;
+        let computation_time_ms = result.metadata.additional
+            .get("computation_time_ms")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+
+        Ok(YensStats {
+            paths_found: result.paths.len() as u64,
+            computation_time_ms,
+            execution_time_ms: result.metadata.execution_time.as_millis() as u64,
+        })
     }
 
     pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
@@ -278,6 +316,32 @@ impl YensBuilder {
                 "Yen's mutate/write is not implemented yet".to_string(),
             ),
         )
+    }
+
+    /// Estimate memory requirements for Yen's K-shortest paths execution
+    ///
+    /// Returns a memory range estimate based on path storage, priority queues, and graph overhead.
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+        let k = self.k;
+        
+        // Priority queue for candidate paths (can grow large)
+        let queue_memory = k * node_count * 16; // path + cost per candidate
+        
+        // Path storage (storing k shortest paths)
+        let path_storage_memory = k * node_count * 8; // worst case: full paths
+        
+        // Distance arrays for each candidate path computation
+        let distance_arrays_memory = k * node_count * 8;
+        
+        // Graph structure overhead
+        let avg_degree = 10.0;
+        let relationship_count = (node_count as f64 * avg_degree) as usize;
+        let graph_overhead = relationship_count * 16;
+        
+        let total_memory = queue_memory + path_storage_memory + distance_arrays_memory + graph_overhead;
+        let overhead = total_memory / 5;
+        MemoryRange::of_range(total_memory, total_memory + overhead)
     }
 }
 

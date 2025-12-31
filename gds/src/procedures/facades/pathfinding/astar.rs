@@ -39,15 +39,22 @@
 
 use crate::procedures::astar::{AStarComputationRuntime, AStarStorageRuntime};
 use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::facades::traits::{PathResult, Result};
+use crate::procedures::facades::traits::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph_store::GraphStore;
 use crate::types::prelude::DefaultGraphStore;
+use crate::mem::MemoryRange;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+// Import upgraded systems
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+};
+use crate::procedures::core::prelude::*;
 
 // ============================================================================
 // Heuristic Types
@@ -158,6 +165,9 @@ pub struct AStarBuilder {
     heuristic: Heuristic,
     /// Concurrency level for parallel processing
     concurrency: usize,
+    /// Progress tracking components
+    task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
+    user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
 }
 
 impl AStarBuilder {
@@ -179,6 +189,8 @@ impl AStarBuilder {
             direction: "outgoing".to_string(),
             heuristic: Heuristic::Manhattan,
             concurrency: 4,
+            task_registry_factory: None,
+            user_log_registry_factory: None,
         }
     }
 
@@ -254,6 +266,18 @@ impl AStarBuilder {
         self
     }
 
+    /// Set task registry factory for progress tracking
+    pub fn task_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.task_registry_factory = Some(factory);
+        self
+    }
+
+    /// Set user log registry factory for progress tracking
+    pub fn user_log_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.user_log_registry_factory = Some(factory);
+        self
+    }
+
     /// Validate configuration before execution
     fn validate(&self) -> Result<()> {
         match self.source {
@@ -315,8 +339,18 @@ impl AStarBuilder {
         })
     }
 
-    fn compute(self) -> Result<(Vec<PathResult>, AStarStats)> {
+    fn compute(self) -> Result<PathFindingResult> {
         self.validate()?;
+
+        // Set up progress tracking
+        let _task_registry_factory = self.task_registry_factory
+            .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
+        let _user_log_registry_factory = self.user_log_registry_factory
+            .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
+
+        // Create progress tracker for A* execution
+        let node_count = self.graph_store.node_count();
+        let _progress_tracker = ProgressTracker::new(Tasks::Leaf("A*".to_string(), node_count));
 
         let source_u64 = self.source.expect("validate() ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -355,7 +389,7 @@ impl AStarBuilder {
         let lon_values = graph_view.node_properties("longitude");
 
         let start_time = std::time::Instant::now();
-        let mut rows: Vec<PathResult> = Vec::new();
+        let mut paths: Vec<PathResult> = Vec::new();
         let mut nodes_visited_total: u64 = 0;
 
         for (target_u64, target_node) in target_nodes {
@@ -395,7 +429,7 @@ impl AStarBuilder {
                     })
                     .collect::<Result<Vec<_>>>()?;
 
-                rows.push(PathResult {
+                paths.push(PathResult {
                     source: source_u64,
                     target: target_u64,
                     path: node_path,
@@ -404,26 +438,37 @@ impl AStarBuilder {
             }
         }
 
-        let targets_found = rows.len() as u64;
+        let targets_found = paths.len() as u64;
         let all_targets_reached = targets_found == self.targets.len() as u64;
 
-        let stats = AStarStats {
-            nodes_visited: nodes_visited_total,
-            final_queue_size: 0,
-            max_queue_size: 0,
-            execution_time_ms: start_time.elapsed().as_millis() as u64,
-            targets_found,
-            all_targets_reached,
-            heuristic_accuracy: match self.heuristic {
-                Heuristic::Manhattan => 1.2,
-                Heuristic::Euclidean => 1.0,
-                Heuristic::Haversine => 1.0,
-                Heuristic::Custom(_) => 1.1,
-            },
-            heuristic_evaluations: nodes_visited_total,
+        // Create execution metadata
+        let execution_time = start_time.elapsed();
+        let metadata = ExecutionMetadata {
+            execution_time,
+            iterations: None,
+            converged: Some(all_targets_reached),
+            additional: std::collections::HashMap::from([
+                ("nodes_visited".to_string(), nodes_visited_total.to_string()),
+                ("targets_found".to_string(), targets_found.to_string()),
+                ("all_targets_reached".to_string(), all_targets_reached.to_string()),
+                ("heuristic_accuracy".to_string(), match self.heuristic {
+                    Heuristic::Manhattan => "1.2",
+                    Heuristic::Euclidean => "1.0",
+                    Heuristic::Haversine => "1.0",
+                    Heuristic::Custom(_) => "1.1",
+                }.to_string()),
+                ("heuristic_evaluations".to_string(), nodes_visited_total.to_string()),
+            ]),
         };
 
-        Ok((rows, stats))
+        // Build result using upgraded result builder
+        let path_result = PathResultBuilder::new()
+            .with_paths(paths)
+            .with_metadata(metadata)
+            .build()
+            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
+
+        Ok(path_result)
     }
 
     /// Execute the algorithm and return iterator over path results
@@ -444,8 +489,8 @@ impl AStarBuilder {
     /// }
     /// ```
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
-        let (rows, _) = self.compute()?;
-        Ok(Box::new(rows.into_iter()))
+        let result = self.compute()?;
+        Ok(Box::new(result.paths.into_iter()))
     }
 
     /// Stats mode: Get aggregated statistics
@@ -461,8 +506,38 @@ impl AStarBuilder {
     /// println!("Visited {} nodes, heuristic accuracy: {:.2}", stats.nodes_visited, stats.heuristic_accuracy);
     /// ```
     pub fn stats(self) -> Result<AStarStats> {
-        let (_, stats) = self.compute()?;
-        Ok(stats)
+        let result = self.compute()?;
+        let nodes_visited = result.metadata.additional
+            .get("nodes_visited")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+        let targets_found = result.metadata.additional
+            .get("targets_found")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+        let all_targets_reached = result.metadata.additional
+            .get("all_targets_reached")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(false);
+        let heuristic_accuracy = result.metadata.additional
+            .get("heuristic_accuracy")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(1.0);
+        let heuristic_evaluations = result.metadata.additional
+            .get("heuristic_evaluations")
+            .and_then(|s| s.parse().ok())
+            .unwrap_or(0);
+
+        Ok(AStarStats {
+            nodes_visited,
+            final_queue_size: 0,
+            max_queue_size: 0,
+            execution_time_ms: result.metadata.execution_time.as_millis() as u64,
+            targets_found,
+            all_targets_reached,
+            heuristic_accuracy,
+            heuristic_evaluations,
+        })
     }
 
     /// Mutate mode: Compute and store as node property
@@ -508,6 +583,59 @@ impl AStarBuilder {
                 "A* mutate/write is not implemented yet".to_string(),
             ),
         )
+    }
+
+    /// Estimate memory requirements for A* execution
+    ///
+    /// Returns a memory range estimate based on:
+    /// - Priority queue storage (heap for open set)
+    /// - Distance arrays (g-scores and f-scores)
+    /// - Path tracking (if enabled)
+    /// - Graph structure overhead
+    ///
+    /// ```rust,no_run
+    /// # use gds::Graph;
+    /// # let graph: Graph = unimplemented!();
+    /// let builder = graph.astar().source(0).target(1);
+    /// let memory = builder.estimate_memory();
+    /// println!("Estimated memory: {} bytes", memory.max());
+    /// ```
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+
+        // Priority queue (open set) - worst case: all nodes in queue
+        // Each entry: node_id (8 bytes) + f-score (8 bytes) + heap overhead (16 bytes) = 32 bytes
+        let priority_queue_memory = node_count * 32;
+
+        // Distance arrays: g-scores and f-scores (8 bytes each per node)
+        let distance_arrays_memory = node_count * 8 * 2; // g-score + f-score
+
+        // Path tracking: predecessor array (8 bytes per node)
+        let path_tracking_memory = node_count * 8;
+
+        // Heuristic computation overhead (coordinate storage if using lat/lng)
+        let heuristic_overhead = if matches!(self.heuristic, Heuristic::Haversine | Heuristic::Euclidean) {
+            node_count * 16 // lat + lng per node
+        } else {
+            0
+        };
+
+        // Graph structure overhead (adjacency lists, etc.)
+        let avg_degree = 10.0; // Conservative estimate
+        let relationship_count = (node_count as f64 * avg_degree) as usize;
+        let graph_overhead = relationship_count * 16; // ~16 bytes per relationship
+
+        let total_memory = priority_queue_memory
+            + distance_arrays_memory
+            + path_tracking_memory
+            + heuristic_overhead
+            + graph_overhead;
+
+        // Add 20% overhead for algorithm-specific structures
+        let overhead = total_memory / 5;
+        let total_with_overhead = total_memory + overhead;
+
+        MemoryRange::of_range(total_memory, total_with_overhead)
     }
 }
 

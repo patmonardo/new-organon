@@ -166,6 +166,20 @@ pub fn handle_delta_stepping(request: &Value, catalog: Arc<dyn GraphCatalog>) ->
                 ),
             }
         }
+        "estimate" => {
+            // Memory estimation mode - returns memory range without executing algorithm
+            let memory_range = builder.estimate_memory();
+            json!({
+                "ok": true,
+                "op": op,
+                "data": {
+                    "memoryBytes": {
+                        "min": memory_range.min(),
+                        "max": memory_range.max()
+                    }
+                }
+            })
+        }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
 }

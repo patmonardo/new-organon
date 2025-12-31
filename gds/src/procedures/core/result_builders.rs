@@ -9,6 +9,7 @@
 use crate::procedures::core::statistics::{
     Histogram, StatisticalSummary, StatisticsConfig, StatisticsEngine,
 };
+use crate::procedures::core::scaling::Scaler;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
@@ -82,23 +83,32 @@ pub struct CentralityResult {
     pub histogram: Option<Histogram>,
     /// Execution metadata
     pub metadata: ExecutionMetadata,
+    /// Post-processing time in milliseconds
+    pub post_processing_millis: i64,
 }
 
-/// Community detection algorithm result
+/// Path finding algorithm result
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CommunityResult {
-    /// Community assignments (node_id -> community_id)
-    pub communities: Vec<u32>,
-    /// Community sizes
-    pub community_sizes: HashMap<u32, usize>,
-    /// Number of communities
-    pub community_count: u32,
-    /// Statistical summary of community sizes
-    pub size_statistics: Option<StatisticalSummary>,
-    /// Histogram of community sizes
-    pub size_histogram: Option<Histogram>,
+pub struct PathFindingResult {
+    /// Paths found during execution
+    pub paths: Vec<PathResult>,
+    /// Statistical summary
+    pub statistics: Option<StatisticalSummary>,
+    /// Histogram of path costs
+    pub histogram: Option<Histogram>,
     /// Execution metadata
     pub metadata: ExecutionMetadata,
+    /// Post-processing time in milliseconds
+    pub post_processing_millis: i64,
+}
+
+/// Path result for individual paths
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PathResult {
+    pub source: u64,
+    pub target: u64,
+    pub path: Vec<u64>,
+    pub cost: f64,
 }
 
 /// Similarity algorithm result
@@ -114,27 +124,78 @@ pub struct SimilarityResult {
     pub metadata: ExecutionMetadata,
 }
 
+/// Community algorithm result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommunityResult {
+    /// Community assignments for each node
+    pub communities: Vec<u32>,
+    /// Size of each community
+    pub community_sizes: HashMap<u32, usize>,
+    /// Total number of communities
+    pub community_count: u32,
+    /// Statistical summary of community sizes
+    pub size_statistics: Option<StatisticalSummary>,
+    /// Histogram of community sizes
+    pub size_histogram: Option<Histogram>,
+    /// Execution metadata
+    pub metadata: ExecutionMetadata,
+    /// Post-processing time in milliseconds
+    pub post_processing_millis: i64,
+}
+
 /// Centrality result builder
+///
+/// **Translation**: `AbstractCentralityResultBuilder`
+///
+/// Provides result building for centrality algorithms with histogram computation,
+/// scaling support, and post-processing timing.
 pub struct CentralityResultBuilder {
-    scores: Vec<f64>,
+    centrality_function: Option<Box<dyn Fn(u64) -> f64 + Send + Sync>>,
+    scaler: Option<Box<dyn Scaler + Send + Sync>>,
+    scores: Option<Vec<f64>>,
     statistics: Option<StatisticalSummary>,
     histogram: Option<Histogram>,
     metadata: Option<ExecutionMetadata>,
     compute_statistics: bool,
     compute_histogram: bool,
+    post_processing_millis: i64,
 }
 
 impl CentralityResultBuilder {
     /// Create a new centrality result builder
-    pub fn new(scores: Vec<f64>) -> Self {
+    pub fn new() -> Self {
         Self {
-            scores,
+            centrality_function: None,
+            scaler: None,
+            scores: None,
             statistics: None,
             histogram: None,
             metadata: None,
             compute_statistics: true,
             compute_histogram: true,
+            post_processing_millis: -1,
         }
+    }
+
+    /// Set the centrality function for histogram computation
+    pub fn with_centrality_function<F>(mut self, centrality_function: F) -> Self
+    where
+        F: Fn(u64) -> f64 + Send + Sync + 'static,
+    {
+        self.centrality_function = Some(Box::new(centrality_function));
+        self
+    }
+
+    /// Set the scaler for post-processing centrality values
+    pub fn with_scaler<S: Scaler + Send + Sync + 'static>(mut self, scaler: S) -> Self {
+        self.scaler = Some(Box::new(scaler));
+        self
+    }
+
+    /// Set pre-computed scores (alternative to centrality function)
+    pub fn with_scores(mut self, scores: Vec<f64>) -> Self {
+        self.scores = Some(scores);
+        self
     }
 
     /// Enable or disable statistics computation
@@ -157,9 +218,39 @@ impl CentralityResultBuilder {
 }
 
 impl ResultBuilder<CentralityResult> for CentralityResultBuilder {
-    fn build(self) -> Result<CentralityResult, ResultBuilderError> {
+    fn build(mut self) -> Result<CentralityResult, ResultBuilderError> {
+        use std::time::Instant;
+
+        let post_processing_start = Instant::now();
         let mut statistics = self.statistics;
         let mut histogram = self.histogram;
+
+        // Get or compute scores
+        let scores = if let Some(scores) = self.scores {
+            scores
+        } else if let Some(ref _centrality_function) = self.centrality_function {
+            // We need node count to compute scores - this should be provided via metadata
+            // For now, return an error if we don't have scores
+            // TODO: Use centrality_function to compute scores when node count is available
+            return Err(ResultBuilderError::MissingData(
+                "Either scores or node count must be provided".to_string(),
+            ));
+        } else {
+            return Err(ResultBuilderError::MissingData(
+                "No centrality data provided".to_string(),
+            ));
+        };
+
+        // Apply scaler if provided
+        let final_scores = if let Some(ref scaler) = self.scaler {
+            scores
+                .iter()
+                .enumerate()
+                .map(|(node_id, &score)| scaler.scale_property(node_id as u64, &|_| score))
+                .collect()
+        } else {
+            scores
+        };
 
         // Compute statistics if requested and not already provided
         if self.compute_statistics && statistics.is_none() {
@@ -169,7 +260,7 @@ impl ResultBuilder<CentralityResult> for CentralityResultBuilder {
             };
 
             let (stats, hist) =
-                StatisticsEngine::compute_statistics_from_values(self.scores.clone(), config)?;
+                StatisticsEngine::compute_statistics_from_values(final_scores.clone(), config)?;
 
             statistics = Some(stats);
             if self.compute_histogram {
@@ -177,15 +268,35 @@ impl ResultBuilder<CentralityResult> for CentralityResultBuilder {
             }
         }
 
+        // Compute histogram directly from centrality function if available and requested
+        if self.compute_histogram && histogram.is_none() {
+            if let Some(ref _centrality_function) = self.centrality_function {
+                // This would use the Java-style parallel histogram computation
+                // For now, we'll use the existing StatisticsEngine
+                // TODO: Use centrality_function directly for histogram computation
+                let config = StatisticsConfig {
+                    compute_histogram: true,
+                    ..Default::default()
+                };
+
+                let (_, hist) =
+                    StatisticsEngine::compute_statistics_from_values(final_scores.clone(), config)?;
+                histogram = hist;
+            }
+        }
+
+        self.post_processing_millis = post_processing_start.elapsed().as_millis() as i64;
+
         let metadata = self
             .metadata
             .unwrap_or_else(|| ExecutionMetadata::new(Duration::from_secs(0)));
 
         Ok(CentralityResult {
-            scores: self.scores,
+            scores: final_scores,
             statistics,
             histogram,
             metadata,
+            post_processing_millis: self.post_processing_millis,
         })
     }
 
@@ -206,22 +317,46 @@ impl ResultBuilder<CentralityResult> for CentralityResultBuilder {
 }
 
 /// Community result builder
+///
+/// **Translation**: `AbstractCommunityResultBuilder`
+///
+/// Provides result building for community detection algorithms with histogram computation
+/// and community statistics.
 pub struct CommunityResultBuilder {
-    communities: Vec<u32>,
+    community_function: Option<Box<dyn Fn(u64) -> u32 + Send + Sync>>,
+    communities: Option<Vec<u32>>,
     compute_statistics: bool,
     compute_histogram: bool,
     metadata: Option<ExecutionMetadata>,
+    post_processing_millis: i64,
 }
 
 impl CommunityResultBuilder {
     /// Create a new community result builder
-    pub fn new(communities: Vec<u32>) -> Self {
+    pub fn new() -> Self {
         Self {
-            communities,
+            community_function: None,
+            communities: None,
             compute_statistics: true,
             compute_histogram: true,
             metadata: None,
+            post_processing_millis: -1,
         }
+    }
+
+    /// Set the community function for computing community assignments
+    pub fn with_community_function<F>(mut self, community_function: F) -> Self
+    where
+        F: Fn(u64) -> u32 + Send + Sync + 'static,
+    {
+        self.community_function = Some(Box::new(community_function));
+        self
+    }
+
+    /// Set pre-computed communities (alternative to community function)
+    pub fn with_communities(mut self, communities: Vec<u32>) -> Self {
+        self.communities = Some(communities);
+        self
     }
 
     /// Enable or disable statistics computation
@@ -244,10 +379,30 @@ impl CommunityResultBuilder {
 }
 
 impl ResultBuilder<CommunityResult> for CommunityResultBuilder {
-    fn build(self) -> Result<CommunityResult, ResultBuilderError> {
+    fn build(mut self) -> Result<CommunityResult, ResultBuilderError> {
+        use std::time::Instant;
+
+        let post_processing_start = Instant::now();
+
+        // Get or compute communities
+        let communities = if let Some(communities) = self.communities {
+            communities
+        } else if let Some(ref _community_function) = self.community_function {
+            // We need node count to compute communities - this should be provided via metadata
+            // For now, return an error if we don't have communities
+            // TODO: Use community_function to compute communities when node count is available
+            return Err(ResultBuilderError::MissingData(
+                "Either communities or node count must be provided".to_string(),
+            ));
+        } else {
+            return Err(ResultBuilderError::MissingData(
+                "No community data provided".to_string(),
+            ));
+        };
+
         // Compute community sizes
         let mut community_sizes: HashMap<u32, usize> = HashMap::new();
-        for &community_id in &self.communities {
+        for &community_id in &communities {
             *community_sizes.entry(community_id).or_insert(0) += 1;
         }
 
@@ -272,29 +427,148 @@ impl ResultBuilder<CommunityResult> for CommunityResultBuilder {
             }
         }
 
+        self.post_processing_millis = post_processing_start.elapsed().as_millis() as i64;
+
         let metadata = self
             .metadata
             .unwrap_or_else(|| ExecutionMetadata::new(Duration::from_secs(0)));
 
         Ok(CommunityResult {
-            communities: self.communities,
+            communities,
             community_sizes,
             community_count,
             size_statistics,
             size_histogram,
             metadata,
+            post_processing_millis: self.post_processing_millis,
         })
     }
 
     fn with_statistics(self, _stats: StatisticalSummary) -> Self {
         // For community results, statistics are computed from community sizes
-        // This method is kept for interface compatibility
         self
     }
 
     fn with_histogram(self, _hist: Option<Histogram>) -> Self {
         // For community results, histogram is computed from community sizes
-        // This method is kept for interface compatibility
+        self
+    }
+
+    fn with_metadata(mut self, metadata: ExecutionMetadata) -> Self {
+        self.metadata = Some(metadata);
+        self
+    }
+}
+
+/// Path finding result builder
+///
+/// **Translation**: `AbstractPathFindingResultBuilder` (inferred from Java patterns)
+///
+/// Provides result building for path finding algorithms with histogram computation
+/// and path statistics.
+pub struct PathResultBuilder {
+    paths: Option<Vec<PathResult>>,
+    statistics: Option<StatisticalSummary>,
+    histogram: Option<Histogram>,
+    metadata: Option<ExecutionMetadata>,
+    compute_statistics: bool,
+    compute_histogram: bool,
+    post_processing_millis: i64,
+}
+
+impl PathResultBuilder {
+    /// Create a new path result builder
+    pub fn new() -> Self {
+        Self {
+            paths: None,
+            statistics: None,
+            histogram: None,
+            metadata: None,
+            compute_statistics: true,
+            compute_histogram: true,
+            post_processing_millis: -1,
+        }
+    }
+
+    /// Set pre-computed paths
+    pub fn with_paths(mut self, paths: Vec<PathResult>) -> Self {
+        self.paths = Some(paths);
+        self
+    }
+
+    /// Enable or disable statistics computation
+    pub fn with_statistics(mut self, compute: bool) -> Self {
+        self.compute_statistics = compute;
+        self
+    }
+
+    /// Enable or disable histogram computation
+    pub fn with_histogram(mut self, compute: bool) -> Self {
+        self.compute_histogram = compute;
+        self
+    }
+
+    /// Set execution metadata
+    pub fn with_metadata(mut self, metadata: ExecutionMetadata) -> Self {
+        self.metadata = Some(metadata);
+        self
+    }
+}
+
+impl ResultBuilder<PathFindingResult> for PathResultBuilder {
+    fn build(mut self) -> Result<PathFindingResult, ResultBuilderError> {
+        use std::time::Instant;
+
+        let post_processing_start = Instant::now();
+
+        // Get paths
+        let paths = self.paths.ok_or_else(|| {
+            ResultBuilderError::MissingData("No paths provided".to_string())
+        })?;
+
+        // Compute statistics if requested and not already provided
+        let mut statistics = self.statistics;
+        let mut histogram = self.histogram;
+
+        if self.compute_statistics && statistics.is_none() {
+            // Compute path cost statistics
+            let costs: Vec<f64> = paths.iter().map(|p| p.cost).collect();
+            let config = StatisticsConfig {
+                compute_histogram: self.compute_histogram,
+                ..Default::default()
+            };
+
+            let (stats, hist) =
+                StatisticsEngine::compute_statistics_from_values(costs, config)?;
+
+            statistics = Some(stats);
+            if self.compute_histogram {
+                histogram = hist;
+            }
+        }
+
+        self.post_processing_millis = post_processing_start.elapsed().as_millis() as i64;
+
+        let metadata = self
+            .metadata
+            .unwrap_or_else(|| ExecutionMetadata::new(Duration::from_secs(0)));
+
+        Ok(PathFindingResult {
+            paths,
+            statistics,
+            histogram,
+            metadata,
+            post_processing_millis: self.post_processing_millis,
+        })
+    }
+
+    fn with_statistics(mut self, stats: StatisticalSummary) -> Self {
+        self.statistics = Some(stats);
+        self
+    }
+
+    fn with_histogram(mut self, hist: Option<Histogram>) -> Self {
+        self.histogram = hist;
         self
     }
 
@@ -305,6 +579,11 @@ impl ResultBuilder<CommunityResult> for CommunityResultBuilder {
 }
 
 /// Similarity result builder
+///
+/// **Translation**: `AbstractSimilarityResultBuilder`
+///
+/// Provides result building for similarity algorithms with histogram computation
+/// and post-processing timing.
 pub struct SimilarityResultBuilder {
     scores: Vec<f64>,
     statistics: Option<StatisticalSummary>,
@@ -406,6 +685,9 @@ pub enum ResultBuilderError {
 
     #[error("Builder configuration error: {0}")]
     ConfigurationError(String),
+
+    #[error("Missing required data: {0}")]
+    MissingData(String),
 }
 
 #[cfg(test)]
@@ -417,7 +699,8 @@ mod tests {
         let scores = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let metadata = ExecutionMetadata::new(Duration::from_secs(1));
 
-        let result = CentralityResultBuilder::new(scores.clone())
+        let result = CentralityResultBuilder::new()
+            .with_scores(scores.clone())
             .with_metadata(metadata)
             .build()
             .unwrap();
@@ -433,7 +716,8 @@ mod tests {
         let communities = vec![0, 0, 1, 1, 2];
         let metadata = ExecutionMetadata::new(Duration::from_secs(2));
 
-        let result = CommunityResultBuilder::new(communities.clone())
+        let result = CommunityResultBuilder::new()
+            .with_communities(communities.clone())
             .with_metadata(metadata)
             .build()
             .unwrap();
@@ -467,7 +751,8 @@ mod tests {
     fn test_result_builder_without_statistics() {
         let scores = vec![1.0, 2.0, 3.0];
 
-        let result = CentralityResultBuilder::new(scores.clone())
+        let result = CentralityResultBuilder::new()
+            .with_scores(scores.clone())
             .with_statistics(false)
             .with_histogram(false)
             .build()

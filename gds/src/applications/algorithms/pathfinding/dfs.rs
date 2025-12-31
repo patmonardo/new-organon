@@ -156,6 +156,20 @@ pub fn handle_dfs(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 Err(e) => err(op, "EXECUTION_ERROR", &format!("DFS write failed: {:?}", e)),
             }
         }
+        "estimate" => {
+            // Memory estimation mode - returns memory range without executing algorithm
+            let memory_range = builder.estimate_memory();
+            json!({
+                "ok": true,
+                "op": op,
+                "data": {
+                    "memoryBytes": {
+                        "min": memory_range.min(),
+                        "max": memory_range.max()
+                    }
+                }
+            })
+        }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
 }

@@ -5,7 +5,7 @@
 //!
 //! This module contains the foundation shared by all graph algorithms:
 //! - Result builders and statistics computation
-//! - Feature scaling for ML pipelines  
+//! - Feature scaling for ML pipelines
 //! - Common algorithm utilities
 //!
 //! ## Architecture
@@ -29,6 +29,14 @@
 //! │
 //! └── prelude.rs              (Common re-exports)
 //! ```
+//!
+//! ## Integration with Core Systems
+//!
+//! This module integrates with upgraded core systems:
+//!
+//! - **Progress Tracking**: Uses `core::utils::progress::*` for task management and logging
+//! - **Memory Estimation**: Uses `mem::*` for algorithm memory requirements
+//! - **Task Registry**: Uses `TaskRegistryFactory` and `UserLogRegistryFactory` for user isolation
 //!
 //! ## What We're NOT Translating
 //!
@@ -65,11 +73,15 @@
 //! - **Replace** visitor pattern with trait objects
 //! - **Preserve** statistical algorithms and scaling logic
 //! - **Preserve** result builder patterns
+//! - **Integrate** with unified progress tracking from `core::utils::progress`
+//! - **Integrate** with comprehensive memory estimation from `mem`
 //!
 //! ## Usage Example
 //!
 //! ```rust,ignore
 //! use gds::procedures::core::prelude::*;
+//! use gds::core::utils::progress::*;
+//! use gds::mem::*;
 //!
 //! // Use result statistics
 //! let stats = CentralityStatistics::compute(
@@ -81,6 +93,22 @@
 //! // Use feature scaling
 //! let scaler = MinMaxScaler::new(property_values, concurrency)?;
 //! let scaled_value = scaler.scale(node_id);
+//!
+//! // Use progress tracking from core
+//! let task_registry = task_registry_factory.new_instance();
+//! let progress_tracker = TaskProgressTracker::new(
+//!     base_task,
+//!     log,
+//!     concurrency,
+//!     task_registry_factory,
+//!     user_log_registry_factory
+//! );
+//!
+//! // Use memory estimation from mem
+//! let estimation = MemoryEstimation::estimate_pagerank_memory(
+//!     &graph_dimensions,
+//!     &concurrency_config,
+//! );
 //! ```
 
 //! Procedure Core - Common utilities from Java GDS algo-common
@@ -90,7 +118,7 @@
 //!
 //! This module contains the foundation shared by all graph algorithms:
 //! - Result builders and statistics computation
-//! - Feature scaling for ML pipelines  
+//! - Feature scaling for ML pipelines
 //! - Memory estimation and progress tracking
 //! - Common algorithm utilities
 //!
@@ -191,9 +219,7 @@
 //!     .build()?;
 //! ```
 
-pub mod memory_estimation;
 pub mod prelude;
-pub mod progress_tracking;
 pub mod result;
 pub mod result_builders;
 pub mod scaling;
