@@ -1,11 +1,11 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use crate::projection::NodeLabel;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::{MappedNodeId, OriginalNodeId};
 use crate::types::graph_store::GraphStore;
-use crate::types::graph_store::{GraphName, GraphStoreError, GraphStoreResult};
+use crate::types::graph_store::{GraphName, GraphStoreError, GraphStoreResult, InducedSubgraphResult};
 
 /// Minimal surface that Form needs from a graph store.
 ///
@@ -30,11 +30,7 @@ pub trait FormStoreSurface {
         &self,
         graph_name: GraphName,
         selected_original_node_ids: &[OriginalNodeId],
-    ) -> GraphStoreResult<(
-        Self::Store,
-        HashMap<MappedNodeId, MappedNodeId>,
-        HashMap<RelationshipType, usize>,
-    )>;
+    ) -> GraphStoreResult<InducedSubgraphResult<Self::Store>>;
 
     /// Map an internal contiguous (mapped) node id back to its original id.
     fn to_original_node_id(&self, mapped_node_id: MappedNodeId) -> Option<OriginalNodeId>;
@@ -88,11 +84,7 @@ impl FormStoreSurface for crate::types::graph_store::DefaultGraphStore {
         &self,
         graph_name: GraphName,
         selected_original_node_ids: &[OriginalNodeId],
-    ) -> GraphStoreResult<(
-        Self::Store,
-        HashMap<MappedNodeId, MappedNodeId>,
-        HashMap<RelationshipType, usize>,
-    )> {
+    ) -> GraphStoreResult<InducedSubgraphResult<Self::Store>> {
         self.commit_induced_subgraph_by_original_node_ids(graph_name, selected_original_node_ids)
     }
 

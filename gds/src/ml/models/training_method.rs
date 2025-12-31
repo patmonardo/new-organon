@@ -11,7 +11,7 @@ use std::fmt;
 ///
 /// This corresponds to the TrainingMethod enum in Java GDS ml-api.
 /// Each variant represents a different ML algorithm that can be trained.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 pub enum TrainingMethod {
     /// Logistic regression for binary/multiclass classification.
     LogisticRegression,
@@ -25,7 +25,8 @@ pub enum TrainingMethod {
     /// Random forest regressor.
     RandomForestRegression,
 
-    /// Multilayer perceptron (neural network) classifier.
+    /// MLP classifier for neural network classification.
+    #[default]
     MLPClassification,
 }
 

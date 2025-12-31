@@ -65,10 +65,13 @@ mod enabled {
 
         // Show a tiny induced projection onto the first 3 original node ids.
         let selection: Vec<i64> = (0..3).collect();
-        let (projected, mapping, kept) = store.commit_induced_subgraph_by_original_node_ids(
+        let result = store.commit_induced_subgraph_by_original_node_ids(
             "projected-subgraph".into(),
             &selection,
         )?;
+        let projected = result.store;
+        let mapping = result.old_to_new_mapping;
+        let kept = result.relationships_kept_by_type;
         println!(
             "Projected subgraph: nodes={} relationships={} kept_by_type={:?}",
             projected.node_count(),

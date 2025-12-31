@@ -32,9 +32,13 @@ fn projection_factory_induces_subgraph_and_preserves_labels() {
     let store = build_store(&labels, rel_type.clone(), outgoing, incoming);
 
     let selection = vec![0, 2, 3];
-    let (projected, mapping, kept) = store
+    let result = store
         .commit_induced_subgraph_by_original_node_ids(GraphName::new("projected"), &selection)
         .expect("projection succeeds");
+
+    let projected = result.store;
+    let mapping = result.old_to_new_mapping;
+    let kept = result.relationships_kept_by_type;
 
     assert_eq!(projected.node_count(), 3);
     assert_eq!(projected.relationship_count(), 3);
@@ -67,9 +71,11 @@ fn projection_factory_projects_node_properties() {
         .expect("property added");
 
     let selection = vec![0, 2, 3];
-    let (projected, _, _) = store
+    let result = store
         .commit_induced_subgraph_by_original_node_ids(GraphName::new("projected"), &selection)
         .expect("projection succeeds");
+
+    let projected = result.store;
 
     let keys = projected.node_property_keys();
     assert!(keys.contains("score"));
@@ -101,9 +107,11 @@ fn projection_factory_projects_float_node_properties() {
         .expect("add float property");
 
     let selection = vec![0, 2, 3];
-    let (projected, _, _) = store
+    let result = store
         .commit_induced_subgraph_by_original_node_ids(GraphName::new("projected"), &selection)
         .expect("projection succeeds");
+
+    let projected = result.store;
 
     let values = projected
         .node_property_values("float_score")
@@ -131,9 +139,11 @@ fn projection_factory_projects_relationship_properties() {
         .expect("add relationship property");
 
     let selection = vec![0, 2, 3];
-    let (projected, _, _) = store
+    let result = store
         .commit_induced_subgraph_by_original_node_ids(GraphName::new("projected"), &selection)
         .expect("projection succeeds");
+
+    let projected = result.store;
 
     assert_eq!(projected.relationship_count(), 3);
     let projected_values = projected
@@ -163,9 +173,11 @@ fn projection_factory_projects_int_relationship_properties() {
         .expect("add relationship property");
 
     let selection = vec![0, 2, 3];
-    let (projected, _, _) = store
+    let result = store
         .commit_induced_subgraph_by_original_node_ids(GraphName::new("projected"), &selection)
         .expect("projection succeeds");
+
+    let projected = result.store;
 
     let projected_values = projected
         .relationship_property_values(&rel_type, "rank")
@@ -202,9 +214,12 @@ fn projection_factory_handles_multiple_relationship_types() {
     );
 
     let selection = vec![0, 1, 2];
-    let (projected, _, kept) = store
+    let result = store
         .commit_induced_subgraph_by_original_node_ids(GraphName::new("projected"), &selection)
         .expect("projection succeeds");
+
+    let projected = result.store;
+    let kept = result.relationships_kept_by_type;
 
     assert_eq!(projected.node_count(), 3);
     // CONNECTS keeps 0->1 and 1->2, FOLLOWS keeps 1->0 and 2->0.

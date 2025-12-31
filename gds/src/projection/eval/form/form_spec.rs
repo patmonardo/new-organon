@@ -15,8 +15,7 @@ use serde_json::Value as JsonValue;
 use crate::projection::eval::procedure::ExecutionContext;
 use crate::substrate::FormStoreSurface;
 use crate::types::graph::id_map::{MappedNodeId, OriginalNodeId};
-use crate::types::graph_store::DefaultGraphStore;
-use crate::types::graph_store::GraphName;
+use crate::types::graph_store::{DefaultGraphStore, GraphName};
 
 /// Artifacts passed into Form evaluation.
 ///
@@ -353,13 +352,17 @@ where
     ) -> Result<FormOperatorOutput<S>, FormError> {
         let selected_original_ids = Self::parse_selected_original_node_ids(input.artifacts)?;
         let inverse_indexed = input.base_graph.inverse_indexed_relationship_types();
-        let (store, old_mapped_to_new, kept_by_type) = input
+        let result = input
             .base_graph
             .commit_induced_subgraph_by_original_node_ids(
                 GraphName::new("form.commitSubgraph"),
                 &selected_original_ids,
             )
             .map_err(|e| FormError::Execution(e.to_string()))?;
+
+        let store = result.store;
+        let old_mapped_to_new = result.old_to_new_mapping;
+        let kept_by_type = result.relationships_kept_by_type;
 
         // Proof (C): a minimal trace of the apodictic commitment.
         let mut old_mapped_to_new_json = serde_json::Map::new();

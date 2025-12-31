@@ -132,12 +132,15 @@ mod enabled {
 
         println!("Step 4: project a focused subgraph with induced nodes");
         let selection: Vec<i64> = (0..1_000.min(node_count)).map(|id| id as i64).collect();
-        let (projected, mapping, kept) = store
+        let result = store
             .commit_induced_subgraph_by_original_node_ids(
                 GraphName::new(PROJECTION_NAME),
                 &selection,
             )
             .expect("projection succeeds");
+        let projected = result.store;
+        let mapping = result.old_to_new_mapping;
+        let kept = result.relationships_kept_by_type;
         println!(
             "- projected graph: nodes={} relationships={} (kept by type: {:?})",
             projected.node_count(),

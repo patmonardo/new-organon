@@ -1,6 +1,6 @@
 use super::{
     Capabilities, DatabaseInfo, DeletionResult, GraphName, GraphStore, GraphStoreError,
-    GraphStoreResult,
+    GraphStoreResult, InducedSubgraphResult, ProjectedPropertiesResult,
 };
 use crate::collections::backends::arrow::{ArrowDoubleArray, ArrowLongArray};
 use crate::collections::backends::factory::{
@@ -154,11 +154,7 @@ impl DefaultGraphStore {
         &self,
         graph_name: GraphName,
         selected_original_node_ids: &[OriginalNodeId],
-    ) -> GraphStoreResult<(
-        DefaultGraphStore,
-        HashMap<MappedNodeId, MappedNodeId>,
-        HashMap<RelationshipType, usize>,
-    )> {
+    ) -> GraphStoreResult<InducedSubgraphResult<DefaultGraphStore>> {
         use std::collections::HashSet;
 
         if selected_original_node_ids.is_empty() {
@@ -192,8 +188,9 @@ impl DefaultGraphStore {
             old_mapped_to_new.insert(old_mapped, new_mapped);
         }
 
-        let (node_properties, node_properties_by_label) =
-            self.project_node_properties(&selected_ordered_old_mapped)?;
+        let projected_properties = self.project_node_properties(&selected_ordered_old_mapped)?;
+        let node_properties = projected_properties.node_properties;
+        let node_properties_by_label = projected_properties.property_keys;
 
         // Build new IdMap, preserving labels.
         let mut new_id_map =
@@ -283,16 +280,17 @@ impl DefaultGraphStore {
         store.refresh_relationship_property_state();
         store.set_modified();
 
-        Ok((store, old_mapped_to_new, kept_by_type))
+        Ok(InducedSubgraphResult {
+            store,
+            old_to_new_mapping: old_mapped_to_new,
+            relationships_kept_by_type: kept_by_type,
+        })
     }
 
     fn project_node_properties(
         &self,
         selected_ordered_old_mapped: &[MappedNodeId],
-    ) -> GraphStoreResult<(
-        HashMap<String, Arc<dyn NodePropertyValues>>,
-        HashMap<String, HashSet<String>>,
-    )> {
+    ) -> GraphStoreResult<ProjectedPropertiesResult> {
         let node_count = selected_ordered_old_mapped.len();
         let mut projected: HashMap<String, Arc<dyn NodePropertyValues>> = HashMap::new();
 
@@ -397,7 +395,10 @@ impl DefaultGraphStore {
             }
         }
 
-        Ok((projected, projected_by_label))
+        Ok(ProjectedPropertiesResult {
+            node_properties: projected,
+            property_keys: projected_by_label,
+        })
     }
 
     fn project_relationship_properties(

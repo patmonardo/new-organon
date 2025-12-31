@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crate::projection::RelationshipType;
 use crate::substrate::FormStoreSurface;
 use crate::types::graph::id_map::{MappedNodeId, OriginalNodeId};
-use crate::types::graph_store::{GraphName, GraphStoreError, GraphStoreResult};
+use crate::types::graph_store::{GraphName, GraphStoreError, GraphStoreResult, InducedSubgraphResult};
 
 /// Minimal in-memory substrate store intended for "PureForm".
 ///
@@ -117,11 +117,7 @@ impl FormStoreSurface for InMemoryFormStore {
         &self,
         graph_name: GraphName,
         selected_original_node_ids: &[OriginalNodeId],
-    ) -> GraphStoreResult<(
-        Self::Store,
-        HashMap<MappedNodeId, MappedNodeId>,
-        HashMap<RelationshipType, usize>,
-    )> {
+    ) -> GraphStoreResult<InducedSubgraphResult<Self::Store>> {
         if selected_original_node_ids.is_empty() {
             return Err(GraphStoreError::InvalidOperation(
                 "selection must be non-empty".to_string(),
@@ -181,7 +177,11 @@ impl FormStoreSurface for InMemoryFormStore {
             }
         }
 
-        Ok((committed, old_mapped_to_new, kept_by_type))
+        Ok(InducedSubgraphResult {
+            store: committed,
+            old_to_new_mapping: old_mapped_to_new,
+            relationships_kept_by_type: kept_by_type,
+        })
     }
 
     fn to_original_node_id(&self, mapped_node_id: MappedNodeId) -> Option<OriginalNodeId> {
