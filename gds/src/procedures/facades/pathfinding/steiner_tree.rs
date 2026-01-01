@@ -3,7 +3,8 @@
 //! Computes minimum Steiner trees connecting source nodes to terminal nodes.
 //! Uses approximation algorithms with delta-stepping and rerouting optimizations.
 
-use crate::procedures::facades::builder_base::ConfigValidator;
+use crate::mem::MemoryRange;
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::facades::traits::Result;
 use crate::procedures::steiner_tree::computation::SteinerTreeComputationRuntime;
 use crate::procedures::steiner_tree::SteinerTreeConfig;
@@ -12,6 +13,9 @@ use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
 use std::sync::Arc;
+
+// Import upgraded systems
+use crate::core::utils::progress::TaskRegistryFactory;
 
 /// Result row for Steiner tree stream mode
 #[derive(Debug, Clone, serde::Serialize)]
@@ -31,7 +35,6 @@ pub struct SteinerTreeStats {
 }
 
 /// Steiner Tree algorithm builder
-#[derive(Clone)]
 pub struct SteinerTreeBuilder {
     graph_store: Arc<DefaultGraphStore>,
     source_node: u64,
@@ -39,6 +42,10 @@ pub struct SteinerTreeBuilder {
     relationship_weight_property: Option<String>,
     delta: f64,
     apply_rerouting: bool,
+    concurrency: usize,
+    /// Progress tracking components
+    task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
+    user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
 }
 
 impl SteinerTreeBuilder {
@@ -50,6 +57,9 @@ impl SteinerTreeBuilder {
             relationship_weight_property: None,
             delta: 1.0,
             apply_rerouting: true,
+            concurrency: 4,
+            task_registry_factory: None,
+            user_log_registry_factory: None,
         }
     }
 
@@ -78,6 +88,27 @@ impl SteinerTreeBuilder {
         self
     }
 
+    /// Set concurrency level
+    ///
+    /// Number of parallel threads to use.
+    /// Steiner tree benefits from parallelism in large graphs.
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
+        self
+    }
+
+    /// Set task registry factory for progress tracking
+    pub fn task_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.task_registry_factory = Some(factory);
+        self
+    }
+
+    /// Set user log registry factory for progress tracking
+    pub fn user_log_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.user_log_registry_factory = Some(factory);
+        self
+    }
+
     fn validate(&self) -> Result<()> {
         if self.target_nodes.is_empty() {
             return Err(
@@ -87,12 +118,20 @@ impl SteinerTreeBuilder {
             );
         }
 
+        if self.concurrency == 0 {
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "concurrency must be > 0".to_string(),
+                ),
+            );
+        }
+
         ConfigValidator::in_range(self.delta, 0.0, 100.0, "delta")?;
 
         Ok(())
     }
 
-    fn compute(&self) -> Result<(Vec<SteinerTreeRow>, SteinerTreeStats)> {
+    fn compute(self) -> Result<(Vec<SteinerTreeRow>, SteinerTreeStats)> {
         self.validate()?;
         let start = std::time::Instant::now();
 
@@ -177,15 +216,46 @@ impl SteinerTreeBuilder {
     }
 
     /// Stream mode: yields tree edges
-    pub fn stream(&self) -> Result<Box<dyn Iterator<Item = SteinerTreeRow>>> {
+    pub fn stream(self) -> Result<Box<dyn Iterator<Item = SteinerTreeRow>>> {
         let (rows, _) = self.compute()?;
         Ok(Box::new(rows.into_iter()))
     }
 
     /// Stats mode: aggregated tree stats
-    pub fn stats(&self) -> Result<SteinerTreeStats> {
+    pub fn stats(self) -> Result<SteinerTreeStats> {
         let (_, stats) = self.compute()?;
         Ok(stats)
+    }
+
+    /// Mutate mode: writes results back to the graph store
+    pub fn mutate(self) -> Result<MutationResult> {
+        // TODO: Implement mutation logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "mutate mode not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Write mode: writes results to external storage
+    pub fn write(self) -> Result<WriteResult> {
+        // TODO: Implement write logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "write mode not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Estimate memory usage for the computation
+    pub fn estimate_memory(&self) -> Result<MemoryRange> {
+        // Estimate based on node count and expected tree structure
+        let node_count = self.graph_store.node_count();
+        let estimated_bytes = node_count * std::mem::size_of::<f64>() * 3; // distances, parents, costs
+        Ok(MemoryRange::of_range(
+            estimated_bytes / 2,
+            estimated_bytes * 2,
+        ))
     }
 }
 

@@ -8,8 +8,10 @@
 //! - `max_degree`: passed through to TriangleCount (performance / approximation)
 //! - `seed_property`: optional triangle-count property name (not yet wired; we compute triangles)
 
-use crate::procedures::facades::builder_base::ConfigValidator;
-use crate::procedures::facades::community::triangle_count::TriangleCountBuilder;
+use crate::core::utils::progress::TaskRegistry;
+use crate::mem::MemoryRange;
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::facades::community::triangle_count::TriangleCountFacade;
 use crate::procedures::facades::traits::Result;
 use crate::procedures::local_clustering_coefficient::LocalClusteringCoefficientComputationRuntime;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -30,23 +32,25 @@ pub struct LocalClusteringCoefficientStats {
     pub execution_time_ms: u64,
 }
 
-/// Local Clustering Coefficient algorithm builder.
+/// Local Clustering Coefficient algorithm facade.
 #[derive(Clone)]
-pub struct LocalClusteringCoefficientBuilder {
+pub struct LocalClusteringCoefficientFacade {
     graph_store: Arc<DefaultGraphStore>,
     concurrency: usize,
     max_degree: u64,
     seed_property: Option<String>,
+    task_registry: Option<TaskRegistry>,
 }
 
-impl LocalClusteringCoefficientBuilder {
-    /// Create a new builder bound to a live graph store.
+impl LocalClusteringCoefficientFacade {
+    /// Create a new facade bound to a live graph store.
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            concurrency: num_cpus::get().max(1),
+            concurrency: 4,
             max_degree: u64::MAX,
             seed_property: None,
+            task_registry: None,
         }
     }
 
@@ -70,6 +74,11 @@ impl LocalClusteringCoefficientBuilder {
         self
     }
 
+    pub fn task_registry(mut self, task_registry: TaskRegistry) -> Self {
+        self.task_registry = Some(task_registry);
+        self
+    }
+
     fn validate(&self) -> Result<()> {
         ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
         if let Some(prop) = &self.seed_property {
@@ -83,7 +92,7 @@ impl LocalClusteringCoefficientBuilder {
         let start = Instant::now();
 
         // Triangle counts (seed_property currently ignored; we always compute).
-        let triangle_result = TriangleCountBuilder::new(Arc::clone(&self.graph_store))
+        let triangle_result = TriangleCountFacade::new(Arc::clone(&self.graph_store))
             .concurrency(self.concurrency)
             .max_degree(self.max_degree)
             .run()?;
@@ -128,5 +137,31 @@ impl LocalClusteringCoefficientBuilder {
             average_clustering_coefficient: avg,
             execution_time_ms: elapsed.as_millis() as u64,
         })
+    }
+
+    /// Mutate mode: writes clustering coefficients back to the graph store.
+    pub fn mutate(self) -> Result<MutationResult> {
+        // TODO: implement mutation logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "mutate not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Write mode: writes clustering coefficients to a new graph.
+    pub fn write(self) -> Result<WriteResult> {
+        // TODO: implement write logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "write not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Estimate memory usage.
+    pub fn estimate_memory(&self) -> Result<MemoryRange> {
+        // TODO: implement memory estimation
+        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
     }
 }

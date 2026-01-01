@@ -5,9 +5,7 @@
 use std::collections::HashMap;
 use std::error::Error as StdError;
 
-use crate::projection::eval::pipeline::{
-    AutoTuningConfig, ExecutableNodePropertyStep, Pipeline,
-};
+use crate::projection::eval::pipeline::{AutoTuningConfig, ExecutableNodePropertyStep, Pipeline};
 
 /// Training type: classification or regression.
 ///

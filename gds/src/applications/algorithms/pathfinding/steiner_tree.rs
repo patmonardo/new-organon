@@ -50,6 +50,11 @@ pub fn handle_steiner_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
         .and_then(|v| v.as_bool())
         .unwrap_or(true);
 
+    let concurrency = request
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(4) as usize;
+
     let mode = request
         .get("mode")
         .and_then(|v| v.as_str())
@@ -72,7 +77,8 @@ pub fn handle_steiner_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
         .source_node(source_node)
         .target_nodes(target_nodes)
         .delta(delta)
-        .apply_rerouting(apply_rerouting);
+        .apply_rerouting(apply_rerouting)
+        .concurrency(concurrency);
 
     if let Some(prop) = relationship_weight_property {
         builder = builder.relationship_weight_property(prop);

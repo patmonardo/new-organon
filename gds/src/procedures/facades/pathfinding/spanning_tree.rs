@@ -2,6 +2,7 @@
 //!
 //! Computes a minimum or maximum spanning tree rooted at a start node.
 
+use crate::mem::MemoryRange;
 use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::facades::traits::Result;
 use crate::procedures::spanning_tree::SpanningTreeStorageRuntime;
@@ -10,6 +11,9 @@ use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+// Import upgraded systems
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory};
 
 /// Per-node spanning tree row.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -30,36 +34,124 @@ pub struct SpanningTreeStats {
 /// Spanning tree facade builder.
 ///
 /// Defaults:
-/// - start_node: 0
+/// - start_node: None (must be set)
 /// - compute_minimum: true
 /// - relationship_types: all
 /// - direction: "undirected" (MST semantics)
 /// - weight_property: "weight"
-/// - concurrency: 1
+/// - concurrency: 4
 pub struct SpanningTreeBuilder {
     graph_store: Arc<DefaultGraphStore>,
-    start_node_id: u64,
+    start_node: Option<u64>,
     compute_minimum: bool,
     relationship_types: Vec<String>,
     direction: String,
     weight_property: String,
     concurrency: usize,
+    /// Progress tracking components
+    task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
+    user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
 }
 
 impl SpanningTreeBuilder {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            start_node_id: 0,
+            start_node: None,
             compute_minimum: true,
             relationship_types: vec![],
             direction: "undirected".to_string(),
             weight_property: "weight".to_string(),
-            concurrency: 1,
+            concurrency: 4,
+            task_registry_factory: None,
+            user_log_registry_factory: None,
         }
     }
 
+    /// Set start node
+    ///
+    /// The algorithm starts the spanning tree from this node.
+    /// Must be a valid node ID in the graph.
+    pub fn start_node(mut self, start_node: u64) -> Self {
+        self.start_node = Some(start_node);
+        self
+    }
+
+    /// Set whether to compute minimum or maximum spanning tree
+    ///
+    /// If true, computes minimum spanning tree (MST).
+    /// If false, computes maximum spanning tree.
+    /// Default: true
+    pub fn compute_minimum(mut self, compute_minimum: bool) -> Self {
+        self.compute_minimum = compute_minimum;
+        self
+    }
+
+    /// Set weight property name
+    ///
+    /// Property must exist on relationships and contain numeric values.
+    /// Default: "weight"
+    pub fn weight_property(mut self, property: &str) -> Self {
+        self.weight_property = property.to_string();
+        self
+    }
+
+    /// Restrict traversal to the provided relationship types.
+    ///
+    /// Empty means all relationship types.
+    pub fn relationship_types(mut self, relationship_types: Vec<String>) -> Self {
+        self.relationship_types = relationship_types;
+        self
+    }
+
+    /// Set traversal direction.
+    ///
+    /// Accepted values: "outgoing", "incoming", "undirected" (default).
+    pub fn direction(mut self, direction: &str) -> Self {
+        self.direction = direction.to_string();
+        self
+    }
+
+    /// Set concurrency level
+    ///
+    /// Number of parallel threads to use.
+    /// Spanning tree benefits from parallelism in large graphs.
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
+        self
+    }
+
+    /// Set task registry factory for progress tracking
+    pub fn task_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.task_registry_factory = Some(factory);
+        self
+    }
+
+    /// Set user log registry factory for progress tracking
+    pub fn user_log_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.user_log_registry_factory = Some(factory);
+        self
+    }
+
     fn validate(&self) -> Result<()> {
+        match self.start_node {
+            None => {
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(
+                        "start_node must be specified".to_string(),
+                    ),
+                )
+            }
+            Some(id) if id == u64::MAX => {
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(
+                        "start_node ID cannot be u64::MAX".to_string(),
+                    ),
+                )
+            }
+            _ => {}
+        }
+
         if self.concurrency == 0 {
             return Err(
                 crate::projection::eval::procedure::AlgorithmError::Execution(
@@ -67,18 +159,38 @@ impl SpanningTreeBuilder {
                 ),
             );
         }
-        ConfigValidator::non_empty_string(&self.direction, "direction")?;
+
+        match self.direction.to_ascii_lowercase().as_str() {
+            "outgoing" | "incoming" | "undirected" => {}
+            other => {
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                        "direction must be 'outgoing', 'incoming', or 'undirected' (got '{other}')"
+                    )),
+                );
+            }
+        }
+
         ConfigValidator::non_empty_string(&self.weight_property, "weight_property")?;
+
         Ok(())
     }
 
     fn compute(self) -> Result<(Vec<SpanningTreeRow>, SpanningTreeStats)> {
         self.validate()?;
 
-        let start_node_id: u32 = u32::try_from(self.start_node_id).map_err(|_| {
+        // Set up progress tracking
+        let _task_registry_factory = self
+            .task_registry_factory
+            .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
+        let _user_log_registry_factory = self
+            .user_log_registry_factory
+            .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
+
+        let start_node_id: u32 = u32::try_from(self.start_node.unwrap()).map_err(|_| {
             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "start_node_id must fit into u32 (got {})",
-                self.start_node_id
+                "start_node must fit into u32 (got {})",
+                self.start_node.unwrap()
             ))
         })?;
 
@@ -138,48 +250,6 @@ impl SpanningTreeBuilder {
         Ok((rows, stats))
     }
 
-    /// Set the root/start node.
-    pub fn start_node(mut self, start_node_id: u64) -> Self {
-        self.start_node_id = start_node_id;
-        self
-    }
-
-    /// Compute a minimum spanning tree.
-    pub fn minimum(mut self) -> Self {
-        self.compute_minimum = true;
-        self
-    }
-
-    /// Compute a maximum spanning tree.
-    pub fn maximum(mut self) -> Self {
-        self.compute_minimum = false;
-        self
-    }
-
-    /// Set relationship types to consider. Empty means all types.
-    pub fn relationship_types(mut self, types: Vec<&str>) -> Self {
-        self.relationship_types = types.into_iter().map(|s| s.to_string()).collect();
-        self
-    }
-
-    /// Set traversal direction: "outgoing", "incoming", or "undirected".
-    pub fn direction(mut self, direction: &str) -> Self {
-        self.direction = direction.to_string();
-        self
-    }
-
-    /// Set relationship weight property.
-    pub fn weight_property(mut self, property: &str) -> Self {
-        self.weight_property = property.to_string();
-        self
-    }
-
-    /// Set concurrency.
-    pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
-        self
-    }
-
     /// Stream mode: yield per-node rows.
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = SpanningTreeRow>>> {
         let (rows, _) = self.compute()?;
@@ -213,6 +283,48 @@ impl SpanningTreeBuilder {
             ),
         )
     }
+
+    /// Estimate memory requirements for spanning tree execution
+    ///
+    /// Returns a memory range estimate based on:
+    /// - Priority queue storage (for Prim's algorithm)
+    /// - Tree structure storage (parent and cost arrays)
+    /// - Graph structure overhead
+    ///
+    /// ```rust,no_run
+    /// # use gds::Graph;
+    /// # let graph: Graph = unimplemented!();
+    /// let builder = graph.spanning_tree().start_node(0);
+    /// let memory = builder.estimate_memory();
+    /// println!("Estimated memory: {} bytes", memory.max());
+    /// ```
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+
+        // Priority queue (open set) - worst case: all nodes in queue
+        // Each entry: node_id (8 bytes) + cost (8 bytes) + heap overhead (16 bytes) = 32 bytes
+        let priority_queue_memory = node_count * 32;
+
+        // Tree storage: parent array (8 bytes per node) + cost array (8 bytes per node)
+        let tree_storage_memory = node_count * 8 * 2;
+
+        // Visited set: bit vector or hash set (~1 byte per node)
+        let visited_memory = node_count;
+
+        // Graph structure overhead (adjacency lists, etc.)
+        let avg_degree = 10.0; // Conservative estimate
+        let relationship_count = (node_count as f64 * avg_degree) as usize;
+        let graph_overhead = relationship_count * 16; // ~16 bytes per relationship
+
+        let total_memory =
+            priority_queue_memory + tree_storage_memory + visited_memory + graph_overhead;
+
+        // Add 20% overhead for algorithm-specific structures
+        let overhead = total_memory / 5;
+        let total_with_overhead = total_memory + overhead;
+
+        MemoryRange::of_range(total_memory, total_with_overhead)
+    }
 }
 
 #[cfg(test)]
@@ -233,12 +345,12 @@ mod tests {
     #[test]
     fn test_builder_defaults() {
         let builder = SpanningTreeBuilder::new(store());
-        assert_eq!(builder.start_node_id, 0);
+        assert_eq!(builder.start_node, None);
         assert!(builder.compute_minimum);
         assert!(builder.relationship_types.is_empty());
         assert_eq!(builder.direction, "undirected");
         assert_eq!(builder.weight_property, "weight");
-        assert_eq!(builder.concurrency, 1);
+        assert_eq!(builder.concurrency, 4);
     }
 
     #[test]
@@ -247,7 +359,7 @@ mod tests {
         let rows: Vec<_> = crate::procedures::facades::graph::Graph::new(store)
             .spanning_tree()
             .start_node(0)
-            .minimum()
+            .compute_minimum(true)
             .stream()
             .unwrap()
             .collect();
@@ -261,7 +373,7 @@ mod tests {
         let stats = crate::procedures::facades::graph::Graph::new(store)
             .spanning_tree()
             .start_node(0)
-            .minimum()
+            .compute_minimum(true)
             .stats()
             .unwrap();
 

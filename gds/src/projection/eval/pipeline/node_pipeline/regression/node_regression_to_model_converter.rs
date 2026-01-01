@@ -1,13 +1,13 @@
 use super::{
-    NodeRegressionPipelineTrainConfig, NodeRegressionTrainPipelineResult,
-    NodeRegressionTrainResult, NodeRegressionTrainingPipeline, NodeRegressionPipelineModelInfo,
+    NodeRegressionPipelineModelInfo, NodeRegressionPipelineTrainConfig,
+    NodeRegressionTrainPipelineResult, NodeRegressionTrainResult, NodeRegressionTrainingPipeline,
 };
+use crate::ml::metrics::regression::RegressionMetric;
 use crate::ml::models::base::{BaseModelData, RegressorData};
 use crate::ml::models::training_method::TrainingMethod;
 use crate::ml::training::statistics::TrainingStatistics;
-use crate::ml::metrics::regression::RegressionMetric;
-use std::collections::HashMap;
 use std::any::Any;
+use std::collections::HashMap;
 
 // Placeholder types until model system is translated
 pub type Model = ();
@@ -116,8 +116,8 @@ impl NodeRegressionToModelConverter {
             NodeRegressionPipelineModelInfo::new(
                 HashMap::new(), // test_metrics
                 HashMap::new(), // outer_train_metrics
-                (), // best_candidate (placeholder)
-                (), // pipeline (placeholder)
+                (),             // best_candidate (placeholder)
+                (),             // pipeline (placeholder)
             ),
             TrainingStatistics::new(vec![Box::new(RegressionMetric::MSE)]), // training_statistics
         )
@@ -152,7 +152,7 @@ impl ResultToModelConverterTrait<NodeRegressionTrainPipelineResult, NodeRegressi
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ml::models::base::{BaseModelData, RegressorData, Regressor};
+    use crate::ml::models::base::{BaseModelData, Regressor, RegressorData};
     use crate::ml::models::training_method::TrainingMethod;
     use std::any::Any;
 

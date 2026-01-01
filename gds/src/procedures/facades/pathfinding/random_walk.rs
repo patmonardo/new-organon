@@ -3,7 +3,8 @@
 //! Generates random walks from nodes in the graph using biased sampling.
 //! Supports node2vec-style exploration with configurable return and in-out factors.
 
-use crate::procedures::facades::builder_base::ConfigValidator;
+use crate::mem::MemoryRange;
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::facades::traits::Result;
 use crate::procedures::random_walk::computation::RandomWalkComputationRuntime;
 use crate::projection::orientation::Orientation;
@@ -13,6 +14,9 @@ use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
+
+// Import upgraded systems
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory};
 
 /// Result row for random walk stream mode
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
@@ -29,7 +33,6 @@ pub struct RandomWalkStats {
 }
 
 /// Random Walk algorithm builder
-#[derive(Clone)]
 pub struct RandomWalkBuilder {
     graph_store: Arc<DefaultGraphStore>,
     walks_per_node: usize,
@@ -38,6 +41,10 @@ pub struct RandomWalkBuilder {
     in_out_factor: f64,
     source_nodes: Vec<u64>,
     random_seed: Option<u64>,
+    concurrency: usize,
+    /// Progress tracking components
+    task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
+    user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
 }
 
 impl RandomWalkBuilder {
@@ -50,6 +57,9 @@ impl RandomWalkBuilder {
             in_out_factor: 1.0,
             source_nodes: Vec::new(),
             random_seed: None,
+            concurrency: 4,
+            task_registry_factory: None,
+            user_log_registry_factory: None,
         }
     }
 
@@ -83,7 +93,36 @@ impl RandomWalkBuilder {
         self
     }
 
+    /// Set concurrency level
+    ///
+    /// Number of parallel threads to use.
+    /// Random walk benefits from parallelism when generating many walks.
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
+        self
+    }
+
+    /// Set task registry factory for progress tracking
+    pub fn task_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.task_registry_factory = Some(factory);
+        self
+    }
+
+    /// Set user log registry factory for progress tracking
+    pub fn user_log_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.user_log_registry_factory = Some(factory);
+        self
+    }
+
     fn validate(&self) -> Result<()> {
+        if self.concurrency == 0 {
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "concurrency must be > 0".to_string(),
+                ),
+            );
+        }
+
         ConfigValidator::in_range(
             self.walks_per_node as f64,
             1.0,
@@ -109,8 +148,17 @@ impl RandomWalkBuilder {
         })
     }
 
-    fn compute(&self) -> Result<(Vec<Vec<u64>>, std::time::Duration)> {
+    fn compute(self) -> Result<(Vec<Vec<u64>>, std::time::Duration)> {
         self.validate()?;
+
+        // Set up progress tracking
+        let _task_registry_factory = self
+            .task_registry_factory
+            .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
+        let _user_log_registry_factory = self
+            .user_log_registry_factory
+            .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
+
         let start = Instant::now();
 
         // Random walk works on directed graphs (Natural orientation)
@@ -180,7 +228,7 @@ impl RandomWalkBuilder {
     }
 
     /// Stream mode: yields walk sequences
-    pub fn stream(&self) -> Result<Box<dyn Iterator<Item = RandomWalkRow>>> {
+    pub fn stream(self) -> Result<Box<dyn Iterator<Item = RandomWalkRow>>> {
         let (walks, _elapsed) = self.compute()?;
 
         let rows: Vec<RandomWalkRow> = walks
@@ -192,13 +240,97 @@ impl RandomWalkBuilder {
     }
 
     /// Stats mode: returns aggregated statistics
-    pub fn stats(&self) -> Result<RandomWalkStats> {
+    pub fn stats(self) -> Result<RandomWalkStats> {
         let (walks, elapsed) = self.compute()?;
 
         Ok(RandomWalkStats {
             walk_count: walks.len(),
             execution_time_ms: elapsed.as_millis() as u64,
         })
+    }
+
+    /// Mutate mode: Compute and update in-memory graph projection
+    ///
+    /// Stores random walks as node properties.
+    ///
+    /// ```rust,no_run
+    /// # use gds::Graph;
+    /// # let graph: Graph = unimplemented!();
+    /// let builder = graph.random_walk();
+    /// let result = builder.mutate("walks")?;
+    /// println!("Updated {} nodes", result.nodes_updated);
+    /// ```
+    pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "RandomWalk mutate/write is not implemented yet".to_string(),
+            ),
+        )
+    }
+
+    /// Write mode: Compute and persist to storage
+    ///
+    /// Persists random walks to storage backend.
+    ///
+    /// ```rust,no_run
+    /// # use gds::Graph;
+    /// # let graph: Graph = unimplemented!();
+    /// let builder = graph.random_walk();
+    /// let result = builder.write("walks")?;
+    /// println!("Wrote {} nodes", result.nodes_written);
+    /// ```
+    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "RandomWalk mutate/write is not implemented yet".to_string(),
+            ),
+        )
+    }
+
+    /// Estimate memory requirements for random walk execution
+    ///
+    /// Returns a memory range estimate based on:
+    /// - Walk storage (walks_per_node * walk_length * node_count)
+    /// - Graph structure overhead
+    ///
+    /// ```rust,no_run
+    /// # use gds::Graph;
+    /// # let graph: Graph = unimplemented!();
+    /// let builder = graph.random_walk();
+    /// let memory = builder.estimate_memory();
+    /// println!("Estimated memory: {} bytes", memory.max());
+    /// ```
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+
+        // Walk storage: each walk is walk_length * 8 bytes (u64 per node)
+        // Total walks: walks_per_node * source_nodes.len() or node_count if empty
+        let source_count = if self.source_nodes.is_empty() {
+            node_count
+        } else {
+            self.source_nodes.len()
+        };
+        let total_walks = self.walks_per_node * source_count;
+        let walk_storage = total_walks * self.walk_length * 8;
+
+        // Graph structure overhead (adjacency lists, etc.)
+        let avg_degree = 10.0; // Conservative estimate
+        let relationship_count = (node_count as f64 * avg_degree) as usize;
+        let graph_overhead = relationship_count * 16; // ~16 bytes per relationship
+
+        let total_memory = walk_storage + graph_overhead;
+
+        // Add 20% overhead for algorithm-specific structures
+        let overhead = total_memory / 5;
+        let total_with_overhead = total_memory + overhead;
+
+        MemoryRange::of_range(total_memory, total_with_overhead)
     }
 }
 

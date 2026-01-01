@@ -33,8 +33,8 @@ pub use base::{
 pub use classifier_factory::ClassifierFactory;
 pub use classifier_trainer_factory::ClassifierTrainerFactory;
 pub use config::{BaseTrainerConfig, ClassAwareTrainerConfig, PenaltyConfig, TrainerConfig};
-pub use regression_trainer_factory::RegressionTrainerFactory;
 pub use features::{DenseFeatures, FeaturesFactory, LazyFeatures};
+pub use regression_trainer_factory::RegressionTrainerFactory;
 pub use training_method::TrainingMethod;
 
 // Model implementations

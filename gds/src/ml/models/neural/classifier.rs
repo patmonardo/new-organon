@@ -2,22 +2,20 @@
 //!
 //! Translated from `MLPClassifier.java` from Java GDS.
 
+use super::data::MLPClassifierData;
 use crate::ml::core::{
     batch::Batch,
     computation_context::ComputationContext,
     functions::{
         constant::Constant,
         matrix_multiply_with_transposed_second_operand::MatrixMultiplyWithTransposedSecondOperand,
-        matrix_vector_sum::MatrixVectorSum,
-        relu::Relu,
-        softmax::Softmax,
+        matrix_vector_sum::MatrixVectorSum, relu::Relu, softmax::Softmax,
     },
     tensor::{Matrix, Tensor},
-    variable::{VariableRef},
+    variable::VariableRef,
 };
 use crate::ml::gradient_descent::batch_feature_matrix;
 use crate::ml::models::{Classifier, ClassifierData, Features};
-use super::data::MLPClassifierData;
 use std::sync::Arc;
 
 /// Multi-Layer Perceptron Classifier
@@ -55,7 +53,11 @@ impl MLPClassifier {
     /// Predict probabilities for a batch
     ///
     /// Java: `public Matrix predictProbabilities(Batch batch, Features features)`
-    pub fn predict_probabilities_batch<B: Batch>(&self, batch: &B, features: &dyn Features) -> Matrix {
+    pub fn predict_probabilities_batch<B: Batch>(
+        &self,
+        batch: &B,
+        features: &dyn Features,
+    ) -> Matrix {
         let ctx = ComputationContext::new();
         let batch_features = batch_feature_matrix(batch, features);
         let batch_features: VariableRef = Arc::new(batch_features);
@@ -79,9 +81,11 @@ impl MLPClassifier {
 
             // Matrix multiplication: input * weights^T
             let weights_var: VariableRef = self.data.weights()[i].clone();
-            let weighted_features: VariableRef = Arc::new(
-                MatrixMultiplyWithTransposedSecondOperand::new_ref(output_from_prev_layer, weights_var),
-            );
+            let weighted_features: VariableRef =
+                Arc::new(MatrixMultiplyWithTransposedSecondOperand::new_ref(
+                    output_from_prev_layer,
+                    weights_var,
+                ));
 
             // Add bias: weighted_features + bias
             let bias_var: VariableRef = self.data.biases()[i].clone();
@@ -214,7 +218,9 @@ mod tests {
 
         // Each row should sum to 1.0 (softmax)
         for row in 0..predictions.rows() {
-            let row_sum: f64 = (0..predictions.cols()).map(|col| predictions[(row, col)]).sum();
+            let row_sum: f64 = (0..predictions.cols())
+                .map(|col| predictions[(row, col)])
+                .sum();
             assert!((row_sum - 1.0).abs() < 1e-10);
         }
     }

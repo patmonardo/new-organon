@@ -445,8 +445,8 @@ mod tests {
     fn test_paged_cursor_multiple_pages() {
         // Create 3 pages of PAGE_SIZE elements each
         let page1: Vec<i64> = (0..PAGE_SIZE).map(|v| v as i64).collect();
-        let page2: Vec<i64> = (PAGE_SIZE..PAGE_SIZE*2).map(|v| v as i64).collect();
-        let page3: Vec<i64> = (PAGE_SIZE*2..PAGE_SIZE*3).map(|v| v as i64).collect();
+        let page2: Vec<i64> = (PAGE_SIZE..PAGE_SIZE * 2).map(|v| v as i64).collect();
+        let page3: Vec<i64> = (PAGE_SIZE * 2..PAGE_SIZE * 3).map(|v| v as i64).collect();
         let pages = vec![page1, page2, page3];
 
         let mut cursor = PagedCursor::new(&pages, PAGE_SIZE * 3);
@@ -465,8 +465,8 @@ mod tests {
     fn test_paged_cursor_range_across_pages() {
         // Create 3 pages of PAGE_SIZE elements each
         let page1: Vec<i64> = (0..PAGE_SIZE).map(|v| v as i64).collect();
-        let page2: Vec<i64> = (PAGE_SIZE..PAGE_SIZE*2).map(|v| v as i64).collect();
-        let page3: Vec<i64> = (PAGE_SIZE*2..PAGE_SIZE*3).map(|v| v as i64).collect();
+        let page2: Vec<i64> = (PAGE_SIZE..PAGE_SIZE * 2).map(|v| v as i64).collect();
+        let page3: Vec<i64> = (PAGE_SIZE * 2..PAGE_SIZE * 3).map(|v| v as i64).collect();
         let pages = vec![page1, page2, page3];
 
         let mut cursor = PagedCursor::new(&pages, PAGE_SIZE * 3);

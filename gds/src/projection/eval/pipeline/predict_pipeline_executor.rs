@@ -5,9 +5,7 @@
 use std::error::Error as StdError;
 use std::sync::Arc;
 
-use crate::projection::eval::pipeline::{
-    NodePropertyStepExecutor, Pipeline, PipelineGraphFilter,
-};
+use crate::projection::eval::pipeline::{NodePropertyStepExecutor, Pipeline, PipelineGraphFilter};
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
 
 /// Abstract pipeline executor for prediction (no training/test splits).
@@ -133,10 +131,7 @@ pub trait PredictPipelineExecutor<PIPELINE: Pipeline, RESULT> {
 
         // 5. Validate feature properties
         self.pipeline()
-            .validate_feature_properties(
-                self.graph_store(),
-                &node_property_step_filter.node_labels,
-            )
+            .validate_feature_properties(self.graph_store(), &node_property_step_filter.node_labels)
             .map_err(|e| PredictPipelineExecutorError::FeatureValidationFailed(Box::new(e)))?;
 
         // 6. Execute prediction

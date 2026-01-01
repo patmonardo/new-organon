@@ -22,8 +22,7 @@
 ///     }
 /// }
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PipelineGraphFilter {
     /// Node labels to include in the filtered graph
     pub node_labels: Vec<String>,
@@ -53,4 +52,3 @@ impl PipelineGraphFilter {
         }
     }
 }
-

@@ -27,17 +27,17 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
+use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::mem::MemoryRange;
 use crate::procedures::bfs::{BfsComputationRuntime, BfsStorageRuntime};
+use crate::procedures::core::prelude::{PathFindingResult, PathResultBuilder};
+use crate::procedures::core::result_builders::{ExecutionMetadata, ResultBuilder};
 use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::facades::traits::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use crate::procedures::core::prelude::{PathResultBuilder, PathFindingResult};
-use crate::core::utils::progress::{ProgressTracker, Tasks};
-use crate::procedures::core::result_builders::{ExecutionMetadata, ResultBuilder};
-use crate::mem::MemoryRange;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -289,13 +289,29 @@ impl BfsBuilder {
 
         // Create execution metadata
         let mut additional = std::collections::HashMap::new();
-        additional.insert("nodes_visited".to_string(), result.nodes_visited.to_string());
-        additional.insert("max_depth_reached".to_string(), max_depth_reached.to_string());
+        additional.insert(
+            "nodes_visited".to_string(),
+            result.nodes_visited.to_string(),
+        );
+        additional.insert(
+            "max_depth_reached".to_string(),
+            max_depth_reached.to_string(),
+        );
         additional.insert("targets_found".to_string(), targets_found.to_string());
-        additional.insert("all_targets_reached".to_string(), all_targets_reached.to_string());
-        additional.insert("avg_branching_factor".to_string(), avg_branching_factor.to_string());
+        additional.insert(
+            "all_targets_reached".to_string(),
+            all_targets_reached.to_string(),
+        );
+        additional.insert(
+            "avg_branching_factor".to_string(),
+            avg_branching_factor.to_string(),
+        );
         additional.insert("track_paths".to_string(), self.track_paths.to_string());
-        additional.insert("max_depth".to_string(), self.max_depth.map_or("unlimited".to_string(), |d| d.to_string()));
+        additional.insert(
+            "max_depth".to_string(),
+            self.max_depth
+                .map_or("unlimited".to_string(), |d| d.to_string()),
+        );
 
         let metadata = ExecutionMetadata {
             execution_time: std::time::Duration::from_millis(result.computation_time_ms),
@@ -309,8 +325,11 @@ impl BfsBuilder {
             .with_paths(paths)
             .with_metadata(metadata)
             .build()
-            .map_err(|e: crate::procedures::core::result_builders::ResultBuilderError|
-                crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
+            .map_err(
+                |e: crate::procedures::core::result_builders::ResultBuilderError| {
+                    crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
+                },
+            )?;
 
         Ok(path_result)
     }
@@ -396,23 +415,33 @@ impl BfsBuilder {
     /// ```
     pub fn stats(self) -> Result<BfsStats> {
         let result = self.compute()?;
-        let nodes_visited = result.metadata.additional
+        let nodes_visited = result
+            .metadata
+            .additional
             .get("nodes_visited")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
-        let max_depth_reached = result.metadata.additional
+        let max_depth_reached = result
+            .metadata
+            .additional
             .get("max_depth_reached")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
-        let targets_found = result.metadata.additional
+        let targets_found = result
+            .metadata
+            .additional
             .get("targets_found")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
-        let all_targets_reached = result.metadata.additional
+        let all_targets_reached = result
+            .metadata
+            .additional
             .get("all_targets_reached")
             .and_then(|s| s.parse::<bool>().ok())
             .unwrap_or(false);
-        let avg_branching_factor = result.metadata.additional
+        let avg_branching_factor = result
+            .metadata
+            .additional
             .get("avg_branching_factor")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0.0);

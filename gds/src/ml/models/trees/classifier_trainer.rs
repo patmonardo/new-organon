@@ -5,7 +5,10 @@
 use crate::collections::HugeIntArray;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::ProgressTracker;
-use crate::ml::decision_tree::{DecisionTreeClassifierTrainer, DecisionTreeTrainer, DecisionTreeTrainerConfig, FeatureBagger, GiniIndex};
+use crate::ml::decision_tree::{
+    DecisionTreeClassifierTrainer, DecisionTreeTrainer, DecisionTreeTrainerConfig, FeatureBagger,
+    GiniIndex,
+};
 use crate::ml::metrics::ModelSpecificMetricsHandler;
 use crate::ml::models::trees::{
     DatasetBootstrapper, RandomForestClassifier, RandomForestClassifierData,
@@ -14,7 +17,6 @@ use crate::ml::models::trees::{
 use crate::ml::models::{Classifier, ClassifierTrainer, Features};
 use rand::SeedableRng;
 use std::sync::Arc;
-
 
 /// Random Forest Classifier Trainer.
 /// 1:1 translation of RandomForestClassifierTrainer.java from Java GDS.
@@ -90,13 +92,20 @@ impl RandomForestClassifierTrainer {
 
             // Create feature bagger
             let feature_bagger = FeatureBagger::new(
-                self.random_seed.map(|s| s + tree_idx as u64).unwrap_or(tree_idx as u64),
+                self.random_seed
+                    .map(|s| s + tree_idx as u64)
+                    .unwrap_or(tree_idx as u64),
                 features.feature_dimension(),
-                self.config.forest.max_features_ratio(features.feature_dimension()),
+                self.config
+                    .forest
+                    .max_features_ratio(features.feature_dimension()),
             );
 
             // Create Gini impurity criterion
-            let impurity_criterion = Box::new(GiniIndex::new(Arc::new(labels.clone()), self.number_of_classes));
+            let impurity_criterion = Box::new(GiniIndex::new(
+                Arc::new(labels.clone()),
+                self.number_of_classes,
+            ));
 
             // Create and train decision tree
             let mut tree_trainer = DecisionTreeClassifierTrainer::new(
@@ -108,8 +117,15 @@ impl RandomForestClassifierTrainer {
                 feature_bagger,
             );
 
-            let tree = tree_trainer.train(&bootstrap_sample.iter().map(|&x| x as i64).collect::<Vec<_>>());
-            decision_trees.push(Box::new(tree) as Box<dyn crate::ml::models::trees::DecisionTreePredictor<usize>>);
+            let tree = tree_trainer.train(
+                &bootstrap_sample
+                    .iter()
+                    .map(|&x| x as i64)
+                    .collect::<Vec<_>>(),
+            );
+            decision_trees.push(
+                Box::new(tree) as Box<dyn crate::ml::models::trees::DecisionTreePredictor<usize>>
+            );
         }
 
         RandomForestClassifierData {

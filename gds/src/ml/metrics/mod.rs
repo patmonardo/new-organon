@@ -4,8 +4,8 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 pub mod classification;
-pub mod regression;
 mod model_specific_handler;
+pub mod regression;
 
 pub use model_specific_handler::ModelSpecificMetricsHandler;
 

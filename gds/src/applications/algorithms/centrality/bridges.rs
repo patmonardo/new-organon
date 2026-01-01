@@ -4,7 +4,6 @@
 //! delegating to the facade layer for execution.
 
 use crate::procedures::facades::centrality::bridges::{BridgeRow, BridgesFacade};
-use crate::procedures::facades::traits::{StatsResults, StreamResults};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -24,6 +23,11 @@ pub fn handle_bridges(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
         .and_then(|v| v.as_str())
         .unwrap_or("stream");
 
+    let concurrency = request
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(4) as usize;
+
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
@@ -37,7 +41,7 @@ pub fn handle_bridges(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
     };
 
     // Create facade
-    let facade = BridgesFacade::new(graph_store);
+    let facade = BridgesFacade::new(graph_store).concurrency(concurrency);
 
     // Execute based on mode
     match mode {
@@ -68,7 +72,70 @@ pub fn handle_bridges(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
                 &format!("Bridges stats failed: {:?}", e),
             ),
         },
-        _ => err(op, "INVALID_REQUEST", "Invalid mode"),
+        "mutate" => {
+            let property_name = match request.get("mutateProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+            match facade.mutate(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Bridges mutate failed: {:?}", e),
+                ),
+            }
+        }
+        "write" => {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+            match facade.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Bridges write failed: {:?}", e),
+                ),
+            }
+        }
+        "estimate_memory" => {
+            let memory = facade.estimate_memory();
+            json!({
+                "ok": true,
+                "op": op,
+                "data": {
+                    "min_bytes": memory.min(),
+                    "max_bytes": memory.max()
+                }
+            })
+        }
+        _ => err(
+            op,
+            "INVALID_REQUEST",
+            "Invalid mode. Use 'stream', 'stats', 'mutate', 'write', or 'estimate_memory'",
+        ),
     }
 }
 

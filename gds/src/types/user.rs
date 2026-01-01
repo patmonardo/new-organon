@@ -3,7 +3,7 @@
 use std::fmt;
 
 /// Represents a user in the system.
-/// 
+///
 /// This is used for authentication and authorization in GraphStore operations.
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct User {
@@ -16,12 +16,12 @@ impl User {
     pub fn new(username: String, is_admin: bool) -> Self {
         Self { username, is_admin }
     }
-    
+
     /// Returns the username.
     pub fn username(&self) -> &str {
         &self.username
     }
-    
+
     /// Returns whether the user is an admin.
     pub fn is_admin(&self) -> bool {
         self.is_admin

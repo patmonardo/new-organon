@@ -1,8 +1,8 @@
 // Phase 3.2: LinkFeatureExtractor - Core feature extraction orchestrator
 
 use super::{LinkFeatureAppender, LinkFeatureStep};
-use crate::types::graph::Graph;
 use crate::concurrency::{Concurrency, TerminationFlag};
+use crate::types::graph::Graph;
 use rayon::prelude::*;
 
 /// Core feature extraction orchestrator for link prediction.
@@ -129,7 +129,8 @@ impl LinkFeatureExtractor {
         // Collect all relationships as (source, target) pairs
         let mut relationships = Vec::new();
         for source in 0..graph.node_count() as i64 {
-            let relationships_iter = graph.stream_relationships(source, graph.default_property_value());
+            let relationships_iter =
+                graph.stream_relationships(source, graph.default_property_value());
             for cursor in relationships_iter {
                 let target = cursor.target_id();
                 relationships.push((source, target));

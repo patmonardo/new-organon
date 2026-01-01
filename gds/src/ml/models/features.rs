@@ -4,9 +4,12 @@
 //! Moved from NodeId-based API to index-based API to match Java.
 
 use crate::collections::HugeObjectArray;
-use crate::ml::core::features::{extract, extract_graph, feature_count, property_extractors, AnyFeatureExtractor, FeatureConsumer};
-use crate::types::graph::Graph;
+use crate::ml::core::features::{
+    extract, extract_graph, feature_count, property_extractors, AnyFeatureExtractor,
+    FeatureConsumer,
+};
 use crate::ml::core::tensor::Vector;
+use crate::types::graph::Graph;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
 
@@ -91,7 +94,7 @@ pub struct LazyExtractedFeatures {
 impl LazyExtractedFeatures {
     fn new(
         graph: Arc<dyn Graph>,
-    extractors: Vec<AnyFeatureExtractor>,
+        extractors: Vec<AnyFeatureExtractor>,
         feature_dimension: usize,
     ) -> Self {
         let cache = (0..graph.node_count()).map(|_| OnceCell::new()).collect();
@@ -232,7 +235,11 @@ impl FeaturesFactory {
     ) -> Box<dyn Features> {
         let extractors = property_extractors(&*graph, feature_properties);
         let feature_dimension = feature_count(&extractors);
-        Box::new(LazyExtractedFeatures::new(graph, extractors, feature_dimension))
+        Box::new(LazyExtractedFeatures::new(
+            graph,
+            extractors,
+            feature_dimension,
+        ))
     }
 
     /// Extract eager features from graph properties.

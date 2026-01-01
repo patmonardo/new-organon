@@ -34,7 +34,10 @@ impl PartialOrd for QueueItem {
 impl Ord for QueueItem {
     fn cmp(&self, other: &Self) -> Ordering {
         // Reverse ordering for min-heap (lower cost = higher priority)
-        other.cost.partial_cmp(&self.cost).unwrap_or(Ordering::Equal)
+        other
+            .cost
+            .partial_cmp(&self.cost)
+            .unwrap_or(Ordering::Equal)
     }
 }
 

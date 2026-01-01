@@ -6,15 +6,13 @@ use crate::collections::HugeIntArray;
 use crate::ml::core::batch::{BatchQueue, ConsecutiveBatchQueue};
 use crate::ml::gradient_descent::Training;
 use crate::ml::models::{Classifier, ClassifierTrainer, Features};
-use rand::{SeedableRng, RngCore};
-use rand::rngs::StdRng;
-use std::sync::Arc;
 use parking_lot::RwLock;
+use rand::rngs::StdRng;
+use rand::{RngCore, SeedableRng};
+use std::sync::Arc;
 
 use super::{
-    classifier::MLPClassifier,
-    config::MLPClassifierTrainConfig,
-    data::MLPClassifierData,
+    classifier::MLPClassifier, config::MLPClassifierTrainConfig, data::MLPClassifierData,
     objective::MLPClassifierObjective,
 };
 
@@ -79,7 +77,8 @@ impl MLPClassifierTrainer {
             labels,
             self.train_config.penalty,
             self.train_config.focus_weight,
-            self.train_config.initialize_class_weights(self.number_of_classes),
+            self.train_config
+                .initialize_class_weights(self.number_of_classes),
         );
 
         // Create training instance
@@ -97,7 +96,10 @@ impl MLPClassifierTrainer {
 
         // Create batch queue supplier
         let queue_supplier = || {
-            Box::new(ConsecutiveBatchQueue::new(train_set.len() as u64, self.train_config.batch_size)) as Box<dyn BatchQueue>
+            Box::new(ConsecutiveBatchQueue::new(
+                train_set.len() as u64,
+                self.train_config.batch_size,
+            )) as Box<dyn BatchQueue>
         };
 
         // Train the model
@@ -148,7 +150,8 @@ impl ClassifierTrainer for MLPClassifierTrainer {
             labels,
             self.train_config.penalty,
             self.train_config.focus_weight,
-            self.train_config.initialize_class_weights(self.number_of_classes),
+            self.train_config
+                .initialize_class_weights(self.number_of_classes),
         );
 
         // Create training instance
@@ -166,7 +169,10 @@ impl ClassifierTrainer for MLPClassifierTrainer {
 
         // Create batch queue supplier
         let queue_supplier = || {
-            Box::new(ConsecutiveBatchQueue::new(train_set.len() as u64, self.train_config.batch_size)) as Box<dyn BatchQueue>
+            Box::new(ConsecutiveBatchQueue::new(
+                train_set.len() as u64,
+                self.train_config.batch_size,
+            )) as Box<dyn BatchQueue>
         };
 
         // Train the model
@@ -188,7 +194,10 @@ mod tests {
         let trainer = MLPClassifierTrainer::new(3, config, Some(42), 1);
 
         assert_eq!(trainer.number_of_classes(), 3);
-        assert_eq!(trainer.train_config().method, TrainingMethod::MLPClassification);
+        assert_eq!(
+            trainer.train_config().method,
+            TrainingMethod::MLPClassification
+        );
     }
 
     #[test]

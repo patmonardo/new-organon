@@ -10,7 +10,9 @@
 //! - Accumulates into the *reached node* per depth
 //! - Normalizes by `(nodeCount - 1)`
 
-use crate::procedures::facades::builder_base::ConfigValidator;
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory};
+use crate::mem::MemoryRange;
+use crate::procedures::facades::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::facades::traits::{CentralityScore, Result};
 use crate::procedures::msbfs::AggregatedNeighborProcessingMsBfs;
 use crate::projection::orientation::Orientation;
@@ -40,6 +42,8 @@ pub struct HarmonicCentralityStats {
 pub struct HarmonicCentralityFacade {
     graph_store: Arc<DefaultGraphStore>,
     direction: String,
+    concurrency: usize,
+    task_registry: Arc<dyn TaskRegistryFactory>,
 }
 
 impl HarmonicCentralityFacade {
@@ -47,6 +51,8 @@ impl HarmonicCentralityFacade {
         Self {
             graph_store,
             direction: "both".to_string(),
+            concurrency: 4,
+            task_registry: Arc::new(EmptyTaskRegistryFactory),
         }
     }
 
@@ -56,12 +62,42 @@ impl HarmonicCentralityFacade {
         self
     }
 
+    /// Set concurrency level for parallel computation.
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
+        self
+    }
+
+    /// Set the task registry factory for progress tracking and concurrency control.
+    pub fn task_registry(mut self, task_registry: Arc<dyn TaskRegistryFactory>) -> Self {
+        self.task_registry = task_registry;
+        self
+    }
+
     fn orientation(&self) -> Orientation {
         match self.direction.as_str() {
             "incoming" => Orientation::Reverse,
             "outgoing" => Orientation::Natural,
             _ => Orientation::Undirected,
         }
+    }
+
+    /// Validate the facade configuration.
+    ///
+    /// # Returns
+    /// Ok(()) if configuration is valid, Err otherwise
+    ///
+    /// # Errors
+    /// Returns an error if concurrency is not positive
+    pub fn validate(&self) -> Result<()> {
+        if self.concurrency == 0 {
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "concurrency must be positive".to_string(),
+                ),
+            );
+        }
+        Ok(())
     }
 
     fn checked_node_id(value: usize) -> Result<NodeId> {
@@ -139,6 +175,7 @@ impl HarmonicCentralityFacade {
     }
 
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
+        self.validate()?;
         let (scores, _elapsed) = self.compute_scores()?;
         let iter = scores
             .into_iter()
@@ -151,6 +188,7 @@ impl HarmonicCentralityFacade {
     }
 
     pub fn stats(&self) -> Result<HarmonicCentralityStats> {
+        self.validate()?;
         let (scores, elapsed) = self.compute_scores()?;
         if scores.is_empty() {
             return Ok(HarmonicCentralityStats {
@@ -204,9 +242,10 @@ impl HarmonicCentralityFacade {
 
     /// Mutate mode is not implemented yet for harmonic.
     pub fn mutate(
-        &self,
+        self,
         property_name: &str,
     ) -> Result<crate::procedures::facades::builder_base::MutationResult> {
+        self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
         Err(
@@ -214,6 +253,49 @@ impl HarmonicCentralityFacade {
                 "HarmonicCentrality mutate/write is not implemented yet".to_string(),
             ),
         )
+    }
+
+    /// Write mode is not implemented yet for harmonic.
+    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "HarmonicCentrality mutate/write is not implemented yet".to_string(),
+            ),
+        )
+    }
+
+    /// Estimate memory requirements for harmonic centrality computation.
+    ///
+    /// # Returns
+    /// Memory range estimate (min/max bytes)
+    ///
+    /// # Example
+    /// ```ignore
+    /// # let graph = Graph::default();
+    /// # use gds::procedures::facades::centrality::HarmonicCentralityFacade;
+    /// let facade = HarmonicCentralityFacade::new(graph);
+    /// let memory = facade.estimate_memory();
+    /// println!("Will use between {} and {} bytes", memory.min(), memory.max());
+    /// ```
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+
+        // Memory for harmonic centrality scores (one f64 per node)
+        let scores_memory = node_count * std::mem::size_of::<f64>();
+
+        // Memory for MSBFS processing
+        let msbfs_memory = node_count * 8; // Rough estimate for MSBFS structures
+
+        // Additional overhead for computation (temporary vectors, etc.)
+        let computation_overhead = 1024 * 1024; // 1MB for temporary structures
+
+        let total_memory = scores_memory + msbfs_memory + computation_overhead;
+        let total_with_overhead = total_memory + (total_memory / 5); // Add 20% overhead
+
+        MemoryRange::of_range(total_memory, total_with_overhead)
     }
 }
 
@@ -249,7 +331,7 @@ mod tests {
     #[test]
     fn test_mutate_validates_property_name() {
         let facade = HarmonicCentralityFacade::new(store());
-        assert!(facade.mutate("").is_err());
+        assert!(facade.clone().mutate("").is_err());
         assert!(facade.mutate("harmonic").is_err());
     }
 }

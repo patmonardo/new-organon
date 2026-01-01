@@ -23,6 +23,11 @@ pub fn handle_dag_longest_path(request: &Value, catalog: Arc<dyn GraphCatalog>) 
         .and_then(|v| v.as_str())
         .unwrap_or("stream");
 
+    let concurrency = request
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(4) as usize;
+
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
@@ -36,7 +41,7 @@ pub fn handle_dag_longest_path(request: &Value, catalog: Arc<dyn GraphCatalog>) 
     };
 
     // Create builder
-    let builder = DagLongestPathBuilder::new(graph_store);
+    let builder = DagLongestPathBuilder::new(graph_store).concurrency(concurrency);
 
     // Execute based on mode
     match mode {

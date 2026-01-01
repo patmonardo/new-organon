@@ -29,7 +29,9 @@ impl HugeLongLongDoubleMap {
     /// Estimates the memory usage, in bytes, for a map with the provided expected element count.
     pub fn memory_estimation(expected_elements: usize) -> usize {
         let array_size = Self::min_buffer_size(expected_elements);
-        Estimate::size_of_long_array(array_size) * 2 + Estimate::size_of_double_array(array_size) + std::mem::size_of::<Self>()
+        Estimate::size_of_long_array(array_size) * 2
+            + Estimate::size_of_double_array(array_size)
+            + std::mem::size_of::<Self>()
     }
     /// Creates a new map with default capacity.
     pub fn new() -> Self {
@@ -379,7 +381,8 @@ mod tests {
         let estimated = HugeLongLongDoubleMap::memory_estimation(100);
         // Should be greater than just the arrays due to struct overhead
         let array_size = HugeLongLongDoubleMap::min_buffer_size(100);
-        let array_memory = Estimate::size_of_long_array(array_size) * 2 + Estimate::size_of_double_array(array_size);
+        let array_memory = Estimate::size_of_long_array(array_size) * 2
+            + Estimate::size_of_double_array(array_size);
         assert!(estimated > array_memory);
     }
 }

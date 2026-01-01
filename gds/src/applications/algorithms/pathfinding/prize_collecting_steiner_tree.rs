@@ -1,16 +1,19 @@
-//! Topological Sort pathfinding algorithm dispatch handler.
+//! Prize-Collecting Steiner Tree pathfinding algorithm dispatch handler.
 //!
-//! Handles JSON requests for Topological Sort operations,
+//! Handles JSON requests for Prize-Collecting Steiner Tree operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::pathfinding::topological_sort::TopologicalSortBuilder;
+use crate::procedures::facades::pathfinding::prize_collecting_steiner_tree::PCSTreeBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-/// Handle Topological Sort requests
-pub fn handle_topological_sort(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
-    let op = "topological_sort";
+/// Handle Prize-Collecting Steiner Tree requests
+pub fn handle_prize_collecting_steiner_tree(
+    request: &Value,
+    catalog: Arc<dyn GraphCatalog>,
+) -> Value {
+    let op = "prize_collecting_steiner_tree";
 
     // Parse request parameters
     let graph_name = match request.get("graphName").and_then(|v| v.as_str()) {
@@ -18,10 +21,22 @@ pub fn handle_topological_sort(request: &Value, catalog: Arc<dyn GraphCatalog>) 
         None => return err(op, "INVALID_REQUEST", "Missing 'graphName' parameter"),
     };
 
-    let compute_max_distance = request
-        .get("computeMaxDistance")
-        .and_then(|v| v.as_bool())
-        .unwrap_or(false);
+    let prizes = if let Some(prizes_array) = request.get("prizes").and_then(|v| v.as_array()) {
+        prizes_array
+            .iter()
+            .filter_map(|v| v.as_f64())
+            .collect::<Vec<_>>()
+    } else {
+        return err(op, "INVALID_REQUEST", "Missing 'prizes' parameter");
+    };
+
+    if prizes.is_empty() {
+        return err(op, "INVALID_REQUEST", "'prizes' must not be empty");
+    }
+
+    let relationship_weight_property = request
+        .get("relationshipWeightProperty")
+        .and_then(|v| v.as_str());
 
     let concurrency = request
         .get("concurrency")
@@ -46,9 +61,13 @@ pub fn handle_topological_sort(request: &Value, catalog: Arc<dyn GraphCatalog>) 
     };
 
     // Create builder
-    let builder = TopologicalSortBuilder::new(graph_store)
-        .compute_max_distance(compute_max_distance)
+    let mut builder = PCSTreeBuilder::new(graph_store)
+        .prizes(prizes)
         .concurrency(concurrency);
+
+    if let Some(prop) = relationship_weight_property {
+        builder = builder.relationship_weight_property(prop);
+    }
 
     // Execute based on mode
     match mode {
@@ -64,7 +83,7 @@ pub fn handle_topological_sort(request: &Value, catalog: Arc<dyn GraphCatalog>) 
             Err(e) => err(
                 op,
                 "EXECUTION_ERROR",
-                &format!("Topological Sort execution failed: {:?}", e),
+                &format!("Prize-Collecting Steiner Tree execution failed: {:?}", e),
             ),
         },
         "stats" => match builder.stats() {
@@ -76,7 +95,7 @@ pub fn handle_topological_sort(request: &Value, catalog: Arc<dyn GraphCatalog>) 
             Err(e) => err(
                 op,
                 "EXECUTION_ERROR",
-                &format!("Topological Sort stats failed: {:?}", e),
+                &format!("Prize-Collecting Steiner Tree stats failed: {:?}", e),
             ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),

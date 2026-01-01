@@ -7,8 +7,8 @@
 use std::sync::Arc;
 
 use crate::applications::graph_store_catalog::services::MemoryTracker;
-use crate::types::user::User;
 use crate::core::utils::progress::JobId;
+use crate::types::user::User;
 
 /// Placeholder for UserEntityMemory
 #[derive(Clone, Debug)]

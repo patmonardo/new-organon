@@ -3,9 +3,11 @@
 //! Partitions nodes into k communities to maximize (or minimize) the
 //! weight of edges crossing between communities using GRASP.
 
+use crate::core::utils::progress::TaskRegistry;
+use crate::mem::MemoryRange;
 use crate::procedures::approx_max_k_cut::computation::ApproxMaxKCutComputationRuntime;
 use crate::procedures::approx_max_k_cut::spec::ApproxMaxKCutConfig;
-use crate::procedures::facades::builder_base::ConfigValidator;
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::facades::traits::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
@@ -34,9 +36,9 @@ pub struct ApproxMaxKCutStats {
     pub node_count: usize,
 }
 
-/// ApproxMaxKCut algorithm builder
+/// ApproxMaxKCut algorithm facade
 #[derive(Clone)]
-pub struct ApproxMaxKCutBuilder {
+pub struct ApproxMaxKCutFacade {
     graph_store: Arc<DefaultGraphStore>,
     k: u8,
     iterations: usize,
@@ -44,9 +46,11 @@ pub struct ApproxMaxKCutBuilder {
     minimize: bool,
     has_relationship_weight_property: bool,
     min_community_sizes: Vec<usize>,
+    concurrency: usize,
+    task_registry: Option<TaskRegistry>,
 }
 
-impl ApproxMaxKCutBuilder {
+impl ApproxMaxKCutFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
@@ -56,6 +60,8 @@ impl ApproxMaxKCutBuilder {
             minimize: false,
             has_relationship_weight_property: false,
             min_community_sizes: vec![0, 0],
+            concurrency: 4,
+            task_registry: None,
         }
     }
 
@@ -91,9 +97,20 @@ impl ApproxMaxKCutBuilder {
         self
     }
 
+    pub fn task_registry(mut self, task_registry: TaskRegistry) -> Self {
+        self.task_registry = Some(task_registry);
+        self
+    }
+
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
+        self
+    }
+
     fn validate(&self) -> Result<()> {
         ConfigValidator::in_range(self.k as f64, 2.0, 127.0, "k")?;
         ConfigValidator::in_range(self.iterations as f64, 1.0, 1000.0, "iterations")?;
+        ConfigValidator::in_range(self.concurrency as f64, 1.0, 1024.0, "concurrency")?;
 
         if self.min_community_sizes.len() != self.k as usize {
             return Err(
@@ -193,6 +210,32 @@ impl ApproxMaxKCutBuilder {
             k: self.k,
             node_count,
         })
+    }
+
+    /// Mutate mode: writes labels back to the graph store.
+    pub fn mutate(self) -> Result<MutationResult> {
+        // TODO: implement mutation logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "mutate not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Write mode: writes labels to a new graph.
+    pub fn write(self) -> Result<WriteResult> {
+        // TODO: implement write logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "write not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Estimate memory usage.
+    pub fn estimate_memory(&self) -> Result<MemoryRange> {
+        // TODO: implement memory estimation
+        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
     }
 }
 

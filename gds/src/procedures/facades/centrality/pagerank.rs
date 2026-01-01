@@ -29,10 +29,9 @@
 
 use crate::config::base_types::AlgoBaseConfig;
 use crate::config::PageRankConfig;
-use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult};
-use crate::procedures::facades::traits::{
-    AlgorithmRunner, CentralityScore, Result, StatsResults, StreamResults,
-};
+use crate::mem::MemoryRange;
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::facades::traits::{CentralityScore, Result};
 use crate::procedures::pagerank::run_pagerank;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
@@ -40,6 +39,9 @@ use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
+
+// Import upgraded systems
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory};
 
 // ============================================================================
 // Statistics Type
@@ -100,6 +102,8 @@ pub struct PageRankFacade {
     direction: String,
     /// Pregel concurrency (Rayon worker threads)
     concurrency: usize,
+    /// Task registry for progress tracking
+    task_registry: Arc<dyn TaskRegistryFactory>,
     /// Maximum iterations to run
     iterations: u32,
     /// Probability of following a relationship (damping)
@@ -122,6 +126,7 @@ impl PageRankFacade {
             graph_store,
             direction: "outgoing".to_string(),
             concurrency: num_cpus::get().max(1),
+            task_registry: Arc::new(EmptyTaskRegistryFactory),
             iterations: 20,
             damping_factor: 0.85,
             tolerance: 1e-4,
@@ -134,6 +139,12 @@ impl PageRankFacade {
     /// Use `1` for deterministic single-threaded debugging.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
         self.concurrency = concurrency;
+        self
+    }
+
+    /// Set task registry factory for progress tracking
+    pub fn task_registry(mut self, task_registry: Arc<dyn TaskRegistryFactory>) -> Self {
+        self.task_registry = task_registry;
         self
     }
 
@@ -189,7 +200,14 @@ impl PageRankFacade {
     }
 
     /// Validate configuration before execution
-    fn validate(&self) -> Result<()> {
+    pub fn validate(&self) -> Result<()> {
+        if self.concurrency == 0 {
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "concurrency must be greater than 0".to_string(),
+                ),
+            );
+        }
         ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
         ConfigValidator::iterations(self.iterations, "iterations")?;
         ConfigValidator::in_range(self.damping_factor, 0.01, 0.99, "damping_factor")?;
@@ -205,7 +223,7 @@ impl PageRankFacade {
         }
     }
 
-    fn compute_scores(&self) -> Result<(Vec<f64>, u32, bool, std::time::Duration)> {
+    fn compute_scores(self) -> Result<(Vec<f64>, u32, bool, std::time::Duration)> {
         self.validate()?;
         let start = Instant::now();
 
@@ -360,201 +378,75 @@ impl PageRankFacade {
             ),
         )
     }
-}
 
-impl AlgorithmRunner for PageRankFacade {
-    fn algorithm_name(&self) -> &'static str {
-        "pagerank"
-    }
+    /// Write mode: Compute and write results to external storage
+    ///
+    /// Writes the PageRank scores to an external data store.
+    /// This is useful for persisting results for later analysis.
+    ///
+    /// # Arguments
+    /// * `property_name` - Name of the property to store the centrality scores
+    ///
+    /// # Returns
+    /// Result containing write statistics
+    ///
+    /// # Example
+    /// ```ignore
+    /// # let graph = Graph::default();
+    /// # use gds::procedures::facades::centrality::PageRankFacade;
+    /// let facade = PageRankFacade::new();
+    /// let result = facade.write("pagerank")?;
+    /// println!("Wrote {} records", result.records_written);
+    /// ```
+    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-    fn description(&self) -> &'static str {
-        "Compute PageRank centrality scores using iterative link analysis"
-    }
-}
-
-impl StreamResults<CentralityScore> for PageRankFacade {
-    fn stream(&self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
-        let (scores, _iters, _converged, _elapsed) = self.compute_scores()?;
-        let iter = scores
-            .into_iter()
-            .enumerate()
-            .map(|(node_id, score)| CentralityScore {
-                node_id: node_id as u64,
-                score,
-            });
-        Ok(Box::new(iter))
-    }
-}
-
-impl StatsResults for PageRankFacade {
-    type Stats = PageRankStats;
-
-    fn stats(&self) -> Result<Self::Stats> {
-        let (scores, iterations_ran, converged, elapsed) = self.compute_scores()?;
-        if scores.is_empty() {
-            return Ok(PageRankStats {
-                min: 0.0,
-                max: 0.0,
-                mean: 0.0,
-                stddev: 0.0,
-                p50: 0.0,
-                p90: 0.0,
-                p99: 0.0,
-                iterations_ran,
-                converged,
-                execution_time_ms: elapsed.as_millis() as u64,
-            });
-        }
-
-        let mut sorted = scores.clone();
-        sorted.sort_by(|a, b| a.total_cmp(b));
-        let min = *sorted.first().unwrap();
-        let max = *sorted.last().unwrap();
-        let mean = scores.iter().sum::<f64>() / scores.len() as f64;
-        let var = scores
-            .iter()
-            .map(|x| {
-                let d = x - mean;
-                d * d
-            })
-            .sum::<f64>()
-            / scores.len() as f64;
-        let stddev = var.sqrt();
-
-        let percentile = |p: f64| -> f64 {
-            let idx =
-                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
-            sorted[idx]
-        };
-
-        Ok(PageRankStats {
-            min,
-            max,
-            mean,
-            stddev,
-            p50: percentile(50.0),
-            p90: percentile(90.0),
-            p99: percentile(99.0),
-            iterations_ran,
-            converged,
-            execution_time_ms: elapsed.as_millis() as u64,
-        })
-    }
-}
-
-// ============================================================================
-// JSON API Handler
-// ============================================================================
-
-use crate::types::catalog::GraphCatalog;
-use serde_json::{json, Value};
-
-/// Handle PageRank requests from JSON API
-pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
-    let op = "pagerank";
-
-    // Parse request parameters
-    let graph_name = match request.get("graphName").and_then(|v| v.as_str()) {
-        Some(name) => name,
-        None => return err(op, "INVALID_REQUEST", "Missing 'graphName' parameter"),
-    };
-
-    let mode = request
-        .get("mode")
-        .and_then(|v| v.as_str())
-        .unwrap_or("stream");
-
-    let concurrency = request
-        .get("concurrency")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(1) as usize;
-
-    let direction = request
-        .get("direction")
-        .and_then(|v| v.as_str())
-        .unwrap_or("outgoing");
-
-    let source_nodes = request
-        .get("sourceNodes")
-        .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_u64()).collect())
-        .unwrap_or(vec![]);
-
-    let iterations = request
-        .get("iterations")
-        .and_then(|v| v.as_u64())
-        .unwrap_or(20) as u32;
-
-    let damping_factor = request
-        .get("dampingFactor")
-        .and_then(|v| v.as_f64())
-        .unwrap_or(0.85);
-
-    let tolerance = request
-        .get("tolerance")
-        .and_then(|v| v.as_f64())
-        .unwrap_or(1e-4);
-
-    // Get graph store
-    let graph_store = match catalog.get(graph_name) {
-        Some(store) => store,
-        None => {
-            return err(
-                op,
-                "GRAPH_NOT_FOUND",
-                &format!("Graph '{}' not found", graph_name),
-            )
-        }
-    };
-
-    // Create facade
-    let mut facade = PageRankFacade::new(graph_store)
-        .concurrency(concurrency)
-        .direction(direction)
-        .iterations(iterations)
-        .damping_factor(damping_factor)
-        .tolerance(tolerance);
-
-    if !source_nodes.is_empty() {
-        facade = facade.source_nodes(source_nodes);
-    }
-
-    // Execute based on mode
-    match mode {
-        "stream" => match facade.stream() {
-            Ok(rows_iter) => {
-                let rows: Vec<_> = rows_iter.collect();
-                json!({
-                    "ok": true,
-                    "op": op,
-                    "data": rows
-                })
-            }
-            Err(e) => err(
-                op,
-                "EXECUTION_ERROR",
-                &format!("PageRank execution failed: {:?}", e),
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "PageRank mutate/write is not implemented yet".to_string(),
             ),
-        },
-        "stats" => match facade.stats() {
-            Ok(stats) => json!({
-                "ok": true,
-                "op": op,
-                "data": stats
-            }),
-            Err(e) => err(
-                op,
-                "EXECUTION_ERROR",
-                &format!("PageRank stats failed: {:?}", e),
-            ),
-        },
-        _ => err(op, "INVALID_REQUEST", "Invalid mode"),
+        )
     }
-}
 
-/// Common error response builder
-fn err(op: &str, code: &str, message: &str) -> Value {
-    json!({ "ok": false, "op": op, "error": { "code": code, "message": message } })
+    /// Estimate memory usage for this algorithm execution
+    ///
+    /// Provides an estimate of the memory required to run this algorithm
+    /// with the current configuration. This is useful for capacity planning
+    /// and preventing out-of-memory errors.
+    ///
+    /// # Returns
+    /// Memory range estimate (min/max bytes)
+    ///
+    /// # Example
+    /// ```ignore
+    /// # let graph = Graph::default();
+    /// # use gds::procedures::facades::centrality::PageRankFacade;
+    /// let facade = PageRankFacade::new();
+    /// let memory = facade.estimate_memory();
+    /// println!("Will use between {} and {} bytes", memory.min(), memory.max());
+    /// ```
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+
+        // Memory for PageRank scores (one f64 per node)
+        let scores_memory = node_count * std::mem::size_of::<f64>();
+
+        // Memory for previous iteration scores (double buffering)
+        let prev_scores_memory = scores_memory;
+
+        // Memory for convergence tracking
+        let convergence_memory = scores_memory;
+
+        // Additional overhead for computation (temporary vectors, etc.)
+        let computation_overhead = 1024 * 1024; // 1MB for temporary structures
+
+        let total_memory =
+            scores_memory + prev_scores_memory + convergence_memory + computation_overhead;
+        let total_with_overhead = total_memory + (total_memory / 5); // Add 20% overhead
+
+        MemoryRange::of_range(total_memory, total_with_overhead)
+    }
 }
 
 // ============================================================================
@@ -564,7 +456,6 @@ fn err(op: &str, code: &str, message: &str) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 
     fn store() -> Arc<DefaultGraphStore> {

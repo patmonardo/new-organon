@@ -6,15 +6,13 @@
 type GraphNodePropertiesConfig =
     crate::applications::graph_store_catalog::configs::GraphNodePropertiesConfig;
 
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct GraphWriteNodePropertiesConfig {
     /// Base node properties configuration
     pub node_config: GraphNodePropertiesConfig,
     /// List of node property specifications for writing
     pub node_properties: Vec<NodePropertySpec>,
 }
-
 
 impl GraphWriteNodePropertiesConfig {
     /// Validate the configuration

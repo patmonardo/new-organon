@@ -1,5 +1,5 @@
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use super::shuffle::Random;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[derive(Clone)]
 pub struct SplittableRandom {

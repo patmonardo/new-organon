@@ -2,9 +2,12 @@
 //!
 //! Live wiring for Cost-Effective Lazy Forward influence maximization.
 
+use crate::core::utils::progress::TaskRegistry;
+use crate::mem::MemoryRange;
 use crate::procedures::celf::computation::CELFComputationRuntime;
 use crate::procedures::celf::spec::CELFConfig;
-use crate::procedures::facades::traits::{AlgorithmRunner, Result, StatsResults, StreamResults};
+use crate::procedures::facades::builder_base::{MutationResult, WriteResult};
+use crate::procedures::facades::traits::{AlgorithmRunner, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -33,6 +36,8 @@ pub struct CELFStats {
 pub struct CELFFacade {
     graph_store: Arc<DefaultGraphStore>,
     config: CELFConfig,
+    concurrency: usize,
+    task_registry: Option<TaskRegistry>,
 }
 
 impl CELFFacade {
@@ -40,6 +45,8 @@ impl CELFFacade {
         Self {
             graph_store,
             config: CELFConfig::default(),
+            concurrency: 4,
+            task_registry: None,
         }
     }
 
@@ -70,6 +77,16 @@ impl CELFFacade {
 
     pub fn random_seed(mut self, seed: u64) -> Self {
         self.config.random_seed = seed;
+        self
+    }
+
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
+        self
+    }
+
+    pub fn task_registry(mut self, task_registry: TaskRegistry) -> Self {
+        self.task_registry = Some(task_registry);
         self
     }
 
@@ -119,20 +136,8 @@ impl CELFFacade {
 
         Ok((seed_set, start.elapsed()))
     }
-}
 
-impl AlgorithmRunner for CELFFacade {
-    fn algorithm_name(&self) -> &'static str {
-        "celf"
-    }
-
-    fn description(&self) -> &'static str {
-        "Cost-Effective Lazy Forward influence maximization (Independent Cascade)"
-    }
-}
-
-impl StreamResults<CELFRow> for CELFFacade {
-    fn stream(&self) -> Result<Box<dyn Iterator<Item = CELFRow>>> {
+    pub fn stream(&self) -> Result<Box<dyn Iterator<Item = CELFRow>>> {
         let (seed_set, _elapsed) = self.compute_seed_set()?;
 
         let mut rows: Vec<CELFRow> = seed_set
@@ -150,12 +155,8 @@ impl StreamResults<CELFRow> for CELFFacade {
 
         Ok(Box::new(rows.into_iter()))
     }
-}
 
-impl StatsResults for CELFFacade {
-    type Stats = CELFStats;
-
-    fn stats(&self) -> Result<Self::Stats> {
+    pub fn stats(&self) -> Result<CELFStats> {
         let (seed_set, elapsed) = self.compute_seed_set()?;
         let total_spread: f64 = seed_set.values().sum();
 
@@ -165,12 +166,57 @@ impl StatsResults for CELFFacade {
             execution_time_ms: elapsed.as_millis() as u64,
         })
     }
+
+    pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
+        // TODO: Implement actual node property mutation
+        // For now, return a placeholder result
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                "CELF mutate/write is not implemented yet (property_name={})",
+                property_name
+            )),
+        )
+    }
+
+    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+        // For CELF, write is the same as mutate since it's node properties
+        self.mutate(property_name).map(|_| {
+            WriteResult::new(
+                0, // TODO: Return actual count
+                property_name.to_string(),
+                std::time::Duration::from_millis(0), // TODO: Return actual elapsed time
+            )
+        })
+    }
+
+    pub fn estimate_memory(&self) -> MemoryRange {
+        // Estimate memory for CELF computation
+        // - HashMap for seed set: seed_set_size * (8 + 8) bytes
+        // - Monte Carlo simulations: monte_carlo_simulations * node_count * 8 bytes
+        // - Graph view overhead: roughly node_count * 16 bytes
+        let seed_set_memory = self.config.seed_set_size * 16;
+        let simulation_memory =
+            self.config.monte_carlo_simulations * self.graph_store.node_count() * 8;
+        let graph_memory = self.graph_store.node_count() * 16;
+
+        let total = seed_set_memory + simulation_memory + graph_memory;
+        MemoryRange::of_range(total, total * 2) // Conservative upper bound
+    }
+}
+
+impl AlgorithmRunner for CELFFacade {
+    fn algorithm_name(&self) -> &'static str {
+        "celf"
+    }
+
+    fn description(&self) -> &'static str {
+        "Cost-Effective Lazy Forward influence maximization (Independent Cascade)"
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::procedures::facades::traits::StreamResults;
     use crate::procedures::facades::Graph;
     use crate::projection::RelationshipType;
     use crate::types::graph::{RelationshipTopology, SimpleIdMap};

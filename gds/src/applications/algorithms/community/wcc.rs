@@ -3,7 +3,7 @@
 //! Handles JSON requests for Weakly Connected Components operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::wcc::{WccBuilder, WccRow};
+use crate::procedures::facades::community::wcc::{WccFacade, WccRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -40,12 +40,12 @@ pub fn handle_wcc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         }
     };
 
-    // Create builder
-    let builder = WccBuilder::new(graph_store).concurrency(concurrency);
+    // Create facade
+    let facade = WccFacade::new(graph_store).concurrency(concurrency);
 
     // Execute based on mode
     match mode {
-        "stream" => match builder.stream() {
+        "stream" => match facade.stream() {
             Ok(rows_iter) => {
                 let rows: Vec<WccRow> = rows_iter.collect();
                 json!({
@@ -60,7 +60,7 @@ pub fn handle_wcc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 &format!("WCC execution failed: {:?}", e),
             ),
         },
-        "stats" => match builder.stats() {
+        "stats" => match facade.stats() {
             Ok(stats) => json!({
                 "ok": true,
                 "op": op,
@@ -68,7 +68,66 @@ pub fn handle_wcc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
             }),
             Err(e) => err(op, "EXECUTION_ERROR", &format!("WCC stats failed: {:?}", e)),
         },
-        _ => err(op, "INVALID_REQUEST", "Invalid mode"),
+        "mutate" => {
+            let property_name = match request.get("mutateProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+            match facade.mutate(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("WCC mutate failed: {:?}", e),
+                ),
+            }
+        }
+        "write" => {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+            match facade.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("WCC write failed: {:?}", e)),
+            }
+        }
+        "estimate_memory" => {
+            let memory = facade.estimate_memory();
+            json!({
+                "ok": true,
+                "op": op,
+                "data": {
+                    "min_bytes": memory.min(),
+                    "max_bytes": memory.max()
+                }
+            })
+        }
+        _ => err(
+            op,
+            "INVALID_REQUEST",
+            "Invalid mode. Use 'stream', 'stats', 'mutate', 'write', or 'estimate_memory'",
+        ),
     }
 }
 

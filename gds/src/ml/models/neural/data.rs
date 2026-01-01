@@ -6,8 +6,8 @@ use crate::ml::core::functions::weights::Weights;
 use crate::ml::core::tensor::{Matrix, Vector};
 use crate::ml::core::variable::Variable;
 use crate::ml::models::{BaseModelData, ClassifierData, TrainingMethod};
-use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
 use std::sync::Arc;
 
 /// Data structure for MLP Classifier
@@ -41,17 +41,35 @@ impl MLPClassifierData {
         let hidden_depth = hidden_layer_sizes.len();
 
         // First hidden layer: feature_count -> hidden_layer_sizes[0]
-        weights.push(Arc::new(Self::generate_weights(hidden_layer_sizes[0], feature_count, &mut rng)));
-        biases.push(Arc::new(Self::generate_bias(hidden_layer_sizes[0], &mut rng)));
+        weights.push(Arc::new(Self::generate_weights(
+            hidden_layer_sizes[0],
+            feature_count,
+            &mut rng,
+        )));
+        biases.push(Arc::new(Self::generate_bias(
+            hidden_layer_sizes[0],
+            &mut rng,
+        )));
 
         // Hidden layers: hidden_layer_sizes[i] -> hidden_layer_sizes[i+1]
         for i in 0..hidden_depth - 1 {
-            weights.push(Arc::new(Self::generate_weights(hidden_layer_sizes[i + 1], hidden_layer_sizes[i], &mut rng)));
-            biases.push(Arc::new(Self::generate_bias(hidden_layer_sizes[i + 1], &mut rng)));
+            weights.push(Arc::new(Self::generate_weights(
+                hidden_layer_sizes[i + 1],
+                hidden_layer_sizes[i],
+                &mut rng,
+            )));
+            biases.push(Arc::new(Self::generate_bias(
+                hidden_layer_sizes[i + 1],
+                &mut rng,
+            )));
         }
 
         // Output layer: hidden_layer_sizes[last] -> class_count
-        weights.push(Arc::new(Self::generate_weights(class_count, hidden_layer_sizes[hidden_depth - 1], &mut rng)));
+        weights.push(Arc::new(Self::generate_weights(
+            class_count,
+            hidden_layer_sizes[hidden_depth - 1],
+            &mut rng,
+        )));
         biases.push(Arc::new(Self::generate_bias(class_count, &mut rng)));
 
         Self {
@@ -169,12 +187,12 @@ mod tests {
         // Check dimensions
         assert_eq!(data.weights()[0].dimensions(), vec![50, 10]); // 50x10
         assert_eq!(data.weights()[1].dimensions(), vec![25, 50]); // 25x50
-        assert_eq!(data.weights()[2].dimensions(), vec![3, 25]);  // 3x25
+        assert_eq!(data.weights()[2].dimensions(), vec![3, 25]); // 3x25
 
         // Vectors are stored as column vectors: [dim, 1]
         assert_eq!(data.biases()[0].dimensions(), vec![50, 1]); // 50x1 column vector
         assert_eq!(data.biases()[1].dimensions(), vec![25, 1]); // 25x1 column vector
-        assert_eq!(data.biases()[2].dimensions(), vec![3, 1]);  // 3x1 column vector
+        assert_eq!(data.biases()[2].dimensions(), vec![3, 1]); // 3x1 column vector
     }
 
     #[test]

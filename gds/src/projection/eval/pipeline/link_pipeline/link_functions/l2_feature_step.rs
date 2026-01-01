@@ -57,7 +57,8 @@ impl L2FeatureStep {
 impl LinkFeatureStep for L2FeatureStep {
     fn link_feature_appender(&self, graph: &dyn Graph) -> Box<dyn LinkFeatureAppender> {
         let factory = L2LinkFeatureAppenderFactory;
-        let appenders = factory.create_appenders(graph, &self.node_properties)
+        let appenders = factory
+            .create_appenders(graph, &self.node_properties)
             .expect("Failed to create L2 appenders");
         Box::new(UnionLinkFeatureAppender::new(
             appenders,
@@ -138,7 +139,10 @@ impl AbstractLinkFeatureAppenderFactory for L2LinkFeatureAppenderFactory {
         props: Arc<dyn NodePropertyValues>,
         dimension: usize,
     ) -> Box<dyn LinkFeatureAppender> {
-        Box::new(L2LongAppender { props, _dimension: dimension })
+        Box::new(L2LongAppender {
+            props,
+            _dimension: dimension,
+        })
     }
 
     fn double_appender(
@@ -146,7 +150,10 @@ impl AbstractLinkFeatureAppenderFactory for L2LinkFeatureAppenderFactory {
         props: Arc<dyn NodePropertyValues>,
         dimension: usize,
     ) -> Box<dyn LinkFeatureAppender> {
-        Box::new(L2DoubleAppender { props, _dimension: dimension })
+        Box::new(L2DoubleAppender {
+            props,
+            _dimension: dimension,
+        })
     }
 }
 

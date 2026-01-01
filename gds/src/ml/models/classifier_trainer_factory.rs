@@ -1,11 +1,11 @@
 //! Classifier Trainer Factory - 1:1 translation of ClassifierTrainerFactory.java from Java GDS
 
 use crate::concurrency::Concurrency;
-use crate::core::utils::progress::ProgressTracker;
-use crate::ml::models::{ClassifierTrainer, TrainingMethod, base::TrainerConfigTrait};
 use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::ProgressTracker;
 use crate::ml::metrics::ModelSpecificMetricsHandler;
-use crate::ml::models::neural::{MLPClassifierTrainer, MLPClassifierTrainConfig};
+use crate::ml::models::neural::{MLPClassifierTrainConfig, MLPClassifierTrainer};
+use crate::ml::models::{base::TrainerConfigTrait, ClassifierTrainer, TrainingMethod};
 
 /// Factory for creating classifier trainers from configuration.
 /// 1:1 translation of ClassifierTrainerFactory.java from Java GDS.
@@ -45,7 +45,10 @@ impl ClassifierTrainerFactory {
                     concurrency.value(),
                 ))
             }
-            _ => panic!("No such training method for classifier: {:?}", config.method()),
+            _ => panic!(
+                "No such training method for classifier: {:?}",
+                config.method()
+            ),
         }
     }
 }

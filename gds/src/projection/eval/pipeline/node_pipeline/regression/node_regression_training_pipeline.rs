@@ -1,10 +1,11 @@
-use crate::projection::eval::pipeline::{
-    AutoTuningConfig, ExecutableNodePropertyStep, Pipeline, PipelineValidationError, TrainingMethod,
-    TrainingPipeline, TunableTrainerConfig,
-};
 use crate::projection::eval::pipeline::node_pipeline::{
-    node_feature_step::NodeFeatureStep, node_property_prediction_split_config::NodePropertyPredictionSplitConfig,
+    node_feature_step::NodeFeatureStep,
+    node_property_prediction_split_config::NodePropertyPredictionSplitConfig,
     node_property_training_pipeline::NodePropertyTrainingPipeline,
+};
+use crate::projection::eval::pipeline::{
+    AutoTuningConfig, ExecutableNodePropertyStep, Pipeline, PipelineValidationError,
+    TrainingMethod, TrainingPipeline, TunableTrainerConfig,
 };
 use crate::types::graph_store::DefaultGraphStore;
 use std::collections::HashMap;
@@ -98,7 +99,10 @@ impl std::fmt::Debug for NodeRegressionTrainingPipeline {
             .field("model_type", &self.model_type())
             .field("node_property_steps_count", &self.node_property_steps.len())
             .field("feature_steps_count", &self.feature_steps.len())
-            .field("training_parameter_space_size", &self.training_parameter_space.len())
+            .field(
+                "training_parameter_space_size",
+                &self.training_parameter_space.len(),
+            )
             .field("auto_tuning_config", &self.auto_tuning_config)
             .field("split_config", &self.split_config)
             .finish()
@@ -149,19 +153,38 @@ impl Pipeline for NodeRegressionTrainingPipeline {
         let mut map = HashMap::new();
 
         // Add pipeline metadata
-        map.insert("pipelineType".to_string(), serde_json::json!(self.pipeline_type()));
-        map.insert("modelType".to_string(), serde_json::json!(self.model_type()));
+        map.insert(
+            "pipelineType".to_string(),
+            serde_json::json!(self.pipeline_type()),
+        );
+        map.insert(
+            "modelType".to_string(),
+            serde_json::json!(self.model_type()),
+        );
 
         // Add feature pipeline description
-        let feature_pipeline = <Self as NodePropertyTrainingPipeline>::feature_pipeline_description(self);
-        map.insert("featurePipeline".to_string(), serde_json::json!(feature_pipeline));
+        let feature_pipeline =
+            <Self as NodePropertyTrainingPipeline>::feature_pipeline_description(self);
+        map.insert(
+            "featurePipeline".to_string(),
+            serde_json::json!(feature_pipeline),
+        );
 
         // Add training configuration
-        map.insert("trainingParameterSpace".to_string(), serde_json::json!(self.parameter_space_to_map()));
-        map.insert("autoTuningConfig".to_string(), serde_json::json!(self.auto_tuning_config().to_map()));
+        map.insert(
+            "trainingParameterSpace".to_string(),
+            serde_json::json!(self.parameter_space_to_map()),
+        );
+        map.insert(
+            "autoTuningConfig".to_string(),
+            serde_json::json!(self.auto_tuning_config().to_map()),
+        );
 
         // Add split configuration
-        map.insert("splitConfig".to_string(), serde_json::json!(self.split_config().to_map()));
+        map.insert(
+            "splitConfig".to_string(),
+            serde_json::json!(self.split_config().to_map()),
+        );
 
         map
     }
@@ -261,6 +284,9 @@ mod tests {
         // Should fail validation when no feature steps are present
         let result = pipeline.specific_validate_before_execution(graph_store);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("requires at least one feature step"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("requires at least one feature step"));
     }
 }

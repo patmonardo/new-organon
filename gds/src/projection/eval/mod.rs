@@ -24,8 +24,8 @@ pub mod storage_processor;
 pub mod compute_processor;
 
 // Procedure - Raising src/procedure infrastructure into consciousness
-pub mod procedure;
 pub mod pipeline;
+pub mod procedure;
 
 pub use compute_processor::*;
 pub use form::*;
@@ -33,5 +33,6 @@ pub use runner::*;
 pub use storage_processor::*;
 
 #[allow(ambiguous_glob_reexports)]
-pub use procedure::*;
 pub use pipeline::*;
+#[allow(ambiguous_glob_reexports)]
+pub use procedure::*;

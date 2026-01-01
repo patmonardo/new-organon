@@ -4,6 +4,10 @@
 //!
 //! This facade runs the translated Yen's runtime against a live `DefaultGraphStore`.
 
+use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::mem::MemoryRange;
+use crate::procedures::core::prelude::{PathFindingResult, PathResultBuilder};
+use crate::procedures::core::result_builders::ResultBuilder;
 use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::facades::traits::{PathResult, Result};
 use crate::procedures::yens::{YensComputationRuntime, YensStorageRuntime};
@@ -11,10 +15,6 @@ use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use crate::procedures::core::prelude::{PathResultBuilder, PathFindingResult};
-use crate::core::utils::progress::{ProgressTracker, Tasks};
-use crate::procedures::core::result_builders::ResultBuilder;
-use crate::mem::MemoryRange;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -249,9 +249,15 @@ impl YensBuilder {
 
         // Create execution metadata
         let mut additional = std::collections::HashMap::new();
-        additional.insert("computation_time_ms".to_string(), result.computation_time_ms.to_string());
+        additional.insert(
+            "computation_time_ms".to_string(),
+            result.computation_time_ms.to_string(),
+        );
         additional.insert("k".to_string(), self.k.to_string());
-        additional.insert("track_relationships".to_string(), self.track_relationships.to_string());
+        additional.insert(
+            "track_relationships".to_string(),
+            self.track_relationships.to_string(),
+        );
 
         let metadata = crate::procedures::core::result_builders::ExecutionMetadata {
             execution_time: start.elapsed(),
@@ -265,8 +271,11 @@ impl YensBuilder {
             .with_paths(paths)
             .with_metadata(metadata)
             .build()
-            .map_err(|e: crate::procedures::core::result_builders::ResultBuilderError|
-                crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
+            .map_err(
+                |e: crate::procedures::core::result_builders::ResultBuilderError| {
+                    crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
+                },
+            )?;
 
         Ok(path_result)
     }
@@ -284,7 +293,9 @@ impl YensBuilder {
 
     pub fn stats(self) -> Result<YensStats> {
         let result = self.compute()?;
-        let computation_time_ms = result.metadata.additional
+        let computation_time_ms = result
+            .metadata
+            .additional
             .get("computation_time_ms")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
@@ -324,22 +335,23 @@ impl YensBuilder {
     pub fn estimate_memory(&self) -> MemoryRange {
         let node_count = self.graph_store.node_count();
         let k = self.k;
-        
+
         // Priority queue for candidate paths (can grow large)
         let queue_memory = k * node_count * 16; // path + cost per candidate
-        
+
         // Path storage (storing k shortest paths)
         let path_storage_memory = k * node_count * 8; // worst case: full paths
-        
+
         // Distance arrays for each candidate path computation
         let distance_arrays_memory = k * node_count * 8;
-        
+
         // Graph structure overhead
         let avg_degree = 10.0;
         let relationship_count = (node_count as f64 * avg_degree) as usize;
         let graph_overhead = relationship_count * 16;
-        
-        let total_memory = queue_memory + path_storage_memory + distance_arrays_memory + graph_overhead;
+
+        let total_memory =
+            queue_memory + path_storage_memory + distance_arrays_memory + graph_overhead;
         let overhead = total_memory / 5;
         MemoryRange::of_range(total_memory, total_memory + overhead)
     }

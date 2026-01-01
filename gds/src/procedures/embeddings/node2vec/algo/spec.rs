@@ -148,7 +148,6 @@ pub enum EmbeddingInitializerConfig {
     Normalized,
 }
 
-
 impl Node2VecConfig {
     fn default_walks_per_node() -> usize {
         10

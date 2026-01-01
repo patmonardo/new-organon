@@ -4,7 +4,7 @@
 //! delegating to the facade layer for execution.
 
 use crate::procedures::facades::community::triangle_count::{
-    TriangleCountBuilder, TriangleCountRow,
+    TriangleCountFacade, TriangleCountRow,
 };
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
@@ -47,16 +47,16 @@ pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) ->
         }
     };
 
-    // Create builder
-    let mut builder = TriangleCountBuilder::new(graph_store).concurrency(concurrency);
+    // Create facade
+    let mut facade = TriangleCountFacade::new(graph_store).concurrency(concurrency);
 
     if let Some(max_deg) = max_degree {
-        builder = builder.max_degree(max_deg as u64);
+        facade = facade.max_degree(max_deg as u64);
     }
 
     // Execute based on mode
     match mode {
-        "stream" => match builder.stream() {
+        "stream" => match facade.stream() {
             Ok(rows_iter) => {
                 let rows: Vec<TriangleCountRow> = rows_iter.collect();
                 json!({
@@ -71,7 +71,7 @@ pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) ->
                 &format!("Triangle Count execution failed: {:?}", e),
             ),
         },
-        "stats" => match builder.stats() {
+        "stats" => match facade.stats() {
             Ok(stats) => json!({
                 "ok": true,
                 "op": op,
@@ -81,6 +81,42 @@ pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) ->
                 op,
                 "EXECUTION_ERROR",
                 &format!("Triangle Count stats failed: {:?}", e),
+            ),
+        },
+        "mutate" => match facade.mutate() {
+            Ok(result) => json!({
+                "ok": true,
+                "op": op,
+                "data": result
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Triangle Count mutate failed: {:?}", e),
+            ),
+        },
+        "write" => match facade.write() {
+            Ok(result) => json!({
+                "ok": true,
+                "op": op,
+                "data": result
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Triangle Count write failed: {:?}", e),
+            ),
+        },
+        "estimate_memory" => match facade.estimate_memory() {
+            Ok(range) => json!({
+                "ok": true,
+                "op": op,
+                "data": range
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Triangle Count memory estimation failed: {:?}", e),
             ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),

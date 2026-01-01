@@ -399,7 +399,8 @@ mod tests {
             .create_pages(size);
 
         // Spot check several indices across all concurrency levels
-        let page_size = PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<f32>());
+        let page_size =
+            PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<f32>());
         for idx in [0, 1000, 50000, 99999] {
             let expected = (idx as f32) * 0.5;
 
@@ -428,7 +429,8 @@ mod tests {
         assert!(!pages.is_empty());
 
         // Check specific values
-        let page_size = PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<f32>());
+        let page_size =
+            PageUtil::page_size_for(PageUtil::PAGE_SIZE_32KB, std::mem::size_of::<f32>());
         let page_5m = 5_000_000 / page_size;
         let index_5m = 5_000_000 % page_size;
         assert_eq!(pages[page_5m][index_5m], 5_000_000.0);

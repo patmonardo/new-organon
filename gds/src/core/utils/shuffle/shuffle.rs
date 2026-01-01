@@ -1,5 +1,5 @@
-use crate::collections::HugeLongArray;
 use super::random::SplittableRandom;
+use crate::collections::HugeLongArray;
 
 pub trait Random {
     fn next_int(&mut self, origin: i32, bound: i32) -> i32;

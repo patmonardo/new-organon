@@ -5,7 +5,6 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    use crate::procedures::facades::traits::StreamResults;
     use crate::procedures::facades::Graph;
     use crate::projection::RelationshipType;
     use crate::types::graph::{RelationshipTopology, SimpleIdMap};

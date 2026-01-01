@@ -1,4 +1,4 @@
-use crate::collections::{HugeIntArray, long_multiset::LongMultiSet};
+use crate::collections::{long_multiset::LongMultiSet, HugeIntArray};
 use crate::ml::core::subgraph::LocalIdMap;
 use crate::types::properties::node::NodePropertyValues;
 use std::collections::HashMap;
@@ -71,7 +71,8 @@ impl LabelsAndClassCountsExtractor {
         for node_id in 0..node_count {
             let class_id = target_node_property
                 .long_value(node_id as u64)
-                .expect("Failed to get long value for node property") as u64;
+                .expect("Failed to get long value for node property")
+                as u64;
             let mapped_id = local_id_map.to_mapped(class_id) as i32;
             labels.set(node_id as usize, mapped_id);
         }

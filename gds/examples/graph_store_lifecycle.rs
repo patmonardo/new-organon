@@ -22,7 +22,7 @@ mod enabled {
     use gds::mem::graph_store_memory_container::GraphStoreMemoryContainer;
     use gds::prelude::GraphStore;
     use gds::procedures::facades::centrality::pagerank::PageRankFacade;
-    use gds::procedures::facades::community::TriangleCountBuilder;
+    use gds::procedures::facades::community::TriangleCountFacade;
     use gds::projection::orientation::Orientation;
     use gds::projection::{NodeLabel, RelationshipType};
     use gds::types::graph::id_map::IdMap;
@@ -206,7 +206,7 @@ mod enabled {
                 .map(|row| format!("{}:{:.4}", row.node_id, row.score))
                 .collect::<Vec<_>>()
         );
-        let triangle_stats = TriangleCountBuilder::new(projected_arc.clone())
+        let triangle_stats = TriangleCountFacade::new(projected_arc.clone())
             .concurrency(2)
             .stats()?;
         println!(

@@ -4,9 +4,11 @@
 
 use crate::collections::HugeDoubleArray;
 use crate::concurrency::Concurrency;
-use crate::core::utils::progress::ProgressTracker;
 use crate::concurrency::TerminationFlag;
-use crate::ml::decision_tree::{DecisionTreeRegressorTrainer, DecisionTreeTrainer, DecisionTreeTrainerConfig, FeatureBagger};
+use crate::core::utils::progress::ProgressTracker;
+use crate::ml::decision_tree::{
+    DecisionTreeRegressorTrainer, DecisionTreeTrainer, DecisionTreeTrainerConfig, FeatureBagger,
+};
 use crate::ml::models::trees::{
     DatasetBootstrapper, RandomForestRegressor, RandomForestRegressorData,
     RandomForestRegressorTrainerConfig,
@@ -14,7 +16,6 @@ use crate::ml::models::trees::{
 use crate::ml::models::{Features, Regressor, RegressorTrainer};
 use rand::SeedableRng;
 use std::sync::Arc;
-
 
 /// Random Forest Regressor Trainer.
 /// 1:1 translation of RandomForestRegressorTrainer.java from Java GDS.
@@ -85,9 +86,13 @@ impl RandomForestRegressorTrainer {
 
             // Create feature bagger
             let feature_bagger = FeatureBagger::new(
-                self.random_seed.map(|s| s + tree_idx as u64).unwrap_or(tree_idx as u64),
+                self.random_seed
+                    .map(|s| s + tree_idx as u64)
+                    .unwrap_or(tree_idx as u64),
                 features.feature_dimension(),
-                self.config.forest.max_features_ratio(features.feature_dimension()),
+                self.config
+                    .forest
+                    .max_features_ratio(features.feature_dimension()),
             );
 
             // Create and train decision tree
@@ -98,8 +103,15 @@ impl RandomForestRegressorTrainer {
                 feature_bagger,
             );
 
-            let tree = tree_trainer.train(&bootstrap_sample.iter().map(|&x| x as i64).collect::<Vec<_>>());
-            decision_trees.push(Box::new(tree) as Box<dyn crate::ml::models::trees::DecisionTreePredictor<f64>>);
+            let tree = tree_trainer.train(
+                &bootstrap_sample
+                    .iter()
+                    .map(|&x| x as i64)
+                    .collect::<Vec<_>>(),
+            );
+            decision_trees.push(
+                Box::new(tree) as Box<dyn crate::ml::models::trees::DecisionTreePredictor<f64>>
+            );
         }
 
         RandomForestRegressorData {

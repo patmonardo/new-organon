@@ -3,7 +3,7 @@
 //! Handles JSON requests for SCC computation operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::scc::{SccBuilder, SccRow};
+use crate::procedures::facades::community::scc::{SccFacade, SccRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -40,12 +40,12 @@ pub fn handle_scc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         }
     };
 
-    // Create builder
-    let builder = SccBuilder::new(graph_store).concurrency(concurrency);
+    // Create facade
+    let facade = SccFacade::new(graph_store).concurrency(concurrency);
 
     // Execute based on mode
     match mode {
-        "stream" => match builder.stream() {
+        "stream" => match facade.stream() {
             Ok(rows_iter) => {
                 let rows: Vec<SccRow> = rows_iter.collect();
                 json!({
@@ -60,13 +60,45 @@ pub fn handle_scc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 &format!("SCC execution failed: {:?}", e),
             ),
         },
-        "stats" => match builder.stats() {
+        "stats" => match facade.stats() {
             Ok(stats) => json!({
                 "ok": true,
                 "op": op,
                 "data": stats
             }),
             Err(e) => err(op, "EXECUTION_ERROR", &format!("SCC stats failed: {:?}", e)),
+        },
+        "mutate" => match facade.mutate() {
+            Ok(result) => json!({
+                "ok": true,
+                "op": op,
+                "data": result
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("SCC mutate failed: {:?}", e),
+            ),
+        },
+        "write" => match facade.write() {
+            Ok(result) => json!({
+                "ok": true,
+                "op": op,
+                "data": result
+            }),
+            Err(e) => err(op, "EXECUTION_ERROR", &format!("SCC write failed: {:?}", e)),
+        },
+        "estimate_memory" => match facade.estimate_memory() {
+            Ok(range) => json!({
+                "ok": true,
+                "op": op,
+                "data": range
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("SCC memory estimation failed: {:?}", e),
+            ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

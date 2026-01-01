@@ -24,9 +24,9 @@ impl AdamOptimizer {
     /// Calculate memory size in bytes for given dimensions
     pub fn size_in_bytes(rows: usize, cols: usize) -> usize {
         let term_size = rows * cols * std::mem::size_of::<f64>();
-        std::mem::size_of::<Self>() + 
-            2 * term_size + // fields
-            2 * term_size // working memory: mCap, vCap
+        std::mem::size_of::<Self>()
+            + 2 * term_size // fields
+            + 2 * term_size // working memory: mCap, vCap
     }
 
     /// Create a new Adam optimizer

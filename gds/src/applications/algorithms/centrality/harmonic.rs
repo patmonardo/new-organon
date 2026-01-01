@@ -29,6 +29,11 @@ pub fn handle_harmonic(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
         .and_then(|v| v.as_str())
         .unwrap_or("both");
 
+    let concurrency = request
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(1) as usize;
+
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
@@ -42,7 +47,9 @@ pub fn handle_harmonic(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
     };
 
     // Create facade
-    let facade = HarmonicCentralityFacade::new(graph_store).direction(direction);
+    let facade = HarmonicCentralityFacade::new(graph_store)
+        .direction(direction)
+        .concurrency(concurrency);
 
     // Execute based on mode
     match mode {
@@ -72,6 +79,52 @@ pub fn handle_harmonic(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
                 "EXECUTION_ERROR",
                 &format!("Harmonic stats failed: {:?}", e),
             ),
+        },
+        "mutate" => {
+            let property_name = request
+                .get("mutateProperty")
+                .and_then(|v| v.as_str())
+                .unwrap_or("harmonic");
+            match facade.mutate(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Harmonic mutate failed: {:?}", e),
+                ),
+            }
+        }
+        "write" => {
+            let property_name = request
+                .get("writeProperty")
+                .and_then(|v| v.as_str())
+                .unwrap_or("harmonic");
+            match facade.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Harmonic write failed: {:?}", e),
+                ),
+            }
+        }
+        "estimate_memory" => match facade.estimate_memory() {
+            memory => json!({
+                "ok": true,
+                "op": op,
+                "data": {
+                    "min": memory.min(),
+                    "max": memory.max()
+                }
+            }),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

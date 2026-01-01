@@ -63,7 +63,9 @@ pub struct LocalOperationsProcedureFacade {
 
 impl LocalOperationsProcedureFacade {
     pub fn new(applications_facade: Arc<ApplicationsFacade>) -> Self {
-        Self { _applications_facade: applications_facade }
+        Self {
+            _applications_facade: applications_facade,
+        }
     }
 }
 
@@ -88,7 +90,9 @@ impl OperationsProcedureFacade for LocalOperationsProcedureFacade {
 
     fn reset_adjacency_packing_strategy(&self) -> Vec<FeatureStringValue> {
         // Placeholder
-        vec![FeatureStringValue { value: "default".to_string() }]
+        vec![FeatureStringValue {
+            value: "default".to_string(),
+        }]
     }
 
     fn reset_enable_adjacency_compression_memory_tracking(&self) -> Vec<FeatureState> {

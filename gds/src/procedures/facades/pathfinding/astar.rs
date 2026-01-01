@@ -37,6 +37,7 @@
 //!     .unwrap();
 //! ```
 
+use crate::mem::MemoryRange;
 use crate::procedures::astar::{AStarComputationRuntime, AStarStorageRuntime};
 use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::facades::traits::Result;
@@ -45,7 +46,6 @@ use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph_store::GraphStore;
 use crate::types::prelude::DefaultGraphStore;
-use crate::mem::MemoryRange;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -343,9 +343,11 @@ impl AStarBuilder {
         self.validate()?;
 
         // Set up progress tracking
-        let _task_registry_factory = self.task_registry_factory
+        let _task_registry_factory = self
+            .task_registry_factory
             .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
-        let _user_log_registry_factory = self.user_log_registry_factory
+        let _user_log_registry_factory = self
+            .user_log_registry_factory
             .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
 
         // Create progress tracker for A* execution
@@ -450,14 +452,24 @@ impl AStarBuilder {
             additional: std::collections::HashMap::from([
                 ("nodes_visited".to_string(), nodes_visited_total.to_string()),
                 ("targets_found".to_string(), targets_found.to_string()),
-                ("all_targets_reached".to_string(), all_targets_reached.to_string()),
-                ("heuristic_accuracy".to_string(), match self.heuristic {
-                    Heuristic::Manhattan => "1.2",
-                    Heuristic::Euclidean => "1.0",
-                    Heuristic::Haversine => "1.0",
-                    Heuristic::Custom(_) => "1.1",
-                }.to_string()),
-                ("heuristic_evaluations".to_string(), nodes_visited_total.to_string()),
+                (
+                    "all_targets_reached".to_string(),
+                    all_targets_reached.to_string(),
+                ),
+                (
+                    "heuristic_accuracy".to_string(),
+                    match self.heuristic {
+                        Heuristic::Manhattan => "1.2",
+                        Heuristic::Euclidean => "1.0",
+                        Heuristic::Haversine => "1.0",
+                        Heuristic::Custom(_) => "1.1",
+                    }
+                    .to_string(),
+                ),
+                (
+                    "heuristic_evaluations".to_string(),
+                    nodes_visited_total.to_string(),
+                ),
             ]),
         };
 
@@ -466,7 +478,9 @@ impl AStarBuilder {
             .with_paths(paths)
             .with_metadata(metadata)
             .build()
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
+            })?;
 
         Ok(path_result)
     }
@@ -507,23 +521,33 @@ impl AStarBuilder {
     /// ```
     pub fn stats(self) -> Result<AStarStats> {
         let result = self.compute()?;
-        let nodes_visited = result.metadata.additional
+        let nodes_visited = result
+            .metadata
+            .additional
             .get("nodes_visited")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
-        let targets_found = result.metadata.additional
+        let targets_found = result
+            .metadata
+            .additional
             .get("targets_found")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
-        let all_targets_reached = result.metadata.additional
+        let all_targets_reached = result
+            .metadata
+            .additional
             .get("all_targets_reached")
             .and_then(|s| s.parse().ok())
             .unwrap_or(false);
-        let heuristic_accuracy = result.metadata.additional
+        let heuristic_accuracy = result
+            .metadata
+            .additional
             .get("heuristic_accuracy")
             .and_then(|s| s.parse().ok())
             .unwrap_or(1.0);
-        let heuristic_evaluations = result.metadata.additional
+        let heuristic_evaluations = result
+            .metadata
+            .additional
             .get("heuristic_evaluations")
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
@@ -614,11 +638,12 @@ impl AStarBuilder {
         let path_tracking_memory = node_count * 8;
 
         // Heuristic computation overhead (coordinate storage if using lat/lng)
-        let heuristic_overhead = if matches!(self.heuristic, Heuristic::Haversine | Heuristic::Euclidean) {
-            node_count * 16 // lat + lng per node
-        } else {
-            0
-        };
+        let heuristic_overhead =
+            if matches!(self.heuristic, Heuristic::Haversine | Heuristic::Euclidean) {
+                node_count * 16 // lat + lng per node
+            } else {
+                0
+            };
 
         // Graph structure overhead (adjacency lists, etc.)
         let avg_degree = 10.0; // Conservative estimate

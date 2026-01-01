@@ -2,8 +2,8 @@
 //!
 //! Translated from `MLPClassifierTrainConfig.java` from Java GDS.
 
-use crate::ml::models::TrainingMethod;
 use crate::ml::models::base::TrainerConfigTrait;
+use crate::ml::models::TrainingMethod;
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 

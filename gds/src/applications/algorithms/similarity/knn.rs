@@ -65,9 +65,7 @@ pub fn handle_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         .and_then(|v| v.as_u64())
         .map(|d| d as usize);
 
-    let random_seed = request
-        .get("randomSeed")
-        .and_then(|v| v.as_u64());
+    let random_seed = request.get("randomSeed").and_then(|v| v.as_u64());
 
     let concurrency = request
         .get("concurrency")

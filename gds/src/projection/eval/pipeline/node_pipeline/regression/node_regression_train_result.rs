@@ -1,7 +1,7 @@
+use super::node_regression_pipeline_model_info::NodeRegressionPipelineModelInfo;
+use super::NodeRegressionPipelineTrainConfig;
 use crate::ml::models::base::{Regressor, RegressorData};
 use crate::ml::training::statistics::TrainingStatistics;
-use super::NodeRegressionPipelineTrainConfig;
-use super::node_regression_pipeline_model_info::NodeRegressionPipelineModelInfo;
 
 // Placeholder types until model catalog is implemented
 pub type CatalogModelContainer = ();
@@ -99,9 +99,9 @@ impl NodeRegressionTrainPipelineResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::projection::eval::pipeline::node_pipeline::NodePropertyPipelineBaseTrainConfig;
-    use crate::ml::models::base::{BaseModelData, RegressorData, Regressor};
+    use crate::ml::models::base::{BaseModelData, Regressor, RegressorData};
     use crate::ml::models::training_method::TrainingMethod;
+    use crate::projection::eval::pipeline::node_pipeline::NodePropertyPipelineBaseTrainConfig;
     use std::any::Any;
     use std::collections::HashMap;
 
@@ -169,7 +169,10 @@ mod tests {
             training_stats,
         );
 
-        assert!(std::ptr::eq(result.regressor_data().as_any(), &TestRegressorData as &dyn Any));
+        assert!(std::ptr::eq(
+            result.regressor_data().as_any(),
+            &TestRegressorData as &dyn Any
+        ));
     }
 
     #[test]

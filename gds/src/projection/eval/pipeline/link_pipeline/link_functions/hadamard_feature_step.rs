@@ -47,7 +47,8 @@ impl HadamardFeatureStep {
 impl LinkFeatureStep for HadamardFeatureStep {
     fn link_feature_appender(&self, graph: &dyn Graph) -> Box<dyn LinkFeatureAppender> {
         let factory = HadamardLinkFeatureAppenderFactory;
-        let appenders = factory.create_appenders(graph, &self.node_properties)
+        let appenders = factory
+            .create_appenders(graph, &self.node_properties)
             .expect("Failed to create Hadamard appenders");
         Box::new(UnionLinkFeatureAppender::new(
             appenders,
@@ -125,7 +126,10 @@ impl AbstractLinkFeatureAppenderFactory for HadamardLinkFeatureAppenderFactory {
         props: Arc<dyn NodePropertyValues>,
         dimension: usize,
     ) -> Box<dyn LinkFeatureAppender> {
-        Box::new(HadamardLongAppender { props, _dimension: dimension })
+        Box::new(HadamardLongAppender {
+            props,
+            _dimension: dimension,
+        })
     }
 
     fn double_appender(
@@ -133,7 +137,10 @@ impl AbstractLinkFeatureAppenderFactory for HadamardLinkFeatureAppenderFactory {
         props: Arc<dyn NodePropertyValues>,
         dimension: usize,
     ) -> Box<dyn LinkFeatureAppender> {
-        Box::new(HadamardDoubleAppender { props, _dimension: dimension })
+        Box::new(HadamardDoubleAppender {
+            props,
+            _dimension: dimension,
+        })
     }
 }
 

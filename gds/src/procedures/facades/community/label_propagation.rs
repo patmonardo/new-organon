@@ -8,7 +8,9 @@
 //! - `node_weight_property`: optional node weight property (defaults to 1.0).
 //! - `seed_property`: optional seed labels property.
 
-use crate::procedures::facades::builder_base::ConfigValidator;
+use crate::core::utils::progress::TaskRegistry;
+use crate::mem::MemoryRange;
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::facades::traits::Result;
 use crate::procedures::label_propagation::{LabelPropComputationRuntime, LabelPropResult};
 use crate::projection::orientation::Orientation;
@@ -35,24 +37,26 @@ pub struct LabelPropagationStats {
     pub execution_time_ms: u64,
 }
 
-/// Label Propagation algorithm builder.
+/// Label Propagation algorithm facade.
 #[derive(Clone)]
-pub struct LabelPropagationBuilder {
+pub struct LabelPropagationFacade {
     graph_store: Arc<DefaultGraphStore>,
     concurrency: usize,
     max_iterations: u64,
     node_weight_property: Option<String>,
     seed_property: Option<String>,
+    task_registry: Option<TaskRegistry>,
 }
 
-impl LabelPropagationBuilder {
+impl LabelPropagationFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            concurrency: num_cpus::get().max(1),
+            concurrency: 4,
             max_iterations: 10,
             node_weight_property: None,
             seed_property: None,
+            task_registry: None,
         }
     }
 
@@ -73,6 +77,11 @@ impl LabelPropagationBuilder {
 
     pub fn seed_property(mut self, property: &str) -> Self {
         self.seed_property = Some(property.to_string());
+        self
+    }
+
+    pub fn task_registry(mut self, task_registry: TaskRegistry) -> Self {
+        self.task_registry = Some(task_registry);
         self
     }
 
@@ -211,6 +220,32 @@ impl LabelPropagationBuilder {
             community_count,
             execution_time_ms: elapsed_ms,
         })
+    }
+
+    /// Mutate mode: writes labels back to the graph store.
+    pub fn mutate(self) -> Result<MutationResult> {
+        // TODO: implement mutation logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "mutate not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Write mode: writes labels to a new graph.
+    pub fn write(self) -> Result<WriteResult> {
+        // TODO: implement write logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "write not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Estimate memory usage.
+    pub fn estimate_memory(&self) -> Result<MemoryRange> {
+        // TODO: implement memory estimation
+        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
     }
 
     /// Full result: returns the procedure-level Label Propagation result.

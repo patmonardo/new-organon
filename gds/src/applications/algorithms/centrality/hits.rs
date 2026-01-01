@@ -3,7 +3,7 @@
 //! Handles JSON requests for HITS (Hyperlink-Induced Topic Search) operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::centrality::hits::HitsBuilder;
+use crate::procedures::facades::centrality::hits::HitsCentralityFacade;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -50,33 +50,86 @@ pub fn handle_hits(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         }
     };
 
-    // Create builder
-    let builder = HitsBuilder::new(graph_store)
+    // Create facade
+    let facade = HitsCentralityFacade::new(graph_store)
         .max_iterations(max_iterations)
         .tolerance(tolerance)
         .concurrency(concurrency);
 
     // Execute based on mode
     match mode {
-        "stream" => match builder.stream() {
-            Ok(rows) => json!({
-                "ok": true,
-                "op": op,
-                "data": rows
-            }),
+        "stream" => match facade.stream() {
+            Ok(rows_iter) => {
+                let rows: Vec<_> = rows_iter.collect();
+                json!({
+                    "ok": true,
+                    "op": op,
+                    "data": rows
+                })
+            }
             Err(e) => err(
                 op,
                 "EXECUTION_ERROR",
-                &format!("HITS execution failed: {}", e),
+                &format!("HITS execution failed: {:?}", e),
             ),
         },
-        "stats" => match builder.stats() {
+        "stats" => match facade.stats() {
             Ok(stats) => json!({
                 "ok": true,
                 "op": op,
                 "data": stats
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("HITS stats failed: {}", e)),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("HITS stats failed: {:?}", e),
+            ),
+        },
+        "mutate" => {
+            let property_name = request
+                .get("mutateProperty")
+                .and_then(|v| v.as_str())
+                .unwrap_or("hits_hub");
+            match facade.mutate(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("HITS mutate failed: {:?}", e),
+                ),
+            }
+        }
+        "write" => {
+            let property_name = request
+                .get("writeProperty")
+                .and_then(|v| v.as_str())
+                .unwrap_or("hits_hub");
+            match facade.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("HITS write failed: {:?}", e),
+                ),
+            }
+        }
+        "estimate_memory" => match facade.estimate_memory() {
+            memory => json!({
+                "ok": true,
+                "op": op,
+                "data": {
+                    "min": memory.min(),
+                    "max": memory.max()
+                }
+            }),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

@@ -3,9 +3,7 @@
 //! Handles JSON requests for Cost-Effective Lazy Forward influence maximization operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::celf::spec::CELFConfig;
 use crate::procedures::facades::centrality::celf::{CELFFacade, CELFRow};
-use crate::procedures::facades::traits::{StatsResults, StreamResults};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -69,16 +67,13 @@ pub fn handle_celf(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     };
 
     // Create facade with configuration
-    let config = CELFConfig {
-        seed_set_size,
-        monte_carlo_simulations,
-        propagation_probability,
-        batch_size,
-        random_seed,
-        concurrency,
-    };
-
-    let facade = CELFFacade::new(graph_store).with_config(config);
+    let facade = CELFFacade::new(graph_store)
+        .seed_set_size(seed_set_size)
+        .monte_carlo_simulations(monte_carlo_simulations)
+        .propagation_probability(propagation_probability)
+        .batch_size(batch_size)
+        .random_seed(random_seed)
+        .concurrency(concurrency);
 
     // Execute based on mode
     match mode {
@@ -109,7 +104,70 @@ pub fn handle_celf(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 &format!("CELF stats failed: {:?}", e),
             ),
         },
-        _ => err(op, "INVALID_REQUEST", "Invalid mode"),
+        "mutate" => {
+            let property_name = match request.get("mutateProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+            match facade.mutate(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("CELF mutate failed: {:?}", e),
+                ),
+            }
+        }
+        "write" => {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+            match facade.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("CELF write failed: {:?}", e),
+                ),
+            }
+        }
+        "estimate_memory" => {
+            let memory = facade.estimate_memory();
+            json!({
+                "ok": true,
+                "op": op,
+                "data": {
+                    "min_bytes": memory.min(),
+                    "max_bytes": memory.max()
+                }
+            })
+        }
+        _ => err(
+            op,
+            "INVALID_REQUEST",
+            "Invalid mode. Use 'stream', 'stats', 'mutate', 'write', or 'estimate_memory'",
+        ),
     }
 }
 

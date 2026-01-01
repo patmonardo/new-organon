@@ -3,7 +3,7 @@
 //! Handles JSON requests for K1Coloring operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::k1coloring::{K1ColoringBuilder, K1ColoringRow};
+use crate::procedures::facades::community::k1coloring::{K1ColoringFacade, K1ColoringRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -40,12 +40,12 @@ pub fn handle_k1coloring(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
         }
     };
 
-    // Create builder
-    let builder = K1ColoringBuilder::new(graph_store).concurrency(concurrency);
+    // Create facade
+    let facade = K1ColoringFacade::new(graph_store).concurrency(concurrency);
 
     // Execute based on mode
     match mode {
-        "stream" => match builder.stream() {
+        "stream" => match facade.stream() {
             Ok(rows_iter) => {
                 let rows: Vec<K1ColoringRow> = rows_iter.collect();
                 json!({
@@ -60,7 +60,7 @@ pub fn handle_k1coloring(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
                 &format!("K1Coloring execution failed: {:?}", e),
             ),
         },
-        "stats" => match builder.stats() {
+        "stats" => match facade.stats() {
             Ok(stats) => json!({
                 "ok": true,
                 "op": op,
@@ -70,6 +70,42 @@ pub fn handle_k1coloring(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
                 op,
                 "EXECUTION_ERROR",
                 &format!("K1Coloring stats failed: {:?}", e),
+            ),
+        },
+        "mutate" => match facade.mutate() {
+            Ok(result) => json!({
+                "ok": true,
+                "op": op,
+                "data": result
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("K1Coloring mutate failed: {:?}", e),
+            ),
+        },
+        "write" => match facade.write() {
+            Ok(result) => json!({
+                "ok": true,
+                "op": op,
+                "data": result
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("K1Coloring write failed: {:?}", e),
+            ),
+        },
+        "estimate_memory" => match facade.estimate_memory() {
+            Ok(range) => json!({
+                "ok": true,
+                "op": op,
+                "data": range
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("K1Coloring memory estimation failed: {:?}", e),
             ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),

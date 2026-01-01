@@ -1,3 +1,4 @@
+use crate::collections::PageUtil;
 /// A sparse array of i64 vectors supporting >2 billion elements with memory-efficient storage.
 ///
 /// This array stores `Vec<i64>` as elements, only allocating pages where vectors actually exist.
@@ -41,7 +42,6 @@
 /// ```
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use crate::collections::PageUtil;
 
 /// Number of elements in a single page (derived from PageUtil PAGE_SIZE_32KB)
 const PAGE_SIZE: usize = PageUtil::PAGE_SIZE_32KB;
@@ -253,9 +253,9 @@ mod tests {
         let array = builder.build();
 
         assert_eq!(array.get(0), &vec![1, 2, 3]);
-            // Test around page boundary (PAGE_SIZE elements per page)
-            builder.set(PAGE_SIZE - 1, vec![1]); // Last element of page 0
-            builder.set(PAGE_SIZE, vec![2]); // First element of page 1
+        // Test around page boundary (PAGE_SIZE elements per page)
+        builder.set(PAGE_SIZE - 1, vec![1]); // Last element of page 0
+        builder.set(PAGE_SIZE, vec![2]); // First element of page 1
         assert_eq!(array.get(100), &vec![10, 20]);
         assert_eq!(array.get(1000), &vec![100]);
         assert_eq!(array.get(50), &Vec::<i64>::new()); // Default value

@@ -3,8 +3,11 @@
 //! Evaluates community quality by measuring the proportion of edges
 //! that cross community boundaries.
 
+use crate::core::utils::progress::TaskRegistry;
+use crate::mem::MemoryRange;
 use crate::procedures::conductance::computation::ConductanceComputationRuntime;
 use crate::procedures::conductance::spec::ConductanceConfig;
+use crate::procedures::facades::builder_base::{MutationResult, WriteResult};
 use crate::procedures::facades::traits::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
@@ -31,25 +34,32 @@ pub struct ConductanceStats {
     pub average_conductance: f64,
 }
 
-/// Conductance algorithm builder
+/// Conductance algorithm facade
 #[derive(Clone)]
-pub struct ConductanceBuilder {
+pub struct ConductanceFacade {
     graph_store: Arc<DefaultGraphStore>,
     community_property: String,
     has_relationship_weight_property: bool,
+    task_registry: Option<TaskRegistry>,
 }
 
-impl ConductanceBuilder {
+impl ConductanceFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>, community_property: String) -> Self {
         Self {
             graph_store,
             community_property,
             has_relationship_weight_property: false,
+            task_registry: None,
         }
     }
 
     pub fn relationship_weight_property(mut self, use_weights: bool) -> Self {
         self.has_relationship_weight_property = use_weights;
+        self
+    }
+
+    pub fn task_registry(mut self, task_registry: TaskRegistry) -> Self {
+        self.task_registry = Some(task_registry);
         self
     }
 
@@ -165,6 +175,32 @@ impl ConductanceBuilder {
             average_conductance: avg,
         })
     }
+
+    /// Mutate mode: writes conductance scores back to the graph store.
+    pub fn mutate(self) -> Result<MutationResult> {
+        // TODO: implement mutation logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "mutate not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Write mode: writes conductance scores to a new graph.
+    pub fn write(self) -> Result<WriteResult> {
+        // TODO: implement write logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "write not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Estimate memory usage.
+    pub fn estimate_memory(&self) -> Result<MemoryRange> {
+        // TODO: implement memory estimation
+        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
+    }
 }
 
 #[cfg(test)]
@@ -179,8 +215,8 @@ mod tests {
         // Test that builder methods exist and are chainable
         // (Cannot test actual execution without a real graph store)
         assert_eq!(
-            std::mem::size_of::<ConductanceBuilder>(),
-            std::mem::size_of::<ConductanceBuilder>()
+            std::mem::size_of::<ConductanceFacade>(),
+            std::mem::size_of::<ConductanceFacade>()
         );
     }
 }

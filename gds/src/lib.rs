@@ -1,7 +1,8 @@
 //! Rust GDS - Graph Data Science library
 //!
 //! A modular graph data structure and algorithms library.
-#![allow(ambiguous_wide_pointer_comparisons)]#![allow(clippy::all)]
+#![allow(ambiguous_wide_pointer_comparisons)]
+#![allow(clippy::all)]
 // Real algorithm implementations are in procedures/ module
 // (Previously had speculative stubs here - all moved to procedures/)
 

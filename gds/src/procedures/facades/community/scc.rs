@@ -8,8 +8,9 @@
 //! - `concurrency`: accepted for Java GDS alignment; currently unused.
 
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::{ProgressTracker, Tasks};
-use crate::procedures::facades::builder_base::ConfigValidator;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
+use crate::mem::MemoryRange;
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::facades::traits::Result;
 use crate::procedures::scc::{SccComputationRuntime, SccResult, SccStorageRuntime};
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -29,23 +30,30 @@ pub struct SccStats {
     pub execution_time_ms: u64,
 }
 
-/// SCC algorithm builder.
+/// SCC algorithm facade.
 #[derive(Clone)]
-pub struct SccBuilder {
+pub struct SccFacade {
     graph_store: Arc<DefaultGraphStore>,
     concurrency: usize,
+    task_registry: Option<TaskRegistry>,
 }
 
-impl SccBuilder {
+impl SccFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            concurrency: num_cpus::get().max(1),
+            concurrency: 4,
+            task_registry: None,
         }
     }
 
     pub fn concurrency(mut self, concurrency: usize) -> Self {
         self.concurrency = concurrency;
+        self
+    }
+
+    pub fn task_registry(mut self, task_registry: TaskRegistry) -> Self {
+        self.task_registry = Some(task_registry);
         self
     }
 
@@ -103,6 +111,32 @@ impl SccBuilder {
             component_count: result.component_count,
             execution_time_ms: result.computation_time_ms,
         })
+    }
+
+    /// Mutate mode: writes component assignments back to the graph store.
+    pub fn mutate(self) -> Result<MutationResult> {
+        // TODO: implement mutation logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "mutate not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Write mode: writes component assignments to a new graph.
+    pub fn write(self) -> Result<WriteResult> {
+        // TODO: implement write logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "write not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Estimate memory usage.
+    pub fn estimate_memory(&self) -> Result<MemoryRange> {
+        // TODO: implement memory estimation
+        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
     }
 
     /// Full result: returns the procedure-level SCC result.

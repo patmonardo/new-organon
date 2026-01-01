@@ -10,14 +10,14 @@ use super::pathfinding::{
 
 use super::centrality::{
     ArticulationPointsFacade, BetweennessCentralityFacade, BridgesFacade, CELFFacade,
-    ClosenessCentralityFacade, DegreeCentralityFacade, HarmonicCentralityFacade, HitsBuilder,
-    PageRankFacade,
+    ClosenessCentralityFacade, DegreeCentralityFacade, HarmonicCentralityFacade,
+    HitsCentralityFacade, PageRankFacade,
 };
 
 use super::community::{
-    ApproxMaxKCutBuilder, ConductanceBuilder, K1ColoringBuilder, KCoreBuilder, KMeansBuilder,
-    LabelPropagationBuilder, LocalClusteringCoefficientBuilder, LouvainBuilder, ModularityBuilder,
-    SccBuilder, TriangleCountBuilder, WccBuilder,
+    ApproxMaxKCutFacade, ConductanceFacade, K1ColoringFacade, KCoreFacade, KMeansFacade,
+    LabelPropagationFacade, LocalClusteringCoefficientFacade, LouvainFacade, ModularityFacade,
+    SccFacade, TriangleCountFacade, WccFacade,
 };
 
 use super::embeddings::{
@@ -164,8 +164,8 @@ impl Graph {
     /// HITS (bidirectional authority/hub scoring).
     ///
     /// Implemented using bidirectional Pregel: authority from incoming neighbors, hubs from outgoing.
-    pub fn hits(&self) -> HitsBuilder {
-        HitsBuilder::new(Arc::clone(&self.store))
+    pub fn hits(&self) -> HitsCentralityFacade {
+        HitsCentralityFacade::new(Arc::clone(&self.store))
     }
 
     /// Articulation Points (cut vertices) for undirected connectivity.
@@ -189,62 +189,62 @@ impl Graph {
     }
 
     /// Triangle Count (per-node triangles + global triangle count).
-    pub fn triangle_count(&self) -> TriangleCountBuilder {
-        TriangleCountBuilder::new(Arc::clone(&self.store))
+    pub fn triangle_count(&self) -> TriangleCountFacade {
+        TriangleCountFacade::new(Arc::clone(&self.store))
     }
 
     /// Local Clustering Coefficient (per-node coefficient + average).
-    pub fn local_clustering_coefficient(&self) -> LocalClusteringCoefficientBuilder {
-        LocalClusteringCoefficientBuilder::new(Arc::clone(&self.store))
+    pub fn local_clustering_coefficient(&self) -> LocalClusteringCoefficientFacade {
+        LocalClusteringCoefficientFacade::new(Arc::clone(&self.store))
     }
 
     /// Strongly Connected Components (directed graph SCCs).
-    pub fn scc(&self) -> SccBuilder {
-        SccBuilder::new(Arc::clone(&self.store))
+    pub fn scc(&self) -> SccFacade {
+        SccFacade::new(Arc::clone(&self.store))
     }
 
     /// Label Propagation (community detection via label voting).
-    pub fn label_propagation(&self) -> LabelPropagationBuilder {
-        LabelPropagationBuilder::new(Arc::clone(&self.store))
+    pub fn label_propagation(&self) -> LabelPropagationFacade {
+        LabelPropagationFacade::new(Arc::clone(&self.store))
     }
 
     /// Weakly Connected Components (undirected connectivity).
-    pub fn wcc(&self) -> WccBuilder {
-        WccBuilder::new(Arc::clone(&self.store))
+    pub fn wcc(&self) -> WccFacade {
+        WccFacade::new(Arc::clone(&self.store))
     }
 
     /// Louvain community detection (modularity optimization).
-    pub fn louvain(&self) -> LouvainBuilder {
-        LouvainBuilder::new(Arc::clone(&self.store))
+    pub fn louvain(&self) -> LouvainFacade {
+        LouvainFacade::new(Arc::clone(&self.store))
     }
 
     /// K-Means clustering (community detection on feature vectors).
-    pub fn kmeans(&self) -> KMeansBuilder {
-        KMeansBuilder::new(Arc::clone(&self.store))
+    pub fn kmeans(&self) -> KMeansFacade {
+        KMeansFacade::new(Arc::clone(&self.store))
     }
 
     /// K1-Coloring (greedy graph coloring).
-    pub fn k1coloring(&self) -> K1ColoringBuilder {
-        K1ColoringBuilder::new(Arc::clone(&self.store))
+    pub fn k1coloring(&self) -> K1ColoringFacade {
+        K1ColoringFacade::new(Arc::clone(&self.store))
     }
 
     /// K-Core Decomposition (core values).
-    pub fn kcore(&self) -> KCoreBuilder {
-        KCoreBuilder::new(Arc::clone(&self.store))
+    pub fn kcore(&self) -> KCoreFacade {
+        KCoreFacade::new(Arc::clone(&self.store))
     }
 
     /// Conductance community quality metric.
-    pub fn conductance(&self, community_property: String) -> ConductanceBuilder {
-        ConductanceBuilder::new(Arc::clone(&self.store), community_property)
+    pub fn conductance(&self, community_property: String) -> ConductanceFacade {
+        ConductanceFacade::new(Arc::clone(&self.store), community_property)
     }
 
     /// Approximate maximum k-cut partitioning.
-    pub fn approx_max_k_cut(&self) -> ApproxMaxKCutBuilder {
-        ApproxMaxKCutBuilder::new(Arc::clone(&self.store))
+    pub fn approx_max_k_cut(&self) -> ApproxMaxKCutFacade {
+        ApproxMaxKCutFacade::new(Arc::clone(&self.store))
     }
 
     /// Modularity community quality metric.
-    pub fn modularity(&self, community_property: String) -> ModularityBuilder {
-        ModularityBuilder::new(Arc::clone(&self.store), community_property)
+    pub fn modularity(&self, community_property: String) -> ModularityFacade {
+        ModularityFacade::new(Arc::clone(&self.store), community_property)
     }
 }

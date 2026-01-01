@@ -10,7 +10,7 @@ use std::fmt;
 ///
 /// The range can span 0 bytes when min and max are identical.
 /// Supports arithmetic operations for memory estimation composition.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize)]
 pub struct MemoryRange {
     min: usize,
     max: usize,

@@ -3,8 +3,9 @@
 //! Computes shortest path distances for all (source, target) pairs.
 //! Supports unweighted (BFS) and weighted (Dijkstra) variants.
 
+use crate::mem::MemoryRange;
 use crate::procedures::all_shortest_paths::{AlgorithmType, AllShortestPathsStorageRuntime};
-use crate::procedures::facades::builder_base::ConfigValidator;
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::facades::traits::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
@@ -12,6 +13,9 @@ use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+// Import upgraded systems
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory};
 
 /// A single all-pairs shortest path distance row.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -35,41 +39,117 @@ pub struct AllShortestPathsStats {
 /// Facade builder for all-shortest-paths.
 ///
 /// Defaults:
-/// - algorithm_type: Unweighted
+/// - weighted: false
 /// - relationship_types: all
 /// - direction: "outgoing"
 /// - weight_property: "weight"
-/// - concurrency: num_cpus
+/// - concurrency: 4
 /// - max_results: None
 pub struct AllShortestPathsBuilder {
     graph_store: Arc<DefaultGraphStore>,
-    algorithm_type: AlgorithmType,
+    weighted: bool,
     relationship_types: Vec<String>,
     direction: String,
     weight_property: String,
     concurrency: usize,
     max_results: Option<usize>,
+    /// Progress tracking components
+    task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
+    user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
+}
+
+/// Helper function to convert NodeId to u64
+fn checked_u64(value: NodeId, context: &str) -> Result<u64> {
+    u64::try_from(value).map_err(|_| {
+        crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+            "AllShortestPaths returned invalid node id for {context}: {value}",
+        ))
+    })
 }
 
 impl AllShortestPathsBuilder {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            algorithm_type: AlgorithmType::Unweighted,
+            weighted: false,
             relationship_types: vec![],
             direction: "outgoing".to_string(),
             weight_property: "weight".to_string(),
-            concurrency: num_cpus::get(),
+            concurrency: 4,
             max_results: None,
+            task_registry_factory: None,
+            user_log_registry_factory: None,
         }
     }
 
-    fn checked_u64(value: NodeId, context: &str) -> Result<u64> {
-        u64::try_from(value).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "AllShortestPaths returned invalid node id for {context}: {value}",
-            ))
-        })
+    /// Set whether to use weighted (Dijkstra) or unweighted (BFS) algorithm
+    ///
+    /// If true, uses Dijkstra's algorithm with edge weights.
+    /// If false, uses BFS for unweighted shortest paths.
+    /// Default: false
+    pub fn weighted(mut self, weighted: bool) -> Self {
+        self.weighted = weighted;
+        self
+    }
+
+    /// Use unweighted BFS algorithm (convenience method)
+    pub fn unweighted(self) -> Self {
+        self.weighted(false)
+    }
+
+    /// Set weight property name
+    ///
+    /// Property must exist on relationships and contain numeric values.
+    /// Only used when weighted=true.
+    /// Default: "weight"
+    pub fn weight_property(mut self, property: &str) -> Self {
+        self.weight_property = property.to_string();
+        self
+    }
+
+    /// Restrict traversal to the provided relationship types.
+    ///
+    /// Empty means all relationship types.
+    pub fn relationship_types(mut self, relationship_types: Vec<String>) -> Self {
+        self.relationship_types = relationship_types;
+        self
+    }
+
+    /// Set traversal direction.
+    ///
+    /// Accepted values: "outgoing", "incoming", "undirected".
+    pub fn direction(mut self, direction: &str) -> Self {
+        self.direction = direction.to_string();
+        self
+    }
+
+    /// Set concurrency level
+    ///
+    /// Number of parallel threads to use.
+    /// All-pairs shortest paths benefits greatly from parallelism.
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
+        self
+    }
+
+    /// Set maximum number of results to return
+    ///
+    /// Limits the output size. None means no limit.
+    pub fn max_results(mut self, max_results: usize) -> Self {
+        self.max_results = Some(max_results);
+        self
+    }
+
+    /// Set task registry factory for progress tracking
+    pub fn task_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.task_registry_factory = Some(factory);
+        self
+    }
+
+    /// Set user log registry factory for progress tracking
+    pub fn user_log_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.user_log_registry_factory = Some(factory);
+        self
     }
 
     fn validate(&self) -> Result<()> {
@@ -80,7 +160,18 @@ impl AllShortestPathsBuilder {
                 ),
             );
         }
-        ConfigValidator::non_empty_string(&self.direction, "direction")?;
+
+        match self.direction.to_ascii_lowercase().as_str() {
+            "outgoing" | "incoming" | "undirected" => {}
+            other => {
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                        "direction must be 'outgoing', 'incoming', or 'undirected' (got '{other}')"
+                    )),
+                );
+            }
+        }
+
         ConfigValidator::non_empty_string(&self.weight_property, "weight_property")?;
         if let Some(max) = self.max_results {
             if max == 0 {
@@ -96,6 +187,20 @@ impl AllShortestPathsBuilder {
 
     fn compute(self) -> Result<(Vec<AllShortestPathsRow>, AllShortestPathsStats)> {
         self.validate()?;
+
+        // Set up progress tracking
+        let _task_registry_factory = self
+            .task_registry_factory
+            .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
+        let _user_log_registry_factory = self
+            .user_log_registry_factory
+            .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
+
+        let algorithm_type = if self.weighted {
+            AlgorithmType::Weighted
+        } else {
+            AlgorithmType::Unweighted
+        };
 
         let rel_types: HashSet<RelationshipType> = if self.relationship_types.is_empty() {
             self.graph_store.relationship_types()
@@ -125,7 +230,7 @@ impl AllShortestPathsBuilder {
 
         let storage = AllShortestPathsStorageRuntime::with_settings(
             Arc::clone(&graph_view),
-            self.algorithm_type,
+            algorithm_type,
             self.concurrency,
         );
 
@@ -157,8 +262,8 @@ impl AllShortestPathsBuilder {
                 }
             }
 
-            let source = Self::checked_u64(result.source, "source")?;
-            let target = Self::checked_u64(result.target, "target")?;
+            let source = checked_u64(result.source, "source")?;
+            let target = checked_u64(result.target, "target")?;
 
             rows.push(AllShortestPathsRow {
                 source,
@@ -183,48 +288,6 @@ impl AllShortestPathsBuilder {
         Ok((rows, stats))
     }
 
-    /// Select unweighted (BFS) shortest paths.
-    pub fn unweighted(mut self) -> Self {
-        self.algorithm_type = AlgorithmType::Unweighted;
-        self
-    }
-
-    /// Select weighted (Dijkstra) shortest paths.
-    pub fn weighted(mut self) -> Self {
-        self.algorithm_type = AlgorithmType::Weighted;
-        self
-    }
-
-    /// Set relationship types to consider. Empty means all types.
-    pub fn relationship_types(mut self, types: Vec<&str>) -> Self {
-        self.relationship_types = types.into_iter().map(|s| s.to_string()).collect();
-        self
-    }
-
-    /// Set traversal direction: "outgoing", "incoming", or "undirected".
-    pub fn direction(mut self, direction: &str) -> Self {
-        self.direction = direction.to_string();
-        self
-    }
-
-    /// Set weight property (used for weighted runs).
-    pub fn weight_property(mut self, property: &str) -> Self {
-        self.weight_property = property.to_string();
-        self
-    }
-
-    /// Set concurrency.
-    pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
-        self
-    }
-
-    /// Cap the number of streamed results.
-    pub fn max_results(mut self, max_results: Option<usize>) -> Self {
-        self.max_results = max_results;
-        self
-    }
-
     /// Stream mode: yield distance rows.
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = AllShortestPathsRow>>> {
         let (rows, _) = self.compute()?;
@@ -235,6 +298,91 @@ impl AllShortestPathsBuilder {
     pub fn stats(self) -> Result<AllShortestPathsStats> {
         let (_, stats) = self.compute()?;
         Ok(stats)
+    }
+
+    /// Mutate mode: Compute and update in-memory graph projection
+    ///
+    /// Stores all-pairs shortest path distances as node properties.
+    ///
+    /// ```rust,no_run
+    /// # use gds::Graph;
+    /// # let graph: Graph = unimplemented!();
+    /// let builder = graph.all_shortest_paths();
+    /// let result = builder.mutate("distance")?;
+    /// println!("Updated {} nodes", result.nodes_updated);
+    /// ```
+    pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "AllShortestPaths mutate/write is not implemented yet".to_string(),
+            ),
+        )
+    }
+
+    /// Write mode: Compute and persist to storage
+    ///
+    /// Persists all-pairs shortest path results to storage backend.
+    ///
+    /// ```rust,no_run
+    /// # use gds::Graph;
+    /// # let graph: Graph = unimplemented!();
+    /// let builder = graph.all_shortest_paths();
+    /// let result = builder.write("distances")?;
+    /// println!("Wrote {} nodes", result.nodes_written);
+    /// ```
+    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "AllShortestPaths mutate/write is not implemented yet".to_string(),
+            ),
+        )
+    }
+
+    /// Estimate memory requirements for all-shortest-paths execution
+    ///
+    /// Returns a memory range estimate based on:
+    /// - Distance matrix storage (node_count² * 8 bytes)
+    /// - Priority queues for Dijkstra (if weighted)
+    /// - Graph structure overhead
+    ///
+    /// ```rust,no_run
+    /// # use gds::Graph;
+    /// # let graph: Graph = unimplemented!();
+    /// let builder = graph.all_shortest_paths();
+    /// let memory = builder.estimate_memory();
+    /// println!("Estimated memory: {} bytes", memory.max());
+    /// ```
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+
+        // Distance matrix: node_count² * 8 bytes (f64 per pair)
+        let distance_matrix_memory = node_count * node_count * 8;
+
+        // Priority queues for weighted algorithm (worst case)
+        let priority_queue_memory = if self.weighted {
+            node_count * 32 // Similar to Dijkstra
+        } else {
+            0
+        };
+
+        // Graph structure overhead (adjacency lists, etc.)
+        let avg_degree = 10.0; // Conservative estimate
+        let relationship_count = (node_count as f64 * avg_degree) as usize;
+        let graph_overhead = relationship_count * 16; // ~16 bytes per relationship
+
+        let total_memory = distance_matrix_memory + priority_queue_memory + graph_overhead;
+
+        // Add 20% overhead for algorithm-specific structures
+        let overhead = total_memory / 5;
+        let total_with_overhead = total_memory + overhead;
+
+        MemoryRange::of_range(total_memory, total_with_overhead)
     }
 }
 
@@ -256,11 +404,11 @@ mod tests {
     #[test]
     fn test_builder_defaults() {
         let builder = AllShortestPathsBuilder::new(store());
-        assert_eq!(builder.algorithm_type, AlgorithmType::Unweighted);
+        assert!(!builder.weighted);
         assert!(builder.relationship_types.is_empty());
         assert_eq!(builder.direction, "outgoing");
         assert_eq!(builder.weight_property, "weight");
-        assert!(builder.concurrency > 0);
+        assert_eq!(builder.concurrency, 4);
         assert!(builder.max_results.is_none());
     }
 
@@ -269,8 +417,8 @@ mod tests {
         let store = store();
         let rows: Vec<_> = crate::procedures::facades::graph::Graph::new(store)
             .all_shortest_paths()
-            .unweighted()
-            .max_results(Some(50))
+            .weighted(false)
+            .max_results(50)
             .stream()
             .unwrap()
             .collect();
@@ -283,8 +431,8 @@ mod tests {
         let store = store();
         let stats = crate::procedures::facades::graph::Graph::new(store)
             .all_shortest_paths()
-            .weighted()
-            .max_results(Some(50))
+            .weighted(true)
+            .max_results(50)
             .stats()
             .unwrap();
 

@@ -18,10 +18,10 @@ pub fn handle_all_shortest_paths(request: &Value, catalog: Arc<dyn GraphCatalog>
         None => return err(op, "INVALID_REQUEST", "Missing 'graphName' parameter"),
     };
 
-    let algorithm = request
-        .get("algorithm")
-        .and_then(|v| v.as_str())
-        .unwrap_or("unweighted");
+    let weighted = request
+        .get("weighted")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
 
     let relationship_types =
         if let Some(types) = request.get("relationshipTypes").and_then(|v| v.as_array()) {
@@ -73,22 +73,14 @@ pub fn handle_all_shortest_paths(request: &Value, catalog: Arc<dyn GraphCatalog>
 
     // Create builder
     let mut builder = AllShortestPathsBuilder::new(graph_store)
-        .relationship_types(relationship_types.iter().map(|s| s.as_str()).collect())
+        .weighted(weighted)
+        .relationship_types(relationship_types)
         .direction(direction)
         .weight_property(weight_property)
         .concurrency(concurrency);
 
     if let Some(max) = max_results {
-        builder = builder.max_results(Some(max));
-    }
-
-    match algorithm {
-        "weighted" => {
-            builder = builder.weighted();
-        }
-        _ => {
-            builder = builder.unweighted();
-        }
+        builder = builder.max_results(max);
     }
 
     // Execute based on mode

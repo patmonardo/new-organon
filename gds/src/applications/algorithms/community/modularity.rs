@@ -3,7 +3,7 @@
 //! Handles JSON requests for modularity computation operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::modularity::{ModularityBuilder, ModularityRow};
+use crate::procedures::facades::community::modularity::{ModularityFacade, ModularityRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -46,12 +46,12 @@ pub fn handle_modularity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
         }
     };
 
-    // Create builder
-    let builder = ModularityBuilder::new(graph_store, community_property.to_string());
+    // Create facade
+    let facade = ModularityFacade::new(graph_store, community_property.to_string());
 
     // Execute based on mode
     match mode {
-        "stream" => match builder.stream() {
+        "stream" => match facade.stream() {
             Ok(rows_iter) => {
                 let rows: Vec<ModularityRow> = rows_iter.collect();
                 json!({
@@ -66,7 +66,7 @@ pub fn handle_modularity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
                 &format!("Modularity execution failed: {:?}", e),
             ),
         },
-        "stats" => match builder.stats() {
+        "stats" => match facade.stats() {
             Ok(stats) => json!({
                 "ok": true,
                 "op": op,
@@ -76,6 +76,42 @@ pub fn handle_modularity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
                 op,
                 "EXECUTION_ERROR",
                 &format!("Modularity stats failed: {:?}", e),
+            ),
+        },
+        "mutate" => match facade.mutate() {
+            Ok(result) => json!({
+                "ok": true,
+                "op": op,
+                "data": result
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Modularity mutate failed: {:?}", e),
+            ),
+        },
+        "write" => match facade.write() {
+            Ok(result) => json!({
+                "ok": true,
+                "op": op,
+                "data": result
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Modularity write failed: {:?}", e),
+            ),
+        },
+        "estimate_memory" => match facade.estimate_memory() {
+            Ok(range) => json!({
+                "ok": true,
+                "op": op,
+                "data": range
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Modularity memory estimation failed: {:?}", e),
             ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),

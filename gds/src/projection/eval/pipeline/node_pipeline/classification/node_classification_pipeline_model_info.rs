@@ -97,12 +97,7 @@ impl NodeClassificationPipelineModelInfo {
         );
         map.insert(
             "pipeline".to_string(),
-            Value::Object(
-                self.pipeline
-                    .to_map()
-                    .into_iter()
-                    .collect(),
-            ),
+            Value::Object(self.pipeline.to_map().into_iter().collect()),
         );
 
         // TODO: When ExecutableNodePropertyStep has to_map(), add:

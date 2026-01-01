@@ -14,6 +14,7 @@
 //! - `seed_centroids`
 //! - `random_seed`
 
+use crate::core::utils::progress::TaskRegistry;
 use crate::procedures::facades::builder_base::ConfigValidator;
 use crate::procedures::facades::traits::Result;
 use crate::procedures::kmeans::{
@@ -45,19 +46,21 @@ pub struct KMeansStats {
 }
 
 #[derive(Clone)]
-pub struct KMeansBuilder {
+pub struct KMeansFacade {
     graph_store: Arc<DefaultGraphStore>,
     config: KMeansConfig,
+    task_registry: Option<TaskRegistry>,
 }
 
-impl KMeansBuilder {
+impl KMeansFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
             config: KMeansConfig {
-                concurrency: num_cpus::get().max(1),
+                concurrency: 4,
                 ..KMeansConfig::default()
             },
+            task_registry: None,
         }
     }
 
@@ -108,6 +111,11 @@ impl KMeansBuilder {
 
     pub fn random_seed(mut self, seed: u64) -> Self {
         self.config.random_seed = Some(seed);
+        self
+    }
+
+    pub fn task_registry(mut self, task_registry: TaskRegistry) -> Self {
+        self.task_registry = Some(task_registry);
         self
     }
 

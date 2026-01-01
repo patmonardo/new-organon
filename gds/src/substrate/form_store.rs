@@ -3,7 +3,9 @@ use std::collections::{HashMap, HashSet};
 use crate::projection::RelationshipType;
 use crate::substrate::FormStoreSurface;
 use crate::types::graph::id_map::{MappedNodeId, OriginalNodeId};
-use crate::types::graph_store::{GraphName, GraphStoreError, GraphStoreResult, InducedSubgraphResult};
+use crate::types::graph_store::{
+    GraphName, GraphStoreError, GraphStoreResult, InducedSubgraphResult,
+};
 
 /// Minimal in-memory substrate store intended for "PureForm".
 ///

@@ -56,7 +56,8 @@ impl CosineFeatureStep {
 impl LinkFeatureStep for CosineFeatureStep {
     fn link_feature_appender(&self, graph: &dyn Graph) -> Box<dyn LinkFeatureAppender> {
         let factory = CosineLinkFeatureAppenderFactory;
-        let appenders = factory.create_appenders(graph, &self.node_property_names)
+        let appenders = factory
+            .create_appenders(graph, &self.node_property_names)
             .expect("Failed to create cosine appenders");
         Box::new(UnionLinkFeatureAppender::new(appenders))
     }
@@ -116,7 +117,10 @@ impl AbstractLinkFeatureAppenderFactory for CosineLinkFeatureAppenderFactory {
         props: Arc<dyn NodePropertyValues>,
         dimension: usize,
     ) -> Box<dyn LinkFeatureAppender> {
-        Box::new(CosineLongAppender { props, _dimension: dimension })
+        Box::new(CosineLongAppender {
+            props,
+            _dimension: dimension,
+        })
     }
 
     fn double_appender(
@@ -124,7 +128,10 @@ impl AbstractLinkFeatureAppenderFactory for CosineLinkFeatureAppenderFactory {
         props: Arc<dyn NodePropertyValues>,
         dimension: usize,
     ) -> Box<dyn LinkFeatureAppender> {
-        Box::new(CosineDoubleAppender { props, _dimension: dimension })
+        Box::new(CosineDoubleAppender {
+            props,
+            _dimension: dimension,
+        })
     }
 }
 
@@ -380,7 +387,11 @@ impl LinkFeatureAppender for CosineLongAppender {
 
         // Cosine of scalars: if both non-zero and same sign, 1.0; if different signs, -1.0; else 0.0
         let cosine = if source_val != 0.0 && target_val != 0.0 {
-            if (source_val > 0.0) == (target_val > 0.0) { 1.0 } else { -1.0 }
+            if (source_val > 0.0) == (target_val > 0.0) {
+                1.0
+            } else {
+                -1.0
+            }
         } else {
             0.0
         };
@@ -420,7 +431,11 @@ impl LinkFeatureAppender for CosineDoubleAppender {
 
         // Cosine of scalars: if both non-zero and same sign, 1.0; if different signs, -1.0; else 0.0
         let cosine = if source_val != 0.0 && target_val != 0.0 {
-            if (source_val > 0.0) == (target_val > 0.0) { 1.0 } else { -1.0 }
+            if (source_val > 0.0) == (target_val > 0.0) {
+                1.0
+            } else {
+                -1.0
+            }
         } else {
             0.0
         };

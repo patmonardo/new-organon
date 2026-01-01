@@ -1,6 +1,6 @@
+use crate::collections::PageUtil;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
-use crate::collections::PageUtil;
 
 /// Number of elements in a single page (derived from PageUtil PAGE_SIZE_32KB)
 const PAGE_SIZE: usize = PageUtil::PAGE_SIZE_32KB;

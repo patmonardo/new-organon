@@ -1,8 +1,8 @@
 //! Classifier Factory - 1:1 translation of ClassifierFactory.java from Java GDS
 
 use crate::mem::{MemoryEstimation, MemoryRange};
-use crate::ml::models::{Classifier, ClassifierData, TrainingMethod};
 use crate::ml::models::neural::{MLPClassifier, MLPClassifierData};
+use crate::ml::models::{Classifier, ClassifierData, TrainingMethod};
 
 /// Factory for creating classifiers from trained model data.
 /// 1:1 translation of ClassifierFactory.java from Java GDS.
@@ -30,7 +30,10 @@ impl ClassifierFactory {
                     .expect("Invalid ClassifierData type for MLPClassification");
                 Box::new(MLPClassifier::new(mlp_data.clone()))
             }
-            _ => panic!("No such classifier for training method: {:?}", classifier_data.trainer_method()),
+            _ => panic!(
+                "No such classifier for training method: {:?}",
+                classifier_data.trainer_method()
+            ),
         }
     }
 
@@ -79,7 +82,10 @@ impl ClassifierFactory {
             TrainingMethod::MLPClassification => {
                 todo!("MLP data memory estimation")
             }
-            _ => panic!("No such classifier for training method: {:?}", trainer_config.method()),
+            _ => panic!(
+                "No such classifier for training method: {:?}",
+                trainer_config.method()
+            ),
         }
     }
 }

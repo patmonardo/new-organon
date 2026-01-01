@@ -1,9 +1,9 @@
 //! Regression Trainer Factory - 1:1 translation of RegressionTrainerFactory.java from Java GDS
 
 use crate::concurrency::Concurrency;
-use crate::core::utils::progress::ProgressTracker;
-use crate::ml::models::{RegressorTrainer, TrainingMethod, base::TrainerConfigTrait};
 use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::ProgressTracker;
+use crate::ml::models::{base::TrainerConfigTrait, RegressorTrainer, TrainingMethod};
 use parking_lot::RwLock;
 use std::sync::Arc;
 
@@ -49,7 +49,10 @@ impl RegressionTrainerFactory {
                     crate::projection::eval::procedure::LogLevel::Info, // Default log level
                 ))
             }
-            _ => panic!("No such training method for regression: {:?}", config.method()),
+            _ => panic!(
+                "No such training method for regression: {:?}",
+                config.method()
+            ),
         }
     }
 }

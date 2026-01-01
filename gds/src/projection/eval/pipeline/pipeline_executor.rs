@@ -6,9 +6,7 @@ use std::collections::{HashMap, HashSet};
 use std::error::Error as StdError;
 use std::sync::Arc;
 
-use crate::projection::eval::pipeline::{
-    NodePropertyStepExecutor, Pipeline, PipelineGraphFilter,
-};
+use crate::projection::eval::pipeline::{NodePropertyStepExecutor, Pipeline, PipelineGraphFilter};
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
 use crate::types::schema::GraphSchema;
 
@@ -183,10 +181,7 @@ pub trait PipelineExecutor<PIPELINE: Pipeline, RESULT> {
         // 2. Validate pipeline before execution
         // featureInput nodeLabels contain source&target nodeLabel used in training/testing plus contextNodeLabels
         self.pipeline()
-            .validate_before_execution(
-                self.graph_store(),
-                &feature_input_graph_filter.node_labels,
-            )
+            .validate_before_execution(self.graph_store(), &feature_input_graph_filter.node_labels)
             .map_err(|e| PipelineExecutorError::PipelineValidationFailed(Box::new(e)))?;
 
         // 3. Create node property step executor
@@ -488,7 +483,10 @@ mod tests {
         struct TestPipeline;
         impl Pipeline for TestPipeline {
             type FeatureStep = MockFeatureStep;
-            fn node_property_steps(&self) -> &[Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>] {
+            fn node_property_steps(
+                &self,
+            ) -> &[Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>]
+            {
                 &[]
             }
             fn feature_steps(&self) -> &[Self::FeatureStep] {
@@ -497,7 +495,8 @@ mod tests {
             fn specific_validate_before_execution(
                 &self,
                 _graph_store: &DefaultGraphStore,
-            ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError> {
+            ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError>
+            {
                 Ok(())
             }
             fn to_map(&self) -> HashMap<String, serde_json::Value> {
@@ -561,7 +560,10 @@ mod tests {
         struct TestPipeline;
         impl Pipeline for TestPipeline {
             type FeatureStep = MockFeatureStep;
-            fn node_property_steps(&self) -> &[Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>] {
+            fn node_property_steps(
+                &self,
+            ) -> &[Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>]
+            {
                 &[]
             }
             fn feature_steps(&self) -> &[Self::FeatureStep] {
@@ -570,7 +572,8 @@ mod tests {
             fn specific_validate_before_execution(
                 &self,
                 _graph_store: &DefaultGraphStore,
-            ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError> {
+            ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError>
+            {
                 Ok(())
             }
             fn to_map(&self) -> HashMap<String, serde_json::Value> {

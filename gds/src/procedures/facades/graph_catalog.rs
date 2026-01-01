@@ -8,8 +8,8 @@
 use std::sync::Arc;
 
 use crate::applications::graph_store_catalog::facade::GraphCatalogApplications;
-use crate::types::user::User;
 use crate::types::graph_store::DatabaseId;
+use crate::types::user::User;
 
 /// Trait for Graph Procedure Facade operations
 pub trait GraphProcedureFacade {

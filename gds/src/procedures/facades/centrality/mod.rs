@@ -28,5 +28,5 @@ pub use celf::{CELFFacade, CELFRow, CELFStats};
 pub use closeness::ClosenessCentralityFacade;
 pub use degree_centrality::DegreeCentralityFacade;
 pub use harmonic::HarmonicCentralityFacade;
-pub use hits::{HitsBuilder, HitsRow, HitsStats};
+pub use hits::{HitsCentralityFacade, HitsStats};
 pub use pagerank::PageRankFacade;

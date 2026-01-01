@@ -126,7 +126,6 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         //     .build()
 
         // Placeholder
-        
     }
 
     /// Get task name for progress tracking.
@@ -148,7 +147,6 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         // Self::progress_task_with_pipeline(graph_store, &pipeline)
 
         // Placeholder
-        
     }
 
     /// Create progress task with explicit pipeline.
@@ -160,7 +158,6 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         // NodeClassificationTrain::progress_task(pipeline, graph_store.node_count())
 
         // Placeholder
-        
     }
 }
 

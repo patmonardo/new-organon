@@ -8,7 +8,9 @@
 //! - `concurrency`: reserved for future parallel implementation
 //! - `max_degree`: filter to skip high-degree nodes (performance / approximation)
 
-use crate::procedures::facades::builder_base::ConfigValidator;
+use crate::core::utils::progress::TaskRegistry;
+use crate::mem::MemoryRange;
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::facades::traits::Result;
 use crate::procedures::triangle_count::TriangleCountComputationRuntime;
 use crate::projection::orientation::Orientation;
@@ -33,21 +35,23 @@ pub struct TriangleCountStats {
     pub execution_time_ms: u64,
 }
 
-/// Triangle Count algorithm builder.
+/// Triangle Count algorithm facade.
 #[derive(Clone)]
-pub struct TriangleCountBuilder {
+pub struct TriangleCountFacade {
     graph_store: Arc<DefaultGraphStore>,
     concurrency: usize,
     max_degree: u64,
+    task_registry: Option<TaskRegistry>,
 }
 
-impl TriangleCountBuilder {
-    /// Create a new TriangleCount builder bound to a live graph store.
+impl TriangleCountFacade {
+    /// Create a new TriangleCount facade bound to a live graph store.
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            concurrency: num_cpus::get().max(1),
+            concurrency: 4,
             max_degree: u64::MAX,
+            task_registry: None,
         }
     }
 
@@ -62,6 +66,11 @@ impl TriangleCountBuilder {
     /// This mirrors the Java GDS `maxDegree` control used by the intersect-based implementation.
     pub fn max_degree(mut self, max_degree: u64) -> Self {
         self.max_degree = max_degree;
+        self
+    }
+
+    pub fn task_registry(mut self, task_registry: TaskRegistry) -> Self {
+        self.task_registry = Some(task_registry);
         self
     }
 
@@ -141,6 +150,32 @@ impl TriangleCountBuilder {
             global_triangles: global,
             execution_time_ms: elapsed.as_millis() as u64,
         })
+    }
+
+    /// Mutate mode: writes triangle counts back to the graph store.
+    pub fn mutate(self) -> Result<MutationResult> {
+        // TODO: implement mutation logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "mutate not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Write mode: writes triangle counts to a new graph.
+    pub fn write(self) -> Result<WriteResult> {
+        // TODO: implement write logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "write not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Estimate memory usage.
+    pub fn estimate_memory(&self) -> Result<MemoryRange> {
+        // TODO: implement memory estimation
+        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
     }
 
     /// Full result: returns both local and global counts.

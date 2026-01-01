@@ -7,7 +7,9 @@
 //! - `max_iterations`: maximum number of coloring/validation iterations (must be >= 1).
 //! - `batch_size`: accepted for parity; currently unused.
 
-use crate::procedures::facades::builder_base::ConfigValidator;
+use crate::core::utils::progress::TaskRegistry;
+use crate::mem::MemoryRange;
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::facades::traits::Result;
 use crate::procedures::k1coloring::{K1ColoringComputationRuntime, K1ColoringResult};
 use crate::projection::orientation::Orientation;
@@ -34,22 +36,24 @@ pub struct K1ColoringStats {
     pub execution_time_ms: u64,
 }
 
-/// K1-Coloring algorithm builder.
+/// K1-Coloring algorithm facade.
 #[derive(Clone)]
-pub struct K1ColoringBuilder {
+pub struct K1ColoringFacade {
     graph_store: Arc<DefaultGraphStore>,
     concurrency: usize,
     max_iterations: u64,
     batch_size: usize,
+    task_registry: Option<TaskRegistry>,
 }
 
-impl K1ColoringBuilder {
+impl K1ColoringFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            concurrency: num_cpus::get().max(1),
+            concurrency: 4,
             max_iterations: 10,
             batch_size: crate::core::utils::partition::DEFAULT_BATCH_SIZE,
+            task_registry: None,
         }
     }
 
@@ -65,6 +69,11 @@ impl K1ColoringBuilder {
 
     pub fn batch_size(mut self, batch_size: usize) -> Self {
         self.batch_size = batch_size;
+        self
+    }
+
+    pub fn task_registry(mut self, task_registry: TaskRegistry) -> Self {
+        self.task_registry = Some(task_registry);
         self
     }
 
@@ -159,6 +168,32 @@ impl K1ColoringBuilder {
             color_count,
             execution_time_ms: elapsed_ms,
         })
+    }
+
+    /// Mutate mode: writes color assignments back to the graph store.
+    pub fn mutate(self) -> Result<MutationResult> {
+        // TODO: implement mutation logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "mutate not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Write mode: writes color assignments to a new graph.
+    pub fn write(self) -> Result<WriteResult> {
+        // TODO: implement write logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "write not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Estimate memory usage.
+    pub fn estimate_memory(&self) -> Result<MemoryRange> {
+        // TODO: implement memory estimation
+        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
     }
 
     /// Full result: returns the procedure-level K1Coloring result.

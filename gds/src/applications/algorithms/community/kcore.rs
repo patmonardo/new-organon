@@ -3,7 +3,7 @@
 //! Handles JSON requests for KCore decomposition operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::kcore::{KCoreBuilder, KCoreRow};
+use crate::procedures::facades::community::kcore::{KCoreFacade, KCoreRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -40,12 +40,12 @@ pub fn handle_kcore(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         }
     };
 
-    // Create builder
-    let builder = KCoreBuilder::new(graph_store).concurrency(concurrency);
+    // Create facade
+    let facade = KCoreFacade::new(graph_store).concurrency(concurrency);
 
     // Execute based on mode
     match mode {
-        "stream" => match builder.stream() {
+        "stream" => match facade.stream() {
             Ok(rows_iter) => {
                 let rows: Vec<KCoreRow> = rows_iter.collect();
                 json!({
@@ -60,7 +60,7 @@ pub fn handle_kcore(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 &format!("KCore execution failed: {:?}", e),
             ),
         },
-        "stats" => match builder.stats() {
+        "stats" => match facade.stats() {
             Ok(stats) => json!({
                 "ok": true,
                 "op": op,
@@ -70,6 +70,42 @@ pub fn handle_kcore(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 op,
                 "EXECUTION_ERROR",
                 &format!("KCore stats failed: {:?}", e),
+            ),
+        },
+        "mutate" => match facade.mutate() {
+            Ok(result) => json!({
+                "ok": true,
+                "op": op,
+                "data": result
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("KCore mutate failed: {:?}", e),
+            ),
+        },
+        "write" => match facade.write() {
+            Ok(result) => json!({
+                "ok": true,
+                "op": op,
+                "data": result
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("KCore write failed: {:?}", e),
+            ),
+        },
+        "estimate_memory" => match facade.estimate_memory() {
+            Ok(range) => json!({
+                "ok": true,
+                "op": op,
+                "data": range
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("KCore memory estimation failed: {:?}", e),
             ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),

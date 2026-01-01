@@ -4,7 +4,7 @@
 //! delegating to the facade layer for execution.
 
 use crate::procedures::facades::community::local_clustering_coefficient::{
-    LocalClusteringCoefficientBuilder, LocalClusteringCoefficientRow,
+    LocalClusteringCoefficientFacade, LocalClusteringCoefficientRow,
 };
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
@@ -55,20 +55,20 @@ pub fn handle_local_clustering_coefficient(
         }
     };
 
-    // Create builder
-    let mut builder = LocalClusteringCoefficientBuilder::new(graph_store).concurrency(concurrency);
+    // Create facade
+    let mut facade = LocalClusteringCoefficientFacade::new(graph_store).concurrency(concurrency);
 
     if let Some(max_deg) = max_degree {
-        builder = builder.max_degree(max_deg as u64);
+        facade = facade.max_degree(max_deg as u64);
     }
 
     if let Some(seed) = seed_property {
-        builder = builder.seed_property(&seed);
+        facade = facade.seed_property(&seed);
     }
 
     // Execute based on mode
     match mode {
-        "stream" => match builder.stream() {
+        "stream" => match facade.stream() {
             Ok(rows_iter) => {
                 let rows: Vec<LocalClusteringCoefficientRow> = rows_iter.collect();
                 json!({
@@ -83,7 +83,7 @@ pub fn handle_local_clustering_coefficient(
                 &format!("Local Clustering Coefficient execution failed: {:?}", e),
             ),
         },
-        "stats" => match builder.stats() {
+        "stats" => match facade.stats() {
             Ok(stats) => json!({
                 "ok": true,
                 "op": op,
@@ -93,6 +93,45 @@ pub fn handle_local_clustering_coefficient(
                 op,
                 "EXECUTION_ERROR",
                 &format!("Local Clustering Coefficient stats failed: {:?}", e),
+            ),
+        },
+        "mutate" => match facade.mutate() {
+            Ok(result) => json!({
+                "ok": true,
+                "op": op,
+                "data": result
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Local Clustering Coefficient mutate failed: {:?}", e),
+            ),
+        },
+        "write" => match facade.write() {
+            Ok(result) => json!({
+                "ok": true,
+                "op": op,
+                "data": result
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Local Clustering Coefficient write failed: {:?}", e),
+            ),
+        },
+        "estimate_memory" => match facade.estimate_memory() {
+            Ok(range) => json!({
+                "ok": true,
+                "op": op,
+                "data": range
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!(
+                    "Local Clustering Coefficient memory estimation failed: {:?}",
+                    e
+                ),
             ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),

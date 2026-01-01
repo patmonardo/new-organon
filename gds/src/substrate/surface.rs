@@ -5,7 +5,9 @@ use crate::projection::NodeLabel;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::{MappedNodeId, OriginalNodeId};
 use crate::types::graph_store::GraphStore;
-use crate::types::graph_store::{GraphName, GraphStoreError, GraphStoreResult, InducedSubgraphResult};
+use crate::types::graph_store::{
+    GraphName, GraphStoreError, GraphStoreResult, InducedSubgraphResult,
+};
 
 /// Minimal surface that Form needs from a graph store.
 ///

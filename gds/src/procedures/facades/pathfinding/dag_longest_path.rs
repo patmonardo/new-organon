@@ -3,7 +3,9 @@
 //! Finds longest paths in a directed acyclic graph using topological ordering
 //! and dynamic programming.
 
+use crate::mem::MemoryRange;
 use crate::procedures::dag_longest_path::computation::DagLongestPathComputationRuntime;
+use crate::procedures::facades::builder_base::{MutationResult, WriteResult};
 use crate::procedures::facades::traits::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
@@ -12,6 +14,9 @@ use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
+
+// Import upgraded systems
+use crate::core::utils::progress::TaskRegistryFactory;
 
 /// Result row for longest path stream mode
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
@@ -32,14 +37,55 @@ pub struct DagLongestPathStats {
 }
 
 /// DAG Longest Path algorithm builder
-#[derive(Clone)]
 pub struct DagLongestPathBuilder {
     graph_store: Arc<DefaultGraphStore>,
+    concurrency: usize,
+    /// Progress tracking components
+    task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
+    user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
 }
 
 impl DagLongestPathBuilder {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
-        Self { graph_store }
+        Self {
+            graph_store,
+            concurrency: 4,
+            task_registry_factory: None,
+            user_log_registry_factory: None,
+        }
+    }
+
+    /// Set concurrency level
+    ///
+    /// Number of parallel threads to use.
+    /// DAG longest path benefits from parallelism in large graphs.
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
+        self
+    }
+
+    /// Set task registry factory for progress tracking
+    pub fn task_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.task_registry_factory = Some(factory);
+        self
+    }
+
+    /// Set user log registry factory for progress tracking
+    pub fn user_log_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.user_log_registry_factory = Some(factory);
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.concurrency == 0 {
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "concurrency must be > 0".to_string(),
+                ),
+            );
+        }
+
+        Ok(())
     }
 
     fn checked_node_id(value: usize) -> Result<NodeId> {
@@ -51,7 +97,9 @@ impl DagLongestPathBuilder {
         })
     }
 
-    fn compute(&self) -> Result<(Vec<DagLongestPathRow>, std::time::Duration)> {
+    fn compute(self) -> Result<(Vec<DagLongestPathRow>, std::time::Duration)> {
+        self.validate()?;
+
         let start = Instant::now();
 
         // Longest path works on directed graphs (Natural orientation)
@@ -110,19 +158,50 @@ impl DagLongestPathBuilder {
     }
 
     /// Stream mode: yields path rows with source, target, costs, and node sequences
-    pub fn stream(&self) -> Result<Box<dyn Iterator<Item = DagLongestPathRow>>> {
+    pub fn stream(self) -> Result<Box<dyn Iterator<Item = DagLongestPathRow>>> {
         let (rows, _elapsed) = self.compute()?;
         Ok(Box::new(rows.into_iter()))
     }
 
     /// Stats mode: returns aggregated statistics
-    pub fn stats(&self) -> Result<DagLongestPathStats> {
+    pub fn stats(self) -> Result<DagLongestPathStats> {
         let (rows, elapsed) = self.compute()?;
 
         Ok(DagLongestPathStats {
             path_count: rows.len(),
             execution_time_ms: elapsed.as_millis() as u64,
         })
+    }
+
+    /// Mutate mode: writes results back to the graph store
+    pub fn mutate(self) -> Result<MutationResult> {
+        // TODO: Implement mutation logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "mutate mode not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Write mode: writes results to external storage
+    pub fn write(self) -> Result<WriteResult> {
+        // TODO: Implement write logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "write mode not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Estimate memory usage for the computation
+    pub fn estimate_memory(&self) -> Result<MemoryRange> {
+        // Estimate based on node count and expected path storage
+        let node_count = self.graph_store.node_count();
+        let estimated_bytes = node_count * std::mem::size_of::<f64>() * 2; // distances and predecessors
+        Ok(MemoryRange::of_range(
+            estimated_bytes / 2,
+            estimated_bytes * 2,
+        ))
     }
 }
 

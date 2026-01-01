@@ -2,16 +2,13 @@
 //!
 //! Translated from `MLPClassifierObjective.java` from Java GDS.
 
+use super::{classifier::MLPClassifier, data::MLPClassifierData};
 use crate::collections::HugeIntArray;
 use crate::ml::core::{
     batch::Batch,
     functions::{
-        constant::Constant,
-        constant_scale::ConstantScale,
-        cross_entropy_loss::CrossEntropyLoss,
-        element_sum::ElementSum,
-        focal_loss::FocalLoss,
-        l2_norm_squared::L2NormSquared,
+        constant::Constant, constant_scale::ConstantScale, cross_entropy_loss::CrossEntropyLoss,
+        element_sum::ElementSum, focal_loss::FocalLoss, l2_norm_squared::L2NormSquared,
         weights::Weights,
     },
     tensor::Vector,
@@ -19,7 +16,6 @@ use crate::ml::core::{
 };
 use crate::ml::gradient_descent::{batch_feature_matrix, Objective};
 use crate::ml::models::Features;
-use super::{classifier::MLPClassifier, data::MLPClassifierData};
 use std::sync::Arc;
 
 /// Objective function for MLP classifier training
@@ -240,14 +236,8 @@ mod tests {
         let features = TestFeatures::new();
         let labels = HugeIntArray::from_vec(vec![0, 1]);
 
-        let objective = MLPClassifierObjective::new(
-            classifier,
-            &features,
-            &labels,
-            0.01,
-            0.0,
-            vec![1.0, 1.0],
-        );
+        let objective =
+            MLPClassifierObjective::new(classifier, &features, &labels, 0.01, 0.0, vec![1.0, 1.0]);
 
         let batch = RangeBatch::new(0, 2, 2);
         let loss_variable = objective.loss(&batch, 2);
@@ -291,14 +281,8 @@ mod tests {
         let features = TestFeatures::new();
         let labels = HugeIntArray::from_vec(vec![0, 1, 2, 0]);
 
-        let objective = MLPClassifierObjective::new(
-            classifier,
-            &features,
-            &labels,
-            0.01,
-            0.0,
-            vec![1.0, 1.0],
-        );
+        let objective =
+            MLPClassifierObjective::new(classifier, &features, &labels, 0.01, 0.0, vec![1.0, 1.0]);
 
         let batch = RangeBatch::new(0, 2, 2);
         let label_vector = objective.batch_label_vector(&batch);

@@ -81,24 +81,29 @@ impl LinkFeatureStep for SameCategoryStep {
                 .unwrap_or_else(|| panic!("Property {} not found", property_name));
 
             let appender: Box<dyn LinkFeatureAppender> = match property.value_type() {
-                crate::types::ValueType::Long => Box::new(SameCategoryLongAppender {
-                    props: property,
-                }),
-                crate::types::ValueType::Double => Box::new(SameCategoryDoubleAppender {
-                    props: property,
-                }),
-                _ => panic!("SameCategory only supports numeric properties (Long, Double), got {:?}", property.value_type()),
+                crate::types::ValueType::Long => {
+                    Box::new(SameCategoryLongAppender { props: property })
+                }
+                crate::types::ValueType::Double => {
+                    Box::new(SameCategoryDoubleAppender { props: property })
+                }
+                _ => panic!(
+                    "SameCategory only supports numeric properties (Long, Double), got {:?}",
+                    property.value_type()
+                ),
             };
 
             appenders.push(appender);
         }
 
         // Use UnionLinkFeatureAppender to combine all property appenders
-        Box::new(super::union_link_feature_appender::UnionLinkFeatureAppender::new(
-            appenders,
-            "SAME_CATEGORY".to_string(),
-            self.node_properties.clone(),
-        ))
+        Box::new(
+            super::union_link_feature_appender::UnionLinkFeatureAppender::new(
+                appenders,
+                "SAME_CATEGORY".to_string(),
+                self.node_properties.clone(),
+            ),
+        )
     }
 
     fn name(&self) -> &str {

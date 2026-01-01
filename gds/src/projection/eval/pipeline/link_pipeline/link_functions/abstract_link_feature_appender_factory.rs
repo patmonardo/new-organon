@@ -110,15 +110,20 @@ pub trait AbstractLinkFeatureAppenderFactory {
         use crate::projection::eval::pipeline::feature_step_util::property_dimension;
 
         // Get the property values from the graph
-        let props = graph.node_properties(property_name)
+        let props = graph
+            .node_properties(property_name)
             .ok_or_else(|| format!("Property '{}' not found in graph", property_name))?;
 
         // Get the property type
         let property_type = props.value_type();
 
         // Get the dimension
-        let dimension = property_dimension(&*props, property_name)
-            .map_err(|e| format!("Failed to get dimension for property '{}': {:?}", property_name, e))?;
+        let dimension = property_dimension(&*props, property_name).map_err(|e| {
+            format!(
+                "Failed to get dimension for property '{}': {:?}",
+                property_name, e
+            )
+        })?;
 
         // Dispatch to the appropriate type-specific constructor
         match property_type {
@@ -127,7 +132,10 @@ pub trait AbstractLinkFeatureAppenderFactory {
             ValueType::LongArray => Ok(self.long_array_appender(props, dimension)),
             ValueType::Long => Ok(self.long_appender(props, dimension)),
             ValueType::Double => Ok(self.double_appender(props, dimension)),
-            _ => Err(format!("Unsupported ValueType {:?} for property '{}'", property_type, property_name)),
+            _ => Err(format!(
+                "Unsupported ValueType {:?} for property '{}'",
+                property_type, property_name
+            )),
         }
     }
 

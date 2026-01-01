@@ -91,9 +91,7 @@ impl ParallelNodeClassifier {
         let batch_predictions: Vec<(usize, i64)> = evaluation_set
             .par_chunks(self.batch_size)
             .enumerate()
-            .flat_map(|(batch_idx, batch)| {
-                self.process_batch(batch, batch_idx * self.batch_size)
-            })
+            .flat_map(|(batch_idx, batch)| self.process_batch(batch, batch_idx * self.batch_size))
             .collect();
 
         // Set predictions in the array

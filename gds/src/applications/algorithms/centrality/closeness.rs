@@ -30,9 +30,14 @@ pub fn handle_closeness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Valu
         .unwrap_or("both");
 
     let wasserman_faust = request
-        .get("wassermanFaust")
+        .get("useWasserman")
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
+
+    let concurrency = request
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(1) as usize;
 
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
@@ -49,7 +54,8 @@ pub fn handle_closeness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Valu
     // Create facade
     let facade = ClosenessCentralityFacade::new(graph_store)
         .direction(direction)
-        .wasserman_faust(wasserman_faust);
+        .wasserman_faust(wasserman_faust)
+        .concurrency(concurrency);
 
     // Execute based on mode
     match mode {
@@ -79,6 +85,52 @@ pub fn handle_closeness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Valu
                 "EXECUTION_ERROR",
                 &format!("Closeness stats failed: {:?}", e),
             ),
+        },
+        "mutate" => {
+            let property_name = request
+                .get("mutateProperty")
+                .and_then(|v| v.as_str())
+                .unwrap_or("closeness");
+            match facade.mutate(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Closeness mutate failed: {:?}", e),
+                ),
+            }
+        }
+        "write" => {
+            let property_name = request
+                .get("writeProperty")
+                .and_then(|v| v.as_str())
+                .unwrap_or("closeness");
+            match facade.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Closeness write failed: {:?}", e),
+                ),
+            }
+        }
+        "estimate_memory" => match facade.estimate_memory() {
+            memory => json!({
+                "ok": true,
+                "op": op,
+                "data": {
+                    "min": memory.min(),
+                    "max": memory.max()
+                }
+            }),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

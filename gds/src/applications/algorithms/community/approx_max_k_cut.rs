@@ -4,7 +4,7 @@
 //! delegating to the facade layer for execution.
 
 use crate::procedures::facades::community::approx_max_k_cut::{
-    ApproxMaxKCutBuilder, ApproxMaxKCutRow,
+    ApproxMaxKCutFacade, ApproxMaxKCutRow,
 };
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
@@ -70,8 +70,8 @@ pub fn handle_approx_max_k_cut(request: &Value, catalog: Arc<dyn GraphCatalog>) 
         }
     };
 
-    // Create builder
-    let mut builder = ApproxMaxKCutBuilder::new(graph_store)
+    // Create facade
+    let mut facade = ApproxMaxKCutFacade::new(graph_store)
         .k(k)
         .iterations(iterations)
         .random_seed(random_seed)
@@ -79,12 +79,12 @@ pub fn handle_approx_max_k_cut(request: &Value, catalog: Arc<dyn GraphCatalog>) 
         .relationship_weight_property(relationship_weight_property);
 
     if !min_community_sizes.is_empty() {
-        builder = builder.min_community_sizes(min_community_sizes);
+        facade = facade.min_community_sizes(min_community_sizes);
     }
 
     // Execute based on mode
     match mode {
-        "stream" => match builder.stream() {
+        "stream" => match facade.stream() {
             Ok(rows_iter) => {
                 let rows: Vec<ApproxMaxKCutRow> = rows_iter.collect();
                 json!({
@@ -99,7 +99,7 @@ pub fn handle_approx_max_k_cut(request: &Value, catalog: Arc<dyn GraphCatalog>) 
                 &format!("ApproxMaxKCut execution failed: {:?}", e),
             ),
         },
-        "stats" => match builder.stats() {
+        "stats" => match facade.stats() {
             Ok(stats) => json!({
                 "ok": true,
                 "op": op,

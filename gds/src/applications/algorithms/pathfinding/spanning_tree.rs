@@ -23,10 +23,10 @@ pub fn handle_spanning_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
         .and_then(|v| v.as_u64())
         .unwrap_or(0);
 
-    let objective = request
-        .get("objective")
-        .and_then(|v| v.as_str())
-        .unwrap_or("minimum");
+    let compute_minimum = request
+        .get("computeMinimum")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true);
 
     let relationship_types =
         if let Some(types) = request.get("relationshipTypes").and_then(|v| v.as_array()) {
@@ -72,21 +72,13 @@ pub fn handle_spanning_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
     };
 
     // Create builder
-    let mut builder = SpanningTreeBuilder::new(graph_store)
+    let builder = SpanningTreeBuilder::new(graph_store)
         .start_node(start_node)
-        .relationship_types(relationship_types.iter().map(|s| s.as_str()).collect())
+        .relationship_types(relationship_types)
         .direction(direction)
         .weight_property(weight_property)
-        .concurrency(concurrency);
-
-    match objective {
-        "maximum" => {
-            builder = builder.maximum();
-        }
-        _ => {
-            builder = builder.minimum();
-        }
-    }
+        .concurrency(concurrency)
+        .compute_minimum(compute_minimum);
 
     // Execute based on mode
     match mode {

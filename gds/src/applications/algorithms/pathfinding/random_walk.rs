@@ -46,6 +46,11 @@ pub fn handle_random_walk(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
 
     let random_seed = request.get("randomSeed").and_then(|v| v.as_u64());
 
+    let concurrency = request
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(4) as usize;
+
     let mode = request
         .get("mode")
         .and_then(|v| v.as_str())
@@ -69,7 +74,8 @@ pub fn handle_random_walk(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
         .walk_length(walk_length)
         .return_factor(return_factor)
         .in_out_factor(in_out_factor)
-        .source_nodes(source_nodes);
+        .source_nodes(source_nodes)
+        .concurrency(concurrency);
 
     if let Some(seed) = random_seed {
         builder = builder.random_seed(seed);

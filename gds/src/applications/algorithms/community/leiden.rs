@@ -3,7 +3,7 @@
 //! Handles JSON requests for Leiden community detection operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::leiden::{LeidenBuilder, LeidenRow};
+use crate::procedures::facades::community::leiden::{LeidenFacade, LeidenRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -57,8 +57,8 @@ pub fn handle_leiden(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         }
     };
 
-    // Create builder
-    let builder = LeidenBuilder::new(graph_store)
+    // Create facade
+    let facade = LeidenFacade::new(graph_store)
         .gamma(gamma)
         .theta(theta)
         .tolerance(tolerance)
@@ -67,7 +67,7 @@ pub fn handle_leiden(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 
     // Execute based on mode
     match mode {
-        "stream" => match builder.stream() {
+        "stream" => match facade.stream() {
             Ok(rows_iter) => {
                 let rows: Vec<LeidenRow> = rows_iter.collect();
                 json!({
@@ -82,7 +82,7 @@ pub fn handle_leiden(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 &format!("Leiden execution failed: {:?}", e),
             ),
         },
-        "stats" => match builder.stats() {
+        "stats" => match facade.stats() {
             Ok(stats) => json!({
                 "ok": true,
                 "op": op,

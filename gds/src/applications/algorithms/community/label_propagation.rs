@@ -4,7 +4,7 @@
 //! delegating to the facade layer for execution.
 
 use crate::procedures::facades::community::label_propagation::{
-    LabelPropagationBuilder, LabelPropagationRow,
+    LabelPropagationFacade, LabelPropagationRow,
 };
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
@@ -57,22 +57,22 @@ pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>)
         }
     };
 
-    // Create builder
-    let mut builder = LabelPropagationBuilder::new(graph_store)
+    // Create facade
+    let mut facade = LabelPropagationFacade::new(graph_store)
         .concurrency(concurrency)
         .max_iterations(max_iterations);
 
     if let Some(node_weight) = node_weight_property {
-        builder = builder.node_weight_property(&node_weight);
+        facade = facade.node_weight_property(&node_weight);
     }
 
     if let Some(seed) = seed_property {
-        builder = builder.seed_property(&seed);
+        facade = facade.seed_property(&seed);
     }
 
     // Execute based on mode
     match mode {
-        "stream" => match builder.stream() {
+        "stream" => match facade.stream() {
             Ok(rows_iter) => {
                 let rows: Vec<LabelPropagationRow> = rows_iter.collect();
                 json!({
@@ -87,7 +87,7 @@ pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>)
                 &format!("Label Propagation execution failed: {:?}", e),
             ),
         },
-        "stats" => match builder.stats() {
+        "stats" => match facade.stats() {
             Ok(stats) => json!({
                 "ok": true,
                 "op": op,
@@ -97,6 +97,42 @@ pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>)
                 op,
                 "EXECUTION_ERROR",
                 &format!("Label Propagation stats failed: {:?}", e),
+            ),
+        },
+        "mutate" => match facade.mutate() {
+            Ok(result) => json!({
+                "ok": true,
+                "op": op,
+                "data": result
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Label Propagation mutate failed: {:?}", e),
+            ),
+        },
+        "write" => match facade.write() {
+            Ok(result) => json!({
+                "ok": true,
+                "op": op,
+                "data": result
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Label Propagation write failed: {:?}", e),
+            ),
+        },
+        "estimate_memory" => match facade.estimate_memory() {
+            Ok(range) => json!({
+                "ok": true,
+                "op": op,
+                "data": range
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Label Propagation memory estimation failed: {:?}", e),
             ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),

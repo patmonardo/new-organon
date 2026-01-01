@@ -306,12 +306,7 @@ mod tests {
         let task = Task::new("Test".to_string(), 100);
         let job_id = JobId::new();
 
-        store.store_with_notification(
-            "alice".to_string(),
-            job_id,
-            task,
-            UserTask::new,
-        );
+        store.store_with_notification("alice".to_string(), job_id, task, UserTask::new);
 
         assert_eq!(listener1.get_added_count(), 1);
         assert_eq!(listener2.get_added_count(), 1);

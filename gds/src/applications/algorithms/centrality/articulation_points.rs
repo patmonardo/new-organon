@@ -6,7 +6,6 @@
 use crate::procedures::facades::centrality::articulation_points::{
     ArticulationPointRow, ArticulationPointsFacade,
 };
-use crate::procedures::facades::traits::{StatsResults, StreamResults};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -26,6 +25,11 @@ pub fn handle_articulation_points(request: &Value, catalog: Arc<dyn GraphCatalog
         .and_then(|v| v.as_str())
         .unwrap_or("stream");
 
+    let concurrency = request
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(4) as usize;
+
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
@@ -38,8 +42,8 @@ pub fn handle_articulation_points(request: &Value, catalog: Arc<dyn GraphCatalog
         }
     };
 
-    // Create facade
-    let facade = ArticulationPointsFacade::new(graph_store);
+    // Create facade with configuration
+    let facade = ArticulationPointsFacade::new(graph_store).concurrency(concurrency);
 
     // Execute based on mode
     match mode {
@@ -70,6 +74,55 @@ pub fn handle_articulation_points(request: &Value, catalog: Arc<dyn GraphCatalog
                 &format!("Articulation Points stats failed: {:?}", e),
             ),
         },
+        "mutate" => match request.get("propertyName").and_then(|v| v.as_str()) {
+            Some(property_name) => match facade.mutate(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Articulation Points mutate failed: {:?}", e),
+                ),
+            },
+            None => err(
+                op,
+                "INVALID_REQUEST",
+                "Missing 'propertyName' parameter for mutate mode",
+            ),
+        },
+        "write" => match request.get("propertyName").and_then(|v| v.as_str()) {
+            Some(property_name) => match facade.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Articulation Points write failed: {:?}", e),
+                ),
+            },
+            None => err(
+                op,
+                "INVALID_REQUEST",
+                "Missing 'propertyName' parameter for write mode",
+            ),
+        },
+        "estimate_memory" => {
+            let memory = facade.estimate_memory();
+            json!({
+                "ok": true,
+                "op": op,
+                "data": {
+                    "minBytes": memory.min(),
+                    "maxBytes": memory.max()
+                }
+            })
+        }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
 }

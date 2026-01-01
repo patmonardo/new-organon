@@ -1,3 +1,4 @@
+use crate::collections::PageUtil;
 /// A sparse long array supporting >2 billion elements with memory-efficient paged storage.
 ///
 /// This array only allocates pages where values actually exist, using a HashMap to track
@@ -41,7 +42,6 @@
 /// ```
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use crate::collections::PageUtil;
 
 /// Number of elements in a single page (derived from PageUtil PAGE_SIZE_32KB)
 const PAGE_SIZE: usize = PageUtil::PAGE_SIZE_32KB;

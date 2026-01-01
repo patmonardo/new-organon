@@ -64,9 +64,7 @@
 
 use super::FeaturesAndLabels;
 use crate::concurrency::{Concurrency, TerminationFlag};
-use crate::projection::eval::pipeline::link_pipeline::{
-    LinkFeatureExtractor, LinkFeatureStep,
-};
+use crate::projection::eval::pipeline::link_pipeline::{LinkFeatureExtractor, LinkFeatureStep};
 use crate::types::graph::Graph;
 use rayon::prelude::*;
 #[allow(unused_imports)]
@@ -110,12 +108,8 @@ pub fn extract_features_and_labels(
     termination_flag: &TerminationFlag,
 ) -> Result<FeaturesAndLabels, String> {
     // Extract features using LinkFeatureExtractor
-    let features = LinkFeatureExtractor::extract_features(
-        graph,
-        feature_steps,
-        concurrency,
-        termination_flag,
-    );
+    let features =
+        LinkFeatureExtractor::extract_features(graph, feature_steps, concurrency, termination_flag);
 
     // Extract labels from relationship weights
     let labels = extract_labels(graph, features.len(), concurrency, termination_flag)?;
@@ -151,7 +145,8 @@ fn extract_labels(
     // Collect all relationships as (source, target, weight) tuples
     let mut relationships = Vec::new();
     for source in 0..graph.node_count() as i64 {
-        let relationships_iter = graph.stream_relationships_weighted(source, graph.default_property_value());
+        let relationships_iter =
+            graph.stream_relationships_weighted(source, graph.default_property_value());
         for cursor in relationships_iter {
             let target = cursor.target_id();
             let weight = cursor.weight();

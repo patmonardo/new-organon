@@ -6,15 +6,13 @@
 type GraphStreamRelationshipsConfig =
     crate::applications::graph_store_catalog::configs::GraphStreamRelationshipsConfig;
 
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct GraphStreamRelationshipPropertiesConfig {
     /// Base relationship streaming configuration
     pub relationships_config: GraphStreamRelationshipsConfig,
     /// List of relationship properties to stream
     pub relationship_properties: Vec<String>,
 }
-
 
 impl GraphStreamRelationshipPropertiesConfig {
     /// Validate the configuration

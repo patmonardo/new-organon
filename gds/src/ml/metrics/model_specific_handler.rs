@@ -94,12 +94,13 @@ mod tests {
 
     #[test]
     fn test_for_stats_builder() {
-        use super::super::{ModelStatsBuilder};
+        use super::super::ModelStatsBuilder;
 
         let stats_builder = Arc::new(Mutex::new(ModelStatsBuilder::new(2)));
         let metrics: Vec<Box<dyn Metric>> = vec![]; // Empty for this test
 
-        let handler = ModelSpecificMetricsHandler::for_stats_builder(&metrics, stats_builder.clone());
+        let handler =
+            ModelSpecificMetricsHandler::for_stats_builder(&metrics, stats_builder.clone());
 
         // Handler should be created successfully
         assert_eq!(handler.metrics.len(), 0);

@@ -10,7 +10,9 @@
 //! - `max_iterations`: Maximum iterations (default: 10)
 //! - `random_seed`: Random seed for reproducibility (default: 42)
 
-use crate::procedures::facades::builder_base::ConfigValidator;
+use crate::core::utils::progress::TaskRegistry;
+use crate::mem::MemoryRange;
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::facades::traits::Result;
 use crate::procedures::leiden::computation::leiden as leiden_fn;
 use crate::procedures::leiden::{LeidenConfig, LeidenResult};
@@ -38,18 +40,20 @@ pub struct LeidenStats {
     pub execution_time_ms: u64,
 }
 
-/// Leiden algorithm builder.
+/// Leiden algorithm facade.
 #[derive(Clone)]
-pub struct LeidenBuilder {
+pub struct LeidenFacade {
     graph_store: Arc<DefaultGraphStore>,
     config: LeidenConfig,
+    task_registry: Option<TaskRegistry>,
 }
 
-impl LeidenBuilder {
+impl LeidenFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
             config: LeidenConfig::default(),
+            task_registry: None,
         }
     }
 
@@ -94,6 +98,11 @@ impl LeidenBuilder {
     /// Default: 42
     pub fn random_seed(mut self, seed: u64) -> Self {
         self.config.random_seed = seed;
+        self
+    }
+
+    pub fn task_registry(mut self, task_registry: TaskRegistry) -> Self {
+        self.task_registry = Some(task_registry);
         self
     }
 
@@ -170,6 +179,32 @@ impl LeidenBuilder {
             converged: result.converged,
             execution_time_ms: elapsed,
         })
+    }
+
+    /// Mutate mode: writes labels back to the graph store.
+    pub fn mutate(self) -> Result<MutationResult> {
+        // TODO: implement mutation logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "mutate not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Write mode: writes labels to a new graph.
+    pub fn write(self) -> Result<WriteResult> {
+        // TODO: implement write logic
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "write not yet implemented".to_string(),
+            ),
+        )
+    }
+
+    /// Estimate memory usage.
+    pub fn estimate_memory(&self) -> Result<MemoryRange> {
+        // TODO: implement memory estimation
+        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
     }
 }
 

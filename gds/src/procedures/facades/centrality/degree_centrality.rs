@@ -25,15 +25,19 @@
 //! graph.degree_centrality().mutate("degree")?;
 //! ```
 
+use crate::mem::MemoryRange;
 use crate::procedures::degree_centrality::{
     DegreeCentralityComputationRuntime, DegreeCentralityStorageRuntime,
 };
-use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult};
+use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::facades::traits::{CentralityScore, Result};
 use crate::types::graph::id_map::NodeId;
-use crate::types::prelude::DefaultGraphStore;
+use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
 use std::time::Instant;
+
+// Import upgraded systems
+use crate::core::utils::progress::TaskRegistryFactory;
 
 // ============================================================================
 // Statistics Type
@@ -72,6 +76,10 @@ pub struct DegreeCentralityFacade {
     normalize: bool,
     orientation: crate::procedures::degree_centrality::storage::Orientation,
     has_relationship_weight_property: bool,
+    concurrency: usize,
+    /// Progress tracking components
+    task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
+    user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
 }
 
 impl DegreeCentralityFacade {
@@ -82,6 +90,9 @@ impl DegreeCentralityFacade {
             normalize: false,
             orientation: crate::procedures::degree_centrality::storage::Orientation::Natural,
             has_relationship_weight_property: false,
+            concurrency: 4,
+            task_registry_factory: None,
+            user_log_registry_factory: None,
         }
     }
 
@@ -106,6 +117,39 @@ impl DegreeCentralityFacade {
         self
     }
 
+    /// Set concurrency level
+    ///
+    /// Number of parallel threads to use.
+    /// Degree centrality benefits from parallelism in large graphs.
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
+        self
+    }
+
+    /// Set task registry factory for progress tracking
+    pub fn task_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.task_registry_factory = Some(factory);
+        self
+    }
+
+    /// Set user log registry factory for progress tracking
+    pub fn user_log_registry_factory(mut self, factory: Box<dyn TaskRegistryFactory>) -> Self {
+        self.user_log_registry_factory = Some(factory);
+        self
+    }
+
+    fn validate(&self) -> Result<()> {
+        if self.concurrency == 0 {
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "concurrency must be > 0".to_string(),
+                ),
+            );
+        }
+
+        Ok(())
+    }
+
     fn checked_node_id(value: usize) -> Result<NodeId> {
         NodeId::try_from(value as i64).map_err(|_| {
             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
@@ -115,7 +159,9 @@ impl DegreeCentralityFacade {
         })
     }
 
-    fn compute_scores(&self) -> Result<(Vec<f64>, std::time::Duration)> {
+    fn compute_scores(self) -> Result<(Vec<f64>, std::time::Duration)> {
+        self.validate()?;
+
         let start = Instant::now();
 
         let storage = DegreeCentralityStorageRuntime::with_settings(
@@ -157,7 +203,7 @@ impl DegreeCentralityFacade {
     ///     }
     /// }
     /// ```
-    pub fn stream(&self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
+    pub fn stream(self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
         let (scores, _elapsed) = self.compute_scores()?;
         let iter = scores
             .into_iter()
@@ -186,7 +232,7 @@ impl DegreeCentralityFacade {
     /// println!("Max degree (highest hub): {}", stats.max);
     /// println!("Isolated nodes: {}", stats.isolated_nodes);
     /// ```
-    pub fn stats(&self) -> Result<DegreeCentralityStats> {
+    pub fn stats(self) -> Result<DegreeCentralityStats> {
         let (scores, elapsed) = self.compute_scores()?;
         if scores.is_empty() {
             return Ok(DegreeCentralityStats {
@@ -252,7 +298,7 @@ impl DegreeCentralityFacade {
     /// let result = facade.mutate("degree")?;
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
-    pub fn mutate(&self, property_name: &str) -> Result<MutationResult> {
+    pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
         Err(
@@ -260,6 +306,68 @@ impl DegreeCentralityFacade {
                 "DegreeCentrality mutate/write is not implemented yet".to_string(),
             ),
         )
+    }
+
+    /// Write mode: Compute and write results to external storage
+    ///
+    /// Writes the degree centrality scores to an external data store.
+    /// This is useful for persisting results for later analysis.
+    ///
+    /// # Arguments
+    /// * `property_name` - Name of the property to store the centrality scores
+    ///
+    /// # Returns
+    /// Result containing write statistics
+    ///
+    /// # Example
+    /// ```ignore
+    /// # let graph = Graph::default();
+    /// # use gds::procedures::facades::centrality::DegreeCentralityFacade;
+    /// let facade = DegreeCentralityFacade::new();
+    /// let result = facade.write("degree_centrality")?;
+    /// println!("Wrote {} records", result.records_written);
+    /// ```
+    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        Err(
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                "DegreeCentrality mutate/write is not implemented yet".to_string(),
+            ),
+        )
+    }
+
+    /// Estimate memory usage for this algorithm execution
+    ///
+    /// Provides an estimate of the memory required to run this algorithm
+    /// with the current configuration. This is useful for capacity planning
+    /// and preventing out-of-memory errors.
+    ///
+    /// # Returns
+    /// Memory range estimate (min/max bytes)
+    ///
+    /// # Example
+    /// ```ignore
+    /// # let graph = Graph::default();
+    /// # use gds::procedures::facades::centrality::DegreeCentralityFacade;
+    /// let facade = DegreeCentralityFacade::new();
+    /// let memory = facade.estimate_memory();
+    /// println!("Will use between {} and {} bytes", memory.min_bytes, memory.max_bytes);
+    /// ```
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+
+        // Memory for centrality scores (one f64 per node)
+        let scores_memory = node_count * std::mem::size_of::<f64>();
+
+        // Additional overhead for computation
+        let computation_overhead = 1024 * 1024; // 1MB for temporary structures
+
+        let total_memory = scores_memory + computation_overhead;
+        let total_with_overhead = total_memory + (total_memory / 5); // Add 20% overhead
+
+        MemoryRange::of_range(total_memory, total_with_overhead)
     }
 }
 

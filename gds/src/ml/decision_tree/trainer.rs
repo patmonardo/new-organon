@@ -5,8 +5,8 @@
 
 use crate::collections::HugeLongArray;
 use crate::ml::decision_tree::{
-    predictor::DecisionTreePredictor, DecisionTreeTrainerConfig, FeatureBagger, Group, ImpurityCriterion,
-    Splitter, StackRecord, TreeNode,
+    predictor::DecisionTreePredictor, DecisionTreeTrainerConfig, FeatureBagger, Group,
+    ImpurityCriterion, Splitter, StackRecord, TreeNode,
 };
 use crate::ml::models::Features;
 use std::collections::VecDeque;

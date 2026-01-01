@@ -3,7 +3,7 @@
 //! Handles JSON requests for KMeans clustering operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::kmeans::{KMeansBuilder, KMeansRow};
+use crate::procedures::facades::community::kmeans::{KMeansFacade, KMeansRow};
 use crate::procedures::kmeans::KMeansSamplerType;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
@@ -88,8 +88,8 @@ pub fn handle_kmeans(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         }
     };
 
-    // Create builder
-    let mut builder = KMeansBuilder::new(graph_store)
+    // Create facade
+    let mut facade = KMeansFacade::new(graph_store)
         .k(k)
         .node_property(node_property)
         .concurrency(concurrency)
@@ -99,12 +99,12 @@ pub fn handle_kmeans(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         .sampler_type(sampler);
 
     if let Some(centroids) = seed_centroids {
-        builder = builder.seed_centroids(centroids);
+        facade = facade.seed_centroids(centroids);
     }
 
     // Execute based on mode
     match mode {
-        "stream" => match builder.stream() {
+        "stream" => match facade.stream() {
             Ok(rows_iter) => {
                 let rows: Vec<KMeansRow> = rows_iter.collect();
                 json!({
@@ -119,7 +119,7 @@ pub fn handle_kmeans(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 &format!("KMeans execution failed: {:?}", e),
             ),
         },
-        "stats" => match builder.stats() {
+        "stats" => match facade.stats() {
             Ok(stats) => json!({
                 "ok": true,
                 "op": op,

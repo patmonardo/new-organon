@@ -18,20 +18,21 @@ pub mod triangle_count;
 pub mod wcc;
 
 pub use local_clustering_coefficient::{
-    LocalClusteringCoefficientBuilder, LocalClusteringCoefficientRow,
+    LocalClusteringCoefficientFacade, LocalClusteringCoefficientRow,
     LocalClusteringCoefficientStats,
 };
-pub use triangle_count::{TriangleCountBuilder, TriangleCountRow, TriangleCountStats};
+pub use triangle_count::{TriangleCountFacade, TriangleCountRow, TriangleCountStats};
 
-pub use scc::{SccBuilder, SccRow, SccStats};
+pub use scc::{SccFacade, SccRow, SccStats};
 
-pub use label_propagation::{LabelPropagationBuilder, LabelPropagationRow, LabelPropagationStats};
+pub use label_propagation::{LabelPropagationFacade, LabelPropagationRow, LabelPropagationStats};
 
-pub use approx_max_k_cut::{ApproxMaxKCutBuilder, ApproxMaxKCutRow, ApproxMaxKCutStats};
-pub use conductance::{ConductanceBuilder, ConductanceRow, ConductanceStats};
-pub use k1coloring::{K1ColoringBuilder, K1ColoringRow, K1ColoringStats};
-pub use kcore::{KCoreBuilder, KCoreRow, KCoreStats};
-pub use kmeans::{KMeansBuilder, KMeansRow, KMeansStats};
-pub use louvain::{LouvainBuilder, LouvainRow, LouvainStats};
-pub use modularity::{ModularityBuilder, ModularityRow, ModularityStats};
-pub use wcc::{WccBuilder, WccRow, WccStats};
+pub use approx_max_k_cut::{ApproxMaxKCutFacade, ApproxMaxKCutRow, ApproxMaxKCutStats};
+pub use conductance::{ConductanceFacade, ConductanceRow, ConductanceStats};
+pub use k1coloring::{K1ColoringFacade, K1ColoringRow, K1ColoringStats};
+pub use kcore::{KCoreFacade, KCoreRow, KCoreStats};
+pub use kmeans::{KMeansFacade, KMeansRow, KMeansStats};
+pub use leiden::{LeidenFacade, LeidenRow, LeidenStats};
+pub use louvain::{LouvainFacade, LouvainRow, LouvainStats};
+pub use modularity::{ModularityFacade, ModularityRow, ModularityStats};
+pub use wcc::{WccFacade, WccRow, WccStats};

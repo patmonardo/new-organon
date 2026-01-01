@@ -82,7 +82,14 @@ pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
     match mode {
         "stream" => match facade.stream() {
             Ok(rows_iter) => {
-                let rows: Vec<_> = rows_iter.collect();
+                let rows: Vec<serde_json::Value> = rows_iter
+                    .map(|score| {
+                        json!({
+                            "node_id": score.node_id,
+                            "score": score.score
+                        })
+                    })
+                    .collect();
                 json!({
                     "ok": true,
                     "op": op,
@@ -107,7 +114,70 @@ pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
                 &format!("PageRank stats failed: {:?}", e),
             ),
         },
-        _ => err(op, "INVALID_REQUEST", "Invalid mode"),
+        "mutate" => {
+            let property_name = match request.get("mutateProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+            match facade.mutate(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("PageRank mutate failed: {:?}", e),
+                ),
+            }
+        }
+        "write" => {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+            match facade.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("PageRank write failed: {:?}", e),
+                ),
+            }
+        }
+        "estimate_memory" => {
+            let memory = facade.estimate_memory();
+            json!({
+                "ok": true,
+                "op": op,
+                "data": {
+                    "min_bytes": memory.min(),
+                    "max_bytes": memory.max()
+                }
+            })
+        }
+        _ => err(
+            op,
+            "INVALID_REQUEST",
+            "Invalid mode. Use 'stream', 'stats', 'mutate', 'write', or 'estimate_memory'",
+        ),
     }
 }
 

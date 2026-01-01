@@ -27,6 +27,7 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
+use crate::mem::MemoryRange;
 use crate::procedures::dijkstra::targets::create_targets;
 use crate::procedures::dijkstra::{DijkstraComputationRuntime, DijkstraStorageRuntime};
 use crate::procedures::facades::builder_base::{ConfigValidator, MutationResult, WriteResult};
@@ -35,7 +36,6 @@ use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use crate::mem::MemoryRange;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -151,14 +151,17 @@ impl DijkstraBuilder {
         self.validate()?;
 
         // Set up progress tracking
-        let _task_registry_factory = self.task_registry_factory
+        let _task_registry_factory = self
+            .task_registry_factory
             .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
-        let _user_log_registry_factory = self.user_log_registry_factory
+        let _user_log_registry_factory = self
+            .user_log_registry_factory
             .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
 
         // Create progress tracker for Dijkstra execution
         let node_count = self.graph_store.node_count();
-        let _progress_tracker = ProgressTracker::new(Tasks::Leaf("Dijkstra".to_string(), node_count));
+        let _progress_tracker =
+            ProgressTracker::new(Tasks::Leaf("Dijkstra".to_string(), node_count));
 
         let source_u64 = self.source.expect("validate() ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -236,7 +239,9 @@ impl DijkstraBuilder {
             .with_paths(paths)
             .with_metadata(metadata)
             .build()
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
+            })?;
 
         Ok(path_result)
     }
@@ -395,9 +400,9 @@ impl DijkstraBuilder {
         Ok(DijkstraStats {
             paths_found: result.paths.len() as u64,
             execution_time_ms: result.metadata.execution_time.as_millis() as u64,
-            nodes_expanded: 0, // TODO: extract from metadata if available
+            nodes_expanded: 0,   // TODO: extract from metadata if available
             edges_considered: 0, // TODO: extract from metadata if available
-            max_queue_size: 0, // TODO: extract from metadata if available
+            max_queue_size: 0,   // TODO: extract from metadata if available
             target_reached: !result.paths.is_empty() && has_targets,
         })
     }
@@ -477,10 +482,8 @@ impl DijkstraBuilder {
         let relationship_count = (node_count as f64 * avg_degree) as usize;
         let graph_overhead = relationship_count * 16;
 
-        let total_memory = priority_queue_memory
-            + distance_array_memory
-            + path_tracking_memory
-            + graph_overhead;
+        let total_memory =
+            priority_queue_memory + distance_array_memory + path_tracking_memory + graph_overhead;
 
         let overhead = total_memory / 5; // 20% overhead
         MemoryRange::of_range(total_memory, total_memory + overhead)

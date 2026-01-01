@@ -30,7 +30,10 @@ impl PartialOrd for ClusterEntry {
 impl Ord for ClusterEntry {
     fn cmp(&self, other: &Self) -> Ordering {
         // Min-heap: reverse comparison
-        other.cost.partial_cmp(&self.cost).unwrap_or(Ordering::Equal)
+        other
+            .cost
+            .partial_cmp(&self.cost)
+            .unwrap_or(Ordering::Equal)
     }
 }
 

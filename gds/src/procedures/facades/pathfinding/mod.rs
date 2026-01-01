@@ -29,7 +29,7 @@ pub use delta_stepping::{DeltaSteppingBuilder, DeltaSteppingStats};
 pub use dfs::{DfsBuilder, DfsStats};
 pub use dijkstra::{DijkstraBuilder, DijkstraStats};
 pub use kspanningtree::{KSpanningTreeBuilder, KSpanningTreeRow, KSpanningTreeStats};
-pub use prize_collecting_steiner_tree::{PCSTreeAlgorithm, PCSTreeBuilder};
+pub use prize_collecting_steiner_tree::{PCSTreeBuilder, PCSTreeRow, PCSTreeStats};
 pub use random_walk::{RandomWalkBuilder, RandomWalkRow, RandomWalkStats};
 pub use spanning_tree::{SpanningTreeBuilder, SpanningTreeRow, SpanningTreeStats};
 pub use steiner_tree::{SteinerTreeBuilder, SteinerTreeRow, SteinerTreeStats};

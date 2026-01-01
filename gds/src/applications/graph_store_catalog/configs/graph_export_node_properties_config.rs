@@ -6,8 +6,7 @@
 type GraphNodePropertiesConfig =
     crate::applications::graph_store_catalog::configs::GraphNodePropertiesConfig;
 
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub struct GraphExportNodePropertiesConfig {
     /// Base node properties configuration
     pub node_config: GraphNodePropertiesConfig,
@@ -16,7 +15,6 @@ pub struct GraphExportNodePropertiesConfig {
     /// Whether to include node labels in the output
     pub list_node_labels: bool,
 }
-
 
 impl GraphExportNodePropertiesConfig {
     /// Validate the configuration

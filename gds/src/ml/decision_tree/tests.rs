@@ -111,9 +111,9 @@ mod tree_node_tests {
     }
 }
 
-use crate::ml::decision_tree::ClassifierImpurityCriterionType;
 use crate::ml::decision_tree::predictor::DecisionTreePredictor;
-use crate::ml::decision_tree::{DecisionTreeTrainerConfig};
+use crate::ml::decision_tree::ClassifierImpurityCriterionType;
+use crate::ml::decision_tree::DecisionTreeTrainerConfig;
 use crate::ml::decision_tree::{FeatureBagger, ImpurityData, MSEImpurityData};
 
 #[cfg(test)]

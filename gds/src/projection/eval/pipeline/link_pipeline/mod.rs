@@ -6,11 +6,11 @@ pub mod link_feature_appender;
 pub mod link_feature_extractor;
 pub mod link_feature_step;
 pub mod link_feature_step_factory;
+pub mod link_functions;
 pub mod link_prediction_model_info;
 pub mod link_prediction_predict_pipeline;
 pub mod link_prediction_split_config;
 pub mod link_prediction_training_pipeline;
-pub mod link_functions;
 pub mod train;
 
 pub use batch_link_feature_extractor::BatchLinkFeatureExtractor;

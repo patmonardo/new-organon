@@ -30,7 +30,10 @@ impl PartialOrd for DijkstraEntry {
 impl Ord for DijkstraEntry {
     fn cmp(&self, other: &Self) -> Ordering {
         // Reverse order for min-heap
-        other.cost.partial_cmp(&self.cost).unwrap_or(Ordering::Equal)
+        other
+            .cost
+            .partial_cmp(&self.cost)
+            .unwrap_or(Ordering::Equal)
     }
 }
 

@@ -6,10 +6,10 @@
 //! This module provides result building capabilities for different algorithm types,
 //! integrating with our statistics and progress tracking modules.
 
+use crate::procedures::core::scaling::Scaler;
 use crate::procedures::core::statistics::{
     Histogram, StatisticalSummary, StatisticsConfig, StatisticsEngine,
 };
-use crate::procedures::core::scaling::Scaler;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
@@ -534,9 +534,9 @@ impl ResultBuilder<PathFindingResult> for PathResultBuilder {
         let post_processing_start = Instant::now();
 
         // Get paths
-        let paths = self.paths.ok_or_else(|| {
-            ResultBuilderError::MissingData("No paths provided".to_string())
-        })?;
+        let paths = self
+            .paths
+            .ok_or_else(|| ResultBuilderError::MissingData("No paths provided".to_string()))?;
 
         // Compute statistics if requested and not already provided
         let mut statistics = self.statistics;
@@ -550,8 +550,7 @@ impl ResultBuilder<PathFindingResult> for PathResultBuilder {
                 ..Default::default()
             };
 
-            let (stats, hist) =
-                StatisticsEngine::compute_statistics_from_values(costs, config)?;
+            let (stats, hist) = StatisticsEngine::compute_statistics_from_values(costs, config)?;
 
             statistics = Some(stats);
             if self.compute_histogram {

@@ -1,10 +1,11 @@
-use crate::projection::eval::pipeline::{
-    AutoTuningConfig, ExecutableNodePropertyStep, Pipeline, PipelineValidationError, TrainingMethod,
-    TrainingPipeline, TunableTrainerConfig,
-};
 use crate::projection::eval::pipeline::node_pipeline::{
-    node_feature_step::NodeFeatureStep, node_property_prediction_split_config::NodePropertyPredictionSplitConfig,
+    node_feature_step::NodeFeatureStep,
+    node_property_prediction_split_config::NodePropertyPredictionSplitConfig,
     node_property_training_pipeline::NodePropertyTrainingPipeline,
+};
+use crate::projection::eval::pipeline::{
+    AutoTuningConfig, ExecutableNodePropertyStep, Pipeline, PipelineValidationError,
+    TrainingMethod, TrainingPipeline, TunableTrainerConfig,
 };
 use crate::types::graph_store::DefaultGraphStore;
 use std::collections::HashMap;
@@ -75,7 +76,8 @@ impl NodeClassificationTrainingPipeline {
     ) -> Result<(), PipelineValidationError> {
         if self.feature_steps.is_empty() {
             return Err(PipelineValidationError::Other {
-                message: "Node classification pipeline requires at least one feature step".to_string(),
+                message: "Node classification pipeline requires at least one feature step"
+                    .to_string(),
             });
         }
         Ok(())
@@ -129,19 +131,38 @@ impl Pipeline for NodeClassificationTrainingPipeline {
         let mut map = HashMap::new();
 
         // Add pipeline metadata
-        map.insert("pipelineType".to_string(), serde_json::json!(self.pipeline_type()));
-        map.insert("modelType".to_string(), serde_json::json!(self.model_type()));
+        map.insert(
+            "pipelineType".to_string(),
+            serde_json::json!(self.pipeline_type()),
+        );
+        map.insert(
+            "modelType".to_string(),
+            serde_json::json!(self.model_type()),
+        );
 
         // Add feature pipeline description
-        let feature_pipeline = <Self as NodePropertyTrainingPipeline>::feature_pipeline_description(self);
-        map.insert("featurePipeline".to_string(), serde_json::json!(feature_pipeline));
+        let feature_pipeline =
+            <Self as NodePropertyTrainingPipeline>::feature_pipeline_description(self);
+        map.insert(
+            "featurePipeline".to_string(),
+            serde_json::json!(feature_pipeline),
+        );
 
         // Add training configuration
-        map.insert("trainingParameterSpace".to_string(), serde_json::json!(self.parameter_space_to_map()));
-        map.insert("autoTuningConfig".to_string(), serde_json::json!(self.auto_tuning_config().to_map()));
+        map.insert(
+            "trainingParameterSpace".to_string(),
+            serde_json::json!(self.parameter_space_to_map()),
+        );
+        map.insert(
+            "autoTuningConfig".to_string(),
+            serde_json::json!(self.auto_tuning_config().to_map()),
+        );
 
         // Add split configuration
-        map.insert("splitConfig".to_string(), serde_json::json!(self.split_config().to_map()));
+        map.insert(
+            "splitConfig".to_string(),
+            serde_json::json!(self.split_config().to_map()),
+        );
 
         map
     }
