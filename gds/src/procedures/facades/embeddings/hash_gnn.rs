@@ -11,8 +11,23 @@ use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::Instant;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HashGNNStats {
+    #[serde(rename = "nodeCount")]
+    pub node_count: u64,
+    #[serde(rename = "embeddingDimension")]
+    pub embedding_dimension: u64,
+    #[serde(rename = "outputMode")]
+    pub output_mode: String,
+    #[serde(rename = "computeMillis")]
+    pub compute_millis: u64,
+    pub success: bool,
+}
 
 /// HashGNN builder.
 #[derive(Clone)]
@@ -141,6 +156,36 @@ impl HashGNNBuilder {
     /// Full result: returns embeddings.
     pub fn run(&self) -> Result<HashGNNResult> {
         self.compute()
+    }
+
+    pub fn stats(&self) -> Result<HashGNNStats> {
+        let start = Instant::now();
+        let result = self.compute()?;
+        let compute_millis = start.elapsed().as_millis() as u64;
+
+        let (output_mode, embedding_dimension, node_count) = match &result.embeddings {
+            HashGNNEmbeddings::BinaryIndices {
+                embedding_dimension,
+                embeddings,
+            } => (
+                "binary".to_string(),
+                *embedding_dimension as u64,
+                embeddings.len() as u64,
+            ),
+            HashGNNEmbeddings::Dense { embeddings } => (
+                "dense".to_string(),
+                embeddings.first().map(|v| v.len() as u64).unwrap_or(0),
+                embeddings.len() as u64,
+            ),
+        };
+
+        Ok(HashGNNStats {
+            node_count,
+            embedding_dimension,
+            output_mode,
+            compute_millis,
+            success: true,
+        })
     }
 
     /// Full result + a canonical print envelope (summary) emitted at the boundary.

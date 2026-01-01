@@ -1,4 +1,4 @@
-use std::sync::RwLock;
+use std::cell::Cell;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Trait representing a clock that provides the current time in milliseconds.
@@ -27,21 +27,21 @@ impl Clock for SystemUTCClock {
 pub struct ClockService;
 
 static SYSTEM_CLOCK: SystemUTCClock = SystemUTCClock;
-static CLOCK: RwLock<Option<&'static dyn Clock>> = RwLock::new(None);
+
+thread_local! {
+    static CLOCK_OVERRIDE: Cell<Option<&'static dyn Clock>> = const { Cell::new(None) };
+}
 
 impl ClockService {
     /// Sets the clock to be used by the service.
     pub fn set_clock(clock: &'static dyn Clock) {
-        *CLOCK.write().expect("Clock lock poisoned") = Some(clock);
+        CLOCK_OVERRIDE.with(|slot| slot.set(Some(clock)));
     }
 
     /// Returns the currently configured clock.
     /// Defaults to the system UTC clock.
     pub fn clock() -> &'static dyn Clock {
-        CLOCK
-            .read()
-            .expect("Clock lock poisoned")
-            .unwrap_or(&SYSTEM_CLOCK)
+        CLOCK_OVERRIDE.with(|slot| slot.get().unwrap_or(&SYSTEM_CLOCK))
     }
 
     /// Executes a given closure with a temporarily specified clock.
@@ -51,17 +51,16 @@ impl ClockService {
     where
         F: FnOnce(&'static T) -> R,
     {
-        let previous = {
-            let mut guard = CLOCK.write().expect("Clock lock poisoned");
-            let prev = *guard;
-            *guard = Some(temp_clock);
+        let previous = CLOCK_OVERRIDE.with(|slot| {
+            let prev = slot.get();
+            slot.set(Some(temp_clock));
             prev
-        };
+        });
 
         let result =
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| runnable(temp_clock)));
 
-        *CLOCK.write().expect("Clock lock poisoned") = previous;
+        CLOCK_OVERRIDE.with(|slot| slot.set(previous));
 
         match result {
             Ok(r) => r,

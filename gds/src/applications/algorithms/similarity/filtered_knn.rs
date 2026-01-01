@@ -149,17 +149,18 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
                 "stream mode not yet implemented for Filtered KNN",
             )
         }
-        "stats" => {
-            // For now, just return success - stats computation would need to be implemented
-            json!({
+        "stats" => match builder.stats() {
+            Ok(stats) => json!({
                 "ok": true,
                 "op": op,
-                "data": {
-                    "nodesCompared": 0,
-                    "similarityPairs": 0
-                }
-            })
-        }
+                "data": stats
+            }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Filtered KNN stats failed: {:?}", e),
+            ),
+        },
         "mutate" => {
             let _property_name = match request.get("property_name").and_then(|v| v.as_str()) {
                 Some(name) => name,

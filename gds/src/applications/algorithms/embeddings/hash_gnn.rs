@@ -123,26 +123,8 @@ pub fn handle_hash_gnn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
 
     // Execute based on mode
     match mode {
-        "stats" => match builder.run() {
-            Ok(result) => {
-                let (node_count, embedding_dimension) = match &result.embeddings {
-                    crate::procedures::embeddings::hashgnn::algo::spec::HashGNNEmbeddings::BinaryIndices { embeddings, embedding_dimension } => {
-                        (embeddings.len(), *embedding_dimension)
-                    }
-                    crate::procedures::embeddings::hashgnn::algo::spec::HashGNNEmbeddings::Dense { embeddings } => {
-                        let dim = embeddings.first().map(|v| v.len()).unwrap_or(0);
-                        (embeddings.len(), dim)
-                    }
-                };
-                json!({
-                    "op": op,
-                    "success": true,
-                    "data": {
-                        "nodeCount": node_count,
-                        "embeddingDimension": embedding_dimension
-                    }
-                })
-            }
+        "stats" => match builder.stats() {
+            Ok(stats) => json!({ "ok": true, "op": op, "data": stats }),
             Err(e) => err(
                 op,
                 "EXECUTION_ERROR",
@@ -171,11 +153,8 @@ pub fn handle_hash_gnn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
 /// Helper function to create error responses
 fn err(op: &str, error_type: &str, message: &str) -> Value {
     json!({
+        "ok": false,
         "op": op,
-        "success": false,
-        "error": {
-            "type": error_type,
-            "message": message
-        }
+        "error": { "code": error_type, "message": message }
     })
 }

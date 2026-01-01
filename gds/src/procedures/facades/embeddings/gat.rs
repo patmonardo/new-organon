@@ -3,10 +3,26 @@ use crate::prelude::GraphStore;
 use crate::procedures::embeddings::gat::storage::GATStorageRuntime;
 use crate::procedures::embeddings::GATConfig;
 use crate::procedures::embeddings::GATResult;
+use crate::procedures::facades::builder_base::ConfigValidator;
 use crate::procedures::facades::traits as facade;
+use crate::projection::eval::procedure::AlgorithmError;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Instant;
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GATStats {
+    #[serde(rename = "nodeCount")]
+    pub node_count: u64,
+    #[serde(rename = "embeddingDimension")]
+    pub embedding_dimension: u64,
+    #[serde(rename = "computeMillis")]
+    pub compute_millis: u64,
+    pub success: bool,
+}
+
+#[derive(Clone)]
 pub struct GATBuilder {
     graph_store: Arc<DefaultGraphStore>,
     config: GATConfig,
@@ -60,7 +76,35 @@ impl GATBuilder {
         self
     }
 
-    pub fn run(self) -> facade::Result<GATResult> {
+    fn validate(&self) -> facade::Result<()> {
+        if self.config.embedding_dimension == 0 {
+            return Err(AlgorithmError::Execution(
+                "embedding_dimension must be > 0".into(),
+            ));
+        }
+        if self.config.num_heads == 0 {
+            return Err(AlgorithmError::Execution("num_heads must be > 0".into()));
+        }
+        if self.config.num_layers == 0 {
+            return Err(AlgorithmError::Execution("num_layers must be > 0".into()));
+        }
+        if self.config.epochs == 0 {
+            return Err(AlgorithmError::Execution("epochs must be > 0".into()));
+        }
+        ConfigValidator::in_range(self.config.dropout, 0.0, 1.0, "dropout")?;
+        ConfigValidator::in_range(self.config.alpha, 0.0, 1_000_000.0, "alpha")?;
+        ConfigValidator::in_range(
+            self.config.concurrency as f64,
+            1.0,
+            1_000_000.0,
+            "concurrency",
+        )?;
+        Ok(())
+    }
+
+    fn compute(&self) -> facade::Result<GATResult> {
+        self.validate()?;
+
         let storage = GATStorageRuntime::new();
         // For now, assume natural orientation, empty rel types
         let rel_types = std::collections::HashSet::new();
@@ -75,6 +119,23 @@ impl GATBuilder {
                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
             })?;
         Ok(storage.compute(graph.as_ref(), &self.config))
+    }
+
+    pub fn run(self) -> facade::Result<GATResult> {
+        self.compute()
+    }
+
+    pub fn stats(self) -> facade::Result<GATStats> {
+        let start = Instant::now();
+        let result = self.compute()?;
+        let compute_millis = start.elapsed().as_millis() as u64;
+
+        Ok(GATStats {
+            node_count: result.num_nodes as u64,
+            embedding_dimension: result.embedding_dimension as u64,
+            compute_millis,
+            success: true,
+        })
     }
 }
 

@@ -64,6 +64,14 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
 
     let _target_node_label = request.get("targetNodeLabel").and_then(|v| v.as_str());
 
+    if _source_node_label.is_some() || _target_node_label.is_some() {
+        return err(
+            op,
+            "NOT_IMPLEMENTED",
+            "sourceNodeLabel/targetNodeLabel filtering is not implemented yet for Node Similarity",
+        );
+    }
+
     let mode = request
         .get("mode")
         .and_then(|v| v.as_str())
@@ -121,13 +129,10 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
             ),
         },
         "stats" => match builder.stats() {
-            Ok(_) => json!({
+            Ok(stats) => json!({
                 "ok": true,
                 "op": op,
-                "data": {
-                    "nodesCompared": 0,
-                    "similarityPairs": 0
-                }
+                "data": stats
             }),
             Err(e) => err(
                 op,

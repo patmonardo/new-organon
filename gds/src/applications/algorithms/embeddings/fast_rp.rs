@@ -74,8 +74,8 @@ pub fn handle_fast_rp(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
                     })
                     .collect();
                 json!({
+                    "ok": true,
                     "op": op,
-                    "success": true,
                     "data": embeddings
                 })
             }
@@ -85,32 +85,14 @@ pub fn handle_fast_rp(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
                 &format!("Failed to compute embeddings: {}", e),
             ),
         },
-        "stats" => {
-            // For stats mode, we compute all embeddings and return summary
-            match builder.stream() {
-                Ok(iter) => {
-                    let embeddings: Vec<_> = iter.collect();
-                    let node_count = embeddings.len();
-                    let embedding_dim = embeddings
-                        .first()
-                        .map(|row| row.embedding.len())
-                        .unwrap_or(0);
-                    json!({
-                        "op": op,
-                        "success": true,
-                        "data": {
-                            "nodeCount": node_count,
-                            "embeddingDimension": embedding_dim
-                        }
-                    })
-                }
-                Err(e) => err(
-                    op,
-                    "EXECUTION_ERROR",
-                    &format!("Failed to compute embeddings: {}", e),
-                ),
-            }
-        }
+        "stats" => match builder.stats() {
+            Ok(stats) => json!({ "ok": true, "op": op, "data": stats }),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("Failed to compute embeddings: {}", e),
+            ),
+        },
         "mutate" => err(
             op,
             "NOT_IMPLEMENTED",
@@ -128,11 +110,8 @@ pub fn handle_fast_rp(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
 /// Helper function to create error responses
 fn err(op: &str, error_type: &str, message: &str) -> Value {
     json!({
+        "ok": false,
         "op": op,
-        "success": false,
-        "error": {
-            "type": error_type,
-            "message": message
-        }
+        "error": { "code": error_type, "message": message }
     })
 }

@@ -97,19 +97,7 @@ define_algorithm_spec! {
         // Convert to result type
         let mapped_results: Vec<NodeSimilarityResult> = results.into_iter().map(NodeSimilarityResult::from).collect();
 
-        Ok(NodeSimilarityAlgorithmResult::new(mapped_results)) // TODO: This doesn't match single object return if execute expects aggregation?
-        // Wait, `define_algorithm_spec` `execute` usually returns `Result<T, ...>`.
-        // If `output_type` is `NodeSimilarityResult`, does it expect a single result (like stats) or a stream?
-        // In WCC, it was `WccResult` which contained `components` vec.
-        // Here we probably want to support Stream, so we might need an iterator or a wrapper struct.
-        // But `Stream` mode in GDS usually implies the algorithm runtime yields items.
-        // The `execute` block in `define_algorithm_spec` (as seen in WCC) returned `WccResult`.
-
-        // Let's look at WCC spec again. output_type: WccResult.
-        // And WccResult had `components: Vec<u64>`.
-        // So for Node Similarity, passing back a huge Vec might be okay for in-memory, but real Stream mode is lazy.
-        // However, sticking to the pattern:
-        // We can define a result struct that wraps the vec.
+        Ok(NodeSimilarityAlgorithmResult::new(mapped_results))
     }
 }
 
@@ -117,16 +105,6 @@ define_algorithm_spec! {
 pub struct NodeSimilarityAlgorithmResult {
     pub similarities: Vec<NodeSimilarityResult>,
 }
-
-// Re-defining for correct macro usage if needed, or adjusting the macro invocation.
-// WCC used output_type: WccResult.
-// If I use `NodeSimilarityResult` as the row type, `execute` usually needs to return that?
-// Actually, `define_algorithm_spec` generates the boilerplate.
-// If `execute` returns `Vec<NodeSimilarityResult>`, then `output_type` should be `Vec<NodeSimilarityResult>`?
-// Or maybe `NodeSimilarityResult` implies the row?
-// Ref WCC: `output_type: WccResult`, execute returns `WccResult`.
-// WccResult is ONE object containing the whole result.
-// So I should define `NodeSimilarityAlgorithmResult` holding the vector.
 
 impl NodeSimilarityAlgorithmResult {
     pub fn new(similarities: Vec<NodeSimilarityResult>) -> Self {

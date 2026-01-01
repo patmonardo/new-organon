@@ -134,17 +134,14 @@ pub fn handle_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 &format!("KNN execution failed: {:?}", e),
             ),
         },
-        "stats" => {
-            // For now, just return success - stats computation would need to be implemented
-            json!({
+        "stats" => match builder.stats() {
+            Ok(stats) => json!({
                 "ok": true,
                 "op": op,
-                "data": {
-                    "nodesCompared": 0,
-                    "similarityPairs": 0
-                }
-            })
-        }
+                "data": stats
+            }),
+            Err(e) => err(op, "EXECUTION_ERROR", &format!("KNN stats failed: {:?}", e)),
+        },
         "mutate" => {
             let _property_name = match request.get("property_name").and_then(|v| v.as_str()) {
                 Some(name) => name,

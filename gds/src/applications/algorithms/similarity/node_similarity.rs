@@ -114,13 +114,10 @@ pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -
             ),
         },
         "stats" => match builder.stats() {
-            Ok(_) => json!({
+            Ok(stats) => json!({
                 "ok": true,
                 "op": op,
-                "data": {
-                    "nodesCompared": 0,
-                    "similarityPairs": 0
-                }
+                "data": stats
             }),
             Err(e) => err(
                 op,

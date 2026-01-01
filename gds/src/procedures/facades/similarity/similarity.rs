@@ -1,3 +1,4 @@
+use crate::procedures::facades::builder_base::ConfigValidator;
 use crate::procedures::facades::traits::Result;
 use crate::procedures::similarity::{
     NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult,
@@ -5,8 +6,23 @@ use crate::procedures::similarity::{
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NodeSimilarityStats {
+    #[serde(rename = "nodesCompared")]
+    pub nodes_compared: u64,
+    #[serde(rename = "similarityPairs")]
+    pub similarity_pairs: u64,
+    #[serde(rename = "similarityDistribution")]
+    pub similarity_distribution: HashMap<String, f64>,
+    #[serde(rename = "computeMillis")]
+    pub compute_millis: u64,
+    pub success: bool,
+}
 
 pub struct SimilarityBuilder {
     graph_store: Arc<DefaultGraphStore>,
@@ -61,6 +77,16 @@ impl SimilarityBuilder {
         self
     }
 
+    fn validate(&self) -> Result<()> {
+        ConfigValidator::in_range(self.similarity_cutoff, 0.0, 1.0, "similarity_cutoff")?;
+        ConfigValidator::in_range(self.top_k as f64, 1.0, 1_000_000.0, "top_k")?;
+        ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
+        if let Some(prop) = &self.weight_property {
+            ConfigValidator::non_empty_string(prop, "weight_property")?;
+        }
+        Ok(())
+    }
+
     fn build_config(&self) -> NodeSimilarityConfig {
         NodeSimilarityConfig {
             similarity_metric: self.metric,
@@ -74,14 +100,12 @@ impl SimilarityBuilder {
 
     // Computation helper
     fn compute_results(&self) -> Result<Vec<NodeSimilarityResult>> {
+        self.validate()?;
         // We need to access the graph from the store.
         // Assuming Orientation::Natural for Similarity.
-        // And we include all relationship types (empty HashSet conventionally means all, or we need to know types).
-        // Since NodeSimilarity usually operates on specific projection or all, we'll assume ALL for now or usage default.
+        // Empty set = all relationship types in the default graph view.
 
-        let rel_types = HashSet::new(); // Empty usually means "all" in GDS or "none"?
-                                        // In GDS projections, usually you specify types. If running on anonymous facade graph, it takes what's there.
-                                        // Let's assume we want the default view.
+        let rel_types = HashSet::new();
 
         let graph = self
             .graph_store
@@ -108,18 +132,47 @@ impl SimilarityBuilder {
         Ok(Box::new(results.into_iter()))
     }
 
-    pub fn stats(self) -> Result<()> {
-        // TODO: Implement stats
-        Ok(())
+    pub fn stats(self) -> Result<NodeSimilarityStats> {
+        let results = self.compute_results()?;
+
+        let mut sources = HashSet::new();
+        let tuples: Vec<(u64, u64, f64)> = results
+            .iter()
+            .map(|r| {
+                sources.insert(r.source);
+                (r.source, r.target, r.similarity)
+            })
+            .collect();
+
+        let stats = crate::procedures::core::result::similarity::similarity_stats(
+            || tuples.into_iter(),
+            true,
+        );
+
+        Ok(NodeSimilarityStats {
+            nodes_compared: sources.len() as u64,
+            similarity_pairs: results.len() as u64,
+            similarity_distribution: stats.summary(),
+            compute_millis: stats.compute_millis,
+            success: stats.success,
+        })
     }
 
-    pub fn mutate(self, _property: &str) -> Result<()> {
-        // TODO: Implement mutate
-        Ok(())
+    pub fn mutate(self, property: &str) -> Result<()> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property, "property_name")?;
+
+        Err(AlgorithmError::Execution(
+            "Node Similarity mutate/write is not implemented yet".to_string(),
+        ))
     }
 
-    pub fn write(self, _property: &str) -> Result<()> {
-        // TODO: Implement write
-        Ok(())
+    pub fn write(self, property: &str) -> Result<()> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property, "property_name")?;
+
+        Err(AlgorithmError::Execution(
+            "Node Similarity mutate/write is not implemented yet".to_string(),
+        ))
     }
 }

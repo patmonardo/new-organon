@@ -6,7 +6,22 @@ use crate::procedures::similarity::filteredknn::{
 use crate::procedures::similarity::knn::metrics::{KnnNodePropertySpec, SimilarityMetric};
 use crate::projection::NodeLabel;
 use crate::types::prelude::DefaultGraphStore;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FilteredKnnStats {
+    #[serde(rename = "nodesCompared")]
+    pub nodes_compared: u64,
+    #[serde(rename = "similarityPairs")]
+    pub similarity_pairs: u64,
+    #[serde(rename = "similarityDistribution")]
+    pub similarity_distribution: HashMap<String, f64>,
+    #[serde(rename = "computeMillis")]
+    pub compute_millis: u64,
+    pub success: bool,
+}
 
 pub struct FilteredKnnBuilder {
     graph_store: Arc<DefaultGraphStore>,
@@ -93,7 +108,7 @@ impl FilteredKnnBuilder {
         }
     }
 
-    pub fn stream(self) -> Result<Box<dyn Iterator<Item = FilteredKnnResultRow>>> {
+    fn compute_rows(self) -> Result<Vec<FilteredKnnResultRow>> {
         let config = self.build_config();
         let computation = FilteredKnnComputationRuntime::new();
         let storage = FilteredKnnStorageRuntime::new(config.concurrency);
@@ -121,10 +136,40 @@ impl FilteredKnnBuilder {
             )?
         };
 
-        let rows: Vec<FilteredKnnResultRow> = results
+        Ok(results
             .into_iter()
             .map(FilteredKnnResultRow::from)
-            .collect();
+            .collect())
+    }
+
+    pub fn stream(self) -> Result<Box<dyn Iterator<Item = FilteredKnnResultRow>>> {
+        let rows = self.compute_rows()?;
         Ok(Box::new(rows.into_iter()))
+    }
+
+    pub fn stats(self) -> Result<FilteredKnnStats> {
+        let rows = self.compute_rows()?;
+
+        let mut sources = HashSet::new();
+        let tuples: Vec<(u64, u64, f64)> = rows
+            .iter()
+            .map(|r| {
+                sources.insert(r.source);
+                (r.source, r.target, r.similarity)
+            })
+            .collect();
+
+        let stats = crate::procedures::core::result::similarity::similarity_stats(
+            || tuples.into_iter(),
+            true,
+        );
+
+        Ok(FilteredKnnStats {
+            nodes_compared: sources.len() as u64,
+            similarity_pairs: rows.len() as u64,
+            similarity_distribution: stats.summary(),
+            compute_millis: stats.compute_millis,
+            success: stats.success,
+        })
     }
 }

@@ -10,8 +10,21 @@ use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::Instant;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FastRPStats {
+    #[serde(rename = "nodeCount")]
+    pub node_count: u64,
+    #[serde(rename = "embeddingDimension")]
+    pub embedding_dimension: u64,
+    #[serde(rename = "computeMillis")]
+    pub compute_millis: u64,
+    pub success: bool,
+}
 
 /// Stream row: `(node_id, embedding)`.
 #[derive(Debug, Clone, PartialEq)]
@@ -147,6 +160,26 @@ impl FastRPBuilder {
     /// Full result: returns all embeddings.
     pub fn run(&self) -> Result<FastRPResult> {
         self.compute()
+    }
+
+    pub fn stats(&self) -> Result<FastRPStats> {
+        let start = Instant::now();
+        let result = self.compute()?;
+        let compute_millis = start.elapsed().as_millis() as u64;
+
+        let node_count = result.embeddings.len() as u64;
+        let embedding_dimension = result
+            .embeddings
+            .first()
+            .map(|v| v.len() as u64)
+            .unwrap_or(0);
+
+        Ok(FastRPStats {
+            node_count,
+            embedding_dimension,
+            compute_millis,
+            success: true,
+        })
     }
 
     /// Full result + a canonical print envelope (summary) emitted at the boundary.

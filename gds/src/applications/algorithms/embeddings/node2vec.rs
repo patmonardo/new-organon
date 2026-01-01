@@ -105,8 +105,8 @@ pub fn handle_node2vec(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
                     })
                     .collect();
                 json!({
+                    "ok": true,
                     "op": op,
-                    "success": true,
                     "data": embeddings
                 })
             }
@@ -116,17 +116,8 @@ pub fn handle_node2vec(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
                 &format!("Failed to compute embeddings: {}", e),
             ),
         },
-        "stats" => match builder.run() {
-            Ok(result) => {
-                json!({
-                    "op": op,
-                    "success": true,
-                    "data": {
-                        "nodeCount": result.node_count,
-                        "embeddingDimension": result.embedding_dimension
-                    }
-                })
-            }
+        "stats" => match builder.stats() {
+            Ok(stats) => json!({ "ok": true, "op": op, "data": stats }),
             Err(e) => err(
                 op,
                 "EXECUTION_ERROR",
@@ -150,11 +141,8 @@ pub fn handle_node2vec(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
 /// Helper function to create error responses
 fn err(op: &str, error_type: &str, message: &str) -> Value {
     json!({
+        "ok": false,
         "op": op,
-        "success": false,
-        "error": {
-            "type": error_type,
-            "message": message
-        }
+        "error": { "code": error_type, "message": message }
     })
 }

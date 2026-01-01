@@ -85,17 +85,8 @@ pub fn handle_gat(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 
     // Execute based on mode
     match mode {
-        "stats" => match builder.run() {
-            Ok(result) => {
-                json!({
-                    "op": op,
-                    "success": true,
-                    "data": {
-                        "nodeCount": result.num_nodes,
-                        "embeddingDimension": result.embedding_dimension
-                    }
-                })
-            }
+        "stats" => match builder.stats() {
+            Ok(stats) => json!({ "ok": true, "op": op, "data": stats }),
             Err(e) => err(
                 op,
                 "EXECUTION_ERROR",
@@ -124,11 +115,8 @@ pub fn handle_gat(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 /// Helper function to create error responses
 fn err(op: &str, error_type: &str, message: &str) -> Value {
     json!({
+        "ok": false,
         "op": op,
-        "success": false,
-        "error": {
-            "type": error_type,
-            "message": message
-        }
+        "error": { "code": error_type, "message": message }
     })
 }

@@ -3,7 +3,22 @@ use crate::procedures::similarity::knn::{
     KnnConfig, KnnNodePropertySpec, KnnResultRow, SimilarityMetric,
 };
 use crate::types::prelude::DefaultGraphStore;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnnStats {
+    #[serde(rename = "nodesCompared")]
+    pub nodes_compared: u64,
+    #[serde(rename = "similarityPairs")]
+    pub similarity_pairs: u64,
+    #[serde(rename = "similarityDistribution")]
+    pub similarity_distribution: HashMap<String, f64>,
+    #[serde(rename = "computeMillis")]
+    pub compute_millis: u64,
+    pub success: bool,
+}
 
 pub struct KnnBuilder {
     graph_store: Arc<DefaultGraphStore>,
@@ -74,7 +89,7 @@ impl KnnBuilder {
         }
     }
 
-    pub fn stream(self) -> Result<Box<dyn Iterator<Item = KnnResultRow>>> {
+    fn compute_rows(self) -> Result<Vec<KnnResultRow>> {
         let config = self.build_config();
         let computation = crate::procedures::similarity::knn::KnnComputationRuntime::new();
         let storage =
@@ -99,7 +114,37 @@ impl KnnBuilder {
             )?
         };
 
-        let rows: Vec<KnnResultRow> = results.into_iter().map(KnnResultRow::from).collect();
+        Ok(results.into_iter().map(KnnResultRow::from).collect())
+    }
+
+    pub fn stream(self) -> Result<Box<dyn Iterator<Item = KnnResultRow>>> {
+        let rows = self.compute_rows()?;
         Ok(Box::new(rows.into_iter()))
+    }
+
+    pub fn stats(self) -> Result<KnnStats> {
+        let rows = self.compute_rows()?;
+
+        let mut sources = HashSet::new();
+        let tuples: Vec<(u64, u64, f64)> = rows
+            .iter()
+            .map(|r| {
+                sources.insert(r.source);
+                (r.source, r.target, r.similarity)
+            })
+            .collect();
+
+        let stats = crate::procedures::core::result::similarity::similarity_stats(
+            || tuples.into_iter(),
+            true,
+        );
+
+        Ok(KnnStats {
+            nodes_compared: sources.len() as u64,
+            similarity_pairs: rows.len() as u64,
+            similarity_distribution: stats.summary(),
+            compute_millis: stats.compute_millis,
+            success: stats.success,
+        })
     }
 }
