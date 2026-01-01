@@ -3,7 +3,7 @@
 //! Handles JSON requests for Cost-Effective Lazy Forward influence maximization operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::centrality::celf::{CELFFacade, CELFRow};
+use crate::procedures::centrality::celf::{CELFFacade, CELFRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

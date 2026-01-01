@@ -11,7 +11,7 @@
 
 use crate::collections::backends::vec::VecDouble;
 use crate::config::PageRankConfig;
-use crate::procedures::pagerank::run_pagerank;
+use crate::algo::pagerank::run_pagerank;
 use crate::projection::eval::pipeline::{
     ExecutableNodePropertyStep, NodePropertyStepContextConfig,
 };

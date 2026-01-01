@@ -3,7 +3,7 @@
 //! Handles JSON requests for bridge edge detection operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::centrality::bridges::{BridgeRow, BridgesFacade};
+use crate::procedures::centrality::bridges::{BridgeRow, BridgesFacade};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

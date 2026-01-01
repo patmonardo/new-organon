@@ -3,7 +3,7 @@
 //! Handles JSON requests for Filtered KNN similarity operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::similarity::filtered_knn::FilteredKnnBuilder;
+use crate::procedures::similarity::filtered_knn::FilteredKnnBuilder;
 use crate::projection::NodeLabel;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
@@ -110,7 +110,7 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
     for prop in &node_properties[1..] {
         builder = builder.add_property(
             prop,
-            crate::procedures::similarity::knn::metrics::SimilarityMetric::Default,
+            crate::algo::similarity::knn::metrics::SimilarityMetric::Default,
         );
     }
 

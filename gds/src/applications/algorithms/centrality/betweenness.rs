@@ -3,7 +3,7 @@
 //! Handles JSON requests for Betweenness centrality operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::centrality::betweenness::BetweennessCentralityFacade;
+use crate::procedures::centrality::betweenness::BetweennessCentralityFacade;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

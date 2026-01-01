@@ -3,7 +3,7 @@
 //! Handles JSON requests for K1Coloring operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::k1coloring::{K1ColoringFacade, K1ColoringRow};
+use crate::procedures::community::k1coloring::{K1ColoringFacade, K1ColoringRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

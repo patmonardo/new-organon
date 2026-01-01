@@ -3,7 +3,7 @@
 //! Handles JSON requests for DFS pathfinding operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::pathfinding::dfs::DfsBuilder;
+use crate::procedures::pathfinding::dfs::DfsBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

@@ -3,7 +3,7 @@
 //! Handles JSON requests for Triangle Count operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::triangle_count::{
+use crate::procedures::community::triangle_count::{
     TriangleCountFacade, TriangleCountRow,
 };
 use crate::types::catalog::GraphCatalog;

@@ -3,7 +3,7 @@
 //! Handles JSON requests for Bellman-Ford pathfinding operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::pathfinding::bellman_ford::BellmanFordBuilder;
+use crate::procedures::pathfinding::bellman_ford::BellmanFordBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

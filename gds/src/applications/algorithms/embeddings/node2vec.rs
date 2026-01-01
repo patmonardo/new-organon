@@ -3,7 +3,7 @@
 //! Handles JSON requests for Node2Vec embedding operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::embeddings::Node2VecBuilder;
+use crate::procedures::embeddings::Node2VecBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

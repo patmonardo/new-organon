@@ -3,7 +3,7 @@
 //! Handles JSON requests for PageRank operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::centrality::pagerank::PageRankFacade;
+use crate::procedures::centrality::pagerank::PageRankFacade;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

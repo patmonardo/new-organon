@@ -3,7 +3,7 @@
 //! Handles JSON requests for Yen's operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::pathfinding::yens::YensBuilder;
+use crate::procedures::pathfinding::yens::YensBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

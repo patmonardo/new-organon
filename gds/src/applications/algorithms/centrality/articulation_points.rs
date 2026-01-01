@@ -3,7 +3,7 @@
 //! Handles JSON requests for Articulation Points operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::centrality::articulation_points::{
+use crate::procedures::centrality::articulation_points::{
     ArticulationPointRow, ArticulationPointsFacade,
 };
 use crate::types::catalog::GraphCatalog;

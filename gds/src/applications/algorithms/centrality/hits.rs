@@ -3,7 +3,7 @@
 //! Handles JSON requests for HITS (Hyperlink-Induced Topic Search) operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::centrality::hits::HitsCentralityFacade;
+use crate::procedures::centrality::hits::HitsCentralityFacade;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

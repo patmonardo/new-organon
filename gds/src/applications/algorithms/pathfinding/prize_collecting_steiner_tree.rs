@@ -3,7 +3,7 @@
 //! Handles JSON requests for Prize-Collecting Steiner Tree operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::pathfinding::prize_collecting_steiner_tree::PCSTreeBuilder;
+use crate::procedures::pathfinding::prize_collecting_steiner_tree::PCSTreeBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

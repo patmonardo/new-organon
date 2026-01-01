@@ -3,8 +3,8 @@
 //! Handles JSON requests for HashGNN embedding operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::embeddings::hashgnn::{BinarizeFeaturesConfig, GenerateFeaturesConfig};
-use crate::procedures::facades::embeddings::HashGNNBuilder;
+use crate::algo::embeddings::hashgnn::{BinarizeFeaturesConfig, GenerateFeaturesConfig};
+use crate::procedures::embeddings::HashGNNBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

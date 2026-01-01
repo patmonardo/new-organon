@@ -3,7 +3,7 @@
 //! Handles JSON requests for GraphSAGE embedding operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::embeddings::GraphSageBuilder;
+use crate::procedures::embeddings::GraphSageBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

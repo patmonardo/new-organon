@@ -3,7 +3,7 @@
 //! Handles JSON requests for modularity computation operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::modularity::{ModularityFacade, ModularityRow};
+use crate::procedures::community::modularity::{ModularityFacade, ModularityRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

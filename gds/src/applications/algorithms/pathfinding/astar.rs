@@ -3,7 +3,7 @@
 //! Handles JSON requests for A* pathfinding operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::pathfinding::astar::{AStarBuilder, Heuristic};
+use crate::procedures::pathfinding::astar::{AStarBuilder, Heuristic};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

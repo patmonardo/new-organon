@@ -1,12 +1,9 @@
-pub mod filteredknn;
+#[allow(clippy::module_inception)]
+pub mod similarity;
+pub use similarity::SimilarityBuilder;
+
 pub mod knn;
-pub mod nodesim;
+pub use knn::KnnBuilder;
 
-// Preserve the existing public surface by re-exporting NodeSim types at the
-// similarity root.
-pub use nodesim::{
-    NodeSimilarityAlgorithmSpec, NodeSimilarityComputationRuntime, NodeSimilarityConfig,
-    NodeSimilarityMetric, NodeSimilarityResult, NodeSimilarityStorageRuntime,
-};
-
-pub use filteredknn::{FilteredKnnAlgorithmSpec, FilteredKnnConfig};
+pub mod filtered_knn;
+pub use filtered_knn::FilteredKnnBuilder;

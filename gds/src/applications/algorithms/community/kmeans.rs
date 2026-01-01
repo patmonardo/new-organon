@@ -3,8 +3,8 @@
 //! Handles JSON requests for KMeans clustering operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::kmeans::{KMeansFacade, KMeansRow};
-use crate::procedures::kmeans::KMeansSamplerType;
+use crate::procedures::community::kmeans::{KMeansFacade, KMeansRow};
+use crate::algo::kmeans::KMeansSamplerType;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

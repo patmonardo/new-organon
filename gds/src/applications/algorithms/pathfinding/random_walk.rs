@@ -3,7 +3,7 @@
 //! Handles JSON requests for Random Walk operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::pathfinding::random_walk::RandomWalkBuilder;
+use crate::procedures::pathfinding::random_walk::RandomWalkBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

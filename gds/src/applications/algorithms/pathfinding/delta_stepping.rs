@@ -3,7 +3,7 @@
 //! Handles JSON requests for Delta Stepping pathfinding operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::pathfinding::delta_stepping::DeltaSteppingBuilder;
+use crate::procedures::pathfinding::delta_stepping::DeltaSteppingBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

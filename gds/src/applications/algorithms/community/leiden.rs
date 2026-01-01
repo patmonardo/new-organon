@@ -3,7 +3,7 @@
 //! Handles JSON requests for Leiden community detection operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::leiden::{LeidenFacade, LeidenRow};
+use crate::procedures::community::leiden::{LeidenFacade, LeidenRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

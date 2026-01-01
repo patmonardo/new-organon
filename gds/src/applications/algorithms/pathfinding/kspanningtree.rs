@@ -3,7 +3,7 @@
 //! Handles JSON requests for K-Spanning Tree operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::pathfinding::kspanningtree::KSpanningTreeBuilder;
+use crate::procedures::pathfinding::kspanningtree::KSpanningTreeBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

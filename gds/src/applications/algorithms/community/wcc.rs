@@ -3,7 +3,7 @@
 //! Handles JSON requests for Weakly Connected Components operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::wcc::{WccFacade, WccRow};
+use crate::procedures::community::wcc::{WccFacade, WccRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

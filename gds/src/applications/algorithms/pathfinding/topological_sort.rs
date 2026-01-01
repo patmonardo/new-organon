@@ -3,7 +3,7 @@
 //! Handles JSON requests for Topological Sort operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::pathfinding::topological_sort::TopologicalSortBuilder;
+use crate::procedures::pathfinding::topological_sort::TopologicalSortBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

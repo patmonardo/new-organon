@@ -3,7 +3,7 @@
 //! Handles JSON requests for Label Propagation community detection operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::label_propagation::{
+use crate::procedures::community::label_propagation::{
     LabelPropagationFacade, LabelPropagationRow,
 };
 use crate::types::catalog::GraphCatalog;

@@ -3,7 +3,7 @@
 //! Handles JSON requests for KCore decomposition operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::kcore::{KCoreFacade, KCoreRow};
+use crate::procedures::community::kcore::{KCoreFacade, KCoreRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

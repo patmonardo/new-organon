@@ -1,18 +1,13 @@
-//! Embeddings procedures (node/graph embeddings).
-//!
-//! This module hosts embedding algorithms implemented in the standard
-//! `spec/storage/computation` shape used across `procedures/`.
+//! Embeddings facades.
 
-pub mod fastrp;
+pub mod fast_rp;
 pub mod gat;
 pub mod graphsage;
-pub mod hashgnn;
+pub mod hash_gnn;
 pub mod node2vec;
 
-pub use fastrp::{FastRPAlgorithmSpec, FastRPConfig, FastRPResult};
-pub use gat::config::GATConfig;
-pub use gat::spec::GATAlgorithmSpec;
-pub use gat::types::GATResult;
-pub use graphsage::algo::spec::{GRAPHSAGEAlgorithmSpec, GraphSageConfig, GraphSageResult};
-pub use hashgnn::{HashGNNAlgorithmSpec, HashGNNConfig, HashGNNEmbeddings, HashGNNResult};
-pub use node2vec::{Node2VecAlgorithmSpec, Node2VecConfig, Node2VecResult};
+pub use fast_rp::FastRPBuilder;
+pub use gat::GATBuilder;
+pub use graphsage::GraphSageBuilder;
+pub use hash_gnn::HashGNNBuilder;
+pub use node2vec::Node2VecBuilder;

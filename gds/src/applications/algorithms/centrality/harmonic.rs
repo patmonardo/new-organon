@@ -3,8 +3,8 @@
 //! Handles JSON requests for harmonic centrality operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::centrality::harmonic::HarmonicCentralityFacade;
-use crate::procedures::facades::traits::CentralityScore;
+use crate::procedures::centrality::harmonic::HarmonicCentralityFacade;
+use crate::procedures::traits::CentralityScore;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

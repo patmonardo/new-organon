@@ -3,7 +3,7 @@
 //! Handles JSON requests for Filtered Node Similarity operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::similarity::SimilarityBuilder;
+use crate::procedures::similarity::SimilarityBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

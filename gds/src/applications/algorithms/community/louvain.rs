@@ -3,7 +3,7 @@
 //! Handles JSON requests for Louvain community detection operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::louvain::{LouvainFacade, LouvainRow};
+use crate::procedures::community::louvain::{LouvainFacade, LouvainRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

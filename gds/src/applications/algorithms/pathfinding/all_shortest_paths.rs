@@ -3,7 +3,7 @@
 //! Handles JSON requests for all shortest paths operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::pathfinding::all_shortest_paths::AllShortestPathsBuilder;
+use crate::procedures::pathfinding::all_shortest_paths::AllShortestPathsBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

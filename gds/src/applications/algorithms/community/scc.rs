@@ -3,7 +3,7 @@
 //! Handles JSON requests for SCC computation operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::scc::{SccFacade, SccRow};
+use crate::procedures::community::scc::{SccFacade, SccRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

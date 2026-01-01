@@ -6,6 +6,7 @@
 // Real algorithm implementations are in procedures/ module
 // (Previously had speculative stubs here - all moved to procedures/)
 
+pub mod algo;
 pub mod collections;
 pub mod concurrency;
 pub mod config;
@@ -33,7 +34,7 @@ pub use types::*;
 pub use values::*;
 
 // User-facing facade entrypoint (live-by-default).
-pub use procedures::facades::Graph;
+pub use procedures::Graph;
 
 // Re-export procedure macros for procedures module
 #[cfg(feature = "procedures")]

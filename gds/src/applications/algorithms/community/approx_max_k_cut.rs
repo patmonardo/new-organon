@@ -3,7 +3,7 @@
 //! Handles JSON requests for ApproxMaxKCut community detection operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::approx_max_k_cut::{
+use crate::procedures::community::approx_max_k_cut::{
     ApproxMaxKCutFacade, ApproxMaxKCutRow,
 };
 use crate::types::catalog::GraphCatalog;

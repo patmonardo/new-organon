@@ -3,7 +3,7 @@
 //! Handles JSON requests for Local Clustering Coefficient operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::community::local_clustering_coefficient::{
+use crate::procedures::community::local_clustering_coefficient::{
     LocalClusteringCoefficientFacade, LocalClusteringCoefficientRow,
 };
 use crate::types::catalog::GraphCatalog;

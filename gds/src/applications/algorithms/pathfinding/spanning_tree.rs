@@ -3,7 +3,7 @@
 //! Handles JSON requests for Spanning Tree operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::pathfinding::spanning_tree::SpanningTreeBuilder;
+use crate::procedures::pathfinding::spanning_tree::SpanningTreeBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

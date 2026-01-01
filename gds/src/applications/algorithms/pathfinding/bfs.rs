@@ -3,7 +3,7 @@
 //! Handles JSON requests for BFS pathfinding operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::facades::pathfinding::bfs::BfsBuilder;
+use crate::procedures::pathfinding::bfs::BfsBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
