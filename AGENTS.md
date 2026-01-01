@@ -4,6 +4,7 @@
 - TypeScript workspace lives in `gdsl/` (IR + schemas), `logic/` (canonical graph + validation tooling), `task/` (agent/workflow schemas + runtime sketch), and `model/` (app-facing schemas + Prisma + `model/examples/dashboard` Next.js demo). Barrel schemas sit under `*/src/schema`.
 - Rust workspace lives in `gds/` (compute/algorithms) and `reality/` (experiments); Cargo builds are separate from PNPM.
 - Helper scripts and utilities sit in `tools/`. Architectural guardrails for TS↔Rust live in `.github/codegen-boundaries.md`.
+ - In `gds/`, treat `applications/` → `procedures/` (facades) as the public surface; `algo/` is internal and should only be touched by facades and internal executors (e.g., projection/eval), not by applications or examples.
 
 ## Build, Test, and Development Commands
 - Install: `pnpm install` (Node 20+, pnpm 9+).

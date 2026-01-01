@@ -17,9 +17,8 @@
 use crate::core::utils::progress::TaskRegistry;
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits::Result;
-use crate::algo::kmeans::{
-    KMeansComputationRuntime, KMeansConfig, KMeansResult, KMeansSamplerType,
-};
+use crate::algo::kmeans::{KMeansComputationRuntime, KMeansConfig, KMeansResult};
+pub use crate::algo::kmeans::KMeansSamplerType;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};

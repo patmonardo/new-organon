@@ -16,8 +16,8 @@ Run: cargo run -p gds --example gnn_pipeline_demo --features ml"
 
 #[cfg(feature = "ml")]
 mod enabled {
-    use gds::procedures::embeddings::hashgnn::GenerateFeaturesConfig;
-    use gds::procedures::facades::Graph;
+    use gds::algo::embeddings::{HashGNNEmbeddings, hashgnn::GenerateFeaturesConfig};
+    use gds::procedures::Graph;
     use gds::types::graph_store::{DefaultGraphStore, GraphStore};
     use gds::types::random::{RandomGraphConfig, RandomRelationshipConfig};
     use std::sync::Arc;
@@ -81,7 +81,7 @@ mod enabled {
         println!("Step 4: Analyzing embeddings...");
 
         match &result.embeddings {
-            gds::procedures::embeddings::hashgnn::algo::HashGNNEmbeddings::Dense { embeddings } => {
+            HashGNNEmbeddings::Dense { embeddings } => {
                 println!("Dense embeddings generated");
                 println!("Total nodes: {}", embeddings.len());
                 // Show sample embeddings (first 5 nodes)
@@ -98,7 +98,7 @@ mod enabled {
                     );
                 }
             }
-            gds::procedures::embeddings::hashgnn::algo::HashGNNEmbeddings::BinaryIndices {
+            HashGNNEmbeddings::BinaryIndices {
                 embeddings,
                 embedding_dimension,
             } => {

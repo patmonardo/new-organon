@@ -29,6 +29,7 @@ use crate::mem::MemoryRange;
 use crate::algo::degree_centrality::{
     DegreeCentralityComputationRuntime, DegreeCentralityStorageRuntime,
 };
+pub use crate::algo::degree_centrality::storage::Orientation;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
 use crate::types::graph::id_map::NodeId;
@@ -74,7 +75,7 @@ pub struct DegreeCentralityStats {
 pub struct DegreeCentralityFacade {
     graph_store: Arc<DefaultGraphStore>,
     normalize: bool,
-    orientation: crate::algo::degree_centrality::storage::Orientation,
+    orientation: Orientation,
     has_relationship_weight_property: bool,
     concurrency: usize,
     /// Progress tracking components
@@ -88,7 +89,7 @@ impl DegreeCentralityFacade {
         Self {
             graph_store,
             normalize: false,
-            orientation: crate::algo::degree_centrality::storage::Orientation::Natural,
+            orientation: Orientation::Natural,
             has_relationship_weight_property: false,
             concurrency: 4,
             task_registry_factory: None,
@@ -103,10 +104,7 @@ impl DegreeCentralityFacade {
     }
 
     /// Set orientation for degree computation.
-    pub fn orientation(
-        mut self,
-        orientation: crate::algo::degree_centrality::storage::Orientation,
-    ) -> Self {
+    pub fn orientation(mut self, orientation: Orientation) -> Self {
         self.orientation = orientation;
         self
     }

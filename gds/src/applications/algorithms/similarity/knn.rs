@@ -3,7 +3,7 @@
 //! Handles JSON requests for KNN similarity operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::similarity::knn::KnnBuilder;
+use crate::procedures::similarity::knn::{KnnBuilder, SimilarityMetric};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -97,10 +97,7 @@ pub fn handle_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 
     // Add additional properties if any
     for prop in &node_properties[1..] {
-        builder = builder.add_property(
-            prop,
-            crate::algo::similarity::knn::SimilarityMetric::Default,
-        );
+        builder = builder.add_property(prop, SimilarityMetric::Default);
     }
 
     // Apply optional parameters

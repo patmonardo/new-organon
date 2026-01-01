@@ -3,8 +3,7 @@
 //! Handles JSON requests for degree centrality operations,
 //! delegating to the facade layer for execution.
 
-use crate::algo::degree_centrality::storage::Orientation;
-use crate::procedures::centrality::degree_centrality::DegreeCentralityFacade;
+use crate::procedures::centrality::degree_centrality::{DegreeCentralityFacade, Orientation};
 use crate::procedures::traits::CentralityScore;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};

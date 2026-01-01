@@ -417,7 +417,7 @@ let result = executor.compute(&mut algorithm, &config)?;
 ### Facade Example
 
 ```rust
-use gds::procedures::facades::pathfinding::astar::AStarBuilder;
+use gds::procedures::pathfinding::AStarBuilder;
 
 let builder = AStarBuilder::new(graph_store)
     .source(0)

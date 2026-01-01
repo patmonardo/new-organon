@@ -11,8 +11,8 @@ How to take the Rust GNN pieces in `gds/src/ml` from code to a runnable pipeline
 2) Prepare a graph store (replace the random graph with your own loader if needed):
 ```rust
 use std::sync::Arc;
-use gds::procedures::facades::Graph;
-use gds::procedures::embeddings::hashgnn::GenerateFeaturesConfig;
+use gds::algo::embeddings::hashgnn::GenerateFeaturesConfig;
+use gds::procedures::Graph;
 use gds::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 use gds::types::graph_store::DefaultGraphStore;
 
@@ -46,7 +46,7 @@ let (result, summary) = graph
 println!("embeddings: {:?}", result.embeddings);      // binary indices or dense vectors
 println!("run summary: {}", serde_json::to_string(&summary).unwrap());
 ```
-Key config knobs live in `gds/src/procedures/embeddings/hashgnn/algo/spec.rs`:
+Key config knobs live in `gds/src/algo/embeddings/hashgnn/algo/spec.rs`:
 - `iterations` (>0), `embedding_density` (>0), `neighbor_influence` (0..1e6)
 - Feature source: `feature_properties` **or** `generate_features` (one is required)
 - Optional: `output_dimension` to densify, `binarize_features`, `heterogeneous`, `concurrency`, `random_seed`

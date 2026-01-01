@@ -21,8 +21,8 @@ mod enabled {
     use gds::config::{GraphStoreConfig, GraphStorePropertiesConfig};
     use gds::mem::graph_store_memory_container::GraphStoreMemoryContainer;
     use gds::prelude::GraphStore;
-    use gds::procedures::facades::centrality::pagerank::PageRankFacade;
-    use gds::procedures::facades::community::TriangleCountFacade;
+    use gds::procedures::centrality::PageRankFacade;
+    use gds::procedures::community::TriangleCountFacade;
     use gds::projection::orientation::Orientation;
     use gds::projection::{NodeLabel, RelationshipType};
     use gds::types::graph::id_map::IdMap;

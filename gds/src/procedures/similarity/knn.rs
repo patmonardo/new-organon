@@ -1,7 +1,6 @@
 use crate::procedures::traits::Result;
-use crate::algo::similarity::knn::{
-    KnnConfig, KnnNodePropertySpec, KnnResultRow, SimilarityMetric,
-};
+pub use crate::algo::similarity::knn::{KnnNodePropertySpec, SimilarityMetric};
+use crate::algo::similarity::knn::{KnnConfig, KnnResultRow};
 use crate::types::prelude::DefaultGraphStore;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
