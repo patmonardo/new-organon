@@ -128,7 +128,7 @@ mod tests {
         let mut rng = SplittableRandom::with_seed(Some(1234));
         for _ in 0..100 {
             let value = rng.next_int(10, 40);
-            assert!(value >= 10 && value < 40);
+            assert!((10..40).contains(&value));
         }
     }
 }

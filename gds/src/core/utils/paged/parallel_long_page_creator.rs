@@ -438,7 +438,7 @@ mod tests {
         let pages = creator.create_pages(1_000_000);
 
         let page_size = creator.page_size();
-        let num_pages = (1_000_000 + page_size - 1) / page_size;
+        let num_pages = 1_000_000_usize.div_ceil(page_size);
 
         assert_eq!(pages.len(), num_pages);
 

@@ -241,7 +241,7 @@ mod tests {
             "alice".to_string(),
             job_id.clone(),
             task.clone(),
-            |username, job_id, task| UserTask::new(username, job_id, task),
+            UserTask::new,
         );
 
         assert_eq!(listener.get_added_count(), 1);
@@ -310,7 +310,7 @@ mod tests {
             "alice".to_string(),
             job_id,
             task,
-            |username, job_id, task| UserTask::new(username, job_id, task),
+            UserTask::new,
         );
 
         assert_eq!(listener1.get_added_count(), 1);

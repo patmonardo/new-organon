@@ -16,8 +16,8 @@ mod enabled {
     use std::collections::HashMap;
     use std::sync::Arc;
 
-    use gds::projection::eval::ml::pipeline::node_pipeline::NodeFeatureStep;
-    use gds::projection::eval::ml::pipeline::{
+    use gds::projection::eval::pipeline::node_pipeline::NodeFeatureStep;
+    use gds::projection::eval::pipeline::{
         Pipeline, PipelineGraphFilter, PipelineValidationError, PredictPipelineExecutor,
         PredictPipelineExecutorError,
     };
@@ -77,7 +77,7 @@ mod enabled {
 
     struct SmokePipeline {
         node_property_steps:
-            Vec<Box<dyn gds::projection::eval::ml::pipeline::ExecutableNodePropertyStep>>,
+            Vec<Box<dyn gds::projection::eval::pipeline::ExecutableNodePropertyStep>>,
         feature_steps: Vec<NodeFeatureStep>,
     }
 
@@ -86,7 +86,7 @@ mod enabled {
 
         fn node_property_steps(
             &self,
-        ) -> &[Box<dyn gds::projection::eval::ml::pipeline::ExecutableNodePropertyStep>] {
+        ) -> &[Box<dyn gds::projection::eval::pipeline::ExecutableNodePropertyStep>] {
             &self.node_property_steps
         }
 
@@ -164,11 +164,11 @@ mod enabled {
 
         let mut config = HashMap::new();
         config.insert(
-            gds::projection::eval::ml::pipeline::MUTATE_PROPERTY_KEY.to_string(),
+            gds::projection::eval::pipeline::MUTATE_PROPERTY_KEY.to_string(),
             serde_json::Value::String("feat".to_string()),
         );
 
-        let step = gds::projection::eval::ml::pipeline::NodePropertyStep::new(
+        let step = gds::projection::eval::pipeline::NodePropertyStep::new(
             "gds.fastRP.mutate".to_string(),
             config,
         );

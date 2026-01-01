@@ -414,7 +414,7 @@ mod tests {
         // Allow for page overhead
         let ratio = estimated as f64 / expected as f64;
         assert!(
-            ratio >= 0.1 && ratio <= 20.0,
+            (0.1..=20.0).contains(&ratio),
             "Memory estimation ratio {} should be reasonable",
             ratio
         );

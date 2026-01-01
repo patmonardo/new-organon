@@ -239,7 +239,7 @@ impl DfsBuilder {
         additional.insert("max_depth".to_string(), self.max_depth.map_or("unlimited".to_string(), |d| d.to_string()));
 
         let metadata = ExecutionMetadata {
-            execution_time: std::time::Duration::from_millis(result.computation_time_ms as u64),
+            execution_time: std::time::Duration::from_millis(result.computation_time_ms),
             iterations: None,
             converged: None,
             additional,
@@ -471,25 +471,25 @@ impl DfsBuilder {
     /// Returns a memory range estimate based on stack storage, visited tracking, and path storage.
     pub fn estimate_memory(&self) -> MemoryRange {
         let node_count = self.graph_store.node_count();
-        
+
         // Stack storage (for DFS recursion/iteration)
         let stack_memory = node_count * 8; // node_id per entry
-        
+
         // Visited tracking
         let visited_memory = node_count;
-        
+
         // Path tracking (if enabled)
         let path_memory = if self.track_paths {
             node_count * 8
         } else {
             0
         };
-        
+
         // Graph structure overhead
         let avg_degree = 10.0;
         let relationship_count = (node_count as f64 * avg_degree) as usize;
         let graph_overhead = relationship_count * 16;
-        
+
         let total_memory = stack_memory + visited_memory + path_memory + graph_overhead;
         let overhead = total_memory / 5;
         MemoryRange::of_range(total_memory, total_memory + overhead)

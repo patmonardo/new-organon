@@ -540,7 +540,7 @@ mod tests {
 
         // Should center around mean and normalize by range
         let scaled = scaler.scale_property(2, &property_fn);
-        assert!(scaled >= -1.0 && scaled <= 1.0);
+        assert!((-1.0..=1.0).contains(&scaled));
     }
 
     #[test]

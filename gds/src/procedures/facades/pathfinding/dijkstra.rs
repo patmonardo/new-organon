@@ -225,7 +225,7 @@ impl DijkstraBuilder {
 
         // Create execution metadata
         let metadata = ExecutionMetadata {
-            execution_time: std::time::Duration::from_millis(result.computation_time_ms as u64),
+            execution_time: std::time::Duration::from_millis(result.computation_time_ms),
             iterations: None,
             converged: None,
             additional: std::collections::HashMap::new(),
@@ -458,30 +458,30 @@ impl DijkstraBuilder {
     /// - Graph structure overhead
     pub fn estimate_memory(&self) -> MemoryRange {
         let node_count = self.graph_store.node_count();
-        
+
         // Priority queue (open set) - worst case: all nodes in queue
         let priority_queue_memory = node_count * 32; // node_id + distance + heap overhead
-        
+
         // Distance array (8 bytes per node)
         let distance_array_memory = node_count * 8;
-        
+
         // Path tracking: predecessor array (8 bytes per node)
         let path_tracking_memory = if self.track_relationships {
             node_count * 8
         } else {
             0
         };
-        
+
         // Graph structure overhead
         let avg_degree = 10.0;
         let relationship_count = (node_count as f64 * avg_degree) as usize;
         let graph_overhead = relationship_count * 16;
-        
+
         let total_memory = priority_queue_memory
             + distance_array_memory
             + path_tracking_memory
             + graph_overhead;
-        
+
         let overhead = total_memory / 5; // 20% overhead
         MemoryRange::of_range(total_memory, total_memory + overhead)
     }

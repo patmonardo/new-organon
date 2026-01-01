@@ -167,7 +167,7 @@ mod tests {
         let mut sampler = WeightedUniformSampler::new(42);
         let input = vec![(0, 1.0), (1, 1.0), (2, 1.0), (3, 1.0), (4, 1.0)];
 
-        let samples = sampler.sample(input.into_iter(), 5, 3);
+        let samples = sampler.sample(input, 5, 3);
 
         assert_eq!(samples.len(), 3);
         // All samples should be in range [0, 5)
@@ -205,7 +205,7 @@ mod tests {
         let input = vec![(0, 1.0), (1, 1.0), (2, 1.0), (3, 1.0), (4, 1.0)];
 
         // Only include even numbers
-        let samples = sampler.sample_filtered(input.into_iter(), 5, 3, |node_id| node_id % 2 == 0);
+        let samples = sampler.sample_filtered(input, 5, 3, |node_id| node_id % 2 == 0);
 
         assert_eq!(samples.len(), 3);
         // All samples should be even
@@ -218,7 +218,7 @@ mod tests {
         let input = vec![(0, 1.0), (1, 2.0), (2, 3.0)];
 
         // Request more samples than available
-        let samples = sampler.sample(input.into_iter(), 3, 10);
+        let samples = sampler.sample(input, 3, 10);
 
         assert_eq!(samples.len(), 3);
         assert!(samples.contains(&0));
@@ -242,7 +242,7 @@ mod tests {
         // Zero weight should not cause panic
         let input = vec![(0, 0.0), (1, 1.0)];
 
-        let samples = sampler.sample(input.into_iter(), 2, 1);
+        let samples = sampler.sample(input, 2, 1);
 
         assert_eq!(samples.len(), 1);
     }

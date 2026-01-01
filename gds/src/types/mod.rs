@@ -5,6 +5,7 @@ pub mod properties;
 pub mod property_state;
 pub mod random;
 pub mod schema;
+pub mod user;
 pub mod value_type;
 
 pub use default_value::*;

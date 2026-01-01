@@ -316,6 +316,12 @@ impl ResultBuilder<CentralityResult> for CentralityResultBuilder {
     }
 }
 
+impl Default for CentralityResultBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Community result builder
 ///
 /// **Translation**: `AbstractCommunityResultBuilder`
@@ -460,6 +466,12 @@ impl ResultBuilder<CommunityResult> for CommunityResultBuilder {
     }
 }
 
+impl Default for CommunityResultBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Path finding result builder
 ///
 /// **Translation**: `AbstractPathFindingResultBuilder` (inferred from Java patterns)
@@ -575,6 +587,12 @@ impl ResultBuilder<PathFindingResult> for PathResultBuilder {
     fn with_metadata(mut self, metadata: ExecutionMetadata) -> Self {
         self.metadata = Some(metadata);
         self
+    }
+}
+
+impl Default for PathResultBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

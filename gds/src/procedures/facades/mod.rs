@@ -58,6 +58,9 @@
 
 pub mod builder_base;
 pub mod graph;
+pub mod graph_catalog;
+pub mod memory;
+pub mod operations;
 pub mod traits;
 
 // Facade implementations by algorithm family

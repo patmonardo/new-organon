@@ -230,8 +230,8 @@ mod tests {
 
         let summary = stats.summary();
         assert_eq!(summary.get("min"), Some(&0.0));
-        assert!(summary.get("max").is_some());
-        assert!(summary.get("mean").is_some());
+        assert!(summary.contains_key("max"));
+        assert!(summary.contains_key("mean"));
     }
 
     #[test]

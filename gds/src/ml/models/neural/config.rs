@@ -107,6 +107,17 @@ impl MLPClassifierTrainConfig {
 
 // Remove trait implementations - these are structs, not traits
 
+impl TrainerConfigTrait for MLPClassifierTrainConfig {
+    fn method(&self) -> TrainingMethod {
+        self.method
+    }
+
+    fn to_map(&self) -> std::collections::HashMap<String, serde_json::Value> {
+        // TODO: Implement serialization
+        std::collections::HashMap::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,16 +183,5 @@ mod tests {
             .build()
             .unwrap();
         config.initialize_class_weights(3); // Should panic
-    }
-}
-
-impl TrainerConfigTrait for MLPClassifierTrainConfig {
-    fn method(&self) -> TrainingMethod {
-        self.method
-    }
-
-    fn to_map(&self) -> std::collections::HashMap<String, serde_json::Value> {
-        // TODO: Implement serialization
-        std::collections::HashMap::new()
     }
 }

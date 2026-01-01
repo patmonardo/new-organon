@@ -281,8 +281,7 @@ mod tests {
         }
 
         fn reset(&mut self, _new_task_volume: i64) -> i64 {
-            let old_volume = 1000; // Dummy value
-            old_volume
+            1000 // Dummy value
         }
 
         fn release(&mut self) {

@@ -82,7 +82,7 @@ mod tests {
         let targets = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let predictions = vec![1.1, 2.2, 2.8, 4.2, 4.9];
         let mse = RegressionMetric::MSE.compute(&targets, &predictions);
-        assert!((mse - 0.05).abs() < 1e-10);
+        assert!((mse - 0.028).abs() < 1e-10);
     }
 
     #[test]
