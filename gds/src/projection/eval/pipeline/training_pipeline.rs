@@ -5,6 +5,8 @@
 use std::collections::HashMap;
 use std::error::Error as StdError;
 
+use dyn_clone::DynClone;
+
 use crate::projection::eval::pipeline::{AutoTuningConfig, ExecutableNodePropertyStep, Pipeline};
 
 /// Training type: classification or regression.
@@ -63,7 +65,7 @@ impl std::fmt::Display for TrainingMethod {
 ///
 /// This represents a single model candidate in the training parameter space.
 /// Can be concrete (fixed parameters) or tunable (parameter ranges for AutoML).
-pub trait TunableTrainerConfig: Send + Sync {
+pub trait TunableTrainerConfig: Send + Sync + DynClone {
     /// Get the training method for this config.
     fn training_method(&self) -> TrainingMethod;
 
@@ -75,6 +77,8 @@ pub trait TunableTrainerConfig: Send + Sync {
     /// Convert to map for serialization.
     fn to_map(&self) -> HashMap<String, serde_json::Value>;
 }
+
+dyn_clone::clone_trait_object!(TunableTrainerConfig);
 
 /// Training pipeline that supports model selection and hyperparameter tuning.
 ///
@@ -277,6 +281,7 @@ mod tests {
     }
 
     // Mock implementations for testing
+    #[derive(Clone)]
     struct MockTrainerConfig {
         method: TrainingMethod,
         concrete: bool,

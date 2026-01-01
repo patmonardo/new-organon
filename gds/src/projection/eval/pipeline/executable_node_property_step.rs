@@ -4,6 +4,7 @@
 
 use std::collections::HashMap;
 use std::error::Error as StdError;
+use dyn_clone::DynClone;
 
 /// Executable node property step.
 ///
@@ -33,7 +34,7 @@ use std::error::Error as StdError;
 ///     String mutateNodeProperty();
 /// }
 /// ```
-pub trait ExecutableNodePropertyStep {
+pub trait ExecutableNodePropertyStep: DynClone + Send + Sync {
     /// Execute the algorithm and mutate graph store with computed property.
     ///
     /// **Java**: `void execute(ExecutionContext, String graphName, ...)`
@@ -98,3 +99,5 @@ pub trait ExecutableNodePropertyStep {
         map
     }
 }
+
+dyn_clone::clone_trait_object!(ExecutableNodePropertyStep);

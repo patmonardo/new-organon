@@ -13,7 +13,7 @@ use std::collections::HashMap;
 /// - Cosine: angular similarity
 /// - L2: Euclidean distance
 /// - SameCategory: categorical equality
-pub trait LinkFeatureStep {
+pub trait LinkFeatureStep: Send + Sync {
     /// Creates a LinkFeatureAppender for this feature step on the given graph.
     /// The appender is responsible for extracting features for (source, target) pairs.
     fn link_feature_appender(&self, graph: &dyn Graph) -> Box<dyn LinkFeatureAppender>;
@@ -41,6 +41,12 @@ pub trait LinkFeatureStep {
     /// Clones this feature step into a new boxed trait object.
     /// Required for copying pipelines (e.g., training → predict).
     fn clone_box(&self) -> Box<dyn LinkFeatureStep>;
+}
+
+impl Clone for Box<dyn LinkFeatureStep> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
 }
 
 #[cfg(test)]

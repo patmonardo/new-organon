@@ -82,6 +82,20 @@ impl PipelineUserCatalog {
         Ok(())
     }
 
+    fn replace<P: TrainingPipeline + Send + Sync + 'static>(
+        &mut self,
+        pipeline_name: String,
+        pipeline: Arc<P>,
+    ) -> Result<(), String> {
+        if !self.pipelines_by_name.contains_key(&pipeline_name) {
+            return Err(format!("Pipeline named `{}` does not exist.", pipeline_name));
+        }
+
+        let entry = PipelineCatalogEntry::new(pipeline_name.clone(), pipeline);
+        self.pipelines_by_name.insert(pipeline_name, entry);
+        Ok(())
+    }
+
     fn exists(&self, pipeline_name: &str) -> bool {
         self.pipelines_by_name.contains_key(pipeline_name)
     }
@@ -153,6 +167,28 @@ impl PipelineCatalog {
             .or_insert_with(PipelineUserCatalog::new);
 
         user_catalog.set(pipeline_name.to_string(), pipeline)
+    }
+
+    /// Replace an existing pipeline with a new instance.
+    ///
+    /// This is used by facade "builder" procedures (add step/configure/etc.)
+    /// where we want atomic-ish updates without mutating shared state in-place.
+    pub fn replace<P: TrainingPipeline + Send + Sync + 'static>(
+        &self,
+        user: &str,
+        pipeline_name: &str,
+        pipeline: Arc<P>,
+    ) -> Result<(), String> {
+        let mut catalogs = self
+            .user_catalogs
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
+
+        let user_catalog = catalogs
+            .get_mut(user)
+            .ok_or_else(|| format!("No pipelines exist for user `{}`.", user))?;
+
+        user_catalog.replace(pipeline_name.to_string(), pipeline)
     }
 
     /// Check if a pipeline exists in the catalog.

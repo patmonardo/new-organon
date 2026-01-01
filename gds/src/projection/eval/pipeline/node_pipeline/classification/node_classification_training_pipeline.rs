@@ -57,6 +57,11 @@ impl NodeClassificationTrainingPipeline {
         self.feature_steps.push(step);
     }
 
+    /// Replace all feature steps in the pipeline.
+    pub fn set_feature_steps(&mut self, steps: Vec<NodeFeatureStep>) {
+        self.feature_steps = steps;
+    }
+
     /// Get the pipeline type.
     pub fn pipeline_type(&self) -> &'static str {
         Self::PIPELINE_TYPE
@@ -95,13 +100,14 @@ impl NodeClassificationTrainingPipeline {
 
 impl Clone for NodeClassificationTrainingPipeline {
     fn clone(&self) -> Self {
-        // Note: This is a temporary implementation. In a real implementation,
-        // the trait objects would need to be cloneable or we'd use Arc references.
-        // For now, we create a new pipeline with the same configuration but empty steps.
         Self {
-            node_property_steps: Vec::new(), // TODO: Implement proper cloning
+            node_property_steps: self.node_property_steps.iter().cloned().collect(),
             feature_steps: self.feature_steps.clone(),
-            training_parameter_space: HashMap::new(), // TODO: Implement proper cloning
+            training_parameter_space: self
+                .training_parameter_space
+                .iter()
+                .map(|(method, configs)| (*method, configs.iter().cloned().collect()))
+                .collect(),
             auto_tuning_config: self.auto_tuning_config.clone(),
             split_config: self.split_config.clone(),
         }

@@ -95,11 +95,7 @@ impl LinkPredictionPredictPipeline {
         training_pipeline: &super::LinkPredictionTrainingPipeline,
     ) -> Self {
         // Copy feature steps from the training pipeline
-        let feature_steps = training_pipeline
-            .feature_steps()
-            .iter()
-            .map(|step| step.clone_box())
-            .collect();
+        let feature_steps = training_pipeline.link_feature_steps();
 
         Self {
             node_property_steps: PhantomData,

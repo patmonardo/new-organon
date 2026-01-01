@@ -1,7 +1,10 @@
 // Phase 4.1: LinkPredictionTrainingPipeline - Training pipeline for link prediction
 
 use super::{LinkFeatureStep, LinkPredictionSplitConfig};
-use crate::projection::eval::pipeline::ExecutableNodePropertyStep;
+use crate::projection::eval::pipeline::{
+    AutoTuningConfig, ExecutableNodePropertyStep, FeatureStep, Pipeline, TrainingMethod,
+    TrainingPipeline, TunableTrainerConfig,
+};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
@@ -47,6 +50,61 @@ use std::marker::PhantomData;
 /// pipeline.add_feature_step(CosineFeatureStep::new(vec!["features".to_string()]));
 /// pipeline.set_split_config(LinkPredictionSplitConfig::default());
 /// ```
+#[derive(Clone)]
+pub struct LinkFeatureStepWrapper {
+    step: Box<dyn LinkFeatureStep>,
+    name: String,
+    input_node_properties: Vec<String>,
+    configuration: HashMap<String, serde_json::Value>,
+}
+
+impl LinkFeatureStepWrapper {
+    pub fn new(step: Box<dyn LinkFeatureStep>) -> Self {
+        let name = step.name().to_string();
+        let input_node_properties = step.input_node_properties();
+        let configuration = step.configuration();
+        Self {
+            step,
+            name,
+            input_node_properties,
+            configuration,
+        }
+    }
+
+    pub fn as_link_step(&self) -> &dyn LinkFeatureStep {
+        self.step.as_ref()
+    }
+
+    pub fn to_link_step_box(&self) -> Box<dyn LinkFeatureStep> {
+        self.step.clone_box()
+    }
+}
+
+impl FeatureStep for LinkFeatureStepWrapper {
+    fn input_node_properties(&self) -> &[String] {
+        &self.input_node_properties
+    }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn configuration(&self) -> &HashMap<String, serde_json::Value> {
+        &self.configuration
+    }
+
+    fn to_map(&self) -> HashMap<String, serde_json::Value> {
+        let mut map = HashMap::new();
+        map.insert("name".to_string(), serde_json::json!(self.name()));
+        map.insert(
+            "config".to_string(),
+            serde_json::json!(self.configuration().clone()),
+        );
+        map
+    }
+}
+
+#[derive(Clone)]
 pub struct LinkPredictionTrainingPipeline {
     /// Pipeline type identifier
     pub pipeline_type: &'static str,
@@ -55,22 +113,19 @@ pub struct LinkPredictionTrainingPipeline {
     pub model_type: &'static str,
 
     /// Node property steps (preprocessing)
-    /// TODO: Use actual ExecutableNodePropertyStep type
-    node_property_steps: PhantomData<Vec<Box<dyn ExecutableNodePropertyStep>>>,
+    node_property_steps: Vec<Box<dyn ExecutableNodePropertyStep>>,
 
     /// Link feature steps (feature extraction)
-    feature_steps: Vec<Box<dyn LinkFeatureStep>>,
+    feature_steps: Vec<LinkFeatureStepWrapper>,
 
     /// Split configuration (train/test/validation + negative sampling)
     split_config: LinkPredictionSplitConfig,
 
-    /// Training type (always CLASSIFICATION for link prediction)
-    /// TODO: Use TrainingType enum
-    _training_type: String,
+    /// Training parameter space (model candidates)
+    training_parameter_space: HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>>,
 
-    /// Parameter space for hyperparameter search
-    /// TODO: Use TrainerConfig type
-    parameter_space: PhantomData<()>,
+    /// AutoML / tuning configuration
+    auto_tuning_config: AutoTuningConfig,
 }
 
 impl LinkPredictionTrainingPipeline {
@@ -94,11 +149,11 @@ impl LinkPredictionTrainingPipeline {
         Self {
             pipeline_type: Self::PIPELINE_TYPE,
             model_type: Self::MODEL_TYPE,
-            node_property_steps: PhantomData,
+            node_property_steps: Vec::new(),
             feature_steps: Vec::new(),
             split_config: LinkPredictionSplitConfig::default(),
-            _training_type: "CLASSIFICATION".to_string(),
-            parameter_space: PhantomData,
+            training_parameter_space: HashMap::new(),
+            auto_tuning_config: AutoTuningConfig::default(),
         }
     }
 
@@ -112,14 +167,24 @@ impl LinkPredictionTrainingPipeline {
         self.model_type
     }
 
-    /// Returns the feature steps.
-    pub fn feature_steps(&self) -> &[Box<dyn LinkFeatureStep>] {
-        &self.feature_steps
+    /// Returns the link feature steps as boxed trait objects.
+    ///
+    /// This is a convenience API for link-specific runtime code.
+    pub fn link_feature_steps(&self) -> Vec<Box<dyn LinkFeatureStep>> {
+        self.feature_steps
+            .iter()
+            .map(|s| s.to_link_step_box())
+            .collect()
     }
 
     /// Adds a feature step to the pipeline.
     pub fn add_feature_step(&mut self, step: Box<dyn LinkFeatureStep>) {
-        self.feature_steps.push(step);
+        self.feature_steps.push(LinkFeatureStepWrapper::new(step));
+    }
+
+    /// Adds a node property step to the pipeline.
+    pub fn add_node_property_step(&mut self, step: Box<dyn ExecutableNodePropertyStep>) {
+        self.node_property_steps.push(step);
     }
 
     /// Returns the split configuration.
@@ -147,15 +212,18 @@ impl LinkPredictionTrainingPipeline {
         let mut description = HashMap::new();
 
         // Node property steps
-        // TODO: Iterate over actual node_property_steps when available
-        let node_steps: Vec<HashMap<String, serde_json::Value>> = Vec::new();
+        let node_steps: Vec<HashMap<String, serde_json::Value>> = self
+            .node_property_steps
+            .iter()
+            .map(|step| step.to_map())
+            .collect();
         description.insert("nodePropertySteps".to_string(), node_steps);
 
         // Feature steps (the Form Evaluation steps!)
         let feature_steps_maps: Vec<HashMap<String, serde_json::Value>> = self
             .feature_steps
             .iter()
-            .map(|step| step.configuration())
+            .map(|step| step.configuration().clone())
             .collect();
         description.insert("featureSteps".to_string(), feature_steps_maps);
 
@@ -188,6 +256,10 @@ impl LinkPredictionTrainingPipeline {
             );
         }
         Ok(())
+    }
+
+    pub fn split_config_mut(&mut self) -> &mut LinkPredictionSplitConfig {
+        &mut self.split_config
     }
 
     /// Returns tasks grouped by relationship property.
@@ -229,6 +301,110 @@ impl LinkPredictionTrainingPipeline {
         // Call tasks_by_relationship_property()
         // Return first property if any
         None
+    }
+}
+
+impl Pipeline for LinkPredictionTrainingPipeline {
+    type FeatureStep = LinkFeatureStepWrapper;
+
+    fn node_property_steps(&self) -> &[Box<dyn ExecutableNodePropertyStep>] {
+        &self.node_property_steps
+    }
+
+    fn feature_steps(&self) -> &[Self::FeatureStep] {
+        &self.feature_steps
+    }
+
+    fn specific_validate_before_execution(
+        &self,
+        _graph_store: &crate::types::graph_store::DefaultGraphStore,
+    ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError> {
+        // Reuse the link-specific check for "must have at least one feature".
+        self.validate_before_execution()
+            .map_err(|e| crate::projection::eval::pipeline::PipelineValidationError::Other {
+                message: e,
+            })
+    }
+
+    fn to_map(&self) -> HashMap<String, serde_json::Value> {
+        let mut map = HashMap::new();
+
+        // Basic identity
+        map.insert("type".to_string(), serde_json::json!(self.pipeline_type()));
+        map.insert("modelType".to_string(), serde_json::json!(self.model_type()));
+
+        // Steps
+        map.insert(
+            "nodePropertySteps".to_string(),
+            serde_json::json!(
+                self.node_property_steps()
+                    .iter()
+                    .map(|s| s.to_map())
+                    .collect::<Vec<_>>()
+            ),
+        );
+        map.insert(
+            "featureSteps".to_string(),
+            serde_json::json!(
+                self.feature_steps()
+                    .iter()
+                    .map(|s| s.to_map())
+                    .collect::<Vec<_>>()
+            ),
+        );
+
+        // Training config
+        let parameter_space: HashMap<String, Vec<HashMap<String, serde_json::Value>>> = self
+            .training_parameter_space()
+            .iter()
+            .map(|(k, v)| {
+                (
+                    k.to_string(),
+                    v.iter().map(|cfg| cfg.to_map()).collect::<Vec<_>>(),
+                )
+            })
+            .collect();
+
+        map.insert(
+            "parameterSpace".to_string(),
+            serde_json::json!(parameter_space),
+        );
+        map.insert(
+            "autoTuningConfig".to_string(),
+            serde_json::json!(self.auto_tuning_config().to_map()),
+        );
+        map.insert(
+            "splitConfig".to_string(),
+            serde_json::json!(self.split_config().to_map()),
+        );
+
+        map
+    }
+}
+
+impl TrainingPipeline for LinkPredictionTrainingPipeline {
+    fn pipeline_type(&self) -> &str {
+        self.pipeline_type
+    }
+
+    fn training_parameter_space(
+        &self,
+    ) -> &HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>> {
+        &self.training_parameter_space
+    }
+
+    fn training_parameter_space_mut(
+        &mut self,
+    ) -> &mut HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>> {
+        &mut self.training_parameter_space
+    }
+
+    fn auto_tuning_config(&self) -> &AutoTuningConfig {
+        &self.auto_tuning_config
+    }
+
+    fn set_auto_tuning_config(&mut self, config: AutoTuningConfig) {
+        self.auto_tuning_config = config;
     }
 }
 
