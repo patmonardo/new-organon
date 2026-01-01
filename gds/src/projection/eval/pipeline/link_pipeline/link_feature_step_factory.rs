@@ -9,46 +9,18 @@ use std::fmt;
 
 /// Factory enum for creating LinkFeatureStep instances from configuration.
 ///
-/// # CAR:CDR - The Atom of Science! 🎯
-///
-/// This is the **CAR** - the atomic factory that gives us the Given!
-/// - **CAR**: The factory case (HADAMARD, COSINE, L2, SAME_CATEGORY)
-/// - **CDR**: The reconstruction (create() method builds the instance)
-///
-/// **Science is Given and Reconstruction of Given**:
-/// - Given: The enum variant identifies the type
-/// - Reconstruction: The create() method reconstructs the instance
-///
-/// # Pattern: Enum Factory
-///
-/// Java uses enum with abstract method:
-/// ```java
-/// enum LinkFeatureStepFactory {
-///     HADAMARD { LinkFeatureStep create(Config c) { ... } },
-///     COSINE { LinkFeatureStep create(Config c) { ... } },
-///     ...
-/// }
-/// ```
-///
-/// Rust uses enum with match:
-/// ```rust
-/// enum LinkFeatureStepFactory {
-///     Hadamard, Cosine, L2, SameCategory
-/// }
-/// impl LinkFeatureStepFactory {
-///     fn create(&self, config) -> LinkFeatureStep { match self { ... } }
-/// }
-/// ```
+/// This enum provides a type-safe way to create different link feature extraction
+/// steps (Hadamard, Cosine, L2, SameCategory) from string names or configuration.
 ///
 /// # Usage
 ///
 /// ```text
 /// // From string name
 /// let factory = LinkFeatureStepFactory::parse("HADAMARD")?;
-/// let step = factory.create(config);
+/// let step = factory.create(vec!["embedding".to_string()]);
 ///
 /// // Direct creation
-/// let step = LinkFeatureStepFactory::create("COSINE", config)?;
+/// let step = LinkFeatureStepFactory::create_from_name("COSINE", vec!["features".to_string()])?;
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LinkFeatureStepFactory {
@@ -67,10 +39,6 @@ impl LinkFeatureStepFactory {
     pub const VALUES: &'static [&'static str] = &["HADAMARD", "COSINE", "L2", "SAME_CATEGORY"];
 
     /// Parse factory from string (case-insensitive).
-    ///
-    /// # The CAR - The Given Atom!
-    ///
-    /// This is the **Given** - we receive a string and extract the atomic type.
     ///
     /// # Arguments
     ///
@@ -97,19 +65,9 @@ impl LinkFeatureStepFactory {
 
     /// Create a LinkFeatureStep instance from this factory.
     ///
-    /// # The CDR - The Reconstruction!
-    ///
-    /// This is the **Reconstruction of Given** - we take the atomic type (CAR)
-    /// and reconstruct the full instance (CDR).
-    ///
-    /// **Science = CAR + CDR**:
-    /// - CAR: Factory variant (atomic Given)
-    /// - CDR: create() method (Reconstruction)
-    /// - Science: The unity of Given and Reconstruction!
-    ///
     /// # Arguments
     ///
-    /// * `config` - Configuration with nodeProperties
+    /// * `node_properties` - List of node property names to use for feature extraction
     ///
     /// # Returns
     ///
@@ -125,26 +83,21 @@ impl LinkFeatureStepFactory {
 
     /// Create a LinkFeatureStep from task name and configuration.
     ///
-    /// # The Complete Science!
-    ///
-    /// This is the **full CAR:CDR** - parse (Given) + create (Reconstruction)!
+    /// Create a LinkFeatureStep from task name and node properties.
     ///
     /// # Arguments
     ///
-    /// * `task_name` - Factory name string
-    /// * `config` - Configuration value with nodeProperties
+    /// * `task_name` - Name of the feature step type (e.g., "HADAMARD", "COSINE")
+    /// * `node_properties` - List of node property names to use
     ///
     /// # Returns
     ///
-    /// Boxed LinkFeatureStep or error.
+    /// Boxed LinkFeatureStep or error if task name is unknown.
     pub fn create_from_name(
         task_name: &str,
         node_properties: Vec<String>,
     ) -> Result<Box<dyn LinkFeatureStep>, String> {
-        // Parse factory (CAR - the Given)
         let factory = Self::parse(task_name)?;
-
-        // Create instance (CDR - the Reconstruction)
         Ok(factory.create(node_properties))
     }
 

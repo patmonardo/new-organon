@@ -7,19 +7,6 @@ use rayon::prelude::*;
 
 /// Core feature extraction orchestrator for link prediction.
 ///
-/// # The CDR - The Reconstruction Orchestrator! 🎯
-///
-/// This is the **CDR** (Reconstruction) to LinkFeatureStepFactory's **CAR** (Given):
-/// - **Factory (CAR)**: Creates individual LinkFeatureSteps (atomic Given)
-/// - **Extractor (CDR)**: Orchestrates extraction across all steps (Reconstruction)
-///
-/// **Science = CAR + CDR**:
-/// - CAR gives us the atomic steps
-/// - CDR reconstructs the complete feature space from steps
-/// - Together: Complete feature extraction pipeline!
-///
-/// # Responsibility
-///
 /// Responsible for extracting features on a specific graph.
 /// **Instances should not be reused between different graphs.**
 ///
@@ -83,12 +70,6 @@ pub struct LinkFeatureExtractor {
 impl LinkFeatureExtractor {
     /// Creates a LinkFeatureExtractor from LinkFeatureSteps and a graph.
     ///
-    /// # The CDR Factory!
-    ///
-    /// This is **Reconstruction from Given**:
-    /// - Given: List of LinkFeatureSteps (from CAR factory)
-    /// - Reconstruction: Create appenders from steps, calculate dimensions
-    ///
     /// # Arguments
     ///
     /// * `graph` - Graph to extract features from
@@ -98,7 +79,7 @@ impl LinkFeatureExtractor {
     ///
     /// LinkFeatureExtractor ready to extract features.
     pub fn of(graph: &dyn Graph, link_feature_steps: Vec<Box<dyn LinkFeatureStep>>) -> Self {
-        // Create appenders from steps (Reconstruction!)
+        // Create appenders from steps
         let link_feature_appenders: Vec<Box<dyn LinkFeatureAppender>> = link_feature_steps
             .into_iter()
             .map(|step| step.link_feature_appender(graph))
@@ -124,14 +105,7 @@ impl LinkFeatureExtractor {
 
     /// Extract features for all relationships in graph (parallel).
     ///
-    /// # The Complete CDR - Full Reconstruction!
-    ///
-    /// This is the **complete reconstruction** of the feature space:
-    /// - Collects all relationships from the graph
-    /// - Processes relationships in parallel using Rayon
-    /// - Returns vector of feature vectors for all relationships
-    ///
-    /// **Science in Action**: CAR (factory/steps) → CDR (this method) → Features!
+    /// Collects all relationships from the graph and processes them in parallel using Rayon.
     ///
     /// # Arguments
     ///
@@ -184,12 +158,7 @@ impl LinkFeatureExtractor {
 
     /// Extract features for a single (source, target) pair.
     ///
-    /// # The Atomic Extraction!
-    ///
-    /// This is the **atomic unit** of extraction:
-    /// - Allocates feature array
-    /// - Calls each appender sequentially
-    /// - Each appender writes to its offset range
+    /// Allocates a feature array and calls each appender sequentially to fill it.
     ///
     /// # Arguments
     ///
@@ -213,11 +182,8 @@ impl LinkFeatureExtractor {
 
     /// Returns true if all appenders are symmetric.
     ///
-    /// # Symmetry Optimization
-    ///
-    /// If symmetric, `extract(a, b) == extract(b, a)`, allowing:
-    /// - Caching of (a, b) for use with (b, a)
-    /// - Half the feature extractions for undirected graphs
+    /// If symmetric, `extract(a, b) == extract(b, a)`, allowing optimizations like
+    /// caching of (a, b) for use with (b, a) in undirected graphs.
     pub fn is_symmetric(&self) -> bool {
         self.is_symmetric
     }
@@ -305,28 +271,24 @@ mod tests {
 
     #[test]
     #[ignore] // FIXME: Random graph doesn't have expected properties
-    fn test_car_cdr_science() {
-        // CAR:CDR - The Complete Science!
-
+    fn test_feature_extraction_integration() {
         let graph_store = random_graph_store(&RandomGraphConfig::seeded(42));
         let graph = graph_store.graph();
 
-        // CAR - The Given (factory creates atomic steps)
+        // Create feature extraction steps
         let steps: Vec<Box<dyn LinkFeatureStep>> = vec![
             Box::new(HadamardFeatureStep::new(vec!["prop1".to_string()])),
             Box::new(CosineFeatureStep::new(vec!["prop2".to_string()])),
         ];
 
-        // CDR - The Reconstruction (extractor orchestrates)
+        // Create extractor
         let extractor = LinkFeatureExtractor::of(graph.as_ref(), steps);
 
-        // Science = CAR + CDR (complete feature extraction!)
+        // Verify extractor setup
         assert_eq!(extractor.link_feature_appenders.len(), 2);
         assert_eq!(extractor.feature_dimension(), 1); // Sum of dimensions
 
-        // Extract (the final act of Science!)
+        // Extract features for a pair
         let _features = extractor.extract_features_for_pair(0, 1);
-
-        // This is SCIENCE - Given (factory) → Reconstruction (extractor) → Features! 🎯
     }
 }
