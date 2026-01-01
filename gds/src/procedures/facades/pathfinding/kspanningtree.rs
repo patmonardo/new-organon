@@ -103,6 +103,7 @@ impl KSpanningTreeBuilder {
         })
     }
 
+    #[allow(clippy::type_complexity)]
     fn compute(&self) -> Result<(Vec<i64>, Vec<f64>, f64, u64, std::time::Duration)> {
         self.validate()?;
         let start = Instant::now();

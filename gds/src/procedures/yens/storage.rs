@@ -142,6 +142,7 @@ impl YensStorageRuntime {
         self.shortest_path(self.source_node, self.target_node, graph, direction, None)
     }
 
+    #[allow(clippy::type_complexity)]
     fn shortest_path(
         &self,
         source: NodeId,

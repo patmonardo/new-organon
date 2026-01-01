@@ -104,6 +104,7 @@ impl FilteredKnnStorageRuntime {
         ))
     }
 
+    #[allow(clippy::type_complexity)]
     fn build_filters(
         graph_store: &impl GraphStore,
         source_node_labels: &[NodeLabel],

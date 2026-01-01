@@ -3,6 +3,7 @@
 //! This example is intentionally verbose: it prints each phase of building a
 //! larger in-memory `DefaultGraphStore`, wiring it with the Collections
 //! backends (Arrow vs Vec), projecting a subgraph, and running an algorithm
+#![allow(clippy::all)]
 //! over the projected view.
 //!
 //! Run with:

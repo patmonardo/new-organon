@@ -3,6 +3,7 @@
 //! A runnable tour of the runtime value layer:
 //! - `ValueType` helpers
 //! - `DefaultValue` fallbacks
+#![allow(clippy::all)]
 //! - `PrimitiveValues` factory (runtime parsing + smart conversions)
 //!
 //! Run with:

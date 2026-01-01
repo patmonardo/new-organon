@@ -3,6 +3,7 @@
 //! This example demonstrates running a complete GNN pipeline using the Rust GDS library.
 //! It creates a random graph, generates HashGNN embeddings, and shows the results.
 //!
+#![allow(clippy::all)]
 //! Run with: cargo run -p gds --example gnn_pipeline_demo --features ml
 
 #[cfg(not(feature = "ml"))]

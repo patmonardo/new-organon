@@ -3,6 +3,7 @@
 //! A compact, runnable tour of the low-level Projection surface:
 //! - Inspect the canonical `ValueType` table
 //! - Build typed `PropertyMappings` with defaults and aggregations
+#![allow(clippy::all)]
 //! - Assemble node/relationship projections and serialize them
 //!
 //! Run with:

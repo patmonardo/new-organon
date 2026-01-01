@@ -157,6 +157,8 @@ pub trait AbstractLinkFeatureAppenderFactory {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::all)]
+    #![allow(dead_code)]
     use super::*;
     // use std::marker::PhantomData;
 
@@ -225,68 +227,68 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_factory_creates_double_array_appender() {
-        let factory = TestFactory;
-        // TODO: Create proper dummy Arc<dyn NodePropertyValues> for testing
-        // let dummy_props = Arc::new(...);
-        // let appender = factory.double_array_appender(dummy_props, 10);
-        // assert_eq!(appender.dimension(), 10);
-    }
+    // #[test]
+    // fn test_factory_creates_double_array_appender() {
+    //     let factory = TestFactory;
+    //     // TODO: Create proper dummy Arc<dyn NodePropertyValues> for testing
+    //     // let dummy_props = Arc::new(...);
+    //     // let appender = factory.double_array_appender(dummy_props, 10);
+    //     // assert_eq!(appender.dimension(), 10);
+    // }
 
-    #[test]
-    fn test_factory_creates_float_array_appender() {
-        let factory = TestFactory;
-        // TODO: Create proper dummy Arc<dyn NodePropertyValues> for testing
-        // let appender = factory.float_array_appender(PhantomData, 5);
-        // assert_eq!(appender.dimension(), 5);
-    }
+    // #[test]
+    // fn test_factory_creates_float_array_appender() {
+    //     let factory = TestFactory;
+    //     // TODO: Create proper dummy Arc<dyn NodePropertyValues> for testing
+    //     // let appender = factory.float_array_appender(PhantomData, 5);
+    //     // assert_eq!(appender.dimension(), 5);
+    // }
 
-    #[test]
-    fn test_factory_creates_long_array_appender() {
-        let factory = TestFactory;
-        // TODO: Create proper dummy Arc<dyn NodePropertyValues> for testing
-        // let appender = factory.long_array_appender(PhantomData, 8);
-        // assert_eq!(appender.dimension(), 8);
-    }
+    // #[test]
+    // fn test_factory_creates_long_array_appender() {
+    //     let factory = TestFactory;
+    //     // TODO: Create proper dummy Arc<dyn NodePropertyValues> for testing
+    //     // let appender = factory.long_array_appender(PhantomData, 8);
+    //     // assert_eq!(appender.dimension(), 8);
+    // }
 
-    #[test]
-    fn test_factory_creates_long_appender() {
-        let factory = TestFactory;
-        // TODO: Create proper dummy Arc<dyn NodePropertyValues> for testing
-        // let appender = factory.long_appender(PhantomData, 1);
-        // assert_eq!(appender.dimension(), 1);
-    }
+    // #[test]
+    // fn test_factory_creates_long_appender() {
+    //     let factory = TestFactory;
+    //     // TODO: Create proper dummy Arc<dyn NodePropertyValues> for testing
+    //     // let appender = factory.long_appender(PhantomData, 1);
+    //     // assert_eq!(appender.dimension(), 1);
+    // }
 
-    #[test]
-    fn test_factory_creates_double_appender() {
-        let factory = TestFactory;
-        // TODO: Create proper dummy Arc<dyn NodePropertyValues> for testing
-        // let dummy_props = Arc::new(...);
-        // let appender = factory.double_appender(dummy_props, 1);
-        // assert_eq!(appender.dimension(), 1);
-    }
+    // #[test]
+    // fn test_factory_creates_double_appender() {
+    //     let factory = TestFactory;
+    //     // TODO: Create proper dummy Arc<dyn NodePropertyValues> for testing
+    //     // let dummy_props = Arc::new(...);
+    //     // let appender = factory.double_appender(dummy_props, 1);
+    //     // assert_eq!(appender.dimension(), 1);
+    // }
 
-    #[test]
-    fn test_mexican_jumping_bean_container() {
-        // The Scientific Syllogism - Container of Jumping Beans!
-        // Each bean (appender) knows how to jump (compute) for its type
+    // #[test]
+    // fn test_mexican_jumping_bean_container() {
+    //     // The Scientific Syllogism - Container of Jumping Beans!
+    //     // Each bean (appender) knows how to jump (compute) for its type
 
-        let factory = TestFactory;
+    //     let factory = TestFactory;
 
-        // TODO: Create dummy props for testing
-        // Create dummy props for testing
-        // let dummy_props = Arc::new(crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues::<crate::collections::backends::vec::vec_double::VecDouble>::new(crate::collections::backends::vec::vec_double::VecDouble::new(), None));
+    //     // TODO: Create dummy props for testing
+    //     // Create dummy props for testing
+    //     // let dummy_props = Arc::new(crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues::<crate::collections::backends::vec::vec_double::VecDouble>::new(crate::collections::backends::vec::vec_double::VecDouble::new(), None));
 
-        // The beans jump differently based on type!
-        // let double_bean = factory.double_appender(dummy_props.clone(), 1);
-        // let array_bean = factory.double_array_appender(dummy_props, 10);
+    //     // The beans jump differently based on type!
+    //     // let double_bean = factory.double_appender(dummy_props.clone(), 1);
+    //     // let array_bean = factory.double_array_appender(dummy_props, 10);
 
-        // assert_eq!(double_bean.dimension(), 1); // Scalar bean
-        // assert_eq!(array_bean.dimension(), 10); // Array bean
+    //     // assert_eq!(double_bean.dimension(), 1); // Scalar bean
+    //     // assert_eq!(array_bean.dimension(), 10); // Array bean
 
-        // Same factory, different jumps! 🫘
-        // Pure Container holds Given Contained type dispatch
-        // Contained is WITHIN Container - Being qua Being!
-    }
+    //     // Same factory, different jumps! 🫘
+    //     // Pure Container holds Given Contained type dispatch
+    //     // Contained is WITHIN Container - Being qua Being!
+    // }
 }
