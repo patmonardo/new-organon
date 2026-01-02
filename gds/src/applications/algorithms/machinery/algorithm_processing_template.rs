@@ -1,4 +1,7 @@
-use crate::api::{Graph, GraphStore, GraphName};
+use std::sync::Arc;
+
+use crate::procedures::Graph;
+use crate::types::graph_store::DefaultGraphStore;
 use crate::applications::algorithms::machinery::{
     AlgorithmLabel, MutateStep, WriteStep, ResultBuilder, StreamResultBuilder, StatsResultBuilder,
     DimensionTransformer,
@@ -26,13 +29,13 @@ pub trait AlgorithmProcessingTemplate {
     >(
         &self,
         relationship_weight_override: Option<String>,
-        graph_name: GraphName,
+        graph_name: String,
         configuration: ConfigT,
         post_graph_store_load_validation_hooks: Option<Vec<Box<dyn PostLoadValidationHook>>>,
         post_graph_store_load_etl_hooks: Option<Vec<Box<dyn PostLoadETLHook>>>,
         label: AlgorithmLabel,
         estimation_factory: impl Fn() -> Box<dyn MemoryEstimation>,
-        computation: impl Fn(Graph, GraphStore) -> ResultFromAlgorithm,
+        computation: impl Fn(Graph, Arc<DefaultGraphStore>) -> ResultFromAlgorithm,
         write_step: Box<dyn WriteStep<ResultFromAlgorithm, WriteMetadata>>,
         result_builder: Box<dyn ResultBuilder<ConfigT, ResultFromAlgorithm, ResultToCaller, WriteMetadata>>,
     ) -> ResultToCaller;
@@ -46,13 +49,13 @@ pub trait AlgorithmProcessingTemplate {
     >(
         &self,
         relationship_weight_override: Option<String>,
-        graph_name: GraphName,
+        graph_name: String,
         configuration: ConfigT,
         post_graph_store_load_validation_hooks: Option<Vec<Box<dyn PostLoadValidationHook>>>,
         post_graph_store_load_etl_hooks: Option<Vec<Box<dyn PostLoadETLHook>>>,
         label: AlgorithmLabel,
         estimation_factory: impl Fn() -> Box<dyn MemoryEstimation>,
-        computation: impl Fn(Graph, GraphStore) -> ResultFromAlgorithm,
+        computation: impl Fn(Graph, Arc<DefaultGraphStore>) -> ResultFromAlgorithm,
         mutate_step: Box<dyn MutateStep<ResultFromAlgorithm, MutateMetadata>>,
         result_builder: Box<dyn ResultBuilder<ConfigT, ResultFromAlgorithm, ResultToCaller, MutateMetadata>>,
     ) -> ResultToCaller;
@@ -65,13 +68,13 @@ pub trait AlgorithmProcessingTemplate {
     >(
         &self,
         relationship_weight_override: Option<String>,
-        graph_name: GraphName,
+        graph_name: String,
         configuration: ConfigT,
         post_graph_store_load_validation_hooks: Option<Vec<Box<dyn PostLoadValidationHook>>>,
         post_graph_store_load_etl_hooks: Option<Vec<Box<dyn PostLoadETLHook>>>,
         label: AlgorithmLabel,
         estimation_factory: impl Fn() -> Box<dyn MemoryEstimation>,
-        computation: impl Fn(Graph, GraphStore) -> ResultFromAlgorithm,
+        computation: impl Fn(Graph, Arc<DefaultGraphStore>) -> ResultFromAlgorithm,
         result_builder: Box<dyn StreamResultBuilder<ResultFromAlgorithm, ResultToCaller>>,
     ) -> Vec<ResultToCaller>;
 
@@ -83,13 +86,13 @@ pub trait AlgorithmProcessingTemplate {
     >(
         &self,
         relationship_weight_override: Option<String>,
-        graph_name: GraphName,
+        graph_name: String,
         configuration: ConfigT,
         post_graph_store_load_validation_hooks: Option<Vec<Box<dyn PostLoadValidationHook>>>,
         post_graph_store_load_etl_hooks: Option<Vec<Box<dyn PostLoadETLHook>>>,
         label: AlgorithmLabel,
         estimation_factory: impl Fn() -> Box<dyn MemoryEstimation>,
-        computation: impl Fn(Graph, GraphStore) -> ResultFromAlgorithm,
+        computation: impl Fn(Graph, Arc<DefaultGraphStore>) -> ResultFromAlgorithm,
         result_builder: Box<dyn StatsResultBuilder<ResultFromAlgorithm, ResultToCaller>>,
     ) -> ResultToCaller;
 
@@ -102,14 +105,14 @@ pub trait AlgorithmProcessingTemplate {
     >(
         &self,
         relationship_weight_override: Option<String>,
-        graph_name: GraphName,
+        graph_name: String,
         configuration: ConfigT,
         post_graph_store_load_validation_hooks: Option<Vec<Box<dyn PostLoadValidationHook>>>,
         post_graph_store_load_etl_hooks: Option<Vec<Box<dyn PostLoadETLHook>>>,
         label: AlgorithmLabel,
         dimension_transformer: Box<dyn DimensionTransformer>,
         estimation_factory: impl Fn() -> Box<dyn MemoryEstimation>,
-        computation: impl Fn(Graph, GraphStore) -> ResultFromAlgorithm,
+        computation: impl Fn(Graph, Arc<DefaultGraphStore>) -> ResultFromAlgorithm,
         side_effect: Option<Box<dyn SideEffect<ResultFromAlgorithm, SideEffectMetadata>>>,
         result_renderer: Box<dyn ResultRenderer<ResultFromAlgorithm, ResultToCaller, SideEffectMetadata>>,
     ) -> ResultToCaller;

@@ -1,6 +1,8 @@
-use crate::api::Graph;
-use crate::api::GraphStore;
-use crate::api::properties::nodes::NodePropertyValues;
+use std::sync::Arc;
+
+use crate::procedures::Graph;
+use crate::types::graph_store::DefaultGraphStore;
+use crate::types::properties::node::NodePropertyValues;
 use crate::applications::algorithms::metadata::NodePropertiesWritten;
 use crate::config::base_types::Config;
 use crate::graph_store::GraphStore as _;
@@ -22,7 +24,7 @@ pub trait MutateNodeProperty {
     fn mutate_node_properties<C: Config>(
         &self,
         graph: &Graph,
-        graph_store: &mut GraphStore,
+        graph_store: &mut Arc<DefaultGraphStore>,
         config: &C,
         node_properties: Box<dyn NodePropertyValues>,
     ) -> NodePropertiesWritten;
@@ -41,7 +43,7 @@ pub trait MutateNodeProperty {
     fn mutate_node_properties_with_labels(
         &self,
         graph: &Graph,
-        graph_store: &mut GraphStore,
+        graph_store: &mut Arc<DefaultGraphStore>,
         node_labels: Vec<String>,
         property_name: String,
         node_properties: Box<dyn NodePropertyValues>,
@@ -68,7 +70,7 @@ impl MutateNodeProperty for DefaultMutateNodeProperty {
     fn mutate_node_properties<C: Config>(
         &self,
         graph: &Graph,
-        _graph_store: &mut GraphStore,
+        _graph_store: &mut Arc<DefaultGraphStore>,
         _config: &C,
         _node_properties: Box<dyn NodePropertyValues>,
     ) -> NodePropertiesWritten {
@@ -86,7 +88,7 @@ impl MutateNodeProperty for DefaultMutateNodeProperty {
     fn mutate_node_properties_with_labels(
         &self,
         graph: &Graph,
-        _graph_store: &mut GraphStore,
+        _graph_store: &mut Arc<DefaultGraphStore>,
         _node_labels: Vec<String>,
         _property_name: String,
         _node_properties: Box<dyn NodePropertyValues>,

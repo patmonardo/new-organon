@@ -1,4 +1,7 @@
-use crate::api::{Graph, GraphStore};
+use std::sync::Arc;
+
+use crate::procedures::Graph;
+use crate::types::graph_store::DefaultGraphStore;
 use crate::applications::algorithms::machinery::{
     AlgorithmLabel, MemoryGuard, DimensionTransformer,
 };
@@ -15,7 +18,7 @@ pub trait Computation<RESULT> {
     /// # Arguments
     /// * `graph` - most algorithms need this
     /// * `graph_store` - very few algorithms need this
-    fn compute(&self, graph: Graph, graph_store: GraphStore) -> RESULT;
+    fn compute(&self, graph: Graph, graph_store: Arc<DefaultGraphStore>) -> RESULT;
 }
 
 /// Computation Service - encapsulates computing stuff with memory guard and metrics.

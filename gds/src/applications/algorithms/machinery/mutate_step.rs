@@ -1,5 +1,7 @@
-use crate::api::Graph;
-use crate::api::GraphStore;
+use std::sync::Arc;
+
+use crate::procedures::Graph;
+use crate::types::graph_store::DefaultGraphStore;
 use std::marker::PhantomData;
 
 /// Interface for mutation steps that modify graph properties.
@@ -18,7 +20,7 @@ pub trait MutateStep<RESULT, META> {
     fn execute(
         &self,
         graph: Graph,
-        graph_store: GraphStore,
+        graph_store: Arc<DefaultGraphStore>,
         result: RESULT,
     ) -> META;
 }
@@ -26,7 +28,7 @@ pub trait MutateStep<RESULT, META> {
 /// Generic mutation step that can be used for simple cases.
 pub struct GenericMutateStep<F, RESULT, META>
 where
-    F: Fn(Graph, GraphStore, RESULT) -> META,
+    F: Fn(Graph, Arc<DefaultGraphStore>, RESULT) -> META,
 {
     execute_fn: F,
     _phantom: PhantomData<(RESULT, META)>,
@@ -34,7 +36,7 @@ where
 
 impl<F, RESULT, META> GenericMutateStep<F, RESULT, META>
 where
-    F: Fn(Graph, GraphStore, RESULT) -> META,
+    F: Fn(Graph, Arc<DefaultGraphStore>, RESULT) -> META,
 {
     pub fn new(execute_fn: F) -> Self {
         Self {
@@ -46,12 +48,12 @@ where
 
 impl<F, RESULT, META> MutateStep<RESULT, META> for GenericMutateStep<F, RESULT, META>
 where
-    F: Fn(Graph, GraphStore, RESULT) -> META,
+    F: Fn(Graph, Arc<DefaultGraphStore>, RESULT) -> META,
 {
     fn execute(
         &self,
         graph: Graph,
-        graph_store: GraphStore,
+        graph_store: Arc<DefaultGraphStore>,
         result: RESULT,
     ) -> META {
         (self.execute_fn)(graph, graph_store, result)

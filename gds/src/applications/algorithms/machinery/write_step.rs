@@ -1,6 +1,8 @@
-use crate::api::Graph;
-use crate::api::GraphStore;
-use crate::api::ResultStore;
+use std::sync::Arc;
+
+use crate::procedures::Graph;
+use crate::types::graph_store::DefaultGraphStore;
+use crate::applications::graph_store_catalog::loaders::ResultStore;
 use crate::core::utils::progress::JobId;
 use std::marker::PhantomData;
 
@@ -22,8 +24,8 @@ pub trait WriteStep<RESULT, META> {
     fn execute(
         &self,
         graph: Graph,
-        graph_store: GraphStore,
-        result_store: Option<&ResultStore>,
+        graph_store: Arc<DefaultGraphStore>,
+        result_store: Option<&dyn ResultStore>,
         result: RESULT,
         job_id: JobId,
     ) -> META;
@@ -32,7 +34,7 @@ pub trait WriteStep<RESULT, META> {
 /// Generic write step that can be used for simple cases.
 pub struct GenericWriteStep<F, RESULT, META>
 where
-    F: Fn(Graph, GraphStore, Option<&ResultStore>, RESULT, JobId) -> META,
+    F: Fn(Graph, Arc<DefaultGraphStore>, Option<&dyn ResultStore>, RESULT, JobId) -> META,
 {
     execute_fn: F,
     _phantom: PhantomData<(RESULT, META)>,
@@ -40,7 +42,7 @@ where
 
 impl<F, RESULT, META> GenericWriteStep<F, RESULT, META>
 where
-    F: Fn(Graph, GraphStore, Option<&ResultStore>, RESULT, JobId) -> META,
+    F: Fn(Graph, Arc<DefaultGraphStore>, Option<&dyn ResultStore>, RESULT, JobId) -> META,
 {
     pub fn new(execute_fn: F) -> Self {
         Self {
@@ -52,13 +54,13 @@ where
 
 impl<F, RESULT, META> WriteStep<RESULT, META> for GenericWriteStep<F, RESULT, META>
 where
-    F: Fn(Graph, GraphStore, Option<&ResultStore>, RESULT, JobId) -> META,
+    F: Fn(Graph, Arc<DefaultGraphStore>, Option<&dyn ResultStore>, RESULT, JobId) -> META,
 {
     fn execute(
         &self,
         graph: Graph,
-        graph_store: GraphStore,
-        result_store: Option<&ResultStore>,
+        graph_store: Arc<DefaultGraphStore>,
+        result_store: Option<&dyn ResultStore>,
         result: RESULT,
         job_id: JobId,
     ) -> META {

@@ -1,7 +1,9 @@
-use crate::api::Graph;
-use crate::api::GraphStore;
-use crate::api::ResultStore;
-use crate::api::properties::nodes::NodePropertyValues;
+use std::sync::Arc;
+
+use crate::procedures::Graph;
+use crate::types::graph_store::DefaultGraphStore;
+use crate::applications::graph_store_catalog::loaders::ResultStore;
+use crate::types::properties::node::NodePropertyValues;
 use crate::applications::algorithms::metadata::NodePropertiesWritten;
 use crate::applications::algorithms::machinery::AlgorithmLabel;
 use crate::config::base_types::Config;
@@ -28,8 +30,8 @@ pub trait WriteToDatabase {
     fn perform<C: Config>(
         &self,
         graph: &Graph,
-        graph_store: &GraphStore,
-        result_store: &mut ResultStore,
+        graph_store: &Arc<DefaultGraphStore>,
+        result_store: &mut dyn ResultStore,
         config: &C,
         algorithm_label: AlgorithmLabel,
         job_id: JobId,
@@ -53,8 +55,8 @@ pub trait WriteToDatabase {
     fn perform_with_config<C: Config, W: Config>(
         &self,
         graph: &Graph,
-        graph_store: &GraphStore,
-        result_store: &mut ResultStore,
+        graph_store: &Arc<DefaultGraphStore>,
+        result_store: &mut dyn ResultStore,
         config: &C,
         write_config: &W,
         algorithm_label: AlgorithmLabel,
@@ -83,8 +85,8 @@ impl WriteToDatabase for DefaultWriteToDatabase {
     fn perform<C: Config>(
         &self,
         graph: &Graph,
-        _graph_store: &GraphStore,
-        _result_store: &mut ResultStore,
+        _graph_store: &Arc<DefaultGraphStore>,
+        _result_store: &mut dyn ResultStore,
         _config: &C,
         _algorithm_label: AlgorithmLabel,
         _job_id: JobId,
@@ -105,8 +107,8 @@ impl WriteToDatabase for DefaultWriteToDatabase {
     fn perform_with_config<C: Config, W: Config>(
         &self,
         graph: &Graph,
-        _graph_store: &GraphStore,
-        _result_store: &mut ResultStore,
+        _graph_store: &Arc<DefaultGraphStore>,
+        _result_store: &mut dyn ResultStore,
         _config: &C,
         _write_config: &W,
         _algorithm_label: AlgorithmLabel,

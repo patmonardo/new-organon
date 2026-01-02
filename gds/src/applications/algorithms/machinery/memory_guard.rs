@@ -1,4 +1,6 @@
-use crate::api::GraphStore;
+use std::sync::Arc;
+
+use crate::types::graph_store::DefaultGraphStore;
 use crate::applications::algorithms::machinery::{AlgorithmLabel, DimensionTransformer};
 use crate::config::base_types::Config;
 use crate::mem::MemoryEstimation;
@@ -13,7 +15,7 @@ pub trait MemoryGuard {
         &self,
         username: &str,
         estimation_factory: &dyn Fn() -> Box<dyn MemoryEstimation>,
-        graph_store: &GraphStore,
+        graph_store: &Arc<DefaultGraphStore>,
         configuration: &dyn Config,
         label: &AlgorithmLabel,
         dimension_transformer: Box<dyn DimensionTransformer>,
@@ -82,7 +84,7 @@ impl MemoryGuard for DefaultMemoryGuard {
         &self,
         username: &str,
         estimation_factory: &dyn Fn() -> Box<dyn MemoryEstimation>,
-        graph_store: &GraphStore,
+        graph_store: &Arc<DefaultGraphStore>,
         configuration: &dyn Config,
         label: &AlgorithmLabel,
         dimension_transformer: Box<dyn DimensionTransformer>,
@@ -133,7 +135,7 @@ impl MemoryRequirement {
 
     pub fn create(
         estimation_factory: &dyn Fn() -> Box<dyn MemoryEstimation>,
-        graph_store: &GraphStore,
+        graph_store: &Arc<DefaultGraphStore>,
         graph_dimension_factory: &dyn GraphDimensionFactory,
         dimension_transformer: Box<dyn DimensionTransformer>,
         configuration: &dyn Config,
@@ -155,7 +157,7 @@ impl MemoryRequirement {
 
 // Placeholder traits
 pub trait GraphDimensionFactory {
-    fn create(&self, graph_store: &GraphStore, configuration: &dyn Config) -> Box<dyn GraphDimensions>;
+    fn create(&self, graph_store: &Arc<DefaultGraphStore>, configuration: &dyn Config) -> Box<dyn GraphDimensions>;
 }
 
 pub trait MemoryTracker {
@@ -172,7 +174,7 @@ impl DefaultGraphDimensionFactory {
 }
 
 impl GraphDimensionFactory for DefaultGraphDimensionFactory {
-    fn create(&self, _graph_store: &GraphStore, _configuration: &dyn Config) -> Box<dyn GraphDimensions> {
+    fn create(&self, _graph_store: &Arc<DefaultGraphStore>, _configuration: &dyn Config) -> Box<dyn GraphDimensions> {
         // TODO(gds,2025-01-31): Implement actual graph dimensions computation
         Box::new(crate::core::GraphDimensionsImpl::new())
     }

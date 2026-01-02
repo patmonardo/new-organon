@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
+use std::sync::Arc;
 
-use crate::api::Graph;
+use crate::procedures::Graph;
+use crate::types::graph_store::DefaultGraphStore;
 
 use super::AlgorithmProcessingTimings;
 
@@ -71,7 +73,7 @@ where
 
 /// Result builder for streaming results.
 pub trait StreamResultBuilder<RESULT, OUTPUT> {
-    fn build(&self, graph: Graph, graph_store: crate::api::GraphStore, result: Option<RESULT>) -> Vec<OUTPUT>;
+    fn build(&self, graph: Graph, graph_store: Arc<DefaultGraphStore>, result: Option<RESULT>) -> Vec<OUTPUT>;
 }
 
 /// Result builder for statistics results.

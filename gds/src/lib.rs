@@ -7,7 +7,6 @@
 // (Previously had speculative stubs here - all moved to procedures/)
 
 pub mod algo;
-pub mod api;
 pub mod collections;
 pub mod concurrency;
 pub mod config;

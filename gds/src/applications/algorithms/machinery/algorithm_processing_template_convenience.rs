@@ -1,4 +1,7 @@
-use crate::api::{Graph, GraphStore, GraphName};
+use std::sync::Arc;
+
+use crate::procedures::Graph;
+use crate::types::graph_store::DefaultGraphStore;
 use crate::applications::algorithms::machinery::{
     AlgorithmLabel, MutateStep, WriteStep, StreamResultBuilder, StatsResultBuilder,
     MutateResultBuilder, WriteResultBuilder, RequestScopedDependencies, WriteContext,
@@ -46,11 +49,11 @@ impl AlgorithmProcessingTemplateConvenience {
         ResultBuilderT: MutateResultBuilder<ConfigT, ResultT, OutputT, MetaT>,
     >(
         &self,
-        _graph_name: GraphName,
+        _graph_name: String,
         _config: ConfigT,
         _algorithm_label: AlgorithmLabel,
         _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &GraphStore) -> ResultT,
+        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
         _mutate_step: MutateStepT,
         _result_builder: ResultBuilderT,
     ) -> OutputT {
@@ -76,11 +79,11 @@ impl AlgorithmProcessingTemplateConvenience {
         ResultBuilderT: WriteResultBuilder<ConfigT, ResultT, OutputT, MetaT>,
     >(
         &self,
-        _graph_name: GraphName,
+        _graph_name: String,
         _config: ConfigT,
         _algorithm_label: AlgorithmLabel,
         _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &GraphStore) -> ResultT,
+        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
         _write_step: WriteStepT,
         _result_builder: ResultBuilderT,
     ) -> OutputT {
@@ -104,11 +107,11 @@ impl AlgorithmProcessingTemplateConvenience {
         ResultBuilderT: StreamResultBuilder<ResultT, OutputT>,
     >(
         &self,
-        _graph_name: GraphName,
+        _graph_name: String,
         _config: ConfigT,
         _algorithm_label: AlgorithmLabel,
         _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &GraphStore) -> ResultT,
+        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
         _result_builder: ResultBuilderT,
     ) -> OutputT {
         // TODO: Implement the full stream mode processing
@@ -130,11 +133,11 @@ impl AlgorithmProcessingTemplateConvenience {
         ResultBuilderT: StatsResultBuilder<ResultT, OutputT>,
     >(
         &self,
-        _graph_name: GraphName,
+        _graph_name: String,
         _config: ConfigT,
         _algorithm_label: AlgorithmLabel,
         _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &GraphStore) -> ResultT,
+        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
         _result_builder: ResultBuilderT,
     ) -> OutputT {
         // TODO: Implement the full stats mode processing
@@ -158,11 +161,11 @@ impl AlgorithmProcessingTemplateConvenience {
         ResultBuilderT: MutateResultBuilder<ConfigT, ResultT, OutputT, MetaT>,
     >(
         &self,
-        _graph_name: Option<GraphName>,
+        _graph_name: Option<String>,
         _config: ConfigT,
         _algorithm_label: AlgorithmLabel,
         _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &GraphStore) -> ResultT,
+        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
         _mutate_step: MutateStepT,
         _result_builder: ResultBuilderT,
         _pre_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
@@ -194,11 +197,11 @@ impl AlgorithmProcessingTemplateConvenience {
         ResultBuilderT: WriteResultBuilder<ConfigT, ResultT, OutputT, MetaT>,
     >(
         &self,
-        _graph_name: Option<GraphName>,
+        _graph_name: Option<String>,
         _config: ConfigT,
         _algorithm_label: AlgorithmLabel,
         _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &GraphStore) -> ResultT,
+        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
         _write_step: WriteStepT,
         _result_builder: ResultBuilderT,
         _pre_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
@@ -228,11 +231,11 @@ impl AlgorithmProcessingTemplateConvenience {
         ResultBuilderT: StreamResultBuilder<ResultT, OutputT>,
     >(
         &self,
-        _graph_name: GraphName,
+        _graph_name: String,
         _config: ConfigT,
         _algorithm_label: AlgorithmLabel,
         _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &GraphStore) -> ResultT,
+        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
         _result_builder: ResultBuilderT,
         _pre_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
         _post_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
@@ -260,11 +263,11 @@ impl AlgorithmProcessingTemplateConvenience {
         ResultBuilderT: StatsResultBuilder<ResultT, OutputT>,
     >(
         &self,
-        _graph_name: GraphName,
+        _graph_name: String,
         _config: ConfigT,
         _algorithm_label: AlgorithmLabel,
         _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &GraphStore) -> ResultT,
+        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
         _result_builder: ResultBuilderT,
         _pre_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
         _post_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
