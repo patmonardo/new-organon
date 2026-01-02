@@ -36,6 +36,7 @@ use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -187,7 +188,13 @@ impl DijkstraBuilder {
             false,
         );
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
+        // Use selectors so the algorithm consumes the requested weight property.
+        // (If no selector is provided, DefaultGraph may auto-select only when exactly one exists.)
+        let rel_types: HashSet<RelationshipType> = self.graph_store.relationship_types();
+        let selectors: HashMap<RelationshipType, String> = rel_types
+            .iter()
+            .map(|t| (t.clone(), self.weight_property.clone()))
+            .collect();
         let (orientation, direction_byte) = match self.direction.as_str() {
             "incoming" => (Orientation::Reverse, 1u8),
             "both" => (Orientation::Undirected, 0u8),
@@ -196,7 +203,7 @@ impl DijkstraBuilder {
 
         let graph_view = self
             .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, orientation)
+            .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
             .map_err(|e| {
                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
             })?;

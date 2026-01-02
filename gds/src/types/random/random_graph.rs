@@ -7,6 +7,8 @@ use crate::types::graph_store::{
 };
 use crate::types::properties::graph::impls::default_graph_property_values::DefaultDoubleGraphPropertyValues;
 use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+use crate::types::properties::relationship::impls::default_relationship_property_values::DefaultRelationshipPropertyValues;
+use crate::types::properties::relationship::RelationshipPropertyValues;
 use crate::types::schema::{Direction, MutableGraphSchema};
 use crate::types::ValueType;
 use rand::rngs::StdRng;
@@ -296,6 +298,7 @@ impl Randomizable<RandomGraphConfig> for DefaultGraphStore {
 
         let mut relationship_topologies: HashMap<RelationshipType, RelationshipTopology> =
             HashMap::new();
+        let mut relationship_weights: HashMap<RelationshipType, Vec<f64>> = HashMap::new();
 
         for rel in &config.relationships {
             let rel_type = RelationshipType::of(rel.name.as_str());
@@ -303,6 +306,17 @@ impl Randomizable<RandomGraphConfig> for DefaultGraphStore {
                 &RandomGraphConfig,
                 &RandomRelationshipConfig,
             )>>::random_with_rng(&(config, rel), rng)?;
+
+            // Relationship property values are indexed by a stable ordering:
+            // flatten outgoing adjacency lists in node-id order.
+            let mut weights: Vec<f64> = Vec::with_capacity(topology.relationship_count());
+            for neighbors in topology.outgoing_lists() {
+                for _ in neighbors {
+                    // Keep weights strictly positive to avoid confusing "free" edges in demos.
+                    weights.push(rng.gen_range(0.1..1.0));
+                }
+            }
+            relationship_weights.insert(rel_type.clone(), weights);
             relationship_topologies.insert(rel_type, topology);
         }
 
@@ -361,6 +375,19 @@ impl Randomizable<RandomGraphConfig> for DefaultGraphStore {
             crate::collections::backends::vec::VecDouble,
         >::singleton(density));
         store.add_graph_property("edge_density", graph_property_values)?;
+
+        // Add per-relationship weights.
+        for (rel_type, weights) in relationship_weights {
+            let element_count = weights.len();
+            if element_count == 0 {
+                continue;
+            }
+
+            let pv: Arc<dyn RelationshipPropertyValues> = Arc::new(
+                DefaultRelationshipPropertyValues::with_values(weights, 0.0, element_count),
+            );
+            store.add_relationship_property(rel_type, "weight", pv)?;
+        }
 
         Ok(store)
     }

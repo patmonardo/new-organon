@@ -109,6 +109,7 @@ impl BfsStorageRuntime {
         let mut traversed_nodes = vec![0 as NodeId; node_count];
         let mut weights = vec![0.0f64; node_count];
         let mut visited = vec![false; node_count];
+        let mut predecessor = vec![-1 as NodeId; node_count];
 
         let node_id_to_index = |node_id: NodeId| -> Option<usize> {
             if node_id < 0 {
@@ -137,6 +138,7 @@ impl BfsStorageRuntime {
         visited[source_index] = true;
         traversed_nodes[0] = self.source_node;
         weights[0] = 0.0;
+        predecessor[source_index] = self.source_node;
 
         // Main BFS loop with depth control
         let mut current_depth = 0;
@@ -181,6 +183,7 @@ impl BfsStorageRuntime {
 
                             if !visited[neighbor_index] {
                                 visited[neighbor_index] = true;
+                                predecessor[neighbor_index] = node_id;
                                 let new_index =
                                     traversed_nodes_length.fetch_add(1, Ordering::SeqCst);
                                 if new_index < node_count {
@@ -202,13 +205,12 @@ impl BfsStorageRuntime {
             }
 
             // Update indices for next level: move start to the previous end_index
-            let old_index = traversed_nodes_index.load(Ordering::SeqCst);
             let new_length = traversed_nodes_length.load(Ordering::SeqCst);
             traversed_nodes_index.store(end_index, Ordering::SeqCst);
             current_depth += 1;
 
-            // Check if no new nodes were added (compare old length with new length)
-            if old_index == new_length {
+            // Check if no new nodes were added.
+            if end_index == new_length {
                 break;
             }
         }
@@ -229,7 +231,7 @@ impl BfsStorageRuntime {
             .collect();
 
         let paths = if self.track_paths {
-            self.build_paths(&traversed_nodes[..final_length])
+            self.build_paths(&traversed_nodes[..final_length], &predecessor)
         } else {
             Vec::new()
         };
@@ -245,20 +247,28 @@ impl BfsStorageRuntime {
     }
 
     /// Build paths from traversed nodes
-    fn build_paths(&self, traversed_nodes: &[NodeId]) -> Vec<BfsPathResult> {
+    fn build_paths(&self, traversed_nodes: &[NodeId], predecessor: &[NodeId]) -> Vec<BfsPathResult> {
         let mut paths = Vec::new();
 
-        // For each target node, find its position and build path
-        for &target in &self.target_nodes {
-            if let Some(target_index) = traversed_nodes.iter().position(|&node| node == target) {
-                let path_nodes = traversed_nodes[..=target_index].to_vec();
-                paths.push(BfsPathResult {
-                    source_node: self.source_node,
-                    target_node: target,
-                    node_ids: path_nodes,
-                    path_length: target_index as u32,
-                });
-            }
+        let targets: Vec<NodeId> = if self.target_nodes.is_empty() {
+            traversed_nodes.to_vec()
+        } else {
+            self.target_nodes.clone()
+        };
+
+        for target in targets {
+            let path_nodes = match reconstruct_path(self.source_node, target, predecessor) {
+                Some(path) => path,
+                None => continue,
+            };
+
+            let path_length = path_nodes.len().saturating_sub(1) as u32;
+            paths.push(BfsPathResult {
+                source_node: self.source_node,
+                target_node: target,
+                node_ids: path_nodes,
+                path_length,
+            });
         }
 
         paths
@@ -280,6 +290,56 @@ impl BfsStorageRuntime {
             }
         }
     }
+}
+
+fn reconstruct_path(
+    source: NodeId,
+    target: NodeId,
+    predecessor: &[NodeId],
+) -> Option<Vec<NodeId>> {
+    if source < 0 || target < 0 {
+        return None;
+    }
+
+    let target_index = target as usize;
+    if target_index >= predecessor.len() {
+        return None;
+    }
+
+    // If the target was never discovered, its predecessor stays at -1.
+    if predecessor[target_index] == -1 {
+        return None;
+    }
+
+    let mut path = Vec::new();
+    let mut current = target;
+    let mut steps = 0usize;
+
+    loop {
+        path.push(current);
+        if current == source {
+            break;
+        }
+
+        let current_index = current as usize;
+        if current_index >= predecessor.len() {
+            return None;
+        }
+
+        let pred = predecessor[current_index];
+        if pred == -1 {
+            return None;
+        }
+
+        current = pred;
+        steps += 1;
+        if steps > predecessor.len() {
+            return None;
+        }
+    }
+
+    path.reverse();
+    Some(path)
 }
 
 #[cfg(test)]
