@@ -113,7 +113,7 @@ impl TrainerConfigTrait for MLPClassifierTrainConfig {
     }
 
     fn to_map(&self) -> std::collections::HashMap<String, serde_json::Value> {
-        // TODO: Implement serialization
+        // Note: Placeholder; implement serialization.
         std::collections::HashMap::new()
     }
 }

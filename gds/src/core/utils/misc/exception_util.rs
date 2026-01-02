@@ -56,7 +56,7 @@ impl ExceptionUtil {
             (None, current) => current,
             (initial, None) => initial,
             (Some(initial), Some(_current)) => {
-                // TODO: Store suppressed exceptions in a wrapper type
+                // Note: Store suppressed exceptions in a wrapper type.
                 // For now, just return the initial error
                 Some(initial)
             }

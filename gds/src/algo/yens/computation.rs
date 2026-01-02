@@ -81,7 +81,7 @@ impl YensComputationRuntime {
         // Set up relationship filter
         self.relationship_filterer.set_filter(spur_node);
 
-        // TODO: Implement actual spur path computation using Dijkstra
+        // Note: spur path computation via Dijkstra is deferred.
         // For now, return None (no spur path found)
         Ok(None)
     }

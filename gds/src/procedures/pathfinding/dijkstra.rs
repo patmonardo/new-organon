@@ -400,9 +400,9 @@ impl DijkstraBuilder {
         Ok(DijkstraStats {
             paths_found: result.paths.len() as u64,
             execution_time_ms: result.metadata.execution_time.as_millis() as u64,
-            nodes_expanded: 0,   // TODO: extract from metadata if available
-            edges_considered: 0, // TODO: extract from metadata if available
-            max_queue_size: 0,   // TODO: extract from metadata if available
+            nodes_expanded: 0,   // Note: extract from metadata when available.
+            edges_considered: 0, // Note: extract from metadata when available.
+            max_queue_size: 0,   // Note: extract from metadata when available.
             target_reached: !result.paths.is_empty() && has_targets,
         })
     }

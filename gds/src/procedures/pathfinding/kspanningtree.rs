@@ -151,7 +151,7 @@ impl KSpanningTreeBuilder {
                         return None;
                     }
                     let weight = if let Some(ref _prop) = self.weight_property {
-                        // TODO: get actual property value when property access is available
+                        // Note: property-backed weights are deferred until property access is available.
                         1.0
                     } else {
                         1.0

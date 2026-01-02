@@ -74,7 +74,7 @@ impl StreamNodePropertiesApplication {
                             })
                             .unwrap_or(serde_json::Value::Null),
                         _ => {
-                            // TODO: support array/object node property values once we have a stable JSON encoding.
+                            // Note: array/object node property values are deferred until stable JSON encoding exists.
                             serde_json::Value::Null
                         }
                     },

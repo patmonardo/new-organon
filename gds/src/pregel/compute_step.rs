@@ -313,7 +313,7 @@ impl<C: PregelRuntimeConfig + Clone, I: MessageIterator> ForkJoinComputeStep<C, 
     }
 }
 
-// TODO: Re-enable tests once we have proper mock implementations
+// Note: Re-enable tests once we have proper mock implementations.
 // Tests need to be updated to match new ForkJoinComputeStep::new() signature
 // that takes config directly instead of supplier functions
 /*

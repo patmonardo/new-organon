@@ -44,7 +44,7 @@ pub struct WeightAggregator;
 
 impl Aggregator for WeightAggregator {
     fn apply(&self, _source_node: NodeId, _current_node: NodeId, weight_at_source: f64) -> f64 {
-        // TODO: Implement actual edge weight lookup
+        // Note: edge weight lookup is deferred.
         // For now, just increment by 1.0
         weight_at_source + 1.0
     }

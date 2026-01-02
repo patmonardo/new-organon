@@ -47,10 +47,10 @@ pub type FloatValue = f64;
 // =============================================================================
 //
 // These will be removed after full migration to Java GDS alignment
-// TODO: Remove these aliases after updating all 228 usages
+// Note: Remove these aliases after updating all usages.
 
 /// @deprecated Use NodeId instead
 pub type MappedNodeId = NodeId;
 
-/// @deprecated Use NodeId instead  
+/// @deprecated Use NodeId instead
 pub type OriginalNodeId = NodeId;

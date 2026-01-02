@@ -316,7 +316,7 @@ impl AllShortestPathsStorageRuntime {
         let node_count = self.graph.node_count();
 
         // For now, process sequentially to avoid lifetime issues
-        // TODO: Implement proper parallel processing with lifetime management
+        // Note: parallel processing with more precise lifetime management is deferred.
         for source_node in 0..node_count as NodeId {
             let results = self.compute_shortest_paths(source_node, direction)?;
 

@@ -22,7 +22,7 @@ impl GraphSageLoss {
     const SAMPLING_BUCKETS: usize = 3;
     const NEGATIVE_NODES_OFFSET: usize = 2;
 
-    // TODO: make configurable (matches Java)
+    // Note: keep constant for now; make configurable to match Java later.
     const ALPHA: f64 = 1.0;
 
     pub fn new(

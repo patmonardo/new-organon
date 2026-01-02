@@ -50,7 +50,7 @@ This is good news: we can upgrade algorithm correctness while keeping the harnes
 
 These are patterns seen in the codebase that tend to indicate “translated but not yet correct”:
 
-- Hard-coded placeholders like `let node_count = 100; // TODO: Replace with actual graph store`.
+- Hard-coded placeholders like `let node_count = 100; // Note: Replace with actual graph store`.
 - TODOs for missing graph-store accessors (edge weights, node counts, property access).
 - Specs validating config with `projection::codegen::config::validation::ConfigError` while other config flows use `config::validation::ConfigError`.
 

@@ -237,8 +237,7 @@ impl DijkstraStorageRuntime {
 
     /// Get neighbors with weights for a given node
     ///
-    /// TODO: Replace with actual GraphStore API call
-    /// This simulates the Java `forEachRelationship` logic
+    /// This currently uses the `Graph` streaming APIs; GraphStore wiring is deferred.
     fn get_neighbors_with_weights(
         &self,
         graph: Option<&dyn Graph>,

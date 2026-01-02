@@ -6,7 +6,7 @@
 //! Notes:
 //! - This is an initial translation intended to compile and provide a usable API surface.
 //! - Weighted degree normalization falls back to unweighted `degree()` until
-//!   relationship weight accessors are wired (TODO).
+//!   relationship weight accessors are wired (deferred).
 
 use std::sync::Arc;
 

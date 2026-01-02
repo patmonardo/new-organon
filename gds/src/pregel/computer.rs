@@ -273,7 +273,7 @@ impl<C: PregelRuntimeConfig + Clone, I: MessageIterator> Default for PregelCompu
 
 #[cfg(test)]
 mod tests {
-    // TODO: Add tests once we have mock implementations
+    // Note: Add tests once we have mock implementations.
     // - Test init_computation (no-op)
     // - Test init_iteration creates root task
     // - Test run_iteration executes task

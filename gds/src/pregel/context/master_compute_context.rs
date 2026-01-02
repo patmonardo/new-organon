@@ -23,7 +23,7 @@ use std::sync::Arc;
 /// - Deciding whether to terminate early
 /// - Logging progress
 ///
-/// # TODO
+/// # Notes
 ///
 /// This is a stub interface. Full implementation will include:
 /// - Superstep number
@@ -31,7 +31,7 @@ use std::sync::Arc;
 /// - Aggregator access
 /// - Early termination signaling
 /// - Parallel execution support via executor service
-#[allow(dead_code)] // TODO: Remove once fully implemented
+#[allow(dead_code)] // Temporary: remove once fully implemented.
 pub struct MasterComputeContext<C: PregelRuntimeConfig> {
     config: C,
     graph: Arc<dyn Graph>,

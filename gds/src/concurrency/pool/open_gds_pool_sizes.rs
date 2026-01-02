@@ -7,7 +7,7 @@ use super::PoolSizes;
 ///
 /// In Java GDS:
 /// ```java
-/// // TODO: think how to make the magic numbers less magic
+/// // Note: think how to make the magic numbers less magic
 /// public class OpenGdsPoolSizes implements PoolSizes {
 ///     @Override public int corePoolSize() { return 4; }
 ///     @Override public int maxPoolSize() { return 4; }

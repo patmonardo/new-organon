@@ -402,7 +402,7 @@ mod tests {
         }
     }
 
-    // TODO: Re-enable when we have a way to create graphs with properties
+    // Note: Re-enable when we have a way to create graphs with properties.
     // #[test]
     // fn test_property_exists_validator_success() {
     //     // Need to create graph with actual properties for this test

@@ -85,7 +85,7 @@ define_algorithm_spec! {
         // For each node, compute degree
         for node_id in 0..node_count {
             let _degree = storage.degree(node_id);
-            // TODO: Get actual triangle count for this node
+            // Note: triangle count per-node is deferred.
         }
 
         computation.compute(&triangle_counts, &degrees);

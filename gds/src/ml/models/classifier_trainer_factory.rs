@@ -27,11 +27,11 @@ impl ClassifierTrainerFactory {
     ) -> Box<dyn ClassifierTrainer> {
         match config.method() {
             TrainingMethod::LogisticRegression => {
-                todo!("LogisticRegressionTrainer factory not implemented")
+                panic!("ClassifierTrainerFactory::create: LogisticRegression trainer not yet implemented")
             }
             TrainingMethod::RandomForestClassification => {
                 // In Java: new RandomForestClassifierTrainer(...)
-                todo!("RandomForestClassifierTrainer factory not implemented")
+                panic!("ClassifierTrainerFactory::create: RandomForestClassification trainer not yet implemented")
             }
             TrainingMethod::MLPClassification => {
                 // In Java: new MLPClassifierTrainer(numberOfClasses, (MLPClassifierTrainConfig) config, randomSeed, ...)

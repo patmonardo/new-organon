@@ -321,14 +321,14 @@ where
     where
         Self: Sized,
     {
-        todo!("Implement with_capacity for PartitionAwareCollection")
+        Self::new(C::with_capacity(_capacity))
     }
 
     fn with_defaults(_count: usize, _default_value: T) -> Self
     where
         Self: Sized,
     {
-        todo!("Implement with_defaults for PartitionAwareCollection")
+        Self::new(C::with_defaults(_count, _default_value))
     }
 }
 

@@ -16,11 +16,11 @@ impl ClassifierFactory {
             TrainingMethod::LogisticRegression => {
                 // In Java: LogisticRegressionClassifier.from((LogisticRegressionData) classifierData)
                 // We need to downcast to the specific data type
-                todo!("Need to implement downcasting for LogisticRegressionData")
+                panic!("ClassifierFactory::create: LogisticRegression not yet implemented (requires downcasting support)")
             }
             TrainingMethod::RandomForestClassification => {
                 // In Java: new RandomForestClassifier((RandomForestClassifierData) classifierData)
-                todo!("Need to implement downcasting for RandomForestClassifierData")
+                panic!("ClassifierFactory::create: RandomForestClassification not yet implemented (requires downcasting support)")
             }
             TrainingMethod::MLPClassification => {
                 // In Java: new MLPClassifier((MLPClassifierData) classifierData)
@@ -48,15 +48,15 @@ impl ClassifierFactory {
     ) -> MemoryRange {
         match method {
             TrainingMethod::LogisticRegression => {
-                // TODO: Implement logistic regression memory estimation
+                // Note: Placeholder; implement logistic regression memory estimation.
                 MemoryRange::empty()
             }
             TrainingMethod::RandomForestClassification => {
-                // TODO: Implement RandomForest runtime overhead memory estimation
+                // Note: Placeholder; implement RandomForest runtime overhead memory estimation.
                 MemoryRange::empty()
             }
             TrainingMethod::MLPClassification => {
-                // TODO: Implement MLP memory estimation
+                // Note: Placeholder; implement MLP memory estimation.
                 MemoryRange::empty()
             }
             _ => panic!("No such classifier for training method: {:?}", method),
@@ -74,13 +74,13 @@ impl ClassifierFactory {
     ) -> Box<dyn MemoryEstimation> {
         match trainer_config.method() {
             TrainingMethod::LogisticRegression => {
-                todo!("Logistic regression data memory estimation")
+                panic!("ClassifierFactory::data_memory_estimation: LogisticRegression not yet implemented")
             }
             TrainingMethod::RandomForestClassification => {
-                todo!("RandomForest data memory estimation")
+                panic!("ClassifierFactory::data_memory_estimation: RandomForestClassification not yet implemented")
             }
             TrainingMethod::MLPClassification => {
-                todo!("MLP data memory estimation")
+                panic!("ClassifierFactory::data_memory_estimation: MLPClassification not yet implemented")
             }
             _ => panic!(
                 "No such classifier for training method: {:?}",

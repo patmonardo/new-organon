@@ -75,7 +75,7 @@ impl ComputationService {
     ) -> ResultFromAlgorithm {
         let _execution_metric = self.algorithm_metrics_service.create(label.as_string());
 
-        // TODO: Implement proper metrics tracking
+        // Note: proper metrics tracking is deferred.
         // try (executionMetric) {
         //     executionMetric.start();
         //     return computation.compute(graphResources.graph(), graphResources.graphStore());

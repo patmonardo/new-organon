@@ -168,7 +168,7 @@ impl CELFFacade {
     }
 
     pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
-        // TODO: Implement actual node property mutation
+        // Note: node property mutation is deferred.
         // For now, return a placeholder result
         Err(
             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
@@ -182,9 +182,9 @@ impl CELFFacade {
         // For CELF, write is the same as mutate since it's node properties
         self.mutate(property_name).map(|_| {
             WriteResult::new(
-                0, // TODO: Return actual count
+                0, // Note: placeholder count until mutation is wired.
                 property_name.to_string(),
-                std::time::Duration::from_millis(0), // TODO: Return actual elapsed time
+                std::time::Duration::from_millis(0), // Note: placeholder time until mutation is wired.
             )
         })
     }

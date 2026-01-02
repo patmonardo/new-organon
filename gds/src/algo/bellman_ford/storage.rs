@@ -141,7 +141,7 @@ impl BellmanFordStorageRuntime {
         computation: &BellmanFordComputationRuntime,
     ) -> Result<Vec<PathResult>, AlgorithmError> {
         let mut paths = Vec::new();
-        let node_count = 100; // TODO: Replace with actual graph store
+        let node_count = computation.node_count();
 
         for target_node in 0..node_count {
             let target_node = target_node as NodeId;
@@ -225,7 +225,7 @@ impl BellmanFordStorageRuntime {
 
         let mut current_node = start_node;
         let mut length = 0;
-        let max_length = 100; // TODO: Replace with actual graph node count
+        let max_length = computation.node_count();
 
         // Follow predecessors until we complete the cycle
         while length < max_length {

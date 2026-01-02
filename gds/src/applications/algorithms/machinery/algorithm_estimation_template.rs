@@ -19,14 +19,13 @@ impl AlgorithmEstimationTemplate {
         _graph_name_or_configuration: &str,
         _memory_estimation: Box<dyn MemoryEstimation>,
     ) -> crate::mem::MemoryEstimateResult {
-        // TODO: Implement memory estimation
+        // Note: memory estimation for the applications template is deferred.
         // This would typically involve:
         // 1. Getting graph information
         // 2. Calculating memory requirements
         // 3. Returning the estimation result
-        
-        // For now, return a placeholder
-        todo!("Implement memory estimation")
+
+        panic!("memory estimation not yet implemented")
     }
 }
 

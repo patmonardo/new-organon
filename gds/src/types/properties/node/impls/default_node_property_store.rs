@@ -207,30 +207,6 @@ impl DefaultNodePropertyStoreBuilder {
         let default_config = crate::config::CollectionsConfig::<f64>::default();
         self.put_double_with_config(&default_config, key, values)
     }
-
-    /// Convenience: create and put a DoubleArray property from a Vec<Option<Vec<f64>>>.
-    /// NOTE: Array types not yet implemented with universal adapters - this method is temporarily disabled.
-    #[allow(dead_code)]
-    pub fn put_double_array_from_vec(
-        self,
-        _key: impl Into<String>,
-        _values: Vec<Option<Vec<f64>>>,
-    ) -> Self {
-        // TODO: Implement when array types are added to universal adapters
-        unimplemented!("DoubleArray not yet migrated to universal adapters");
-    }
-
-    /// Convenience: create and put a LongArray property from a Vec<Option<Vec<i64>>>.
-    /// NOTE: Array types not yet implemented with universal adapters - this method is temporarily disabled.
-    #[allow(dead_code)]
-    pub fn put_long_array_from_vec(
-        self,
-        _key: impl Into<String>,
-        _values: Vec<Option<Vec<i64>>>,
-    ) -> Self {
-        // TODO: Implement when array types are added to universal adapters
-        unimplemented!("LongArray not yet migrated to universal adapters");
-    }
 }
 
 fn build_long_node_property_values(

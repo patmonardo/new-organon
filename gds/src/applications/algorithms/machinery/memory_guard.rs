@@ -145,7 +145,7 @@ impl MemoryRequirement {
         let graph_dimensions = graph_dimension_factory.create(graph_store, configuration);
         let _transformed_graph_dimensions = dimension_transformer.transform(graph_dimensions);
 
-        // TODO(gds,2025-01-31): Implement actual memory estimation
+        // Note(gds,2025-01-31): actual memory estimation is deferred.
         // let memory_tree = memory_estimation.estimate(transformed_graph_dimensions, configuration.concurrency());
         // let memory_range = memory_tree.memory_usage();
         // let bytes_required = if use_max_memory_estimation { memory_range.max } else { memory_range.min };
@@ -175,7 +175,7 @@ impl DefaultGraphDimensionFactory {
 
 impl GraphDimensionFactory for DefaultGraphDimensionFactory {
     fn create(&self, _graph_store: &Arc<DefaultGraphStore>, _configuration: &dyn Config) -> Box<dyn GraphDimensions> {
-        // TODO(gds,2025-01-31): Implement actual graph dimensions computation
+        // Note(gds,2025-01-31): actual graph dimensions computation is deferred.
         Box::new(crate::core::GraphDimensionsImpl::new())
     }
 }

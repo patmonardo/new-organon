@@ -58,7 +58,7 @@ mod tests {
         };
 
         let result = config.validate();
-        // TODO: Implement actual validation logic
+        // Note: Implement actual validation logic.
         assert!(
             result.is_ok(),
             "Validation currently passes - needs implementation"

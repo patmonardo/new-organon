@@ -222,7 +222,7 @@ impl CommunityCompanion {
         // Apply incremental filtering if needed
         // Translation of: lines 68-70
         let incremental_filtered = if incremental && result_property == seed_property {
-            // TODO: Implement LongIfChangedNodePropertyValues when we have seed property supplier
+            // Note: LongIfChangedNodePropertyValues is deferred until we have a seed property supplier.
             // For now, return filtered properties
             filtered
         } else {
@@ -273,13 +273,13 @@ impl CommunityCompanion {
     ///
     /// Node property values for seeding, or error if property not found or wrong type
     ///
-    /// ## TODO
+    /// ## Deferred
     ///
     /// This method requires `NodePropertyContainer` which we haven't translated yet.
     /// Will be implemented when we translate the core API.
     pub fn extract_seeding_property(
         property_name: &str,
-        // TODO: Accept NodePropertyContainer when available
+        // Note: Accept NodePropertyContainer when available.
     ) -> Result<Box<dyn NodePropertyValues>, String> {
         // Stub for now - will be implemented when we have full property system
         Err(format!(

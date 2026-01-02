@@ -74,7 +74,7 @@ impl MutateNodeProperty for DefaultMutateNodeProperty {
         _config: &C,
         _node_properties: Box<dyn NodePropertyValues>,
     ) -> NodePropertiesWritten {
-        // TODO: Implement actual node property mutation
+        // Note: actual node property mutation is deferred.
         // This would typically involve:
         // 1. Getting the target node labels from the config
         // 2. Getting the property name from the config
@@ -93,7 +93,7 @@ impl MutateNodeProperty for DefaultMutateNodeProperty {
         _property_name: String,
         _node_properties: Box<dyn NodePropertyValues>,
     ) -> NodePropertiesWritten {
-        // TODO: Implement actual node property mutation with explicit labels
+        // Note: actual node property mutation with explicit labels is deferred.
         // This would typically involve:
         // 1. Writing the properties to the specified node labels
         // 2. Using the specified property name

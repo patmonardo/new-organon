@@ -166,7 +166,7 @@ impl SteinerTreeBuilder {
                 .filter_map(|cursor| {
                     let target = cursor.target_id();
                     if target >= 0 {
-                        let weight = 1.0; // TODO: get actual weight property when available
+                        let weight = 1.0; // Note: weight property lookup is deferred.
                         Some((target as usize, weight))
                     } else {
                         None
@@ -229,7 +229,7 @@ impl SteinerTreeBuilder {
 
     /// Mutate mode: writes results back to the graph store
     pub fn mutate(self) -> Result<MutationResult> {
-        // TODO: Implement mutation logic
+        // Note: mutation logic is deferred.
         Err(
             crate::projection::eval::procedure::AlgorithmError::Execution(
                 "mutate mode not yet implemented".to_string(),
@@ -239,7 +239,7 @@ impl SteinerTreeBuilder {
 
     /// Write mode: writes results to external storage
     pub fn write(self) -> Result<WriteResult> {
-        // TODO: Implement write logic
+        // Note: write logic is deferred.
         Err(
             crate::projection::eval::procedure::AlgorithmError::Execution(
                 "write mode not yet implemented".to_string(),

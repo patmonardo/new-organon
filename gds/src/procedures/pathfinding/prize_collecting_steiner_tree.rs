@@ -218,7 +218,7 @@ impl PCSTreeBuilder {
 
     /// Mutate mode: writes results back to the graph store
     pub fn mutate(self) -> Result<MutationResult> {
-        // TODO: Implement mutation logic
+        // Note: mutation logic is deferred.
         Err(
             crate::projection::eval::procedure::AlgorithmError::Execution(
                 "mutate mode not yet implemented".to_string(),
@@ -228,7 +228,7 @@ impl PCSTreeBuilder {
 
     /// Write mode: writes results to external storage
     pub fn write(self) -> Result<WriteResult> {
-        // TODO: Implement write logic
+        // Note: write logic is deferred.
         Err(
             crate::projection::eval::procedure::AlgorithmError::Execution(
                 "write mode not yet implemented".to_string(),

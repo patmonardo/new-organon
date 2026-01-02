@@ -114,7 +114,7 @@ pub fn create_float_backend_from_config(
     values: Vec<f32>,
 ) -> VecFloat {
     // For now, always use Vec backend regardless of config
-    // TODO: Implement adaptive backend selection when Huge and Arrow are ready
+    // Note: adaptive backend selection is deferred until Huge and Arrow are ready.
     VecFloat::from(values)
 }
 
@@ -124,7 +124,7 @@ pub fn create_int_backend_from_config(
     values: Vec<i32>,
 ) -> VecInt {
     // For now, always use Vec backend regardless of config
-    // TODO: Implement adaptive backend selection when Huge and Arrow are ready
+    // Note: adaptive backend selection is deferred until Huge and Arrow are ready.
     VecInt::from(values)
 }
 
@@ -134,7 +134,7 @@ pub fn create_short_backend_from_config(
     values: Vec<i16>,
 ) -> VecShort {
     // For now, always use Vec backend regardless of config
-    // TODO: Implement adaptive backend selection when Huge and Arrow are ready
+    // Note: adaptive backend selection is deferred until Huge and Arrow are ready.
     VecShort { data: values }
 }
 
@@ -144,7 +144,7 @@ pub fn create_byte_backend_from_config(
     values: Vec<i8>,
 ) -> VecByte {
     // For now, always use Vec backend regardless of config
-    // TODO: Implement adaptive backend selection when Huge and Arrow are ready
+    // Note: adaptive backend selection is deferred until Huge and Arrow are ready.
     VecByte { data: values }
 }
 

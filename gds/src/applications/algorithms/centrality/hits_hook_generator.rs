@@ -25,13 +25,12 @@ impl HitsHookGenerator {
 
     /// Creates an ETL hook for the HITS algorithm.
     pub fn create_etl_hook<C: Config>(&self, _config: &C) -> Box<dyn std::any::Any> {
-        // TODO: Implement HITS ETL hook creation
+        // Note: HITS ETL hook creation is deferred.
         // This would typically involve:
         // 1. Creating a hook that handles inverse relationship indexing
         // 2. Configuring it with the algorithm's relationship types
         // 3. Returning the hook
 
-        // For now, return a placeholder
-        todo!("Implement HITS ETL hook creation")
+        panic!("HITS ETL hook creation not yet implemented")
     }
 }

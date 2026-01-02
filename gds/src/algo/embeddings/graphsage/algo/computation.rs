@@ -11,7 +11,7 @@ impl GraphSageComputationRuntime {
         // This is a simplified implementation - in practice we'd need access to the model catalog
         // For now, we'll create a placeholder that shows the structure
 
-        // TODO: Implement proper model catalog access
+        // Note: model catalog access is deferred.
         // let model_catalog = graph_store.model_catalog();
         // let factory = GraphSageAlgorithmFactory::new(model_catalog);
         // let graphsage = factory.build(

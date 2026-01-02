@@ -58,7 +58,7 @@ impl GraphSageEmbeddingsGenerator {
         graph: Arc<dyn Graph>,
         features: Arc<HugeObjectArray<Vec<f64>>>,
     ) -> HugeObjectArray<Vec<f64>> {
-        // Progress tracker integration is a TODO in Rust GDS; keep the value live for parity.
+        // Progress tracker integration is deferred in Rust GDS; keep the value live for parity.
         let _ = &self.progress_tracker;
 
         let mut result: HugeObjectArray<Vec<f64>> = HugeObjectArray::new(graph.node_count());

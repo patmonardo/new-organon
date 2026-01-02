@@ -3,7 +3,7 @@
 /// the context of database write operations.
 #[derive(Clone)]
 pub struct WriteContext {
-    // TODO: Add fields as needed based on the Java implementation
+    // Note: fields are deferred (awaiting a stable write context design).
     // This might include:
     // - Database connection information
     // - Transaction context
@@ -13,9 +13,7 @@ pub struct WriteContext {
 
 impl WriteContext {
     pub fn new() -> Self {
-        Self {
-            // TODO: Initialize fields
-        }
+        Self {}
     }
 }
 

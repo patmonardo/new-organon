@@ -78,16 +78,16 @@ impl Heuristic {
     pub fn calculate(&self, node_a: u64, node_b: u64) -> f64 {
         match self {
             Heuristic::Manhattan => {
-                // TODO: Implement actual coordinate lookup and Manhattan calculation
+                // Note: coordinate lookup + Manhattan calculation is deferred.
                 // For now, return a simple estimate based on node IDs
                 ((node_a as f64 - node_b as f64).abs() * 2.0).min(100.0)
             }
             Heuristic::Euclidean => {
-                // TODO: Implement actual coordinate lookup and Euclidean calculation
+                // Note: coordinate lookup + Euclidean calculation is deferred.
                 ((node_a as f64 - node_b as f64).abs() * 1.414).min(100.0)
             }
             Heuristic::Haversine => {
-                // TODO: Implement actual lat/lng lookup and Haversine calculation
+                // Note: lat/lng lookup + Haversine calculation is deferred.
                 // For geographic routing, this would use latitude/longitude properties
                 ((node_a as f64 - node_b as f64).abs() * 111.0).min(1000.0) // Rough km estimate
             }

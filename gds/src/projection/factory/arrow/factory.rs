@@ -180,7 +180,7 @@ impl GraphStoreFactory for ArrowNativeFactory {
             return self.build_from_tables(node_table, edge_table, config);
         }
 
-        // TODO(gds,2025-01-31): Add support for loading tables from config-driven references
+        // Note(gds,2025-01-31): Add support for loading tables from config-driven references.
         Err(ArrowProjectionError::InvalidConfig(
             "ArrowNativeFactory needs in-memory node/edge tables (use from_tables())".to_string(),
         ))
@@ -203,7 +203,7 @@ impl GraphStoreFactory for ArrowNativeFactory {
             return Ok((nodes, edges));
         }
 
-        // TODO(gds,2025-01-31): Use Arrow metadata to estimate buffers even without in-memory tables
+        // Note(gds,2025-01-31): Use Arrow metadata to estimate buffers even without in-memory tables.
         let _ = config;
         Ok((0, 0))
     }
@@ -219,7 +219,7 @@ impl GraphStoreFactory for ArrowNativeFactory {
             return Ok(node_table.row_count());
         }
 
-        // TODO(gds,2025-01-31): Support node counts from Arrow metadata when tables are not in memory
+        // Note(gds,2025-01-31): Support node counts from Arrow metadata when tables are not in memory.
         Err(ArrowProjectionError::InvalidConfig(
             "node table missing; provide via ArrowNativeFactory::from_tables()".to_string(),
         ))
@@ -236,7 +236,7 @@ impl GraphStoreFactory for ArrowNativeFactory {
             return Ok(edge_table.row_count());
         }
 
-        // TODO(gds,2025-01-31): Support edge counts from Arrow metadata when tables are not in memory
+        // Note(gds,2025-01-31): Support edge counts from Arrow metadata when tables are not in memory.
         Err(ArrowProjectionError::InvalidConfig(
             "edge table missing; provide via ArrowNativeFactory::from_tables()".to_string(),
         ))

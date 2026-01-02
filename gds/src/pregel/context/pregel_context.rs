@@ -17,7 +17,7 @@ use crate::pregel::PregelRuntimeConfig;
 /// - **Logging**: Debug, info, and warning messages
 /// - **Graph Statistics**: Node count, relationship count, multi-graph check
 ///
-/// # TODO
+/// # Notes
 ///
 /// This is a foundational stub. Full implementation will include:
 /// - Config reference
@@ -25,7 +25,7 @@ use crate::pregel::PregelRuntimeConfig;
 /// - Graph reference for statistics
 pub struct PregelContext<C: PregelRuntimeConfig> {
     config: std::marker::PhantomData<C>,
-    // TODO: Add fields when implementing
+    // Planned: add fields when implementing.
     // config: &'a C,
     // progress_tracker: &'a ProgressTracker,
     // graph: &'a Graph, (or just store statistics)
@@ -34,7 +34,7 @@ pub struct PregelContext<C: PregelRuntimeConfig> {
 impl<C: PregelRuntimeConfig> PregelContext<C> {
     /// Create a new Pregel context (stub).
     ///
-    /// # TODO
+    /// # Notes
     ///
     /// Add actual parameters: config, progress_tracker, graph stats
     pub fn stub() -> Self {
@@ -45,7 +45,7 @@ impl<C: PregelRuntimeConfig> PregelContext<C> {
 
     /// Get the algorithm configuration.
     ///
-    /// # TODO
+    /// # Notes
     ///
     /// Stub - will return reference to actual config
     pub fn config(&self) -> &C {
@@ -54,7 +54,7 @@ impl<C: PregelRuntimeConfig> PregelContext<C> {
 
     /// Log a debug message.
     ///
-    /// # TODO
+    /// # Notes
     ///
     /// Stub - will call progress_tracker.log_debug(message)
     pub fn log_debug(&self, _message: &str) {
@@ -63,7 +63,7 @@ impl<C: PregelRuntimeConfig> PregelContext<C> {
 
     /// Log an info message.
     ///
-    /// # TODO
+    /// # Notes
     ///
     /// Stub - will call progress_tracker.log_info(message)
     pub fn log_message(&self, _message: &str) {
@@ -72,7 +72,7 @@ impl<C: PregelRuntimeConfig> PregelContext<C> {
 
     /// Log a warning message.
     ///
-    /// # TODO
+    /// # Notes
     ///
     /// Stub - will call progress_tracker.log_warning(message)
     pub fn log_warning(&self, _message: &str) {
@@ -81,7 +81,7 @@ impl<C: PregelRuntimeConfig> PregelContext<C> {
 
     /// Check if the input graph is a multi-graph (allows parallel edges).
     ///
-    /// # TODO
+    /// # Notes
     ///
     /// Stub - will return graph.is_multi_graph()
     pub fn is_multi_graph(&self) -> bool {
@@ -90,7 +90,7 @@ impl<C: PregelRuntimeConfig> PregelContext<C> {
 
     /// Get the number of nodes in the input graph.
     ///
-    /// # TODO
+    /// # Notes
     ///
     /// Stub - will return graph.node_count()
     pub fn node_count(&self) -> u64 {
@@ -99,7 +99,7 @@ impl<C: PregelRuntimeConfig> PregelContext<C> {
 
     /// Get the number of relationships in the input graph.
     ///
-    /// # TODO
+    /// # Notes
     ///
     /// Stub - will return graph.relationship_count()
     pub fn relationship_count(&self) -> u64 {

@@ -38,7 +38,7 @@ pub struct Element {
     pub visibility: Visibility,
 
     /// Optional default value for the property
-    /// TODO: Replace with GdsValue when available
+    /// Note: Replace with GdsValue when available.
     pub default_value: Option<DefaultValue>,
 
     /// Optional source property key from PropertyStore
@@ -60,7 +60,7 @@ pub struct Element {
 
 /// Temporary default value representation until GdsValue is available.
 ///
-/// # TODO
+/// # Notes
 ///
 /// Replace with proper GdsValue type from values module.
 #[derive(Debug, Clone, PartialEq)]

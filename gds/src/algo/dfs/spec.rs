@@ -225,7 +225,7 @@ mod tests {
         });
 
         let validation_config = spec.validation_config(&ExecutionContext::new("test_user"));
-        // TODO: Implement actual validation logic
+        // Note: graph-aware validation is deferred; config-level validation covers basics.
         assert!(validation_config
             .validate_before_load(&valid_config)
             .is_ok());

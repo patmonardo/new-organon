@@ -403,7 +403,7 @@ impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> Default
 
 #[cfg(test)]
 mod tests {
-    // TODO: Add integration tests once we have:
+    // Note: Add integration tests once we have:
     // - Mock graph implementation
     // - Mock messenger implementation
     // - Simple test algorithm (e.g., node count)

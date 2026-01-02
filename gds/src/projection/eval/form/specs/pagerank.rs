@@ -75,9 +75,10 @@ impl PageRankFormSpec {
     /// - context: graph_name, execution parameters
     /// - morph: patterns ["pagerank"]
     pub fn from_form_shape(_shape: &FormShape) -> Result<Self, FormSpecError> {
-        // TODO: Parse FormShape JSON
-        // For now, stub implementation
-        todo!("Parse FormShape to extract PageRank parameters")
+        // Note: Parse FormShape JSON (deferred). For now, this is a stub implementation.
+        Err(FormSpecError::ParseError(
+            "PageRankFormSpec::from_form_shape is not yet implemented".to_string(),
+        ))
     }
 
     /// Convert to FormShape (for GDS → GDSL transmission)
@@ -141,7 +142,7 @@ impl FormSpec for PageRankFormSpec {
         // })
         //
         // For now, stub:
-        todo!("Return PageRank AlgorithmSpec")
+        panic!("PageRankFormSpec::thesis is not yet implemented")
     }
 
     fn antithesis(&self) -> &Antithesis {
@@ -157,9 +158,9 @@ impl FormSpec for PageRankFormSpec {
     }
 
     fn extract_output(&self, _cycle_result: &TriadicCycleMetadata) -> Result<Self::Output, String> {
-        // TODO: Extract PageRank scores from cycle result
-        // This would parse the procedure output stream
-        todo!("Extract PageRank result from cycle metadata")
+        // Note: Extract PageRank scores from cycle result (deferred).
+        // This would parse the procedure output stream.
+        Err("PageRankFormSpec::extract_output is not yet implemented".to_string())
     }
 }
 

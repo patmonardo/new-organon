@@ -35,7 +35,7 @@ impl Default for DefaultProgressTrackerCreator {
 
 impl ProgressTrackerCreator for DefaultProgressTrackerCreator {
     fn create_progress_tracker<C: Config>(&self, _config: &C, task: Tasks) -> ProgressTracker {
-        // TODO: Implement actual progress tracker creation
+        // Note: progress tracker creation is deferred.
         // This would typically involve:
         // 1. Creating a progress tracker with the given task
         // 2. Configuring it with the algorithm's concurrency settings

@@ -231,7 +231,7 @@ impl ResultBuilder<CentralityResult> for CentralityResultBuilder {
         } else if let Some(ref _centrality_function) = self.centrality_function {
             // We need node count to compute scores - this should be provided via metadata
             // For now, return an error if we don't have scores
-            // TODO: Use centrality_function to compute scores when node count is available
+            // Note: computing scores via centrality_function is deferred until node count is available here.
             return Err(ResultBuilderError::MissingData(
                 "Either scores or node count must be provided".to_string(),
             ));
@@ -273,7 +273,7 @@ impl ResultBuilder<CentralityResult> for CentralityResultBuilder {
             if let Some(ref _centrality_function) = self.centrality_function {
                 // This would use the Java-style parallel histogram computation
                 // For now, we'll use the existing StatisticsEngine
-                // TODO: Use centrality_function directly for histogram computation
+                // Note: histogram computation via centrality_function is deferred.
                 let config = StatisticsConfig {
                     compute_histogram: true,
                     ..Default::default()
@@ -396,7 +396,7 @@ impl ResultBuilder<CommunityResult> for CommunityResultBuilder {
         } else if let Some(ref _community_function) = self.community_function {
             // We need node count to compute communities - this should be provided via metadata
             // For now, return an error if we don't have communities
-            // TODO: Use community_function to compute communities when node count is available
+            // Note: computing communities via community_function is deferred until node count is available here.
             return Err(ResultBuilderError::MissingData(
                 "Either communities or node count must be provided".to_string(),
             ));

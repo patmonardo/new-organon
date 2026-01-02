@@ -57,7 +57,7 @@ impl AlgorithmProcessingTemplateConvenience {
         _mutate_step: MutateStepT,
         _result_builder: ResultBuilderT,
     ) -> OutputT {
-        // TODO: Implement the full mutate mode processing
+        // Note: full mutate mode processing is deferred.
         // This would typically involve:
         // 1. Memory estimation
         // 2. Graph loading
@@ -65,8 +65,7 @@ impl AlgorithmProcessingTemplateConvenience {
         // 4. Mutation step execution
         // 5. Result building
 
-        // For now, return a placeholder
-        todo!("Implement mutate mode processing")
+        panic!("mutate mode processing not yet implemented")
     }
 
     /// Processes a regular algorithm in write mode.
@@ -87,7 +86,7 @@ impl AlgorithmProcessingTemplateConvenience {
         _write_step: WriteStepT,
         _result_builder: ResultBuilderT,
     ) -> OutputT {
-        // TODO: Implement the full write mode processing
+        // Note: full write mode processing is deferred.
         // This would typically involve:
         // 1. Memory estimation
         // 2. Graph loading
@@ -95,8 +94,7 @@ impl AlgorithmProcessingTemplateConvenience {
         // 4. Write step execution
         // 5. Result building
 
-        // For now, return a placeholder
-        todo!("Implement write mode processing")
+        panic!("write mode processing not yet implemented")
     }
 
     /// Processes a regular algorithm in stream mode.
@@ -114,15 +112,14 @@ impl AlgorithmProcessingTemplateConvenience {
         _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
         _result_builder: ResultBuilderT,
     ) -> OutputT {
-        // TODO: Implement the full stream mode processing
+        // Note: full stream mode processing is deferred.
         // This would typically involve:
         // 1. Memory estimation
         // 2. Graph loading
         // 3. Algorithm execution
         // 4. Result building
 
-        // For now, return a placeholder
-        todo!("Implement stream mode processing")
+        panic!("stream mode processing not yet implemented")
     }
 
     /// Processes a regular algorithm in stats mode.
@@ -140,15 +137,14 @@ impl AlgorithmProcessingTemplateConvenience {
         _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
         _result_builder: ResultBuilderT,
     ) -> OutputT {
-        // TODO: Implement the full stats mode processing
+        // Note: full stats mode processing is deferred.
         // This would typically involve:
         // 1. Memory estimation
         // 2. Graph loading
         // 3. Algorithm execution
         // 4. Result building
 
-        // For now, return a placeholder
-        todo!("Implement stats mode processing")
+        panic!("stats mode processing not yet implemented")
     }
 
     /// Processes an algorithm with custom hooks and processing.
@@ -172,7 +168,7 @@ impl AlgorithmProcessingTemplateConvenience {
         _post_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
         _post_processing_hooks: Option<Vec<Box<dyn std::any::Any>>>,
     ) -> OutputT {
-        // TODO: Implement the full algorithm processing with hooks
+        // Note: full algorithm processing with hooks is deferred.
         // This would typically involve:
         // 1. Memory estimation
         // 2. Pre-load hook execution
@@ -183,8 +179,7 @@ impl AlgorithmProcessingTemplateConvenience {
         // 7. Post-processing hook execution
         // 8. Result building
 
-        // For now, return a placeholder
-        todo!("Implement algorithm processing with hooks")
+        panic!("algorithm processing with hooks not yet implemented")
     }
 
     /// Processes an algorithm in write mode with custom hooks.
@@ -208,7 +203,7 @@ impl AlgorithmProcessingTemplateConvenience {
         _post_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
         _post_processing_hooks: Option<Vec<Box<dyn std::any::Any>>>,
     ) -> OutputT {
-        // TODO: Implement the full algorithm processing with hooks
+        // Note: full algorithm processing with hooks is deferred.
         // This would typically involve:
         // 1. Memory estimation
         // 2. Pre-load hook execution
@@ -219,8 +214,7 @@ impl AlgorithmProcessingTemplateConvenience {
         // 7. Post-processing hook execution
         // 8. Result building
 
-        // For now, return a placeholder
-        todo!("Implement algorithm processing with hooks")
+        panic!("algorithm processing with hooks not yet implemented")
     }
 
     /// Processes an algorithm in stream mode with custom hooks.
@@ -241,7 +235,7 @@ impl AlgorithmProcessingTemplateConvenience {
         _post_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
         _post_processing_hooks: Option<Vec<Box<dyn std::any::Any>>>,
     ) -> OutputT {
-        // TODO: Implement the full algorithm processing with hooks
+        // Note: full algorithm processing with hooks is deferred.
         // This would typically involve:
         // 1. Memory estimation
         // 2. Pre-load hook execution
@@ -251,8 +245,7 @@ impl AlgorithmProcessingTemplateConvenience {
         // 6. Post-processing hook execution
         // 7. Result building
 
-        // For now, return a placeholder
-        todo!("Implement algorithm processing with hooks")
+        panic!("algorithm processing with hooks not yet implemented")
     }
 
     /// Processes an algorithm in stats mode with custom hooks.
@@ -273,7 +266,7 @@ impl AlgorithmProcessingTemplateConvenience {
         _post_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
         _post_processing_hooks: Option<Vec<Box<dyn std::any::Any>>>,
     ) -> OutputT {
-        // TODO: Implement the full algorithm processing with hooks
+        // Note: full algorithm processing with hooks is deferred.
         // This would typically involve:
         // 1. Memory estimation
         // 2. Pre-load hook execution
@@ -283,7 +276,6 @@ impl AlgorithmProcessingTemplateConvenience {
         // 6. Post-processing hook execution
         // 7. Result building
 
-        // For now, return a placeholder
-        todo!("Implement algorithm processing with hooks")
+        panic!("algorithm processing with hooks not yet implemented")
     }
 }

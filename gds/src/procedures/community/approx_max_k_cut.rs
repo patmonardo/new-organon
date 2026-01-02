@@ -214,7 +214,7 @@ impl ApproxMaxKCutFacade {
 
     /// Mutate mode: writes labels back to the graph store.
     pub fn mutate(self) -> Result<MutationResult> {
-        // TODO: implement mutation logic
+        // Note: mutation logic is deferred.
         Err(
             crate::projection::eval::procedure::AlgorithmError::Execution(
                 "mutate not yet implemented".to_string(),
@@ -224,7 +224,7 @@ impl ApproxMaxKCutFacade {
 
     /// Write mode: writes labels to a new graph.
     pub fn write(self) -> Result<WriteResult> {
-        // TODO: implement write logic
+        // Note: write logic is deferred.
         Err(
             crate::projection::eval::procedure::AlgorithmError::Execution(
                 "write not yet implemented".to_string(),
@@ -234,7 +234,7 @@ impl ApproxMaxKCutFacade {
 
     /// Estimate memory usage.
     pub fn estimate_memory(&self) -> Result<MemoryRange> {
-        // TODO: implement memory estimation
+        // Note: memory estimation is deferred.
         Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
     }
 }

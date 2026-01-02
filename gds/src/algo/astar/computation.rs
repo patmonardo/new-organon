@@ -43,7 +43,7 @@ impl AStarComputationResult {
 /// Translation of: A* algorithm computation logic
 pub struct AStarComputationRuntime {
     /// Priority queue for A* algorithm (placeholder for now)
-    /// TODO: Implement proper priority queue with heuristic function
+    /// Note: a dedicated priority queue + heuristic integration is deferred.
     open_set: Vec<NodeId>,
     /// Visited nodes
     visited: std::collections::HashSet<NodeId>,

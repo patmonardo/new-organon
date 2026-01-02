@@ -5,10 +5,11 @@
 
 use crate::config::PageRankConfig;
 use crate::projection::eval::procedure::{
-    AlgorithmError, AlgorithmSpec, ComputationResult, ConfigError, ConsumerError, ExecutionContext,
-    ExecutionMode, LogLevel, ProjectionHint, ValidationConfiguration,
+    AfterLoadValidator, AlgorithmError, AlgorithmSpec, ComputationResult, ConfigError,
+    ConsumerError, ExecutionContext, ExecutionMode, LogLevel, ProjectionHint,
+    ValidationConfiguration, ValidationError,
 };
-use crate::types::prelude::GraphStore;
+use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde_json::{json, Value as JsonValue};
 use std::time::Instant;
 
@@ -125,6 +126,17 @@ impl AlgorithmSpec for PageRankAlgorithmSpec {
                 .iter()
                 .filter_map(|v| v.as_str().map(|s| s.to_string()))
                 .collect();
+
+            // In this Rust runtime, `sourceNodes` are interpreted as internal node IDs (0..n).
+            // Enforce numeric strings early so later execution doesn't silently drop entries.
+            for s in &nodes {
+                if s.parse::<u64>().is_err() {
+                    return Err(ConfigError::InvalidValue {
+                        param: "sourceNodes".to_string(),
+                        message: format!("expected numeric string node ids; got '{s}'"),
+                    });
+                }
+            }
             builder = builder.source_nodes(Some(nodes));
         }
 
@@ -162,18 +174,18 @@ impl AlgorithmSpec for PageRankAlgorithmSpec {
     ///    so before-load validators are typically not needed here.
     ///
     /// 2. **After-load validation** (config + graph):
-    ///    - TODO: Validate `weightProperty` exists (if specified)
-    ///    - TODO: Validate `sourceNodes` exist in graph (if specified)
+    ///    - Validate `sourceNodes` are valid internal node IDs (if specified)
     ///    - Graph must have nodes (handled by executor)
     ///
     /// **Current Status**: Returns `empty()` because:
     /// - Config system already validates parameters in `parse_config()` via `PageRankConfig::builder().build()`
-    /// - Graph-specific validators (weight property, source nodes) not yet implemented
+    /// - Graph-specific validators are implemented as after-load validators
+    ///
+    /// Note: `weightProperty` is currently accepted but ignored by the runtime wiring,
+    /// so we intentionally do not validate its existence yet.
     fn validation_config(&self, _context: &ExecutionContext) -> ValidationConfiguration {
-        // TODO: Add after-load validators:
-        // - PropertyExistsValidator for weightProperty (if specified)
-        // - NodeExistsValidator for sourceNodes (if specified)
-        ValidationConfiguration::empty()
+        ValidationConfiguration::new()
+            .add_after_load(PageRankSourceNodesExistIfSpecifiedValidator)
     }
 
     /// Execute the algorithm
@@ -217,9 +229,8 @@ impl AlgorithmSpec for PageRankAlgorithmSpec {
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        // Convert source_nodes from Vec<String> to Vec<u64>
-        // Source nodes in config are strings (node identifiers), need to convert to IDs
-        // TODO: This should use GraphStore's node ID resolution
+        // Convert sourceNodes from numeric strings to internal node IDs (u64).
+        // Note: The current Rust runtime treats sourceNodes as internal/mapped ids.
         let source_nodes = config
             .get("sourceNodes")
             .and_then(|v| v.as_array())
@@ -310,6 +321,52 @@ impl AlgorithmSpec for PageRankAlgorithmSpec {
                 Err(ConsumerError::UnsupportedMode(*other))
             }
         }
+    }
+}
+
+// ============================================================================
+// After-load Validators
+// ============================================================================
+
+struct PageRankSourceNodesExistIfSpecifiedValidator;
+
+impl AfterLoadValidator for PageRankSourceNodesExistIfSpecifiedValidator {
+    fn validate(
+        &self,
+        graph_store: &DefaultGraphStore,
+        config: &JsonValue,
+    ) -> Result<(), ValidationError> {
+        let Some(arr) = config.get("sourceNodes").and_then(|v| v.as_array()) else {
+            return Ok(());
+        };
+
+        let node_count = graph_store.node_count() as u64;
+
+        for raw in arr {
+            let Some(s) = raw.as_str() else {
+                return Err(ValidationError::InvalidValue {
+                    param: "sourceNodes".to_string(),
+                    message: "expected array of numeric strings".to_string(),
+                });
+            };
+            let id = s.parse::<u64>().map_err(|_| ValidationError::InvalidValue {
+                param: "sourceNodes".to_string(),
+                message: format!("expected numeric string node ids; got '{s}'"),
+            })?;
+
+            if id >= node_count {
+                return Err(ValidationError::InvalidValue {
+                    param: "sourceNodes".to_string(),
+                    message: format!("node id {id} out of range [0, {node_count})"),
+                });
+            }
+        }
+
+        Ok(())
+    }
+
+    fn name(&self) -> &str {
+        "PageRankSourceNodesExistIfSpecifiedValidator"
     }
 }
 

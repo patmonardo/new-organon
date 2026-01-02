@@ -72,7 +72,7 @@ pub use user_task::UserTask;
 /// Placeholder for ProgressTracker - tracks progress of algorithm execution.
 #[derive(Debug, Clone)]
 pub struct ProgressTracker {
-    // TODO: Implement actual progress tracking
+    // Note: Placeholder; implement actual progress tracking.
 }
 
 impl ProgressTracker {

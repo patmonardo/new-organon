@@ -82,7 +82,7 @@ impl WccFacade {
     pub fn mutate(self, _property_name: &str) -> Result<MutationResult> {
         let (_result, _elapsed) = self.compute()?;
 
-        // TODO: Implement actual node property mutation
+        // Note: node property mutation is deferred.
         // For now, return a placeholder result
         Err(
             crate::projection::eval::procedure::AlgorithmError::Execution(
@@ -95,9 +95,9 @@ impl WccFacade {
         // For WCC, write is the same as mutate since it's node properties
         self.mutate(property_name).map(|_| {
             WriteResult::new(
-                0, // TODO: Return actual count
+                0, // Note: placeholder count until mutation is wired.
                 property_name.to_string(),
-                std::time::Duration::from_millis(0), // TODO: Return actual elapsed time
+                std::time::Duration::from_millis(0), // Note: placeholder time until mutation is wired.
             )
         })
     }

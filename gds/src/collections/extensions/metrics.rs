@@ -236,16 +236,14 @@ where
     where
         Self: Sized,
     {
-        // Implementation for metrics collections
-        todo!("Implement with_capacity for MetricsCollection")
+        Self::new(C::with_capacity(_capacity))
     }
 
     fn with_defaults(_count: usize, _default_value: T) -> Self
     where
         Self: Sized,
     {
-        // Implementation for metrics collections
-        todo!("Implement with_defaults for MetricsCollection")
+        Self::new(C::with_defaults(_count, _default_value))
     }
 }
 
@@ -312,7 +310,7 @@ where
         // Export to OpenTelemetry (placeholder implementation)
         if let Some(config) = &self.metrics_config {
             if config.enable_opentelemetry {
-                // TODO: Implement actual OpenTelemetry export
+                // Note: OpenTelemetry export is deferred.
                 println!("Exporting metrics to OpenTelemetry...");
             }
         }

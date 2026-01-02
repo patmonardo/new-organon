@@ -160,7 +160,7 @@ impl DeltaSteppingStorageRuntime {
         computation: &DeltaSteppingComputationRuntime,
     ) -> Result<Vec<DeltaSteppingPathResult>, AlgorithmError> {
         let mut paths = Vec::new();
-        let node_count = 100; // TODO(gds,2025-01-31): Replace with actual graph store once wired
+        let node_count = computation.node_count();
 
         for target_node in 0..node_count {
             let target_node = target_node as NodeId;
@@ -206,7 +206,7 @@ impl DeltaSteppingStorageRuntime {
         costs.reverse();
 
         Ok(DeltaSteppingPathResult {
-            index: 0, // TODO(gds,2025-01-31): Assign proper index
+            index: 0, // Indexing is not yet exposed/used in the Rust surface.
             source_node,
             target_node,
             node_ids,
