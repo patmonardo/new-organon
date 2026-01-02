@@ -90,9 +90,11 @@
 
 pub mod centrality;
 pub mod community;
+pub mod machine_learning;
 pub mod similarity;
 
 // Re-export commonly used types
 pub use centrality::*;
 pub use community::*;
+pub use machine_learning::*;
 pub use similarity::*;

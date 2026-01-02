@@ -24,6 +24,10 @@ use super::embeddings::{
     FastRPBuilder, GATBuilder, GraphSageBuilder, HashGNNBuilder, Node2VecBuilder,
 };
 
+use super::miscellaneous::{
+    CollapsePathFacade, IndexInverseFacade, ScalePropertiesFacade, ToUndirectedFacade,
+};
+
 /// User-facing graph handle for running algorithms against a live `DefaultGraphStore`.
 ///
 /// This is the main entrypoint for the facade layer.
@@ -246,5 +250,25 @@ impl Graph {
     /// Modularity community quality metric.
     pub fn modularity(&self, community_property: String) -> ModularityFacade {
         ModularityFacade::new(Arc::clone(&self.store), community_property)
+    }
+
+    /// Converts the graph to an undirected projection (utility).
+    pub fn to_undirected(&self) -> ToUndirectedFacade {
+        ToUndirectedFacade::new(Arc::clone(&self.store))
+    }
+
+    /// Scales a numeric node property (utility).
+    pub fn scale_properties(&self) -> ScalePropertiesFacade {
+        ScalePropertiesFacade::new(Arc::clone(&self.store))
+    }
+
+    /// Builds inverse indices for relationships (placeholder utility).
+    pub fn index_inverse(&self) -> IndexInverseFacade {
+        IndexInverseFacade::new(Arc::clone(&self.store))
+    }
+
+    /// Collapses paths into relationships (placeholder utility).
+    pub fn collapse_path(&self) -> CollapsePathFacade {
+        CollapsePathFacade::new(Arc::clone(&self.store))
     }
 }

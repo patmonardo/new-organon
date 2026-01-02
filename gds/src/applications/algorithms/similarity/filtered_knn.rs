@@ -42,32 +42,10 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
 
     let top_k = request.get("topK").and_then(|v| v.as_u64()).unwrap_or(10) as usize;
 
-    let _sample_rate = request
-        .get("sampleRate")
-        .and_then(|v| v.as_f64())
-        .unwrap_or(1.0);
-
-    let _perturbation_rate = request
-        .get("perturbationRate")
-        .and_then(|v| v.as_f64())
-        .unwrap_or(0.0);
-
-    let max_iterations = request
-        .get("maxIterations")
-        .and_then(|v| v.as_u64())
-        .map(|i| i as usize);
-
     let similarity_cutoff = request
         .get("similarityCutoff")
         .and_then(|v| v.as_f64())
         .unwrap_or(0.0);
-
-    let degree_cutoff = request
-        .get("degreeCutoff")
-        .and_then(|v| v.as_u64())
-        .map(|d| d as usize);
-
-    let random_seed = request.get("randomSeed").and_then(|v| v.as_u64());
 
     let concurrency = request
         .get("concurrency")
@@ -113,40 +91,31 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
     }
 
     // Add node label filters
-    if let Some(_label) = source_node_label {
-        // Note: FilteredKnnBuilder doesn't have source_node_labels method yet
-        // This would need to be added to the builder
+    if let Some(label) = source_node_label {
+        builder = builder.source_labels(vec![label]);
     }
 
-    if let Some(_label) = target_node_label {
-        // Note: FilteredKnnBuilder doesn't have target_node_labels method yet
-        // This would need to be added to the builder
-    }
-
-    // Apply optional parameters
-    if let Some(_iterations) = max_iterations {
-        // Note: FilteredKnnBuilder doesn't have max_iterations, this might be for future use
-    }
-
-    if let Some(_degree) = degree_cutoff {
-        // Note: FilteredKnnBuilder doesn't have degree_cutoff, this might be for future use
-    }
-
-    if let Some(_seed) = random_seed {
-        // Note: FilteredKnnBuilder doesn't have random_seed, this might be for future use
+    if let Some(label) = target_node_label {
+        builder = builder.target_labels(vec![label]);
     }
 
     // Execute based on mode
     match mode {
-        "stream" => {
-            // Note: FilteredKnnBuilder doesn't have stream method yet
-            // This would need to be implemented
-            err(
+        "stream" => match builder.stream() {
+            Ok(results) => {
+                let result_rows: Vec<_> = results.collect();
+                json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result_rows
+                })
+            }
+            Err(e) => err(
                 op,
-                "NOT_IMPLEMENTED",
-                "stream mode not yet implemented for Filtered KNN",
-            )
-        }
+                "EXECUTION_ERROR",
+                &format!("Filtered KNN execution failed: {:?}", e),
+            ),
+        },
         "stats" => match builder.stats() {
             Ok(stats) => json!({
                 "ok": true,
@@ -170,7 +139,6 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
                     )
                 }
             };
-            // Note: mutate not implemented in FilteredKnnBuilder yet
             err(
                 op,
                 "NOT_IMPLEMENTED",
@@ -188,7 +156,6 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
                     )
                 }
             };
-            // Note: write not implemented in FilteredKnnBuilder yet
             err(
                 op,
                 "NOT_IMPLEMENTED",

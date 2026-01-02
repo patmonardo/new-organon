@@ -3,7 +3,8 @@
 //! Handles JSON requests for Filtered Node Similarity operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::similarity::SimilarityBuilder;
+use crate::procedures::similarity::FilteredNodeSimilarityBuilder;
+use crate::projection::NodeLabel;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -60,15 +61,21 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
         .and_then(|v| v.as_u64())
         .unwrap_or(4) as usize;
 
-    let _source_node_label = request.get("sourceNodeLabel").and_then(|v| v.as_str());
+    let source_node_label = request
+        .get("sourceNodeLabel")
+        .and_then(|v| v.as_str())
+        .map(NodeLabel::of);
 
-    let _target_node_label = request.get("targetNodeLabel").and_then(|v| v.as_str());
+    let target_node_label = request
+        .get("targetNodeLabel")
+        .and_then(|v| v.as_str())
+        .map(NodeLabel::of);
 
-    if _source_node_label.is_some() || _target_node_label.is_some() {
+    if source_node_label.is_none() && target_node_label.is_none() {
         return err(
             op,
-            "NOT_IMPLEMENTED",
-            "sourceNodeLabel/targetNodeLabel filtering is not implemented yet for Node Similarity",
+            "INVALID_REQUEST",
+            "filtered_node_similarity requires sourceNodeLabel and/or targetNodeLabel",
         );
     }
 
@@ -90,7 +97,7 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
     };
 
     // Create builder
-    let mut builder = SimilarityBuilder::new(graph_store)
+    let mut builder = FilteredNodeSimilarityBuilder::new(graph_store)
         .similarity_cutoff(similarity_cutoff)
         .top_k(top_k)
         .concurrency(concurrency);
@@ -108,8 +115,12 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
         // Note: SimilarityBuilder doesn't have bottom_n, this might be for future use
     }
 
-    // Note: Node label filtering not implemented yet in SimilarityBuilder
-    // This would need to be added to support sourceNodeLabel and targetNodeLabel
+    if let Some(label) = source_node_label {
+        builder = builder.source_node_label(label);
+    }
+    if let Some(label) = target_node_label {
+        builder = builder.target_node_label(label);
+    }
 
     // Execute based on mode
     match mode {

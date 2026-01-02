@@ -515,6 +515,16 @@ fn handle_algorithms(request: &serde_json::Value) -> serde_json::Value {
         "harmonic" => algorithms_dispatch::handle_harmonic(request, catalog),
         "hits" => algorithms_dispatch::handle_hits(request, catalog),
 
+        // =========================================================================
+        // Similarity Algorithms
+        // =========================================================================
+        "knn" => algorithms_dispatch::handle_knn(request, catalog),
+        "node_similarity" => algorithms_dispatch::handle_node_similarity(request, catalog),
+        "filtered_knn" => algorithms_dispatch::handle_filtered_knn(request, catalog),
+        "filtered_node_similarity" => {
+            algorithms_dispatch::handle_filtered_node_similarity(request, catalog)
+        }
+
         // ============================================================================
         // Embedding Algorithms
         // ============================================================================
@@ -523,6 +533,14 @@ fn handle_algorithms(request: &serde_json::Value) -> serde_json::Value {
         "graphsage" => algorithms_dispatch::handle_graphsage(request, catalog),
         "hash_gnn" => algorithms_dispatch::handle_hash_gnn(request, catalog),
         "node2vec" => algorithms_dispatch::handle_node2vec(request, catalog),
+
+        // =========================================================================
+        // Miscellaneous Algorithms
+        // =========================================================================
+        "to_undirected" => algorithms_dispatch::handle_to_undirected(request, catalog),
+        "scale_properties" => algorithms_dispatch::handle_scale_properties(request, catalog),
+        "index_inverse" => algorithms_dispatch::handle_index_inverse(request, catalog),
+        "collapse_path" => algorithms_dispatch::handle_collapse_path(request, catalog),
 
         _ => err(op, "UNSUPPORTED_OP", "Unsupported algorithms operation."),
     }

@@ -3,12 +3,12 @@ use crate::applications::algorithms::machinery::{MutateStep, WriteStep};
 use crate::core::utils::progress::JobId;
 
 /// Side Effect - represents side effects that can be applied after algorithm execution
-pub trait SideEffect<RESULT_FROM_ALGORITHM, METADATA> {
+pub trait SideEffect<ResultFromAlgorithm, Metadata> {
     fn process(
         &self,
         graph_resources: &GraphResources,
-        result: Option<RESULT_FROM_ALGORITHM>,
-    ) -> Option<METADATA>;
+        result: Option<ResultFromAlgorithm>,
+    ) -> Option<Metadata>;
 }
 
 /// Side Effect Executor - reusable boilerplate for executing side effects
@@ -20,18 +20,16 @@ impl SideEffectExecutor {
     }
 
     /// Reusable boilerplate for executing side effects
-    pub fn execute_side_effect<RESULT_FROM_ALGORITHM, METADATA>(
+    pub fn execute_side_effect<ResultFromAlgorithm, Metadata>(
         &self,
-        result: Option<RESULT_FROM_ALGORITHM>,
-        side_effect: impl Fn(RESULT_FROM_ALGORITHM) -> METADATA,
-    ) -> Option<METADATA> {
+        result: Option<ResultFromAlgorithm>,
+        side_effect: impl Fn(ResultFromAlgorithm) -> Metadata,
+    ) -> Option<Metadata> {
         if result.is_none() {
             return None;
         }
 
-        let result_from_algorithm = result.unwrap();
-        let metadata = side_effect(result_from_algorithm);
-        Some(metadata)
+        Some(side_effect(result.unwrap()))
     }
 }
 
@@ -42,13 +40,13 @@ impl Default for SideEffectExecutor {
 }
 
 /// Mutate Side Effect - wraps a MutateStep as a SideEffect
-pub struct MutateSideEffect<RESULT_FROM_ALGORITHM, MUTATE_METADATA> {
+pub struct MutateSideEffect<ResultFromAlgorithm, MutateMetadata> {
     side_effect_executor: SideEffectExecutor,
-    mutate_step: Box<dyn MutateStep<RESULT_FROM_ALGORITHM, MUTATE_METADATA>>,
+    mutate_step: Box<dyn MutateStep<ResultFromAlgorithm, MutateMetadata>>,
 }
 
-impl<RESULT_FROM_ALGORITHM, MUTATE_METADATA> MutateSideEffect<RESULT_FROM_ALGORITHM, MUTATE_METADATA> {
-    pub fn new(mutate_step: Box<dyn MutateStep<RESULT_FROM_ALGORITHM, MUTATE_METADATA>>) -> Self {
+impl<ResultFromAlgorithm, MutateMetadata> MutateSideEffect<ResultFromAlgorithm, MutateMetadata> {
+    pub fn new(mutate_step: Box<dyn MutateStep<ResultFromAlgorithm, MutateMetadata>>) -> Self {
         Self {
             side_effect_executor: SideEffectExecutor::new(),
             mutate_step,
@@ -56,14 +54,14 @@ impl<RESULT_FROM_ALGORITHM, MUTATE_METADATA> MutateSideEffect<RESULT_FROM_ALGORI
     }
 }
 
-impl<RESULT_FROM_ALGORITHM, MUTATE_METADATA> SideEffect<RESULT_FROM_ALGORITHM, MUTATE_METADATA> 
-    for MutateSideEffect<RESULT_FROM_ALGORITHM, MUTATE_METADATA> 
+impl<ResultFromAlgorithm, MutateMetadata> SideEffect<ResultFromAlgorithm, MutateMetadata>
+    for MutateSideEffect<ResultFromAlgorithm, MutateMetadata>
 {
     fn process(
         &self,
         graph_resources: &GraphResources,
-        result: Option<RESULT_FROM_ALGORITHM>,
-    ) -> Option<MUTATE_METADATA> {
+        result: Option<ResultFromAlgorithm>,
+    ) -> Option<MutateMetadata> {
         self.side_effect_executor.execute_side_effect(result, |r| {
             self.mutate_step.execute(
                 graph_resources.graph.clone(),
@@ -75,16 +73,16 @@ impl<RESULT_FROM_ALGORITHM, MUTATE_METADATA> SideEffect<RESULT_FROM_ALGORITHM, M
 }
 
 /// Write Side Effect - wraps a WriteStep as a SideEffect
-pub struct WriteSideEffect<RESULT_FROM_ALGORITHM, WRITE_METADATA> {
+pub struct WriteSideEffect<ResultFromAlgorithm, WriteMetadata> {
     side_effect_executor: SideEffectExecutor,
-    job_id: crate::core::utils::progress::JobId,
-    write_step: Box<dyn WriteStep<RESULT_FROM_ALGORITHM, WRITE_METADATA>>,
+    job_id: JobId,
+    write_step: Box<dyn WriteStep<ResultFromAlgorithm, WriteMetadata>>,
 }
 
-impl<RESULT_FROM_ALGORITHM, WRITE_METADATA> WriteSideEffect<RESULT_FROM_ALGORITHM, WRITE_METADATA> {
+impl<ResultFromAlgorithm, WriteMetadata> WriteSideEffect<ResultFromAlgorithm, WriteMetadata> {
     pub fn new(
-        job_id: crate::core::utils::progress::JobId,
-        write_step: Box<dyn WriteStep<RESULT_FROM_ALGORITHM, WRITE_METADATA>>,
+        job_id: JobId,
+        write_step: Box<dyn WriteStep<ResultFromAlgorithm, WriteMetadata>>,
     ) -> Self {
         Self {
             side_effect_executor: SideEffectExecutor::new(),
@@ -94,19 +92,22 @@ impl<RESULT_FROM_ALGORITHM, WRITE_METADATA> WriteSideEffect<RESULT_FROM_ALGORITH
     }
 }
 
-impl<RESULT_FROM_ALGORITHM, WRITE_METADATA> SideEffect<RESULT_FROM_ALGORITHM, WRITE_METADATA> 
-    for WriteSideEffect<RESULT_FROM_ALGORITHM, WRITE_METADATA> 
+impl<ResultFromAlgorithm, WriteMetadata> SideEffect<ResultFromAlgorithm, WriteMetadata>
+    for WriteSideEffect<ResultFromAlgorithm, WriteMetadata>
 {
     fn process(
         &self,
         graph_resources: &GraphResources,
-        result: Option<RESULT_FROM_ALGORITHM>,
-    ) -> Option<WRITE_METADATA> {
+        result: Option<ResultFromAlgorithm>,
+    ) -> Option<WriteMetadata> {
         self.side_effect_executor.execute_side_effect(result, |r| {
             self.write_step.execute(
                 graph_resources.graph.clone(),
                 graph_resources.graph_store.clone(),
-                graph_resources.result_store.as_ref().map(|rs| rs.as_ref()),
+                graph_resources
+                    .result_store
+                    .as_ref()
+                    .map(|rs| rs.as_ref()),
                 r,
                 self.job_id.clone(),
             )

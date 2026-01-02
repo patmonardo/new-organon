@@ -196,3 +196,19 @@ pub fn handle_graphsage(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Valu
 pub fn handle_node2vec(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::algorithms::embeddings::node2vec::handle_node2vec(request, catalog)
 }
+
+pub fn handle_to_undirected(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::miscellaneous::handle_to_undirected(request, catalog)
+}
+
+pub fn handle_scale_properties(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::miscellaneous::handle_scale_properties(request, catalog)
+}
+
+pub fn handle_index_inverse(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::miscellaneous::handle_index_inverse(request, catalog)
+}
+
+pub fn handle_collapse_path(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::miscellaneous::handle_collapse_path(request, catalog)
+}

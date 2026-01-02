@@ -9,13 +9,13 @@ use crate::core::GraphDimensions;
 /// This is just memory guarding. Do not conflate with UI concerns.
 pub trait MemoryGuard {
     /// This could be handy for tests
-    fn assert_algorithm_can_run<CONFIG: Config>(
+    fn assert_algorithm_can_run(
         &self,
         username: &str,
-        estimation_factory: impl Fn() -> Box<dyn MemoryEstimation>,
+        estimation_factory: &dyn Fn() -> Box<dyn MemoryEstimation>,
         graph_store: &GraphStore,
-        configuration: &CONFIG,
-        label: AlgorithmLabel,
+        configuration: &dyn Config,
+        label: &AlgorithmLabel,
         dimension_transformer: Box<dyn DimensionTransformer>,
     ) -> Result<(), MemoryGuardError>;
 }
@@ -78,13 +78,13 @@ impl DefaultMemoryGuard {
 }
 
 impl MemoryGuard for DefaultMemoryGuard {
-    fn assert_algorithm_can_run<CONFIG: Config>(
+    fn assert_algorithm_can_run(
         &self,
         username: &str,
-        estimation_factory: impl Fn() -> Box<dyn MemoryEstimation>,
+        estimation_factory: &dyn Fn() -> Box<dyn MemoryEstimation>,
         graph_store: &GraphStore,
-        configuration: &CONFIG,
-        label: AlgorithmLabel,
+        configuration: &dyn Config,
+        label: &AlgorithmLabel,
         dimension_transformer: Box<dyn DimensionTransformer>,
     ) -> Result<(), MemoryGuardError> {
         match MemoryRequirement::create(
@@ -98,12 +98,12 @@ impl MemoryGuard for DefaultMemoryGuard {
             Ok(memory_requirement) => {
                 let bytes_to_reserve = memory_requirement.required_memory();
 
-                if configuration.sudo() {
-                    self.memory_tracker.track(username, label.as_string(), configuration.job_id(), bytes_to_reserve);
-                    return Ok(());
-                }
-
-                match self.memory_tracker.try_to_track(username, label.as_string(), configuration.job_id(), bytes_to_reserve) {
+                // Java parity placeholder: we don't yet have sudo/job-id on the shared Config traits.
+                // Use job_id=0 for now.
+                match self
+                    .memory_tracker
+                    .try_to_track(username, label.as_string(), 0, bytes_to_reserve)
+                {
                     Ok(_) => Ok(()),
                     Err(e) => Err(MemoryGuardError::Other(e.to_string())),
                 }
@@ -127,17 +127,21 @@ impl MemoryRequirement {
         Self { required_memory }
     }
 
-    pub fn create<CONFIG: Config>(
-        estimation_factory: impl Fn() -> Box<dyn MemoryEstimation>,
+    pub fn required_memory(&self) -> u64 {
+        self.required_memory
+    }
+
+    pub fn create(
+        estimation_factory: &dyn Fn() -> Box<dyn MemoryEstimation>,
         graph_store: &GraphStore,
         graph_dimension_factory: &dyn GraphDimensionFactory,
         dimension_transformer: Box<dyn DimensionTransformer>,
-        configuration: &CONFIG,
-        use_max_memory_estimation: bool,
+        configuration: &dyn Config,
+        _use_max_memory_estimation: bool,
     ) -> Result<Self, MemoryGuardError> {
-        let memory_estimation = estimation_factory();
+        let _memory_estimation = estimation_factory();
         let graph_dimensions = graph_dimension_factory.create(graph_store, configuration);
-        let transformed_graph_dimensions = dimension_transformer.transform(graph_dimensions);
+        let _transformed_graph_dimensions = dimension_transformer.transform(graph_dimensions);
 
         // TODO(gds,2025-01-31): Implement actual memory estimation
         // let memory_tree = memory_estimation.estimate(transformed_graph_dimensions, configuration.concurrency());
@@ -151,7 +155,7 @@ impl MemoryRequirement {
 
 // Placeholder traits
 pub trait GraphDimensionFactory {
-    fn create<CONFIG: Config>(&self, graph_store: &GraphStore, configuration: &CONFIG) -> Box<dyn GraphDimensions>;
+    fn create(&self, graph_store: &GraphStore, configuration: &dyn Config) -> Box<dyn GraphDimensions>;
 }
 
 pub trait MemoryTracker {
@@ -168,7 +172,7 @@ impl DefaultGraphDimensionFactory {
 }
 
 impl GraphDimensionFactory for DefaultGraphDimensionFactory {
-    fn create<CONFIG: Config>(&self, _graph_store: &GraphStore, _configuration: &CONFIG) -> Box<dyn GraphDimensions> {
+    fn create(&self, _graph_store: &GraphStore, _configuration: &dyn Config) -> Box<dyn GraphDimensions> {
         // TODO(gds,2025-01-31): Implement actual graph dimensions computation
         Box::new(crate::core::GraphDimensionsImpl::new())
     }

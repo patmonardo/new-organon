@@ -71,6 +71,8 @@ pub mod model_catalog;
 pub mod centrality;
 pub mod community;
 pub mod embeddings;
+pub mod machine_learning;
+pub mod miscellaneous;
 pub mod pathfinding;
 pub mod similarity;
 

@@ -38,12 +38,14 @@ use crate::types::properties::relationship::RelationshipPropertyValues;
 use crate::types::properties::relationship::{
     RelationshipPropertyStore, RelationshipPropertyStoreBuilder,
 };
-use crate::types::schema::{Direction, GraphSchema, PropertySchemaTrait};
+use crate::types::schema::{Direction, GraphSchema, PropertySchemaTrait, RelationshipSchema, RelationshipSchemaEntry};
 use crate::types::PropertyState;
 use crate::types::ValueType;
 use chrono::{DateTime, Utc};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+use crate::algo::core::scaling::{MinMaxScaler, Scaler};
 
 /// In-memory [`GraphStore`] backed by [`SimpleIdMap`] and [`RelationshipTopology`].
 #[derive(Debug, Clone)]
@@ -141,6 +143,325 @@ impl DefaultGraphStore {
             self.relationship_property_stores.clone(),
             HashMap::new(),
         ))
+    }
+
+    /// Creates an undirected version of this graph store.
+    ///
+    /// Semantics:
+    /// - For each relationship type, creates symmetric adjacency: if (u→v) exists, then (v→u) exists.
+    /// - Neighbor sets are deduplicated per source node.
+    /// - Relationship properties are not carried over yet.
+    pub fn to_undirected(&self, graph_name: GraphName) -> GraphStoreResult<DefaultGraphStore> {
+        let node_count = self.node_count();
+
+        let mut new_relationship_topologies: HashMap<RelationshipType, RelationshipTopology> =
+            HashMap::new();
+
+        for (rel_type, topology) in &self.relationship_topologies {
+            let mut outgoing: Vec<Vec<MappedNodeId>> = vec![Vec::new(); node_count];
+
+            for source in 0..node_count {
+                let source_id = source as MappedNodeId;
+                let Some(neighbors) = topology.outgoing(source_id) else {
+                    continue;
+                };
+
+                for &target_id in neighbors.iter() {
+                    let target = target_id as usize;
+                    if target >= node_count {
+                        continue;
+                    }
+                    outgoing[source].push(target_id);
+                    outgoing[target].push(source_id);
+                }
+            }
+
+            for adj in outgoing.iter_mut() {
+                adj.sort_unstable();
+                adj.dedup();
+            }
+
+            new_relationship_topologies.insert(
+                rel_type.clone(),
+                RelationshipTopology::new(outgoing, None),
+            );
+        }
+
+        // Update schema: mark all relationship types as undirected, preserving properties.
+        let old_schema = self.schema.as_ref();
+        let mut rel_entries: HashMap<RelationshipType, RelationshipSchemaEntry> = HashMap::new();
+        for entry in old_schema.relationship_schema().entries() {
+            rel_entries.insert(
+                entry.identifier().clone(),
+                RelationshipSchemaEntry::new(
+                    entry.identifier().clone(),
+                    Direction::Undirected,
+                    entry.properties().clone(),
+                ),
+            );
+        }
+        let relationship_schema = RelationshipSchema::new(rel_entries);
+        let schema = GraphSchema::new(
+            old_schema.node_schema().clone(),
+            relationship_schema,
+            old_schema.graph_properties().clone(),
+        );
+
+        let mut store = self.clone();
+        store.graph_name = graph_name;
+        store.schema = Arc::new(schema);
+        store.relationship_topologies = new_relationship_topologies
+            .into_iter()
+            .map(|(t, topo)| (t, Arc::new(topo)))
+            .collect();
+        store.relationship_property_stores.clear();
+        store.has_relationship_properties = false;
+
+        store.rebuild_relationship_metadata();
+        store.refresh_relationship_property_state();
+
+        Ok(store)
+    }
+
+    /// Creates a version of this store where all relationship types have inverse indices.
+    ///
+    /// This enables `graph.stream_inverse_relationships(...)` and `degree_inverse(...)`.
+    pub fn with_inverse_indices(
+        &self,
+        graph_name: GraphName,
+    ) -> GraphStoreResult<DefaultGraphStore> {
+        let node_count = self.node_count();
+
+        let mut new_relationship_topologies: HashMap<RelationshipType, Arc<RelationshipTopology>> =
+            HashMap::new();
+
+        for (rel_type, topology) in &self.relationship_topologies {
+            let outgoing = topology.outgoing_lists().to_vec();
+            let mut incoming: Vec<Vec<MappedNodeId>> = vec![Vec::new(); node_count];
+
+            for source in 0..node_count {
+                let source_id = source as MappedNodeId;
+                let Some(neighbors) = topology.outgoing(source_id) else {
+                    continue;
+                };
+                for &target_id in neighbors.iter() {
+                    let target = target_id as usize;
+                    if target >= node_count {
+                        continue;
+                    }
+                    incoming[target].push(source_id);
+                }
+            }
+
+            for adj in incoming.iter_mut() {
+                adj.sort_unstable();
+                adj.dedup();
+            }
+
+            new_relationship_topologies.insert(
+                rel_type.clone(),
+                Arc::new(RelationshipTopology::new(outgoing, Some(incoming))),
+            );
+        }
+
+        let mut store = self.clone();
+        store.graph_name = graph_name;
+        store.relationship_topologies = new_relationship_topologies;
+
+        store.rebuild_relationship_metadata();
+        store.refresh_relationship_property_state();
+        Ok(store)
+    }
+
+    /// Creates a new store with a scaled numeric node property added.
+    ///
+    /// Currently uses MinMax scaling and writes the result as a Double property.
+    pub fn with_scaled_node_property_minmax(
+        &self,
+        graph_name: GraphName,
+        source_property: &str,
+        target_property: &str,
+        concurrency: usize,
+    ) -> GraphStoreResult<DefaultGraphStore> {
+        if source_property.is_empty() {
+            return Err(GraphStoreError::InvalidOperation(
+                "source_property must be non-empty".to_string(),
+            ));
+        }
+        if target_property.is_empty() {
+            return Err(GraphStoreError::InvalidOperation(
+                "target_property must be non-empty".to_string(),
+            ));
+        }
+        if concurrency == 0 {
+            return Err(GraphStoreError::InvalidOperation(
+                "concurrency must be > 0".to_string(),
+            ));
+        }
+
+        let pv = self.node_property_values(source_property)?;
+        let node_count = self.node_count() as u64;
+
+        let property_fn: Box<dyn Fn(u64) -> f64 + Send + Sync> = match pv.value_type() {
+            ValueType::Long => Box::new(move |node_id: u64| pv.long_value(node_id).unwrap_or(0) as f64),
+            ValueType::Double => Box::new(move |node_id: u64| pv.double_value(node_id).unwrap_or(0.0)),
+            other => {
+                return Err(GraphStoreError::InvalidOperation(format!(
+                    "scaleProperties expects Long/Double node property (got {other:?})"
+                )))
+            }
+        };
+
+        let scaler: Box<dyn Scaler> = MinMaxScaler::create(node_count, &property_fn, concurrency);
+        let mut scaled: Vec<f64> = Vec::with_capacity(node_count as usize);
+        for node_id in 0..node_count {
+            scaled.push(scaler.scale_property(node_id, property_fn.as_ref()));
+        }
+
+        let pv_out: Arc<dyn NodePropertyValues> = Arc::new(
+            DefaultDoubleNodePropertyValues::<VecDouble>::from_collection(
+                VecDouble::from(scaled),
+                node_count as usize,
+            ),
+        );
+
+        let mut store = self.clone();
+        store.graph_name = graph_name;
+        store.add_node_property(
+            HashSet::from([NodeLabel::all_nodes()]),
+            target_property.to_string(),
+            pv_out,
+        )?;
+
+        Ok(store)
+    }
+
+    /// Collapses linear paths by removing degree-2 intermediate nodes.
+    ///
+    /// Semantics (directed, per relationship type):
+    /// - Detect chains where intermediate nodes have exactly 1 incoming and 1 outgoing edge.
+    /// - Replace each chain `s -> ... -> t` with a single edge `s -> t`.
+    /// - Does not modify the node set.
+    /// - Leaves pure directed cycles unchanged (no natural chain start).
+    /// - Relationship properties are not carried over.
+    pub fn collapse_paths_degree2(
+        &self,
+        graph_name: GraphName,
+        max_hops: Option<usize>,
+    ) -> GraphStoreResult<DefaultGraphStore> {
+        let node_count = self.node_count();
+
+        let mut new_relationship_topologies: HashMap<RelationshipType, Arc<RelationshipTopology>> =
+            HashMap::new();
+
+        for (rel_type, topology) in &self.relationship_topologies {
+            let outgoing_lists = topology.outgoing_lists();
+
+            // Compute in/out degrees and unique successor (when out_degree==1).
+            let mut out_degree: Vec<usize> = vec![0; node_count];
+            let mut in_degree: Vec<usize> = vec![0; node_count];
+            let mut succ: Vec<Option<MappedNodeId>> = vec![None; node_count];
+
+            for (u, neighbors) in outgoing_lists.iter().enumerate() {
+                out_degree[u] = neighbors.len();
+                if neighbors.len() == 1 {
+                    succ[u] = Some(neighbors[0]);
+                }
+                for &v in neighbors {
+                    let v_usize = v as usize;
+                    if v_usize < node_count {
+                        in_degree[v_usize] += 1;
+                    }
+                }
+            }
+
+            // Mark nodes whose unique outgoing edge is part of a collapsed chain.
+            let mut remove_unique_outgoing: Vec<bool> = vec![false; node_count];
+            let mut collapsed_edges: Vec<(MappedNodeId, MappedNodeId)> = Vec::new();
+
+            for s in 0..node_count {
+                if out_degree[s] != 1 {
+                    continue;
+                }
+                // Start nodes are where the chain can be entered from "outside".
+                if in_degree[s] == 1 {
+                    continue;
+                }
+
+                let mut next = match succ[s] {
+                    Some(v) => v,
+                    None => continue,
+                };
+
+                let mut hops = 1usize;
+                remove_unique_outgoing[s] = true;
+
+                loop {
+                    if max_hops.is_some_and(|m| hops >= m) {
+                        break;
+                    }
+
+                    let next_usize = next as usize;
+                    if next_usize >= node_count {
+                        break;
+                    }
+
+                    // Stop if next isn't a strict intermediate.
+                    if in_degree[next_usize] != 1 || out_degree[next_usize] != 1 {
+                        break;
+                    }
+
+                    // Advance through the intermediate.
+                    remove_unique_outgoing[next_usize] = true;
+                    next = match succ[next_usize] {
+                        Some(v) => v,
+                        None => break,
+                    };
+                    hops += 1;
+                }
+
+                // Create the collapsed edge from the original start to the terminal.
+                collapsed_edges.push((s as MappedNodeId, next));
+            }
+
+            // Rebuild outgoing adjacency, skipping removed unique edges and adding collapsed edges.
+            let mut new_outgoing: Vec<Vec<MappedNodeId>> = vec![Vec::new(); node_count];
+            for (u, neighbors) in outgoing_lists.iter().enumerate() {
+                if out_degree[u] == 1 && remove_unique_outgoing[u] {
+                    continue;
+                }
+                for &v in neighbors {
+                    new_outgoing[u].push(v);
+                }
+            }
+
+            for (s, t) in collapsed_edges {
+                let s_usize = s as usize;
+                if s_usize < node_count {
+                    new_outgoing[s_usize].push(t);
+                }
+            }
+
+            for adj in new_outgoing.iter_mut() {
+                adj.sort_unstable();
+                adj.dedup();
+            }
+
+            new_relationship_topologies.insert(
+                rel_type.clone(),
+                Arc::new(RelationshipTopology::new(new_outgoing, None)),
+            );
+        }
+
+        let mut store = self.clone();
+        store.graph_name = graph_name;
+        store.relationship_topologies = new_relationship_topologies;
+        store.relationship_property_stores.clear();
+        store.has_relationship_properties = false;
+
+        store.rebuild_relationship_metadata();
+        store.refresh_relationship_property_state();
+        Ok(store)
     }
 
     /// Projects an induced subgraph into a new [`DefaultGraphStore`].

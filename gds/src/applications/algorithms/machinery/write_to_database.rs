@@ -6,13 +6,14 @@ use crate::applications::algorithms::metadata::NodePropertiesWritten;
 use crate::applications::algorithms::machinery::AlgorithmLabel;
 use crate::config::base_types::Config;
 use crate::core::utils::progress::JobId;
+use crate::graph_store::GraphStore as _;
 
 /// Interface for writing algorithm results to the database.
 /// This is a core pattern in the Applications system for handling
 /// algorithm results that need to be persisted to the database.
 pub trait WriteToDatabase {
     /// Writes algorithm results to the database.
-    /// 
+    ///
     /// # Arguments
     /// * `graph` - The graph that was processed
     /// * `graph_store` - The graph store containing the graph
@@ -21,7 +22,7 @@ pub trait WriteToDatabase {
     /// * `algorithm_label` - The algorithm label for tracking
     /// * `job_id` - The job ID for tracking progress
     /// * `node_properties` - The node properties to write
-    /// 
+    ///
     /// # Returns
     /// Metadata about what was written
     fn perform<C: Config>(
@@ -36,7 +37,7 @@ pub trait WriteToDatabase {
     ) -> NodePropertiesWritten;
 
     /// Writes algorithm results to the database with explicit configuration.
-    /// 
+    ///
     /// # Arguments
     /// * `graph` - The graph that was processed
     /// * `graph_store` - The graph store containing the graph
@@ -46,7 +47,7 @@ pub trait WriteToDatabase {
     /// * `algorithm_label` - The algorithm label for tracking
     /// * `job_id` - The job ID for tracking progress
     /// * `node_properties` - The node properties to write
-    /// 
+    ///
     /// # Returns
     /// Metadata about what was written
     fn perform_with_config<C: Config, W: Config>(
@@ -82,12 +83,12 @@ impl WriteToDatabase for DefaultWriteToDatabase {
     fn perform<C: Config>(
         &self,
         graph: &Graph,
-        graph_store: &GraphStore,
-        result_store: &mut ResultStore,
-        config: &C,
-        algorithm_label: AlgorithmLabel,
-        job_id: JobId,
-        node_properties: Box<dyn NodePropertyValues>,
+        _graph_store: &GraphStore,
+        _result_store: &mut ResultStore,
+        _config: &C,
+        _algorithm_label: AlgorithmLabel,
+        _job_id: JobId,
+        _node_properties: Box<dyn NodePropertyValues>,
     ) -> NodePropertiesWritten {
         // TODO(gds,2025-01-31): Implement actual database writing
         // This would typically involve:
@@ -96,21 +97,21 @@ impl WriteToDatabase for DefaultWriteToDatabase {
         // 3. Writing the properties to the database
         // 4. Updating the result store
         // 5. Returning metadata about what was written
-        
+
         // For now, return a placeholder
-        NodePropertiesWritten::new(graph.node_count())
+        NodePropertiesWritten::new(graph.store().node_count() as u64)
     }
 
     fn perform_with_config<C: Config, W: Config>(
         &self,
         graph: &Graph,
-        graph_store: &GraphStore,
-        result_store: &mut ResultStore,
-        config: &C,
-        write_config: &W,
-        algorithm_label: AlgorithmLabel,
-        job_id: JobId,
-        node_properties: Box<dyn NodePropertyValues>,
+        _graph_store: &GraphStore,
+        _result_store: &mut ResultStore,
+        _config: &C,
+        _write_config: &W,
+        _algorithm_label: AlgorithmLabel,
+        _job_id: JobId,
+        _node_properties: Box<dyn NodePropertyValues>,
     ) -> NodePropertiesWritten {
         // TODO(gds,2025-01-31): Implement actual database writing with explicit config
         // This would typically involve:
@@ -118,8 +119,8 @@ impl WriteToDatabase for DefaultWriteToDatabase {
         // 2. Writing the properties to the database
         // 3. Updating the result store
         // 4. Returning metadata about what was written
-        
+
         // For now, return a placeholder
-        NodePropertiesWritten::new(graph.node_count())
+        NodePropertiesWritten::new(graph.store().node_count() as u64)
     }
 }

@@ -21,14 +21,22 @@ pub struct GraphResources {
     pub graph_store: Arc<DefaultGraphStore>,
     /// The facade graph (for algorithm access)
     pub graph: FacadeGraph,
-    // Future: result_store for write-back
+    /// Optional result store (Java parity: used for write-back caching).
+    ///
+    /// Today this is typically `None` for catalog-backed loading.
+    pub result_store:
+        Option<Arc<dyn crate::applications::graph_store_catalog::loaders::ResultStore>>,
 }
 
 impl GraphResources {
     /// Create GraphResources from a graph store.
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         let graph = FacadeGraph::new(Arc::clone(&graph_store));
-        Self { graph_store, graph }
+        Self {
+            graph_store,
+            graph,
+            result_store: None,
+        }
     }
 
     /// Access the underlying store.

@@ -104,10 +104,27 @@ impl KnnBuilder {
                 config.similarity_metric,
             )?
         } else {
+            // Multi-property mode should include the primary property passed to `new(...)`.
+            // The `node_properties` list represents additional per-property metric specs.
+            let mut combined: Vec<KnnNodePropertySpec> = Vec::with_capacity(
+                config.node_properties.len() + 1,
+            );
+
+            let primary = config.node_property.trim();
+            if !primary.is_empty()
+                && !config.node_properties.iter().any(|p| p.name == primary)
+            {
+                combined.push(KnnNodePropertySpec::new(
+                    primary,
+                    config.similarity_metric,
+                ));
+            }
+            combined.extend(config.node_properties.iter().cloned());
+
             storage.compute_multi(
                 &computation,
                 self.graph_store.as_ref(),
-                &config.node_properties,
+                &combined,
                 config.k,
                 config.similarity_cutoff,
             )?
@@ -145,5 +162,33 @@ impl KnnBuilder {
             compute_millis: stats.compute_millis,
             success: stats.success,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::prelude::DefaultGraphStore;
+    use crate::types::random::RandomGraphConfig;
+
+    #[test]
+    fn multi_property_mode_includes_primary_property() {
+        let config = RandomGraphConfig {
+            node_count: 12,
+            seed: Some(42),
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+
+        // If the primary property were (incorrectly) ignored in multi-property mode,
+        // this would succeed because `random_score` exists.
+        // We expect it to fail because the primary property is missing.
+        let err = KnnBuilder::new(Arc::clone(&store), "does_not_exist")
+            .add_property("random_score", SimilarityMetric::Default)
+            .k(1)
+            .stream()
+            .err();
+
+        assert!(err.is_some());
     }
 }

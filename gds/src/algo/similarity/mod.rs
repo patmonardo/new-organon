@@ -1,4 +1,5 @@
 pub mod filteredknn;
+pub mod filterednodesim;
 pub mod knn;
 pub mod nodesim;
 

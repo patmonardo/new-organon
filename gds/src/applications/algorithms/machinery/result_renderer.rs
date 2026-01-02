@@ -3,33 +3,33 @@ use crate::applications::algorithms::machinery::AlgorithmProcessingTimings;
 use crate::applications::algorithms::machinery::{ResultBuilder, StatsResultBuilder, StreamResultBuilder};
 
 /// Result Renderer - renders results from algorithm execution
-pub trait ResultRenderer<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, SIDE_EFFECT_METADATA> {
+pub trait ResultRenderer<ResultFromAlgorithm, ResultToCaller, SideEffectMetadata> {
     fn render(
         &self,
         graph_resources: &GraphResources,
-        result: Option<RESULT_FROM_ALGORITHM>,
+        result: Option<ResultFromAlgorithm>,
         timings: AlgorithmProcessingTimings,
-        metadata: Option<SIDE_EFFECT_METADATA>,
-    ) -> RESULT_TO_CALLER;
+        metadata: Option<SideEffectMetadata>,
+    ) -> ResultToCaller;
 }
 
 /// Mutate Result Renderer - renders results for mutate mode
 pub struct MutateResultRenderer<
-    RESULT_FROM_ALGORITHM,
-    RESULT_TO_CALLER,
-    MUTATE_METADATA,
-    CONFIG: crate::config::base_types::Config,
+    ResultFromAlgorithm,
+    ResultToCaller,
+    MutateMetadata,
+    ConfigT: crate::config::base_types::Config,
 > {
-    configuration: CONFIG,
-    result_builder: Box<dyn ResultBuilder<CONFIG, RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, MUTATE_METADATA>>,
+    configuration: ConfigT,
+    result_builder: Box<dyn ResultBuilder<ConfigT, ResultFromAlgorithm, ResultToCaller, MutateMetadata>>,
 }
 
-impl<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, MUTATE_METADATA, CONFIG: crate::config::base_types::Config>
-    MutateResultRenderer<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, MUTATE_METADATA, CONFIG>
+impl<ResultFromAlgorithm, ResultToCaller, MutateMetadata, ConfigT: crate::config::base_types::Config>
+    MutateResultRenderer<ResultFromAlgorithm, ResultToCaller, MutateMetadata, ConfigT>
 {
     pub fn new(
-        configuration: CONFIG,
-        result_builder: Box<dyn ResultBuilder<CONFIG, RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, MUTATE_METADATA>>,
+        configuration: ConfigT,
+        result_builder: Box<dyn ResultBuilder<ConfigT, ResultFromAlgorithm, ResultToCaller, MutateMetadata>>,
     ) -> Self {
         Self {
             configuration,
@@ -38,17 +38,17 @@ impl<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, MUTATE_METADATA, CONFIG: crate::co
     }
 }
 
-impl<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, MUTATE_METADATA, CONFIG: crate::config::base_types::Config>
-    ResultRenderer<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, MUTATE_METADATA>
-    for MutateResultRenderer<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, MUTATE_METADATA, CONFIG>
+impl<ResultFromAlgorithm, ResultToCaller, MutateMetadata, ConfigT: crate::config::base_types::Config>
+    ResultRenderer<ResultFromAlgorithm, ResultToCaller, MutateMetadata>
+    for MutateResultRenderer<ResultFromAlgorithm, ResultToCaller, MutateMetadata, ConfigT>
 {
     fn render(
         &self,
         graph_resources: &GraphResources,
-        result: Option<RESULT_FROM_ALGORITHM>,
+        result: Option<ResultFromAlgorithm>,
         timings: AlgorithmProcessingTimings,
-        metadata: Option<MUTATE_METADATA>,
-    ) -> RESULT_TO_CALLER {
+        metadata: Option<MutateMetadata>,
+    ) -> ResultToCaller {
         self.result_builder.build(
             graph_resources.graph.clone(),
             &self.configuration,
@@ -61,21 +61,21 @@ impl<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, MUTATE_METADATA, CONFIG: crate::co
 
 /// Write Result Renderer - renders results for write mode
 pub struct WriteResultRenderer<
-    RESULT_FROM_ALGORITHM,
-    RESULT_TO_CALLER,
-    WRITE_METADATA,
-    CONFIG: crate::config::base_types::Config,
+    ResultFromAlgorithm,
+    ResultToCaller,
+    WriteMetadata,
+    ConfigT: crate::config::base_types::Config,
 > {
-    configuration: CONFIG,
-    result_builder: Box<dyn ResultBuilder<CONFIG, RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, WRITE_METADATA>>,
+    configuration: ConfigT,
+    result_builder: Box<dyn ResultBuilder<ConfigT, ResultFromAlgorithm, ResultToCaller, WriteMetadata>>,
 }
 
-impl<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, WRITE_METADATA, CONFIG: crate::config::base_types::Config>
-    WriteResultRenderer<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, WRITE_METADATA, CONFIG>
+impl<ResultFromAlgorithm, ResultToCaller, WriteMetadata, ConfigT: crate::config::base_types::Config>
+    WriteResultRenderer<ResultFromAlgorithm, ResultToCaller, WriteMetadata, ConfigT>
 {
     pub fn new(
-        configuration: CONFIG,
-        result_builder: Box<dyn ResultBuilder<CONFIG, RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, WRITE_METADATA>>,
+        configuration: ConfigT,
+        result_builder: Box<dyn ResultBuilder<ConfigT, ResultFromAlgorithm, ResultToCaller, WriteMetadata>>,
     ) -> Self {
         Self {
             configuration,
@@ -84,17 +84,17 @@ impl<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, WRITE_METADATA, CONFIG: crate::con
     }
 }
 
-impl<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, WRITE_METADATA, CONFIG: crate::config::base_types::Config>
-    ResultRenderer<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, WRITE_METADATA>
-    for WriteResultRenderer<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, WRITE_METADATA, CONFIG>
+impl<ResultFromAlgorithm, ResultToCaller, WriteMetadata, ConfigT: crate::config::base_types::Config>
+    ResultRenderer<ResultFromAlgorithm, ResultToCaller, WriteMetadata>
+    for WriteResultRenderer<ResultFromAlgorithm, ResultToCaller, WriteMetadata, ConfigT>
 {
     fn render(
         &self,
         graph_resources: &GraphResources,
-        result: Option<RESULT_FROM_ALGORITHM>,
+        result: Option<ResultFromAlgorithm>,
         timings: AlgorithmProcessingTimings,
-        metadata: Option<WRITE_METADATA>,
-    ) -> RESULT_TO_CALLER {
+        metadata: Option<WriteMetadata>,
+    ) -> ResultToCaller {
         self.result_builder.build(
             graph_resources.graph.clone(),
             &self.configuration,
@@ -106,26 +106,26 @@ impl<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, WRITE_METADATA, CONFIG: crate::con
 }
 
 /// Stats Result Renderer - renders results for stats mode
-pub struct StatsResultRenderer<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER> {
-    stats_result_builder: Box<dyn StatsResultBuilder<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER>>,
+pub struct StatsResultRenderer<ResultFromAlgorithm, ResultToCaller> {
+    stats_result_builder: Box<dyn StatsResultBuilder<ResultFromAlgorithm, ResultToCaller>>,
 }
 
-impl<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER> StatsResultRenderer<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER> {
-    pub fn new(stats_result_builder: Box<dyn StatsResultBuilder<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER>>) -> Self {
+impl<ResultFromAlgorithm, ResultToCaller> StatsResultRenderer<ResultFromAlgorithm, ResultToCaller> {
+    pub fn new(stats_result_builder: Box<dyn StatsResultBuilder<ResultFromAlgorithm, ResultToCaller>>) -> Self {
         Self { stats_result_builder }
     }
 }
 
-impl<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER> ResultRenderer<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER, ()>
-    for StatsResultRenderer<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER>
+impl<ResultFromAlgorithm, ResultToCaller> ResultRenderer<ResultFromAlgorithm, ResultToCaller, ()>
+    for StatsResultRenderer<ResultFromAlgorithm, ResultToCaller>
 {
     fn render(
         &self,
         graph_resources: &GraphResources,
-        result: Option<RESULT_FROM_ALGORITHM>,
+        result: Option<ResultFromAlgorithm>,
         timings: AlgorithmProcessingTimings,
         _metadata: Option<()>,
-    ) -> RESULT_TO_CALLER {
+    ) -> ResultToCaller {
         self.stats_result_builder.build(
             graph_resources.graph.clone(),
             result,
@@ -135,26 +135,26 @@ impl<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER> ResultRenderer<RESULT_FROM_ALGORIT
 }
 
 /// Stream Result Renderer - renders results for stream mode
-pub struct StreamResultRenderer<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER> {
-    result_builder: Box<dyn StreamResultBuilder<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER>>,
+pub struct StreamResultRenderer<ResultFromAlgorithm, ResultToCaller> {
+    result_builder: Box<dyn StreamResultBuilder<ResultFromAlgorithm, ResultToCaller>>,
 }
 
-impl<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER> StreamResultRenderer<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER> {
-    pub fn new(result_builder: Box<dyn StreamResultBuilder<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER>>) -> Self {
+impl<ResultFromAlgorithm, ResultToCaller> StreamResultRenderer<ResultFromAlgorithm, ResultToCaller> {
+    pub fn new(result_builder: Box<dyn StreamResultBuilder<ResultFromAlgorithm, ResultToCaller>>) -> Self {
         Self { result_builder }
     }
 }
 
-impl<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER> ResultRenderer<RESULT_FROM_ALGORITHM, Vec<RESULT_TO_CALLER>, ()>
-    for StreamResultRenderer<RESULT_FROM_ALGORITHM, RESULT_TO_CALLER>
+impl<ResultFromAlgorithm, ResultToCaller> ResultRenderer<ResultFromAlgorithm, Vec<ResultToCaller>, ()>
+    for StreamResultRenderer<ResultFromAlgorithm, ResultToCaller>
 {
     fn render(
         &self,
         graph_resources: &GraphResources,
-        result: Option<RESULT_FROM_ALGORITHM>,
+        result: Option<ResultFromAlgorithm>,
         _timings: AlgorithmProcessingTimings,
         _metadata: Option<()>,
-    ) -> Vec<RESULT_TO_CALLER> {
+    ) -> Vec<ResultToCaller> {
         self.result_builder.build(
             graph_resources.graph.clone(),
             graph_resources.graph_store.clone(),

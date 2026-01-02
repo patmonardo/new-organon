@@ -287,13 +287,12 @@ Both paradigms use the same underlying algorithm runtimes:
 
 ### Standard Terms
 
-- **"spec.rs"**: AlgorithmSpec implementation for ProcedureExecutor
-  - Located in `gds/src/procedures/{algo}/spec.rs`
-  - Implements `AlgorithmSpec` trait
-  - Used by `ProcedureExecutor` for declarative execution
+- **"spec.rs"**: AlgorithmSpec implementation for `ProcedureExecutor`
+  - **Planned shape** (not broadly used in the repo yet)
+  - The current codebase mostly uses direct facades/builders instead of `ProcedureExecutor`
 
 - **"facades"**: Direct builder API for applications
-  - Located in `gds/src/procedures/facades/{category}/{algo}.rs`
+  - Located in `gds/src/procedures/{category}/{algo}.rs`
   - Provides fluent builder pattern
   - Used for direct application integration
 

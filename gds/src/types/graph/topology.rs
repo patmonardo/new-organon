@@ -44,6 +44,11 @@ impl RelationshipTopology {
             .map(|neighbors| neighbors.as_slice())
     }
 
+    /// Returns all outgoing adjacency lists.
+    pub fn outgoing_lists(&self) -> &[Vec<NodeId>] {
+        &self.outgoing
+    }
+
     /// Returns the incoming adjacency for the given node when an inverse index exists.
     pub fn incoming(&self, node: NodeId) -> Option<&[NodeId]> {
         self.incoming
