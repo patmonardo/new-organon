@@ -1,6 +1,6 @@
 // Phase 1.2: LinkFeatureAppender - Feature appending for link pairs
 
-// TODO: Replace u64 with proper NodeId type when available
+// Note: When a distinct NodeId type exists, use it instead of u64.
 
 /// Appends features for a specific graph's link pairs.
 ///

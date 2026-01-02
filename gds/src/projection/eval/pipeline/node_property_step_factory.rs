@@ -17,6 +17,10 @@ use crate::projection::eval::pipeline::{
 };
 use std::collections::HashMap;
 
+use super::node_property_step::{
+    DEBUG_WRITE_CONSTANT_DOUBLE_MUTATE, FASTRP_MUTATE, MUTATE_PROPERTY_KEY, PAGERANK_MUTATE,
+};
+
 /// Reserved configuration keys that cannot be set in individual node property steps.
 ///
 /// These are set by the pipeline executor based on the current execution context.
@@ -100,10 +104,10 @@ pub fn create_node_property_step_with_context(
     // Normalize algorithm name
     let normalized_name = normalize_name(task_name);
 
-    // TODO: Validate algorithm configuration
-    // In Java, this uses AlgoConfigParser to validate the config against the algorithm spec.
-    // In Rust direct integration, we can add validation when we have the algorithm registry.
-    // For now, basic checks are sufficient.
+    // Minimal validation:
+    // - Ensure required mutate property exists (avoids downstream panics)
+    // - Ensure algorithm exists in the current direct-integration registry
+    validate_node_property_step_config(&normalized_name, &proc_config_map)?;
 
     // Create the step
     let step = NodePropertyStep::with_context(
@@ -114,6 +118,28 @@ pub fn create_node_property_step_with_context(
     );
 
     Ok(Box::new(step))
+}
+
+fn validate_node_property_step_config(
+    algorithm_name: &str,
+    procedure_config: &HashMap<String, serde_json::Value>,
+) -> Result<(), NodePropertyStepFactoryError> {
+    match algorithm_name {
+        DEBUG_WRITE_CONSTANT_DOUBLE_MUTATE | PAGERANK_MUTATE | FASTRP_MUTATE => {}
+        _ => {
+            return Err(NodePropertyStepFactoryError::AlgorithmNotFound {
+                algorithm_name: algorithm_name.to_string(),
+            });
+        }
+    }
+
+    match procedure_config.get(MUTATE_PROPERTY_KEY).and_then(|v| v.as_str()) {
+        Some(_) => Ok(()),
+        None => Err(NodePropertyStepFactoryError::InvalidConfiguration {
+            algorithm_name: algorithm_name.to_string(),
+            message: format!("Missing or invalid '{}'", MUTATE_PROPERTY_KEY),
+        }),
+    }
 }
 
 /// Validate that procedure configuration doesn't contain reserved keys.

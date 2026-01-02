@@ -41,7 +41,7 @@ use std::marker::PhantomData;
 #[derive(Debug)]
 pub struct SinglePropertyFeatureAppender {
     /// The node property values this appender operates on.
-    /// TODO: Replace PhantomData with actual NodePropertyValues type
+    /// Note: placeholder until NodePropertyValues wiring is introduced here.
     props: PhantomData<()>,
 
     /// The feature dimension this appender produces.

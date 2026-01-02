@@ -101,6 +101,7 @@ mod tests {
     use super::*;
     use crate::ml::models::base::{BaseModelData, Regressor, RegressorData};
     use crate::ml::models::training_method::TrainingMethod;
+    use crate::projection::eval::pipeline::node_pipeline::NodePropertyPredictPipeline;
     use crate::projection::eval::pipeline::node_pipeline::NodePropertyPipelineBaseTrainConfig;
     use std::any::Any;
     use std::collections::HashMap;
@@ -158,7 +159,7 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
             (), // best_candidate
-            (), // pipeline
+            NodePropertyPredictPipeline::empty(),
         );
         let training_stats = TrainingStatistics::new(vec![]);
 
@@ -183,7 +184,7 @@ mod tests {
             HashMap::new(),
             HashMap::new(),
             (), // best_candidate
-            (), // pipeline
+            NodePropertyPredictPipeline::empty(),
         );
         let training_stats = TrainingStatistics::new(vec![]);
 

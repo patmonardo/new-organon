@@ -1,10 +1,12 @@
 use crate::projection::eval::pipeline::TrainingMethod;
+use crate::projection::eval::pipeline::node_pipeline::NodePropertyPredictPipeline;
+use crate::projection::eval::pipeline::Pipeline;
+use std::fmt;
 use std::collections::HashMap;
 
 // Placeholder types until ml-metrics, ml-training, and pipeline packages are complete
 pub type Metric = ();
 pub type ModelCandidateStats = ();
-pub type NodePropertyPredictPipeline = (); // TODO: Use real type when Debug/Clone/Default implemented
 
 /// Custom metadata for trained node regression models.
 ///
@@ -22,7 +24,6 @@ pub type NodePropertyPredictPipeline = (); // TODO: Use real type when Debug/Clo
 /// - Feature importance tracking
 /// - Hyperparameter history
 /// - Pipeline reproducibility
-#[derive(Debug, Clone)]
 pub struct NodeRegressionPipelineModelInfo {
     /// Metrics evaluated on the held-out test set.
     test_metrics: HashMap<Metric, f64>,
@@ -37,6 +38,23 @@ pub struct NodeRegressionPipelineModelInfo {
     /// The prediction pipeline (features + node property steps).
     /// Used for reproducibility and serving.
     pipeline: NodePropertyPredictPipeline,
+}
+
+impl fmt::Debug for NodeRegressionPipelineModelInfo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("NodeRegressionPipelineModelInfo")
+            .field("test_metrics_len", &self.test_metrics.len())
+            .field("outer_train_metrics_len", &self.outer_train_metrics.len())
+            .field(
+                "node_property_steps_len",
+                &self.pipeline.node_property_steps().len(),
+            )
+            .field(
+                "feature_properties_len",
+                &self.pipeline.feature_properties().len(),
+            )
+            .finish()
+    }
 }
 
 impl NodeRegressionPipelineModelInfo {
@@ -78,8 +96,7 @@ impl NodeRegressionPipelineModelInfo {
     ///
     /// Java: `Optional<TrainingMethod> optionalTrainerMethod()`
     pub fn optional_trainer_method(&self) -> Option<TrainingMethod> {
-        // TODO: Implement when ModelCandidateStats is translated
-        // Some(self.best_candidate.trainer_config().method())
+        // This will be populated once ModelCandidateStats and TrainerConfig are available.
         None
     }
 
@@ -89,21 +106,36 @@ impl NodeRegressionPipelineModelInfo {
     pub fn to_map(&self) -> HashMap<String, serde_json::Value> {
         use serde_json::json;
 
-        // TODO: Implement full serialization when dependencies are available
-        // Map.of(
-        //     "bestParameters", bestCandidate.trainerConfig().toMapWithTrainerMethod(),
-        //     "metrics", bestCandidate.renderMetrics(testMetrics, outerTrainMetrics),
-        //     "pipeline", pipeline.toMap(),
-        //     "nodePropertySteps", ToMapConvertible.toMap(pipeline.nodePropertySteps()),
-        //     "featureProperties", pipeline.featureProperties()
-        // )
+        let node_property_steps: Vec<serde_json::Value> = self
+            .pipeline
+            .node_property_steps()
+            .iter()
+            .map(|step| {
+                let step_map: serde_json::Map<String, serde_json::Value> =
+                    step.to_map().into_iter().collect();
+                serde_json::Value::Object(step_map)
+            })
+            .collect();
+
+        let feature_properties: Vec<serde_json::Value> = self
+            .pipeline
+            .feature_properties()
+            .into_iter()
+            .map(serde_json::Value::String)
+            .collect();
 
         HashMap::from([
             ("bestParameters".to_string(), json!({})),
             ("metrics".to_string(), json!({})),
-            ("pipeline".to_string(), json!({})),
-            ("nodePropertySteps".to_string(), json!([])),
-            ("featureProperties".to_string(), json!([])),
+            ("pipeline".to_string(), json!(self.pipeline.to_map())),
+            (
+                "nodePropertySteps".to_string(),
+                serde_json::Value::Array(node_property_steps),
+            ),
+            (
+                "featureProperties".to_string(),
+                serde_json::Value::Array(feature_properties),
+            ),
         ])
     }
 }
@@ -162,7 +194,12 @@ mod tests {
 
     #[test]
     fn test_model_info_new() {
-        let info = NodeRegressionPipelineModelInfo::new(HashMap::new(), HashMap::new(), (), ());
+        let info = NodeRegressionPipelineModelInfo::new(
+            HashMap::new(),
+            HashMap::new(),
+            (),
+            NodePropertyPredictPipeline::empty(),
+        );
 
         assert!(info.test_metrics().is_empty());
         assert!(info.outer_train_metrics().is_empty());
@@ -174,7 +211,7 @@ mod tests {
             .test_metrics(HashMap::new())
             .outer_train_metrics(HashMap::new())
             .best_candidate(())
-            .pipeline(())
+            .pipeline(NodePropertyPredictPipeline::empty())
             .build();
 
         assert!(result.is_ok());
@@ -192,7 +229,12 @@ mod tests {
 
     #[test]
     fn test_to_map_structure() {
-        let info = NodeRegressionPipelineModelInfo::new(HashMap::new(), HashMap::new(), (), ());
+        let info = NodeRegressionPipelineModelInfo::new(
+            HashMap::new(),
+            HashMap::new(),
+            (),
+            NodePropertyPredictPipeline::empty(),
+        );
 
         let map = info.to_map();
         assert!(map.contains_key("bestParameters"));

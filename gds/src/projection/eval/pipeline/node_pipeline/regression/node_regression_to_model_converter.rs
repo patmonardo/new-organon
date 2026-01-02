@@ -6,13 +6,12 @@ use crate::ml::metrics::regression::RegressionMetric;
 use crate::ml::models::base::{BaseModelData, RegressorData};
 use crate::ml::models::training_method::TrainingMethod;
 use crate::ml::training::statistics::TrainingStatistics;
+use crate::projection::eval::pipeline::node_pipeline::NodePropertyPredictPipeline;
 use std::any::Any;
 use std::collections::HashMap;
 
-// Placeholder types until model system is translated
-pub type Model = ();
+// Placeholder type until model catalog integration is implemented
 pub type GraphSchema = ();
-pub type ResultToModelConverter = ();
 
 // Placeholder implementations for model converter
 #[derive(Debug)]
@@ -92,24 +91,8 @@ impl NodeRegressionToModelConverter {
         _train_result: NodeRegressionTrainResult,
         _original_schema: GraphSchema,
     ) -> NodeRegressionTrainPipelineResult {
-        // TODO: Implement when Model system is translated
-        // let catalog_model = Model::of(
-        //     GDS_VERSION,
-        //     NodeRegressionTrainingPipeline::MODEL_TYPE,
-        //     original_schema,
-        //     train_result.regressor().data(),
-        //     self.config.clone(),
-        //     NodeRegressionPipelineModelInfo::of(
-        //         train_result.training_statistics().winning_model_test_metrics(),
-        //         train_result.training_statistics().winning_model_outer_train_metrics(),
-        //         train_result.training_statistics().best_candidate(),
-        //         NodePropertyPredictPipeline::from(&self.pipeline),
-        //     ),
-        // );
-        //
-        // NodeRegressionTrainPipelineResult::of(catalog_model, train_result.training_statistics())
-
-        // Placeholder implementation (model_info will be real NodeRegressionPipelineModelInfo later)
+        // Catalog model creation is not wired yet; return a minimal container that preserves
+        // config + shape for downstream plumbing/tests.
         NodeRegressionTrainPipelineResult::new(
             Box::new(PlaceholderRegressorData), // regressor_data
             self.config.clone(),
@@ -117,7 +100,7 @@ impl NodeRegressionToModelConverter {
                 HashMap::new(), // test_metrics
                 HashMap::new(), // outer_train_metrics
                 (),             // best_candidate (placeholder)
-                (),             // pipeline (placeholder)
+                NodePropertyPredictPipeline::empty(),
             ),
             TrainingStatistics::new(vec![Box::new(RegressionMetric::MSE)]), // training_statistics
         )

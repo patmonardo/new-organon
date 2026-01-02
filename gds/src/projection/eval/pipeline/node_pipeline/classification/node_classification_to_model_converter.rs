@@ -40,7 +40,7 @@ impl NodeClassificationToModelConverter {
         result: &NodeClassificationTrainResult,
         _original_schema: &GraphSchema,
     ) -> NodeClassificationModelResult {
-        // TODO: When Model catalog is implemented, create actual Model:
+        // Note: When model catalog/types are translated, create and return a real catalog Model.
         // let catalog_model = Model::of(
         //     GdsVersionInfoProvider::gds_version(),
         //     NodeClassificationTrainingPipeline::MODEL_TYPE,
@@ -63,7 +63,7 @@ impl NodeClassificationToModelConverter {
     }
 }
 
-// TODO: Implement ResultToModelConverter trait when available
+// Note: Implement ResultToModelConverter trait once it is translated.
 // impl ResultToModelConverter<NodeClassificationModelResult, NodeClassificationTrainResult> for NodeClassificationToModelConverter {
 //     fn to_model(&self, result: &NodeClassificationTrainResult, original_schema: &GraphSchema) -> NodeClassificationModelResult {
 //         self.to_model(result, original_schema)

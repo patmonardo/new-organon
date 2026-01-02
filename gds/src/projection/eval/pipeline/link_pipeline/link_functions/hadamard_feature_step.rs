@@ -79,20 +79,6 @@ impl LinkFeatureStep for HadamardFeatureStep {
     }
 }
 
-// Placeholder appender for Gamma quality
-#[allow(dead_code)]
-struct HadamardPlaceholderAppender;
-
-impl LinkFeatureAppender for HadamardPlaceholderAppender {
-    fn append_features(&self, _source: u64, _target: u64, _features: &mut [f64], _offset: usize) {
-        // TODO: Implement Hadamard computation
-    }
-
-    fn dimension(&self) -> usize {
-        0 // Placeholder
-    }
-}
-
 /// Factory for creating Hadamard appenders.
 struct HadamardLinkFeatureAppenderFactory;
 

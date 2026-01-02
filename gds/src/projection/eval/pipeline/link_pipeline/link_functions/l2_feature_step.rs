@@ -89,23 +89,6 @@ impl LinkFeatureStep for L2FeatureStep {
     }
 }
 
-// Placeholder appender for Gamma quality
-#[allow(dead_code)]
-struct L2PlaceholderAppender;
-
-impl LinkFeatureAppender for L2PlaceholderAppender {
-    fn append_features(&self, _source: u64, _target: u64, _features: &mut [f64], _offset: usize) {
-        // TODO: Implement L2 computation:
-        // For each dimension i:
-        //   features[offset + i] = (source[i] - target[i])²
-        // Returns vector of squared differences (not summed, not sqrt'd)
-    }
-
-    fn dimension(&self) -> usize {
-        0 // Placeholder - should match property dimension
-    }
-}
-
 /// Factory for creating L2 appenders.
 struct L2LinkFeatureAppenderFactory;
 

@@ -127,13 +127,7 @@ impl LinkFeatureAppender for UnionLinkFeatureAppender {
             local_offset += appender.dimension();
         }
 
-        // Validate computed features (check for NaN)
-        // TODO: Implement FeatureStepUtil::validateComputedFeatures
-        // Should check features[offset..local_offset] for NaN values
-        // If NaN found, throw error with:
-        //   - feature_step_name
-        //   - input_node_properties
-        //   - source and target node IDs
+        // Validate computed features (NaN / Infinity) and include context if invalid.
         self.validate_features(features, offset, local_offset, source, target);
     }
 
@@ -161,19 +155,22 @@ impl UnionLinkFeatureAppender {
         features: &[f64],
         offset: usize,
         end_offset: usize,
-        _source: u64,
-        _target: u64,
+        source: u64,
+        target: u64,
     ) {
-        // Check for NaN in computed range
-        for feature in features.iter().take(end_offset).skip(offset) {
-            if feature.is_nan() {
+        for (index, feature) in features.iter().take(end_offset).skip(offset).enumerate() {
+            if !feature.is_finite() {
                 panic!(
-                    "NaN value encountered in {} feature computation for properties {:?}",
-                    self.feature_step_name, self.input_node_properties
+                    "Invalid value (index {}, value {}) in {} feature computation for properties {:?} (source={}, target={})",
+                    offset + index,
+                    feature,
+                    self.feature_step_name,
+                    self.input_node_properties,
+                    source,
+                    target
                 );
             }
         }
-        // TODO: More comprehensive validation from FeatureStepUtil
     }
 }
 

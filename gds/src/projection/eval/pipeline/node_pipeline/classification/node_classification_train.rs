@@ -61,7 +61,7 @@ impl NodeClassificationTrain {
         _model_catalog: &ModelCatalog,
         _algorithms_procedure_facade: &AlgorithmsProcedureFacade,
     ) -> MemoryEstimation {
-        // TODO: Implement when memory estimation is available
+        // Note: Implement once memory estimation infrastructure is translated.
         // new NodeClassificationTrainMemoryEstimateDefinition(
         //     pipeline,
         //     configuration,
@@ -72,7 +72,7 @@ impl NodeClassificationTrain {
 
     /// Create progress task for training.
     pub fn progress_task(pipeline: &NodeClassificationTrainingPipeline, node_count: u64) -> Task {
-        // TODO: Implement when Tasks API is available
+        // Note: Implement once the Tasks API is translated.
         // let split_config = pipeline.split_config();
         // let train_set_size = split_config.train_set_size(node_count);
         // let test_set_size = split_config.test_set_size(node_count);
@@ -103,7 +103,7 @@ impl NodeClassificationTrain {
         node_feature_producer: NodeFeatureProducer<NodeClassificationPipelineTrainConfig>,
         progress_tracker: ProgressTracker,
     ) -> Self {
-        // TODO: Implement when graph API is available
+        // Note: Implement once the graph API is available for property extraction.
         // Extract target node property and labels
         // let nodes_graph = graph_store.get_graph(config.target_node_label_identifiers(&graph_store));
         // pipeline.split_config().validate_min_num_nodes_in_split_sets(&nodes_graph);
@@ -158,7 +158,7 @@ impl NodeClassificationTrain {
     /// 5. Evaluate on train and test sets
     /// 6. Retrain on full dataset
     pub fn run(&mut self) -> NodeClassificationTrainResult {
-        // TODO: Implement when dependencies are available
+        // Note: Implement full training loop once training/evaluation dependencies are translated.
         // self.progress_tracker.begin_sub_task();
         //
         // let split_config = self.pipeline.split_config();
@@ -216,195 +216,6 @@ impl NodeClassificationTrain {
             self._class_counts.clone(),
         )
     }
-
-    /// Find the best model candidate via cross-validation.
-    #[allow(dead_code)]
-    fn find_best_model_candidate(
-        &mut self,
-        _train_node_ids: &ReadOnlyHugeLongArray,
-        _features: &Features,
-        _training_statistics: &mut TrainingStatistics,
-    ) {
-        // TODO: Implement when CrossValidation and RandomSearch are available
-        // let cross_validation = CrossValidation::new(
-        //     &self.progress_tracker,
-        //     &self.termination_flag,
-        //     &self.metrics,
-        //     self.pipeline.split_config().validation_folds(),
-        //     self.train_config.random_seed(),
-        //     |train_set, config, metrics_handler, message_log_level| {
-        //         self.train_model(train_set, config, features, message_log_level, metrics_handler)
-        //     },
-        //     |evaluation_set, classifier, score_consumer| {
-        //         self.register_metric_scores(
-        //             evaluation_set,
-        //             classifier,
-        //             features,
-        //             score_consumer,
-        //             &ProgressTracker::NULL_TRACKER,
-        //         )
-        //     },
-        // );
-        //
-        // let model_candidates = RandomSearch::new(
-        //     self.pipeline.training_parameter_space(),
-        //     self.pipeline.auto_tuning_config().max_trials(),
-        //     self.train_config.random_seed(),
-        // );
-        //
-        // let sorted_class_ids: Vec<_> = (0..self.class_counts.len() as i64).collect();
-        //
-        // cross_validation.select_model(
-        //     train_node_ids,
-        //     |node_id| self.targets.get(node_id),
-        //     &sorted_class_ids,
-        //     training_statistics,
-        //     &model_candidates,
-        // );
-    }
-
-    /// Register metric scores for a classifier.
-    #[allow(dead_code)]
-    fn register_metric_scores(
-        &self,
-        _evaluation_set: &ReadOnlyHugeLongArray,
-        _classifier: &Classifier,
-        _features: &Features,
-        _score_consumer: &mut MetricConsumer,
-        _custom_progress_tracker: &ProgressTracker,
-    ) {
-        // TODO: Implement when ClassificationMetricComputer is available
-        // let metric_computer = ClassificationMetricComputer::for_evaluation_set(
-        //     features,
-        //     &self.targets,
-        //     evaluation_set,
-        //     classifier,
-        //     self.train_config.concurrency(),
-        //     &self.termination_flag,
-        //     custom_progress_tracker,
-        // );
-        //
-        // for metric in &self.classification_metrics {
-        //     score_consumer.consume(metric, metric_computer.score(metric));
-        // }
-    }
-
-    /// Evaluate the best model on train and test sets.
-    #[allow(dead_code)]
-    fn evaluate_best_model(
-        &mut self,
-        _outer_split: &TrainingExamplesSplit,
-        _features: &Features,
-        _training_statistics: &mut TrainingStatistics,
-    ) {
-        // TODO: Implement when model evaluation is available
-        // self.progress_tracker.begin_sub_task("Train best model");
-        // let best_candidate = training_statistics.best_candidate();
-        // let best_classifier = self.train_model(
-        //     &outer_split.train_set(),
-        //     &best_candidate.trainer_config(),
-        //     features,
-        //     LogLevel::INFO,
-        //     &ModelSpecificMetricsHandler::of(&self.metrics, |m, v| {
-        //         training_statistics.add_test_score(m, v)
-        //     }),
-        // );
-        // self.progress_tracker.end_sub_task("Train best model");
-        //
-        // // Evaluate on train data
-        // self.progress_tracker.begin_sub_task("Evaluate on train data");
-        // self.progress_tracker.set_steps(outer_split.train_set().len());
-        // self.register_metric_scores(
-        //     &outer_split.train_set(),
-        //     &best_classifier,
-        //     features,
-        //     &mut |m, v| training_statistics.add_outer_train_score(m, v),
-        //     &self.progress_tracker,
-        // );
-        // let outer_train_metrics = training_statistics.winning_model_outer_train_metrics();
-        // self.progress_tracker.log_info(&format!(
-        //     "Final model metrics on full train set: {:?}",
-        //     outer_train_metrics
-        // ));
-        // self.progress_tracker.end_sub_task("Evaluate on train data");
-        //
-        // // Evaluate on test data
-        // self.progress_tracker.begin_sub_task("Evaluate on test data");
-        // self.progress_tracker.set_steps(outer_split.test_set().len());
-        // self.register_metric_scores(
-        //     &outer_split.test_set(),
-        //     &best_classifier,
-        //     features,
-        //     &mut |m, v| training_statistics.add_test_score(m, v),
-        //     &self.progress_tracker,
-        // );
-        // let test_metrics = training_statistics.winning_model_test_metrics();
-        // self.progress_tracker.log_info(&format!(
-        //     "Final model metrics on test set: {:?}",
-        //     test_metrics
-        // ));
-        // self.progress_tracker.end_sub_task("Evaluate on test data");
-    }
-
-    /// Retrain the best model on the full training set.
-    #[allow(dead_code)]
-    fn retrain_best_model(
-        &mut self,
-        _train_set: &ReadOnlyHugeLongArray,
-        _features: &Features,
-        _best_parameters: &TrainerConfig,
-    ) -> Classifier {
-        // TODO: Implement when model training is available
-        // self.progress_tracker.begin_sub_task("Retrain best model");
-        // let retrained_classifier = self.train_model(
-        //     train_set,
-        //     best_parameters,
-        //     features,
-        //     LogLevel::INFO,
-        //     &ModelSpecificMetricsHandler::NOOP,
-        // );
-        // self.progress_tracker.end_sub_task("Retrain best model");
-        // retrained_classifier
-
-        // Placeholder
-    }
-
-    /// Train a single model with given parameters.
-    #[allow(dead_code)]
-    fn train_model(
-        &self,
-        _train_set: &ReadOnlyHugeLongArray,
-        _trainer_config: &TrainerConfig,
-        _features: &Features,
-        _message_log_level: LogLevel,
-        _metrics_handler: &ModelSpecificMetricsHandler,
-    ) -> Classifier {
-        // TODO: Implement when ClassifierTrainerFactory is available
-        // let trainer = ClassifierTrainerFactory::create(
-        //     trainer_config,
-        //     self.class_id_map.size(),
-        //     &self.termination_flag,
-        //     &self.progress_tracker,
-        //     message_log_level,
-        //     self.train_config.concurrency(),
-        //     self.train_config.random_seed(),
-        //     false,
-        //     metrics_handler,
-        // );
-        //
-        // trainer.train(features, &self.targets, train_set)
-
-        // Placeholder
-    }
-}
-
-// Placeholder for LogLevel
-#[derive(Debug, Clone, Copy)]
-pub enum LogLevel {
-    Info,
-    Debug,
-    Warn,
-    Error,
 }
 
 #[cfg(test)]

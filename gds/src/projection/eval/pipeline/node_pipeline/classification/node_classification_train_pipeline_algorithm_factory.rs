@@ -49,7 +49,7 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         configuration: NodeClassificationPipelineTrainConfig,
         progress_tracker: ProgressTracker,
     ) -> NodeClassificationTrainAlgorithm {
-        // TODO: Implement when PipelineCatalog is translated
+        // Note: When PipelineCatalog is translated, retrieve a typed pipeline from the catalog.
         // let pipeline = PipelineCatalog::get_typed::<NodeClassificationTrainingPipeline>(
         //     configuration.username(),
         //     configuration.pipeline(),
@@ -70,10 +70,10 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         pipeline: NodeClassificationTrainingPipeline,
         progress_tracker: ProgressTracker,
     ) -> NodeClassificationTrainAlgorithm {
-        // TODO: Implement when pipeline validation is available
+        // Note: Pipeline/metric validation will be wired in once the metrics system is translated.
         // validate_main_metric(&pipeline, &configuration.metrics()[0].to_string());
 
-        // TODO: Create NodeFeatureProducer when fully implemented
+        // Note: Wire NodeFeatureProducer + node-property-step context validation when training is translated.
         // let node_feature_producer = NodeFeatureProducer::create(
         //     graph_store.clone(),
         //     &configuration,
@@ -85,7 +85,7 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         //     pipeline.node_property_steps()
         // );
 
-        // TODO: Create NodeClassificationTrain when implemented
+        // Note: Create NodeClassificationTrain once training infrastructure is translated.
         // let trainer = NodeClassificationTrain::create(
         //     graph_store.clone(),
         //     &pipeline,
@@ -110,7 +110,7 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         &self,
         _configuration: &NodeClassificationPipelineTrainConfig,
     ) -> MemoryEstimation {
-        // TODO: Implement when MemoryEstimations and NodeClassificationTrain are translated
+        // Note: Implement once MemoryEstimations and NodeClassificationTrain are translated.
         // let pipeline = PipelineCatalog::get_typed::<NodeClassificationTrainingPipeline>(
         //     configuration.username(),
         //     configuration.pipeline(),
@@ -126,6 +126,7 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         //     .build()
 
         // Placeholder
+        ()
     }
 
     /// Get task name for progress tracking.
@@ -139,7 +140,7 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         _graph_store: &DefaultGraphStore,
         _config: &NodeClassificationPipelineTrainConfig,
     ) -> Task {
-        // TODO: Implement when Task and NodeClassificationTrain are translated
+        // Note: Implement once Task and NodeClassificationTrain are translated.
         // let pipeline = PipelineCatalog::get_typed::<NodeClassificationTrainingPipeline>(
         //     config.username(),
         //     config.pipeline(),
@@ -147,6 +148,7 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         // Self::progress_task_with_pipeline(graph_store, &pipeline)
 
         // Placeholder
+        ()
     }
 
     /// Create progress task with explicit pipeline.
@@ -154,10 +156,11 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         _graph_store: &DefaultGraphStore,
         _pipeline: &NodeClassificationTrainingPipeline,
     ) -> Task {
-        // TODO: Implement when Task and NodeClassificationTrain are translated
+        // Note: Implement once Task and NodeClassificationTrain are translated.
         // NodeClassificationTrain::progress_task(pipeline, graph_store.node_count())
 
         // Placeholder
+        ()
     }
 }
 

@@ -1,4 +1,5 @@
 use crate::types::graph_store::DefaultGraphStore;
+use crate::types::graph_store::GraphStore;
 use crate::types::schema::NodeLabel;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -30,14 +31,13 @@ pub trait NodePropertyPipelineBaseTrainConfig {
     /// that the specified labels exist in the graph.
     fn target_node_label_identifiers(
         &self,
-        _graph_store: &Arc<DefaultGraphStore>,
+        graph_store: &Arc<DefaultGraphStore>,
     ) -> HashSet<NodeLabel> {
         let target_labels = self.target_node_labels();
 
         if target_labels.len() == 1 && target_labels[0] == "*" {
             // Project all node labels
-            // TODO: Implement node_labels() method on DefaultGraphStore
-            unimplemented!("GraphStore.node_labels() not yet implemented")
+            graph_store.node_labels()
         } else {
             // Convert specified labels
             target_labels

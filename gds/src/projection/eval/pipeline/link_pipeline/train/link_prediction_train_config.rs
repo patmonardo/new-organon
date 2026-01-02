@@ -81,7 +81,7 @@ pub struct LinkPredictionTrainConfig {
 
     /// Evaluation metrics (default: [AUCPR])
     /// **The Ought**: How we measure Truth
-    metrics: Vec<String>, // TODO: Use LinkMetric enum
+    metrics: Vec<String>, // Note: placeholder until LinkMetric enum is introduced here.
 
     /// Graph name
     /// **The Ought**: Which graph Truth we're working with
@@ -263,9 +263,9 @@ impl LinkPredictionTrainConfig {
     /// * `graph_store` - Graph store to validate against (placeholder)
     pub fn validate_against_graph_store(
         &self,
-        _graph_store: PhantomData<()>, // TODO: GraphStore
+        _graph_store: PhantomData<()>, // Note: placeholder for GraphStore.
     ) -> Result<(), String> {
-        // TODO: Implement when GraphStore is available:
+        // Note: implement when GraphStore is available:
         // 1. Validate source_node_label exists (unless "*")
         // 2. Validate target_node_label exists (unless "*")
         // 3. Validate target_relationship_type exists and is UNDIRECTED

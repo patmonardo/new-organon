@@ -3,12 +3,13 @@
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-// TODO: Replace with real types when available
-pub type TrainerConfig = PhantomData<()>;
-pub type LinkPredictionPredictPipeline = PhantomData<()>;
+use super::LinkPredictionPredictPipeline;
+use crate::projection::eval::pipeline::TrainingMethod;
+
+// Note: Replace placeholders with real ML-training types when available.
+pub type TrainerConfig = ();
 pub type Metric = PhantomData<()>;
 pub type ModelCandidateStats = PhantomData<()>;
-pub type TrainingMethod = PhantomData<()>;
 
 /// Custom metadata for Link Prediction models.
 ///
@@ -42,7 +43,7 @@ pub type TrainingMethod = PhantomData<()>;
 ///     custom_info: model_info,            // LinkPredictionModelInfo (THIS)
 /// )
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct LinkPredictionModelInfo {
     /// Best hyperparameters selected during training
     best_parameters: TrainerConfig,
@@ -88,9 +89,9 @@ impl LinkPredictionModelInfo {
         _best_candidate: ModelCandidateStats,
         pipeline: LinkPredictionPredictPipeline,
     ) -> Self {
-        // TODO: Implement renderMetrics when ModelCandidateStats available
+        // Note: Implement best-candidate metrics rendering once ModelCandidateStats is available.
         let metrics = HashMap::new();
-        let best_parameters = PhantomData;
+        let best_parameters = ();
 
         Self::new(best_parameters, metrics, pipeline)
     }
@@ -121,12 +122,34 @@ impl LinkPredictionModelInfo {
     pub fn to_map(&self) -> HashMap<String, serde_json::Value> {
         let mut map = HashMap::new();
 
-        // TODO: Implement proper serialization when types available
+        // Note: Fill bestParameters once TrainerConfig can serialize itself.
         map.insert("bestParameters".to_string(), serde_json::json!({}));
         map.insert("metrics".to_string(), serde_json::json!(self.metrics));
-        map.insert("pipeline".to_string(), serde_json::json!({}));
-        map.insert("nodePropertySteps".to_string(), serde_json::json!([]));
-        map.insert("featureSteps".to_string(), serde_json::json!([]));
+
+        let pipeline_map = self.pipeline.to_map();
+        map.insert("pipeline".to_string(), serde_json::json!(pipeline_map));
+
+        // Back-compat fields (mirrors Java shape).
+        map.insert(
+            "nodePropertySteps".to_string(),
+            serde_json::json!(
+                self.pipeline
+                    .to_map()
+                    .get("nodePropertySteps")
+                    .cloned()
+                    .unwrap_or_default()
+            ),
+        );
+        map.insert(
+            "featureSteps".to_string(),
+            serde_json::json!(
+                self.pipeline
+                    .to_map()
+                    .get("featureSteps")
+                    .cloned()
+                    .unwrap_or_default()
+            ),
+        );
 
         map
     }
@@ -135,8 +158,17 @@ impl LinkPredictionModelInfo {
     ///
     /// Extracted from `best_parameters().method()`.
     pub fn optional_trainer_method(&self) -> Option<TrainingMethod> {
-        // TODO: Implement when TrainerConfig available
+        // Note: Return Some(best_parameters.method()) once TrainerConfig exists.
         None
+    }
+}
+
+impl std::fmt::Debug for LinkPredictionModelInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LinkPredictionModelInfo")
+            .field("metrics_keys", &self.metrics.keys().collect::<Vec<_>>())
+            .field("pipeline", &"<LinkPredictionPredictPipeline>")
+            .finish()
     }
 }
 
@@ -146,9 +178,9 @@ mod tests {
 
     #[test]
     fn test_model_info_creation() {
-        let params = PhantomData;
+        let params = ();
         let metrics = HashMap::new();
-        let pipeline = PhantomData;
+        let pipeline = LinkPredictionPredictPipeline::empty();
 
         let info = LinkPredictionModelInfo::new(params, metrics, pipeline);
 
@@ -160,7 +192,7 @@ mod tests {
         let test_metrics = HashMap::new();
         let train_metrics = HashMap::new();
         let best_candidate = PhantomData;
-        let pipeline = PhantomData;
+        let pipeline = LinkPredictionPredictPipeline::empty();
 
         let info =
             LinkPredictionModelInfo::of(test_metrics, train_metrics, best_candidate, pipeline);
@@ -170,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_accessors() {
-        let info = LinkPredictionModelInfo::new(PhantomData, HashMap::new(), PhantomData);
+        let info = LinkPredictionModelInfo::new((), HashMap::new(), LinkPredictionPredictPipeline::empty());
 
         let _params = info.best_parameters();
         let _metrics = info.metrics();
@@ -179,7 +211,7 @@ mod tests {
 
     #[test]
     fn test_to_map() {
-        let info = LinkPredictionModelInfo::new(PhantomData, HashMap::new(), PhantomData);
+        let info = LinkPredictionModelInfo::new((), HashMap::new(), LinkPredictionPredictPipeline::empty());
 
         let map = info.to_map();
 
@@ -192,14 +224,14 @@ mod tests {
 
     #[test]
     fn test_optional_trainer_method() {
-        let info = LinkPredictionModelInfo::new(PhantomData, HashMap::new(), PhantomData);
+        let info = LinkPredictionModelInfo::new((), HashMap::new(), LinkPredictionPredictPipeline::empty());
 
         assert!(info.optional_trainer_method().is_none()); // Placeholder
     }
 
     #[test]
     fn test_clone() {
-        let info1 = LinkPredictionModelInfo::new(PhantomData, HashMap::new(), PhantomData);
+        let info1 = LinkPredictionModelInfo::new((), HashMap::new(), LinkPredictionPredictPipeline::empty());
         let info2 = info1.clone();
 
         assert_eq!(info1.metrics().len(), info2.metrics().len());

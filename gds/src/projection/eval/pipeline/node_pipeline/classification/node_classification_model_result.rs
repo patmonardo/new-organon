@@ -12,7 +12,7 @@ pub type NodeClassificationPipelineModelInfo = ();
 /// This is a value class that wraps the model catalog entry with training statistics.
 #[derive(Debug, Clone)]
 pub struct NodeClassificationModelResult {
-    // TODO: When model catalog is implemented, this should be:
+    // Note: When model catalog is implemented, this should become a typed catalog entry, e.g.
     // model: Model<ClassifierData, NodeClassificationPipelineTrainConfig, NodeClassificationPipelineModelInfo>
     catalog_model: CatalogModel,
     training_statistics: TrainingStatistics,

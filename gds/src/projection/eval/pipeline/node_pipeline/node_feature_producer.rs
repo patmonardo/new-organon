@@ -3,9 +3,10 @@ use crate::projection::eval::pipeline::{
     ExecutableNodePropertyStep, NodePropertyStepExecutor, NodePropertyStepExecutorError,
 };
 use crate::types::graph_store::DefaultGraphStore;
+use crate::types::graph_store::GraphStore;
 use std::sync::Arc;
 
-// TODO: These types will be implemented when ml-models package is translated
+// These types are placeholders until the ml-models package is translated.
 // use crate::ml::models::Features;
 // use crate::ml::models::FeaturesFactory;
 
@@ -61,11 +62,34 @@ impl<C: NodePropertyPipelineBaseTrainConfig> NodeFeatureProducer<C> {
     pub fn create(graph_store: Arc<DefaultGraphStore>, config: C) -> Self {
         use std::collections::HashSet;
 
-        // TODO: Get these from config when the methods are implemented
-        let node_labels = config.node_labels();
-        let relationship_types = vec![]; // TODO: config.internalRelationshipTypes()
-        let available_relationship_types = HashSet::new(); // TODO: graphStore.relationshipTypes()
-        let concurrency = 4; // TODO: Get from config
+        let node_labels_config = config.node_labels();
+        let node_labels = if node_labels_config.len() == 1 && node_labels_config[0] == "*" {
+            let mut labels: Vec<String> = graph_store
+                .node_labels()
+                .into_iter()
+                .map(|l| l.name().to_string())
+                .collect();
+            labels.sort();
+            labels
+        } else {
+            node_labels_config
+        };
+
+        let mut relationship_types: Vec<String> = graph_store
+            .relationship_types()
+            .into_iter()
+            .map(|t| t.name().to_string())
+            .collect();
+        relationship_types.sort();
+
+        let available_relationship_types: HashSet<String> = relationship_types
+            .iter()
+            .cloned()
+            .collect();
+
+        let concurrency = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1);
 
         let step_executor = NodePropertyStepExecutor::new(
             node_labels,
@@ -115,22 +139,21 @@ impl<C: NodePropertyPipelineBaseTrainConfig> NodeFeatureProducer<C> {
             .map_err(NodeFeatureProducerError::StepExecutionFailed)?;
 
         // Get target node labels
-        let _target_node_labels = self
+        let mut target_node_labels: Vec<String> = self
             .train_config
-            .target_node_label_identifiers(&self.graph_store);
+            .target_node_label_identifiers(&self.graph_store)
+            .into_iter()
+            .map(|l| l.name().to_string())
+            .collect();
+        target_node_labels.sort();
 
-        // Validate that feature properties exist
-        // TODO: Implement pipeline.validate_feature_properties() when Pipeline trait is extended
-        // pipeline.validate_feature_properties(&self.graph_store, &target_node_labels)
-        //     .map_err(NodeFeatureProducerError::FeatureValidationFailed)?;
+        pipeline
+            .validate_feature_properties(&self.graph_store, &target_node_labels)
+            .map_err(|e| NodeFeatureProducerError::FeatureValidationFailed(e.to_string()))?;
 
-        // Create a filtered graph with only target node labels
-        // TODO: Implement graph_store.get_graph(labels) when GraphStore API is extended
-        // let target_node_label_graph = self.graph_store.get_graph(&target_node_labels)
-        //     .map_err(NodeFeatureProducerError::GraphFilterFailed)?;
-
-        // Extract features (eager or lazy)
-        // TODO: Implement FeaturesFactory when ml-models is translated
+        // Extract features (eager or lazy).
+        // Feature extraction is not implemented yet; return a placeholder until
+        // ml-models is translated.
         let _eager = pipeline.require_eager_features();
         let _props = pipeline.feature_properties();
         let features = (); // Placeholder

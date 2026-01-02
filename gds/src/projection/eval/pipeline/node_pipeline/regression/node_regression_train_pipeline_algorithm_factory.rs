@@ -1,18 +1,17 @@
 use crate::types::graph_store::DefaultGraphStore;
+use crate::projection::eval::pipeline::Pipeline;
 use std::sync::Arc;
 
 use super::{
     NodeRegressionPipelineTrainConfig, NodeRegressionTrainAlgorithm, NodeRegressionTrainingPipeline,
 };
 
+use crate::projection::eval::pipeline::node_pipeline::NodeFeatureProducer;
+
 // Placeholder types until full framework is available
-pub type GraphStoreAlgorithmFactory<A, C> = std::marker::PhantomData<(A, C)>;
 pub type ExecutionContext = ();
 pub type ProgressTracker = ();
 pub type Task = ();
-pub type PipelineCatalog = ();
-pub type NodeFeatureProducer<C> = std::marker::PhantomData<C>;
-pub type NodeRegressionTrain = ();
 
 /// Factory for creating node regression training algorithm instances.
 ///
@@ -66,13 +65,8 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
         configuration: NodeRegressionPipelineTrainConfig,
         progress_tracker: ProgressTracker,
     ) -> NodeRegressionTrainAlgorithm {
-        // TODO: Implement when PipelineCatalog is translated
-        // let pipeline = PipelineCatalog::get_typed(
-        //     configuration.username(),
-        //     configuration.pipeline(),
-        //     NodeRegressionTrainingPipeline::class(),
-        // );
-
+        // Direct integration: catalog lookup isn't wired yet, so this overload uses a
+        // default in-memory pipeline instance.
         let pipeline = NodeRegressionTrainingPipeline::new();
         self.build_with_pipeline(graph_store, configuration, pipeline, progress_tracker)
     }
@@ -110,26 +104,14 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
         pipeline: NodeRegressionTrainingPipeline,
         progress_tracker: ProgressTracker,
     ) -> NodeRegressionTrainAlgorithm {
-        // TODO: Implement validation when metrics are available
-        // Self::validate_main_metric(&pipeline, &configuration.metrics()[0].to_string());
+        Self::validate_main_metric(&pipeline, configuration.metrics().first());
 
-        // TODO: Create NodeFeatureProducer when available
-        // let node_feature_producer = NodeFeatureProducer::create(
-        //     &graph_store,
-        //     &configuration,
-        //     &self.execution_context,
-        //     &progress_tracker,
-        // );
-        // node_feature_producer.validate_node_property_steps_context_configs(pipeline.node_property_steps());
-
-        // TODO: Create NodeRegressionTrain when available
-        // let pipeline_trainer = NodeRegressionTrain::create(
-        //     graph_store.clone(),
-        //     pipeline.clone(),
-        //     configuration.clone(),
-        //     node_feature_producer,
-        //     progress_tracker,
-        // );
+        // Execute node-property-step context validation early (mirrors Java behavior).
+        // Training itself is not wired in this module yet.
+        let node_feature_producer = NodeFeatureProducer::create(graph_store.clone(), configuration.clone());
+        node_feature_producer
+            .validate_node_property_steps_context_configs(pipeline.node_property_steps())
+            .expect("node property step context config validation failed");
 
         NodeRegressionTrainAlgorithm::new(
             std::marker::PhantomData, // pipeline_trainer (placeholder)
@@ -155,13 +137,7 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
         _graph_store: &DefaultGraphStore,
         _config: &NodeRegressionPipelineTrainConfig,
     ) -> Task {
-        // TODO: Implement when PipelineCatalog and Task system are available
-        // let pipeline = PipelineCatalog::get_typed(
-        //     config.username(),
-        //     config.pipeline(),
-        //     NodeRegressionTrainingPipeline::class(),
-        // );
-        // Self::progress_task_for_pipeline(&pipeline, graph_store.node_count())
+        // Task/progress plumbing is not wired yet in direct integration.
     }
 
     /// Creates a progress task for a specific pipeline.
@@ -176,20 +152,23 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
         _pipeline: &NodeRegressionTrainingPipeline,
         _node_count: u64,
     ) -> Task {
-        // TODO: Delegate to NodeRegressionTrain::progress_task
+        // Task/progress plumbing is not wired yet in direct integration.
     }
 
     /// Validates that the main metric is supported by the pipeline.
     ///
     /// Java source: `PipelineCompanion.validateMainMetric(pipeline, metric)`
-    #[allow(dead_code)]
-    fn validate_main_metric(_pipeline: &NodeRegressionTrainingPipeline, _metric: &str) {
-        // TODO: Implement metric validation
-        // Checks that the first metric in config is compatible with pipeline training type
+    fn validate_main_metric(
+        _pipeline: &NodeRegressionTrainingPipeline,
+        _metric: Option<&super::RegressionMetrics>,
+    ) {
+        // Regression metric validation will be added once the full metrics registry is
+        // implemented. For now, any metric enum value is accepted.
     }
 }
 
-// TODO: Implement GraphStoreAlgorithmFactory trait when available
+// Note: implementing the GraphStoreAlgorithmFactory trait is deferred until the
+// broader algorithm/task framework is wired into this crate.
 // impl GraphStoreAlgorithmFactory<NodeRegressionTrainAlgorithm, NodeRegressionPipelineTrainConfig>
 //     for NodeRegressionTrainPipelineAlgorithmFactory
 // {

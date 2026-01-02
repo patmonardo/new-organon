@@ -129,30 +129,6 @@ impl LinkFeatureStep for SameCategoryStep {
     }
 }
 
-// Placeholder appender for Gamma quality
-#[allow(dead_code)]
-struct SameCategoryPlaceholderAppender {
-    dimension: usize,
-}
-
-impl LinkFeatureAppender for SameCategoryPlaceholderAppender {
-    fn append_features(&self, _source: u64, _target: u64, _features: &mut [f64], _offset: usize) {
-        // TODO: Implement categorical equality check:
-        // For each property predicate:
-        //   features[offset++] = if predicate(source, target) { 1.0 } else { 0.0 }
-        //
-        // Predicate logic (from sameCategoryPredicate):
-        //   Match property.valueType():
-        //     Long   -> source.longValue() == target.longValue()
-        //     Double -> source.doubleValue() == target.doubleValue()
-        //     Other  -> Error: "only supports numeric properties"
-    }
-
-    fn dimension(&self) -> usize {
-        self.dimension // One binary feature per property
-    }
-}
-
 /// SameCategory appender for i64 properties.
 struct SameCategoryLongAppender {
     props: Arc<dyn NodePropertyValues>,
@@ -256,7 +232,6 @@ mod tests {
         ]);
 
         assert_eq!(step.input_node_properties().len(), 3);
-        // Placeholder appender should return dimension = 3
     }
 
     #[test]
@@ -288,7 +263,7 @@ mod tests {
         assert_eq!(step.name(), "SAME_CATEGORY");
         assert_eq!(step.input_node_properties().len(), 2);
 
-        // Contained (Pure): Equality predicates deferred with TODOs
+        // Contained (Pure): Equality predicates deferred
         // Second Representation: The concept of "sameness" itself!
     }
 }

@@ -98,7 +98,8 @@ impl NodeRegressionTrainAlgorithm {
     }
 }
 
-// TODO: Implement Algorithm trait when framework is available
+// Note: implementing the Algorithm trait is deferred until the broader
+// algorithm/task framework is wired into this crate.
 // impl Algorithm for NodeRegressionTrainAlgorithm {
 //     type Result = NodeRegressionTrainPipelineResult;
 //

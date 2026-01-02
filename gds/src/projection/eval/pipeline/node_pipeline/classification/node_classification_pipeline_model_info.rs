@@ -1,5 +1,5 @@
 use crate::projection::eval::pipeline::node_pipeline::NodePropertyPredictPipeline;
-use crate::projection::eval::pipeline::Pipeline;
+use crate::projection::eval::pipeline::pipeline_trait::Pipeline;
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -44,8 +44,7 @@ impl NodeClassificationPipelineModelInfo {
         pipeline: NodePropertyPredictPipeline,
         classes: Vec<i64>,
     ) -> Self {
-        // TODO: When metrics system is implemented:
-        // let metrics = best_candidate.render_metrics(test_metrics, outer_train_metrics);
+        // Note: Metrics rendering will be wired in once the metrics system is translated.
         let best_parameters = ();
         let metrics = HashMap::new();
 
@@ -72,7 +71,7 @@ impl NodeClassificationPipelineModelInfo {
     pub fn to_map(&self) -> HashMap<String, Value> {
         let mut map = HashMap::new();
 
-        // TODO: When TrainerConfig is implemented, add: best_parameters.to_map_with_trainer_method()
+        // Note: When TrainerConfig is implemented, populate bestParameters with its serialized form.
         map.insert(
             "bestParameters".to_string(),
             Value::Object(Default::default()),
@@ -100,8 +99,7 @@ impl NodeClassificationPipelineModelInfo {
             Value::Object(self.pipeline.to_map().into_iter().collect()),
         );
 
-        // TODO: When ExecutableNodePropertyStep has to_map(), add:
-        // map.insert("nodePropertySteps", to_map_convertible(pipeline.node_property_steps()));
+        // Note: Node-property-step serialization will be added once step-to-map exists.
 
         map.insert(
             "featureProperties".to_string(),
@@ -119,7 +117,7 @@ impl NodeClassificationPipelineModelInfo {
 
     /// Get optional training method.
     pub fn optional_trainer_method(&self) -> Option<TrainingMethod> {
-        // TODO: When TrainerConfig is implemented: Some(self.best_parameters.method())
+        // Note: Training method will be derived from TrainerConfig once implemented.
         None
     }
 }

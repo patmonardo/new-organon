@@ -65,7 +65,7 @@
 // **Translation Notes**:
 // - Gamma translation from LinkPredictionTrainPipelineExecutor.java (~243 lines)
 // - Pre-Prim 0.0.x: Structure defined (Prakasa), implementation deferred (Kriya waiting)
-// - TODOs mark future implementation points (Bija seeds)
+// - Deferred integration points mark future implementation (Bija seeds)
 //
 // **The Prakasa-Kriya-Krama Pattern**:
 // - This file embodies all three:
@@ -103,27 +103,27 @@ use crate::projection::RelationshipType;
 #[derive(Debug, Clone)]
 pub struct LinkPredictionTrainPipelineExecutor {
     /// The training pipeline (contains all configuration)
-    /// TODO (Bija): Replace with actual LinkPredictionTrainingPipeline
+    /// Note (Bija): placeholder until LinkPredictionTrainingPipeline is wired in.
     pub pipeline: PhantomData<()>,
 
     /// Training configuration
-    /// TODO (Bija): Replace with actual LinkPredictionTrainConfig
+    /// Note (Bija): placeholder until LinkPredictionTrainConfig is wired in.
     pub config: PhantomData<()>,
 
     /// Execution context (catalog, user, etc.)
-    /// TODO (Bija): Replace with actual ExecutionContext
+    /// Note (Bija): placeholder until ExecutionContext is wired in.
     pub execution_context: PhantomData<()>,
 
     /// Graph store containing the data
-    /// TODO (Bija): Replace with Arc<GraphStore>
+    /// Note (Bija): placeholder until Arc<GraphStore> is wired in.
     pub graph_store: PhantomData<()>,
 
     /// Progress tracker for logging
-    /// TODO (Bija): Replace with actual ProgressTracker
+    /// Note (Bija): placeholder until ProgressTracker is wired in.
     pub progress_tracker: PhantomData<()>,
 
     /// Relationship sampler for data splitting
-    /// TODO (Bija): Replace with actual LinkPredictionRelationshipSampler
+    /// Note (Bija): placeholder until LinkPredictionRelationshipSampler is wired in.
     pub relationship_sampler: PhantomData<()>,
 
     /// Available relationship types for node property steps
@@ -139,13 +139,13 @@ impl LinkPredictionTrainPipelineExecutor {
     /// # The Prakasa (Illumination)
     /// Constructor illuminates the whole pipeline structure before execution
     pub fn new(
-        _pipeline: PhantomData<()>, // TODO: actual LinkPredictionTrainingPipeline - Bija!
-        _config: PhantomData<()>,   // TODO: actual LinkPredictionTrainConfig - Bija!
-        _execution_context: PhantomData<()>, // TODO: actual ExecutionContext - Bija!
-        _graph_store: PhantomData<()>, // TODO: Arc<GraphStore> - Bija!
-        _progress_tracker: PhantomData<()>, // TODO: actual ProgressTracker - Bija!
+        _pipeline: PhantomData<()>, // Note: placeholder for LinkPredictionTrainingPipeline (Bija).
+        _config: PhantomData<()>,   // Note: placeholder for LinkPredictionTrainConfig (Bija).
+        _execution_context: PhantomData<()>, // Note: placeholder for ExecutionContext (Bija).
+        _graph_store: PhantomData<()>, // Note: placeholder for Arc<GraphStore> (Bija).
+        _progress_tracker: PhantomData<()>, // Note: placeholder for ProgressTracker (Bija).
     ) -> Self {
-        // TODO (Bija): Implement in Prim 0.1.x
+        // Note (Bija): implement in Prim 0.1.x.
         // 1. Filter available relationship types (exclude target)
         // 2. Create LinkPredictionRelationshipSampler
         // 3. Store all components
@@ -183,7 +183,7 @@ impl LinkPredictionTrainPipelineExecutor {
     pub fn generate_dataset_split_graph_filters(
         &self,
     ) -> Result<HashMap<DatasetSplit, PipelineGraphFilter>, String> {
-        // TODO (Bija): Implement in Prim 0.1.x
+        // Note (Bija): implement in Prim 0.1.x.
         // 1. Get split config from pipeline
         // 2. Create TRAIN filter (trainRelationshipType)
         // 3. Create TEST filter (testRelationshipType)
@@ -202,7 +202,7 @@ impl LinkPredictionTrainPipelineExecutor {
     /// 2. Generate negative samples
     /// 3. Update graph store with split relationship types
     pub fn split_datasets(&mut self) -> Result<(), String> {
-        // TODO (Bija): Implement in Prim 0.1.x
+        // Note (Bija): implement in Prim 0.1.x.
         // Call: self.relationship_sampler.split_and_sample_relationships(
         //     pipeline.relationshipWeightProperty(execution_context.model_catalog(), execution_context.username())
         // )
@@ -229,7 +229,7 @@ impl LinkPredictionTrainPipelineExecutor {
         &self,
         _data_splits: HashMap<DatasetSplit, PipelineGraphFilter>,
     ) -> Result<LinkPredictionTrainPipelineResult, String> {
-        // TODO (Bija): Implement in Prim 0.1.x
+        // Note (Bija): implement in Prim 0.1.x.
         // 1. Validate training parameter space
         // 2. Get TRAIN graph from graph_store
         // 3. Get TEST graph from graph_store
@@ -266,7 +266,7 @@ impl LinkPredictionTrainPipelineExecutor {
         &mut self,
         _datasets: &HashMap<DatasetSplit, PipelineGraphFilter>,
     ) -> Result<(), String> {
-        // TODO (Bija): Implement in Prim 0.1.x
+        // Note (Bija): implement in Prim 0.1.x.
         // 1. Collect all relationship types from datasets
         // 2. Remove duplicates
         // 3. Call graph_store.delete_relationships() for each
@@ -292,10 +292,10 @@ impl LinkPredictionTrainPipelineExecutor {
 /// ```
 pub fn progress_task(
     task_name: String,
-    _pipeline: PhantomData<()>, // TODO: actual LinkPredictionTrainingPipeline - Bija!
+    _pipeline: PhantomData<()>, // Note: placeholder for LinkPredictionTrainingPipeline (Bija).
     _relationship_count: usize,
 ) -> ProgressTask {
-    // TODO (Bija): Implement in Prim 0.1.x
+    // Note (Bija): implement in Prim 0.1.x.
     // 1. Calculate expected set sizes from split config
     // 2. Create task hierarchy:
     //    - LinkPredictionRelationshipSampler::progress_task()
@@ -317,13 +317,13 @@ pub fn progress_task(
 /// 2. Node property steps
 /// 3. Training (cross-validation + model selection)
 pub fn estimate_memory(
-    _pipeline: PhantomData<()>, // TODO: actual LinkPredictionTrainingPipeline - Bija!
-    _config: PhantomData<()>,   // TODO: actual LinkPredictionTrainConfig - Bija!
-    _model_catalog: PhantomData<()>, // TODO: actual ModelCatalog - Bija!
-    _algorithms_facade: PhantomData<()>, // TODO: actual AlgorithmsProcedureFacade - Bija!
+    _pipeline: PhantomData<()>, // Note: placeholder for LinkPredictionTrainingPipeline (Bija).
+    _config: PhantomData<()>,   // Note: placeholder for LinkPredictionTrainConfig (Bija).
+    _model_catalog: PhantomData<()>, // Note: placeholder for ModelCatalog (Bija).
+    _algorithms_facade: PhantomData<()>, // Note: placeholder for AlgorithmsProcedureFacade (Bija).
     _username: String,
 ) -> MemoryEstimate {
-    // TODO (Bija): Implement in Prim 0.1.x
+    // Note (Bija): implement in Prim 0.1.x.
     // 1. Validate training parameter space
     // 2. Get split estimations
     // 3. Estimate node property steps
@@ -370,11 +370,11 @@ pub struct PipelineGraphFilter {
 #[derive(Debug, Clone)]
 pub struct LinkPredictionTrainPipelineResult {
     /// The trained model
-    /// TODO (Bija): Replace with actual Model<Classifier.ClassifierData>
+    /// Note (Bija): placeholder until Model<ClassifierData> is introduced.
     pub model: PhantomData<()>,
 
     /// Training statistics (metrics, best parameters, etc.)
-    /// TODO (Bija): Replace with actual TrainingStatistics
+    /// Note (Bija): placeholder until TrainingStatistics is introduced.
     pub training_statistics: PhantomData<()>,
 }
 
@@ -605,9 +605,9 @@ mod tests {
         // ✅ Tests pass
         // assert!(true, "Tests pass");
 
-        // ✅ TODOs explicit (Bija seeds counted)
-        let todo_count = 20; // Counted manually
-        assert!(todo_count > 15, "Many seeds planted");
+        // ✅ Deferred integration points explicit (Bija seeds counted)
+        let marker_count = 20; // Counted manually
+        assert!(marker_count > 15, "Many seeds planted");
 
         // ⏳ Implementation deferred
         let executor = LinkPredictionTrainPipelineExecutor::new(

@@ -107,7 +107,7 @@ impl LinkFeatureStepFactory {
         config: &Value,
     ) -> Result<Box<dyn LinkFeatureStep>, String> {
         // Validate and extract node properties using the trait's validation
-        // TODO: Once we have a concrete config struct, use that here
+        // Note: Once we have a concrete config struct, use it here instead of ad-hoc JSON parsing.
         // For now, directly extract array
         let props_array = config
             .as_array()

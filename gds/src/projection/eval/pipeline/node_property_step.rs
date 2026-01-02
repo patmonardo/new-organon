@@ -37,6 +37,11 @@ pub const DEBUG_WRITE_CONSTANT_DOUBLE_MUTATE: &str = "gds.debug.writeConstantDou
 /// Computes PageRank and writes the resulting scores to `mutateProperty`.
 pub const PAGERANK_MUTATE: &str = "gds.pagerank.mutate";
 
+/// A common node embedding algorithm used in ML pipelines.
+///
+/// Note: Execution wiring is deferred; creating a step is still supported.
+pub const FASTRP_MUTATE: &str = "gds.fastrp.mutate";
+
 /// Node property step that executes an algorithm to compute node properties.
 ///
 /// This is a simplified Rust version that stores the algorithm name and configuration,
@@ -283,9 +288,9 @@ impl ExecutableNodePropertyStep for NodePropertyStep {
     }
 
     fn root_task_name(&self) -> &str {
-        // TODO: In Java, this comes from the algorithm spec's task name.
-        // For now, use the algorithm name as the task name.
-        // This can be enhanced with algorithm metadata when we have a full registry.
+        // In Java, this comes from the algorithm spec's task name.
+        // For now, we use the procedure name as a stable task name until we have
+        // algorithm metadata in a registry.
         &self.algorithm_name
     }
 

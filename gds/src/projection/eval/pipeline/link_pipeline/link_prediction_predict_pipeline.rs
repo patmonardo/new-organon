@@ -39,7 +39,7 @@ use std::marker::PhantomData;
 /// ```
 pub struct LinkPredictionPredictPipeline {
     /// Node property steps (preprocessing) - frozen from training
-    /// TODO: Use actual ExecutableNodePropertyStep type
+    /// Note: This will become a concrete list of steps once link training execution is wired.
     node_property_steps: PhantomData<Vec<Box<dyn ExecutableNodePropertyStep>>>,
 
     /// Link feature steps (feature extraction) - frozen from training
@@ -142,7 +142,7 @@ impl LinkPredictionPredictPipeline {
         let mut map = HashMap::new();
 
         // Node property steps (placeholder)
-        // TODO: Convert actual node property steps
+        // Note: Convert actual node property steps once they are stored concretely.
         let node_steps: Vec<HashMap<String, serde_json::Value>> = Vec::new();
         map.insert("nodePropertySteps".to_string(), node_steps);
 
@@ -150,7 +150,7 @@ impl LinkPredictionPredictPipeline {
         let feature_steps_maps: Vec<HashMap<String, serde_json::Value>> = self
             .feature_steps
             .iter()
-            .map(|step| step.configuration())
+            .map(|step| step.to_map())
             .collect();
         map.insert("featureSteps".to_string(), feature_steps_maps);
 
@@ -176,8 +176,16 @@ impl Default for LinkPredictionPredictPipeline {
     }
 }
 
-// TODO: Implement Pipeline trait when associated types are properly configured
-// For now, LinkPredictionPredictPipeline provides its own interface
+// Note: Implement the shared Pipeline trait once associated types are finalized.
+
+impl Clone for LinkPredictionPredictPipeline {
+    fn clone(&self) -> Self {
+        Self {
+            node_property_steps: PhantomData,
+            feature_steps: self.feature_steps.clone(),
+        }
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::LinkPredictionPredictPipeline;

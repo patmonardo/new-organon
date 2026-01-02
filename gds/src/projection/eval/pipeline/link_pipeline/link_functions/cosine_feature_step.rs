@@ -165,24 +165,6 @@ impl LinkFeatureAppender for UnionLinkFeatureAppender {
     }
 }
 
-// Placeholder appender for Gamma quality
-#[allow(dead_code)]
-struct CosinePlaceholderAppender;
-
-impl LinkFeatureAppender for CosinePlaceholderAppender {
-    fn append_features(&self, _source: u64, _target: u64, _features: &mut [f64], _offset: usize) {
-        // TODO: Implement cosine computation:
-        // 1. Accumulate dot_product, source_square_norm, target_square_norm
-        // 2. Compute l2_norm = sqrt(source_square_norm * target_square_norm)
-        // 3. If l2_norm != 0.0: features[offset] = dot_product / l2_norm
-        // 4. Validate not NaN
-    }
-
-    fn dimension(&self) -> usize {
-        1 // Cosine returns single similarity value
-    }
-}
-
 /// Cosine similarity appender for f64[] properties.
 struct CosineDoubleArrayAppender {
     props: Arc<dyn NodePropertyValues>,
@@ -452,6 +434,18 @@ impl LinkFeatureAppender for CosineDoubleAppender {
 mod tests {
     use super::*;
 
+    struct TestCosineAppender;
+
+    impl LinkFeatureAppender for TestCosineAppender {
+        fn append_features(&self, _source: u64, _target: u64, _features: &mut [f64], _offset: usize) {
+            // Test-only stub.
+        }
+
+        fn dimension(&self) -> usize {
+            1
+        }
+    }
+
     #[test]
     fn test_cosine_creation() {
         let step = CosineFeatureStep::new(vec!["embedding".to_string()]);
@@ -483,7 +477,7 @@ mod tests {
     #[test]
     fn test_dimension_is_one() {
         // Cosine similarity always returns single scalar value
-        let appender = CosinePlaceholderAppender;
+        let appender = TestCosineAppender;
         assert_eq!(appender.dimension(), 1);
     }
 

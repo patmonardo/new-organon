@@ -65,21 +65,21 @@ pub struct BatchLinkFeatureExtractor {
     _extractor: Arc<LinkFeatureExtractor>,
 
     /// The partition of nodes to process
-    /// TODO: Replace with actual DegreePartition
+    /// Note: Replace with actual DegreePartition when ported.
     partition: PhantomData<()>,
 
     /// The graph to extract from (concurrent copy)
-    graph: PhantomData<()>, // TODO: Arc<dyn Graph>
+    graph: PhantomData<()>, // Note: replace with Arc<dyn Graph>
 
     /// Offset into linkFeatures array for this batch
     relationship_offset: Arc<AtomicU64>,
 
     /// Shared output array for all batches
-    /// TODO: Replace with HugeObjectArray<Vec<f64>>
+    /// Note: Replace with HugeObjectArray<Vec<f64>>
     link_features: PhantomData<()>,
 
     /// Progress tracker
-    /// TODO: Replace with ProgressTracker
+    /// Note: Replace with ProgressTracker
     progress_tracker: PhantomData<()>,
 }
 
@@ -140,7 +140,7 @@ impl BatchLinkFeatureExtractor {
     /// - Process: Feature extraction (Science)
     /// - Output: Feature entities (CDR - Reconstructed)
     pub fn run(&self) {
-        // TODO: Implement extraction loop:
+        // Note: Implement the extraction loop once DegreePartition/Graph/HugeObjectArray are wired.
         // let mut current_offset = self.relationship_offset.load(Ordering::Relaxed);
         //
         // self.partition.consume(|node_id| {

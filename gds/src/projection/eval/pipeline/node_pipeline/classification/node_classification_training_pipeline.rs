@@ -221,9 +221,10 @@ impl Default for NodeClassificationTrainingPipeline {
         Self::new()
     }
 }
+
+#[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
-    use super::*;
+    use super::NodeClassificationTrainingPipeline;
 
     #[test]
     fn test_new_pipeline() {

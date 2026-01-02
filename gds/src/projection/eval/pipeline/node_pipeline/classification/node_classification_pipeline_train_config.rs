@@ -42,15 +42,22 @@ impl NodeClassificationPipelineTrainConfig {
 
     /// Create concrete metrics from specifications given class ID map and class counts.
     pub fn metrics(&self, _class_id_map: &LocalIdMap, _class_counts: &LongMultiSet) -> Vec<Metric> {
-        // TODO: Implement when ClassificationMetricSpecification is translated
-        // self.metrics.iter().flat_map(|spec| spec.create_metrics(class_id_map, class_counts)).collect()
+        // Note: This will expand metric specifications once ClassificationMetricSpecification is translated.
+        // self.metrics
+        //     .iter()
+        //     .flat_map(|spec| spec.create_metrics(class_id_map, class_counts))
+        //     .collect()
         vec![]
     }
 
     /// Filter classification metrics (non-model-specific).
     pub fn classification_metrics(_metrics: &[Metric]) -> Vec<ClassificationMetric> {
-        // TODO: Implement when Metric trait is translated
-        // metrics.iter().filter(|m| !m.is_model_specific()).map(|m| m as ClassificationMetric).collect()
+        // Note: This will filter metrics once the Metric trait hierarchy is translated.
+        // metrics
+        //     .iter()
+        //     .filter(|m| !m.is_model_specific())
+        //     .map(|m| m as ClassificationMetric)
+        //     .collect()
         vec![]
     }
 }

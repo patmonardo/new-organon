@@ -277,10 +277,10 @@ impl LinkPredictionTrainingPipeline {
     /// Map of relationship property name → list of task names using that property.
     pub fn tasks_by_relationship_property(
         &self,
-        _model_catalog: PhantomData<()>, // TODO: ModelCatalog
+        _model_catalog: PhantomData<()>, // Note: replace with ModelCatalog
         _username: &str,
     ) -> HashMap<String, Vec<String>> {
-        // TODO: Implement when ModelCatalog available
+        // Note: Implement when ModelCatalog is available.
         // For each node property step:
         //   - Check if config has RELATIONSHIP_WEIGHT_PROPERTY key
         //   - Or check if config has MODEL_NAME_KEY and look up model
@@ -294,10 +294,10 @@ impl LinkPredictionTrainingPipeline {
     /// This method extracts the weight property from node property steps.
     pub fn relationship_weight_property(
         &self,
-        _model_catalog: PhantomData<()>, // TODO: ModelCatalog
+        _model_catalog: PhantomData<()>, // Note: replace with ModelCatalog
         _username: &str,
     ) -> Option<String> {
-        // TODO: Implement when ModelCatalog available
+        // Note: Implement when ModelCatalog is available.
         // Call tasks_by_relationship_property()
         // Return first property if any
         None

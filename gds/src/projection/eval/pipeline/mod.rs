@@ -8,8 +8,8 @@
 //! ├── Pipeline.java                  →    ├── pipeline_trait.rs
 //! ├── FeatureStep.java               →    ├── feature_step.rs
 //! ├── ExecutableNodePropertyStep.java →   ├── executable_node_property_step.rs
-//! ├── PipelineExecutor.java          →    ├── pipeline_executor.rs (TODO)
-//! ├── NodePropertyStep.java          →    ├── node_property_step.rs (TODO)
+//! ├── PipelineExecutor.java          →    ├── pipeline_executor.rs
+//! ├── NodePropertyStep.java          →    ├── node_property_step.rs
 //! └── ...                                  └── ...
 //! ```
 

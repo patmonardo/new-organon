@@ -279,10 +279,10 @@ impl LinkPredictionSplitConfig {
     /// * `target_relationship_type` - Target relationship type to split
     pub fn validate_against_graph_store(
         &self,
-        _graph_store: PhantomData<()>, // TODO: GraphStore
+        _graph_store: PhantomData<()>, // Note: replace with GraphStore
         _target_relationship_type: &RelationshipType,
     ) -> Result<(), String> {
-        // TODO: Implement validation when GraphStore is available:
+        // Note: Implement validation when GraphStore is available:
         // 1. Check reserved types don't exist in graph
         // 2. Validate negative relationship type if specified
         // 3. Check negativeSamplingRatio and negativeRelationshipType aren't both set

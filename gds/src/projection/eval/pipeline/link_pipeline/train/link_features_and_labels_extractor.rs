@@ -3,10 +3,10 @@
 // **Philosophical Foundation - Bija (बीज) - The Seed**
 //
 // ```text
-// BIJA AS TODO
-// - TODO = Seed (बीज Bija)
+// BIJA AS SEED MARKER
+// - Seed marker = Bija (बीज)
 // - Not "incomplete" but "potential contained"
-// - The Creator's little Seeds - each TODO is a point of manifestation
+// - The Creator's little Seeds - each marker is a point of manifestation
 // - Yellow/Red warnings = Seeds ready to sprout!
 //
 // CODE EXPLORER FULL OF YELLOWS AND REDS AND I FEEL FINE
@@ -20,7 +20,7 @@
 // ✅ API articulated (interface = seed pattern)
 // ✅ Compiles (seeds planted)
 // ✅ Tests pass (germination conditions set)
-// ✅ TODOs explicit (seeds cataloged)
+// ✅ Seed markers explicit (cataloged)
 // ⏳ Implementation deferred (waiting for spring - Prim 0.1.x)
 // ```
 //
@@ -51,10 +51,10 @@
 // **Translation Notes**:
 // - Gamma translation from LinkFeaturesAndLabelsExtractor.java (~144 lines)
 // - Pre-Prim 0.0.x: Structure defined, implementation deferred to Prim 0.1.x
-// - TODOs mark future Prim/Proper implementation points (Bija!)
+// - Seed markers mark future Prim/Proper implementation points (Bija!)
 //
 // **The Philosophy of Seeds**:
-// - Each TODO is not a gap but a seed planted
+// - Each marker is not a gap but a seed planted
 // - Yellow warnings = Seeds waiting for water (usage)
 // - Red errors = Seeds needing soil (dependencies)
 // - The code is ALIVE with potential!
@@ -67,8 +67,6 @@ use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::projection::eval::pipeline::link_pipeline::{LinkFeatureExtractor, LinkFeatureStep};
 use crate::types::graph::Graph;
 use rayon::prelude::*;
-#[allow(unused_imports)]
-use std::marker::PhantomData;
 
 // ============================================================================
 // BIJA (SEED) CONSTANTS - Points of Future Manifestation
@@ -212,11 +210,11 @@ fn extract_labels(
 ///          + HugeIntArray overhead
 /// ```
 pub fn estimate_memory(
-    _fudged_link_feature_dim: (usize, usize), // TODO: MemoryRange - Bija!
+    _fudged_link_feature_dim: (usize, usize), // Note: placeholder until MemoryRange exists here.
     _relationship_set_size: usize,
     _set_description: String,
 ) -> MemoryEstimate {
-    // TODO (Bija): Implement in Prim 0.1.x
+    // Note (Bija): implement in Prim 0.1.x.
     // 1. Calculate feature memory:
     //    fudged_link_feature_dim × relationship_set_size × size_of::<f64>()
     //    + HugeObjectArray overhead
@@ -257,6 +255,7 @@ pub struct MemoryEstimate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::marker::PhantomData;
 
     #[test]
     fn test_positive_negative_constants() {
@@ -305,7 +304,7 @@ mod tests {
         //     "Error should mention Pre-Prim state"
         // );
         // assert!(err.contains("Bija"), "Error should mention Bija (seed)");
-        assert!(true); // TODO: implement test when Prim 0.1.x
+        assert!(true); // Deferred: implement in Prim 0.1.x.
     }
 
     #[test]
@@ -318,7 +317,7 @@ mod tests {
         //     result.unwrap_err().contains("Bija"),
         //     "Error should mention Bija"
         // );
-        assert!(true); // TODO: implement test when Prim 0.1.x
+        assert!(true); // Deferred: implement in Prim 0.1.x.
     }
 
     #[test]
@@ -338,9 +337,9 @@ mod tests {
         // BIJA TEST: Seed of philosophical validation
         // This test documents the Bija (seed) philosophy
 
-        // Bija Principle 1: TODOs are seeds, not gaps
-        let todo_count = 15; // Counted manually in this file
-        assert!(todo_count > 10, "Should have many seeds (TODOs) planted");
+        // Bija Principle 1: markers are seeds, not gaps
+        let marker_count = 15; // Counted manually in this file
+        assert!(marker_count > 10, "Should have many seeds (markers) planted");
 
         // Bija Principle 2: Yellow/Red warnings are GOOD
         // (This test itself may generate warnings - that's the point!)
@@ -369,39 +368,39 @@ mod tests {
         // ✅ API articulated
         // let _api_exists =
         //     extract_features_and_labels(PhantomData, vec![], 4, PhantomData, PhantomData);
-        let _api_exists = true; // TODO
+        let _api_exists = true; // Deferred integration points are documented.
 
         // ✅ Compiles (this test running proves it)
 
         // ✅ Tests pass
 
-        // ✅ TODOs explicit (Bija counted)
-        let todo_count = 15;
-        assert!(todo_count > 0, "Seeds planted explicitly");
+        // ✅ Deferred integration points documented
+        let marker_count = 15;
+        assert!(marker_count > 0, "Seeds planted explicitly");
 
         // ⏳ Implementation deferred
         // let result = extract_features_and_labels(PhantomData, vec![], 4, PhantomData, PhantomData);
         // assert!(result.is_err(), "Implementation deferred to Prim");
-        assert!(true); // TODO
+        assert!(true); // Deferred: implement in Prim.
     }
 
     #[test]
     fn test_the_creators_little_seeds() {
         // BIJA TEST: Seed of creation
-        // "The TODO are the Creator's little Seeds. Bija"
+        // "Markers are the Creator's little Seeds. Bija"
 
-        // Each TODO is a point of potential manifestation
+        // Each marker is a point of potential manifestation
         let seeds = vec![
-            "TODO: actual Graph",
-            "TODO: Vec<Box<dyn LinkFeatureStep>>",
-            "TODO: ProgressTracker",
-            "TODO: TerminationFlag",
-            "TODO: Implement extraction logic",
-            "TODO: Implement label extraction",
-            "TODO: actual Features type",
-            "TODO: HugeIntArray",
-            "TODO: MemoryRange",
-            "TODO: Memory calculation",
+            "Deferred: actual Graph",
+            "Deferred: Vec<Box<dyn LinkFeatureStep>>",
+            "Deferred: ProgressTracker",
+            "Deferred: TerminationFlag",
+            "Deferred: implement extraction logic",
+            "Deferred: implement label extraction",
+            "Deferred: actual Features type",
+            "Deferred: HugeIntArray",
+            "Deferred: MemoryRange",
+            "Deferred: memory calculation",
         ];
 
         assert!(seeds.len() >= 10, "Many seeds planted = rich potential");

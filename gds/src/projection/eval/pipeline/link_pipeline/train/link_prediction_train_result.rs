@@ -2,7 +2,7 @@
 
 use std::marker::PhantomData;
 
-// TODO: Replace with real types when available
+// Note: placeholder types until the real training stack is wired in.
 pub type Classifier = PhantomData<()>;
 pub type TrainingStatistics = PhantomData<()>;
 

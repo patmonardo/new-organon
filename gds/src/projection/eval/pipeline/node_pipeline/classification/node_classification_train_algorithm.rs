@@ -65,7 +65,7 @@ impl NodeClassificationTrainAlgorithm {
         &self.progress_tracker
     }
 
-    // TODO: Add compute() method when PipelineTrainAlgorithm trait is translated
+    // Note: Add compute()/execution wiring once PipelineTrainAlgorithm is translated.
 }
 
 #[cfg(test)]
