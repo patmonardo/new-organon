@@ -10,6 +10,7 @@
 
 mod enabled {
     use gds::procedures::pathfinding::BfsBuilder;
+    use gds::procedures::pathfinding::DfsBuilder;
     use gds::procedures::pathfinding::DijkstraBuilder;
     use gds::projection::orientation::Orientation;
     use gds::types::prelude::{DefaultGraphStore, GraphStore, RandomGraphConfig};
@@ -25,6 +26,10 @@ mod enabled {
 
     fn run() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         println!("=== Random graph + BFS walkthrough ===\n");
+
+        if cfg!(debug_assertions) {
+            println!("(Note) Progress logs print to stderr in debug builds.\n");
+        }
 
         // 1) Generate a deterministic random graph.
         //
@@ -105,6 +110,39 @@ mod enabled {
         println!("\nFirst 10 BFS results (target, distance, path):");
         for r in &results {
             println!("- target={} dist={} path={:?}", r.target, r.cost, r.path);
+        }
+
+        // 3b) Run a second procedure: DFS.
+        //
+        // This shares the same underlying progress tracker instrumentation as BFS now.
+        let dfs_stats = DfsBuilder::new(std::sync::Arc::clone(&store))
+            .source(0)
+            .max_depth(3)
+            .track_paths(true)
+            .stats()?;
+
+        println!(
+            "\nDFS stats: visited={} max_depth_reached={} targets_found={} all_targets_reached={} backtrack_operations={} avg_branch_depth={:.3} execution_time_ms={}",
+            dfs_stats.nodes_visited,
+            dfs_stats.max_depth_reached,
+            dfs_stats.targets_found,
+            dfs_stats.all_targets_reached,
+            dfs_stats.backtrack_operations,
+            dfs_stats.avg_branch_depth,
+            dfs_stats.execution_time_ms,
+        );
+
+        let dfs_results: Vec<_> = DfsBuilder::new(std::sync::Arc::clone(&store))
+            .source(0)
+            .max_depth(3)
+            .track_paths(true)
+            .stream()?
+            .take(10)
+            .collect();
+
+        println!("\nFirst 10 DFS results (target, depth, path):");
+        for r in &dfs_results {
+            println!("- target={} depth={} path={:?}", r.target, r.cost, r.path);
         }
 
         // 4) Run a weighted procedure: Dijkstra.

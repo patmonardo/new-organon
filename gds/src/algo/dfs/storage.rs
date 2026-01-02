@@ -7,6 +7,7 @@
 
 use super::computation::DfsComputationRuntime;
 use super::spec::{DfsPathResult, DfsResult};
+use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
@@ -55,8 +56,18 @@ impl DfsStorageRuntime {
         &self,
         computation: &mut DfsComputationRuntime,
         graph: Option<&dyn Graph>,
+        progress_tracker: &mut ProgressTracker,
     ) -> Result<DfsResult, AlgorithmError> {
         let start_time = std::time::Instant::now();
+
+        let volume = graph
+            .map(|g| g.relationship_count())
+            .unwrap_or(UNKNOWN_VOLUME);
+        if volume == UNKNOWN_VOLUME {
+            progress_tracker.begin_subtask_unknown();
+        } else {
+            progress_tracker.begin_subtask(volume);
+        }
 
         // Initialize computation runtime
         computation.initialize(self.source_node, self.max_depth);
@@ -102,6 +113,8 @@ impl DfsStorageRuntime {
 
             // Get neighbors and add to stack (in reverse order for consistent traversal)
             let mut neighbors = self.get_neighbors(graph, current_node);
+            // Progress is tracked in terms of relationships examined.
+            progress_tracker.log_progress(neighbors.len());
             neighbors.reverse(); // Reverse to maintain consistent order
 
             for neighbor in neighbors {
@@ -125,6 +138,8 @@ impl DfsStorageRuntime {
         let visited_count = visited.len();
         let mut visited_nodes: Vec<(NodeId, u32)> = visited.into_iter().collect();
         visited_nodes.sort_by_key(|(_, order)| *order);
+
+        progress_tracker.end_subtask();
 
         Ok(DfsResult {
             visited_nodes,
@@ -187,6 +202,7 @@ impl DfsStorageRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::utils::progress::Tasks;
 
     #[test]
     fn test_dfs_storage_runtime_creation() {
@@ -203,7 +219,11 @@ mod tests {
         let storage = DfsStorageRuntime::new(0, vec![3], None, true, 1);
         let mut computation = DfsComputationRuntime::new(0, true, 1);
 
-        let result = storage.compute_dfs(&mut computation, None).unwrap();
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("DFS", UNKNOWN_VOLUME));
+
+        let result = storage
+            .compute_dfs(&mut computation, None, &mut progress_tracker)
+            .unwrap();
 
         assert!(result.nodes_visited > 0);
         assert!(!result.paths.is_empty());
@@ -214,7 +234,11 @@ mod tests {
         let storage = DfsStorageRuntime::new(0, vec![0], None, true, 1);
         let mut computation = DfsComputationRuntime::new(0, true, 1);
 
-        let result = storage.compute_dfs(&mut computation, None).unwrap();
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("DFS", UNKNOWN_VOLUME));
+
+        let result = storage
+            .compute_dfs(&mut computation, None, &mut progress_tracker)
+            .unwrap();
 
         assert!(result.nodes_visited >= 1);
         assert!(!result.paths.is_empty());
@@ -228,7 +252,11 @@ mod tests {
         let storage = DfsStorageRuntime::new(0, vec![], Some(1), false, 1);
         let mut computation = DfsComputationRuntime::new(0, false, 1);
 
-        let result = storage.compute_dfs(&mut computation, None).unwrap();
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("DFS", UNKNOWN_VOLUME));
+
+        let result = storage
+            .compute_dfs(&mut computation, None, &mut progress_tracker)
+            .unwrap();
 
         // With max_depth=1, we should only visit nodes at distance 0 and 1
         assert!(result.nodes_visited <= 3); // Source + immediate neighbors

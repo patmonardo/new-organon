@@ -10,6 +10,7 @@ use super::spec::{BfsPathResult, BfsResult};
 use crate::algo::traversal::{
     Aggregator, ExitPredicate, FollowExitPredicate, OneHopAggregator, TargetExitPredicate,
 };
+use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
@@ -98,8 +99,18 @@ impl BfsStorageRuntime {
         &self,
         computation: &mut BfsComputationRuntime,
         graph: Option<&dyn Graph>,
+        progress_tracker: &mut ProgressTracker,
     ) -> Result<BfsResult, AlgorithmError> {
         let start_time = std::time::Instant::now();
+
+        let volume = graph
+            .map(|g| g.relationship_count())
+            .unwrap_or(UNKNOWN_VOLUME);
+        if volume == UNKNOWN_VOLUME {
+            progress_tracker.begin_subtask_unknown();
+        } else {
+            progress_tracker.begin_subtask(volume);
+        }
 
         // Initialize computation runtime
         computation.initialize(self.source_node, self.max_depth);
@@ -176,6 +187,8 @@ impl BfsStorageRuntime {
                     if exit_result == crate::algo::traversal::ExitPredicateResult::Follow {
                         // Relax node - get neighbors and add to next level
                         let neighbors = self.get_neighbors(graph, node_id);
+                        // Progress is tracked in terms of relationships examined.
+                        progress_tracker.log_progress(neighbors.len());
                         for neighbor in neighbors {
                             let Some(neighbor_index) = node_id_to_index(neighbor) else {
                                 continue;
@@ -237,6 +250,8 @@ impl BfsStorageRuntime {
         };
 
         let computation_time = start_time.elapsed().as_millis() as u64;
+
+        progress_tracker.end_subtask();
 
         Ok(BfsResult {
             visited_nodes,
@@ -345,6 +360,7 @@ fn reconstruct_path(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::utils::progress::Tasks;
 
     #[test]
     fn test_bfs_storage_runtime_creation() {
@@ -362,7 +378,11 @@ mod tests {
         let storage = BfsStorageRuntime::new(0, vec![3], None, true, 1, 64);
         let mut computation = BfsComputationRuntime::new(0, true, 1);
 
-        let result = storage.compute_bfs(&mut computation, None).unwrap();
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("BFS", UNKNOWN_VOLUME));
+
+        let result = storage
+            .compute_bfs(&mut computation, None, &mut progress_tracker)
+            .unwrap();
 
         assert!(result.nodes_visited > 0);
     }
@@ -372,7 +392,11 @@ mod tests {
         let storage = BfsStorageRuntime::new(0, vec![0], None, true, 1, 64);
         let mut computation = BfsComputationRuntime::new(0, true, 1);
 
-        let result = storage.compute_bfs(&mut computation, None).unwrap();
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("BFS", UNKNOWN_VOLUME));
+
+        let result = storage
+            .compute_bfs(&mut computation, None, &mut progress_tracker)
+            .unwrap();
 
         assert!(result.nodes_visited >= 1);
     }
@@ -382,7 +406,11 @@ mod tests {
         let storage = BfsStorageRuntime::new(0, vec![], Some(1), false, 1, 64);
         let mut computation = BfsComputationRuntime::new(0, false, 1);
 
-        let result = storage.compute_bfs(&mut computation, None).unwrap();
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("BFS", UNKNOWN_VOLUME));
+
+        let result = storage
+            .compute_bfs(&mut computation, None, &mut progress_tracker)
+            .unwrap();
 
         // With max_depth=1, we should only visit nodes at distance 0 and 1
         assert!(result.nodes_visited <= 3); // Source + immediate neighbors

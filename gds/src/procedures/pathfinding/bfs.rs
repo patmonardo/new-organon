@@ -201,9 +201,10 @@ impl BfsBuilder {
     fn compute(self) -> Result<PathFindingResult> {
         self.validate()?;
 
-        // Create progress tracker for BFS execution
-        let node_count = self.graph_store.node_count();
-        let _progress_tracker = ProgressTracker::new(Tasks::Leaf("BFS".to_string(), node_count));
+        // Create progress tracker for BFS execution.
+        // We track progress in terms of relationships examined.
+        let task = Tasks::leaf("BFS", crate::core::utils::progress::UNKNOWN_VOLUME);
+        let mut progress_tracker = ProgressTracker::with_concurrency(task, self.concurrency);
 
         let source_u64 = self.source.expect("validate() ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -233,7 +234,7 @@ impl BfsBuilder {
                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
             })?;
 
-        let result = storage.compute_bfs(&mut computation, Some(graph_view.as_ref()))?;
+        let result = storage.compute_bfs(&mut computation, Some(graph_view.as_ref()), &mut progress_tracker)?;
 
         let mut path_map: HashMap<NodeId, Vec<u64>> = HashMap::new();
         if self.track_paths {
