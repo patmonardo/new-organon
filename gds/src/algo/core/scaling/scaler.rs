@@ -152,6 +152,10 @@ impl PropertyStats {
             variance.sqrt()
         }
     }
+
+    fn is_empty(&self) -> bool {
+        self.count == 0
+    }
 }
 
 /// Compute statistics in parallel over node properties
@@ -211,11 +215,17 @@ impl MinMaxScaler {
         F: Fn(u64) -> f64 + Send + Sync,
     {
         let stats = compute_stats(node_count, property_fn, concurrency);
+        if stats.is_empty() {
+            return Box::new(ZeroScaler {
+                statistics: ScalerStatistics::new(),
+            });
+        }
         let range = stats.max - stats.min;
 
         let statistics = ScalerStatistics::new()
             .with_stat("min", stats.min)
-            .with_stat("max", stats.max);
+            .with_stat("max", stats.max)
+            .with_stat("maxMinDiff", range);
 
         if range.abs() < CLOSE_TO_ZERO {
             Box::new(ZeroScaler { statistics })
@@ -258,6 +268,11 @@ impl StdScoreScaler {
         F: Fn(u64) -> f64 + Send + Sync,
     {
         let stats = compute_stats(node_count, property_fn, concurrency);
+        if stats.is_empty() {
+            return Box::new(ZeroScaler {
+                statistics: ScalerStatistics::new(),
+            });
+        }
         let avg = stats.avg();
         let std = stats.std();
 
@@ -306,13 +321,19 @@ impl MeanScaler {
         F: Fn(u64) -> f64 + Send + Sync,
     {
         let stats = compute_stats(node_count, property_fn, concurrency);
+        if stats.is_empty() {
+            return Box::new(ZeroScaler {
+                statistics: ScalerStatistics::new(),
+            });
+        }
         let avg = stats.avg();
         let range = stats.max - stats.min;
 
         let statistics = ScalerStatistics::new()
             .with_stat("min", stats.min)
             .with_stat("avg", avg)
-            .with_stat("max", stats.max);
+            .with_stat("max", stats.max)
+            .with_stat("maxMinDiff", range);
 
         if range.abs() < CLOSE_TO_ZERO {
             Box::new(ZeroScaler { statistics })
@@ -354,6 +375,11 @@ impl MaxScaler {
         F: Fn(u64) -> f64 + Send + Sync,
     {
         let stats = compute_stats(node_count, property_fn, concurrency);
+        if stats.is_empty() {
+            return Box::new(ZeroScaler {
+                statistics: ScalerStatistics::new(),
+            });
+        }
         let abs_max = stats.abs_max;
 
         let statistics = ScalerStatistics::new().with_stat("absMax", abs_max);
@@ -397,6 +423,11 @@ impl CenterScaler {
         F: Fn(u64) -> f64 + Send + Sync,
     {
         let stats = compute_stats(node_count, property_fn, concurrency);
+        if stats.is_empty() {
+            return Box::new(ZeroScaler {
+                statistics: ScalerStatistics::new(),
+            });
+        }
         let avg = stats.avg();
 
         let statistics = ScalerStatistics::new().with_stat("avg", avg);

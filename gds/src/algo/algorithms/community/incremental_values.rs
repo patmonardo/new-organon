@@ -4,9 +4,9 @@
 //!
 //! This module provides node property values that only writes changed values for incremental algorithms.
 
-use super::super::stubs::{
-    FilteredNodePropertyValuesMarker, LongNodePropertyValues, NodePropertyValues, ValueType,
-};
+use crate::types::properties::node::{LongNodePropertyValues, NodePropertyValues};
+use crate::types::properties::{PropertyValues, PropertyValuesResult};
+use crate::types::ValueType;
 
 /// Node property values that only writes changed values (for incremental algorithms)
 ///
@@ -51,6 +51,7 @@ use super::super::stubs::{
 /// // Only nodes whose community changed will have values written
 /// // Unchanged nodes return i64::MIN (sentinel value)
 /// ```
+#[derive(Debug)]
 pub struct LongIfChangedNodePropertyValues {
     /// Previous iteration property values (seed)
     seed_properties: Box<dyn LongNodePropertyValues>,
@@ -88,23 +89,110 @@ impl LongIfChangedNodePropertyValues {
     }
 }
 
-impl LongNodePropertyValues for LongIfChangedNodePropertyValues {
-    /// Only return value if it changed from seed
-    ///
-    /// Translation of: `longValue()` (lines 72-78)
-    ///
-    /// ## Returns
-    ///
-    /// - New value if it differs from seed value
-    /// - `i64::MIN` if value unchanged (sentinel value for filtering)
-    fn long_value(&self, node_id: usize) -> i64 {
-        let seed_value = if node_id < self.seed_properties.node_count() {
-            self.seed_properties.long_value(node_id)
+impl PropertyValues for LongIfChangedNodePropertyValues {
+    fn value_type(&self) -> ValueType {
+        ValueType::Long
+    }
+
+    fn element_count(&self) -> usize {
+        self.seed_properties
+            .element_count()
+            .max(self.new_properties.element_count())
+    }
+}
+
+impl NodePropertyValues for LongIfChangedNodePropertyValues {
+    fn double_value(&self, _node_id: u64) -> PropertyValuesResult<f64> {
+        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+            actual: ValueType::Long,
+            expected: ValueType::Double,
+        })
+    }
+
+    fn long_value(&self, node_id: u64) -> PropertyValuesResult<i64> {
+        let seed_value = if (node_id as usize) < self.seed_properties.element_count() {
+            self.seed_properties.long_value_unchecked(node_id)
         } else {
             i64::MIN
         };
-        let write_value = if node_id < self.new_properties.node_count() {
-            self.new_properties.long_value(node_id)
+        let write_value = if (node_id as usize) < self.new_properties.element_count() {
+            self.new_properties.long_value_unchecked(node_id)
+        } else {
+            i64::MIN
+        };
+
+        if seed_value != write_value {
+            Ok(write_value)
+        } else {
+            Ok(i64::MIN) // Sentinel: don't write unchanged values
+        }
+    }
+
+    fn double_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<f64>> {
+        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+            actual: ValueType::Long,
+            expected: ValueType::DoubleArray,
+        })
+    }
+
+    fn float_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<f32>> {
+        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+            actual: ValueType::Long,
+            expected: ValueType::FloatArray,
+        })
+    }
+
+    fn long_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<i64>> {
+        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+            actual: ValueType::Long,
+            expected: ValueType::LongArray,
+        })
+    }
+
+    fn get_object(&self, _node_id: u64) -> PropertyValuesResult<Box<dyn std::any::Any>> {
+        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+            actual: ValueType::Long,
+            expected: ValueType::Unknown,
+        })
+    }
+
+    fn dimension(&self) -> Option<usize> {
+        Some(1)
+    }
+
+    fn get_max_long_property_value(&self) -> Option<i64> {
+        // This would be complex to compute, so we'll skip for now
+        None
+    }
+
+    fn get_max_double_property_value(&self) -> Option<f64> {
+        None
+    }
+
+    fn has_value(&self, node_id: u64) -> bool {
+        let seed_value = if (node_id as usize) < self.seed_properties.element_count() {
+            self.seed_properties.long_value_unchecked(node_id)
+        } else {
+            i64::MIN
+        };
+        let write_value = if (node_id as usize) < self.new_properties.element_count() {
+            self.new_properties.long_value_unchecked(node_id)
+        } else {
+            i64::MIN
+        };
+        seed_value == i64::MIN || (seed_value != write_value)
+    }
+}
+
+impl LongNodePropertyValues for LongIfChangedNodePropertyValues {
+    fn long_value_unchecked(&self, node_id: u64) -> i64 {
+        let seed_value = if (node_id as usize) < self.seed_properties.element_count() {
+            self.seed_properties.long_value_unchecked(node_id)
+        } else {
+            i64::MIN
+        };
+        let write_value = if (node_id as usize) < self.new_properties.element_count() {
+            self.new_properties.long_value_unchecked(node_id)
         } else {
             i64::MIN
         };
@@ -115,80 +203,90 @@ impl LongNodePropertyValues for LongIfChangedNodePropertyValues {
             i64::MIN // Sentinel: don't write unchanged values
         }
     }
-
-    /// Has value only if it changed
-    ///
-    /// Translation of: `hasValue()` (lines 86-90)
-    ///
-    /// ## Returns
-    ///
-    /// - `true` if seed had no value OR if new value differs from seed
-    /// - `false` if new value same as seed
-    fn has_value(&self, node_id: usize) -> bool {
-        let seed_value = if node_id < self.seed_properties.node_count() {
-            self.seed_properties.long_value(node_id)
-        } else {
-            i64::MIN
-        };
-        let write_value = if node_id < self.new_properties.node_count() {
-            self.new_properties.long_value(node_id)
-        } else {
-            i64::MIN
-        };
-        seed_value == i64::MIN || (seed_value != write_value)
-    }
 }
-
-impl NodePropertyValues for LongIfChangedNodePropertyValues {
-    /// Get the number of nodes
-    ///
-    /// Translation of: `nodeCount()` (lines 80-83)
-    ///
-    /// ## Returns
-    ///
-    /// Maximum of seed and new property node counts
-    fn node_count(&self) -> usize {
-        self.seed_properties
-            .node_count()
-            .max(self.new_properties.node_count())
-    }
-
-    /// Get the value type
-    fn value_type(&self) -> ValueType {
-        ValueType::Long
-    }
-}
-
-/// Marker trait indicating this is a filtered property values implementation
-impl FilteredNodePropertyValuesMarker for LongIfChangedNodePropertyValues {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algo::algorithms::stubs::{LongNodePropertyValues, ValueType};
+    use crate::types::properties::{PropertyValues, PropertyValuesResult};
+    use crate::types::ValueType;
 
     // Test implementation
+    #[derive(Debug)]
     struct TestLongProperty {
         values: Vec<i64>,
     }
 
-    impl NodePropertyValues for TestLongProperty {
-        fn node_count(&self) -> usize {
-            self.values.len()
-        }
-
+    impl PropertyValues for TestLongProperty {
         fn value_type(&self) -> ValueType {
             ValueType::Long
+        }
+
+        fn element_count(&self) -> usize {
+            self.values.len()
+        }
+    }
+
+    impl NodePropertyValues for TestLongProperty {
+        fn double_value(&self, _node_id: u64) -> PropertyValuesResult<f64> {
+            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::Double,
+            })
+        }
+
+        fn long_value(&self, node_id: u64) -> PropertyValuesResult<i64> {
+            Ok(self.values[node_id as usize])
+        }
+
+        fn double_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<f64>> {
+            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::DoubleArray,
+            })
+        }
+
+        fn float_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<f32>> {
+            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::FloatArray,
+            })
+        }
+
+        fn long_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<i64>> {
+            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::LongArray,
+            })
+        }
+
+        fn get_object(&self, _node_id: u64) -> PropertyValuesResult<Box<dyn std::any::Any>> {
+            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::Unknown,
+            })
+        }
+
+        fn dimension(&self) -> Option<usize> {
+            Some(1)
+        }
+
+        fn get_max_long_property_value(&self) -> Option<i64> {
+            self.values.iter().max().copied()
+        }
+
+        fn get_max_double_property_value(&self) -> Option<f64> {
+            None
+        }
+
+        fn has_value(&self, node_id: u64) -> bool {
+            self.values[node_id as usize] != i64::MIN
         }
     }
 
     impl LongNodePropertyValues for TestLongProperty {
-        fn long_value(&self, node_id: usize) -> i64 {
-            self.values[node_id]
-        }
-
-        fn has_value(&self, node_id: usize) -> bool {
-            self.values[node_id] != i64::MIN
+        fn long_value_unchecked(&self, node_id: u64) -> i64 {
+            self.values[node_id as usize]
         }
     }
 
@@ -203,17 +301,17 @@ mod tests {
 
         let incremental = LongIfChangedNodePropertyValues::new(seed, new);
 
-        assert_eq!(incremental.node_count(), 5);
+        assert_eq!(incremental.element_count(), 5);
         assert_eq!(incremental.value_type(), ValueType::Long);
 
         // Unchanged values should return i64::MIN
-        assert_eq!(incremental.long_value(0), i64::MIN); // 1 -> 1 (unchanged)
-        assert_eq!(incremental.long_value(1), i64::MIN); // 2 -> 2 (unchanged)
-        assert_eq!(incremental.long_value(3), i64::MIN); // 4 -> 4 (unchanged)
+        assert_eq!(incremental.long_value(0).unwrap(), i64::MIN); // 1 -> 1 (unchanged)
+        assert_eq!(incremental.long_value(1).unwrap(), i64::MIN); // 2 -> 2 (unchanged)
+        assert_eq!(incremental.long_value(3).unwrap(), i64::MIN); // 4 -> 4 (unchanged)
 
         // Changed values should return new value
-        assert_eq!(incremental.long_value(2), 6); // 3 -> 6 (changed)
-        assert_eq!(incremental.long_value(4), 7); // 5 -> 7 (changed)
+        assert_eq!(incremental.long_value(2).unwrap(), 6); // 3 -> 6 (changed)
+        assert_eq!(incremental.long_value(4).unwrap(), 7); // 5 -> 7 (changed)
 
         // Check has_value
         assert!(!incremental.has_value(0)); // Unchanged
@@ -234,12 +332,12 @@ mod tests {
 
         let incremental = LongIfChangedNodePropertyValues::new(seed, new);
 
-        assert_eq!(incremental.node_count(), 3);
+        assert_eq!(incremental.element_count(), 3);
 
         // All values should be written (no seed values)
-        assert_eq!(incremental.long_value(0), 1);
-        assert_eq!(incremental.long_value(1), 2);
-        assert_eq!(incremental.long_value(2), 3);
+        assert_eq!(incremental.long_value(0).unwrap(), 1);
+        assert_eq!(incremental.long_value(1).unwrap(), 2);
+        assert_eq!(incremental.long_value(2).unwrap(), 3);
 
         assert!(incremental.has_value(0));
         assert!(incremental.has_value(1));
@@ -257,12 +355,12 @@ mod tests {
 
         let incremental = LongIfChangedNodePropertyValues::new(seed, new);
 
-        assert_eq!(incremental.node_count(), 3);
+        assert_eq!(incremental.element_count(), 3);
 
         // All values should be filtered out (unchanged)
-        assert_eq!(incremental.long_value(0), i64::MIN);
-        assert_eq!(incremental.long_value(1), i64::MIN);
-        assert_eq!(incremental.long_value(2), i64::MIN);
+        assert_eq!(incremental.long_value(0).unwrap(), i64::MIN);
+        assert_eq!(incremental.long_value(1).unwrap(), i64::MIN);
+        assert_eq!(incremental.long_value(2).unwrap(), i64::MIN);
 
         assert!(!incremental.has_value(0));
         assert!(!incremental.has_value(1));
@@ -281,14 +379,14 @@ mod tests {
         let incremental = LongIfChangedNodePropertyValues::new(seed, new);
 
         // Should use maximum size
-        assert_eq!(incremental.node_count(), 3);
+        assert_eq!(incremental.element_count(), 3);
 
         // Existing nodes
-        assert_eq!(incremental.long_value(0), i64::MIN); // 1 -> 1 (unchanged)
-        assert_eq!(incremental.long_value(1), i64::MIN); // 2 -> 2 (unchanged)
+        assert_eq!(incremental.long_value(0).unwrap(), i64::MIN); // 1 -> 1 (unchanged)
+        assert_eq!(incremental.long_value(1).unwrap(), i64::MIN); // 2 -> 2 (unchanged)
 
         // New node (no seed value)
-        assert_eq!(incremental.long_value(2), 3); // No seed -> 3 (changed)
+        assert_eq!(incremental.long_value(2).unwrap(), 3); // No seed -> 3 (changed)
 
         assert!(!incremental.has_value(0));
         assert!(!incremental.has_value(1));

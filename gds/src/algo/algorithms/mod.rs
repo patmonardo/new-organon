@@ -90,9 +90,9 @@
 
 pub mod centrality;
 pub mod community;
-pub mod result;
-pub mod stubs;
+pub mod similarity;
 
 // Re-export commonly used types
 pub use centrality::*;
 pub use community::*;
+pub use similarity::*;

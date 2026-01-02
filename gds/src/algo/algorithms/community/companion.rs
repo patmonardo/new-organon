@@ -4,11 +4,13 @@
 //!
 //! This module provides utility functions for community detection algorithms.
 
-use super::super::stubs::FilteredNodePropertyValuesMarker;
-use super::super::stubs::{LongNodePropertyValues, NodePropertyValues};
+use crate::types::properties::node::{LongNodePropertyValues, NodePropertyValues};
+use crate::types::properties::{PropertyValues, PropertyValuesResult};
+use crate::types::ValueType;
 use super::consecutive_values::ConsecutiveLongNodePropertyValues;
 use std::collections::HashMap;
 
+#[derive(Debug)]
 struct CommunitySizeFilter {
     inner: Box<dyn LongNodePropertyValues>,
     min_community_size: usize,
@@ -19,8 +21,8 @@ impl CommunitySizeFilter {
     fn new(inner: Box<dyn LongNodePropertyValues>, min_community_size: usize) -> Self {
         let mut community_sizes: HashMap<i64, usize> = HashMap::new();
         for node_id in 0..inner.node_count() {
-            if inner.has_value(node_id) {
-                let cid = inner.long_value(node_id);
+            if inner.has_value(node_id as u64) {
+                let cid = inner.long_value_unchecked(node_id as u64);
                 if cid != i64::MIN {
                     *community_sizes.entry(cid).or_insert(0) += 1;
                 }
@@ -35,39 +37,87 @@ impl CommunitySizeFilter {
     }
 }
 
-impl NodePropertyValues for CommunitySizeFilter {
-    fn node_count(&self) -> usize {
-        self.inner.node_count()
+impl PropertyValues for CommunitySizeFilter {
+    fn value_type(&self) -> ValueType {
+        ValueType::Long
     }
 
-    fn value_type(&self) -> crate::algo::algorithms::stubs::ValueType {
-        crate::algo::algorithms::stubs::ValueType::Long
+    fn element_count(&self) -> usize {
+        self.inner.node_count()
     }
 }
 
-impl LongNodePropertyValues for CommunitySizeFilter {
-    fn long_value(&self, node_id: usize) -> i64 {
+impl NodePropertyValues for CommunitySizeFilter {
+    fn double_value(&self, _node_id: u64) -> PropertyValuesResult<f64> {
+        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+            actual: ValueType::Long,
+            expected: ValueType::Double,
+        })
+    }
+
+    fn long_value(&self, node_id: u64) -> PropertyValuesResult<i64> {
         if !self.inner.has_value(node_id) {
-            return i64::MIN;
+            return Ok(i64::MIN);
         }
 
-        let cid = self.inner.long_value(node_id);
+        let cid = self.inner.long_value_unchecked(node_id);
         if cid == i64::MIN {
-            return i64::MIN;
+            return Ok(i64::MIN);
         }
 
         match self.community_sizes.get(&cid) {
-            Some(size) if *size >= self.min_community_size => cid,
-            _ => i64::MIN,
+            Some(size) if *size >= self.min_community_size => Ok(cid),
+            _ => Ok(i64::MIN),
         }
     }
 
-    fn has_value(&self, node_id: usize) -> bool {
+    fn double_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<f64>> {
+        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+            actual: ValueType::Long,
+            expected: ValueType::DoubleArray,
+        })
+    }
+
+    fn float_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<f32>> {
+        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+            actual: ValueType::Long,
+            expected: ValueType::FloatArray,
+        })
+    }
+
+    fn long_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<i64>> {
+        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+            actual: ValueType::Long,
+            expected: ValueType::LongArray,
+        })
+    }
+
+    fn get_object(&self, _node_id: u64) -> PropertyValuesResult<Box<dyn std::any::Any>> {
+        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+            actual: ValueType::Long,
+            expected: ValueType::Unknown,
+        })
+    }
+
+    fn dimension(&self) -> Option<usize> {
+        Some(1)
+    }
+
+    fn get_max_long_property_value(&self) -> Option<i64> {
+        // This would be complex to compute, so we'll skip for now
+        None
+    }
+
+    fn get_max_double_property_value(&self) -> Option<f64> {
+        None
+    }
+
+    fn has_value(&self, node_id: u64) -> bool {
         if !self.inner.has_value(node_id) {
             return false;
         }
 
-        let cid = self.inner.long_value(node_id);
+        let cid = self.inner.long_value_unchecked(node_id);
         if cid == i64::MIN {
             return false;
         }
@@ -78,7 +128,11 @@ impl LongNodePropertyValues for CommunitySizeFilter {
     }
 }
 
-impl FilteredNodePropertyValuesMarker for CommunitySizeFilter {}
+impl LongNodePropertyValues for CommunitySizeFilter {
+    fn long_value_unchecked(&self, node_id: u64) -> i64 {
+        self.long_value(node_id).unwrap_or(i64::MIN)
+    }
+}
 
 /// Community algorithm companion utilities
 ///
@@ -238,30 +292,85 @@ impl CommunityCompanion {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algo::algorithms::stubs::{LongNodePropertyValues, ValueType};
+    use crate::types::properties::{PropertyValues, PropertyValuesResult};
+    use crate::types::ValueType;
 
     // Test implementation
+    #[derive(Debug)]
     struct TestLongProperty {
         values: Vec<i64>,
     }
 
-    impl NodePropertyValues for TestLongProperty {
-        fn node_count(&self) -> usize {
-            self.values.len()
-        }
-
+    impl PropertyValues for TestLongProperty {
         fn value_type(&self) -> ValueType {
             ValueType::Long
+        }
+
+        fn element_count(&self) -> usize {
+            self.values.len()
+        }
+    }
+
+    impl NodePropertyValues for TestLongProperty {
+        fn double_value(&self, _node_id: u64) -> PropertyValuesResult<f64> {
+            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::Double,
+            })
+        }
+
+        fn long_value(&self, node_id: u64) -> PropertyValuesResult<i64> {
+            Ok(self.values[node_id as usize])
+        }
+
+        fn double_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<f64>> {
+            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::DoubleArray,
+            })
+        }
+
+        fn float_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<f32>> {
+            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::FloatArray,
+            })
+        }
+
+        fn long_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<i64>> {
+            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::LongArray,
+            })
+        }
+
+        fn get_object(&self, _node_id: u64) -> PropertyValuesResult<Box<dyn std::any::Any>> {
+            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::Unknown,
+            })
+        }
+
+        fn dimension(&self) -> Option<usize> {
+            Some(1)
+        }
+
+        fn get_max_long_property_value(&self) -> Option<i64> {
+            self.values.iter().max().copied()
+        }
+
+        fn get_max_double_property_value(&self) -> Option<f64> {
+            None
+        }
+
+        fn has_value(&self, node_id: u64) -> bool {
+            self.values[node_id as usize] != i64::MIN
         }
     }
 
     impl LongNodePropertyValues for TestLongProperty {
-        fn long_value(&self, node_id: usize) -> i64 {
-            self.values[node_id]
-        }
-
-        fn has_value(&self, node_id: usize) -> bool {
-            self.values[node_id] != i64::MIN
+        fn long_value_unchecked(&self, node_id: u64) -> i64 {
+            self.values[node_id as usize]
         }
     }
 
@@ -273,9 +382,9 @@ mod tests {
 
         // Test without consecutive IDs
         let result = CommunityCompanion::node_property_values(false, props);
-        assert_eq!(result.node_count(), 5);
-        assert_eq!(result.long_value(0), 1);
-        assert_eq!(result.long_value(4), 5);
+        assert_eq!(result.element_count(), 5);
+        assert_eq!(result.long_value(0).unwrap(), 1);
+        assert_eq!(result.long_value(4).unwrap(), 5);
     }
 
     #[test]
@@ -286,14 +395,14 @@ mod tests {
 
         // Test with consecutive IDs
         let result = CommunityCompanion::node_property_values(true, props);
-        assert_eq!(result.node_count(), 5);
+        assert_eq!(result.element_count(), 5);
 
         // Should remap 10->0, 20->1, 30->2
-        assert_eq!(result.long_value(0), 0); // 10 -> 0
-        assert_eq!(result.long_value(1), 1); // 20 -> 1
-        assert_eq!(result.long_value(2), 0); // 10 -> 0
-        assert_eq!(result.long_value(3), 2); // 30 -> 2
-        assert_eq!(result.long_value(4), 1); // 20 -> 1
+        assert_eq!(result.long_value(0).unwrap(), 0); // 10 -> 0
+        assert_eq!(result.long_value(1).unwrap(), 1); // 20 -> 1
+        assert_eq!(result.long_value(2).unwrap(), 0); // 10 -> 0
+        assert_eq!(result.long_value(3).unwrap(), 2); // 30 -> 2
+        assert_eq!(result.long_value(4).unwrap(), 1); // 20 -> 1
     }
 
     #[test]
@@ -310,11 +419,11 @@ mod tests {
             1,       // concurrency
         );
 
-        assert_eq!(result.node_count(), 5);
+        assert_eq!(result.element_count(), 5);
         // sizes: 1->2, 2->1, 3->2; min=3 means everything filtered
         for node_id in 0..5 {
-            assert!(!result.has_value(node_id));
-            assert_eq!(result.long_value(node_id), i64::MIN);
+            assert!(!result.has_value(node_id as u64));
+            assert_eq!(result.long_value(node_id as u64).unwrap(), i64::MIN);
         }
     }
 

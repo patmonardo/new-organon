@@ -7,7 +7,7 @@
 //! This module provides distribution computation for PageRank and other centrality algorithms.
 
 use super::result::CentralityAlgorithmResult;
-use crate::algo::core::statistics::{StatisticsConfig, StatisticsEngine};
+use crate::algo::core::result::centrality::centrality_statistics;
 use std::collections::HashMap;
 
 /// PageRank distribution result
@@ -92,57 +92,37 @@ impl PageRankDistributionComputer {
     where
         R: CentralityAlgorithmResult,
     {
-        let mut centrality_summary = HashMap::new();
-        let mut error: Option<String> = None;
-        let mut post_processing_millis = 0;
-
-        if should_compute_distribution {
-            if use_log_scaler {
-                // LOG scaler prevents histogram computation
-                // Java stores a String in the summary map; we keep summary numeric
-                // and carry the message separately.
-                error =
-                    Some("Unable to create histogram when using scaler of type LOG".to_string());
-            } else {
-                let start = std::time::Instant::now();
-
-                // Compute statistics using our enhanced core
-                // Translation of: CentralityStatistics.centralityStatistics() (lines 54-60)
-                let config = StatisticsConfig {
-                    compute_histogram: true,
-                    concurrency,
-                    ..Default::default()
-                };
-
-                let score_fn = result.centrality_score_provider();
-                let node_count = result.node_property_values().node_count();
-
-                // Create a thread-safe closure by cloning the scores
-                let scores: Vec<f64> = (0..node_count).map(score_fn).collect();
-
-                if let Ok((summary, _histogram)) = StatisticsEngine::compute_statistics(
-                    node_count,
-                    move |node_id| scores[node_id],
-                    config,
-                ) {
-                    // Build centrality summary map
-                    // Translation of: CentralityStatistics.centralitySummary() (line 62)
-                    centrality_summary.insert("min".to_string(), summary.min);
-                    centrality_summary.insert("max".to_string(), summary.max);
-                    centrality_summary.insert("mean".to_string(), summary.mean);
-                    centrality_summary.insert("p50".to_string(), summary.percentiles.p50);
-                    centrality_summary.insert("p75".to_string(), summary.percentiles.p75);
-                    centrality_summary.insert("p90".to_string(), summary.percentiles.p90);
-                    centrality_summary.insert("p95".to_string(), summary.percentiles.p95);
-                    centrality_summary.insert("p99".to_string(), summary.percentiles.p99);
-                    centrality_summary.insert("p999".to_string(), summary.percentiles.p999);
-                }
-
-                post_processing_millis = start.elapsed().as_millis() as u64;
-            }
+        if !should_compute_distribution {
+            return PageRankDistribution::new(HashMap::new(), None, 0);
         }
 
-        PageRankDistribution::new(centrality_summary, error, post_processing_millis)
+        if use_log_scaler {
+            return PageRankDistribution::new(
+                HashMap::new(),
+                Some("Unable to create histogram when using scaler of type LOG".to_string()),
+                0,
+            );
+        }
+
+        let score_fn = result.centrality_score_provider();
+        let node_count = result.node_property_values().node_count() as u64;
+
+        // Materialize scores so the closure is Send + Sync for parallel stats
+        let scores: Vec<f64> = (0..node_count as usize).map(|id| score_fn(id)).collect();
+
+        let stats = centrality_statistics(
+            node_count,
+            move |node_id| scores[node_id as usize],
+            concurrency,
+            true,
+        );
+
+        let error = (!stats.success).then_some(
+            "Unable to create histogram due to range of scores exceeding implementation limits."
+                .to_string(),
+        );
+
+        PageRankDistribution::new(stats.summary(), error, stats.compute_millis)
     }
 }
 
