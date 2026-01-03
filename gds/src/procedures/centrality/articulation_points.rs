@@ -6,7 +6,9 @@
 //! This facade is the "live wiring" layer: it binds the algorithm runtime to a
 //! `DefaultGraphStore` graph view.
 
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+};
 use crate::mem::MemoryRange;
 use crate::algo::articulation_points::computation::ArticulationPointsComputationRuntime;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
@@ -95,6 +97,12 @@ impl ArticulationPointsFacade {
             return Ok(crate::collections::BitSet::new(0));
         }
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("articulation_points", node_count),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(node_count);
+
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {
             let node_id = match Self::checked_node_id(node_idx) {
@@ -112,6 +120,9 @@ impl ArticulationPointsFacade {
 
         let mut runtime = ArticulationPointsComputationRuntime::new(node_count);
         let result = runtime.compute(node_count, get_neighbors);
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok(result.articulation_points)
     }
@@ -173,6 +184,12 @@ impl ArticulationPointsFacade {
             return Ok((crate::collections::BitSet::new(0), start.elapsed()));
         }
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("articulation_points", node_count),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(node_count);
+
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {
             let node_id = match Self::checked_node_id(node_idx) {
@@ -190,6 +207,9 @@ impl ArticulationPointsFacade {
 
         let mut runtime = ArticulationPointsComputationRuntime::new(node_count);
         let result = runtime.compute(node_count, get_neighbors);
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((result.articulation_points, start.elapsed()))
     }

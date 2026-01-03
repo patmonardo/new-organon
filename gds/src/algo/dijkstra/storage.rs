@@ -9,6 +9,7 @@
 use super::computation::DijkstraComputationRuntime;
 use super::spec::{DijkstraPathResult, DijkstraResult};
 use super::targets::Targets;
+use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
@@ -82,60 +83,90 @@ impl DijkstraStorageRuntime {
         mut targets: Box<dyn Targets>,
         graph: Option<&dyn Graph>,
         direction: u8,
+        progress_tracker: &mut ProgressTracker,
     ) -> Result<DijkstraResult, AlgorithmError> {
-        let start_time = Instant::now();
-
-        // Initialize computation runtime
-        // Bind to actual node count from a Graph view when available
-        let node_count = graph.map(|g| g.node_count()).unwrap_or(100);
-        computation.initialize(
-            self.source_node,
-            self.track_relationships,
-            self.use_heuristic,
-            node_count,
-        );
-
-        // Initialize priority queue with source node
-        computation.add_to_queue(self.source_node, 0.0);
-
-        let mut paths = Vec::new();
-        let mut path_index = 0u64;
-
-        // Main Dijkstra loop
-        while !computation.is_queue_empty() {
-            // Get node with minimum cost
-            let (current_node, current_cost) = computation.pop_from_queue();
-
-            // Mark node as visited
-            computation.mark_visited(current_node);
-
-            // Check if we should emit a result for this node
-            let traversal_state = targets.apply(current_node);
-
-            if traversal_state.should_emit() {
-                // Reconstruct and emit path
-                let path = self.reconstruct_path(computation, current_node, path_index)?;
-                paths.push(path);
-                path_index += 1;
-
-                if traversal_state.should_stop() {
-                    break;
-                }
-            }
-
-            // Relax all outgoing edges using graph-backed neighbor streaming when available
-            self.relax_edges(computation, current_node, current_cost, graph, direction)?;
+        let volume = graph
+            .map(|g| g.relationship_count())
+            .unwrap_or(UNKNOWN_VOLUME);
+        if volume == UNKNOWN_VOLUME {
+            progress_tracker.begin_subtask_unknown();
+        } else {
+            progress_tracker.begin_subtask(volume);
         }
 
-        let computation_time_ms = start_time.elapsed().as_millis() as u64;
+        let start_time = Instant::now();
 
-        // Create path finding result
-        let path_finding_result = super::path_finding_result::PathFindingResult::new(paths);
+        let result = (|| {
+            // Initialize computation runtime
+            // Bind to actual node count from a Graph view when available
+            let node_count = graph.map(|g| g.node_count()).unwrap_or(100);
+            computation.initialize(
+                self.source_node,
+                self.track_relationships,
+                self.use_heuristic,
+                node_count,
+            );
 
-        Ok(DijkstraResult {
-            path_finding_result,
-            computation_time_ms,
-        })
+            // Initialize priority queue with source node
+            computation.add_to_queue(self.source_node, 0.0);
+
+            let mut paths = Vec::new();
+            let mut path_index = 0u64;
+
+            // Main Dijkstra loop
+            while !computation.is_queue_empty() {
+                // Get node with minimum cost
+                let (current_node, current_cost) = computation.pop_from_queue();
+
+                // Mark node as visited
+                computation.mark_visited(current_node);
+
+                // Check if we should emit a result for this node
+                let traversal_state = targets.apply(current_node);
+
+                if traversal_state.should_emit() {
+                    // Reconstruct and emit path
+                    let path = self.reconstruct_path(computation, current_node, path_index)?;
+                    paths.push(path);
+                    path_index += 1;
+
+                    if traversal_state.should_stop() {
+                        break;
+                    }
+                }
+
+                // Relax all outgoing edges using graph-backed neighbor streaming when available
+                self.relax_edges(
+                    computation,
+                    current_node,
+                    current_cost,
+                    graph,
+                    direction,
+                    progress_tracker,
+                )?;
+            }
+
+            let computation_time_ms = start_time.elapsed().as_millis() as u64;
+
+            // Create path finding result
+            let path_finding_result = super::path_finding_result::PathFindingResult::new(paths);
+
+            Ok(DijkstraResult {
+                path_finding_result,
+                computation_time_ms,
+            })
+        })();
+
+        match result {
+            Ok(v) => {
+                progress_tracker.end_subtask();
+                Ok(v)
+            }
+            Err(e) => {
+                progress_tracker.end_subtask_with_failure();
+                Err(e)
+            }
+        }
     }
 
     /// Relax all outgoing edges from a node
@@ -148,9 +179,13 @@ impl DijkstraStorageRuntime {
         source_cost: f64,
         graph: Option<&dyn Graph>,
         direction: u8,
+        progress_tracker: &mut ProgressTracker,
     ) -> Result<(), AlgorithmError> {
         // Get neighbors with weights for the source node
         let neighbors = self.get_neighbors_with_weights(graph, source_node, direction)?;
+
+        // Work unit: edges scanned during relaxation.
+        progress_tracker.log_progress(neighbors.len());
 
         for (target_node, weight, relationship_id) in neighbors {
             // Skip if target is already visited
@@ -291,6 +326,7 @@ mod tests {
     use super::super::computation::DijkstraComputationRuntime;
     use super::super::targets::{AllTargets, ManyTargets, SingleTarget};
     use super::*;
+    use crate::core::utils::progress::Tasks;
 
     #[test]
     fn test_dijkstra_storage_runtime_creation() {
@@ -306,9 +342,11 @@ mod tests {
         let mut storage = DijkstraStorageRuntime::new(0, false, 4, false);
         let mut computation = DijkstraComputationRuntime::new(0, false, 4, false);
         let targets = Box::new(SingleTarget::new(3));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra", UNKNOWN_VOLUME));
 
         // Test basic path computation
-        let result = storage.compute_dijkstra(&mut computation, targets, None, 0);
+        let result =
+            storage.compute_dijkstra(&mut computation, targets, None, 0, &mut progress_tracker);
         assert!(result.is_ok());
 
         let _ = result.unwrap();
@@ -319,9 +357,11 @@ mod tests {
         let mut storage = DijkstraStorageRuntime::new(0, false, 4, false);
         let mut computation = DijkstraComputationRuntime::new(0, false, 4, false);
         let targets = Box::new(ManyTargets::new(vec![3, 5]));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra", UNKNOWN_VOLUME));
 
         // Test with multiple targets
-        let result = storage.compute_dijkstra(&mut computation, targets, None, 0);
+        let result =
+            storage.compute_dijkstra(&mut computation, targets, None, 0, &mut progress_tracker);
         assert!(result.is_ok());
 
         let _ = result.unwrap();
@@ -332,9 +372,11 @@ mod tests {
         let mut storage = DijkstraStorageRuntime::new(0, false, 4, false);
         let mut computation = DijkstraComputationRuntime::new(0, false, 4, false);
         let targets = Box::new(AllTargets::new());
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra", UNKNOWN_VOLUME));
 
         // Test with all targets
-        let result = storage.compute_dijkstra(&mut computation, targets, None, 0);
+        let result =
+            storage.compute_dijkstra(&mut computation, targets, None, 0, &mut progress_tracker);
         assert!(result.is_ok());
 
         let _ = result.unwrap();
@@ -363,9 +405,10 @@ mod tests {
 
         let mut computation = DijkstraComputationRuntime::new(0, true, 4, false);
         let targets = Box::new(SingleTarget::new(3));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra", UNKNOWN_VOLUME));
 
         let result = storage
-            .compute_dijkstra(&mut computation, targets, None, 0)
+            .compute_dijkstra(&mut computation, targets, None, 0, &mut progress_tracker)
             .unwrap();
         let mut paths = result.path_finding_result.clone();
         let first = paths.find_first().expect("expected at least one path");

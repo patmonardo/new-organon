@@ -15,7 +15,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+};
 
 /// A single all-pairs shortest path distance row.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -234,8 +236,14 @@ impl AllShortestPathsBuilder {
             self.concurrency,
         );
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("all_shortest_paths", graph_view.node_count()),
+            self.concurrency,
+        );
+
         let start = std::time::Instant::now();
-        let receiver = storage.compute_all_shortest_paths_streaming(direction_byte)?;
+        let receiver = storage
+            .compute_all_shortest_paths_streaming(direction_byte, &mut progress_tracker)?;
 
         let node_count = graph_view.node_count() as u64;
         let mut rows: Vec<AllShortestPathsRow> = Vec::new();

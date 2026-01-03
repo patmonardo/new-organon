@@ -13,7 +13,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+};
 
 /// Per-node spanning tree row.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -223,8 +225,17 @@ impl SpanningTreeBuilder {
         let storage =
             SpanningTreeStorageRuntime::new(start_node_id, self.compute_minimum, self.concurrency);
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("spanning_tree", graph_view.relationship_count()),
+            self.concurrency,
+        );
+
         let start = std::time::Instant::now();
-        let tree = storage.compute_spanning_tree_with_graph(graph_view.as_ref(), direction_byte)?;
+        let tree = storage.compute_spanning_tree_with_graph(
+            graph_view.as_ref(),
+            direction_byte,
+            &mut progress_tracker,
+        )?;
 
         let mut rows = Vec::with_capacity(tree.node_count as usize);
         for node_id in 0..tree.node_count {

@@ -4,8 +4,9 @@ use crate::algo::similarity::filteredknn::{
     FilteredKnnStorageRuntime,
 };
 use crate::algo::similarity::knn::metrics::{KnnNodePropertySpec, SimilarityMetric};
+use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::projection::NodeLabel;
-use crate::types::prelude::DefaultGraphStore;
+use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -113,6 +114,11 @@ impl FilteredKnnBuilder {
         let computation = FilteredKnnComputationRuntime::new();
         let storage = FilteredKnnStorageRuntime::new(config.concurrency);
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("filteredknn", self.graph_store.node_count()),
+            config.concurrency,
+        );
+
         let results = if config.node_properties.is_empty() {
             storage.compute_single(
                 &computation,
@@ -123,6 +129,7 @@ impl FilteredKnnBuilder {
                 config.similarity_metric,
                 &config.source_node_labels,
                 &config.target_node_labels,
+                &mut progress_tracker,
             )?
         } else {
             // Multi-property mode should include the primary property passed to `new(...)`.
@@ -149,6 +156,7 @@ impl FilteredKnnBuilder {
                 config.similarity_cutoff,
                 &config.source_node_labels,
                 &config.target_node_labels,
+                &mut progress_tracker,
             )?
         };
 

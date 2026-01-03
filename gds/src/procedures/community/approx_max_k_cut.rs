@@ -3,7 +3,7 @@
 //! Partitions nodes into k communities to maximize (or minimize) the
 //! weight of edges crossing between communities using GRASP.
 
-use crate::core::utils::progress::TaskRegistry;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::algo::approx_max_k_cut::computation::ApproxMaxKCutComputationRuntime;
 use crate::algo::approx_max_k_cut::spec::ApproxMaxKCutConfig;
@@ -151,6 +151,12 @@ impl ApproxMaxKCutFacade {
             return Ok((Vec::new(), 0.0, 0));
         }
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("approx_max_k_cut", self.iterations),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(self.iterations);
+
         let fallback = graph_view.default_property_value();
 
         // Get neighbors with weights
@@ -181,6 +187,9 @@ impl ApproxMaxKCutFacade {
 
         let runtime = ApproxMaxKCutComputationRuntime::new(config);
         let result = runtime.compute(node_count, get_neighbors);
+
+        progress_tracker.log_progress(self.iterations);
+        progress_tracker.end_subtask();
 
         Ok((result.communities, result.cut_cost, node_count))
     }

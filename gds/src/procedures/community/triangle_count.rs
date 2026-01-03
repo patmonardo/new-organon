@@ -8,7 +8,7 @@
 //! - `concurrency`: reserved for future parallel implementation
 //! - `max_degree`: filter to skip high-degree nodes (performance / approximation)
 
-use crate::core::utils::progress::TaskRegistry;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
@@ -97,6 +97,9 @@ impl TriangleCountFacade {
             return Ok((Vec::new(), 0, start.elapsed()));
         }
 
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("triangle_count", node_count));
+        progress_tracker.begin_subtask(node_count);
+
         let max_degree = self.max_degree;
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {
@@ -122,6 +125,9 @@ impl TriangleCountFacade {
 
         let mut runtime = TriangleCountComputationRuntime::new();
         let result = runtime.compute(node_count, get_neighbors);
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((
             result.local_triangles,

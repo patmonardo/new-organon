@@ -1,6 +1,8 @@
 //! HITS Facade - Bidirectional Pregel implementation
 
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
@@ -107,7 +109,14 @@ impl HitsCentralityFacade {
                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
             })?;
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("hits", self.max_iterations),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(self.max_iterations);
         let result = run_hits(graph, self.max_iterations, self.tolerance);
+        progress_tracker.log_progress(self.max_iterations);
+        progress_tracker.end_subtask();
 
         let iter = result
             .hub_scores
@@ -146,7 +155,14 @@ impl HitsCentralityFacade {
                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
             })?;
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("hits", self.max_iterations),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(self.max_iterations);
         let result = run_hits(graph, self.max_iterations, self.tolerance);
+        progress_tracker.log_progress(self.max_iterations);
+        progress_tracker.end_subtask();
         let elapsed = start.elapsed();
 
         Ok(HitsStats {
@@ -169,7 +185,14 @@ impl HitsCentralityFacade {
                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
             })?;
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("hits", self.max_iterations),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(self.max_iterations);
         let result = run_hits(graph, self.max_iterations, self.tolerance);
+        progress_tracker.log_progress(self.max_iterations);
+        progress_tracker.end_subtask();
         Ok((result.hub_scores, result.authority_scores))
     }
 

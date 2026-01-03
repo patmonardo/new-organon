@@ -8,6 +8,7 @@
 
 use super::computation::DeltaSteppingComputationRuntime;
 use super::spec::{DeltaSteppingPathResult, DeltaSteppingResult};
+use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
@@ -58,17 +59,31 @@ impl DeltaSteppingStorageRuntime {
         computation: &mut DeltaSteppingComputationRuntime,
         graph: Option<&dyn Graph>,
         direction: u8,
+        progress_tracker: &mut ProgressTracker,
     ) -> Result<DeltaSteppingResult, AlgorithmError> {
+        let volume = graph
+            .map(|g| g.relationship_count())
+            .unwrap_or(UNKNOWN_VOLUME);
+        if volume == UNKNOWN_VOLUME {
+            progress_tracker.begin_subtask_unknown();
+        } else {
+            progress_tracker.begin_subtask(volume);
+        }
+
+        let mut scanned_relationships: usize = 0;
+        const LOG_BATCH: usize = 256;
+
         let start_time = Instant::now();
 
-        // Initialize computation runtime
-        let node_count = graph.map(|g| g.node_count()).unwrap_or(100);
-        computation.initialize(
-            self.source_node,
-            self.delta,
-            self.store_predecessors,
-            node_count,
-        );
+        let result = (|| {
+            // Initialize computation runtime
+            let node_count = graph.map(|g| g.node_count()).unwrap_or(100);
+            computation.initialize(
+                self.source_node,
+                self.delta,
+                self.store_predecessors,
+                node_count,
+            );
 
         // Initialize frontier with source node
         let mut frontier = VecDeque::new();
@@ -85,16 +100,23 @@ impl DeltaSteppingStorageRuntime {
         let max_iterations = node_count; // Safety limit
         let mut iteration = 0;
 
-        while !frontier.is_empty() && iteration < max_iterations {
+            while !frontier.is_empty() && iteration < max_iterations {
             // Phase 1: Relax nodes in current bin
             let mut next_frontier = VecDeque::new();
 
-            while let Some(node_id) = frontier.pop_front() {
+                while let Some(node_id) = frontier.pop_front() {
                 // Check if node is in current bin
                 let node_distance = computation.distance(node_id);
                 if node_distance >= self.delta * current_bin as f64 {
                     // Relax all outgoing edges from this node
                     let neighbors = self.get_neighbors_with_weights(graph, node_id, direction);
+
+                    scanned_relationships =
+                        scanned_relationships.saturating_add(neighbors.len());
+                    if scanned_relationships >= LOG_BATCH {
+                        progress_tracker.log_progress(scanned_relationships);
+                        scanned_relationships = 0;
+                    }
 
                     for (neighbor, weight) in neighbors {
                         let current_distance = computation.distance(node_id);
@@ -117,7 +139,7 @@ impl DeltaSteppingStorageRuntime {
                         }
                     }
                 }
-            }
+                }
 
             // Phase 2: Sync and find next bin
             frontier = next_frontier;
@@ -134,22 +156,38 @@ impl DeltaSteppingStorageRuntime {
                 frontier.push_back(node_id);
             }
 
-            iteration += 1;
+                iteration += 1;
+            }
+
+            if scanned_relationships > 0 {
+                progress_tracker.log_progress(scanned_relationships);
+            }
+
+            // Generate results
+            let shortest_paths = if self.store_predecessors {
+                self.generate_shortest_paths(computation)?
+            } else {
+                vec![]
+            };
+
+            let computation_time_ms = start_time.elapsed().as_millis() as u64;
+
+            Ok(DeltaSteppingResult {
+                shortest_paths,
+                computation_time_ms,
+            })
+        })();
+
+        match result {
+            Ok(result) => {
+                progress_tracker.end_subtask();
+                Ok(result)
+            }
+            Err(e) => {
+                progress_tracker.end_subtask_with_failure();
+                Err(e)
+            }
         }
-
-        // Generate results
-        let shortest_paths = if self.store_predecessors {
-            self.generate_shortest_paths(computation)?
-        } else {
-            vec![]
-        };
-
-        let computation_time_ms = start_time.elapsed().as_millis() as u64;
-
-        Ok(DeltaSteppingResult {
-            shortest_paths,
-            computation_time_ms,
-        })
     }
 
     /// Generate shortest paths from the distance tracker
@@ -250,6 +288,7 @@ impl DeltaSteppingStorageRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::utils::progress::Tasks;
 
     #[test]
     fn test_delta_stepping_storage_runtime_creation() {
@@ -264,9 +303,10 @@ mod tests {
     fn test_delta_stepping_path_computation() {
         let mut storage = DeltaSteppingStorageRuntime::new(0, 1.0, 4, true);
         let mut computation = DeltaSteppingComputationRuntime::new(0, 1.0, 4, true);
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("delta_stepping", UNKNOWN_VOLUME));
 
         // Test basic path computation
-        let result = storage.compute_delta_stepping(&mut computation, None, 0);
+        let result = storage.compute_delta_stepping(&mut computation, None, 0, &mut progress_tracker);
         assert!(result.is_ok());
 
         let _ = result.unwrap();
@@ -276,9 +316,10 @@ mod tests {
     fn test_delta_stepping_path_same_source_target() {
         let mut storage = DeltaSteppingStorageRuntime::new(0, 1.0, 4, true);
         let mut computation = DeltaSteppingComputationRuntime::new(0, 1.0, 4, true);
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("delta_stepping", UNKNOWN_VOLUME));
 
         // Test with same source and target
-        let result = storage.compute_delta_stepping(&mut computation, None, 0);
+        let result = storage.compute_delta_stepping(&mut computation, None, 0, &mut progress_tracker);
         assert!(result.is_ok());
 
         let _ = result.unwrap();

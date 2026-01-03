@@ -24,6 +24,8 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
+use crate::core::utils::progress::{ProgressTracker, Tasks};
+
 /// Per-node Louvain assignment row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub struct LouvainRow {
@@ -157,7 +159,16 @@ impl LouvainFacade {
         let storage = LouvainStorageRuntime::new(self.config.concurrency);
         let mut computation = LouvainComputationRuntime::new();
 
-        let result = storage.compute_louvain(&mut computation, graph_view.as_ref());
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("louvain", graph_view.relationship_count()),
+            self.config.concurrency,
+        );
+
+        let result = storage.compute_louvain(
+            &mut computation,
+            graph_view.as_ref(),
+            &mut progress_tracker,
+        );
         Ok((result, start.elapsed().as_millis() as u64))
     }
 

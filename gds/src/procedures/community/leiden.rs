@@ -10,7 +10,7 @@
 //! - `max_iterations`: Maximum iterations (default: 10)
 //! - `random_seed`: Random seed for reproducibility (default: 42)
 
-use crate::core::utils::progress::TaskRegistry;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
@@ -135,6 +135,9 @@ impl LeidenFacade {
         let node_count = graph_view.node_count();
         let mut adjacency_list = vec![Vec::new(); node_count];
 
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("leiden", node_count));
+        progress_tracker.begin_subtask(node_count);
+
         for (node_id, adj) in adjacency_list.iter_mut().enumerate() {
             let relationships = graph_view.stream_relationships_weighted(node_id as i64, 1.0);
             for cursor in relationships {
@@ -151,6 +154,9 @@ impl LeidenFacade {
             &self.config,
         );
         let result = storage.into_result();
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((result, start.elapsed().as_millis() as u64))
     }

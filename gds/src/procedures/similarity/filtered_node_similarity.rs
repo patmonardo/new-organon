@@ -1,4 +1,5 @@
 use crate::algo::similarity::{NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult};
+use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
@@ -138,6 +139,12 @@ impl FilteredNodeSimilarityBuilder {
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
             .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("filtered_node_similarity", graph.node_count()),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(graph.node_count());
+
         let id_map = GraphStore::nodes(self.graph_store.as_ref());
 
         let mut source_nodes: Option<HashSet<crate::types::graph::id_map::MappedNodeId>> =
@@ -181,6 +188,9 @@ impl FilteredNodeSimilarityBuilder {
             source_nodes.as_ref(),
             target_nodes.as_ref(),
         );
+
+        progress_tracker.log_progress(graph.node_count());
+        progress_tracker.end_subtask();
 
         Ok(results)
     }

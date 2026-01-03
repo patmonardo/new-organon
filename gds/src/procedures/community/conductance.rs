@@ -3,7 +3,7 @@
 //! Evaluates community quality by measuring the proportion of edges
 //! that cross community boundaries.
 
-use crate::core::utils::progress::TaskRegistry;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::algo::conductance::computation::ConductanceComputationRuntime;
 use crate::algo::conductance::spec::ConductanceConfig;
@@ -100,6 +100,9 @@ impl ConductanceFacade {
             return Ok((std::collections::HashMap::new(), 0.0));
         }
 
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("conductance", node_count));
+        progress_tracker.begin_subtask(node_count);
+
         // Get community property values
         let community_props = graph_view
             .node_properties(&self.community_property)
@@ -144,6 +147,9 @@ impl ConductanceFacade {
 
         let runtime = ConductanceComputationRuntime::new(config);
         let result = runtime.compute(node_count, get_community, get_neighbors);
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((result.community_conductances, result.average_conductance))
     }

@@ -7,6 +7,7 @@
 //! **Key Features**: Multi-source parallelization, weighted/unweighted support, streaming results
 
 use crate::projection::eval::procedure::AlgorithmError;
+use crate::core::utils::progress::ProgressTracker;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use std::sync::mpsc;
@@ -311,28 +312,57 @@ impl AllShortestPathsStorageRuntime {
     pub fn compute_all_shortest_paths_streaming(
         &self,
         direction: u8,
+        progress_tracker: &mut ProgressTracker,
     ) -> Result<mpsc::Receiver<ShortestPathResult>, AlgorithmError> {
-        let (sender, receiver) = mpsc::channel();
         let node_count = self.graph.node_count();
+        progress_tracker.begin_subtask(node_count);
 
-        // For now, process sequentially to avoid lifetime issues
-        // Note: parallel processing with more precise lifetime management is deferred.
-        for source_node in 0..node_count as NodeId {
-            let results = self.compute_shortest_paths(source_node, direction)?;
+        let mut processed_sources: usize = 0;
+        const LOG_BATCH: usize = 16;
 
-            // Send results to stream
-            for result in results {
-                if sender.send(result).is_err() {
-                    // Receiver was dropped, stop processing
-                    break;
+        let result = (|| {
+            let (sender, receiver) = mpsc::channel();
+
+            // For now, process sequentially to avoid lifetime issues
+            // Note: parallel processing with more precise lifetime management is deferred.
+            for source_node in 0..node_count as NodeId {
+                let results = self.compute_shortest_paths(source_node, direction)?;
+
+                // Send results to stream
+                for result in results {
+                    if sender.send(result).is_err() {
+                        // Receiver was dropped, stop processing
+                        break;
+                    }
+                }
+
+                processed_sources += 1;
+                if processed_sources >= LOG_BATCH {
+                    progress_tracker.log_progress(processed_sources);
+                    processed_sources = 0;
                 }
             }
+
+            if processed_sources > 0 {
+                progress_tracker.log_progress(processed_sources);
+            }
+
+            // Drop the sender to signal completion
+            drop(sender);
+
+            Ok(receiver)
+        })();
+
+        match result {
+            Ok(receiver) => {
+                progress_tracker.end_subtask();
+                Ok(receiver)
+            }
+            Err(e) => {
+                progress_tracker.end_subtask_with_failure();
+                Err(e)
+            }
         }
-
-        // Drop the sender to signal completion
-        drop(sender);
-
-        Ok(receiver)
     }
 
     /// Get total number of nodes

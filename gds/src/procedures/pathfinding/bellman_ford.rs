@@ -226,11 +226,17 @@ impl BellmanFordBuilder {
             self.concurrency,
         );
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("bellman_ford", graph_view.relationship_count()),
+            self.concurrency,
+        );
+
         let start = std::time::Instant::now();
         let result = storage.compute_bellman_ford(
             &mut computation,
             Some(graph_view.as_ref()),
             direction_byte,
+            &mut progress_tracker,
         )?;
 
         let paths: Vec<PathResult> = result

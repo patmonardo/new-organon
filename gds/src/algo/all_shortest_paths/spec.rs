@@ -141,6 +141,7 @@ define_algorithm_spec! {
     modes: [Stream, Stats],
 
     execute: |self, graph_store, config, context| {
+        use crate::core::utils::progress::{ProgressTracker, Tasks};
         // Extract configuration
         let parsed_config: AllShortestPathsConfig = serde_json::from_value(config.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {}", e)))?;
@@ -172,9 +173,11 @@ define_algorithm_spec! {
             .map(|t| (t.clone(), parsed_config.weight_property.clone()))
             .collect();
 
-        let graph = graph_store
+            let graph = graph_store
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
             .map_err(|e| AlgorithmError::Execution(format!("Failed to obtain graph view: {}", e)))?;
+
+            let node_count = graph.node_count();
 
         context.log(
             LogLevel::Info,
@@ -183,7 +186,7 @@ define_algorithm_spec! {
                 algorithm_type,
                 concurrency,
                 stream_results,
-                graph.node_count()
+                    node_count
             ),
         );
 
@@ -201,7 +204,13 @@ define_algorithm_spec! {
 
         if stream_results {
             // Streaming mode: Process results as they come
-            let receiver = storage.compute_all_shortest_paths_streaming(direction_byte)?;
+            let mut progress_tracker = ProgressTracker::with_concurrency(
+                    Tasks::leaf("all_shortest_paths", node_count),
+                concurrency,
+            );
+
+            let receiver = storage
+                .compute_all_shortest_paths_streaming(direction_byte, &mut progress_tracker)?;
 
             // Collect results from stream
             for result in receiver.iter() {

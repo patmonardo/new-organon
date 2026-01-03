@@ -177,6 +177,7 @@ define_algorithm_spec! {
     modes: [Stream, WriteNodeProperty],
 
     execute: |_self, graph_store, config, _context| {
+        use crate::core::utils::progress::{ProgressTracker, Tasks};
         // Parse configuration
         let config: DijkstraConfig = serde_json::from_value(config.clone())
             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
@@ -227,11 +228,18 @@ define_algorithm_spec! {
 
         let direction = DijkstraDirection::from_str(&config.direction);
 
+        // Progress tracking: volume is best-effort (relationship count);
+        // work units are counted inside the driver loop in storage.
+        let volume = graph.relationship_count();
+        let mut progress_tracker =
+            ProgressTracker::with_concurrency(Tasks::leaf("dijkstra", volume), config.concurrency);
+
         let result = storage.compute_dijkstra(
             &mut computation,
             targets,
             Some(graph.as_ref()),
             direction as u8,
+            &mut progress_tracker,
         )?;
 
         Ok(result)

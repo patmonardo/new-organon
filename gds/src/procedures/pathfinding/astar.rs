@@ -350,9 +350,13 @@ impl AStarBuilder {
             .user_log_registry_factory
             .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
 
-        // Create progress tracker for A* execution
-        let node_count = self.graph_store.node_count();
-        let _progress_tracker = ProgressTracker::new(Tasks::Leaf("A*".to_string(), node_count));
+        // Create progress tracker for A* execution.
+        // Best-effort volume: relationship count (work units are edge scans).
+        let relationship_count = self.graph_store.relationship_count();
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("A*", relationship_count),
+            self.concurrency,
+        );
 
         let source_u64 = self.source.expect("validate() ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -414,7 +418,12 @@ impl AStarBuilder {
 
             let mut computation = AStarComputationRuntime::new();
             let result = storage
-                .compute_astar_path(&mut computation, Some(graph_view.as_ref()), direction_byte)
+                .compute_astar_path(
+                    &mut computation,
+                    Some(graph_view.as_ref()),
+                    direction_byte,
+                    &mut progress_tracker,
+                )
                 .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
 
             nodes_visited_total += result.nodes_explored as u64;

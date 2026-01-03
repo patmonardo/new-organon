@@ -235,11 +235,17 @@ impl DeltaSteppingBuilder {
             self.store_predecessors,
         );
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("delta_stepping", graph_view.relationship_count()),
+            self.concurrency,
+        );
+
         let start = std::time::Instant::now();
         let result = storage.compute_delta_stepping(
             &mut computation,
             Some(graph_view.as_ref()),
             direction_byte,
+            &mut progress_tracker,
         )?;
 
         let paths: Vec<PathResult> = result

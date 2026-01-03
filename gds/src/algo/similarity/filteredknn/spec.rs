@@ -2,6 +2,7 @@ use super::computation::{FilteredKnnComputationResult, FilteredKnnComputationRun
 use super::storage::FilteredKnnStorageRuntime;
 use crate::define_algorithm_spec;
 use crate::algo::similarity::knn::metrics::{KnnNodePropertySpec, SimilarityMetric};
+use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::NodeLabel;
 use serde::{Deserialize, Serialize};
@@ -125,6 +126,11 @@ define_algorithm_spec! {
         let storage = FilteredKnnStorageRuntime::new(parsed.concurrency);
         let computation = FilteredKnnComputationRuntime::new();
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("filteredknn", graph_store.node_count()),
+            parsed.concurrency,
+        );
+
         let results = if parsed.node_properties.is_empty() {
             storage.compute_single(
                 &computation,
@@ -135,6 +141,7 @@ define_algorithm_spec! {
                 parsed.similarity_metric,
                 &parsed.source_node_labels,
                 &parsed.target_node_labels,
+                &mut progress_tracker,
             )?
         } else {
             storage.compute_multi(
@@ -145,6 +152,7 @@ define_algorithm_spec! {
                 parsed.similarity_cutoff,
                 &parsed.source_node_labels,
                 &parsed.target_node_labels,
+                &mut progress_tracker,
             )?
         };
 

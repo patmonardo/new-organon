@@ -7,6 +7,7 @@
 
 use super::computation::BellmanFordComputationRuntime;
 use super::spec::{BellmanFordResult, PathResult};
+use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
@@ -56,81 +57,117 @@ impl BellmanFordStorageRuntime {
         computation: &mut BellmanFordComputationRuntime,
         graph: Option<&dyn Graph>,
         direction: u8,
+        progress_tracker: &mut ProgressTracker,
     ) -> Result<BellmanFordResult, AlgorithmError> {
-        // Initialize computation runtime
-        let node_count = graph.map(|g| g.node_count()).unwrap_or(100);
-        computation.initialize(
-            self.source_node,
-            self.track_negative_cycles,
-            self.track_paths,
-            node_count,
-        );
-
-        // Initialize frontier with source node
-        let mut frontier = VecDeque::new();
-        frontier.push_back(self.source_node);
-
-        // Initialize distances
-        computation.set_distance(self.source_node, 0.0);
-        computation.set_predecessor(self.source_node, None);
-        computation.set_length(self.source_node, 0);
-
-        // Main Bellman-Ford loop
-        let mut iteration = 0;
-        let max_iterations = node_count; // Bellman-Ford converges in at most V-1 iterations
-
-        while !frontier.is_empty() && iteration < max_iterations {
-            let mut next_frontier = VecDeque::new();
-
-            // Process all nodes in current frontier
-            while let Some(node_id) = frontier.pop_front() {
-                // Relax edges from this node according to direction
-                let neighbors = self.get_neighbors_with_weights(graph, node_id, direction);
-
-                for (neighbor, weight) in neighbors {
-                    let current_distance = computation.distance(node_id);
-                    let new_distance = current_distance + weight;
-
-                    if new_distance < computation.distance(neighbor) {
-                        computation.set_distance(neighbor, new_distance);
-                        computation.set_predecessor(neighbor, Some(node_id));
-                        computation.set_length(neighbor, computation.length(node_id) + 1);
-
-                        // Check for negative cycle (path length > V)
-                        if computation.length(neighbor) > node_count as u32 {
-                            computation.add_negative_cycle_node(neighbor);
-                        }
-
-                        next_frontier.push_back(neighbor);
-                    }
-                }
-            }
-
-            frontier = next_frontier;
-            iteration += 1;
+        let volume = graph
+            .map(|g| g.relationship_count())
+            .unwrap_or(UNKNOWN_VOLUME);
+        if volume == UNKNOWN_VOLUME {
+            progress_tracker.begin_subtask_unknown();
+        } else {
+            progress_tracker.begin_subtask(volume);
         }
 
-        // Check if we have negative cycles
-        let contains_negative_cycle = computation.has_negative_cycles();
+        let mut scanned_relationships: usize = 0;
+        const LOG_BATCH: usize = 256;
 
-        // Generate results
-        let shortest_paths = if contains_negative_cycle || !self.track_paths {
-            vec![]
-        } else {
-            self.generate_shortest_paths(computation)?
-        };
+        let result = (|| {
+            // Initialize computation runtime
+            let node_count = graph.map(|g| g.node_count()).unwrap_or(100);
+            computation.initialize(
+                self.source_node,
+                self.track_negative_cycles,
+                self.track_paths,
+                node_count,
+            );
 
-        let negative_cycles = if self.track_negative_cycles {
-            self.generate_negative_cycles(computation)?
-        } else {
-            vec![]
-        };
+            // Initialize frontier with source node
+            let mut frontier = VecDeque::new();
+            frontier.push_back(self.source_node);
 
-        Ok(BellmanFordResult {
-            shortest_paths,
-            negative_cycles,
-            contains_negative_cycle,
-        })
+            // Initialize distances
+            computation.set_distance(self.source_node, 0.0);
+            computation.set_predecessor(self.source_node, None);
+            computation.set_length(self.source_node, 0);
+
+            // Main Bellman-Ford loop
+            let mut iteration = 0;
+            let max_iterations = node_count; // Bellman-Ford converges in at most V-1 iterations
+
+            while !frontier.is_empty() && iteration < max_iterations {
+                let mut next_frontier = VecDeque::new();
+
+                // Process all nodes in current frontier
+                while let Some(node_id) = frontier.pop_front() {
+                    // Relax edges from this node according to direction
+                    let neighbors = self.get_neighbors_with_weights(graph, node_id, direction);
+                    scanned_relationships =
+                        scanned_relationships.saturating_add(neighbors.len());
+                    if scanned_relationships >= LOG_BATCH {
+                        progress_tracker.log_progress(scanned_relationships);
+                        scanned_relationships = 0;
+                    }
+
+                    for (neighbor, weight) in neighbors {
+                        let current_distance = computation.distance(node_id);
+                        let new_distance = current_distance + weight;
+
+                        if new_distance < computation.distance(neighbor) {
+                            computation.set_distance(neighbor, new_distance);
+                            computation.set_predecessor(neighbor, Some(node_id));
+                            computation.set_length(neighbor, computation.length(node_id) + 1);
+
+                            // Check for negative cycle (path length > V)
+                            if computation.length(neighbor) > node_count as u32 {
+                                computation.add_negative_cycle_node(neighbor);
+                            }
+
+                            next_frontier.push_back(neighbor);
+                        }
+                    }
+                }
+
+                frontier = next_frontier;
+                iteration += 1;
+            }
+
+            if scanned_relationships > 0 {
+                progress_tracker.log_progress(scanned_relationships);
+            }
+
+            // Check if we have negative cycles
+            let contains_negative_cycle = computation.has_negative_cycles();
+
+            // Generate results
+            let shortest_paths = if contains_negative_cycle || !self.track_paths {
+                vec![]
+            } else {
+                self.generate_shortest_paths(computation)?
+            };
+
+            let negative_cycles = if self.track_negative_cycles {
+                self.generate_negative_cycles(computation)?
+            } else {
+                vec![]
+            };
+
+            Ok(BellmanFordResult {
+                shortest_paths,
+                negative_cycles,
+                contains_negative_cycle,
+            })
+        })();
+
+        match result {
+            Ok(result) => {
+                progress_tracker.end_subtask();
+                Ok(result)
+            }
+            Err(e) => {
+                progress_tracker.end_subtask_with_failure();
+                Err(e)
+            }
+        }
     }
 
     /// Generate shortest paths from the distance tracker
@@ -300,6 +337,7 @@ impl BellmanFordStorageRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::utils::progress::Tasks;
 
     #[test]
     fn test_bellman_ford_storage_runtime_creation() {
@@ -314,9 +352,10 @@ mod tests {
     fn test_bellman_ford_path_computation() {
         let mut storage = BellmanFordStorageRuntime::new(0, true, true, 4);
         let mut computation = BellmanFordComputationRuntime::new(0, true, true, 4);
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("bellman_ford", UNKNOWN_VOLUME));
 
         // Test basic path computation
-        let result = storage.compute_bellman_ford(&mut computation, None, 0);
+        let result = storage.compute_bellman_ford(&mut computation, None, 0, &mut progress_tracker);
         assert!(result.is_ok());
 
         let bellman_ford_result = result.unwrap();
@@ -327,9 +366,10 @@ mod tests {
     fn test_bellman_ford_path_same_source_target() {
         let mut storage = BellmanFordStorageRuntime::new(0, true, true, 4);
         let mut computation = BellmanFordComputationRuntime::new(0, true, true, 4);
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("bellman_ford", UNKNOWN_VOLUME));
 
         // Test with same source and target
-        let result = storage.compute_bellman_ford(&mut computation, None, 0);
+        let result = storage.compute_bellman_ford(&mut computation, None, 0, &mut progress_tracker);
         assert!(result.is_ok());
 
         let bellman_ford_result = result.unwrap();

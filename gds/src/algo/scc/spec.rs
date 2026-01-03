@@ -116,12 +116,20 @@ define_algorithm_spec! {
         let mut computation = SccComputationRuntime::new();
 
         // Create progress tracker and termination flag
-        let progress_tracker = ProgressTracker::new(Tasks::Leaf("SCC".to_string(), graph_store.node_count()));
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("scc", graph_store.node_count()),
+            concurrency,
+        );
         let termination_flag = TerminationFlag::default();
 
         // Execute SCC algorithm directly on graph_store
         let result = storage
-            .compute_scc(&mut computation, graph_store, &progress_tracker, &termination_flag)
+            .compute_scc(
+                &mut computation,
+                graph_store,
+                &mut progress_tracker,
+                &termination_flag,
+            )
             .map_err(AlgorithmError::Execution)?;
 
         let execution_time = start.elapsed().as_millis() as u64;

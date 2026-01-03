@@ -8,6 +8,7 @@
 use super::computation::BellmanFordComputationRuntime;
 use super::spec::{BELLMAN_FORDAlgorithmSpec, BellmanFordConfig, BellmanFordResult};
 use super::storage::BellmanFordStorageRuntime;
+use crate::core::utils::progress::{ProgressTracker, Tasks, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::{
     AlgorithmSpec, ExecutionContext, ExecutionMode, ProcedureExecutor,
 };
@@ -119,9 +120,10 @@ fn test_bellman_ford_algorithm_completeness() {
 fn test_bellman_ford_storage_computation_integration() {
     let mut storage = BellmanFordStorageRuntime::new(0, true, true, 4);
     let mut computation = BellmanFordComputationRuntime::new(0, true, true, 4);
+    let mut progress_tracker = ProgressTracker::new(Tasks::leaf("bellman_ford", UNKNOWN_VOLUME));
 
     // Test integration between storage and computation
-    let result = storage.compute_bellman_ford(&mut computation, None, 0);
+    let result = storage.compute_bellman_ford(&mut computation, None, 0, &mut progress_tracker);
     assert!(result.is_ok());
 
     let bellman_ford_result = result.unwrap();

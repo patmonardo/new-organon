@@ -2,6 +2,7 @@ use super::computation::{FilteredKnnComputationResult, FilteredKnnComputationRun
 use crate::algo::similarity::knn::metrics::{
     KnnNodePropertySpec, SimilarityComputer, SimilarityMetric,
 };
+use crate::core::utils::progress::ProgressTracker;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::NodeLabel;
 use crate::types::graph_store::GraphStore;
@@ -30,26 +31,44 @@ impl FilteredKnnStorageRuntime {
         metric: SimilarityMetric,
         source_node_labels: &[NodeLabel],
         target_node_labels: &[NodeLabel],
+        progress_tracker: &mut ProgressTracker,
     ) -> Result<Vec<FilteredKnnComputationResult>, AlgorithmError> {
-        let values = graph_store
-            .node_property_values(node_property)
-            .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
+        let node_count = graph_store.node_count();
+        progress_tracker.begin_subtask(node_count);
 
-        let similarity =
-            <dyn SimilarityComputer>::of_property_values(node_property, values, metric)
+        let result = (|| {
+            let values = graph_store
+                .node_property_values(node_property)
                 .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
 
-        let (source_allowed, target_allowed) =
-            Self::build_filters(graph_store, source_node_labels, target_node_labels)?;
+            let similarity =
+                <dyn SimilarityComputer>::of_property_values(node_property, values, metric)
+                    .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
 
-        Ok(computation.compute(
-            graph_store.node_count(),
-            k,
-            similarity_cutoff,
-            similarity,
-            source_allowed.as_deref(),
-            target_allowed.as_deref(),
-        ))
+            let (source_allowed, target_allowed) =
+                Self::build_filters(graph_store, source_node_labels, target_node_labels)?;
+
+            Ok(computation.compute(
+                node_count,
+                k,
+                similarity_cutoff,
+                similarity,
+                source_allowed.as_deref(),
+                target_allowed.as_deref(),
+            ))
+        })();
+
+        match result {
+            Ok(value) => {
+                progress_tracker.log_progress(node_count);
+                progress_tracker.end_subtask();
+                Ok(value)
+            }
+            Err(e) => {
+                progress_tracker.end_subtask_with_failure();
+                Err(e)
+            }
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -62,46 +81,64 @@ impl FilteredKnnStorageRuntime {
         similarity_cutoff: f64,
         source_node_labels: &[NodeLabel],
         target_node_labels: &[NodeLabel],
+        progress_tracker: &mut ProgressTracker,
     ) -> Result<Vec<FilteredKnnComputationResult>, AlgorithmError> {
-        if node_properties.is_empty() {
-            return Err(AlgorithmError::InvalidGraph(
-                "Missing `node_properties`".to_string(),
-            ));
-        }
+        let node_count = graph_store.node_count();
+        progress_tracker.begin_subtask(node_count);
 
-        let mut props: Vec<(
-            String,
-            Arc<dyn crate::types::properties::node::NodePropertyValues>,
-            SimilarityMetric,
-        )> = Vec::with_capacity(node_properties.len());
-
-        for spec in node_properties {
-            let name = spec.name.trim();
-            if name.is_empty() {
+        let result = (|| {
+            if node_properties.is_empty() {
                 return Err(AlgorithmError::InvalidGraph(
-                    "`node_properties` contains an empty property name".to_string(),
+                    "Missing `node_properties`".to_string(),
                 ));
             }
-            let values = graph_store
-                .node_property_values(name)
+
+            let mut props: Vec<(
+                String,
+                Arc<dyn crate::types::properties::node::NodePropertyValues>,
+                SimilarityMetric,
+            )> = Vec::with_capacity(node_properties.len());
+
+            for spec in node_properties {
+                let name = spec.name.trim();
+                if name.is_empty() {
+                    return Err(AlgorithmError::InvalidGraph(
+                        "`node_properties` contains an empty property name".to_string(),
+                    ));
+                }
+                let values = graph_store
+                    .node_property_values(name)
+                    .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
+                props.push((name.to_string(), values, spec.metric));
+            }
+
+            let similarity = <dyn SimilarityComputer>::of_properties(props)
                 .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
-            props.push((name.to_string(), values, spec.metric));
+
+            let (source_allowed, target_allowed) =
+                Self::build_filters(graph_store, source_node_labels, target_node_labels)?;
+
+            Ok(computation.compute(
+                node_count,
+                k,
+                similarity_cutoff,
+                similarity,
+                source_allowed.as_deref(),
+                target_allowed.as_deref(),
+            ))
+        })();
+
+        match result {
+            Ok(value) => {
+                progress_tracker.log_progress(node_count);
+                progress_tracker.end_subtask();
+                Ok(value)
+            }
+            Err(e) => {
+                progress_tracker.end_subtask_with_failure();
+                Err(e)
+            }
         }
-
-        let similarity = <dyn SimilarityComputer>::of_properties(props)
-            .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
-
-        let (source_allowed, target_allowed) =
-            Self::build_filters(graph_store, source_node_labels, target_node_labels)?;
-
-        Ok(computation.compute(
-            graph_store.node_count(),
-            k,
-            similarity_cutoff,
-            similarity,
-            source_allowed.as_deref(),
-            target_allowed.as_deref(),
-        ))
     }
 
     #[allow(clippy::type_complexity)]
@@ -159,6 +196,7 @@ impl FilteredKnnStorageRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::utils::progress::{ProgressTracker, Tasks};
     use crate::types::prelude::DefaultGraphStore;
     use crate::types::random::RandomGraphConfig;
 
@@ -189,6 +227,9 @@ mod tests {
         let runtime = FilteredKnnStorageRuntime::new(4);
         let computation = FilteredKnnComputationRuntime::new();
 
+        let mut progress_tracker =
+            ProgressTracker::with_concurrency(Tasks::leaf("filteredknn", node_count), 4);
+
         let rows = runtime
             .compute_single(
                 &computation,
@@ -199,6 +240,7 @@ mod tests {
                 SimilarityMetric::Default,
                 &[a.clone()],
                 &[b.clone()],
+                &mut progress_tracker,
             )
             .unwrap();
 

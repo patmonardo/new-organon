@@ -230,7 +230,14 @@ define_algorithm_spec! {
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
             .map_err(|e| AlgorithmError::Execution(format!("Failed to obtain graph view: {}", e)))?;
 
-        let spanning_tree = storage.compute_spanning_tree_with_graph(graph.as_ref(), direction_byte)
+        use crate::core::utils::progress::{ProgressTracker, Tasks};
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("spanning_tree", graph.relationship_count()),
+            config.concurrency,
+        );
+
+        let spanning_tree = storage
+            .compute_spanning_tree_with_graph(graph.as_ref(), direction_byte, &mut progress_tracker)
             .map_err(|e| AlgorithmError::Execution(format!("Spanning tree computation failed: {}", e)))?;
 
         // Calculate computation time

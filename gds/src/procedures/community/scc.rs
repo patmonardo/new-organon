@@ -68,17 +68,17 @@ impl SccFacade {
         let mut computation = SccComputationRuntime::new();
         let storage = SccStorageRuntime::new(self.concurrency);
 
-        let progress_tracker = ProgressTracker::new(Tasks::Leaf(
-            "SCC".to_string(),
-            self.graph_store.node_count(),
-        ));
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("scc", self.graph_store.node_count()),
+            self.concurrency,
+        );
         let termination_flag = TerminationFlag::default();
 
         let result = storage
             .compute_scc(
                 &mut computation,
                 self.graph_store.as_ref(),
-                &progress_tracker,
+                &mut progress_tracker,
                 &termination_flag,
             )
             .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;

@@ -4,6 +4,7 @@
 //! It is the **Species** manifestation of the abstract **Genus** (PageRank principle).
 
 use crate::config::PageRankConfig;
+use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::projection::eval::procedure::{
     AfterLoadValidator, AlgorithmError, AlgorithmSpec, ComputationResult, ConfigError,
     ConsumerError, ExecutionContext, ExecutionMode, LogLevel, ProjectionHint,
@@ -271,8 +272,14 @@ impl AlgorithmSpec for PageRankAlgorithmSpec {
         // Use the store's default graph view (natural orientation).
         let graph = graph_store.get_graph();
 
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("pagerank", max_iterations));
+        progress_tracker.begin_subtask(max_iterations);
+
         let source_set = source_nodes.map(|v| v.into_iter().collect());
         let run_result = run_pagerank(graph, pr_config, source_set);
+
+        progress_tracker.log_progress(max_iterations);
+        progress_tracker.end_subtask();
 
         let elapsed = timer.elapsed();
 

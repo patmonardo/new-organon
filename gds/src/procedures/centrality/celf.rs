@@ -2,7 +2,7 @@
 //!
 //! Live wiring for Cost-Effective Lazy Forward influence maximization.
 
-use crate::core::utils::progress::TaskRegistry;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::algo::celf::computation::CELFComputationRuntime;
 use crate::algo::celf::spec::CELFConfig;
@@ -116,6 +116,10 @@ impl CELFFacade {
             return Ok((HashMap::new(), start.elapsed()));
         }
 
+        let mut progress_tracker =
+            ProgressTracker::with_concurrency(Tasks::leaf("celf", self.config.seed_set_size), self.concurrency);
+        progress_tracker.begin_subtask(self.config.seed_set_size);
+
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {
             let node_id = match Self::checked_node_id(node_idx) {
@@ -133,6 +137,9 @@ impl CELFFacade {
 
         let runtime = CELFComputationRuntime::new(self.config.clone(), node_count);
         let seed_set = runtime.compute(get_neighbors);
+
+        progress_tracker.log_progress(self.config.seed_set_size);
+        progress_tracker.end_subtask();
 
         Ok((seed_set, start.elapsed()))
     }

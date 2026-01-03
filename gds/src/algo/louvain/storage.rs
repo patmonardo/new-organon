@@ -1,4 +1,5 @@
 use crate::types::graph::Graph;
+use crate::core::utils::progress::ProgressTracker;
 
 use super::computation::LouvainComputationRuntime;
 use super::spec::LouvainResult;
@@ -17,9 +18,12 @@ impl LouvainStorageRuntime {
         &self,
         computation: &mut LouvainComputationRuntime,
         graph: &dyn Graph,
+        progress_tracker: &mut ProgressTracker,
     ) -> LouvainResult {
         let node_count = graph.node_count();
         let fallback = graph.default_property_value();
+
+        progress_tracker.begin_subtask(node_count);
 
         let get_neighbors = |node: usize| -> Vec<usize> {
             let id = node as u64;
@@ -35,6 +39,12 @@ impl LouvainStorageRuntime {
             out
         };
 
-        computation.compute(node_count, get_neighbors)
+        let result = computation.compute(node_count, get_neighbors);
+
+        // Placeholder implementation: count nodes as the only work unit.
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
+
+        result
     }
 }

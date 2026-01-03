@@ -10,7 +10,9 @@
 //! - Accumulates into the *reached node* per depth
 //! - Normalizes by `(nodeCount - 1)`
 
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
@@ -125,6 +127,12 @@ impl HarmonicCentralityFacade {
             return Ok((Vec::new(), start.elapsed()));
         }
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("harmonic", node_count),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(node_count);
+
         let mut centralities = vec![0.0f64; node_count];
         let mut msbfs = AggregatedNeighborProcessingMsBfs::new(node_count);
 
@@ -170,6 +178,9 @@ impl HarmonicCentralityFacade {
         } else {
             centralities[0] = 0.0;
         }
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((centralities, start.elapsed()))
     }

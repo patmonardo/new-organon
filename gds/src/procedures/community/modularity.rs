@@ -3,7 +3,7 @@
 //! Measures community quality by comparing actual edges within communities
 //! to expected edges if the network were random.
 
-use crate::core::utils::progress::TaskRegistry;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{MutationResult, WriteResult};
 use crate::procedures::traits::Result;
@@ -92,6 +92,9 @@ impl ModularityFacade {
             return Ok((0.0, Vec::new()));
         }
 
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("modularity", node_count));
+        progress_tracker.begin_subtask(node_count);
+
         // Get community property values
         let community_props = graph_view
             .node_properties(&self.community_property)
@@ -132,6 +135,9 @@ impl ModularityFacade {
 
         let runtime = ModularityComputationRuntime::new();
         let result = runtime.compute(node_count, get_community, get_neighbors);
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         let community_scores: Vec<(u64, f64)> = result
             .community_modularities

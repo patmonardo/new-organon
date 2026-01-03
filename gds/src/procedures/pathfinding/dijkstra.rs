@@ -159,10 +159,7 @@ impl DijkstraBuilder {
             .user_log_registry_factory
             .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
 
-        // Create progress tracker for Dijkstra execution
-        let node_count = self.graph_store.node_count();
-        let _progress_tracker =
-            ProgressTracker::new(Tasks::Leaf("Dijkstra".to_string(), node_count));
+        // Progress tracker is best-effort; the driver loop in storage owns begin/log/end.
 
         let source_u64 = self.source.expect("validate() ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -208,11 +205,17 @@ impl DijkstraBuilder {
                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
             })?;
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("dijkstra", graph_view.relationship_count()),
+            self.concurrency,
+        );
+
         let result = storage.compute_dijkstra(
             &mut computation,
             targets,
             Some(graph_view.as_ref()),
             direction_byte,
+            &mut progress_tracker,
         )?;
 
         let paths: Vec<PathResult> = result

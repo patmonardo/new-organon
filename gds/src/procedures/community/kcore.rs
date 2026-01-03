@@ -5,7 +5,7 @@
 //! Parameters (Java GDS aligned):
 //! - `concurrency`: accepted for parity; currently unused.
 
-use crate::core::utils::progress::TaskRegistry;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
@@ -87,6 +87,12 @@ impl KCoreFacade {
             ));
         }
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("kcore", node_count),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(node_count);
+
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {
             let node_id: NodeId = node_idx as i64;
@@ -101,6 +107,9 @@ impl KCoreFacade {
         let mut runtime = KCoreComputationRuntime::new();
         let result = runtime.compute(node_count, get_neighbors);
         let elapsed_ms = start.elapsed().as_millis() as u64;
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((result, elapsed_ms))
     }

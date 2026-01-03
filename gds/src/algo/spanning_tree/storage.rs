@@ -6,6 +6,7 @@
 //! handling persistent data access and orchestrating the Prim's algorithm execution.
 
 use super::computation::{SpanningTree, SpanningTreeComputationRuntime};
+use crate::core::utils::progress::ProgressTracker;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::Graph;
 
@@ -64,75 +65,104 @@ impl SpanningTreeStorageRuntime {
         &self,
         node_count: u32,
         get_neighbors: F,
+        progress_tracker: &mut ProgressTracker,
     ) -> Result<SpanningTree, AlgorithmError>
     where
         F: Fn(u32) -> Vec<(u32, f64)>,
     {
-        // Handle empty graph upfront
-        if node_count == 0 {
-            let empty = SpanningTreeComputationRuntime::new(
-                self.start_node_id,
-                self.compute_minimum,
-                0,
-                self.concurrency,
-            );
-            return Ok(empty.build_result(0));
-        }
+        progress_tracker.begin_subtask(node_count as usize);
 
-        // Create computation runtime
-        let mut computation = SpanningTreeComputationRuntime::new(
-            self.start_node_id,
-            self.compute_minimum,
-            node_count,
-            self.concurrency,
-        );
+        let mut processed_nodes: usize = 0;
+        const LOG_BATCH: usize = 256;
 
-        // Initialize computation
-        computation.initialize(self.start_node_id);
-
-        // Main Prim's algorithm loop
-        while !computation.is_queue_empty() {
-            // Get next node from priority queue
-            let (current_node, current_cost) = match computation.pop_from_queue() {
-                Some((node, cost)) => (node, cost),
-                None => break,
-            };
-
-            // Skip if already visited
-            if computation.is_visited(current_node) {
-                continue;
+        let result = (|| {
+            // Handle empty graph upfront
+            if node_count == 0 {
+                let empty = SpanningTreeComputationRuntime::new(
+                    self.start_node_id,
+                    self.compute_minimum,
+                    0,
+                    self.concurrency,
+                );
+                return Ok(empty.build_result(0));
             }
 
-            // Mark as visited
-            computation.mark_visited(current_node, current_cost);
+            // Create computation runtime
+            let mut computation = SpanningTreeComputationRuntime::new(
+                self.start_node_id,
+                self.compute_minimum,
+                node_count,
+                self.concurrency,
+            );
 
-            // Process neighbors
-            let neighbors = get_neighbors(current_node);
-            for (neighbor, weight) in neighbors {
-                // Skip if neighbor already visited
-                if computation.is_visited(neighbor) {
+            // Initialize computation
+            computation.initialize(self.start_node_id);
+
+            // Main Prim's algorithm loop
+            while !computation.is_queue_empty() {
+                // Get next node from priority queue
+                let (current_node, current_cost) = match computation.pop_from_queue() {
+                    Some((node, cost)) => (node, cost),
+                    None => break,
+                };
+
+                // Skip if already visited
+                if computation.is_visited(current_node) {
                     continue;
                 }
 
-                // Transform weight for min/max spanning tree
-                let transformed_weight = computation.transform_weight(weight);
+                // Mark as visited
+                computation.mark_visited(current_node, current_cost);
 
-                // Check if neighbor is already in queue
-                let current_parent = computation.parent(neighbor);
-                let current_cost_to_parent = computation.cost_to_parent(neighbor);
+                processed_nodes += 1;
+                if processed_nodes >= LOG_BATCH {
+                    progress_tracker.log_progress(processed_nodes);
+                    processed_nodes = 0;
+                }
 
-                if current_parent == -1 {
-                    // Neighbor not in queue, add it
-                    computation.add_to_queue(neighbor, transformed_weight, current_node);
-                } else if transformed_weight < current_cost_to_parent {
-                    // Better path found, update
-                    computation.update_cost(neighbor, transformed_weight, current_node);
+                // Process neighbors
+                let neighbors = get_neighbors(current_node);
+                for (neighbor, weight) in neighbors {
+                    // Skip if neighbor already visited
+                    if computation.is_visited(neighbor) {
+                        continue;
+                    }
+
+                    // Transform weight for min/max spanning tree
+                    let transformed_weight = computation.transform_weight(weight);
+
+                    // Check if neighbor is already in queue
+                    let current_parent = computation.parent(neighbor);
+                    let current_cost_to_parent = computation.cost_to_parent(neighbor);
+
+                    if current_parent == -1 {
+                        // Neighbor not in queue, add it
+                        computation.add_to_queue(neighbor, transformed_weight, current_node);
+                    } else if transformed_weight < current_cost_to_parent {
+                        // Better path found, update
+                        computation.update_cost(neighbor, transformed_weight, current_node);
+                    }
                 }
             }
-        }
 
-        // Build and return result
-        Ok(computation.build_result(node_count))
+            if processed_nodes > 0 {
+                progress_tracker.log_progress(processed_nodes);
+            }
+
+            // Build and return result
+            Ok(computation.build_result(node_count))
+        })();
+
+        match result {
+            Ok(result) => {
+                progress_tracker.end_subtask();
+                Ok(result)
+            }
+            Err(e) => {
+                progress_tracker.end_subtask_with_failure();
+                Err(e)
+            }
+        }
     }
 
     /// Compute the spanning tree using a bound Graph (neighbor streaming via relationship cursors).
@@ -140,11 +170,12 @@ impl SpanningTreeStorageRuntime {
         &self,
         graph: &dyn Graph,
         direction: u8,
+        progress_tracker: &mut ProgressTracker,
     ) -> Result<SpanningTree, AlgorithmError> {
         let node_count = graph.node_count() as u32;
         self.compute_spanning_tree(node_count, |node_id| {
             self.get_neighbors_from_graph(graph, node_id, direction)
-        })
+        }, progress_tracker)
     }
 
     /// Neighbor retrieval backed by Graph::stream_relationships (outgoing edges), with numeric fallback.
@@ -212,14 +243,16 @@ impl SpanningTreeStorageRuntime {
     pub fn compute_spanning_tree_mock(
         &self,
         node_count: u32,
+        progress_tracker: &mut ProgressTracker,
     ) -> Result<SpanningTree, AlgorithmError> {
-        self.compute_spanning_tree(node_count, |node_id| self.get_neighbors(node_id))
+        self.compute_spanning_tree(node_count, |node_id| self.get_neighbors(node_id), progress_tracker)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::utils::progress::Tasks;
 
     #[test]
     fn test_storage_runtime_creation() {
@@ -233,7 +266,10 @@ mod tests {
     #[test]
     fn test_storage_runtime_minimum_spanning_tree() {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
-        let result = runtime.compute_spanning_tree_mock(4).unwrap();
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("spanning_tree", 0));
+        let result = runtime
+            .compute_spanning_tree_mock(4, &mut progress_tracker)
+            .unwrap();
 
         // Verify basic properties
         assert_eq!(result.head(0), 0);
@@ -250,7 +286,10 @@ mod tests {
     #[test]
     fn test_storage_runtime_maximum_spanning_tree() {
         let runtime = SpanningTreeStorageRuntime::new(0, false, 1);
-        let result = runtime.compute_spanning_tree_mock(4).unwrap();
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("spanning_tree", 0));
+        let result = runtime
+            .compute_spanning_tree_mock(4, &mut progress_tracker)
+            .unwrap();
 
         // Verify basic properties
         assert_eq!(result.head(0), 0);
@@ -269,8 +308,14 @@ mod tests {
         let runtime1 = SpanningTreeStorageRuntime::new(0, true, 1);
         let runtime2 = SpanningTreeStorageRuntime::new(1, true, 1);
 
-        let result1 = runtime1.compute_spanning_tree_mock(4).unwrap();
-        let result2 = runtime2.compute_spanning_tree_mock(4).unwrap();
+        let mut progress_tracker1 = ProgressTracker::new(Tasks::leaf("spanning_tree", 0));
+        let mut progress_tracker2 = ProgressTracker::new(Tasks::leaf("spanning_tree", 0));
+        let result1 = runtime1
+            .compute_spanning_tree_mock(4, &mut progress_tracker1)
+            .unwrap();
+        let result2 = runtime2
+            .compute_spanning_tree_mock(4, &mut progress_tracker2)
+            .unwrap();
 
         // Both should produce valid spanning trees
         assert_eq!(result1.effective_node_count(), 4);
@@ -284,7 +329,10 @@ mod tests {
     #[test]
     fn test_storage_runtime_edge_iteration() {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
-        let result = runtime.compute_spanning_tree_mock(4).unwrap();
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("spanning_tree", 0));
+        let result = runtime
+            .compute_spanning_tree_mock(4, &mut progress_tracker)
+            .unwrap();
 
         let mut edges = Vec::new();
         result.for_each_edge(|source, target, cost| {
@@ -306,7 +354,10 @@ mod tests {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
 
         // Mock empty graph
-        let result = runtime.compute_spanning_tree(0, |_| vec![]).unwrap();
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("spanning_tree", 0));
+        let result = runtime
+            .compute_spanning_tree(0, |_| vec![], &mut progress_tracker)
+            .unwrap();
 
         assert_eq!(result.effective_node_count(), 0);
         assert_eq!(result.total_weight(), 0.0);
@@ -317,7 +368,10 @@ mod tests {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
 
         // Mock single node graph
-        let result = runtime.compute_spanning_tree(1, |_| vec![]).unwrap();
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("spanning_tree", 0));
+        let result = runtime
+            .compute_spanning_tree(1, |_| vec![], &mut progress_tracker)
+            .unwrap();
 
         assert_eq!(result.effective_node_count(), 1);
         assert_eq!(result.total_weight(), 0.0);

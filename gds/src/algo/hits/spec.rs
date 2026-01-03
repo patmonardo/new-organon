@@ -3,6 +3,7 @@
 //! This module implements the `AlgorithmSpec` trait for HITS.
 
 use crate::define_algorithm_spec;
+use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::projection::eval::procedure::*;
 use std::time::Duration;
 use std::time::Instant;
@@ -79,6 +80,12 @@ define_algorithm_spec! {
 
         let start = Instant::now();
 
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf(
+            "hits",
+            parsed_config.max_iterations,
+        ));
+        progress_tracker.begin_subtask(parsed_config.max_iterations);
+
         // Create storage runtime
         let storage = HitsStorageRuntime::new(graph_store)?;
 
@@ -89,6 +96,8 @@ define_algorithm_spec! {
             .map_err(|e| AlgorithmError::Execution(format!("Failed to get graph: {}", e)))?;
 
         let result = run_hits(graph, parsed_config.max_iterations, parsed_config.tolerance);
+        progress_tracker.log_progress(parsed_config.max_iterations);
+        progress_tracker.end_subtask();
 
         context.log(
             LogLevel::Info,

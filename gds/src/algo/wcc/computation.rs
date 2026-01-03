@@ -86,15 +86,29 @@ impl WccComputationRuntime {
         &mut self,
         node_count: usize,
         get_neighbors: impl Fn(usize) -> Vec<usize>,
+        progress_tracker: &mut crate::core::utils::progress::ProgressTracker,
     ) -> WccComputationResult {
         let mut union_find = UnionFind::new(node_count);
 
+        let mut nodes_scanned_batch: usize = 0;
+        const NODES_SCAN_LOG_BATCH: usize = 256;
+
         // Process all edges
         for node in 0..node_count {
+            nodes_scanned_batch += 1;
+            if nodes_scanned_batch >= NODES_SCAN_LOG_BATCH {
+                progress_tracker.log_progress(nodes_scanned_batch);
+                nodes_scanned_batch = 0;
+            }
+
             let neighbors = get_neighbors(node);
             for neighbor in neighbors {
                 union_find.union(node, neighbor);
             }
+        }
+
+        if nodes_scanned_batch > 0 {
+            progress_tracker.log_progress(nodes_scanned_batch);
         }
 
         let (components, component_count) = union_find.get_components(node_count);

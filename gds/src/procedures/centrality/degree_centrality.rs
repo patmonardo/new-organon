@@ -38,7 +38,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 // Import upgraded systems
-use crate::core::utils::progress::TaskRegistryFactory;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistryFactory, Tasks};
 
 // ============================================================================
 // Statistics Type
@@ -171,8 +171,21 @@ impl DegreeCentralityFacade {
         let mut computation = DegreeCentralityComputationRuntime::new();
 
         let node_count = storage.node_count();
+
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("degree_centrality", node_count),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(node_count);
+
         for node_id in 0..node_count {
-            let node_id = Self::checked_node_id(node_id)?;
+            let node_id = match Self::checked_node_id(node_id) {
+                Ok(id) => id,
+                Err(err) => {
+                    progress_tracker.end_subtask_with_failure();
+                    return Err(err);
+                }
+            };
             let degree = storage.get_node_degree(node_id)?;
             computation.add_node_degree(node_id, degree);
         }
@@ -180,6 +193,9 @@ impl DegreeCentralityFacade {
         if self.normalize {
             computation.normalize_scores();
         }
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((computation.get_scores().clone(), start.elapsed()))
     }

@@ -172,10 +172,6 @@ impl YensBuilder {
     fn compute(self) -> Result<PathFindingResult> {
         self.validate()?;
 
-        // Create progress tracker for Yen's algorithm execution
-        let node_count = self.graph_store.node_count();
-        let _progress_tracker = ProgressTracker::new(Tasks::Leaf("Yens".to_string(), node_count));
-
         let source_u64 = self.source.expect("validate ensures source is set");
         let target_u64 = self.target.expect("validate ensures target is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -222,9 +218,18 @@ impl YensBuilder {
             self.concurrency,
         );
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("yens", self.k),
+            self.concurrency,
+        );
+
         let start = std::time::Instant::now();
-        let result =
-            storage.compute_yens(&mut computation, Some(graph_view.as_ref()), direction_byte)?;
+        let result = storage.compute_yens(
+            &mut computation,
+            Some(graph_view.as_ref()),
+            direction_byte,
+            &mut progress_tracker,
+        )?;
 
         let paths: Vec<crate::algo::core::result_builders::PathResult> = result
             .paths

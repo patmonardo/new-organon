@@ -34,65 +34,89 @@ impl SccStorageRuntime {
         &self,
         computation: &mut super::computation::SccComputationRuntime,
         graph_store: &G,
-        progress_tracker: &ProgressTracker,
+        progress_tracker: &mut ProgressTracker,
         termination_flag: &TerminationFlag,
     ) -> Result<SccComputationResult, String> {
         let start_time = Instant::now();
 
-        // progress_tracker currently is a stub; keep it in the signature to match the
-        // architecture used by other procedures.
-        let _ = progress_tracker;
+        progress_tracker.begin_subtask(graph_store.node_count());
 
-        // Obtain a directed graph view (Natural orientation, all relationship types)
-        let rel_types: std::collections::HashSet<RelationshipType> =
-            std::collections::HashSet::new();
-        let graph_view = graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| format!("Failed to obtain graph view: {}", e))?;
+        let result = (|| {
+            // Obtain a directed graph view (Natural orientation, all relationship types)
+            let rel_types: std::collections::HashSet<RelationshipType> =
+                std::collections::HashSet::new();
+            let graph_view = graph_store
+                .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
+                .map_err(|e| format!("Failed to obtain graph view: {}", e))?;
 
-        let node_count = graph_view.node_count();
-        if node_count == 0 {
-            return Ok(SccComputationResult::new(Vec::new(), 0, 0));
-        }
-
-        // Build adjacency lists.
-        let fallback = graph_view.default_property_value();
-        let mut outgoing: Vec<Vec<usize>> = vec![Vec::new(); node_count];
-
-        for (node, outgoing_list) in outgoing.iter_mut().enumerate().take(node_count) {
-            if !termination_flag.running() {
-                return Err("Algorithm terminated by user".to_string());
+            let node_count = graph_view.node_count();
+            if node_count == 0 {
+                return Ok(SccComputationResult::new(Vec::new(), 0, 0));
             }
 
-            // NodeId is i64; node indices are contiguous starting at 0.
-            let node_id: i64 = node as i64;
-            *outgoing_list = graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| cursor.target_id())
-                .filter(|target| *target >= 0)
-                .map(|target| target as usize)
-                .filter(|target| *target < node_count)
-                .collect();
-        }
+            // Build adjacency lists.
+            let fallback = graph_view.default_property_value();
+            let mut outgoing: Vec<Vec<usize>> = vec![Vec::new(); node_count];
 
-        // Reverse adjacency.
-        let mut incoming: Vec<Vec<usize>> = vec![Vec::new(); node_count];
-        for (source, neighbors) in outgoing.iter().enumerate() {
-            for &target in neighbors {
-                if target < node_count {
-                    incoming[target].push(source);
+            const LOG_BATCH: usize = 256;
+            let mut pending = 0usize;
+
+            for (node, outgoing_list) in outgoing.iter_mut().enumerate().take(node_count) {
+                if !termination_flag.running() {
+                    return Err("Algorithm terminated by user".to_string());
+                }
+
+                // NodeId is i64; node indices are contiguous starting at 0.
+                let node_id: i64 = node as i64;
+                *outgoing_list = graph_view
+                    .stream_relationships(node_id, fallback)
+                    .map(|cursor| cursor.target_id())
+                    .filter(|target| *target >= 0)
+                    .map(|target| target as usize)
+                    .filter(|target| *target < node_count)
+                    .collect();
+
+                pending += 1;
+                if pending >= LOG_BATCH {
+                    progress_tracker.log_progress(pending);
+                    pending = 0;
                 }
             }
+
+            if pending > 0 {
+                progress_tracker.log_progress(pending);
+            }
+
+            // Reverse adjacency.
+            let mut incoming: Vec<Vec<usize>> = vec![Vec::new(); node_count];
+            for (source, neighbors) in outgoing.iter().enumerate() {
+                for &target in neighbors {
+                    if target < node_count {
+                        incoming[target].push(source);
+                    }
+                }
+            }
+
+            let (components, component_count) =
+                computation.compute(&outgoing, &incoming, termination_flag)?;
+
+            let computation_time = start_time.elapsed().as_millis() as u64;
+            Ok(SccComputationResult::new(
+                components,
+                component_count,
+                computation_time,
+            ))
+        })();
+
+        match result {
+            Ok(value) => {
+                progress_tracker.end_subtask();
+                Ok(value)
+            }
+            Err(e) => {
+                progress_tracker.end_subtask_with_failure();
+                Err(e)
+            }
         }
-
-        let (components, component_count) =
-            computation.compute(&outgoing, &incoming, termination_flag)?;
-
-        let computation_time = start_time.elapsed().as_millis() as u64;
-        Ok(SccComputationResult::new(
-            components,
-            component_count,
-            computation_time,
-        ))
     }
 }

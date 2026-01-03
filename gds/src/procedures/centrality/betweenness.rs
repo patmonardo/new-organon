@@ -28,7 +28,9 @@
 //! println!("Max betweenness: {} (bottleneck identified)", stats.max);
 //! ```
 
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+};
 use crate::mem::MemoryRange;
 use crate::algo::betweenness::BetweennessCentralityComputationRuntime;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
@@ -156,6 +158,12 @@ impl BetweennessCentralityFacade {
             return Ok((Vec::new(), start.elapsed()));
         }
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("betweenness", node_count),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(node_count);
+
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {
             let node_id = match Self::checked_node_id(node_idx) {
@@ -179,6 +187,9 @@ impl BetweennessCentralityFacade {
 
         let mut runtime = BetweennessCentralityComputationRuntime::new(node_count);
         let result = runtime.compute(node_count, divisor, &get_neighbors);
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((result.centralities, start.elapsed()))
     }

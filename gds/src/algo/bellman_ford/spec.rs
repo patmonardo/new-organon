@@ -136,6 +136,7 @@ define_algorithm_spec! {
     modes: [Stream, WriteNodeProperty],
 
     execute: |_self, graph_store, config, _context| {
+        use crate::core::utils::progress::{ProgressTracker, Tasks};
         // Parse configuration
         let config: BellmanFordConfig = serde_json::from_value(config.clone())
             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
@@ -179,8 +180,19 @@ define_algorithm_spec! {
 
         let direction = BellmanDirection::from_str(&config.direction);
 
+        // Progress tracking: best-effort volume (relationship count);
+        // work units are counted inside the driver loop in storage.
+        let volume = graph.relationship_count();
+        let mut progress_tracker =
+            ProgressTracker::with_concurrency(Tasks::leaf("bellman_ford", volume), config.concurrency);
+
         // Execute Bellman-Ford algorithm with graph from graph_store
-        let result = storage.compute_bellman_ford(&mut computation, Some(graph.as_ref()), direction as u8)?;
+        let result = storage.compute_bellman_ford(
+            &mut computation,
+            Some(graph.as_ref()),
+            direction as u8,
+            &mut progress_tracker,
+        )?;
 
         Ok(result)
     }

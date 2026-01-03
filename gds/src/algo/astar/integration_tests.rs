@@ -95,9 +95,15 @@ fn test_astar_storage_computation_integration() {
         AStarStorageRuntime::new(0, 1, "latitude".to_string(), "longitude".to_string());
 
     let mut computation = AStarComputationRuntime::new();
+    let mut progress_tracker = crate::core::utils::progress::ProgressTracker::new(
+        crate::core::utils::progress::Tasks::leaf(
+            "astar",
+            crate::core::utils::progress::UNKNOWN_VOLUME,
+        ),
+    );
 
     let result = storage
-        .compute_astar_path(&mut computation, None, 0)
+        .compute_astar_path(&mut computation, None, 0, &mut progress_tracker)
         .unwrap();
 
     assert!(result.has_path());
@@ -188,9 +194,16 @@ fn test_astar_algorithm_completeness() {
     // Test computation runtime
     let mut computation = AStarComputationRuntime::new();
 
+    let mut progress_tracker = crate::core::utils::progress::ProgressTracker::new(
+        crate::core::utils::progress::Tasks::leaf(
+            "astar",
+            crate::core::utils::progress::UNKNOWN_VOLUME,
+        ),
+    );
+
     // Test integration
     let result = storage
-        .compute_astar_path(&mut computation, None, 0)
+        .compute_astar_path(&mut computation, None, 0, &mut progress_tracker)
         .unwrap();
 
     assert!(result.has_path());

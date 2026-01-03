@@ -3,6 +3,7 @@ use crate::procedures::traits::Result;
 use crate::algo::similarity::{
     NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult,
 };
+use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -112,6 +113,13 @@ impl SimilarityBuilder {
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
             .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
 
+        let node_count = graph.node_count();
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("node_similarity", node_count),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(node_count);
+
         let config = self.build_config();
         let storage =
             crate::algo::similarity::NodeSimilarityStorageRuntime::new(config.concurrency);
@@ -119,6 +127,9 @@ impl SimilarityBuilder {
             crate::algo::similarity::NodeSimilarityComputationRuntime::new();
 
         let results = storage.compute(&mut computation, graph.as_ref(), &config);
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         // Convert to public result type
         Ok(results

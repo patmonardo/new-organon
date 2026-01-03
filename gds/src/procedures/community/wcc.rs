@@ -5,7 +5,7 @@
 //! Parameters (Java GDS aligned):
 //! - `concurrency`: accepted for parity; current runtime is single-threaded.
 
-use crate::core::utils::progress::TaskRegistry;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
@@ -135,7 +135,13 @@ impl WccFacade {
 
         let storage = WccStorageRuntime::new(self.concurrency);
         let mut computation = WccComputationRuntime::new();
-        let result = storage.compute_wcc(&mut computation, graph_view.as_ref());
+
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("wcc", graph_view.relationship_count()),
+            self.concurrency,
+        );
+
+        let result = storage.compute_wcc(&mut computation, graph_view.as_ref(), &mut progress_tracker);
 
         Ok((
             crate::algo::wcc::WccResult {

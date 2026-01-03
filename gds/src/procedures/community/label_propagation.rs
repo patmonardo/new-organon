@@ -8,7 +8,7 @@
 //! - `node_weight_property`: optional node weight property (defaults to 1.0).
 //! - `seed_property`: optional seed labels property.
 
-use crate::core::utils::progress::TaskRegistry;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
@@ -126,6 +126,10 @@ impl LabelPropagationFacade {
             ));
         }
 
+        let mut progress_tracker =
+            ProgressTracker::new(Tasks::leaf("label_propagation", self.max_iterations as usize));
+        progress_tracker.begin_subtask(self.max_iterations as usize);
+
         // Node weights
         let weights: Vec<f64> = if let Some(key) = &self.node_weight_property {
             if graph_view.available_node_properties().contains(key) {
@@ -179,6 +183,9 @@ impl LabelPropagationFacade {
 
         let result = runtime.compute(node_count, get_neighbors);
         let elapsed_ms = start.elapsed().as_millis() as u64;
+
+        progress_tracker.log_progress(self.max_iterations as usize);
+        progress_tracker.end_subtask();
 
         Ok((
             LabelPropResult {

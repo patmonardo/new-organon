@@ -1,6 +1,7 @@
 //! WCC Algorithm Specification
 use super::computation::WccComputationRuntime;
 use super::storage::WccStorageRuntime;
+use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -57,7 +58,11 @@ define_algorithm_spec! {
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to obtain graph view: {}", e)))?;
 
-        let result = storage.compute_wcc(&mut computation, graph_view.as_ref());
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("wcc", graph_view.relationship_count()),
+            parsed_config.concurrency,
+        );
+        let result = storage.compute_wcc(&mut computation, graph_view.as_ref(), &mut progress_tracker);
         Ok(WccResult { components: result.components, component_count: result.component_count })
     }
 }

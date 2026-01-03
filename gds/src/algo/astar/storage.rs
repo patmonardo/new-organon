@@ -5,6 +5,7 @@
 //! This module implements the storage runtime for A* algorithm - the "Gross pole" for persistent data access.
 
 use super::computation::AStarComputationResult;
+use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use crate::types::properties::node::NodePropertyValues;
@@ -75,88 +76,130 @@ impl AStarStorageRuntime {
         computation: &mut super::computation::AStarComputationRuntime,
         graph: Option<&dyn Graph>,
         direction: u8,
+        progress_tracker: &mut ProgressTracker,
     ) -> Result<AStarComputationResult, String> {
-        // If no graph given, keep placeholder behavior for tests
-        if graph.is_none() {
-            let mut path = Vec::new();
-            let total_cost;
-            let nodes_explored;
-            if self.source_node != self.target_node {
-                path.push(self.source_node);
-                path.push(self.target_node);
-                total_cost = self.compute_haversine_distance(self.source_node, self.target_node)?;
-                nodes_explored = 2;
-            } else {
-                path.push(self.source_node);
-                total_cost = 0.0;
-                nodes_explored = 1;
-            }
-            return Ok(AStarComputationResult::new(
-                Some(path),
-                total_cost,
-                nodes_explored,
-            ));
+        let volume = graph
+            .map(|g| g.relationship_count())
+            .unwrap_or(UNKNOWN_VOLUME);
+        if volume == UNKNOWN_VOLUME {
+            progress_tracker.begin_subtask_unknown();
+        } else {
+            progress_tracker.begin_subtask(volume);
         }
 
-        let g = graph.unwrap();
-        computation.initialize(self.source_node, self.target_node);
-
-        // Initialize heuristic for source
-        let h0 = self.compute_haversine_distance(self.source_node, self.target_node)?;
-        computation.update_f_cost(self.source_node, h0);
-
-        while !computation.is_open_set_empty() {
-            let current = match computation.get_lowest_f_cost_node() {
-                Some(n) => n,
-                None => break,
-            };
-            computation.remove_from_open_set(current);
-            computation.mark_visited(current);
-
-            if current == self.target_node {
-                let path = computation.reconstruct_path(self.source_node, self.target_node);
-                let total_cost = computation.get_total_cost(self.target_node);
+        let result = (|| {
+            // If no graph given, keep placeholder behavior for tests
+            if graph.is_none() {
+                let mut path = Vec::new();
+                let total_cost;
+                let nodes_explored;
+                if self.source_node != self.target_node {
+                    path.push(self.source_node);
+                    path.push(self.target_node);
+                    total_cost =
+                        self.compute_haversine_distance(self.source_node, self.target_node)?;
+                    nodes_explored = 2;
+                } else {
+                    path.push(self.source_node);
+                    total_cost = 0.0;
+                    nodes_explored = 1;
+                }
                 return Ok(AStarComputationResult::new(
-                    path,
+                    Some(path),
                     total_cost,
-                    computation.nodes_explored(),
+                    nodes_explored,
                 ));
             }
 
-            // Expand neighbors via relationship streams
-            let fallback: f64 = 1.0;
-            let source_mapped = current;
-            let stream = if direction == 1 {
-                g.stream_inverse_relationships(source_mapped, fallback)
-            } else {
-                g.stream_relationships(source_mapped, fallback)
-            };
+            let g = graph.unwrap();
+            computation.initialize(self.source_node, self.target_node);
 
-            for cursor in stream {
-                let neighbor: NodeId = cursor.target_id();
-                if computation.is_visited(neighbor) {
-                    continue;
+            // Initialize heuristic for source
+            let h0 = self.compute_haversine_distance(self.source_node, self.target_node)?;
+            computation.update_f_cost(self.source_node, h0);
+
+            // Work unit: edges scanned in neighbor expansion.
+            let mut edges_scanned_batch: usize = 0;
+            const EDGES_SCAN_LOG_BATCH: usize = 256;
+
+            while !computation.is_open_set_empty() {
+                let current = match computation.get_lowest_f_cost_node() {
+                    Some(n) => n,
+                    None => break,
+                };
+                computation.remove_from_open_set(current);
+                computation.mark_visited(current);
+
+                if current == self.target_node {
+                    if edges_scanned_batch > 0 {
+                        progress_tracker.log_progress(edges_scanned_batch);
+                    }
+
+                    let path = computation.reconstruct_path(self.source_node, self.target_node);
+                    let total_cost = computation.get_total_cost(self.target_node);
+                    return Ok(AStarComputationResult::new(
+                        path,
+                        total_cost,
+                        computation.nodes_explored(),
+                    ));
                 }
 
-                let tentative_g = computation.get_g_cost(current) + cursor.property();
-                if tentative_g < computation.get_g_cost(neighbor) {
-                    computation.set_parent(neighbor, current);
-                    computation.update_g_cost(neighbor, tentative_g);
-                    let h = self
-                        .compute_haversine_distance(neighbor, self.target_node)
-                        .unwrap_or(0.0);
-                    computation.update_f_cost(neighbor, tentative_g + h);
-                    computation.add_to_open_set(neighbor);
+                // Expand neighbors via relationship streams
+                let fallback: f64 = 1.0;
+                let source_mapped = current;
+                let stream = if direction == 1 {
+                    g.stream_inverse_relationships(source_mapped, fallback)
+                } else {
+                    g.stream_relationships(source_mapped, fallback)
+                };
+
+                for cursor in stream {
+                    edges_scanned_batch += 1;
+                    if edges_scanned_batch >= EDGES_SCAN_LOG_BATCH {
+                        progress_tracker.log_progress(edges_scanned_batch);
+                        edges_scanned_batch = 0;
+                    }
+
+                    let neighbor: NodeId = cursor.target_id();
+                    if computation.is_visited(neighbor) {
+                        continue;
+                    }
+
+                    let tentative_g = computation.get_g_cost(current) + cursor.property();
+                    if tentative_g < computation.get_g_cost(neighbor) {
+                        computation.set_parent(neighbor, current);
+                        computation.update_g_cost(neighbor, tentative_g);
+                        let h = self
+                            .compute_haversine_distance(neighbor, self.target_node)
+                            .unwrap_or(0.0);
+                        computation.update_f_cost(neighbor, tentative_g + h);
+                        computation.add_to_open_set(neighbor);
+                    }
                 }
             }
-        }
 
-        // No path found
-        Ok(AStarComputationResult::new(
-            None,
-            f64::INFINITY,
-            computation.nodes_explored(),
-        ))
+            if edges_scanned_batch > 0 {
+                progress_tracker.log_progress(edges_scanned_batch);
+            }
+
+            // No path found
+            Ok(AStarComputationResult::new(
+                None,
+                f64::INFINITY,
+                computation.nodes_explored(),
+            ))
+        })();
+
+        match result {
+            Ok(v) => {
+                progress_tracker.end_subtask();
+                Ok(v)
+            }
+            Err(e) => {
+                progress_tracker.end_subtask_with_failure();
+                Err(e)
+            }
+        }
     }
 
     /// Compute Haversine distance between two nodes
@@ -309,9 +352,15 @@ mod tests {
         let mut storage = AStarStorageRuntime::new(0, 1, "lat".to_string(), "lon".to_string());
 
         let mut computation = crate::algo::astar::computation::AStarComputationRuntime::new();
+        let mut progress_tracker = crate::core::utils::progress::ProgressTracker::new(
+            crate::core::utils::progress::Tasks::leaf(
+                "astar",
+                crate::core::utils::progress::UNKNOWN_VOLUME,
+            ),
+        );
 
         let result = storage
-            .compute_astar_path(&mut computation, None, 0)
+            .compute_astar_path(&mut computation, None, 0, &mut progress_tracker)
             .unwrap();
 
         assert!(result.path.is_some());
@@ -332,9 +381,15 @@ mod tests {
         );
 
         let mut computation = crate::algo::astar::computation::AStarComputationRuntime::new();
+        let mut progress_tracker = crate::core::utils::progress::ProgressTracker::new(
+            crate::core::utils::progress::Tasks::leaf(
+                "astar",
+                crate::core::utils::progress::UNKNOWN_VOLUME,
+            ),
+        );
 
         let result = storage
-            .compute_astar_path(&mut computation, None, 0)
+            .compute_astar_path(&mut computation, None, 0, &mut progress_tracker)
             .unwrap();
 
         assert!(result.path.is_some());

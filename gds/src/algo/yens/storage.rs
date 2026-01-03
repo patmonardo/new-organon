@@ -11,6 +11,7 @@ use super::mutable_path_result::MutablePathResult;
 use super::spec::{YensPathResult, YensResult};
 use crate::algo::dijkstra::targets::create_targets;
 use crate::algo::dijkstra::{DijkstraComputationRuntime, DijkstraStorageRuntime};
+use crate::core::utils::progress::{ProgressTracker, Tasks, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
@@ -60,77 +61,102 @@ impl YensStorageRuntime {
         computation: &mut YensComputationRuntime,
         graph: Option<&dyn Graph>,
         direction: u8,
+        progress_tracker: &mut ProgressTracker,
     ) -> Result<YensResult, AlgorithmError> {
         let start_time = std::time::Instant::now();
 
-        // Initialize computation runtime
-        computation.initialize(
-            self.source_node,
-            self.target_node,
-            self.k,
-            self.track_relationships,
-        );
+        progress_tracker.begin_subtask(self.k);
 
-        // Find first shortest path using Dijkstra
-        let first_path = self.find_first_path(graph, direction)?;
-        if first_path.is_none() {
-            return Ok(YensResult {
-                paths: Vec::new(),
-                path_count: 0,
-                computation_time_ms: start_time.elapsed().as_millis() as u64,
-            });
-        }
+        let result = (|| {
 
-        let mut k_shortest_paths = vec![first_path.unwrap()];
-        let candidate_queue = CandidatePathsPriorityQueue::new();
+            // Initialize computation runtime
+            computation.initialize(
+                self.source_node,
+                self.target_node,
+                self.k,
+                self.track_relationships,
+            );
 
-        // Main Yen's algorithm loop
-        for i in 1..self.k {
-            if let Some(prev_path) = k_shortest_paths.get(i - 1) {
-                // Generate candidate paths from previous path
-                let candidates =
-                    self.generate_candidates(prev_path, &k_shortest_paths, graph, direction)?;
+            // Find first shortest path using Dijkstra
+            let first_path = self.find_first_path(graph, direction)?;
+            if first_path.is_none() {
+                return Ok(YensResult {
+                    paths: Vec::new(),
+                    path_count: 0,
+                    computation_time_ms: start_time.elapsed().as_millis() as u64,
+                });
+            }
 
-                for candidate in candidates {
-                    candidate_queue.add_path(candidate);
+            let mut k_shortest_paths = vec![first_path.unwrap()];
+            progress_tracker.log_progress(1);
+
+            let candidate_queue = CandidatePathsPriorityQueue::new();
+
+            // Main Yen's algorithm loop
+            for i in 1..self.k {
+                if let Some(prev_path) = k_shortest_paths.get(i - 1) {
+                    // Generate candidate paths from previous path
+                    let candidates = self.generate_candidates(
+                        prev_path,
+                        &k_shortest_paths,
+                        graph,
+                        direction,
+                    )?;
+
+                    for candidate in candidates {
+                        candidate_queue.add_path(candidate);
+                    }
+                }
+
+                if candidate_queue.is_empty() {
+                    break;
+                }
+
+                // Add best candidate to results
+                if let Some(best_candidate) = candidate_queue.pop() {
+                    k_shortest_paths.push(best_candidate);
+                    // 1 unit of progress per path found.
+                    progress_tracker.log_progress(1);
                 }
             }
 
-            if candidate_queue.is_empty() {
-                break;
-            }
+            let computation_time = start_time.elapsed().as_millis() as u64;
 
-            // Add best candidate to results
-            if let Some(best_candidate) = candidate_queue.pop() {
-                k_shortest_paths.push(best_candidate);
-            }
-        }
+            // Convert to result format
+            let paths: Vec<YensPathResult> = k_shortest_paths
+                .into_iter()
+                .enumerate()
+                .map(|(index, path)| {
+                    let total_cost = path.total_cost();
+                    YensPathResult {
+                        index: index as u32,
+                        source_node: path.source_node,
+                        target_node: path.target_node,
+                        node_ids: path.node_ids,
+                        relationship_ids: path.relationship_ids,
+                        costs: path.costs,
+                        total_cost,
+                    }
+                })
+                .collect();
 
-        let computation_time = start_time.elapsed().as_millis() as u64;
-
-        // Convert to result format
-        let paths: Vec<YensPathResult> = k_shortest_paths
-            .into_iter()
-            .enumerate()
-            .map(|(index, path)| {
-                let total_cost = path.total_cost();
-                YensPathResult {
-                    index: index as u32,
-                    source_node: path.source_node,
-                    target_node: path.target_node,
-                    node_ids: path.node_ids,
-                    relationship_ids: path.relationship_ids,
-                    costs: path.costs,
-                    total_cost,
-                }
+            Ok(YensResult {
+                path_count: paths.len(),
+                paths,
+                computation_time_ms: computation_time,
             })
-            .collect();
+        })();
 
-        Ok(YensResult {
-            path_count: paths.len(),
-            paths,
-            computation_time_ms: computation_time,
-        })
+        match result {
+            Ok(value) => {
+                progress_tracker.end_subtask();
+                Ok(value)
+            }
+            Err(e) => {
+                progress_tracker.end_subtask_with_failure();
+                Err(e)
+            }
+        }
     }
 
     /// Find the first shortest path using Dijkstra
@@ -167,7 +193,19 @@ impl YensStorageRuntime {
             false,
         );
 
-        let result = storage.compute_dijkstra(&mut computation, targets, graph, direction)?;
+        let volume = graph
+            .map(|g| g.relationship_count())
+            .unwrap_or(UNKNOWN_VOLUME);
+        let mut progress_tracker =
+            ProgressTracker::with_concurrency(Tasks::leaf("dijkstra", volume), self.concurrency);
+
+        let result = storage.compute_dijkstra(
+            &mut computation,
+            targets,
+            graph,
+            direction,
+            &mut progress_tracker,
+        )?;
         let first = result.path_finding_result.paths().next().cloned();
 
         let Some(path) = first else {
@@ -303,8 +341,11 @@ mod tests {
         let storage = YensStorageRuntime::new(0, 5, 3, true, 1);
         let mut computation = YensComputationRuntime::new(0, 5, 3, true, 1);
 
+        let mut progress_tracker =
+            ProgressTracker::with_concurrency(Tasks::leaf("yens", 3), 1);
+
         let result = storage
-            .compute_yens(&mut computation, Some(graph.as_ref()), 0)
+            .compute_yens(&mut computation, Some(graph.as_ref()), 0, &mut progress_tracker)
             .unwrap();
 
         assert!(result.path_count <= 3);

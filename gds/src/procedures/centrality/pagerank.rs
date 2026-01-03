@@ -41,7 +41,9 @@ use std::sync::Arc;
 use std::time::Instant;
 
 // Import upgraded systems
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+};
 
 // ============================================================================
 // Statistics Type
@@ -255,7 +257,16 @@ impl PageRankFacade {
             .clone()
             .map(|v| v.into_iter().collect::<std::collections::HashSet<u64>>());
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("pagerank", self.iterations as usize),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(self.iterations as usize);
+
         let run = run_pagerank(graph_view, pr_config, source_set);
+
+        progress_tracker.log_progress(self.iterations as usize);
+        progress_tracker.end_subtask();
 
         Ok((
             run.scores,

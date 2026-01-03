@@ -6,6 +6,7 @@
 use super::computation::SpanningTreeComputationRuntime;
 use super::spec::{SPANNING_TREEAlgorithmSpec, SpanningTreeResult};
 use super::storage::SpanningTreeStorageRuntime;
+use crate::core::utils::progress::{ProgressTracker, Tasks, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::{
     AlgorithmSpec, ExecutionContext, ExecutionMode, ProcedureExecutor,
 };
@@ -59,9 +60,10 @@ fn test_spanning_tree_config_validation() {
 #[test]
 fn test_spanning_tree_storage_runtime() {
     let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
+    let mut progress_tracker = ProgressTracker::new(Tasks::leaf("spanning_tree", UNKNOWN_VOLUME));
 
     // Test minimum spanning tree
-    let result = runtime.compute_spanning_tree_mock(4).unwrap();
+    let result = runtime.compute_spanning_tree_mock(4, &mut progress_tracker).unwrap();
 
     assert_eq!(result.head(0), 0);
     assert_eq!(result.effective_node_count(), 4);
@@ -69,7 +71,11 @@ fn test_spanning_tree_storage_runtime() {
 
     // Test maximum spanning tree
     let runtime_max = SpanningTreeStorageRuntime::new(0, false, 1);
-    let result_max = runtime_max.compute_spanning_tree_mock(4).unwrap();
+    let mut progress_tracker_max =
+        ProgressTracker::new(Tasks::leaf("spanning_tree", UNKNOWN_VOLUME));
+    let result_max = runtime_max
+        .compute_spanning_tree_mock(4, &mut progress_tracker_max)
+        .unwrap();
 
     assert_eq!(result_max.head(0), 0);
     assert_eq!(result_max.effective_node_count(), 4);
@@ -124,7 +130,10 @@ fn test_spanning_tree_focused_macro_integration() {
 #[test]
 fn test_spanning_tree_storage_computation_integration() {
     let storage = SpanningTreeStorageRuntime::new(0, true, 1);
-    let result = storage.compute_spanning_tree_mock(4).unwrap();
+    let mut progress_tracker = ProgressTracker::new(Tasks::leaf("spanning_tree", UNKNOWN_VOLUME));
+    let result = storage
+        .compute_spanning_tree_mock(4, &mut progress_tracker)
+        .unwrap();
 
     // Verify the result is a valid spanning tree
     assert_eq!(result.effective_node_count(), 4);
