@@ -1,7 +1,10 @@
 use crate::applications::graph_store_catalog::results::{
-    GraphMemoryUsage, GraphStreamNodePropertiesResult, GraphStreamRelationshipPropertiesResult,
-    TopologyResult,
+    GraphFilterResult, GraphGenerationStats, GraphMemoryUsage, GraphStoreExportResult,
+    GraphStreamGraphPropertiesResult, GraphStreamNodePropertiesResult,
+    GraphStreamRelationshipPropertiesResult, MemoryEstimateResult, MutateLabelResult,
+    RandomWalkSamplingResult, TopologyResult,
 };
+use crate::applications::graph_store_catalog::configs::MutateLabelConfig;
 use crate::core::User;
 use crate::types::graph_store::DatabaseId;
 use crate::types::graph_store::DeletionResult;
@@ -79,6 +82,25 @@ pub trait GraphCatalogApplications {
         relationship_type: &str,
     ) -> Result<DeletionResult, String>;
 
+    /// Drops a graph property.
+    fn drop_graph_property(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: &str,
+        graph_property: &str,
+        fail_if_missing: bool,
+    ) -> Result<u64, String>;
+
+    /// Streams a graph property.
+    fn stream_graph_property(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: &str,
+        graph_property: &str,
+    ) -> Result<Vec<GraphStreamGraphPropertiesResult>, String>;
+
     /// Streams node properties from a graph.
     fn stream_node_properties(
         &self,
@@ -154,6 +176,14 @@ pub trait GraphCatalogApplications {
         export_path: &str,
     ) -> Result<ExportResult, String>;
 
+    /// Estimates CSV export.
+    fn export_to_csv_estimate(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: &str,
+    ) -> Result<GraphStoreExportResult, String>;
+
     /// Exports graph to database.
     fn export_to_database(
         &self,
@@ -171,6 +201,17 @@ pub trait GraphCatalogApplications {
         projection_config: &NativeProjectionConfig,
     ) -> Result<ProjectionResult, String>;
 
+    /// Estimates memory usage for a native projection.
+    ///
+    /// Java parity: `estimateNativeProject`.
+    /// Rust pass-1: deterministic estimate based on config / existing store shape.
+    fn estimate_project_native(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        projection_config: &NativeProjectionConfig,
+    ) -> Result<MemoryEstimateResult, String>;
+
     /// Projects a graph using generic projection.
     fn project_generic(
         &self,
@@ -178,6 +219,32 @@ pub trait GraphCatalogApplications {
         database_id: &DatabaseId,
         projection_config: &GenericProjectionConfig,
     ) -> Result<ProjectionResult, String>;
+
+    /// Projects a graph from Cypher.
+    ///
+    /// Java parity: `cypherProject`.
+    /// Rust pass-1: deterministic/stub projection (no DB integration yet).
+    fn project_cypher(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: &str,
+        node_query: &str,
+        relationship_query: &str,
+        configuration: &Value,
+    ) -> Result<ProjectionResult, String>;
+
+    /// Estimates memory usage for a Cypher projection.
+    ///
+    /// Java parity: `estimateCypherProject`.
+    fn estimate_project_cypher(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        node_query: &str,
+        relationship_query: &str,
+        configuration: &Value,
+    ) -> Result<MemoryEstimateResult, String>;
 
     /// Generates a synthetic graph.
     fn generate_graph(
@@ -187,6 +254,19 @@ pub trait GraphCatalogApplications {
         generation_config: &GraphGenerationConfig,
     ) -> Result<GenerationResult, String>;
 
+    /// Generates a synthetic graph and returns Java-parity stats.
+    ///
+    /// Java parity: `generateGraph` returning `GraphGenerationStats`.
+    fn generate_graph_stats(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: &str,
+        node_count: u64,
+        average_degree: u64,
+        configuration: &Value,
+    ) -> Result<GraphGenerationStats, String>;
+
     /// Samples a graph using random walk.
     fn sample_graph(
         &self,
@@ -195,6 +275,65 @@ pub trait GraphCatalogApplications {
         graph_name: &str,
         sampling_config: &SamplingConfig,
     ) -> Result<SamplingResult, String>;
+
+    /// Subgraph projection.
+    ///
+    /// Java parity: `subGraphProject`.
+    fn sub_graph_project(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: &str,
+        origin_graph_name: &str,
+        node_filter: &str,
+        relationship_filter: &str,
+        configuration: &Value,
+    ) -> Result<GraphFilterResult, String>;
+
+    /// Random-walk with restarts sampling.
+    ///
+    /// Java parity: `sampleRandomWalkWithRestarts`.
+    fn sample_random_walk_with_restarts(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: &str,
+        origin_graph_name: &str,
+        configuration: &Value,
+    ) -> Result<RandomWalkSamplingResult, String>;
+
+    /// Common-neighbour-aware random walk sampling.
+    ///
+    /// Java parity: `sampleCommonNeighbourAwareRandomWalk`.
+    fn sample_common_neighbour_aware_random_walk(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: &str,
+        origin_graph_name: &str,
+        configuration: &Value,
+    ) -> Result<RandomWalkSamplingResult, String>;
+
+    /// Common-neighbour-aware random walk memory estimate.
+    ///
+    /// Java parity: `estimateCommonNeighbourAwareRandomWalk`.
+    fn estimate_common_neighbour_aware_random_walk(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: &str,
+        configuration: &Value,
+    ) -> Result<MemoryEstimateResult, String>;
+
+    /// Mutates (adds) a node label.
+    fn mutate_label(
+        &self,
+        user: &dyn User,
+        database_id: &DatabaseId,
+        graph_name: &str,
+        node_label: &str,
+        config: &MutateLabelConfig,
+    ) -> Result<MutateLabelResult, String>;
 }
 
 /// Placeholder result types for the facade operations
@@ -305,7 +444,8 @@ impl ExportResult {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProjectionResult {
     graph_name: String,
     nodes_projected: u64,
@@ -437,7 +577,8 @@ impl SamplingResult {
 // later swap the implementation to a real native factory (Arrow/Polars/etc.) without
 // changing the TS boundary.
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NativeProjectionConfig {
     /// Name of the projected graph to store in the catalog.
     pub graph_name: String,
@@ -474,7 +615,8 @@ pub struct NativeProjectionConfig {
     pub fictitious_loading: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GenericProjectionConfig {
     pub graph_name: String,
     pub source_graph_name: Option<String>,
@@ -486,10 +628,59 @@ pub struct GenericProjectionConfig {
     pub weight_property: Option<String>,
     pub fictitious_loading: bool,
 }
-#[derive(Clone, Debug)]
-pub struct GraphGenerationConfig;
-#[derive(Clone, Debug)]
-pub struct SamplingConfig;
+
+// -----------------------------------------------------------------------------
+// Generate / Sample config types (pass-1 Java-parity shape)
+// -----------------------------------------------------------------------------
+
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphGenerationConfig {
+    /// Name for the generated graph (stored in catalog). When omitted, defaults to "generated_graph".
+    pub graph_name: Option<String>,
+    /// Number of nodes to generate.
+    pub node_count: Option<usize>,
+    /// Node labels to assign.
+    pub node_labels: Vec<String>,
+    /// Relationship types to generate.
+    pub relationships: Vec<GraphGenerationRelationshipConfig>,
+    /// Directed graph when true.
+    pub directed: Option<bool>,
+    /// Build inverse indices for relationship types.
+    pub inverse_indexed: Option<bool>,
+    /// RNG seed for deterministic generation.
+    pub seed: Option<u64>,
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphGenerationRelationshipConfig {
+    pub relationship_type: String,
+    /// Probability in [0.0, 1.0] of creating an edge between node pairs.
+    pub probability: f64,
+}
+
+impl Default for GraphGenerationRelationshipConfig {
+    fn default() -> Self {
+        Self {
+            relationship_type: "REL".to_string(),
+            probability: 0.1,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SamplingConfig {
+    /// Name for the sampled graph (stored in catalog). When omitted, defaults to "{origin}_sampled".
+    pub sampled_graph_name: Option<String>,
+    /// Fixed sample size in nodes.
+    pub sample_node_count: Option<usize>,
+    /// Ratio of nodes to sample in (0.0, 1.0].
+    pub sample_ratio: Option<f64>,
+    /// RNG seed for deterministic selection.
+    pub seed: Option<u64>,
+}
 
 #[derive(Clone, Debug)]
 pub struct GraphStoreCatalogEntry {

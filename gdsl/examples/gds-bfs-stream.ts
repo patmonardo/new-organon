@@ -58,7 +58,8 @@ export function bfsStreamDemo(): void {
     {
       kind: 'ApplicationForm',
       facade: 'algorithms',
-      op: 'bfs_stream',
+      op: 'bfs',
+      mode: 'stream',
       user,
       databaseId,
       graphName,

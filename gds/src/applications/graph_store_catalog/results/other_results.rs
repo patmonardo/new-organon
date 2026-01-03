@@ -37,7 +37,7 @@ impl GraphMemoryUsage {
 
 /// Result for mutating node labels.
 /// Mirrors Java MutateLabelResult class.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct MutateLabelResult {
     pub mutate_millis: u64,
     pub graph_name: String,
@@ -158,7 +158,8 @@ impl std::fmt::Display for TopologyResult {
 
 /// Result for random walk sampling operations.
 /// Mirrors Java RandomWalkSamplingResult class.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RandomWalkSamplingResult {
     pub graph_name: String,
     pub from_graph_name: String,
@@ -190,7 +191,8 @@ impl RandomWalkSamplingResult {
 
 /// Statistics for graph generation operations.
 /// Mirrors Java GraphGenerationStats class.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GraphGenerationStats {
     pub name: String,
     pub nodes: u64,

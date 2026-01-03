@@ -63,7 +63,8 @@ export function bellmanFordStreamDemo(): void {
     {
       kind: 'ApplicationForm',
       facade: 'algorithms',
-      op: 'bellman_ford_stream',
+      op: 'bellman_ford',
+      mode: 'stream',
       user,
       databaseId,
       graphName,

@@ -58,7 +58,8 @@ export function dfsStreamDemo(): void {
     {
       kind: 'ApplicationForm',
       facade: 'algorithms',
-      op: 'dfs_stream',
+      op: 'dfs',
+      mode: 'stream',
       user,
       databaseId,
       graphName,

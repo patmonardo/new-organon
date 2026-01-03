@@ -66,7 +66,7 @@ export function adminScopeDemo(): void {
     {
       kind: 'ApplicationForm',
       facade: 'graph_store_catalog',
-      op: 'list_graphs',
+      op: 'listGraphs',
       user: alice,
       databaseId: db1,
     },
@@ -74,7 +74,7 @@ export function adminScopeDemo(): void {
     {
       kind: 'ApplicationForm',
       facade: 'graph_store_catalog',
-      op: 'list_graphs',
+      op: 'listGraphs',
       user: bob,
       databaseId: db1,
     },
@@ -82,7 +82,7 @@ export function adminScopeDemo(): void {
     {
       kind: 'ApplicationForm',
       facade: 'graph_store_catalog',
-      op: 'list_graphs',
+      op: 'listGraphs',
       user: admin,
       databaseId: db1,
     },

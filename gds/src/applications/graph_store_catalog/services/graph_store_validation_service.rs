@@ -3,6 +3,7 @@
 /// Mirrors Java GraphStoreValidationService class.
 /// Contains graph validation methods for various operations.
 use crate::types::graph_store::GraphStore;
+use crate::projection::{NodeLabel, RelationshipType};
 
 pub struct GraphStoreValidationService;
 
@@ -200,18 +201,15 @@ impl GraphStoreValidationService {
 
     // Helper methods for checking graph store state
     fn has_node_property<G: GraphStore>(&self, _graph_store: &G, _property: &str) -> bool {
-        // Placeholder implementation
-        true
+        _graph_store.has_node_property(_property)
     }
 
     fn has_relationship_type<G: GraphStore>(&self, _graph_store: &G, _rel_type: &str) -> bool {
-        // Placeholder implementation
-        true
+        _graph_store.has_relationship_type(&RelationshipType::of(_rel_type))
     }
 
     fn has_graph_property<G: GraphStore>(&self, _graph_store: &G, _property: &str) -> bool {
-        // Placeholder implementation
-        true
+        _graph_store.has_graph_property(_property)
     }
 
     fn has_node_property_for_label<G: GraphStore>(
@@ -220,8 +218,7 @@ impl GraphStoreValidationService {
         _label: &str,
         _property: &str,
     ) -> bool {
-        // Placeholder implementation
-        true
+        _graph_store.has_node_property_for_label(&NodeLabel::of(_label), _property)
     }
 
     fn has_relationship_property_for_type<G: GraphStore>(
@@ -230,8 +227,7 @@ impl GraphStoreValidationService {
         _rel_type: &str,
         _property: &str,
     ) -> bool {
-        // Placeholder implementation
-        true
+        _graph_store.has_relationship_property(&RelationshipType::of(_rel_type), _property)
     }
 }
 

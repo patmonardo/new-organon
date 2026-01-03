@@ -57,7 +57,8 @@ export function pagerankStreamDemo(): void {
     {
       kind: 'ApplicationForm',
       facade: 'algorithms',
-      op: 'pagerank_stream',
+      op: 'pagerank',
+      mode: 'stream',
       user,
       databaseId,
       graphName,

@@ -85,6 +85,23 @@ pub struct GraphStreamRelationshipPropertiesResult {
     pub property_value: Value,
 }
 
+/// Result for streaming graph properties.
+/// Mirrors Java GraphStreamGraphPropertiesResult class.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct GraphStreamGraphPropertiesResult {
+    pub graph_property: String,
+    pub property_value: Value,
+}
+
+impl GraphStreamGraphPropertiesResult {
+    pub fn new(graph_property: String, property_value: Value) -> Self {
+        Self {
+            graph_property,
+            property_value,
+        }
+    }
+}
+
 impl GraphStreamRelationshipPropertiesResult {
     pub fn new(
         source_node_id: i64,

@@ -1,9 +1,9 @@
 /**
- * Example: GraphStore Catalog facade (project_native)
+ * Example: GraphStore Catalog facade (subGraphProject)
  *
  * Pass-1 projection semantics:
  * - Creates a source graph via `graph_store.put`
- * - Projects it into a new catalog entry via `graph_store_catalog.project_native`
+ * - Projects it into a new catalog entry via `graph_store_catalog.subGraphProject`
  *
  * This is the “Projection/Factory” seam: today it clones from the catalog; later it
  * can swap to a real native factory/loader without changing the TS-JSON shape.
@@ -60,21 +60,14 @@ export function projectNativeDemo(): void {
     {
       kind: 'ApplicationForm',
       facade: 'graph_store_catalog',
-      op: 'project_native',
+      op: 'subGraphProject',
       user,
       databaseId,
-      projectionConfig: {
-        graphName: projectedGraphName,
-        sourceGraphName,
-        // Minimal projection vocabulary (pass-1): nodeLabels filter (supports "*" for all).
-        nodeLabels: ['*'],
-        // Minimal projection vocabulary (pass-1): nodeProperties pruning (supports "*" for all).
-        nodeProperties: ['*'],
-        // Minimal projection vocabulary (pass-1): relationshipTypes filter.
-        relationshipTypes: ['KNOWS'],
-        // Minimal projection vocabulary (pass-1): relationshipProperties pruning (supports "*" for all).
-        relationshipProperties: ['*'],
-      },
+      graphName: projectedGraphName,
+      originGraphName: sourceGraphName,
+      nodeFilter: '*',
+      relationshipFilter: 'KNOWS',
+      configuration: {},
     },
     {
       kind: 'ApplicationForm',

@@ -7,12 +7,12 @@ describe('GdsTsjsonKernelPort', () => {
 		const invocations: unknown[] = [];
 		const invoke = async (requestJson: string) => {
 			invocations.push(JSON.parse(requestJson));
-			return JSON.stringify({ ok: true, op: 'list_graphs', data: { entries: [{ name: 'g1' }] } });
+			return JSON.stringify({ ok: true, op: 'listGraphs', data: { entries: [{ name: 'g1' }] } });
 		};
 
 		const port = new GdsTsjsonKernelPort(invoke);
 		const request: KernelRunRequest = {
-			model: { id: 'gds.graph_store_catalog.list_graphs' },
+			model: { id: 'gds.graph_store_catalog.listGraphs' },
 			input: { kind: 'ApplicationForm', user: { username: 'alice', isAdmin: true }, databaseId: 'db1' },
 		};
 
@@ -23,7 +23,7 @@ describe('GdsTsjsonKernelPort', () => {
 		const call = invocations[0] as any;
 		expect(call.kind).toBe('ApplicationForm');
 		expect(call.facade).toBe('graph_store_catalog');
-		expect(call.op).toBe('list_graphs');
+		expect(call.op).toBe('listGraphs');
 		expect(call.user.username).toBe('alice');
 	});
 
@@ -31,12 +31,12 @@ describe('GdsTsjsonKernelPort', () => {
 		const invoke = (requestJson: string) => {
 			// sanity: should be valid JSON
 			JSON.parse(requestJson);
-			return JSON.stringify({ ok: false, op: 'graph_memory_usage', error: { code: 'NOT_FOUND', message: 'Graph not found' } });
+			return JSON.stringify({ ok: false, op: 'graphMemoryUsage', error: { code: 'NOT_FOUND', message: 'Graph not found' } });
 		};
 
 		const port = new GdsTsjsonKernelPort(invoke);
 		const request: KernelRunRequest = {
-			model: { id: 'gds.graph_store_catalog.graph_memory_usage' },
+			model: { id: 'gds.graph_store_catalog.graphMemoryUsage' },
 			input: { user: { username: 'alice', isAdmin: true }, databaseId: 'db1', graphName: 'missing' },
 		};
 

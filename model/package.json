@@ -14,7 +14,7 @@
     "dev": "tsc --watch",
     "d": "tsc --watch",
     "demo:loop": "pnpm -w tsx model/src/demo/demo-loop-run.ts",
-    "pretest": "pnpm --filter @organon/gdsl build",
+    "pretest": "pnpm --filter @organon/gdsl build && pnpm --filter @organon/task build",
     "test": "vitest run",
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui",

@@ -55,7 +55,7 @@ export function streamRelationshipPropertiesDemo(): void {
     {
       kind: 'ApplicationForm',
       facade: 'graph_store_catalog',
-      op: 'stream_relationship_properties',
+      op: 'streamRelationshipProperties',
       user,
       databaseId,
       graphName,

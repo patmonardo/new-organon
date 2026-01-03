@@ -58,7 +58,7 @@ export function listGraphsDemo(): void {
   const listReq = {
     kind: 'ApplicationForm',
     facade: 'graph_store_catalog',
-    op: 'list_graphs',
+    op: 'listGraphs',
     user,
     databaseId: 'db1',
     graphName: putReq.graphName,
@@ -74,9 +74,9 @@ export function listGraphsDemo(): void {
   // eslint-disable-next-line no-console
   console.log('batch.response:', resp);
 
-  // Pretty-print the list_graphs entries, including optional degreeDistribution.
+  // Pretty-print the listGraphs entries, including optional degreeDistribution.
   const listResp = Array.isArray(resp) ? resp[1] : resp;
-  if (listResp && (listResp as any).ok && (listResp as any).op === 'list_graphs') {
+  if (listResp && (listResp as any).ok && (listResp as any).op === 'listGraphs') {
     const entries = (listResp as any).data?.entries;
     // eslint-disable-next-line no-console
     console.dir({ entries }, { depth: null });

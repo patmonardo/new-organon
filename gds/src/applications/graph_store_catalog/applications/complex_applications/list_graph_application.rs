@@ -55,6 +55,6 @@ impl ListGraphApplication {
             })
             .collect();
 
-        json!({ "ok": true, "op": "list_graphs", "data": { "entries": arr } })
+        json!({ "ok": true, "op": "listGraphs", "data": { "entries": arr } })
     }
 }

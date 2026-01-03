@@ -69,7 +69,8 @@ export function dijkstraStreamDemo(): void {
     {
       kind: 'ApplicationForm',
       facade: 'algorithms',
-      op: 'dijkstra_stream',
+      op: 'dijkstra',
+      mode: 'stream',
       user,
       databaseId,
       graphName,

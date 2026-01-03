@@ -55,7 +55,7 @@ export function streamNodePropertiesDemo(): void {
     {
       kind: 'ApplicationForm',
       facade: 'graph_store_catalog',
-      op: 'stream_node_properties',
+      op: 'streamNodeProperties',
       user,
       databaseId,
       graphName,

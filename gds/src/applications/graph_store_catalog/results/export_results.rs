@@ -2,7 +2,7 @@
 
 /// Base result for graph store export operations.
 /// Mirrors Java GraphStoreExportResult abstract class.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct GraphStoreExportResult {
     pub graph_name: String,
     pub node_count: u64,

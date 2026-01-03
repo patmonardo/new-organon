@@ -40,7 +40,7 @@ export function graphExistsDemo(): void {
     {
       kind: 'ApplicationForm',
       facade: 'graph_store_catalog',
-      op: 'graph_exists',
+      op: 'graphExists',
       user,
       databaseId,
       graphName,
@@ -60,7 +60,7 @@ export function graphExistsDemo(): void {
     {
       kind: 'ApplicationForm',
       facade: 'graph_store_catalog',
-      op: 'graph_exists',
+      op: 'graphExists',
       user,
       databaseId,
       graphName,

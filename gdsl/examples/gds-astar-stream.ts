@@ -75,7 +75,8 @@ export function astarStreamDemo(): void {
     {
       kind: 'ApplicationForm',
       facade: 'algorithms',
-      op: 'astar_stream',
+      op: 'astar',
+      mode: 'stream',
       user,
       databaseId,
       graphName,
