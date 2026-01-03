@@ -10,6 +10,7 @@ use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::core::utils::progress::{ProgressTracker, Tasks};
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
@@ -134,6 +135,10 @@ impl KSpanningTreeBuilder {
             );
         }
 
+        let mut progress_tracker =
+            ProgressTracker::new(Tasks::leaf("kspanningtree", node_count));
+        progress_tracker.begin_subtask(node_count);
+
         let fallback = graph_view.default_property_value();
 
         // Get neighbors with weights
@@ -169,6 +174,9 @@ impl KSpanningTreeBuilder {
             &self.objective,
             get_neighbors,
         );
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((
             result.parent,

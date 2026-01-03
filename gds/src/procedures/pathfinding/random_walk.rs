@@ -16,7 +16,9 @@ use std::sync::Arc;
 use std::time::Instant;
 
 // Import upgraded systems
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+};
 
 /// Result row for random walk stream mode
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
@@ -175,6 +177,12 @@ impl RandomWalkBuilder {
             return Ok((Vec::new(), start.elapsed()));
         }
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("random_walk", node_count),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(node_count);
+
         let fallback = graph_view.default_property_value();
 
         // Convert source nodes to internal IDs
@@ -223,6 +231,9 @@ impl RandomWalkBuilder {
         );
 
         let result = runtime.compute(node_count, get_neighbors);
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((result.walks, start.elapsed()))
     }

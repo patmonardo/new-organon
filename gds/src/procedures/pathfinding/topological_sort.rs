@@ -16,7 +16,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 // Import upgraded systems
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory};
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks};
 
 /// Result row for topological sort stream mode
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
@@ -126,6 +126,12 @@ impl TopologicalSortBuilder {
             return Ok((Vec::new(), None, start.elapsed()));
         }
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("topological_sort", node_count),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(node_count);
+
         let fallback = graph_view.default_property_value();
 
         // Get neighbors with weights
@@ -151,6 +157,9 @@ impl TopologicalSortBuilder {
         let mut runtime =
             TopologicalSortComputationRuntime::new(node_count, self.compute_max_distance);
         let result = runtime.compute(node_count, get_neighbors);
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((
             result.sorted_nodes,

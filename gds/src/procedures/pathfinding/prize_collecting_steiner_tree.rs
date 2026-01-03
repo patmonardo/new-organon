@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::core::utils::progress::TaskRegistryFactory;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistryFactory, Tasks};
 
 /// Result row for Prize-Collecting Steiner Tree stream mode
 #[derive(Debug, Clone, serde::Serialize)]
@@ -148,6 +148,12 @@ impl PCSTreeBuilder {
             );
         }
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("prize_collecting_steiner_tree", node_count),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(node_count);
+
         let fallback = graph_view.default_property_value();
 
         // Get neighbors with weights
@@ -200,6 +206,9 @@ impl PCSTreeBuilder {
             net_value: result.net_value,
             computation_time_ms: start.elapsed().as_millis() as u64,
         };
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((rows, stats))
     }

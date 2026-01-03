@@ -15,7 +15,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::core::utils::progress::TaskRegistryFactory;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistryFactory, Tasks};
 
 /// Result row for Steiner tree stream mode
 #[derive(Debug, Clone, serde::Serialize)]
@@ -157,6 +157,12 @@ impl SteinerTreeBuilder {
             ));
         }
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("steiner_tree", node_count),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(node_count);
+
         let fallback = graph_view.default_property_value();
 
         // Get neighbors with weights
@@ -211,6 +217,9 @@ impl SteinerTreeBuilder {
             total_cost: result.total_cost,
             computation_time_ms: start.elapsed().as_millis() as u64,
         };
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((rows, stats))
     }

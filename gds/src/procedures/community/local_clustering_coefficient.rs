@@ -8,7 +8,7 @@
 //! - `max_degree`: passed through to TriangleCount (performance / approximation)
 //! - `seed_property`: optional triangle-count property name (not yet wired; we compute triangles)
 
-use crate::core::utils::progress::TaskRegistry;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::community::triangle_count::TriangleCountFacade;
@@ -100,6 +100,12 @@ impl LocalClusteringCoefficientFacade {
         let rel_graph = self.graph_store.get_graph();
         let node_count = rel_graph.node_count();
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("local_clustering_coefficient", node_count),
+            self.concurrency,
+        );
+        progress_tracker.begin_subtask(node_count);
+
         let mut degrees: Vec<i32> = Vec::with_capacity(node_count);
         for node_id in 0..node_count {
             degrees.push(rel_graph.degree(node_id as i64) as i32);
@@ -107,6 +113,9 @@ impl LocalClusteringCoefficientFacade {
 
         let mut runtime = LocalClusteringCoefficientComputationRuntime::new(node_count);
         runtime.compute(&triangle_result.local_triangles, &degrees);
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((
             runtime.local_clustering_coefficients.clone(),

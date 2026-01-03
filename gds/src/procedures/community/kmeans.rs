@@ -14,7 +14,7 @@
 //! - `seed_centroids`
 //! - `random_seed`
 
-use crate::core::utils::progress::TaskRegistry;
+use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits::Result;
 use crate::algo::kmeans::{KMeansComputationRuntime, KMeansConfig, KMeansResult};
@@ -226,15 +226,29 @@ impl KMeansFacade {
             }
         }
 
+        let mut progress_tracker = ProgressTracker::with_concurrency(
+            Tasks::leaf("kmeans", node_count),
+            config.concurrency,
+        );
+        progress_tracker.begin_subtask(node_count);
+
         let mut points: Vec<Vec<f64>> = Vec::with_capacity(node_count);
         for i in 0..node_count {
-            let arr = pv.double_array_value(i as u64).map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "failed to read node_property '{}' for node {}: {}",
-                    config.node_property, i, e
-                ))
-            })?;
+            let arr = match pv.double_array_value(i as u64) {
+                Ok(value) => value,
+                Err(e) => {
+                    progress_tracker.end_subtask_with_failure();
+                    return Err(
+                        crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                            "failed to read node_property '{}' for node {}: {}",
+                            config.node_property, i, e
+                        )),
+                    );
+                }
+            };
+
             if arr.len() != dims {
+                progress_tracker.end_subtask_with_failure();
                 return Err(
                     crate::projection::eval::procedure::AlgorithmError::Execution(format!(
                         "node_property '{}' dimension mismatch at node {}: expected {}, got {}",
@@ -250,6 +264,9 @@ impl KMeansFacade {
 
         let mut runtime = KMeansComputationRuntime::new();
         let result = runtime.compute(&points, &config);
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
 
         Ok((result, start.elapsed().as_millis() as u64))
     }
