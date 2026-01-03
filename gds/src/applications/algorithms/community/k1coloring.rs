@@ -96,7 +96,7 @@ pub fn handle_k1coloring(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
                 &format!("K1Coloring write failed: {:?}", e),
             ),
         },
-        "estimate_memory" => match facade.estimate_memory() {
+        "estimate" => match facade.estimate_memory() {
             Ok(range) => json!({
                 "ok": true,
                 "op": op,

@@ -107,7 +107,7 @@ pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) ->
                 &format!("Triangle Count write failed: {:?}", e),
             ),
         },
-        "estimate_memory" => match facade.estimate_memory() {
+        "estimate" => match facade.estimate_memory() {
             Ok(range) => json!({
                 "ok": true,
                 "op": op,

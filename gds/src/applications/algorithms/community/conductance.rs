@@ -102,7 +102,7 @@ pub fn handle_conductance(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
                 &format!("Conductance write failed: {:?}", e),
             ),
         },
-        "estimate_memory" => match facade.estimate_memory() {
+        "estimate" => match facade.estimate_memory() {
             Ok(range) => json!({
                 "ok": true,
                 "op": op,

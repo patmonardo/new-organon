@@ -38,6 +38,10 @@ pub fn handle_hits(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         .and_then(|v| v.as_u64())
         .unwrap_or(1) as usize;
 
+    let estimate_submode = request
+        .get("estimateSubmode")
+        .and_then(|v| v.as_str());
+
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
         Some(store) => store,
@@ -121,15 +125,27 @@ pub fn handle_hits(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 ),
             }
         }
-        "estimate_memory" => match facade.estimate_memory() {
-            memory => json!({
-                "ok": true,
-                "op": op,
-                "data": {
-                    "min": memory.min(),
-                    "max": memory.max()
-                }
-            }),
+        "estimate" => match estimate_submode {
+            Some("memory") => match facade.estimate_memory() {
+                memory => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": {
+                        "min": memory.min(),
+                        "max": memory.max()
+                    }
+                }),
+            },
+            Some(other) => err(
+                op,
+                "INVALID_REQUEST",
+                &format!("Invalid estimate submode '{}'. Use 'memory'", other),
+            ),
+            None => err(
+                op,
+                "INVALID_REQUEST",
+                "Missing 'estimateSubmode' parameter for estimate mode",
+            ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }

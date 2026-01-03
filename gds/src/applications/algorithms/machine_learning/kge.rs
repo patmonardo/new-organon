@@ -93,7 +93,7 @@ pub fn handle_kge(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
             }),
             Err(e) => err(op, "EXECUTION_ERROR", &format!("KGE failed: {e}")),
         },
-        "mutate" | "write" | "estimate_memory" => err(
+        "mutate" | "write" | "estimate" => err(
             op,
             "NOT_IMPLEMENTED",
             "mutate/write/estimate_memory are not yet wired for KGE",

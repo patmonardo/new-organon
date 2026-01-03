@@ -123,7 +123,7 @@ pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>)
                 &format!("Label Propagation write failed: {:?}", e),
             ),
         },
-        "estimate_memory" => match facade.estimate_memory() {
+        "estimate" => match facade.estimate_memory() {
             Ok(range) => json!({
                 "ok": true,
                 "op": op,

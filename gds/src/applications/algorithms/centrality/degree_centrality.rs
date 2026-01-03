@@ -39,6 +39,10 @@ pub fn handle_degree_centrality(request: &Value, catalog: Arc<dyn GraphCatalog>)
         .and_then(|v| v.as_bool())
         .unwrap_or(false);
 
+    let estimate_submode = request
+        .get("estimateSubmode")
+        .and_then(|v| v.as_str());
+
     let concurrency = request
         .get("concurrency")
         .and_then(|v| v.as_u64())
@@ -154,21 +158,35 @@ pub fn handle_degree_centrality(request: &Value, catalog: Arc<dyn GraphCatalog>)
                 ),
             }
         }
-        "estimate_memory" => {
-            let memory = facade.estimate_memory();
-            json!({
-                "ok": true,
-                "op": op,
-                "data": {
-                    "min_bytes": memory.min(),
-                    "max_bytes": memory.max()
+        "estimate" => {
+            match estimate_submode {
+                Some("memory") => {
+                    let memory = facade.estimate_memory();
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "data": {
+                            "min_bytes": memory.min(),
+                            "max_bytes": memory.max()
+                        }
+                    })
                 }
-            })
+                Some(other) => err(
+                    op,
+                    "INVALID_REQUEST",
+                    &format!("Invalid estimate submode '{}'. Use 'memory'", other),
+                ),
+                None => err(
+                    op,
+                    "INVALID_REQUEST",
+                    "Missing 'estimateSubmode' parameter for estimate mode",
+                ),
+            }
         }
         _ => err(
             op,
             "INVALID_REQUEST",
-            "Invalid mode. Use 'stream', 'stats', 'mutate', 'write', or 'estimate_memory'",
+            "Invalid mode. Use 'stream', 'stats', 'mutate', 'write', or 'estimate'",
         ),
     }
 }

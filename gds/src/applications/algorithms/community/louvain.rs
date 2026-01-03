@@ -120,7 +120,7 @@ pub fn handle_louvain(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
                 ),
             }
         }
-        "estimate_memory" => {
+        "estimate" => {
             let memory = facade.estimate_memory();
             json!({
                 "ok": true,
@@ -134,7 +134,7 @@ pub fn handle_louvain(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
         _ => err(
             op,
             "INVALID_REQUEST",
-            "Invalid mode. Use 'stream', 'stats', 'mutate', 'write', or 'estimate_memory'",
+            "Invalid mode. Use 'stream', 'stats', 'mutate', 'write', or 'estimate'",
         ),
     }
 }

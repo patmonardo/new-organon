@@ -112,7 +112,7 @@ pub fn handle_wcc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 Err(e) => err(op, "EXECUTION_ERROR", &format!("WCC write failed: {:?}", e)),
             }
         }
-        "estimate_memory" => {
+        "estimate" => {
             let memory = facade.estimate_memory();
             json!({
                 "ok": true,
@@ -126,7 +126,7 @@ pub fn handle_wcc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         _ => err(
             op,
             "INVALID_REQUEST",
-            "Invalid mode. Use 'stream', 'stats', 'mutate', 'write', or 'estimate_memory'",
+            "Invalid mode. Use 'stream', 'stats', 'mutate', 'write', or 'estimate'",
         ),
     }
 }

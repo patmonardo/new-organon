@@ -44,7 +44,7 @@ pub fn handle_scale_properties(request: &Value, catalog: Arc<dyn GraphCatalog>) 
         .source_property(source_property.clone())
         .concurrency(concurrency);
 
-    if mode == "estimate_memory" {
+    if mode == "estimate" {
         if source_property.is_empty() {
             return err(
                 op,

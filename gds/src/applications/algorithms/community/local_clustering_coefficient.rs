@@ -119,7 +119,7 @@ pub fn handle_local_clustering_coefficient(
                 &format!("Local Clustering Coefficient write failed: {:?}", e),
             ),
         },
-        "estimate_memory" => match facade.estimate_memory() {
+        "estimate" => match facade.estimate_memory() {
             Ok(range) => json!({
                 "ok": true,
                 "op": op,

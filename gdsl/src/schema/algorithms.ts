@@ -19,11 +19,19 @@ const AlgorithmsBase = gdsApplicationBase(GdsAlgorithmsFacadeSchema);
  * - stats: Returns aggregated statistics only
  * - mutate: Writes results to in-memory graph projection
  * - write: Writes results back to database
+ * - estimate: Returns memory estimation without executing
  */
 export const AlgorithmModeSchema = z
-	.enum(['stream', 'stats', 'mutate', 'write', 'train'])
+	.enum(['stream', 'stats', 'mutate', 'write', 'estimate', 'train'])
 	.default('stream');
 export type AlgorithmMode = z.infer<typeof AlgorithmModeSchema>;
+
+/**
+ * Submode for estimate operations.
+ * - memory: Memory usage estimation
+ */
+export const EstimateSubmodeSchema = z.enum(['memory']).optional();
+export type EstimateSubmode = z.infer<typeof EstimateSubmodeSchema>;
 
 // NOTE: This union is intentionally large; it can be split further by Java package
 // (centrality/community/pathfinding/embeddings/...) once the op surface is stable.
@@ -41,6 +49,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		trackPaths: z.boolean().optional(),
 		concurrency: z.number().int().positive().optional(),
 		delta: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('dfs'),
@@ -51,6 +60,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		maxDepth: z.number().int().positive().optional(),
 		trackPaths: z.boolean().optional(),
 		concurrency: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('dijkstra'),
@@ -63,6 +73,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		direction: z.enum(['incoming', 'outgoing', 'both']).optional(),
 		trackRelationships: z.boolean().optional(),
 		concurrency: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('bellman_ford'),
@@ -75,6 +86,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		trackNegativeCycles: z.boolean().optional(),
 		trackPaths: z.boolean().optional(),
 		concurrency: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('astar'),
@@ -190,6 +202,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		weighted: z.boolean().optional(),
 		weightProperty: z.string().min(1).optional(),
 		concurrency: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('pagerank'),
@@ -201,6 +214,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		tolerance: z.number().positive().optional(),
 		sourceNodes: z.array(z.number().int().nonnegative()).optional(),
 		concurrency: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('betweenness'),
@@ -208,6 +222,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		graphName: GdsGraphNameSchema,
 		direction: z.enum(['incoming', 'outgoing', 'both']).optional(),
 		concurrency: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('closeness'),
@@ -216,6 +231,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		direction: z.enum(['incoming', 'outgoing', 'both']).optional(),
 		useWasserman: z.boolean().optional(),
 		concurrency: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('harmonic'),
@@ -223,6 +239,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		graphName: GdsGraphNameSchema,
 		direction: z.enum(['incoming', 'outgoing', 'both']).optional(),
 		concurrency: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('hits'),
@@ -232,18 +249,21 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		iterations: z.number().int().positive().optional(),
 		tolerance: z.number().positive().optional(),
 		concurrency: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('articulation_points'),
 		mode: AlgorithmModeSchema,
 		graphName: GdsGraphNameSchema,
 		concurrency: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('bridges'),
 		mode: AlgorithmModeSchema,
 		graphName: GdsGraphNameSchema,
 		concurrency: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('celf'),
@@ -251,6 +271,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		graphName: GdsGraphNameSchema,
 		seedSetSize: z.number().int().positive().optional(),
 		concurrency: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	// ==========================================================================
 	// Similarity Algorithms
@@ -268,6 +289,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		degreeCutoff: z.number().int().nonnegative().optional(),
 		randomSeed: z.number().int().nonnegative().optional(),
 		concurrency: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('node_similarity'),
@@ -282,6 +304,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		topN: z.number().int().positive().optional(),
 		bottomN: z.number().int().positive().optional(),
 		concurrency: z.number().int().positive().optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('filtered_knn'),
@@ -298,6 +321,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		concurrency: z.number().int().positive().optional(),
 		sourceNodeLabel: z.string().min(1).optional(),
 		targetNodeLabel: z.string().min(1).optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('filtered_node_similarity'),
@@ -314,6 +338,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		concurrency: z.number().int().positive().optional(),
 		sourceNodeLabel: z.string().min(1).optional(),
 		targetNodeLabel: z.string().min(1).optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	// ==========================================================================
 	// Node Embeddings Algorithms
@@ -334,6 +359,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		randomSeed: z.number().int().nonnegative().optional(),
 		concurrency: z.number().int().positive().optional(),
 		modelName: z.string().min(1).optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('node2vec'),
@@ -347,6 +373,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		randomSeed: z.number().int().nonnegative().optional(),
 		concurrency: z.number().int().positive().optional(),
 		modelName: z.string().min(1).optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('fastrp'),
@@ -359,6 +386,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		randomSeed: z.number().int().nonnegative().optional(),
 		concurrency: z.number().int().positive().optional(),
 		modelName: z.string().min(1).optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('hash_gnn'),
@@ -370,6 +398,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		randomSeed: z.number().int().nonnegative().optional(),
 		concurrency: z.number().int().positive().optional(),
 		modelName: z.string().min(1).optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 	AlgorithmsBase.extend({
 		op: z.literal('gat'),
@@ -386,6 +415,7 @@ export const GdsAlgorithmsCallSchema = z.discriminatedUnion('op', [
 		randomSeed: z.number().int().nonnegative().optional(),
 		concurrency: z.number().int().positive().optional(),
 		modelName: z.string().min(1).optional(),
+		estimateSubmode: EstimateSubmodeSchema,
 	}),
 ]);
 export type GdsAlgorithmsCall = z.infer<typeof GdsAlgorithmsCallSchema>;

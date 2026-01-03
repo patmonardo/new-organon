@@ -60,6 +60,10 @@ pub fn handle_dijkstra(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
         .and_then(|v| v.as_u64())
         .unwrap_or(4) as usize;
 
+    let estimate_submode = request
+        .get("estimateSubmode")
+        .and_then(|v| v.as_str());
+
     let mode = request
         .get("mode")
         .and_then(|v| v.as_str())
@@ -166,20 +170,32 @@ pub fn handle_dijkstra(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
                 ),
             }
         }
-        "estimate" => {
-            // Memory estimation mode - returns memory range without executing algorithm
-            let memory_range = builder.estimate_memory();
-            json!({
-                "ok": true,
-                "op": op,
-                "data": {
-                    "memoryBytes": {
-                        "min": memory_range.min(),
-                        "max": memory_range.max()
+        "estimate" => match estimate_submode {
+            Some("memory") => {
+                // Memory estimation mode - returns memory range without executing algorithm
+                let memory_range = builder.estimate_memory();
+                json!({
+                    "ok": true,
+                    "op": op,
+                    "data": {
+                        "memoryBytes": {
+                            "min": memory_range.min(),
+                            "max": memory_range.max()
+                        }
                     }
-                }
-            })
-        }
+                })
+            }
+            Some(other) => err(
+                op,
+                "INVALID_REQUEST",
+                &format!("Invalid estimate submode '{}'. Use 'memory'", other),
+            ),
+            None => err(
+                op,
+                "INVALID_REQUEST",
+                "Missing 'estimateSubmode' parameter for estimate mode",
+            ),
+        },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
 }
