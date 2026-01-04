@@ -135,8 +135,10 @@ impl LeidenFacade {
         let node_count = graph_view.node_count();
         let mut adjacency_list = vec![Vec::new(); node_count];
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("leiden", node_count));
-        progress_tracker.begin_subtask(node_count);
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+            Tasks::leaf_with_volume("leiden".to_string(), node_count),
+        );
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         for (node_id, adj) in adjacency_list.iter_mut().enumerate() {
             let relationships = graph_view.stream_relationships_weighted(node_id as i64, 1.0);

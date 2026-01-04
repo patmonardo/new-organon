@@ -135,9 +135,10 @@ impl KSpanningTreeBuilder {
             );
         }
 
-        let mut progress_tracker =
-            ProgressTracker::new(Tasks::leaf("kspanningtree", node_count));
-        progress_tracker.begin_subtask(node_count);
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+            Tasks::leaf_with_volume("kspanningtree".to_string(), node_count),
+        );
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let fallback = graph_view.default_property_value();
 

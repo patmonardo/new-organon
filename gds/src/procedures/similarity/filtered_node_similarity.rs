@@ -139,11 +139,11 @@ impl FilteredNodeSimilarityBuilder {
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
             .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("filtered_node_similarity", graph.node_count()),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("filtered_node_similarity".to_string(), graph.node_count()),
             self.concurrency,
         );
-        progress_tracker.begin_subtask(graph.node_count());
+        progress_tracker.begin_subtask_with_volume(graph.node_count());
 
         let id_map = GraphStore::nodes(self.graph_store.as_ref());
 

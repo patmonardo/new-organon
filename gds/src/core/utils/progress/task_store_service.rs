@@ -167,7 +167,7 @@ mod tests {
 
         // Should be a real store
         let job_id = JobId::new();
-        let task = Task::new("Test".to_string(), 100);
+        let task = Task::new("Test".to_string(), vec![]);
         store.store("alice".to_string(), job_id.clone(), task);
 
         assert_eq!(store.task_count(), 1);
@@ -184,7 +184,7 @@ mod tests {
 
         // Should be EmptyTaskStore
         let job_id = JobId::new();
-        let task = Task::new("Test".to_string(), 100);
+        let task = Task::new("Test".to_string(), vec![]);
         store.store("alice".to_string(), job_id.clone(), task);
 
         // EmptyTaskStore ignores everything
@@ -402,7 +402,7 @@ mod tests {
                     i
                 );
                 let job_id = JobId::new();
-                let task = Task::new(format!("Task {}", i), 100);
+                let task = Task::new(format!("Task {}", i), vec![]);
                 store.store(format!("user{}", i), job_id, task);
                 counter.fetch_add(1, Ordering::SeqCst);
             });
@@ -458,7 +458,7 @@ mod tests {
         let store = service.get_task_store(db_name);
 
         let job_id = JobId::new();
-        let task = Task::new("Test".to_string(), 100);
+        let task = Task::new("Test".to_string(), vec![]);
         store.store("alice".to_string(), job_id, task);
 
         assert_eq!(store.task_count(), 1);

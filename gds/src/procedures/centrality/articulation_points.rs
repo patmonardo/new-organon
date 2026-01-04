@@ -7,8 +7,9 @@
 //! `DefaultGraphStore` graph view.
 
 use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
 };
+use crate::core::utils::progress::ProgressTracker;
 use crate::mem::MemoryRange;
 use crate::algo::articulation_points::computation::ArticulationPointsComputationRuntime;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
@@ -97,11 +98,11 @@ impl ArticulationPointsFacade {
             return Ok(crate::collections::BitSet::new(0));
         }
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("articulation_points", node_count),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("articulation_points".to_string(), node_count),
             self.concurrency,
         );
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {
@@ -184,11 +185,11 @@ impl ArticulationPointsFacade {
             return Ok((crate::collections::BitSet::new(0), start.elapsed()));
         }
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("articulation_points", node_count),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("articulation_points".to_string(), node_count),
             self.concurrency,
         );
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {

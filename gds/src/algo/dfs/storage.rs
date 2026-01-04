@@ -56,7 +56,7 @@ impl DfsStorageRuntime {
         &self,
         computation: &mut DfsComputationRuntime,
         graph: Option<&dyn Graph>,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<DfsResult, AlgorithmError> {
         let start_time = std::time::Instant::now();
 
@@ -66,7 +66,7 @@ impl DfsStorageRuntime {
         if volume == UNKNOWN_VOLUME {
             progress_tracker.begin_subtask_unknown();
         } else {
-            progress_tracker.begin_subtask(volume);
+            progress_tracker.begin_subtask_with_volume(volume);
         }
 
         // Initialize computation runtime
@@ -219,7 +219,7 @@ mod tests {
         let storage = DfsStorageRuntime::new(0, vec![3], None, true, 1);
         let mut computation = DfsComputationRuntime::new(0, true, 1);
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("DFS", UNKNOWN_VOLUME));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("DFS".to_string()));
 
         let result = storage
             .compute_dfs(&mut computation, None, &mut progress_tracker)
@@ -234,7 +234,7 @@ mod tests {
         let storage = DfsStorageRuntime::new(0, vec![0], None, true, 1);
         let mut computation = DfsComputationRuntime::new(0, true, 1);
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("DFS", UNKNOWN_VOLUME));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("DFS".to_string()));
 
         let result = storage
             .compute_dfs(&mut computation, None, &mut progress_tracker)
@@ -252,7 +252,7 @@ mod tests {
         let storage = DfsStorageRuntime::new(0, vec![], Some(1), false, 1);
         let mut computation = DfsComputationRuntime::new(0, false, 1);
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("DFS", UNKNOWN_VOLUME));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("DFS".to_string()));
 
         let result = storage
             .compute_dfs(&mut computation, None, &mut progress_tracker)

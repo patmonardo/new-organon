@@ -236,8 +236,8 @@ impl AllShortestPathsBuilder {
             self.concurrency,
         );
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("all_shortest_paths", graph_view.node_count()),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("all_shortest_paths".to_string(), graph_view.node_count()),
             self.concurrency,
         );
 

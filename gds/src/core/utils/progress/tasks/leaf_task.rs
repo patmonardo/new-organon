@@ -1,24 +1,18 @@
 #[cfg(test)]
 use super::UNKNOWN_VOLUME;
 use super::{Progress, Task, TaskVisitor};
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
 
 /// Leaf task implementation - terminal node in task hierarchy.
 /// Tracks progress with atomic operations and handles volume updates.
 pub struct LeafTask {
     base: Task,
-    volume: Arc<Mutex<usize>>,
-    current_progress: AtomicUsize,
 }
 
 impl LeafTask {
     /// Create a new leaf task with description and volume.
     pub fn new(description: String, volume: usize) -> Self {
         Self {
-            base: Task::new(description, vec![]),
-            volume: Arc::new(Mutex::new(volume)),
-            current_progress: AtomicUsize::new(0),
+            base: Task::leaf(description, volume),
         }
     }
 
@@ -30,34 +24,21 @@ impl LeafTask {
     /// Finish task and set progress to 100%.
     pub fn finish(&self) {
         self.base.finish();
-
-        // This task should now be considered to have 100% progress.
-        let mut volume = self.volume.lock().unwrap();
-        if *volume == super::UNKNOWN_VOLUME {
-            *volume = self.current_progress.load(Ordering::Relaxed);
-        }
-
-        let current = self.current_progress.load(Ordering::Relaxed);
-        let remaining = volume.saturating_sub(current);
-        self.current_progress
-            .fetch_add(remaining, Ordering::Relaxed);
     }
 
     /// Set task volume.
     pub fn set_volume(&self, volume: usize) {
-        *self.volume.lock().unwrap() = volume;
+        self.base.set_volume(volume);
     }
 
     /// Log progress increment.
     pub fn log_progress(&self, value: usize) {
-        self.current_progress.fetch_add(value, Ordering::Relaxed);
+        self.base.log_progress(value);
     }
 
     /// Get current progress.
     pub fn get_progress(&self) -> Progress {
-        let current = self.current_progress.load(Ordering::Relaxed);
-        let volume = *self.volume.lock().unwrap();
-        Progress::of(current, volume)
+        self.base.get_progress()
     }
 
     /// Accept a visitor (Visitor pattern).
@@ -67,22 +48,22 @@ impl LeafTask {
 
     /// Get current progress value.
     pub fn current_progress_value(&self) -> usize {
-        self.current_progress.load(Ordering::Relaxed)
+        self.base.get_progress().progress()
     }
 
     /// Get task volume.
     pub fn volume(&self) -> usize {
-        *self.volume.lock().unwrap()
+        self.base.current_volume()
     }
 
     /// Reset progress to zero.
     pub fn reset_progress(&self) {
-        self.current_progress.store(0, Ordering::Relaxed);
+        self.base.reset_progress();
     }
 
     /// Check if task has unknown volume.
     pub fn has_unknown_volume(&self) -> bool {
-        *self.volume.lock().unwrap() == super::UNKNOWN_VOLUME
+        self.base.current_volume() == super::UNKNOWN_VOLUME
     }
 }
 

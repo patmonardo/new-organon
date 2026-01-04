@@ -116,9 +116,11 @@ impl CELFFacade {
             return Ok((HashMap::new(), start.elapsed()));
         }
 
-        let mut progress_tracker =
-            ProgressTracker::with_concurrency(Tasks::leaf("celf", self.config.seed_set_size), self.concurrency);
-        progress_tracker.begin_subtask(self.config.seed_set_size);
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("celf".to_string(), self.config.seed_set_size),
+                self.concurrency,
+            );
+        progress_tracker.begin_subtask_with_volume(self.config.seed_set_size);
 
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {

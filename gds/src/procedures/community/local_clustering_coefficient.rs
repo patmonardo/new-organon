@@ -100,11 +100,11 @@ impl LocalClusteringCoefficientFacade {
         let rel_graph = self.graph_store.get_graph();
         let node_count = rel_graph.node_count();
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("local_clustering_coefficient", node_count),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("local_clustering_coefficient".to_string(), node_count),
             self.concurrency,
         );
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let mut degrees: Vec<i32> = Vec::with_capacity(node_count);
         for node_id in 0..node_count {

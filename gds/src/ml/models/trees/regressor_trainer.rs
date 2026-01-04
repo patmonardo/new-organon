@@ -5,7 +5,7 @@
 use crate::collections::HugeDoubleArray;
 use crate::concurrency::Concurrency;
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::ml::decision_tree::{
     DecisionTreeRegressorTrainer, DecisionTreeTrainer, DecisionTreeTrainerConfig, FeatureBagger,
 };
@@ -24,7 +24,7 @@ pub struct RandomForestRegressorTrainer {
     config: RandomForestRegressorTrainerConfig,
     concurrency: Concurrency,
     random_seed: Option<u64>,
-    progress_tracker: ProgressTracker,
+    progress_tracker: TaskProgressTracker,
     termination_flag: TerminationFlag,
 }
 
@@ -36,7 +36,7 @@ impl RandomForestRegressorTrainer {
         config: RandomForestRegressorTrainerConfig,
         random_seed: Option<u64>,
         termination_flag: TerminationFlag,
-        progress_tracker: ProgressTracker,
+        progress_tracker: TaskProgressTracker,
         _message_log_level: crate::projection::eval::procedure::LogLevel,
     ) -> Self {
         Self {

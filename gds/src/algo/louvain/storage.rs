@@ -18,12 +18,12 @@ impl LouvainStorageRuntime {
         &self,
         computation: &mut LouvainComputationRuntime,
         graph: &dyn Graph,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> LouvainResult {
         let node_count = graph.node_count();
         let fallback = graph.default_property_value();
 
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let get_neighbors = |node: usize| -> Vec<usize> {
             let id = node as u64;

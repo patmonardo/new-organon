@@ -11,6 +11,7 @@
 //! This demonstrates the bidirectional Pregel capabilities added to the framework.
 
 use crate::config::PregelConfig;
+use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker};
 use crate::pregel::{
     ComputeContext, ComputeFn, InitContext, InitFn, MasterComputeContext, Messages, PregelBuilder,
     PregelSchema, SyncQueueMessageIterator, SyncQueueMessenger, Visibility,
@@ -125,8 +126,17 @@ pub struct HitsRunResult {
 }
 
 /// Run HITS on a given graph using the Pregel runtime with bidirectional message passing.
-pub fn run_hits(graph: Arc<dyn Graph>, max_iterations: usize, tolerance: f64) -> HitsRunResult {
+pub fn run_hits(
+    graph: Arc<dyn Graph>,
+    max_iterations: usize,
+    tolerance: f64,
+    progress_tracker: &mut TaskProgressTracker,
+) -> HitsRunResult {
     let shared_state = Arc::new(HitsSharedState::new(max_iterations, tolerance));
+    progress_tracker.begin_subtask_with_volume(max_iterations);
+
+    let progress_for_master: Arc<std::sync::Mutex<TaskProgressTracker>> =
+        Arc::new(std::sync::Mutex::new(progress_tracker.clone()));
 
     let schema = PregelSchema::builder()
         .add(AUTHORITY, ValueType::Double, Visibility::Public)
@@ -200,6 +210,7 @@ pub fn run_hits(graph: Arc<dyn Graph>, max_iterations: usize, tolerance: f64) ->
 
     let master_compute_fn = {
         let shared = Arc::clone(&shared_state);
+        let progress_for_master = Arc::clone(&progress_for_master);
         move |context: &mut MasterComputeContext<PregelConfig>| -> bool {
             let state = shared.get_state();
             let superstep = context.superstep();
@@ -234,6 +245,13 @@ pub fn run_hits(graph: Arc<dyn Graph>, max_iterations: usize, tolerance: f64) ->
                 HitsState::NormalizeHubs => {
                     // Check convergence or max iterations
                     let iteration = (superstep + 1) / 5; // 5 phases per iteration
+
+                    // One completed iteration is the unit of work.
+                    if iteration > 0 {
+                        if let Ok(mut tracker) = progress_for_master.lock() {
+                            tracker.log_progress(1);
+                        }
+                    }
 
                     if iteration >= shared.max_iterations {
                         // Max iterations reached
@@ -284,6 +302,8 @@ pub fn run_hits(graph: Arc<dyn Graph>, max_iterations: usize, tolerance: f64) ->
         authority_scores.push(result.node_values.double_value(AUTHORITY, node_id));
     }
 
+    progress_tracker.end_subtask();
+
     HitsRunResult {
         hub_scores,
         authority_scores,
@@ -310,7 +330,10 @@ mod tests {
         let store = DefaultGraphStore::random(&config).unwrap();
         let graph = store.graph();
 
-        let result = run_hits(graph, 20, 1e-4);
+        let mut progress_tracker = TaskProgressTracker::new(
+            crate::core::utils::progress::Tasks::leaf_with_volume("hits".to_string(), 20),
+        );
+        let result = run_hits(graph, 20, 1e-4, &mut progress_tracker);
 
         assert_eq!(result.hub_scores.len(), 3);
         assert_eq!(result.authority_scores.len(), 3);

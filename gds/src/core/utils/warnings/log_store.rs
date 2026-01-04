@@ -28,7 +28,7 @@ pub(crate) struct LogStore {
 /// This ensures consistent ordering even when two tasks have the same start time.
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub(crate) struct TaskKey {
-    pub(crate) start_time: i64,
+    pub(crate) start_time: u64,
     pub(crate) description: String,
 }
 
@@ -109,6 +109,30 @@ impl Default for LogStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::utils::clock_service::{Clock, ClockService};
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    struct MockClock {
+        current_time: AtomicU64,
+    }
+
+    impl MockClock {
+        const fn new(initial_time: u64) -> Self {
+            Self {
+                current_time: AtomicU64::new(initial_time),
+            }
+        }
+
+        fn advance_millis(&self, ms: u64) {
+            self.current_time.fetch_add(ms, Ordering::SeqCst);
+        }
+    }
+
+    impl Clock for MockClock {
+        fn millis(&self) -> u64 {
+            self.current_time.load(Ordering::SeqCst)
+        }
+    }
 
     #[test]
     fn test_log_store_creation() {
@@ -120,7 +144,7 @@ mod tests {
     #[test]
     fn test_add_message() {
         let mut store = LogStore::new();
-        let task = Task::new("Task 1".to_string(), 100);
+        let task = Task::new("Task 1".to_string(), vec![]);
 
         store.add_log_message(&task, "Message 1".to_string());
 
@@ -134,7 +158,7 @@ mod tests {
     #[test]
     fn test_multiple_messages_same_task() {
         let mut store = LogStore::new();
-        let task = Task::new("Task 1".to_string(), 100);
+        let task = Task::new("Task 1".to_string(), vec![]);
 
         store.add_log_message(&task, "Message 1".to_string());
         store.add_log_message(&task, "Message 2".to_string());
@@ -148,8 +172,8 @@ mod tests {
     #[test]
     fn test_multiple_tasks() {
         let mut store = LogStore::new();
-        let task1 = Task::new("Task 1".to_string(), 100);
-        let task2 = Task::new("Task 2".to_string(), 200);
+        let task1 = Task::new("Task 1".to_string(), vec![]);
+        let task2 = Task::new("Task 2".to_string(), vec![]);
 
         store.add_log_message(&task1, "Message 1".to_string());
         store.add_log_message(&task2, "Message 2".to_string());
@@ -161,10 +185,10 @@ mod tests {
     fn test_capacity_enforcement() {
         let mut store = LogStore::with_capacity(3);
 
-        let task1 = Task::new("Task 1".to_string(), 100);
-        let task2 = Task::new("Task 2".to_string(), 200);
-        let task3 = Task::new("Task 3".to_string(), 300);
-        let task4 = Task::new("Task 4".to_string(), 400);
+        let task1 = Task::new("Task 1".to_string(), vec![]);
+        let task2 = Task::new("Task 2".to_string(), vec![]);
+        let task3 = Task::new("Task 3".to_string(), vec![]);
+        let task4 = Task::new("Task 4".to_string(), vec![]);
 
         store.add_log_message(&task1, "Message 1".to_string());
         store.add_log_message(&task2, "Message 2".to_string());
@@ -190,28 +214,34 @@ mod tests {
 
     #[test]
     fn test_task_ordering() {
-        let mut store = LogStore::new();
+        static MOCK: MockClock = MockClock::new(1000);
 
-        // Create tasks with different start times
-        let task1 = Task::new("ZZZ Task".to_string(), 100);
-        std::thread::sleep(std::time::Duration::from_millis(10));
-        let task2 = Task::new("AAA Task".to_string(), 200);
+        ClockService::run_with_clock(&MOCK, |clock| {
+            let mut store = LogStore::new();
 
-        store.add_log_message(&task2, "Message 2".to_string());
-        store.add_log_message(&task1, "Message 1".to_string());
+            // Create tasks with different start times
+            let task1 = Task::new("ZZZ Task".to_string(), vec![]);
+            task1.start();
+            clock.advance_millis(10);
+            let task2 = Task::new("AAA Task".to_string(), vec![]);
+            task2.start();
 
-        let entries = store.stream();
+            store.add_log_message(&task2, "Message 2".to_string());
+            store.add_log_message(&task1, "Message 1".to_string());
 
-        // Should be ordered by start time (task1 first), not description
-        assert!(entries[0].0.start_time < entries[1].0.start_time);
+            let entries = store.stream();
+
+            // Should be ordered by start time (task1 first), not description
+            assert!(entries[0].0.start_time < entries[1].0.start_time);
+        });
     }
 
     #[test]
     fn test_same_start_time_ordered_by_description() {
         let mut store = LogStore::new();
 
-        let task1 = Task::new("BBB Task".to_string(), 100);
-        let task2 = Task::new("AAA Task".to_string(), 200);
+        let task1 = Task::new("BBB Task".to_string(), vec![]);
+        let task2 = Task::new("AAA Task".to_string(), vec![]);
 
         // Both tasks have same start time (created immediately)
         store.add_log_message(&task1, "Message 1".to_string());

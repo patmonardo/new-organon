@@ -96,10 +96,7 @@ fn test_astar_storage_computation_integration() {
 
     let mut computation = AStarComputationRuntime::new();
     let mut progress_tracker = crate::core::utils::progress::ProgressTracker::new(
-        crate::core::utils::progress::Tasks::leaf(
-            "astar",
-            crate::core::utils::progress::UNKNOWN_VOLUME,
-        ),
+        crate::core::utils::progress::Tasks::leaf("astar".to_string()),
     );
 
     let result = storage
@@ -195,10 +192,7 @@ fn test_astar_algorithm_completeness() {
     let mut computation = AStarComputationRuntime::new();
 
     let mut progress_tracker = crate::core::utils::progress::ProgressTracker::new(
-        crate::core::utils::progress::Tasks::leaf(
-            "astar",
-            crate::core::utils::progress::UNKNOWN_VOLUME,
-        ),
+        crate::core::utils::progress::Tasks::leaf("astar".to_string()),
     );
 
     // Test integration

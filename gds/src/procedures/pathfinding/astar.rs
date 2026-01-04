@@ -353,8 +353,8 @@ impl AStarBuilder {
         // Create progress tracker for A* execution.
         // Best-effort volume: relationship count (work units are edge scans).
         let relationship_count = self.graph_store.relationship_count();
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("A*", relationship_count),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("A*".to_string(), relationship_count),
             self.concurrency,
         );
 

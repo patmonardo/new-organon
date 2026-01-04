@@ -48,7 +48,7 @@ fn graphsage_train_then_infer_via_catalog() {
     let train = GraphSageTrainAlgorithmFactory::new("1.0.0".to_string()).build(
         crate::types::graph::Graph::concurrent_copy(graph.as_ref()),
         train_cfg.clone(),
-        ProgressTracker::new(Tasks::Leaf("GraphSageTrain".to_string(), 1)),
+        ProgressTracker::new(Tasks::leaf_with_volume("GraphSageTrain".to_string(), 1)),
         crate::concurrency::TerminationFlag::default(),
     );
     let model = train.compute();
@@ -63,7 +63,7 @@ fn graphsage_train_then_infer_via_catalog() {
         "m1",
         crate::concurrency::Concurrency::of(1),
         10,
-        ProgressTracker::new(Tasks::Leaf("GraphSage".to_string(), 1)),
+        ProgressTracker::new(Tasks::leaf_with_volume("GraphSage".to_string(), 1)),
     );
 
     let res = algo.compute();

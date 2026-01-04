@@ -157,7 +157,7 @@ define_algorithm_spec! {
     modes: [Stream, WriteNodeProperty],
 
     execute: |_self, graph_store, config, _context| {
-        use crate::core::utils::progress::{ProgressTracker, Tasks};
+        use crate::core::utils::progress::Tasks;
         // Parse configuration
         let config: DeltaSteppingConfig = serde_json::from_value(config.clone())
             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
@@ -204,8 +204,10 @@ define_algorithm_spec! {
         // Progress tracking: best-effort volume (relationship count);
         // work units are counted inside the driver loop in storage.
         let volume = graph.relationship_count();
-        let mut progress_tracker =
-            ProgressTracker::with_concurrency(Tasks::leaf("delta_stepping", volume), config.concurrency);
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("delta_stepping".to_string(), volume),
+            config.concurrency,
+        );
 
         let result = storage.compute_delta_stepping(
             &mut computation,

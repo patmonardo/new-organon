@@ -225,8 +225,11 @@ impl SpanningTreeBuilder {
         let storage =
             SpanningTreeStorageRuntime::new(start_node_id, self.compute_minimum, self.concurrency);
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("spanning_tree", graph_view.relationship_count()),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume(
+                "spanning_tree".to_string(),
+                graph_view.relationship_count(),
+            ),
             self.concurrency,
         );
 

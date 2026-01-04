@@ -3,8 +3,9 @@
 //! Live wiring for bridge edge detection in undirected graphs.
 
 use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
 };
+use crate::core::utils::progress::ProgressTracker;
 use crate::mem::MemoryRange;
 use crate::algo::bridges::computation::{Bridge, BridgesComputationRuntime};
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
@@ -94,11 +95,11 @@ impl BridgesFacade {
             return Ok(Vec::new());
         }
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("bridges", node_count),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("bridges".to_string(), node_count),
             self.concurrency,
         );
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {
@@ -264,11 +265,11 @@ impl BridgesFacade {
             return Ok((Vec::new(), start.elapsed()));
         }
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("bridges", node_count),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("bridges".to_string(), node_count),
             self.concurrency,
         );
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {

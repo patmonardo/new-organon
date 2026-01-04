@@ -59,7 +59,7 @@ impl DeltaSteppingStorageRuntime {
         computation: &mut DeltaSteppingComputationRuntime,
         graph: Option<&dyn Graph>,
         direction: u8,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<DeltaSteppingResult, AlgorithmError> {
         let volume = graph
             .map(|g| g.relationship_count())
@@ -67,7 +67,7 @@ impl DeltaSteppingStorageRuntime {
         if volume == UNKNOWN_VOLUME {
             progress_tracker.begin_subtask_unknown();
         } else {
-            progress_tracker.begin_subtask(volume);
+            progress_tracker.begin_subtask_with_volume(volume);
         }
 
         let mut scanned_relationships: usize = 0;
@@ -303,7 +303,7 @@ mod tests {
     fn test_delta_stepping_path_computation() {
         let mut storage = DeltaSteppingStorageRuntime::new(0, 1.0, 4, true);
         let mut computation = DeltaSteppingComputationRuntime::new(0, 1.0, 4, true);
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("delta_stepping", UNKNOWN_VOLUME));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("delta_stepping".to_string()));
 
         // Test basic path computation
         let result = storage.compute_delta_stepping(&mut computation, None, 0, &mut progress_tracker);
@@ -316,7 +316,7 @@ mod tests {
     fn test_delta_stepping_path_same_source_target() {
         let mut storage = DeltaSteppingStorageRuntime::new(0, 1.0, 4, true);
         let mut computation = DeltaSteppingComputationRuntime::new(0, 1.0, 4, true);
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("delta_stepping", UNKNOWN_VOLUME));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("delta_stepping".to_string()));
 
         // Test with same source and target
         let result = storage.compute_delta_stepping(&mut computation, None, 0, &mut progress_tracker);

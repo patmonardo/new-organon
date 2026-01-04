@@ -99,7 +99,7 @@ impl BfsStorageRuntime {
         &self,
         computation: &mut BfsComputationRuntime,
         graph: Option<&dyn Graph>,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<BfsResult, AlgorithmError> {
         let start_time = std::time::Instant::now();
 
@@ -109,7 +109,7 @@ impl BfsStorageRuntime {
         if volume == UNKNOWN_VOLUME {
             progress_tracker.begin_subtask_unknown();
         } else {
-            progress_tracker.begin_subtask(volume);
+            progress_tracker.begin_subtask_with_volume(volume);
         }
 
         // Initialize computation runtime
@@ -378,7 +378,7 @@ mod tests {
         let storage = BfsStorageRuntime::new(0, vec![3], None, true, 1, 64);
         let mut computation = BfsComputationRuntime::new(0, true, 1);
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("BFS", UNKNOWN_VOLUME));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("BFS".to_string()));
 
         let result = storage
             .compute_bfs(&mut computation, None, &mut progress_tracker)
@@ -392,7 +392,7 @@ mod tests {
         let storage = BfsStorageRuntime::new(0, vec![0], None, true, 1, 64);
         let mut computation = BfsComputationRuntime::new(0, true, 1);
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("BFS", UNKNOWN_VOLUME));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("BFS".to_string()));
 
         let result = storage
             .compute_bfs(&mut computation, None, &mut progress_tracker)
@@ -406,7 +406,7 @@ mod tests {
         let storage = BfsStorageRuntime::new(0, vec![], Some(1), false, 1, 64);
         let mut computation = BfsComputationRuntime::new(0, false, 1);
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("BFS", UNKNOWN_VOLUME));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("BFS".to_string()));
 
         let result = storage
             .compute_bfs(&mut computation, None, &mut progress_tracker)

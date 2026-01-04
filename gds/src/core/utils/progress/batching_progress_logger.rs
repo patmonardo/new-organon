@@ -1,6 +1,6 @@
 //! Batching progress logger for high-performance concurrent progress tracking.
 
-use super::{MessageFactory, ProgressLogger, Task, UNKNOWN_VOLUME};
+use super::{MessageFactory, ProgressLogger, UNKNOWN_VOLUME};
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
 /// Maximum interval for logging (2^13 = 8192).
@@ -111,11 +111,6 @@ impl BatchingProgressLogger {
 
         // Cap at maximum interval
         batch_size.min(MAXIMUM_LOG_INTERVAL)
-    }
-
-    /// Calculate batch size from task.
-    pub fn calculate_batch_size(task: &Task, concurrency: usize) -> u64 {
-        Self::calculate_batch_size_for_volume(task.volume() as u64, concurrency)
     }
 
     /// Log progress with batching and optional message.

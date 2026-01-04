@@ -114,9 +114,11 @@ impl K1ColoringFacade {
         }
 
         let volume = self.max_iterations as usize;
-        let mut progress_tracker =
-            ProgressTracker::with_concurrency(Tasks::leaf("k1coloring", volume), self.concurrency);
-        progress_tracker.begin_subtask(volume);
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("k1coloring".to_string(), volume),
+                self.concurrency,
+            );
+        progress_tracker.begin_subtask_with_volume(volume);
 
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {

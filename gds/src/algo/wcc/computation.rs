@@ -86,7 +86,7 @@ impl WccComputationRuntime {
         &mut self,
         node_count: usize,
         get_neighbors: impl Fn(usize) -> Vec<usize>,
-        progress_tracker: &mut crate::core::utils::progress::ProgressTracker,
+        progress_tracker: &mut dyn crate::core::utils::progress::ProgressTracker,
     ) -> WccComputationResult {
         let mut union_find = UnionFind::new(node_count);
 

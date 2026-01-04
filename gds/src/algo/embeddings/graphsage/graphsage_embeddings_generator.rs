@@ -4,7 +4,7 @@ use crate::collections::HugeObjectArray;
 use crate::concurrency::virtual_threads::RunWithConcurrency;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::partition::PartitionUtils;
-use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::tensor::Matrix;
 use crate::types::graph::Graph;
@@ -24,7 +24,7 @@ pub struct GraphSageEmbeddingsGenerator {
     concurrency: Concurrency,
     feature_function: Arc<dyn FeatureFunction>,
     random_seed: u64,
-    progress_tracker: ProgressTracker,
+    progress_tracker: TaskProgressTracker,
     termination_flag: TerminationFlag,
 }
 
@@ -35,7 +35,7 @@ impl GraphSageEmbeddingsGenerator {
         concurrency: Concurrency,
         feature_function: Arc<dyn FeatureFunction>,
         random_seed: Option<u64>,
-        progress_tracker: ProgressTracker,
+        progress_tracker: TaskProgressTracker,
         termination_flag: TerminationFlag,
     ) -> Self {
         let seed = random_seed.unwrap_or_else(|| {
@@ -223,7 +223,7 @@ mod tests {
             Concurrency::of(1),
             Arc::new(SingleLabelFeatureFunction),
             Some(123),
-            ProgressTracker::new(Tasks::Leaf("GraphSage".to_string(), 1)),
+            ProgressTracker::new(Tasks::leaf_with_volume("GraphSage".to_string(), 1)),
             TerminationFlag::default(),
         );
 
@@ -303,7 +303,7 @@ mod tests {
             Concurrency::of(1),
             feature_fn,
             Some(123),
-            ProgressTracker::new(Tasks::Leaf("GraphSage".to_string(), 1)),
+            ProgressTracker::new(Tasks::leaf_with_volume("GraphSage".to_string(), 1)),
             TerminationFlag::default(),
         );
 

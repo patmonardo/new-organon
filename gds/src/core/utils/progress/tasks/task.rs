@@ -1,18 +1,31 @@
-use super::{Progress, Status, TaskVisitor, UNKNOWN_VOLUME};
+use super::{Progress, Status, TaskVisitor};
 use crate::core::utils::clock_service::ClockService;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
+
+/// Marker for unknown task volume.
+///
+/// Java parity: this constant lives on `Task` (`Task.UNKNOWN_VOLUME`).
+pub const UNKNOWN_VOLUME: usize = usize::MAX;
 
 /// Base class for all tasks in the progress tracking system.
 /// Handles task hierarchy, state management, timing, and memory estimation.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Task {
     description: String,
     sub_tasks: Vec<Arc<Task>>,
+    leaf_state: Option<Arc<LeafState>>,
     status: Arc<Mutex<Status>>,
     start_time: Arc<Mutex<u64>>,
     finish_time: Arc<Mutex<u64>>,
     estimated_memory_range_in_bytes: Arc<Mutex<(usize, usize)>>,
     max_concurrency: Arc<Mutex<usize>>,
+}
+
+#[derive(Debug)]
+struct LeafState {
+    volume: Mutex<usize>,
+    current_progress: AtomicUsize,
 }
 
 impl Task {
@@ -25,12 +38,35 @@ impl Task {
         Self {
             description,
             sub_tasks,
+            leaf_state: None,
             status: Arc::new(Mutex::new(Status::Pending)),
             start_time: Arc::new(Mutex::new(Self::NOT_STARTED)),
             finish_time: Arc::new(Mutex::new(Self::NOT_FINISHED)),
             estimated_memory_range_in_bytes: Arc::new(Mutex::new((0, 0))),
             max_concurrency: Arc::new(Mutex::new(Self::UNKNOWN_CONCURRENCY)),
         }
+    }
+
+    /// Create a leaf task (terminal node) with progress tracking.
+    pub fn leaf(description: String, volume: usize) -> Self {
+        Self {
+            description,
+            sub_tasks: vec![],
+            leaf_state: Some(Arc::new(LeafState {
+                volume: Mutex::new(volume),
+                current_progress: AtomicUsize::new(0),
+            })),
+            status: Arc::new(Mutex::new(Status::Pending)),
+            start_time: Arc::new(Mutex::new(Self::NOT_STARTED)),
+            finish_time: Arc::new(Mutex::new(Self::NOT_FINISHED)),
+            estimated_memory_range_in_bytes: Arc::new(Mutex::new((0, 0))),
+            max_concurrency: Arc::new(Mutex::new(Self::UNKNOWN_CONCURRENCY)),
+        }
+    }
+
+    /// Whether this task is a leaf.
+    pub fn is_leaf(&self) -> bool {
+        self.leaf_state.is_some()
     }
 
     /// Get task description.
@@ -69,6 +105,18 @@ impl Task {
 
     /// Finish task successfully.
     pub fn finish(&self) {
+        if let Some(leaf) = &self.leaf_state {
+            // Leaf tasks should be considered 100% complete on finish.
+            let mut volume = leaf.volume.lock().unwrap();
+            if *volume == UNKNOWN_VOLUME {
+                *volume = leaf.current_progress.load(Ordering::Relaxed);
+            }
+
+            let current = leaf.current_progress.load(Ordering::Relaxed);
+            let remaining = volume.saturating_sub(current);
+            leaf.current_progress.fetch_add(remaining, Ordering::Relaxed);
+        }
+
         *self.status.lock().unwrap() = Status::Finished;
         *self.finish_time.lock().unwrap() = ClockService::clock().millis();
     }
@@ -89,6 +137,12 @@ impl Task {
 
     /// Get current progress.
     pub fn get_progress(&self) -> Progress {
+        if let Some(leaf) = &self.leaf_state {
+            let volume = *leaf.volume.lock().unwrap();
+            let current = leaf.current_progress.load(Ordering::Relaxed);
+            return Progress::of(current, volume);
+        }
+
         // If no subtasks, volume is unknown
         if self.sub_tasks.is_empty() {
             return Progress::of(UNKNOWN_VOLUME, UNKNOWN_VOLUME);
@@ -103,28 +157,62 @@ impl Task {
 
             if sub_progress.volume() == UNKNOWN_VOLUME {
                 has_unknown_volume = true;
-                break;
+                // Keep summing absolute progress, but the aggregated volume becomes unknown.
             }
 
             progress += sub_progress.progress();
-            volume += sub_progress.volume();
+            if !has_unknown_volume {
+                volume += sub_progress.volume();
+            }
         }
 
         if has_unknown_volume {
-            Progress::of(UNKNOWN_VOLUME, UNKNOWN_VOLUME)
+            Progress::of(progress, UNKNOWN_VOLUME)
         } else {
             Progress::of(progress, volume)
         }
     }
 
-    /// Set task volume (no-op for base Task, overridden in LeafTask).
-    pub fn set_volume(&self, _volume: usize) {
-        // Base implementation does nothing
+    /// Set task volume.
+    ///
+    /// Java parity: only valid for leaf tasks.
+    pub fn set_volume(&self, volume: usize) {
+        let Some(leaf) = &self.leaf_state else {
+            panic!(
+                "Should only be called on a leaf task, but task '{}' is not a leaf",
+                self.description
+            );
+        };
+        *leaf.volume.lock().unwrap() = volume;
     }
 
-    /// Log progress (no-op for base Task, overridden in LeafTask).
-    pub fn log_progress(&self, _value: usize) {
-        // Base implementation does nothing
+    /// Log progress.
+    ///
+    /// Java parity: only valid for leaf tasks.
+    pub fn log_progress(&self, value: usize) {
+        let Some(leaf) = &self.leaf_state else {
+            panic!(
+                "Should only be called on a leaf task, but task '{}' is not a leaf",
+                self.description
+            );
+        };
+        leaf.current_progress.fetch_add(value, Ordering::Relaxed);
+    }
+
+    /// Get the leaf task volume if this task is a leaf, else `UNKNOWN_VOLUME`.
+    pub fn current_volume(&self) -> usize {
+        self.leaf_state
+            .as_ref()
+            .map(|leaf| *leaf.volume.lock().unwrap())
+            .unwrap_or(UNKNOWN_VOLUME)
+    }
+
+    /// Reset leaf progress to zero.
+    pub fn reset_progress(&self) {
+        let Some(leaf) = &self.leaf_state else {
+            return;
+        };
+        leaf.current_progress.store(0, Ordering::Relaxed);
     }
 
     /// Accept a visitor (Visitor pattern).

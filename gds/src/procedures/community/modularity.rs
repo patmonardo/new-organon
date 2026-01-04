@@ -92,8 +92,10 @@ impl ModularityFacade {
             return Ok((0.0, Vec::new()));
         }
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("modularity", node_count));
-        progress_tracker.begin_subtask(node_count);
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+            Tasks::leaf_with_volume("modularity".to_string(), node_count),
+        );
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         // Get community property values
         let community_props = graph_view

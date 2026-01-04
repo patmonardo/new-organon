@@ -65,7 +65,7 @@ impl PerDatabaseUserLogStore {
                     // Recreate task from key for UserLogEntry
                     // Note: We only have start_time and description from the key
                     messages.iter().map(move |message| {
-                        let task = Task::new(task_key.description.clone(), 0);
+                        let task = Task::new(task_key.description.clone(), vec![]);
                         UserLogEntry::new(&task, message.clone())
                     })
                 })
@@ -106,7 +106,7 @@ mod tests {
     #[test]
     fn test_add_message_for_user() {
         let store = PerDatabaseUserLogStore::new();
-        let task = Task::new("Task 1".to_string(), 100);
+        let task = Task::new("Task 1".to_string(), vec![]);
 
         store.add_user_log_message("user1", &task, "Message 1".to_string());
 
@@ -118,8 +118,8 @@ mod tests {
     #[test]
     fn test_separate_users() {
         let store = PerDatabaseUserLogStore::new();
-        let task1 = Task::new("Task 1".to_string(), 100);
-        let task2 = Task::new("Task 2".to_string(), 200);
+        let task1 = Task::new("Task 1".to_string(), vec![]);
+        let task2 = Task::new("Task 2".to_string(), vec![]);
 
         store.add_user_log_message("user1", &task1, "User 1 message".to_string());
         store.add_user_log_message("user2", &task2, "User 2 message".to_string());
@@ -136,7 +136,7 @@ mod tests {
     #[test]
     fn test_multiple_messages_per_user() {
         let store = PerDatabaseUserLogStore::new();
-        let task = Task::new("Task 1".to_string(), 100);
+        let task = Task::new("Task 1".to_string(), vec![]);
 
         store.add_user_log_message("user1", &task, "Message 1".to_string());
         store.add_user_log_message("user1", &task, "Message 2".to_string());
@@ -156,8 +156,8 @@ mod tests {
     #[test]
     fn test_multiple_tasks_per_user() {
         let store = PerDatabaseUserLogStore::new();
-        let task1 = Task::new("Task 1".to_string(), 100);
-        let task2 = Task::new("Task 2".to_string(), 200);
+        let task1 = Task::new("Task 1".to_string(), vec![]);
+        let task2 = Task::new("Task 2".to_string(), vec![]);
 
         store.add_user_log_message("user1", &task1, "Task 1 message".to_string());
         store.add_user_log_message("user1", &task2, "Task 2 message".to_string());

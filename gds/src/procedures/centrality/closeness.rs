@@ -10,8 +10,9 @@
 //! - Optional Wasserman–Faust normalization
 
 use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
 };
+use crate::core::utils::progress::ProgressTracker;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
@@ -134,11 +135,11 @@ impl ClosenessCentralityFacade {
             return Ok((Vec::new(), start.elapsed()));
         }
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("closeness", node_count),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("closeness".to_string(), node_count),
             self.concurrency,
         );
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let mut farness = vec![0u64; node_count];
         let mut component = vec![0u64; node_count];

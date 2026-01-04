@@ -68,8 +68,8 @@ impl SccFacade {
         let mut computation = SccComputationRuntime::new();
         let storage = SccStorageRuntime::new(self.concurrency);
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("scc", self.graph_store.node_count()),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("scc".to_string(), self.graph_store.node_count()),
             self.concurrency,
         );
         let termination_flag = TerminationFlag::default();

@@ -156,8 +156,9 @@ impl Node2VecComputationRuntime {
                 .unwrap_or(mapped)
         };
 
-        let _progress_tracker =
-            ProgressTracker::new(Tasks::Leaf("Node2Vec".to_string(), config.iterations));
+        let _progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+            Tasks::leaf_with_volume("Node2Vec".to_string(), config.iterations),
+        );
 
         let model = Node2VecModel::new(
             node_count,

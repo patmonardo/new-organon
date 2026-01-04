@@ -97,8 +97,10 @@ impl TriangleCountFacade {
             return Ok((Vec::new(), 0, start.elapsed()));
         }
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("triangle_count", node_count));
-        progress_tracker.begin_subtask(node_count);
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+            Tasks::leaf_with_volume("triangle_count".to_string(), node_count),
+        );
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let max_degree = self.max_degree;
         let fallback = graph_view.default_property_value();

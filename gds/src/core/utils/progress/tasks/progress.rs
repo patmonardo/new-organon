@@ -1,14 +1,10 @@
 //! Progress value representing task completion state.
 
-use std::fmt;
-
-/// Marker for unknown volume.
-pub const UNKNOWN_VOLUME: usize = usize::MAX;
+use super::UNKNOWN_VOLUME;
 
 /// Immutable progress value combining current progress and total volume.
 ///
-/// Represents the completion state of a task with lazy calculation
-/// of relative progress percentage.
+/// Java parity target: a small value object with `relative_progress()`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Progress {
     progress: usize,
@@ -21,21 +17,6 @@ impl Progress {
         Self { progress, volume }
     }
 
-    /// Create zero progress with given volume.
-    pub fn zero(volume: usize) -> Self {
-        Self::of(0, volume)
-    }
-
-    /// Create completed progress.
-    pub fn completed(volume: usize) -> Self {
-        Self::of(volume, volume)
-    }
-
-    /// Create progress with unknown volume.
-    pub fn unknown(progress: usize) -> Self {
-        Self::of(progress, UNKNOWN_VOLUME)
-    }
-
     /// Get current progress value.
     pub fn progress(&self) -> usize {
         self.progress
@@ -46,7 +27,9 @@ impl Progress {
         self.volume
     }
 
-    /// Calculate relative progress (0.0 to 1.0, or UNKNOWN_VOLUME as f64).
+    /// Calculate relative progress.
+    ///
+    /// Java parity: returns `Task.UNKNOWN_VOLUME` when volume is unknown.
     pub fn relative_progress(&self) -> f64 {
         if self.volume == UNKNOWN_VOLUME {
             return UNKNOWN_VOLUME as f64;
@@ -57,41 +40,6 @@ impl Progress {
             1.0
         } else {
             self.progress as f64 / self.volume as f64
-        }
-    }
-
-    /// Get progress as percentage (0.0 to 100.0).
-    pub fn percentage(&self) -> f64 {
-        let relative = self.relative_progress();
-        if relative == UNKNOWN_VOLUME as f64 {
-            return UNKNOWN_VOLUME as f64;
-        }
-        (relative * 100.0).min(100.0)
-    }
-
-    /// Check if task is complete.
-    pub fn is_complete(&self) -> bool {
-        self.volume != UNKNOWN_VOLUME && self.progress >= self.volume
-    }
-
-    /// Check if volume is unknown.
-    pub fn has_unknown_volume(&self) -> bool {
-        self.volume == UNKNOWN_VOLUME
-    }
-}
-
-impl fmt::Display for Progress {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.has_unknown_volume() {
-            write!(f, "{} / UNKNOWN", self.progress)
-        } else {
-            write!(
-                f,
-                "{} / {} ({:.1}%)",
-                self.progress,
-                self.volume,
-                self.percentage()
-            )
         }
     }
 }
@@ -125,25 +73,7 @@ mod tests {
 
     #[test]
     fn test_unknown_volume() {
-        let p = Progress::unknown(42);
-        assert!(p.has_unknown_volume());
+        let p = Progress::of(42, UNKNOWN_VOLUME);
         assert_eq!(p.relative_progress(), UNKNOWN_VOLUME as f64);
-    }
-
-    #[test]
-    fn test_zero_and_completed() {
-        let zero = Progress::zero(100);
-        assert_eq!(zero.progress(), 0);
-        assert!(!zero.is_complete());
-
-        let done = Progress::completed(100);
-        assert!(done.is_complete());
-        assert_eq!(done.percentage(), 100.0);
-    }
-
-    #[test]
-    fn test_percentage() {
-        let p = Progress::of(25, 100);
-        assert!((p.percentage() - 25.0).abs() < 0.1);
     }
 }

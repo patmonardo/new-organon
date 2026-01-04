@@ -2,70 +2,8 @@
 //!
 //! Simplified version without Neo4j kernel dependencies.
 
-use crate::core::utils::progress::{PerDatabaseTaskStore, TaskStore};
-use once_cell::sync::Lazy;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-
-/// Global registry for TaskStore instances per database.
-///
-/// Simpler, mutex-backed implementation: creation happens inside the Mutex
-/// so concurrent get/create races are avoided without complex double-checked locking.
-pub struct TaskStoreHolder;
-
-static TASK_STORES: Lazy<Mutex<HashMap<String, Arc<dyn TaskStore>>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
-
-impl TaskStoreHolder {
-    /// Get or create a TaskStore for the given database.
-    ///
-    /// Database names are normalized to lowercase for consistency.
-    pub fn get_task_store(database_name: &str) -> Arc<dyn TaskStore> {
-        let normalized = Self::to_lowercase(database_name);
-
-        // Lock the registry for read/create (simple and safe).
-        let mut stores = TASK_STORES.lock().expect("task store registry poisoned");
-
-        if let Some(store) = stores.get(&normalized) {
-            return Arc::clone(store);
-        }
-
-        // Create new store and insert
-        let store: Arc<dyn TaskStore> = Arc::new(PerDatabaseTaskStore::new());
-        stores.insert(normalized.clone(), Arc::clone(&store));
-        store
-    }
-
-    /// Remove the TaskStore for the given database.
-    pub fn purge(database_name: &str) {
-        let normalized = Self::to_lowercase(database_name);
-        let mut stores = TASK_STORES.lock().expect("task store registry poisoned");
-        stores.remove(&normalized);
-    }
-
-    /// Clear all TaskStores.
-    pub fn clear() {
-        let mut stores = TASK_STORES.lock().expect("task store registry poisoned");
-        stores.clear();
-    }
-
-    /// Get all registered database names.
-    pub fn database_names() -> Vec<String> {
-        let stores = TASK_STORES.lock().expect("task store registry poisoned");
-        stores.keys().cloned().collect()
-    }
-
-    /// Get the number of registered databases.
-    pub fn size() -> usize {
-        let stores = TASK_STORES.lock().expect("task store registry poisoned");
-        stores.len()
-    }
-
-    /// Normalize database name to lowercase.
-    fn to_lowercase(s: &str) -> String {
-        s.to_lowercase()
-    }
-}
+use crate::core::utils::progress::TaskStore;
+use std::sync::Arc;
 
 /// Provider trait for TaskStore instances.
 ///
@@ -98,7 +36,7 @@ pub struct SimpleTaskStoreProvider;
 impl TaskStoreProvider for SimpleTaskStoreProvider {
     fn get_task_store(&self, database_name: &str) -> Arc<dyn TaskStore> {
         #[allow(deprecated)]
-        TaskStoreHolder::get_task_store(database_name)
+        super::task_store_holder::TaskStoreHolder::get_task_store(database_name)
     }
 }
 
@@ -121,7 +59,7 @@ impl TaskStoreProviders {
     pub fn for_database(database_name: String) -> impl Fn() -> Arc<dyn TaskStore> {
         move || {
             #[allow(deprecated)]
-            TaskStoreHolder::get_task_store(&database_name)
+            super::task_store_holder::TaskStoreHolder::get_task_store(&database_name)
         }
     }
 }
@@ -130,6 +68,7 @@ impl TaskStoreProviders {
 mod tests {
     use super::*;
     use crate::core::utils::progress::{JobId, Task};
+    use crate::core::utils::progress::task_store_holder::TaskStoreHolder;
 
     #[test]
     fn test_simple_provider_get_store() {
@@ -143,7 +82,7 @@ mod tests {
 
         // Should be able to use the store
         let job_id = JobId::new();
-        let task = Task::new("Test".to_string(), 100);
+        let task = Task::new("Test".to_string(), vec![]);
         store.store("alice".to_string(), job_id, task);
 
         assert_eq!(store.task_count(), 1);
@@ -246,7 +185,7 @@ mod tests {
         let store = provider.get_task_store(db_name);
 
         let job_id = JobId::new();
-        let task = Task::new("Test".to_string(), 100);
+        let task = Task::new("Test".to_string(), vec![]);
         store.store("alice".to_string(), job_id, task);
 
         assert_eq!(store.task_count(), 1);
@@ -274,7 +213,7 @@ mod tests {
             let handle = thread::spawn(move || {
                 let store = provider_clone.get_task_store(&db_clone);
                 let job_id = JobId::new();
-                let task = Task::new(format!("Task {}", i), 100);
+                let task = Task::new(format!("Task {}", i), vec![]);
                 store.store(format!("user{}", i), job_id, task);
             });
             handles.push(handle);

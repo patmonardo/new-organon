@@ -62,7 +62,7 @@ mod tests {
     fn test_add_warning_to_log() {
         let store = Box::new(EmptyUserLogStore::new());
         let registry = UserLogRegistry::new("test_user".to_string(), store);
-        let task = Task::new("Test Task".to_string(), 100);
+        let task = Task::new("Test Task".to_string(), vec![]);
 
         // Should not panic with empty store
         registry.add_warning_to_log(&task, "Warning message".to_string());

@@ -126,11 +126,11 @@ impl TopologicalSortBuilder {
             return Ok((Vec::new(), None, start.elapsed()));
         }
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("topological_sort", node_count),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("topological_sort".to_string(), node_count),
             self.concurrency,
         );
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let fallback = graph_view.default_property_value();
 

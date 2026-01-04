@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn test_empty_store_store_is_noop() {
         let store = EmptyTaskStore;
-        let task = Task::new("test".to_string(), 100);
+        let task = Task::new("test".to_string(), vec![]);
 
         store.store("user".to_string(), JobId::new(), task);
 

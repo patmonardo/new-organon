@@ -205,7 +205,7 @@ mod tests {
         let factory = EmptyTaskRegistryFactory;
         let registry = factory.new_instance(JobId::new());
 
-        let task = Task::new("Test task".to_string(), 100);
+        let task = Task::new("Test task".to_string(), vec![]);
         registry.register_task(task.clone());
 
         // Empty store means no task is actually stored

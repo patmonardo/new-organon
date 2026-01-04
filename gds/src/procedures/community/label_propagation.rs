@@ -126,9 +126,11 @@ impl LabelPropagationFacade {
             ));
         }
 
-        let mut progress_tracker =
-            ProgressTracker::new(Tasks::leaf("label_propagation", self.max_iterations as usize));
-        progress_tracker.begin_subtask(self.max_iterations as usize);
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(Tasks::leaf_with_volume(
+                "label_propagation".to_string(),
+                self.max_iterations as usize,
+            ));
+        progress_tracker.begin_subtask_with_volume(self.max_iterations as usize);
 
         // Node weights
         let weights: Vec<f64> = if let Some(key) = &self.node_weight_property {

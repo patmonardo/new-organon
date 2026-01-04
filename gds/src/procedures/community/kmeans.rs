@@ -226,11 +226,11 @@ impl KMeansFacade {
             }
         }
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("kmeans", node_count),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("kmeans".to_string(), node_count),
             config.concurrency,
         );
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let mut points: Vec<Vec<f64>> = Vec::with_capacity(node_count);
         for i in 0..node_count {

@@ -95,8 +95,8 @@ impl KnnBuilder {
         let storage =
             crate::algo::similarity::knn::KnnStorageRuntime::new(config.concurrency);
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("knn", self.graph_store.node_count()),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("knn".to_string(), self.graph_store.node_count()),
             config.concurrency,
         );
 

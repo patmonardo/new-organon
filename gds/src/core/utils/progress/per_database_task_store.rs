@@ -227,7 +227,7 @@ mod tests {
     fn test_store_and_query() {
         let store = PerDatabaseTaskStore::new();
         let job_id = JobId::new();
-        let task = Task::new("Test task".to_string(), 100);
+        let task = Task::new("Test task".to_string(), vec![]);
 
         store.store("alice".to_string(), job_id.clone(), task.clone());
 
@@ -239,7 +239,7 @@ mod tests {
 
         let user_task = result.unwrap();
         assert_eq!(user_task.username, "alice");
-        assert_eq!(user_task.task.description, "Test task");
+        assert_eq!(user_task.task.description(), "Test task");
     }
 
     #[test]
@@ -247,8 +247,8 @@ mod tests {
         let store = PerDatabaseTaskStore::new();
         let job_id1 = JobId::new();
         let job_id2 = JobId::new();
-        let task1 = Task::new("Task 1".to_string(), 100);
-        let task2 = Task::new("Task 2".to_string(), 200);
+        let task1 = Task::new("Task 1".to_string(), vec![]);
+        let task2 = Task::new("Task 2".to_string(), vec![]);
 
         store.store("alice".to_string(), job_id1.clone(), task1);
         store.store("bob".to_string(), job_id2.clone(), task2);
@@ -267,8 +267,8 @@ mod tests {
         let store = PerDatabaseTaskStore::new();
         let job_id1 = JobId::new();
         let job_id2 = JobId::new();
-        let task1 = Task::new("Task 1".to_string(), 100);
-        let task2 = Task::new("Task 2".to_string(), 200);
+        let task1 = Task::new("Task 1".to_string(), vec![]);
+        let task2 = Task::new("Task 2".to_string(), vec![]);
 
         store.store("alice".to_string(), job_id1, task1);
         store.store("alice".to_string(), job_id2, task2);
@@ -283,7 +283,7 @@ mod tests {
     fn test_remove_task() {
         let store = PerDatabaseTaskStore::new();
         let job_id = JobId::new();
-        let task = Task::new("Test task".to_string(), 100);
+        let task = Task::new("Test task".to_string(), vec![]);
 
         store.store("alice".to_string(), job_id.clone(), task);
         assert_eq!(store.task_count(), 1);
@@ -308,8 +308,8 @@ mod tests {
         let store = PerDatabaseTaskStore::new();
         let job_id1 = JobId::new();
         let job_id2 = JobId::new();
-        let task1 = Task::new("Task 1".to_string(), 100);
-        let task2 = Task::new("Task 2".to_string(), 200);
+        let task1 = Task::new("Task 1".to_string(), vec![]);
+        let task2 = Task::new("Task 2".to_string(), vec![]);
 
         store.store("alice".to_string(), job_id1, task1);
         store.store("bob".to_string(), job_id2, task2);
@@ -322,7 +322,7 @@ mod tests {
     fn test_query_by_job_id() {
         let store = PerDatabaseTaskStore::new();
         let job_id = JobId::new();
-        let task = Task::new("Test task".to_string(), 100);
+        let task = Task::new("Test task".to_string(), vec![]);
 
         store.store("alice".to_string(), job_id.clone(), task.clone());
         store.store("bob".to_string(), job_id.clone(), task);
@@ -336,7 +336,7 @@ mod tests {
         let store = PerDatabaseTaskStore::new();
         let job_id1 = JobId::new();
         let job_id2 = JobId::new();
-        let task = Task::new("Test task".to_string(), 100);
+        let task = Task::new("Test task".to_string(), vec![]);
 
         store.store("alice".to_string(), job_id1, task.clone());
         store.store("alice".to_string(), job_id2, task);
@@ -356,7 +356,7 @@ mod tests {
     fn test_clear() {
         let store = PerDatabaseTaskStore::new();
         let job_id = JobId::new();
-        let task = Task::new("Test task".to_string(), 100);
+        let task = Task::new("Test task".to_string(), vec![]);
 
         store.store("alice".to_string(), job_id, task);
         assert_eq!(store.task_count(), 1);
@@ -372,7 +372,7 @@ mod tests {
         let store = PerDatabaseTaskStore::with_listeners(vec![listener.clone()]);
 
         let job_id = JobId::new();
-        let task = Task::new("Test task".to_string(), 100);
+        let task = Task::new("Test task".to_string(), vec![]);
 
         store.store("alice".to_string(), job_id, task);
 
@@ -385,7 +385,7 @@ mod tests {
         let store = PerDatabaseTaskStore::with_listeners(vec![listener.clone()]);
 
         let job_id = JobId::new();
-        let task = Task::new("Test task".to_string(), 100);
+        let task = Task::new("Test task".to_string(), vec![]);
 
         store.store("alice".to_string(), job_id.clone(), task);
         store.remove("alice", &job_id);
@@ -399,7 +399,7 @@ mod tests {
         let store = PerDatabaseTaskStore::with_listeners(vec![listener.clone()]);
 
         let job_id = JobId::new();
-        let task = Task::new("Test task".to_string(), 100);
+        let task = Task::new("Test task".to_string(), vec![]);
 
         store.store("alice".to_string(), job_id, task);
         store.clear();
@@ -425,7 +425,7 @@ mod tests {
             let store_clone = store.clone();
             let handle = thread::spawn(move || {
                 let job_id = JobId::new();
-                let task = Task::new(format!("Task {}", i), 100);
+                let task = Task::new(format!("Task {}", i), vec![]);
                 store_clone.store(format!("user{}", i), job_id, task);
             });
             handles.push(handle);

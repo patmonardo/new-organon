@@ -18,12 +18,12 @@ impl WccStorageRuntime {
         &self,
         computation: &mut WccComputationRuntime,
         graph: &dyn Graph,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> WccComputationResult {
         let node_count = graph.node_count();
         let fallback = graph.default_property_value();
 
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         // Undirected: neighbors are union of out and in targets; dedupe via Vec + sort/unique is overkill per node, so we push both directions; computation uses union-find so duplicates are harmless.
         let get_neighbors = |node: usize| -> Vec<usize> {

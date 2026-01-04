@@ -159,8 +159,8 @@ impl LouvainFacade {
         let storage = LouvainStorageRuntime::new(self.config.concurrency);
         let mut computation = LouvainComputationRuntime::new();
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("louvain", graph_view.relationship_count()),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("louvain".to_string(), graph_view.relationship_count()),
             self.config.concurrency,
         );
 

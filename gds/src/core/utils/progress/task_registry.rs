@@ -61,7 +61,7 @@ impl TaskRegistry {
     /// Uses description comparison since Task is not reference-counted in the store.
     pub fn contains_task(&self, task: &Task) -> bool {
         if let Some(user_task) = self.task_store.query(&self.username, &self.job_id) {
-            user_task.task.description == task.description
+            user_task.task.description() == task.description()
         } else {
             false
         }
@@ -122,7 +122,7 @@ mod tests {
         let store = Arc::new(EmptyTaskStore);
         let registry = TaskRegistry::with_auto_job_id("charlie".to_string(), store);
 
-        let task = Task::new("Test task".to_string(), 100);
+        let task = Task::new("Test task".to_string(), vec![]);
 
         // Empty store ignores operations
         registry.register_task(task.clone());
@@ -137,7 +137,7 @@ mod tests {
         let store = Arc::new(EmptyTaskStore);
         let registry = TaskRegistry::with_auto_job_id("dave".to_string(), store);
 
-        let task = Task::new("Test task".to_string(), 100);
+        let task = Task::new("Test task".to_string(), vec![]);
 
         // Empty store always returns false
         assert!(!registry.contains_task(&task));

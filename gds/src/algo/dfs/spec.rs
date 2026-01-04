@@ -6,7 +6,7 @@
 
 use super::computation::DfsComputationRuntime;
 use super::storage::DfsStorageRuntime;
-use crate::core::utils::progress::{ProgressTracker, Tasks, UNKNOWN_VOLUME};
+use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::codegen::config::validation::ConfigError;
 use crate::projection::eval::procedure::AlgorithmError;
@@ -136,8 +136,8 @@ define_algorithm_spec! {
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to obtain graph view: {}", e)))?;
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("DFS", UNKNOWN_VOLUME),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf("DFS".to_string()),
             parsed_config.concurrency,
         );
 

@@ -1,6 +1,6 @@
 use crate::config::base_types::Config;
-use crate::core::utils::progress::ProgressTracker;
-use crate::core::utils::progress::Tasks;
+use crate::core::utils::progress::LeafTask;
+use crate::core::utils::progress::TaskProgressTracker;
 
 /// Interface for creating progress trackers for algorithm execution.
 /// This is a core pattern in the Applications system for tracking
@@ -14,7 +14,11 @@ pub trait ProgressTrackerCreator {
     ///
     /// # Returns
     /// A progress tracker for the task
-    fn create_progress_tracker<C: Config>(&self, config: &C, task: Tasks) -> ProgressTracker;
+    fn create_progress_tracker<C: Config>(
+        &self,
+        config: &C,
+        task: LeafTask,
+    ) -> TaskProgressTracker;
 }
 
 /// Default implementation of ProgressTrackerCreator.
@@ -34,12 +38,16 @@ impl Default for DefaultProgressTrackerCreator {
 }
 
 impl ProgressTrackerCreator for DefaultProgressTrackerCreator {
-    fn create_progress_tracker<C: Config>(&self, _config: &C, task: Tasks) -> ProgressTracker {
+    fn create_progress_tracker<C: Config>(
+        &self,
+        _config: &C,
+        task: LeafTask,
+    ) -> TaskProgressTracker {
         // Note: progress tracker creation is deferred.
         // This would typically involve:
         // 1. Creating a progress tracker with the given task
         // 2. Configuring it with the algorithm's concurrency settings
         // 3. Setting up logging and user feedback
-        ProgressTracker::new(task)
+        TaskProgressTracker::new(task)
     }
 }

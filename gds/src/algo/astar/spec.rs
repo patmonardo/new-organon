@@ -151,7 +151,7 @@ define_algorithm_spec! {
     execute: |_self, graph_store, config, _context| {
         use super::storage::AStarStorageRuntime;
         use super::computation::AStarComputationRuntime;
-        use crate::core::utils::progress::{ProgressTracker, Tasks};
+        use crate::core::utils::progress::Tasks;
 
         let start_time = std::time::Instant::now();
 
@@ -201,8 +201,10 @@ define_algorithm_spec! {
         // Progress tracking: A* volume is best-effort (relationship count);
         // work units are counted inside the driver loop in storage.
         let volume = graph.relationship_count();
-        let mut progress_tracker =
-            ProgressTracker::with_concurrency(Tasks::leaf("astar", volume), parsed_config.concurrency);
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("astar".to_string(), volume),
+            parsed_config.concurrency,
+        );
 
         // Execute A* algorithm
         let direction = AStarDirection::from_str(&parsed_config.direction);

@@ -181,8 +181,9 @@ impl BellmanFordBuilder {
 
         // Create progress tracker for Bellman-Ford execution
         let node_count = self.graph_store.node_count();
-        let _progress_tracker =
-            ProgressTracker::new(Tasks::Leaf("BellmanFord".to_string(), node_count));
+        let _progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+            Tasks::leaf_with_volume("BellmanFord".to_string(), node_count),
+        );
 
         let source_u64 = self.source.expect("validate ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -226,8 +227,8 @@ impl BellmanFordBuilder {
             self.concurrency,
         );
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("bellman_ford", graph_view.relationship_count()),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("bellman_ford".to_string(), graph_view.relationship_count()),
             self.concurrency,
         );
 

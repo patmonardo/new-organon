@@ -6,7 +6,8 @@ use std::sync::Arc;
 use crate::applications::graph_store_catalog::applications::*;
 use crate::applications::graph_store_catalog::loaders::GraphStoreCatalogService;
 use crate::applications::graph_store_catalog::services::progress_tracker_factory::{
-    TaskRegistryFactory, UserLogRegistryFactory,
+    default_task_registry_factory, default_user_log_registry_factory, TaskRegistryFactory,
+    UserLogRegistryFactory,
 };
 
 /// Builder for DefaultGraphCatalogApplications.
@@ -92,8 +93,8 @@ impl DefaultGraphCatalogApplicationsBuilder {
             drop_graph_property_application: DropGraphPropertyApplication::default(),
             stream_graph_properties_application: StreamGraphPropertiesApplication::default(),
             node_label_mutator_application: NodeLabelMutatorApplication::default(),
-            task_registry_factory: TaskRegistryFactory::new(),
-            user_log_registry_factory: UserLogRegistryFactory::new(),
+            task_registry_factory: default_task_registry_factory(),
+            user_log_registry_factory: default_user_log_registry_factory(),
         }
     }
 

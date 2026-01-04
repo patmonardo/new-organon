@@ -131,7 +131,7 @@ mod tests {
 
         // Verify it's a working store
         let job_id = JobId::new();
-        let task = Task::new("Test".to_string(), 100);
+        let task = Task::new("Test".to_string(), vec![]);
         store.store("alice".to_string(), job_id.clone(), task);
 
         assert_eq!(store.task_count(), 1);
@@ -257,7 +257,7 @@ mod tests {
             let handle = thread::spawn(move || {
                 let store = TaskStoreHolder::get_task_store(&db_clone);
                 let job_id = JobId::new();
-                let task = Task::new(format!("Task {}", i), 100);
+                let task = Task::new(format!("Task {}", i), vec![]);
                 store.store(format!("user{}", i), job_id, task);
             });
             handles.push(handle);
@@ -286,12 +286,12 @@ mod tests {
 
         // Add task to store1
         let job_id1 = JobId::new();
-        let task1 = Task::new("Task 1".to_string(), 100);
+        let task1 = Task::new("Task 1".to_string(), vec![]);
         store1.store("alice".to_string(), job_id1, task1);
 
         // Add task to store2
         let job_id2 = JobId::new();
-        let task2 = Task::new("Task 2".to_string(), 200);
+        let task2 = Task::new("Task 2".to_string(), vec![]);
         store2.store("bob".to_string(), job_id2, task2);
 
         // Verify isolation

@@ -12,7 +12,7 @@ use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::core::utils::progress::Tasks;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -207,8 +207,8 @@ define_algorithm_spec! {
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to obtain graph view: {}", e)))?;
 
         // Execute Yen's algorithm
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("yens", parsed_config.k),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("yens".to_string(), parsed_config.k),
             parsed_config.concurrency,
         );
 

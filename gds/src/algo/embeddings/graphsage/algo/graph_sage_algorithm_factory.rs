@@ -3,7 +3,7 @@
 use crate::concurrency::Concurrency;
 use crate::concurrency::TerminationFlag;
 use crate::core::model::ModelCatalog;
-use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::algo::embeddings::graphsage::algo::graph_sage::GraphSage;
 use crate::algo::embeddings::graphsage::algo::graph_sage_model_resolver::GraphSageModelResolver;
 use crate::types::graph::Graph;
@@ -26,7 +26,7 @@ impl<MC: ModelCatalog> GraphSageAlgorithmFactory<MC> {
         model_name: &str,
         concurrency: Concurrency,
         batch_size: usize,
-        progress_tracker: ProgressTracker,
+        progress_tracker: TaskProgressTracker,
     ) -> GraphSage {
         // Java: validateRelationshipWeightPropertyValue(...)
         if graph.has_relationship_property() {

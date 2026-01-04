@@ -100,8 +100,10 @@ impl ConductanceFacade {
             return Ok((std::collections::HashMap::new(), 0.0));
         }
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("conductance", node_count));
-        progress_tracker.begin_subtask(node_count);
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+            Tasks::leaf_with_volume("conductance".to_string(), node_count),
+        );
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         // Get community property values
         let community_props = graph_view

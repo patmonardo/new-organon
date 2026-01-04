@@ -190,8 +190,9 @@ impl DeltaSteppingBuilder {
 
         // Create progress tracker for Delta Stepping execution
         let node_count = self.graph_store.node_count();
-        let _progress_tracker =
-            ProgressTracker::new(Tasks::Leaf("DeltaStepping".to_string(), node_count));
+        let _progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+            Tasks::leaf_with_volume("DeltaStepping".to_string(), node_count),
+        );
 
         let source_u64 = self.source.expect("validate ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -235,8 +236,11 @@ impl DeltaSteppingBuilder {
             self.store_predecessors,
         );
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("delta_stepping", graph_view.relationship_count()),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume(
+                "delta_stepping".to_string(),
+                graph_view.relationship_count(),
+            ),
             self.concurrency,
         );
 

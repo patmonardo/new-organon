@@ -7,7 +7,7 @@
 use super::computation::SccComputationRuntime;
 use super::storage::SccStorageRuntime;
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::{AlgorithmError, LogLevel};
 use serde::{Deserialize, Serialize};
@@ -116,8 +116,8 @@ define_algorithm_spec! {
         let mut computation = SccComputationRuntime::new();
 
         // Create progress tracker and termination flag
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("scc", graph_store.node_count()),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("scc".to_string(), graph_store.node_count()),
             concurrency,
         );
         let termination_flag = TerminationFlag::default();

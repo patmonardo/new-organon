@@ -272,8 +272,11 @@ impl AlgorithmSpec for PageRankAlgorithmSpec {
         // Use the store's default graph view (natural orientation).
         let graph = graph_store.get_graph();
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("pagerank", max_iterations));
-        progress_tracker.begin_subtask(max_iterations);
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(Tasks::leaf_with_volume(
+            "pagerank".to_string(),
+            max_iterations,
+        ));
+        progress_tracker.begin_subtask_with_volume(max_iterations);
 
         let source_set = source_nodes.map(|v| v.into_iter().collect());
         let run_result = run_pagerank(graph, pr_config, source_set);

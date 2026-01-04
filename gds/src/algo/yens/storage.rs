@@ -61,11 +61,11 @@ impl YensStorageRuntime {
         computation: &mut YensComputationRuntime,
         graph: Option<&dyn Graph>,
         direction: u8,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<YensResult, AlgorithmError> {
         let start_time = std::time::Instant::now();
 
-        progress_tracker.begin_subtask(self.k);
+        progress_tracker.begin_subtask_with_volume(self.k);
 
         let result = (|| {
 
@@ -196,8 +196,10 @@ impl YensStorageRuntime {
         let volume = graph
             .map(|g| g.relationship_count())
             .unwrap_or(UNKNOWN_VOLUME);
-        let mut progress_tracker =
-            ProgressTracker::with_concurrency(Tasks::leaf("dijkstra", volume), self.concurrency);
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("dijkstra".to_string(), volume),
+            self.concurrency,
+        );
 
         let result = storage.compute_dijkstra(
             &mut computation,
@@ -342,7 +344,7 @@ mod tests {
         let mut computation = YensComputationRuntime::new(0, 5, 3, true, 1);
 
         let mut progress_tracker =
-            ProgressTracker::with_concurrency(Tasks::leaf("yens", 3), 1);
+            ProgressTracker::with_concurrency(Tasks::leaf_with_volume("yens".to_string(), 3), 1);
 
         let result = storage
             .compute_yens(&mut computation, Some(graph.as_ref()), 0, &mut progress_tracker)

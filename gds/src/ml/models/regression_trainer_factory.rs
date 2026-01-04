@@ -2,7 +2,7 @@
 
 use crate::concurrency::Concurrency;
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::ml::models::{base::TrainerConfigTrait, RegressorTrainer, TrainingMethod};
 use parking_lot::RwLock;
 use std::sync::Arc;
@@ -17,7 +17,7 @@ impl RegressionTrainerFactory {
     pub fn create(
         config: &dyn TrainerConfigTrait,
         termination_flag: &TerminationFlag,
-        progress_tracker: &ProgressTracker,
+        progress_tracker: TaskProgressTracker,
         concurrency: &Concurrency,
         random_seed: Option<u64>,
     ) -> Box<dyn RegressorTrainer> {

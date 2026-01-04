@@ -205,8 +205,8 @@ impl DijkstraBuilder {
                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
             })?;
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("dijkstra", graph_view.relationship_count()),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("dijkstra".to_string(), graph_view.relationship_count()),
             self.concurrency,
         );
 

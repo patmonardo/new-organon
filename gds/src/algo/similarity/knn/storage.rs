@@ -24,10 +24,10 @@ impl KnnStorageRuntime {
         k: usize,
         similarity_cutoff: f64,
         metric: SimilarityMetric,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<Vec<KnnComputationResult>, AlgorithmError> {
         let node_count = graph_store.node_count();
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let result = (|| {
             let values = graph_store
@@ -61,10 +61,10 @@ impl KnnStorageRuntime {
         node_properties: &[KnnNodePropertySpec],
         k: usize,
         similarity_cutoff: f64,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<Vec<KnnComputationResult>, AlgorithmError> {
         let node_count = graph_store.node_count();
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let result = (|| {
             if node_properties.is_empty() {

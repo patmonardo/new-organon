@@ -34,12 +34,12 @@ impl SccStorageRuntime {
         &self,
         computation: &mut super::computation::SccComputationRuntime,
         graph_store: &G,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
         termination_flag: &TerminationFlag,
     ) -> Result<SccComputationResult, String> {
         let start_time = Instant::now();
 
-        progress_tracker.begin_subtask(graph_store.node_count());
+        progress_tracker.begin_subtask_with_volume(graph_store.node_count());
 
         let result = (|| {
             // Obtain a directed graph view (Natural orientation, all relationship types)

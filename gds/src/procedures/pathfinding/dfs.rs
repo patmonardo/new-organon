@@ -148,8 +148,12 @@ impl DfsBuilder {
 
         // Create progress tracker for DFS execution.
         // We track progress in terms of relationships examined.
-        let task = Tasks::leaf("DFS", crate::core::utils::progress::UNKNOWN_VOLUME);
-        let mut progress_tracker = ProgressTracker::with_concurrency(task, self.concurrency);
+        let task = Tasks::leaf("DFS".to_string());
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                task,
+                self.concurrency,
+            );
 
         let source_u64 = self.source.expect("validate() ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -178,7 +182,8 @@ impl DfsBuilder {
                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
             })?;
 
-        let result = storage.compute_dfs(&mut computation, Some(graph_view.as_ref()), &mut progress_tracker)?;
+        let result =
+            storage.compute_dfs(&mut computation, Some(graph_view.as_ref()), &mut progress_tracker)?;
 
         let mut path_map: HashMap<NodeId, Vec<u64>> = HashMap::new();
         if self.track_paths {

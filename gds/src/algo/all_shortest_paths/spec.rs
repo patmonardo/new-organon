@@ -141,7 +141,7 @@ define_algorithm_spec! {
     modes: [Stream, Stats],
 
     execute: |self, graph_store, config, context| {
-        use crate::core::utils::progress::{ProgressTracker, Tasks};
+        use crate::core::utils::progress::Tasks;
         // Extract configuration
         let parsed_config: AllShortestPathsConfig = serde_json::from_value(config.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {}", e)))?;
@@ -204,8 +204,8 @@ define_algorithm_spec! {
 
         if stream_results {
             // Streaming mode: Process results as they come
-            let mut progress_tracker = ProgressTracker::with_concurrency(
-                    Tasks::leaf("all_shortest_paths", node_count),
+            let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("all_shortest_paths".to_string(), node_count),
                 concurrency,
             );
 

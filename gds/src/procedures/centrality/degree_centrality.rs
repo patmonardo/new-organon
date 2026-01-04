@@ -172,11 +172,11 @@ impl DegreeCentralityFacade {
 
         let node_count = storage.node_count();
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("degree_centrality", node_count),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("degree_centrality".to_string(), node_count),
             self.concurrency,
         );
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         for node_id in 0..node_count {
             let node_id = match Self::checked_node_id(node_id) {

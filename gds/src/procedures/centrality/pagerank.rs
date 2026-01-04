@@ -42,8 +42,9 @@ use std::time::Instant;
 
 // Import upgraded systems
 use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
 };
+use crate::core::utils::progress::ProgressTracker;
 
 // ============================================================================
 // Statistics Type
@@ -257,11 +258,11 @@ impl PageRankFacade {
             .clone()
             .map(|v| v.into_iter().collect::<std::collections::HashSet<u64>>());
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("pagerank", self.iterations as usize),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("pagerank".to_string(), self.iterations as usize),
             self.concurrency,
         );
-        progress_tracker.begin_subtask(self.iterations as usize);
+        progress_tracker.begin_subtask_with_volume(self.iterations as usize);
 
         let run = run_pagerank(graph_view, pr_config, source_set);
 

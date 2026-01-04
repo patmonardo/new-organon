@@ -234,7 +234,7 @@ mod tests {
         let listener = TestListener::new();
         store.add_listener(listener.clone());
 
-        let task = Task::new("Test".to_string(), 100);
+        let task = Task::new("Test".to_string(), vec![]);
         let job_id = JobId::new();
 
         store.store_with_notification(
@@ -254,7 +254,7 @@ mod tests {
         let listener = TestListener::new();
         store.add_listener(listener.clone());
 
-        let task = Task::new("Test".to_string(), 100);
+        let task = Task::new("Test".to_string(), vec![]);
         let job_id = JobId::new();
 
         // Simulate removal of existing task
@@ -303,7 +303,7 @@ mod tests {
         store.add_listener(listener1.clone());
         store.add_listener(listener2.clone());
 
-        let task = Task::new("Test".to_string(), 100);
+        let task = Task::new("Test".to_string(), vec![]);
         let job_id = JobId::new();
 
         store.store_with_notification("alice".to_string(), job_id, task, UserTask::new);

@@ -76,7 +76,7 @@ impl AStarStorageRuntime {
         computation: &mut super::computation::AStarComputationRuntime,
         graph: Option<&dyn Graph>,
         direction: u8,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<AStarComputationResult, String> {
         let volume = graph
             .map(|g| g.relationship_count())
@@ -84,7 +84,7 @@ impl AStarStorageRuntime {
         if volume == UNKNOWN_VOLUME {
             progress_tracker.begin_subtask_unknown();
         } else {
-            progress_tracker.begin_subtask(volume);
+            progress_tracker.begin_subtask_with_volume(volume);
         }
 
         let result = (|| {
@@ -353,10 +353,7 @@ mod tests {
 
         let mut computation = crate::algo::astar::computation::AStarComputationRuntime::new();
         let mut progress_tracker = crate::core::utils::progress::ProgressTracker::new(
-            crate::core::utils::progress::Tasks::leaf(
-                "astar",
-                crate::core::utils::progress::UNKNOWN_VOLUME,
-            ),
+            crate::core::utils::progress::Tasks::leaf("astar".to_string()),
         );
 
         let result = storage
@@ -382,10 +379,7 @@ mod tests {
 
         let mut computation = crate::algo::astar::computation::AStarComputationRuntime::new();
         let mut progress_tracker = crate::core::utils::progress::ProgressTracker::new(
-            crate::core::utils::progress::Tasks::leaf(
-                "astar",
-                crate::core::utils::progress::UNKNOWN_VOLUME,
-            ),
+            crate::core::utils::progress::Tasks::leaf("astar".to_string()),
         );
 
         let result = storage

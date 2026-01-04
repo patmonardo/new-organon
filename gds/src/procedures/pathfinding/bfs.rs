@@ -203,8 +203,12 @@ impl BfsBuilder {
 
         // Create progress tracker for BFS execution.
         // We track progress in terms of relationships examined.
-        let task = Tasks::leaf("BFS", crate::core::utils::progress::UNKNOWN_VOLUME);
-        let mut progress_tracker = ProgressTracker::with_concurrency(task, self.concurrency);
+        let task = Tasks::leaf("BFS".to_string());
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                task,
+                self.concurrency,
+            );
 
         let source_u64 = self.source.expect("validate() ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;

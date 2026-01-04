@@ -4,7 +4,7 @@
 
 use crate::collections::HugeIntArray;
 use crate::concurrency::{Concurrency, TerminationFlag};
-use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::ml::decision_tree::{
     DecisionTreeClassifierTrainer, DecisionTreeTrainer, DecisionTreeTrainerConfig, FeatureBagger,
     GiniIndex,
@@ -26,7 +26,7 @@ pub struct RandomForestClassifierTrainer {
     config: RandomForestClassifierTrainerConfig,
     concurrency: Concurrency,
     random_seed: Option<u64>,
-    progress_tracker: ProgressTracker,
+    progress_tracker: TaskProgressTracker,
     termination_flag: TerminationFlag,
     metrics_handler: Arc<ModelSpecificMetricsHandler>,
 }
@@ -39,7 +39,7 @@ impl RandomForestClassifierTrainer {
         number_of_classes: usize,
         config: RandomForestClassifierTrainerConfig,
         random_seed: Option<u64>,
-        progress_tracker: ProgressTracker,
+        progress_tracker: TaskProgressTracker,
         termination_flag: TerminationFlag,
         metrics_handler: Arc<ModelSpecificMetricsHandler>,
     ) -> Self {

@@ -70,7 +70,7 @@ impl StreamProcessingTemplate {
         // Step 3: Create progress tracker
         let _progress_tracker = self
             .progress_tracker_creator
-            .create_progress_tracker(config, Tasks::leaf(algorithm.as_string(), 0));
+            .create_progress_tracker(config, Tasks::leaf_with_volume(algorithm.as_string().to_string(), 0));
 
         // Step 4: Run computation
         let raw_result = compute(&resources);

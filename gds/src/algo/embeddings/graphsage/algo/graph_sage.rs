@@ -2,7 +2,7 @@
 
 use crate::collections::HugeObjectArray;
 use crate::concurrency::{Concurrency, TerminationFlag};
-use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::algo::embeddings::graphsage::algo::graph_sage_result::GraphSageResult;
 use crate::algo::embeddings::graphsage::graphsage_embeddings_generator::GraphSageEmbeddingsGenerator;
 use crate::algo::embeddings::graphsage::graphsage_helper;
@@ -23,7 +23,7 @@ pub struct GraphSage {
     >,
     concurrency: Concurrency,
     batch_size: usize,
-    progress_tracker: ProgressTracker,
+    progress_tracker: TaskProgressTracker,
     termination_flag: TerminationFlag,
 }
 
@@ -40,7 +40,7 @@ impl GraphSage {
         >,
         concurrency: Concurrency,
         batch_size: usize,
-        progress_tracker: ProgressTracker,
+        progress_tracker: TaskProgressTracker,
         termination_flag: TerminationFlag,
     ) -> Self {
         Self {

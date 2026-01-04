@@ -19,7 +19,7 @@ impl ClassifierTrainerFactory {
         config: &dyn TrainerConfigTrait,
         number_of_classes: usize,
         _termination_flag: &TerminationFlag,
-        _progress_tracker: &ProgressTracker,
+        _progress_tracker: &dyn ProgressTracker,
         concurrency: &Concurrency,
         random_seed: Option<u64>,
         _reduce_class_count: bool,

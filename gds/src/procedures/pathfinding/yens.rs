@@ -218,8 +218,8 @@ impl YensBuilder {
             self.concurrency,
         );
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("yens", self.k),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("yens".to_string(), self.k),
             self.concurrency,
         );
 

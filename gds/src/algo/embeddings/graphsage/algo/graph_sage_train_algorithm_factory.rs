@@ -1,7 +1,7 @@
 //! Java: `GraphSageTrainAlgorithmFactory`.
 
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::algo::embeddings::graphsage::algo::graph_sage_train::GraphSageTrain;
 use crate::algo::embeddings::graphsage::algo::multi_label_graph_sage_train::MultiLabelGraphSageTrain;
 use crate::algo::embeddings::graphsage::algo::single_label_graph_sage_train::SingleLabelGraphSageTrain;
@@ -22,7 +22,7 @@ impl GraphSageTrainAlgorithmFactory {
         &self,
         graph: Arc<dyn Graph>,
         config: GraphSageTrainConfig,
-        _progress_tracker: ProgressTracker,
+        _progress_tracker: TaskProgressTracker,
         termination_flag: TerminationFlag,
     ) -> Box<dyn GraphSageTrain> {
         if config.is_multi_label {

@@ -49,7 +49,7 @@ mod tests {
     #[test]
     fn test_empty_store_discards_messages() {
         let store = EmptyUserLogStore::new();
-        let task = Task::new("Test".to_string(), 100);
+        let task = Task::new("Test".to_string(), vec![]);
 
         store.add_user_log_message("user1", &task, "message".to_string());
 
@@ -60,7 +60,7 @@ mod tests {
     #[test]
     fn test_empty_store_instance() {
         let store = EmptyUserLogStore::instance();
-        let task = Task::new("Test".to_string(), 100);
+        let task = Task::new("Test".to_string(), vec![]);
 
         store.add_user_log_message("user1", &task, "message".to_string());
 

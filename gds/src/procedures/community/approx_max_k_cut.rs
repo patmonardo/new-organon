@@ -151,11 +151,11 @@ impl ApproxMaxKCutFacade {
             return Ok((Vec::new(), 0.0, 0));
         }
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("approx_max_k_cut", self.iterations),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("approx_max_k_cut".to_string(), self.iterations),
             self.concurrency,
         );
-        progress_tracker.begin_subtask(self.iterations);
+        progress_tracker.begin_subtask_with_volume(self.iterations);
 
         let fallback = graph_view.default_property_value();
 

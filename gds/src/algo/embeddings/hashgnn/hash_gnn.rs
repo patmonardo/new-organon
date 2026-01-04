@@ -2,7 +2,7 @@ use crate::collections::HugeObjectArray;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::paged::HugeAtomicBitSet;
 use crate::core::utils::partition::{DegreeFunction, DegreePartition, Partition, PartitionUtils};
-use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::types::graph::Graph;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -26,7 +26,7 @@ pub struct MinAndArgmin {
 pub struct HashGNN {
     graph: Arc<dyn Graph>,
     parameters: HashGNNParameters,
-    _progress_tracker: ProgressTracker,
+    _progress_tracker: TaskProgressTracker,
     termination_flag: TerminationFlag,
 }
 
@@ -34,7 +34,7 @@ impl HashGNN {
     pub fn new(
         graph: Arc<dyn Graph>,
         parameters: HashGNNParameters,
-        progress_tracker: ProgressTracker,
+        progress_tracker: TaskProgressTracker,
         termination_flag: TerminationFlag,
     ) -> Self {
         Self {
@@ -275,7 +275,7 @@ mod tests {
         let algo = HashGNN::new(
             graph,
             params,
-            ProgressTracker::new(Tasks::Leaf("HashGNN".to_string(), 1)),
+            ProgressTracker::new(Tasks::leaf_with_volume("HashGNN".to_string(), 1)),
             TerminationFlag::default(),
         );
 
@@ -341,7 +341,7 @@ mod tests {
         let algo = HashGNN::new(
             graph,
             params,
-            ProgressTracker::new(Tasks::Leaf("HashGNN".to_string(), 1)),
+            ProgressTracker::new(Tasks::leaf_with_volume("HashGNN".to_string(), 1)),
             TerminationFlag::default(),
         );
 

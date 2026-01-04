@@ -114,8 +114,8 @@ impl FilteredKnnBuilder {
         let computation = FilteredKnnComputationRuntime::new();
         let storage = FilteredKnnStorageRuntime::new(config.concurrency);
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("filteredknn", self.graph_store.node_count()),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("filteredknn".to_string(), self.graph_store.node_count()),
             config.concurrency,
         );
 

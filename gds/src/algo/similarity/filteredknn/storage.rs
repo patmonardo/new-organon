@@ -31,10 +31,10 @@ impl FilteredKnnStorageRuntime {
         metric: SimilarityMetric,
         source_node_labels: &[NodeLabel],
         target_node_labels: &[NodeLabel],
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<Vec<FilteredKnnComputationResult>, AlgorithmError> {
         let node_count = graph_store.node_count();
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let result = (|| {
             let values = graph_store
@@ -81,10 +81,10 @@ impl FilteredKnnStorageRuntime {
         similarity_cutoff: f64,
         source_node_labels: &[NodeLabel],
         target_node_labels: &[NodeLabel],
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<Vec<FilteredKnnComputationResult>, AlgorithmError> {
         let node_count = graph_store.node_count();
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let result = (|| {
             if node_properties.is_empty() {
@@ -228,7 +228,10 @@ mod tests {
         let computation = FilteredKnnComputationRuntime::new();
 
         let mut progress_tracker =
-            ProgressTracker::with_concurrency(Tasks::leaf("filteredknn", node_count), 4);
+            ProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("filteredknn".to_string(), node_count),
+                4,
+            );
 
         let rows = runtime
             .compute_single(

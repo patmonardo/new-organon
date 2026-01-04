@@ -312,10 +312,10 @@ impl AllShortestPathsStorageRuntime {
     pub fn compute_all_shortest_paths_streaming(
         &self,
         direction: u8,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<mpsc::Receiver<ShortestPathResult>, AlgorithmError> {
         let node_count = self.graph.node_count();
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let mut processed_sources: usize = 0;
         const LOG_BATCH: usize = 16;

@@ -65,12 +65,12 @@ impl SpanningTreeStorageRuntime {
         &self,
         node_count: u32,
         get_neighbors: F,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<SpanningTree, AlgorithmError>
     where
         F: Fn(u32) -> Vec<(u32, f64)>,
     {
-        progress_tracker.begin_subtask(node_count as usize);
+        progress_tracker.begin_subtask_with_volume(node_count as usize);
 
         let mut processed_nodes: usize = 0;
         const LOG_BATCH: usize = 256;
@@ -170,7 +170,7 @@ impl SpanningTreeStorageRuntime {
         &self,
         graph: &dyn Graph,
         direction: u8,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<SpanningTree, AlgorithmError> {
         let node_count = graph.node_count() as u32;
         self.compute_spanning_tree(node_count, |node_id| {
@@ -243,7 +243,7 @@ impl SpanningTreeStorageRuntime {
     pub fn compute_spanning_tree_mock(
         &self,
         node_count: u32,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<SpanningTree, AlgorithmError> {
         self.compute_spanning_tree(node_count, |node_id| self.get_neighbors(node_id), progress_tracker)
     }
@@ -266,7 +266,9 @@ mod tests {
     #[test]
     fn test_storage_runtime_minimum_spanning_tree() {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("spanning_tree", 0));
+        let mut progress_tracker = ProgressTracker::new(
+            Tasks::leaf_with_volume("spanning_tree".to_string(), 0),
+        );
         let result = runtime
             .compute_spanning_tree_mock(4, &mut progress_tracker)
             .unwrap();
@@ -286,7 +288,9 @@ mod tests {
     #[test]
     fn test_storage_runtime_maximum_spanning_tree() {
         let runtime = SpanningTreeStorageRuntime::new(0, false, 1);
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("spanning_tree", 0));
+        let mut progress_tracker = ProgressTracker::new(
+            Tasks::leaf_with_volume("spanning_tree".to_string(), 0),
+        );
         let result = runtime
             .compute_spanning_tree_mock(4, &mut progress_tracker)
             .unwrap();
@@ -308,8 +312,12 @@ mod tests {
         let runtime1 = SpanningTreeStorageRuntime::new(0, true, 1);
         let runtime2 = SpanningTreeStorageRuntime::new(1, true, 1);
 
-        let mut progress_tracker1 = ProgressTracker::new(Tasks::leaf("spanning_tree", 0));
-        let mut progress_tracker2 = ProgressTracker::new(Tasks::leaf("spanning_tree", 0));
+        let mut progress_tracker1 = ProgressTracker::new(
+            Tasks::leaf_with_volume("spanning_tree".to_string(), 0),
+        );
+        let mut progress_tracker2 = ProgressTracker::new(
+            Tasks::leaf_with_volume("spanning_tree".to_string(), 0),
+        );
         let result1 = runtime1
             .compute_spanning_tree_mock(4, &mut progress_tracker1)
             .unwrap();
@@ -329,7 +337,9 @@ mod tests {
     #[test]
     fn test_storage_runtime_edge_iteration() {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("spanning_tree", 0));
+        let mut progress_tracker = ProgressTracker::new(
+            Tasks::leaf_with_volume("spanning_tree".to_string(), 0),
+        );
         let result = runtime
             .compute_spanning_tree_mock(4, &mut progress_tracker)
             .unwrap();
@@ -354,7 +364,9 @@ mod tests {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
 
         // Mock empty graph
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("spanning_tree", 0));
+        let mut progress_tracker = ProgressTracker::new(
+            Tasks::leaf_with_volume("spanning_tree".to_string(), 0),
+        );
         let result = runtime
             .compute_spanning_tree(0, |_| vec![], &mut progress_tracker)
             .unwrap();
@@ -368,7 +380,9 @@ mod tests {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
 
         // Mock single node graph
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("spanning_tree", 0));
+        let mut progress_tracker = ProgressTracker::new(
+            Tasks::leaf_with_volume("spanning_tree".to_string(), 0),
+        );
         let result = runtime
             .compute_spanning_tree(1, |_| vec![], &mut progress_tracker)
             .unwrap();

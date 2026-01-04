@@ -3,7 +3,7 @@
 //! This module implements the `AlgorithmSpec` trait for HITS.
 
 use crate::define_algorithm_spec;
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::core::utils::progress::Tasks;
 use crate::projection::eval::procedure::*;
 use std::time::Duration;
 use std::time::Instant;
@@ -80,11 +80,10 @@ define_algorithm_spec! {
 
         let start = Instant::now();
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf(
-            "hits",
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(Tasks::leaf_with_volume(
+            "hits".to_string(),
             parsed_config.max_iterations,
         ));
-        progress_tracker.begin_subtask(parsed_config.max_iterations);
 
         // Create storage runtime
         let storage = HitsStorageRuntime::new(graph_store)?;
@@ -95,9 +94,12 @@ define_algorithm_spec! {
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
             .map_err(|e| AlgorithmError::Execution(format!("Failed to get graph: {}", e)))?;
 
-        let result = run_hits(graph, parsed_config.max_iterations, parsed_config.tolerance);
-        progress_tracker.log_progress(parsed_config.max_iterations);
-        progress_tracker.end_subtask();
+        let result = run_hits(
+            graph,
+            parsed_config.max_iterations,
+            parsed_config.tolerance,
+            &mut progress_tracker,
+        );
 
         context.log(
             LogLevel::Info,

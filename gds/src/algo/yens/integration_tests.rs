@@ -90,7 +90,7 @@ mod tests {
         let mut computation = YensComputationRuntime::new(0, 3, 3, false, 1);
 
         let mut progress_tracker =
-            ProgressTracker::with_concurrency(Tasks::leaf("yens", 3), 1);
+            ProgressTracker::with_concurrency(Tasks::leaf_with_volume("yens".to_string(), 3), 1);
 
         let result = storage
             .compute_yens(&mut computation, Some(graph.as_ref()), 0, &mut progress_tracker)

@@ -57,7 +57,7 @@ impl BellmanFordStorageRuntime {
         computation: &mut BellmanFordComputationRuntime,
         graph: Option<&dyn Graph>,
         direction: u8,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<BellmanFordResult, AlgorithmError> {
         let volume = graph
             .map(|g| g.relationship_count())
@@ -65,7 +65,7 @@ impl BellmanFordStorageRuntime {
         if volume == UNKNOWN_VOLUME {
             progress_tracker.begin_subtask_unknown();
         } else {
-            progress_tracker.begin_subtask(volume);
+            progress_tracker.begin_subtask_with_volume(volume);
         }
 
         let mut scanned_relationships: usize = 0;
@@ -352,7 +352,7 @@ mod tests {
     fn test_bellman_ford_path_computation() {
         let mut storage = BellmanFordStorageRuntime::new(0, true, true, 4);
         let mut computation = BellmanFordComputationRuntime::new(0, true, true, 4);
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("bellman_ford", UNKNOWN_VOLUME));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("bellman_ford".to_string()));
 
         // Test basic path computation
         let result = storage.compute_bellman_ford(&mut computation, None, 0, &mut progress_tracker);
@@ -366,7 +366,7 @@ mod tests {
     fn test_bellman_ford_path_same_source_target() {
         let mut storage = BellmanFordStorageRuntime::new(0, true, true, 4);
         let mut computation = BellmanFordComputationRuntime::new(0, true, true, 4);
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("bellman_ford", UNKNOWN_VOLUME));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("bellman_ford".to_string()));
 
         // Test with same source and target
         let result = storage.compute_bellman_ford(&mut computation, None, 0, &mut progress_tracker);

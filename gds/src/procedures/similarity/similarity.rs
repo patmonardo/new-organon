@@ -114,11 +114,11 @@ impl SimilarityBuilder {
             .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
 
         let node_count = graph.node_count();
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("node_similarity", node_count),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("node_similarity".to_string(), node_count),
             self.concurrency,
         );
-        progress_tracker.begin_subtask(node_count);
+        progress_tracker.begin_subtask_with_volume(node_count);
 
         let config = self.build_config();
         let storage =

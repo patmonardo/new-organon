@@ -83,7 +83,7 @@ impl DijkstraStorageRuntime {
         mut targets: Box<dyn Targets>,
         graph: Option<&dyn Graph>,
         direction: u8,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<DijkstraResult, AlgorithmError> {
         let volume = graph
             .map(|g| g.relationship_count())
@@ -91,7 +91,7 @@ impl DijkstraStorageRuntime {
         if volume == UNKNOWN_VOLUME {
             progress_tracker.begin_subtask_unknown();
         } else {
-            progress_tracker.begin_subtask(volume);
+            progress_tracker.begin_subtask_with_volume(volume);
         }
 
         let start_time = Instant::now();
@@ -179,7 +179,7 @@ impl DijkstraStorageRuntime {
         source_cost: f64,
         graph: Option<&dyn Graph>,
         direction: u8,
-        progress_tracker: &mut ProgressTracker,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<(), AlgorithmError> {
         // Get neighbors with weights for the source node
         let neighbors = self.get_neighbors_with_weights(graph, source_node, direction)?;
@@ -342,7 +342,7 @@ mod tests {
         let mut storage = DijkstraStorageRuntime::new(0, false, 4, false);
         let mut computation = DijkstraComputationRuntime::new(0, false, 4, false);
         let targets = Box::new(SingleTarget::new(3));
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra", UNKNOWN_VOLUME));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra".to_string()));
 
         // Test basic path computation
         let result =
@@ -357,7 +357,7 @@ mod tests {
         let mut storage = DijkstraStorageRuntime::new(0, false, 4, false);
         let mut computation = DijkstraComputationRuntime::new(0, false, 4, false);
         let targets = Box::new(ManyTargets::new(vec![3, 5]));
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra", UNKNOWN_VOLUME));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra".to_string()));
 
         // Test with multiple targets
         let result =
@@ -372,7 +372,7 @@ mod tests {
         let mut storage = DijkstraStorageRuntime::new(0, false, 4, false);
         let mut computation = DijkstraComputationRuntime::new(0, false, 4, false);
         let targets = Box::new(AllTargets::new());
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra", UNKNOWN_VOLUME));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra".to_string()));
 
         // Test with all targets
         let result =
@@ -405,7 +405,7 @@ mod tests {
 
         let mut computation = DijkstraComputationRuntime::new(0, true, 4, false);
         let targets = Box::new(SingleTarget::new(3));
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra", UNKNOWN_VOLUME));
+        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra".to_string()));
 
         let result = storage
             .compute_dijkstra(&mut computation, targets, None, 0, &mut progress_tracker)

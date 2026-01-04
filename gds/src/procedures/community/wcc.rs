@@ -136,8 +136,8 @@ impl WccFacade {
         let storage = WccStorageRuntime::new(self.concurrency);
         let mut computation = WccComputationRuntime::new();
 
-        let mut progress_tracker = ProgressTracker::with_concurrency(
-            Tasks::leaf("wcc", graph_view.relationship_count()),
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("wcc".to_string(), graph_view.relationship_count()),
             self.concurrency,
         );
 
