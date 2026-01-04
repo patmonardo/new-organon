@@ -288,7 +288,7 @@ impl DeltaSteppingStorageRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::utils::progress::Tasks;
+    use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 
     #[test]
     fn test_delta_stepping_storage_runtime_creation() {
@@ -303,7 +303,7 @@ mod tests {
     fn test_delta_stepping_path_computation() {
         let mut storage = DeltaSteppingStorageRuntime::new(0, 1.0, 4, true);
         let mut computation = DeltaSteppingComputationRuntime::new(0, 1.0, 4, true);
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("delta_stepping".to_string()));
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("delta_stepping".to_string()));
 
         // Test basic path computation
         let result = storage.compute_delta_stepping(&mut computation, None, 0, &mut progress_tracker);
@@ -316,7 +316,7 @@ mod tests {
     fn test_delta_stepping_path_same_source_target() {
         let mut storage = DeltaSteppingStorageRuntime::new(0, 1.0, 4, true);
         let mut computation = DeltaSteppingComputationRuntime::new(0, 1.0, 4, true);
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("delta_stepping".to_string()));
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("delta_stepping".to_string()));
 
         // Test with same source and target
         let result = storage.compute_delta_stepping(&mut computation, None, 0, &mut progress_tracker);

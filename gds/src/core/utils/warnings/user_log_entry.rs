@@ -45,7 +45,8 @@ impl UserLogEntry {
 
     /// Returns a formatted time string (HH:MM:SS format).
     pub fn time_started_string(&self) -> String {
-        let datetime = chrono::DateTime::<chrono::Local>::from(self.time_started());
+        // Use UTC to avoid relying on host-local timezone configuration.
+        let datetime = chrono::DateTime::<chrono::Utc>::from(self.time_started());
         datetime.format("%H:%M:%S").to_string()
     }
 }
@@ -91,12 +92,17 @@ mod tests {
 
     #[test]
     fn test_time_formatting() {
-        let task = Task::new("Test Task".to_string(), vec![]);
-        let entry = UserLogEntry::new(&task, "Test message".to_string());
+        static MOCK: MockClock = MockClock::new(1);
 
-        let time_string = entry.time_started_string();
-        // Should be in HH:MM:SS format
-        assert!(time_string.len() >= 8);
-        assert!(time_string.contains(':'));
+        ClockService::run_with_clock(&MOCK, |_clock| {
+            let task = Task::new("Test Task".to_string(), vec![]);
+            task.start();
+            let entry = UserLogEntry::new(&task, "Test message".to_string());
+
+            let time_string = entry.time_started_string();
+            // Should be in HH:MM:SS format
+            assert!(time_string.len() >= 8);
+            assert!(time_string.contains(':'));
+        });
     }
 }

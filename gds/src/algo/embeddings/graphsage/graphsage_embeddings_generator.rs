@@ -155,7 +155,7 @@ impl GraphSageEmbeddingsGenerator {
 mod tests {
     use super::*;
     use crate::collections::backends::vec::VecDouble;
-    use crate::core::utils::progress::{ProgressTracker, Tasks};
+    use crate::core::utils::progress::{TaskProgressTracker, Tasks};
     use crate::algo::embeddings::graphsage::graphsage_helper;
     use crate::algo::embeddings::graphsage::layer_factory::generate_weights;
     use crate::algo::embeddings::graphsage::layer_factory::LayerFactory;
@@ -223,7 +223,7 @@ mod tests {
             Concurrency::of(1),
             Arc::new(SingleLabelFeatureFunction),
             Some(123),
-            ProgressTracker::new(Tasks::leaf_with_volume("GraphSage".to_string(), 1)),
+            TaskProgressTracker::new(Tasks::leaf_with_volume("GraphSage".to_string(), 1)),
             TerminationFlag::default(),
         );
 
@@ -303,7 +303,7 @@ mod tests {
             Concurrency::of(1),
             feature_fn,
             Some(123),
-            ProgressTracker::new(Tasks::leaf_with_volume("GraphSage".to_string(), 1)),
+            TaskProgressTracker::new(Tasks::leaf_with_volume("GraphSage".to_string(), 1)),
             TerminationFlag::default(),
         );
 

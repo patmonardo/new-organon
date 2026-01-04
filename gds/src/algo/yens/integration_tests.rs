@@ -11,7 +11,7 @@ use crate::projection::eval::procedure::AlgorithmSpec;
 use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor};
 use crate::types::prelude::DefaultGraphStore;
 use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use serde_json::json;
 use std::sync::Arc;
 
@@ -89,8 +89,10 @@ mod tests {
         let storage = YensStorageRuntime::new(0, 3, 3, false, 1);
         let mut computation = YensComputationRuntime::new(0, 3, 3, false, 1);
 
-        let mut progress_tracker =
-            ProgressTracker::with_concurrency(Tasks::leaf_with_volume("yens".to_string(), 3), 1);
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("yens".to_string(), 3),
+            1,
+        );
 
         let result = storage
             .compute_yens(&mut computation, Some(graph.as_ref()), 0, &mut progress_tracker)

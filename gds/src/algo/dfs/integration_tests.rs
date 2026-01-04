@@ -7,7 +7,7 @@
 use super::computation::DfsComputationRuntime;
 use super::spec::{DFSAlgorithmSpec, DfsConfig, DfsResult};
 use super::storage::DfsStorageRuntime;
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::projection::eval::procedure::AlgorithmSpec;
 use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor};
 use serde_json::json;
@@ -77,7 +77,7 @@ fn test_dfs_storage_computation_integration() {
     let storage = DfsStorageRuntime::new(0, vec![3], None, true, 1);
     let mut computation = DfsComputationRuntime::new(0, true, 1);
 
-    let mut progress_tracker = ProgressTracker::new(Tasks::leaf("DFS".to_string()));
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("DFS".to_string()));
     let dfs_result = storage
         .compute_dfs(&mut computation, None, &mut progress_tracker)
         .unwrap();

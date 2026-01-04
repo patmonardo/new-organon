@@ -360,7 +360,7 @@ fn reconstruct_path(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::utils::progress::Tasks;
+    use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 
     #[test]
     fn test_bfs_storage_runtime_creation() {
@@ -378,7 +378,7 @@ mod tests {
         let storage = BfsStorageRuntime::new(0, vec![3], None, true, 1, 64);
         let mut computation = BfsComputationRuntime::new(0, true, 1);
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("BFS".to_string()));
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("BFS".to_string()));
 
         let result = storage
             .compute_bfs(&mut computation, None, &mut progress_tracker)
@@ -392,7 +392,7 @@ mod tests {
         let storage = BfsStorageRuntime::new(0, vec![0], None, true, 1, 64);
         let mut computation = BfsComputationRuntime::new(0, true, 1);
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("BFS".to_string()));
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("BFS".to_string()));
 
         let result = storage
             .compute_bfs(&mut computation, None, &mut progress_tracker)
@@ -406,7 +406,7 @@ mod tests {
         let storage = BfsStorageRuntime::new(0, vec![], Some(1), false, 1, 64);
         let mut computation = BfsComputationRuntime::new(0, false, 1);
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("BFS".to_string()));
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("BFS".to_string()));
 
         let result = storage
             .compute_bfs(&mut computation, None, &mut progress_tracker)

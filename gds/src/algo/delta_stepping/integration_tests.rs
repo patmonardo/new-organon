@@ -8,7 +8,7 @@
 use super::computation::DeltaSteppingComputationRuntime;
 use super::spec::{DELTA_STEPPINGAlgorithmSpec, DeltaSteppingConfig, DeltaSteppingResult};
 use super::storage::DeltaSteppingStorageRuntime;
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::projection::eval::procedure::{
     AlgorithmSpec, ExecutionContext, ExecutionMode, ProcedureExecutor,
 };
@@ -120,7 +120,7 @@ fn test_delta_stepping_algorithm_completeness() {
 fn test_delta_stepping_storage_computation_integration() {
     let mut storage = DeltaSteppingStorageRuntime::new(0, 1.0, 4, true);
     let mut computation = DeltaSteppingComputationRuntime::new(0, 1.0, 4, true);
-    let mut progress_tracker = ProgressTracker::new(Tasks::leaf("delta_stepping".to_string()));
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("delta_stepping".to_string()));
 
     // Test integration between storage and computation
     let result = storage.compute_delta_stepping(&mut computation, None, 0, &mut progress_tracker);

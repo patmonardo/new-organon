@@ -337,7 +337,7 @@ impl BellmanFordStorageRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::utils::progress::Tasks;
+    use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 
     #[test]
     fn test_bellman_ford_storage_runtime_creation() {
@@ -352,7 +352,7 @@ mod tests {
     fn test_bellman_ford_path_computation() {
         let mut storage = BellmanFordStorageRuntime::new(0, true, true, 4);
         let mut computation = BellmanFordComputationRuntime::new(0, true, true, 4);
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("bellman_ford".to_string()));
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("bellman_ford".to_string()));
 
         // Test basic path computation
         let result = storage.compute_bellman_ford(&mut computation, None, 0, &mut progress_tracker);
@@ -366,7 +366,7 @@ mod tests {
     fn test_bellman_ford_path_same_source_target() {
         let mut storage = BellmanFordStorageRuntime::new(0, true, true, 4);
         let mut computation = BellmanFordComputationRuntime::new(0, true, true, 4);
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("bellman_ford".to_string()));
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("bellman_ford".to_string()));
 
         // Test with same source and target
         let result = storage.compute_bellman_ford(&mut computation, None, 0, &mut progress_tracker);

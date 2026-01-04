@@ -202,7 +202,7 @@ impl DfsStorageRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::utils::progress::Tasks;
+    use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 
     #[test]
     fn test_dfs_storage_runtime_creation() {
@@ -219,7 +219,7 @@ mod tests {
         let storage = DfsStorageRuntime::new(0, vec![3], None, true, 1);
         let mut computation = DfsComputationRuntime::new(0, true, 1);
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("DFS".to_string()));
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("DFS".to_string()));
 
         let result = storage
             .compute_dfs(&mut computation, None, &mut progress_tracker)
@@ -234,7 +234,7 @@ mod tests {
         let storage = DfsStorageRuntime::new(0, vec![0], None, true, 1);
         let mut computation = DfsComputationRuntime::new(0, true, 1);
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("DFS".to_string()));
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("DFS".to_string()));
 
         let result = storage
             .compute_dfs(&mut computation, None, &mut progress_tracker)
@@ -252,7 +252,7 @@ mod tests {
         let storage = DfsStorageRuntime::new(0, vec![], Some(1), false, 1);
         let mut computation = DfsComputationRuntime::new(0, false, 1);
 
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("DFS".to_string()));
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("DFS".to_string()));
 
         let result = storage
             .compute_dfs(&mut computation, None, &mut progress_tracker)

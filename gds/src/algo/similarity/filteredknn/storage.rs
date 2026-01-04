@@ -196,7 +196,7 @@ impl FilteredKnnStorageRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::utils::progress::{ProgressTracker, Tasks};
+    use crate::core::utils::progress::{TaskProgressTracker, Tasks};
     use crate::types::prelude::DefaultGraphStore;
     use crate::types::random::RandomGraphConfig;
 
@@ -227,11 +227,10 @@ mod tests {
         let runtime = FilteredKnnStorageRuntime::new(4);
         let computation = FilteredKnnComputationRuntime::new();
 
-        let mut progress_tracker =
-            ProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("filteredknn".to_string(), node_count),
-                4,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("filteredknn".to_string(), node_count),
+            4,
+        );
 
         let rows = runtime
             .compute_single(

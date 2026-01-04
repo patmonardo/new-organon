@@ -350,13 +350,8 @@ impl AStarBuilder {
             .user_log_registry_factory
             .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
 
-        // Create progress tracker for A* execution.
         // Best-effort volume: relationship count (work units are edge scans).
         let relationship_count = self.graph_store.relationship_count();
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("A*".to_string(), relationship_count),
-            self.concurrency,
-        );
 
         let source_u64 = self.source.expect("validate() ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -399,6 +394,14 @@ impl AStarBuilder {
         let mut nodes_visited_total: u64 = 0;
 
         for (target_u64, target_node) in target_nodes {
+            // Create a fresh progress tracker per target run.
+            // Reusing a single leaf task across multiple runs would attempt to re-start
+            // a Finished task and panic.
+            let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("A*".to_string(), relationship_count),
+                self.concurrency,
+            );
+
             let mut storage = match (&lat_values, &lon_values) {
                 (Some(lat), Some(lon)) => AStarStorageRuntime::new_with_values(
                     source_node,

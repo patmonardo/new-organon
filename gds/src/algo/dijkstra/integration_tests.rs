@@ -204,7 +204,7 @@ fn test_dijkstra_storage_computation_integration() {
     let mut storage = DijkstraStorageRuntime::new(0, false, 4, false);
     let mut computation = DijkstraComputationRuntime::new(0, false, 4, false);
     let targets = Box::new(SingleTarget::new(3));
-    let mut progress_tracker = crate::core::utils::progress::ProgressTracker::new(
+    let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
         crate::core::utils::progress::Tasks::leaf("dijkstra".to_string()),
     );
 

@@ -232,7 +232,7 @@ mod tests {
     use super::super::hash_gnn_parameters::GenerateFeaturesConfig;
     use super::*;
     use crate::collections::backends::vec::VecLong;
-    use crate::core::utils::progress::{ProgressTracker, Tasks};
+    use crate::core::utils::progress::{TaskProgressTracker, Tasks};
     use crate::types::concurrency::Concurrency;
     use crate::types::graph_store::DefaultGraphStore;
     use crate::types::graph_store::GraphStore;
@@ -275,7 +275,7 @@ mod tests {
         let algo = HashGNN::new(
             graph,
             params,
-            ProgressTracker::new(Tasks::leaf_with_volume("HashGNN".to_string(), 1)),
+            TaskProgressTracker::new(Tasks::leaf_with_volume("HashGNN".to_string(), 1)),
             TerminationFlag::default(),
         );
 
@@ -341,7 +341,7 @@ mod tests {
         let algo = HashGNN::new(
             graph,
             params,
-            ProgressTracker::new(Tasks::leaf_with_volume("HashGNN".to_string(), 1)),
+            TaskProgressTracker::new(Tasks::leaf_with_volume("HashGNN".to_string(), 1)),
             TerminationFlag::default(),
         );
 

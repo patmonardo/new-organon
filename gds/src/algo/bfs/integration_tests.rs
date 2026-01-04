@@ -7,7 +7,7 @@
 use super::computation::BfsComputationRuntime;
 use super::spec::{BFSAlgorithmSpec, BfsConfig, BfsResult};
 use super::storage::BfsStorageRuntime;
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::projection::eval::procedure::AlgorithmSpec;
 use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor};
 use serde_json::json;
@@ -78,7 +78,7 @@ fn test_bfs_storage_computation_integration() {
     let storage = BfsStorageRuntime::new(0, vec![3], None, true, 1, 1);
     let mut computation = BfsComputationRuntime::new(0, true, 1);
 
-    let mut progress_tracker = ProgressTracker::new(Tasks::leaf("BFS".to_string()));
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("BFS".to_string()));
     let bfs_result = storage
         .compute_bfs(&mut computation, None, &mut progress_tracker)
         .unwrap();

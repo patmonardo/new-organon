@@ -352,7 +352,7 @@ mod tests {
         let mut storage = AStarStorageRuntime::new(0, 1, "lat".to_string(), "lon".to_string());
 
         let mut computation = crate::algo::astar::computation::AStarComputationRuntime::new();
-        let mut progress_tracker = crate::core::utils::progress::ProgressTracker::new(
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
             crate::core::utils::progress::Tasks::leaf("astar".to_string()),
         );
 
@@ -378,7 +378,7 @@ mod tests {
         );
 
         let mut computation = crate::algo::astar::computation::AStarComputationRuntime::new();
-        let mut progress_tracker = crate::core::utils::progress::ProgressTracker::new(
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
             crate::core::utils::progress::Tasks::leaf("astar".to_string()),
         );
 

@@ -326,7 +326,7 @@ mod tests {
     use super::super::computation::DijkstraComputationRuntime;
     use super::super::targets::{AllTargets, ManyTargets, SingleTarget};
     use super::*;
-    use crate::core::utils::progress::Tasks;
+    use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 
     #[test]
     fn test_dijkstra_storage_runtime_creation() {
@@ -342,7 +342,7 @@ mod tests {
         let mut storage = DijkstraStorageRuntime::new(0, false, 4, false);
         let mut computation = DijkstraComputationRuntime::new(0, false, 4, false);
         let targets = Box::new(SingleTarget::new(3));
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra".to_string()));
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("dijkstra".to_string()));
 
         // Test basic path computation
         let result =
@@ -357,7 +357,7 @@ mod tests {
         let mut storage = DijkstraStorageRuntime::new(0, false, 4, false);
         let mut computation = DijkstraComputationRuntime::new(0, false, 4, false);
         let targets = Box::new(ManyTargets::new(vec![3, 5]));
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra".to_string()));
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("dijkstra".to_string()));
 
         // Test with multiple targets
         let result =
@@ -372,7 +372,7 @@ mod tests {
         let mut storage = DijkstraStorageRuntime::new(0, false, 4, false);
         let mut computation = DijkstraComputationRuntime::new(0, false, 4, false);
         let targets = Box::new(AllTargets::new());
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra".to_string()));
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("dijkstra".to_string()));
 
         // Test with all targets
         let result =
@@ -405,7 +405,7 @@ mod tests {
 
         let mut computation = DijkstraComputationRuntime::new(0, true, 4, false);
         let targets = Box::new(SingleTarget::new(3));
-        let mut progress_tracker = ProgressTracker::new(Tasks::leaf("dijkstra".to_string()));
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("dijkstra".to_string()));
 
         let result = storage
             .compute_dijkstra(&mut computation, targets, None, 0, &mut progress_tracker)
