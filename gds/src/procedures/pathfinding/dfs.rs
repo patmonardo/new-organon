@@ -30,7 +30,7 @@
 //! ```
 
 use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
 use crate::algo::core::prelude::{PathFindingResult, PathResultBuilder};

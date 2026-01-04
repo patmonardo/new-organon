@@ -33,6 +33,7 @@
 //! ```
 
 pub mod batching_progress_logger;
+pub mod batching_task_progress_tracker;
 pub mod empty_task_store;
 pub mod job_id;
 pub mod observable_task_store;
@@ -49,6 +50,7 @@ pub mod tasks;
 pub mod user_task;
 
 pub use batching_progress_logger::{BatchingProgressLogger, MAXIMUM_LOG_INTERVAL};
+pub use batching_task_progress_tracker::BatchingTaskProgressTracker;
 pub use empty_task_store::EmptyTaskStore;
 pub use job_id::JobId;
 pub use observable_task_store::ObservableTaskStore;

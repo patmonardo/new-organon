@@ -4,7 +4,7 @@ use crate::algo::similarity::filteredknn::{
     FilteredKnnStorageRuntime,
 };
 use crate::algo::similarity::knn::metrics::{KnnNodePropertySpec, SimilarityMetric};
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::core::utils::progress::Tasks;
 use crate::projection::NodeLabel;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde::{Deserialize, Serialize};

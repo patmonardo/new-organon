@@ -75,7 +75,7 @@ impl TaskProgressTracker {
     }
 
     fn format_progress_message(template: &str, value: usize) -> String {
-        // Minimal formatting support for Java-style templates.
+        // Minimal formatting support for Java-style templates (Java parity).
         // Common cases in the repo are "%d" or "{}".
         if template.contains("%d") {
             template.replace("%d", &value.to_string())
@@ -89,7 +89,7 @@ impl TaskProgressTracker {
 
 impl ProgressTracker for TaskProgressTracker {
     fn set_estimated_resource_footprint(&mut self, memory_estimation_in_bytes: MemoryRange) {
-        let mut inner = self.inner.lock().unwrap();
+        let inner = self.inner.lock().unwrap();
         inner.base_task.set_estimated_memory_range_in_bytes(
             memory_estimation_in_bytes.min(),
             memory_estimation_in_bytes.max(),
@@ -97,7 +97,7 @@ impl ProgressTracker for TaskProgressTracker {
     }
 
     fn requested_concurrency(&mut self, concurrency: Concurrency) {
-        let mut inner = self.inner.lock().unwrap();
+        let inner = self.inner.lock().unwrap();
         inner.base_task.set_max_concurrency(concurrency.value());
     }
 

@@ -4,7 +4,7 @@
 //!
 //! This facade runs the translated Yen's runtime against a live `DefaultGraphStore`.
 
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
 use crate::algo::core::prelude::{PathFindingResult, PathResultBuilder};
 use crate::algo::core::result_builders::ResultBuilder;

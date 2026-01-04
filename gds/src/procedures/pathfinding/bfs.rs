@@ -27,7 +27,7 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
 use crate::algo::bfs::{BfsComputationRuntime, BfsStorageRuntime};
 use crate::algo::core::prelude::{PathFindingResult, PathResultBuilder};

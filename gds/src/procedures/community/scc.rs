@@ -8,7 +8,7 @@
 //! - `concurrency`: accepted for Java GDS alignment; currently unused.
 
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
+use crate::core::utils::progress::{TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;

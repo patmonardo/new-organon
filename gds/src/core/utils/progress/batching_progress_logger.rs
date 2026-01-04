@@ -6,11 +6,6 @@ use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 /// Maximum interval for logging (2^13 = 8192).
 pub const MAXIMUM_LOG_INTERVAL: u64 = 1 << 13;
 
-thread_local! {
-    /// Thread-local call counter for batching.
-    static CALL_COUNTER: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
-}
-
 /// Progress logger that batches updates for performance in concurrent scenarios.
 ///
 /// This logger reduces logging overhead by:
@@ -117,38 +112,37 @@ impl BatchingProgressLogger {
     ///
     /// Only actually logs when the batch threshold is reached.
     fn log_progress_internal(&self, progress: i64, _msg_factory: MessageFactory) {
-        // Use thread-local counter
-        CALL_COUNTER.with(|counter| {
-            let local_count = counter.get() + 1;
-            counter.set(local_count);
+        // Always update global progress to avoid undercounting when batching.
+        let new_progress = self.progress_counter.fetch_add(progress, Ordering::SeqCst) + progress;
 
-            // Check if we should log (batch size reached)
-            let batch_size = self.batch_size.load(Ordering::Relaxed);
-            if local_count >= batch_size {
-                counter.set(0); // Reset local counter
+        let task_volume = self.task_volume.load(Ordering::Relaxed);
+        if task_volume == 0 || task_volume == UNKNOWN_VOLUME as u64 {
+            return;
+        }
 
-                // Update global progress
-                let global_progress = self.progress_counter.fetch_add(progress, Ordering::SeqCst);
-                let new_progress = global_progress + progress;
+        // Decide whether to emit/log based on batch size.
+        let batch_size = self.batch_size.load(Ordering::Relaxed).max(1);
+        let should_log = if batch_size == 1 {
+            true
+        } else {
+            // `batch_size` is a power of two by construction.
+            (new_progress as u64) & (batch_size - 1) == 0
+        };
 
-                // Calculate percentage
-                let task_volume = self.task_volume.load(Ordering::Relaxed);
-                if task_volume > 0 && task_volume != UNKNOWN_VOLUME as u64 {
-                    let percentage = ((new_progress as f64 / task_volume as f64) * 100.0) as i64;
-                    let old_percentage = self.global_percentage.swap(percentage, Ordering::SeqCst);
+        if !should_log {
+            return;
+        }
 
-                    // Only log if percentage changed significantly
-                    if percentage > old_percentage {
-                        // In a real implementation, this would call the actual log system
-                        // For now, we just update the percentage
-                        #[cfg(debug_assertions)]
-                        {
-                            eprintln!("[PROGRESS] {}% - {}", percentage, self.task_name);
-                        }
-                    }
-                }
+        let percentage = ((new_progress as f64 / task_volume as f64) * 100.0) as i64;
+        let old_percentage = self.global_percentage.swap(percentage, Ordering::SeqCst);
+
+        if percentage > old_percentage {
+            #[cfg(debug_assertions)]
+            {
+                let _message = _msg_factory();
+                eprintln!("[PROGRESS] {}% - {}", percentage, self.task_name);
             }
-        });
+        }
     }
 
     /// Get current progress counter value.

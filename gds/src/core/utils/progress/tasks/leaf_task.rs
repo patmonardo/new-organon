@@ -115,6 +115,7 @@ mod tests {
     fn test_leaf_task_finish_with_unknown_volume() {
         let task = LeafTask::new("Unknown Volume".to_string(), UNKNOWN_VOLUME);
 
+        task.base().start();
         task.log_progress(75);
         task.finish();
 

@@ -24,7 +24,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::core::utils::progress::Tasks;
 
 /// Per-node Louvain assignment row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]

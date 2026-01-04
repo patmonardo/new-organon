@@ -20,7 +20,7 @@ use std::sync::Arc;
 
 // Import upgraded systems
 use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
 };
 use crate::algo::core::prelude::*;
 

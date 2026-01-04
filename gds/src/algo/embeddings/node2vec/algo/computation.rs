@@ -22,7 +22,7 @@
 //! where needed, but the returned matrix is aligned to the projected graph's node order.
 
 use crate::concurrency::{Concurrency, TerminationFlag};
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::core::utils::progress::Tasks;
 use crate::ml::core::samplers::RandomWalkSampler;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::Graph;

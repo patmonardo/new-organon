@@ -5,7 +5,7 @@
 //! Parameters (Java GDS aligned):
 //! - `concurrency`: accepted for parity; current runtime is single-threaded.
 
-use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
+use crate::core::utils::progress::{TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;

@@ -1,7 +1,7 @@
 #[cfg(test)]
 use super::UNKNOWN_VOLUME;
-use super::{Progress, Task, TaskVisitor};
-use std::sync::Arc;
+use super::{Progress, Status, Task, TaskVisitor};
+use std::sync::{Arc, Mutex};
 
 /// Execution modes for iterative tasks.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -21,6 +21,7 @@ pub struct IterativeTask {
     sub_tasks_supplier: Arc<dyn Fn() -> Vec<Arc<Task>> + Send + Sync>,
     mode: IterativeTaskMode,
     max_iterations: usize,
+    extra_sub_tasks: Mutex<Vec<Arc<Task>>>,
 }
 
 impl IterativeTask {
@@ -54,7 +55,14 @@ impl IterativeTask {
             sub_tasks_supplier,
             mode,
             max_iterations,
+            extra_sub_tasks: Mutex::new(Vec::new()),
         }
+    }
+
+    fn all_sub_tasks(&self) -> Vec<Arc<Task>> {
+        let mut all: Vec<Arc<Task>> = self.base.sub_tasks().iter().cloned().collect();
+        all.extend(self.extra_sub_tasks.lock().unwrap().iter().cloned());
+        all
     }
 
     /// Get the base task.
@@ -64,47 +72,100 @@ impl IterativeTask {
 
     /// Get current progress.
     pub fn get_progress(&self) -> Progress {
-        let base_progress = self.base.get_progress();
+        if self.mode != IterativeTaskMode::Open {
+            return self.base.get_progress();
+        }
 
-        if self.mode == IterativeTaskMode::Open {
-            // For open mode, report progress as unknown
-            Progress::of(base_progress.progress(), super::UNKNOWN_VOLUME)
+        // Java parity for OPEN: include dynamically added iterations in progress aggregation.
+        let sub_tasks = self.all_sub_tasks();
+
+        let mut progress = 0usize;
+        let mut volume = 0usize;
+        let mut has_unknown_volume = false;
+
+        for sub_task in sub_tasks {
+            let sub_progress = sub_task.get_progress();
+
+            if sub_progress.volume() == super::UNKNOWN_VOLUME {
+                has_unknown_volume = true;
+            }
+
+            progress += sub_progress.progress();
+            if !has_unknown_volume {
+                volume += sub_progress.volume();
+            }
+        }
+
+        let aggregated = if has_unknown_volume {
+            Progress::of(progress, super::UNKNOWN_VOLUME)
         } else {
-            base_progress
+            Progress::of(progress, volume)
+        };
+
+        if self.base.status() != Status::Finished {
+            // While running, OPEN mode always reports unknown volume.
+            Progress::of(aggregated.progress(), super::UNKNOWN_VOLUME)
+        } else {
+            aggregated
         }
     }
 
     /// Get next subtask after validation.
     #[allow(dead_code)] // Reserved for iteration control
     fn next_subtask_after_validation(&self) -> Option<Arc<Task>> {
-        // First check if there's a pending subtask
-        if let Some(next) = self.base.next_subtask() {
+        // Java parity: cannot advance while a subtask is running.
+        if self
+            .all_sub_tasks()
+            .iter()
+            .any(|t| t.status() == Status::Running)
+        {
+            panic!(
+                "Cannot move to next subtask, because some subtasks are still running"
+            );
+        }
+
+        // First check if there's a pending subtask.
+        if let Some(next) = self
+            .all_sub_tasks()
+            .into_iter()
+            .find(|t| t.status() == Status::Pending)
+        {
             return Some(next);
         }
 
         // For open mode or if we haven't reached max iterations, add more
         if self.mode == IterativeTaskMode::Open || self.can_add_more_iterations() {
-            self.add_iteration_internal();
-            self.base.next_subtask()
+            let new_iteration_tasks = self.add_iteration_internal();
+            return new_iteration_tasks
+                .into_iter()
+                .find(|t| t.status() == Status::Pending);
         } else {
             None
         }
     }
 
+    /// Java-parity convenience: validate running then return next subtask.
+    #[allow(dead_code)]
+    pub fn next_subtask(&self) -> Option<Arc<Task>> {
+        if self.base.status() != Status::Running {
+            panic!(
+                "Cannot retrieve next subtask, task '{}' is not running.",
+                self.base.description()
+            );
+        }
+        self.next_subtask_after_validation()
+    }
+
     /// Finish the task.
     pub fn finish(&self) {
-        if self.mode == IterativeTaskMode::Fixed {
-            let current_iteration = self.current_iteration();
-            if current_iteration < self.max_iterations {
-                panic!(
-                    "Cannot finish iterative task '{}'. Expected {} iterations but only {} were executed.",
-                    self.base.description(),
-                    self.max_iterations,
-                    current_iteration
-                );
+        self.base.finish();
+
+        // Java parity: finishing cancels remaining pending subtasks.
+        for sub_task in self.base.sub_tasks() {
+            if sub_task.status() == Status::Pending {
+                sub_task.cancel();
             }
         }
-        self.base.finish();
     }
 
     /// Get current iteration number (0-based).
@@ -115,9 +176,9 @@ impl IterativeTask {
         }
 
         let mut completed = 0;
-        for sub_task in self.base.sub_tasks() {
+        for sub_task in self.all_sub_tasks() {
             let status = sub_task.status();
-            if status.is_terminal() {
+            if status == Status::Finished {
                 completed += 1;
             }
         }
@@ -150,13 +211,18 @@ impl IterativeTask {
     }
 
     /// Add a new iteration (internal, modifies base task's subtasks).
-    /// Note: This is a simplified version since Rust doesn't allow easy mutation of Arc<Task>.
     #[allow(dead_code)] // Reserved for dynamic iteration addition
-    fn add_iteration_internal(&self) {
-        // In the Java version, this modifies the subtasks list.
-        // In Rust, we would need to use interior mutability (Mutex) on the subtasks.
-        // For now, this is a placeholder that matches the interface.
-        // A full implementation would require refactoring Task to have mutable subtasks.
+    fn add_iteration_internal(&self) -> Vec<Arc<Task>> {
+        let new_iteration_tasks = (self.sub_tasks_supplier)();
+
+        if self.mode == IterativeTaskMode::Open {
+            self.extra_sub_tasks
+                .lock()
+                .unwrap()
+                .extend(new_iteration_tasks.iter().cloned());
+        }
+
+        new_iteration_tasks
     }
 
     /// Accept a visitor (Visitor pattern).
@@ -273,8 +339,9 @@ mod tests {
         );
 
         let progress = task.get_progress();
-        // Progress delegates to base task
-        assert_eq!(progress.volume(), UNKNOWN_VOLUME);
+        // Java parity: empty intermediate subtasks contribute 0/0.
+        assert_eq!(progress.volume(), 0);
+        assert_eq!(progress.progress(), 0);
     }
 
     #[test]
@@ -289,13 +356,12 @@ mod tests {
         );
 
         let progress = task.get_progress();
-        // Open mode always reports unknown volume
+        // Java parity: OPEN mode reports unknown volume while not finished.
         assert_eq!(progress.volume(), UNKNOWN_VOLUME);
     }
 
     #[test]
-    #[should_panic(expected = "Cannot finish iterative task")]
-    fn test_iterative_task_finish_fixed_incomplete() {
+    fn test_iterative_task_finish_fixed_incomplete_cancels_pending() {
         let supplier = create_sub_tasks_supplier();
         let sub_tasks = unroll_tasks(&supplier, 3);
 
@@ -306,13 +372,20 @@ mod tests {
             IterativeTaskMode::Fixed,
         );
 
+        task.base().start();
+
         // Finish only 1 iteration out of 3
         task.base().sub_tasks()[0].start();
         task.base().sub_tasks()[0].finish();
         task.base().sub_tasks()[1].start();
         task.base().sub_tasks()[1].finish();
 
-        task.finish(); // Should panic
+        task.finish();
+        assert_eq!(task.base().status(), Status::Finished);
+
+        // Pending tasks are canceled on finish.
+        let statuses: Vec<_> = task.base().sub_tasks().iter().map(|t| t.status()).collect();
+        assert!(statuses.iter().any(|s| *s == Status::Canceled));
     }
 
     #[test]
@@ -326,6 +399,8 @@ mod tests {
             supplier,
             IterativeTaskMode::Fixed,
         );
+
+        task.base().start();
 
         // Complete all iterations
         for sub_task in task.base().sub_tasks() {

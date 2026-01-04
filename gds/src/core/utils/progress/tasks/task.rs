@@ -30,8 +30,10 @@ struct LeafState {
 
 impl Task {
     pub const UNKNOWN_CONCURRENCY: usize = usize::MAX;
-    pub const NOT_STARTED: u64 = 0;
-    pub const NOT_FINISHED: u64 = 0;
+    // Java parity: Java uses -1 for these. In Rust (u64) use a sentinel that cannot
+    // collide with `ClockService::clock().millis()`.
+    pub const NOT_STARTED: u64 = u64::MAX;
+    pub const NOT_FINISHED: u64 = u64::MAX;
 
     /// Create a new task with description and subtasks.
     pub fn new(description: String, sub_tasks: Vec<Arc<Task>>) -> Self {
@@ -86,6 +88,7 @@ impl Task {
 
     /// Get next subtask to execute.
     pub fn next_subtask(&self) -> Option<Arc<Task>> {
+        self.validate_task_is_running();
         self.next_subtask_after_validation()
     }
 
@@ -105,6 +108,14 @@ impl Task {
 
     /// Finish task successfully.
     pub fn finish(&self) {
+        let current_status = self.status();
+        if current_status != Status::Running {
+            panic!(
+                "Task '{}' with state {:?} cannot be finished",
+                self.description, current_status
+            );
+        }
+
         if let Some(leaf) = &self.leaf_state {
             // Leaf tasks should be considered 100% complete on finish.
             let mut volume = leaf.volume.lock().unwrap();
@@ -124,10 +135,15 @@ impl Task {
     /// Cancel task execution.
     pub fn cancel(&self) {
         let current_status = self.status();
-        if current_status == Status::Running {
-            *self.status.lock().unwrap() = Status::Canceled;
-            *self.finish_time.lock().unwrap() = ClockService::clock().millis();
+        if current_status == Status::Finished {
+            panic!(
+                "Task '{}' with state {:?} cannot be canceled",
+                self.description, current_status
+            );
         }
+
+        // Java parity: cancel is allowed for any non-finished status.
+        *self.status.lock().unwrap() = Status::Canceled;
     }
 
     /// Mark task as failed.
@@ -143,9 +159,9 @@ impl Task {
             return Progress::of(current, volume);
         }
 
-        // If no subtasks, volume is unknown
+        // Java parity: an intermediate task with no subtasks has 0/0 progress.
         if self.sub_tasks.is_empty() {
-            return Progress::of(UNKNOWN_VOLUME, UNKNOWN_VOLUME);
+            return Progress::of(0, 0);
         }
 
         let mut progress = 0usize;
@@ -232,7 +248,7 @@ impl Task {
 
     /// Check if task has not started yet.
     pub fn has_not_started(&self) -> bool {
-        self.start_time() == Self::NOT_STARTED
+        self.status() == Status::Pending || self.start_time() == Self::NOT_STARTED
     }
 
     /// Get estimated memory range in bytes.
@@ -253,16 +269,68 @@ impl Task {
     /// Set maximum concurrency.
     pub fn set_max_concurrency(&self, concurrency: usize) {
         *self.max_concurrency.lock().unwrap() = concurrency;
+
+        // Java parity: propagate to children that have unknown concurrency.
+        for sub_task in &self.sub_tasks {
+            if sub_task.max_concurrency() == Self::UNKNOWN_CONCURRENCY {
+                sub_task.set_max_concurrency(concurrency);
+            }
+        }
+    }
+
+    /// Render a textual representation of the task tree.
+    ///
+    /// Java parity: mirrors `Task.render()` formatting (tabs + `|-- ` prefixes).
+    pub fn render(&self) -> String {
+        let mut out = String::new();
+        Self::render_into(&mut out, self, 0);
+        out
+    }
+
+    fn render_into(out: &mut String, task: &Task, depth: usize) {
+        if depth > 1 {
+            out.push_str(&"\t".repeat(depth - 1));
+        }
+
+        if depth > 0 {
+            out.push_str("|-- ");
+        }
+
+        out.push_str(task.description());
+        out.push('(');
+        out.push_str(&task.status().to_string());
+        out.push(')');
+        out.push('\n');
+
+        for subtask in task.sub_tasks() {
+            Self::render_into(out, subtask, depth + 1);
+        }
     }
 
     /// Get next subtask after validation (can be overridden).
     fn next_subtask_after_validation(&self) -> Option<Arc<Task>> {
+        // Java parity: fail fast if any subtask is still running.
+        if self.sub_tasks.iter().any(|t| t.status() == Status::Running) {
+            panic!(
+                "Cannot move to next subtask, because some subtasks are still running"
+            );
+        }
+
         for sub_task in &self.sub_tasks {
             if sub_task.status() == Status::Pending {
                 return Some(Arc::clone(sub_task));
             }
         }
         None
+    }
+
+    fn validate_task_is_running(&self) {
+        if self.status() != Status::Running {
+            panic!(
+                "Cannot retrieve next subtask, task '{}' is not running.",
+                self.description
+            );
+        }
     }
 }
 
@@ -306,10 +374,10 @@ mod tests {
     #[test]
     fn test_task_cancellation() {
         let task = Task::new("Cancel Task".to_string(), vec![]);
-        task.start();
         task.cancel();
         assert_eq!(task.status(), Status::Canceled);
-        assert!(task.finish_time() > 0);
+        // Java parity: cancel does not set finish time.
+        assert_eq!(task.finish_time(), Task::NOT_FINISHED);
     }
 
     #[test]
@@ -327,6 +395,8 @@ mod tests {
 
         assert_eq!(parent.sub_tasks().len(), 2);
 
+        parent.start();
+
         let next = parent.next_subtask();
         assert!(next.is_some());
         assert_eq!(next.unwrap().description(), "Sub 1");
@@ -339,8 +409,9 @@ mod tests {
         let parent = Task::new("Parent".to_string(), vec![sub1, sub2]);
 
         let progress = parent.get_progress();
-        // Base tasks have unknown volume
-        assert_eq!(progress.volume(), UNKNOWN_VOLUME);
+        // Java parity: empty intermediate children contribute 0/0.
+        assert_eq!(progress.volume(), 0);
+        assert_eq!(progress.progress(), 0);
     }
 
     #[test]
