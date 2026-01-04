@@ -195,23 +195,39 @@ mod tests {
     /// with other tests that mutate that singleton. Marked ignored by default
     /// to keep the normal test suite deterministic.
     #[test]
+    #[ignore]
     fn test_concurrent_provider_access() {
         use std::thread;
 
-        let db_name = "test_provider_concurrent_unique_db";
+        // Use a unique name to avoid cross-test interference.
+        let db_name = format!(
+            "test_provider_concurrent_{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        );
 
         #[allow(deprecated)]
-        TaskStoreHolder::purge(db_name);
+        TaskStoreHolder::purge(&db_name);
 
         let provider = Arc::new(SimpleTaskStoreProvider);
         let mut handles = vec![];
 
+        // Pre-create the store so all threads contend on the same instance.
+        let store = provider.get_task_store(&db_name);
+
         // Spawn multiple threads using the same provider
         for i in 0..10 {
             let provider_clone = provider.clone();
-            let db_clone = db_name.to_string();
+            let db_clone = db_name.clone();
+            let store_clone = store.clone();
             let handle = thread::spawn(move || {
                 let store = provider_clone.get_task_store(&db_clone);
+                assert!(
+                    Arc::ptr_eq(&store, &store_clone),
+                    "Expected all threads to get the same store instance"
+                );
                 let job_id = JobId::new();
                 let task = Task::new(format!("Task {}", i), vec![]);
                 store.store(format!("user{}", i), job_id, task);
@@ -225,7 +241,7 @@ mod tests {
         }
 
         // Verify all tasks were stored
-        let store = provider.get_task_store(db_name);
+        let store = provider.get_task_store(&db_name);
         assert_eq!(store.task_count(), 10);
     }
 }

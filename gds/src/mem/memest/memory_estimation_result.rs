@@ -28,8 +28,8 @@ impl MemoryEstimationResult {
     }
 
     /// Returns the minimum memory required for this estimation.
-    pub fn memory_usage(&self) -> usize {
-        self.memory_tree.memory_usage().min()
+    pub fn memory_usage(&self) -> u64 {
+        self.memory_tree.memory_usage().min() as u64
     }
 
     /// Returns the memory range (min to max) for this estimation.
@@ -44,7 +44,11 @@ impl MemoryEstimationResult {
 
     /// Formats the memory usage in human-readable form.
     pub fn format_memory_usage(&self) -> String {
-        Estimate::human_readable(self.memory_usage())
+        Estimate::human_readable(
+            self.memory_usage()
+                .try_into()
+                .expect("memory_usage should fit into usize"),
+        )
     }
 
     /// Converts this result to a map structure for serialization.

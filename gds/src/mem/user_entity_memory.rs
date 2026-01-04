@@ -8,12 +8,12 @@ pub struct UserEntityMemory {
     user: String,
     name: String,
     entity: String,
-    memory_in_bytes: usize,
+    memory_in_bytes: u64,
 }
 
 impl UserEntityMemory {
     /// Creates a new user entity memory record
-    pub fn new(user: String, name: String, entity: String, memory_in_bytes: usize) -> Self {
+    pub fn new(user: String, name: String, entity: String, memory_in_bytes: u64) -> Self {
         Self {
             user,
             name,
@@ -33,7 +33,7 @@ impl UserEntityMemory {
     /// assert_eq!(graph_mem.user(), "alice");
     /// assert_eq!(graph_mem.name(), "my-graph");
     /// ```
-    pub fn create_graph(user: &str, name: &str, memory_in_bytes: usize) -> Self {
+    pub fn create_graph(user: &str, name: &str, memory_in_bytes: u64) -> Self {
         Self {
             user: user.to_string(),
             name: name.to_string(),
@@ -53,7 +53,7 @@ impl UserEntityMemory {
     /// assert_eq!(task_mem.user(), "bob");
     /// assert_eq!(task_mem.name(), "pagerank");
     /// ```
-    pub fn create_task(user: &str, name: &str, job_id: &str, memory_in_bytes: usize) -> Self {
+    pub fn create_task(user: &str, name: &str, job_id: &str, memory_in_bytes: u64) -> Self {
         Self {
             user: user.to_string(),
             name: name.to_string(),
@@ -79,6 +79,13 @@ impl UserEntityMemory {
 
     /// Returns the memory in bytes
     pub fn memory_in_bytes(&self) -> usize {
+        self.memory_in_bytes
+            .try_into()
+            .expect("memory_in_bytes should fit into usize")
+    }
+
+    /// Returns the memory in bytes (u64).
+    pub fn memory_in_bytes_u64(&self) -> u64 {
         self.memory_in_bytes
     }
 }

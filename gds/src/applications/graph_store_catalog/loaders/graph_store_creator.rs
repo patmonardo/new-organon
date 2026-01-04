@@ -1,5 +1,5 @@
 use super::GraphStoreLoader;
-use crate::core::GraphDimensions;
+use crate::mem::MemoryEstimation;
 
 /// Extended trait for creating graph stores with memory estimation.
 ///
@@ -15,8 +15,3 @@ pub trait GraphStoreCreator: GraphStoreLoader {
     fn estimate_memory_usage_after_loading(&self) -> Box<dyn MemoryEstimation>;
 }
 
-/// Placeholder for MemoryEstimation trait.
-/// In real implementation, this would be the actual MemoryEstimation type.
-pub trait MemoryEstimation {
-    fn estimate(&self, dimensions: &dyn GraphDimensions) -> u64;
-}

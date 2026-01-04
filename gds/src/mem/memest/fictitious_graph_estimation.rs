@@ -5,7 +5,7 @@
 
 use super::GraphMemoryEstimation;
 use crate::core::graph_dimensions::{ConcreteGraphDimensions, GraphDimensions};
-use crate::mem::{MemoryRange, MemoryTree};
+use crate::mem::{MemoryEstimation, MemoryRange, MemoryTree};
 
 /// Service for estimating memory usage of hypothetical graph projections.
 ///
@@ -23,8 +23,11 @@ use crate::mem::{MemoryRange, MemoryTree};
 /// // Estimate for a graph with 1M nodes and 5M relationships
 /// let estimation = service.estimate(1_000_000, 5_000_000);
 ///
-/// println!("Min memory: {} bytes", estimation.min_memory());
-/// println!("Max memory: {} bytes", estimation.max_memory());
+/// let tree = estimation
+///     .estimate_memory_usage_after_loading()
+///     .estimate(estimation.dimensions(), 4);
+/// println!("Min memory: {} bytes", tree.memory_usage().min());
+/// println!("Max memory: {} bytes", tree.memory_usage().max());
 /// ```
 pub struct FictitiousGraphEstimationService;
 
@@ -46,9 +49,13 @@ impl FictitiousGraphEstimationService {
     /// Memory estimation for the graph
     pub fn estimate(&self, node_count: usize, relationship_count: usize) -> GraphMemoryEstimation {
         let dimensions = ConcreteGraphDimensions::of(node_count, relationship_count);
-        let memory_tree = self.estimate_memory_tree(&dimensions);
+        let estimation = Box::new(FictitiousGraphStoreEstimation {
+            mode: FictitiousMode::Simple,
+            node_label_count: 0,
+            property_count: 0,
+        });
 
-        GraphMemoryEstimation::new(dimensions, memory_tree)
+        GraphMemoryEstimation::new(dimensions, estimation)
     }
 
     /// Estimates memory usage with detailed configuration.
@@ -71,157 +78,144 @@ impl FictitiousGraphEstimationService {
         property_count: usize,
     ) -> GraphMemoryEstimation {
         let dimensions = ConcreteGraphDimensions::of(node_count, relationship_count);
-        let memory_tree =
-            self.estimate_memory_tree_detailed(&dimensions, node_label_count, property_count);
+        let estimation = Box::new(FictitiousGraphStoreEstimation {
+            mode: FictitiousMode::Detailed,
+            node_label_count,
+            property_count,
+        });
 
-        GraphMemoryEstimation::new(dimensions, memory_tree)
+        GraphMemoryEstimation::new(dimensions, estimation)
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FictitiousMode {
+    Simple,
+    Detailed,
+}
+
+#[derive(Clone, Debug)]
+struct FictitiousGraphStoreEstimation {
+    mode: FictitiousMode,
+    node_label_count: usize,
+    property_count: usize,
+}
+
+impl MemoryEstimation for FictitiousGraphStoreEstimation {
+    fn description(&self) -> String {
+        "Graph Store".to_string()
     }
 
-    /// Estimates memory tree for the given dimensions.
-    ///
-    /// This uses empirical formulas based on typical graph storage overhead.
-    fn estimate_memory_tree(&self, dimensions: &ConcreteGraphDimensions) -> MemoryTree {
-        let node_count = dimensions.node_count();
-        let rel_count = dimensions.rel_count_upper_bound();
-
-        // Empirical memory estimation formulas
-        // Based on typical overhead for CSR/CSC adjacency lists + ID mappings
-
-        // Node storage: ~32 bytes per node (ID mapping, degree arrays, metadata)
-        let node_memory = node_count * 32;
-
-        // Relationship storage: ~24 bytes per relationship (source, target, properties pointer)
-        let rel_memory = rel_count * 24;
-
-        // Adjacency lists: ~16 bytes per relationship (forward + backward indices)
-        let adjacency_memory = rel_count * 16;
-
-        // Overhead: ~10% for metadata, caches, alignment
-        let overhead = (node_memory + rel_memory + adjacency_memory) / 10;
-
-        // Total memory
-        let total_memory = node_memory + rel_memory + adjacency_memory + overhead;
-
-        // Build memory tree
-        let children = vec![
-            MemoryTree::leaf("Node Storage".to_string(), MemoryRange::of(node_memory)),
-            MemoryTree::leaf(
-                "Relationship Storage".to_string(),
-                MemoryRange::of(rel_memory),
+    fn estimate(&self, dimensions: &dyn GraphDimensions, _concurrency: usize) -> MemoryTree {
+        match self.mode {
+            FictitiousMode::Simple => estimate_memory_tree_simple(dimensions),
+            FictitiousMode::Detailed => estimate_memory_tree_detailed(
+                dimensions,
+                self.node_label_count,
+                self.property_count,
             ),
-            MemoryTree::leaf(
-                "Adjacency Lists".to_string(),
-                MemoryRange::of(adjacency_memory),
-            ),
-            MemoryTree::leaf("Metadata Overhead".to_string(), MemoryRange::of(overhead)),
-        ];
-
-        MemoryTree::new(
-            "Graph Store".to_string(),
-            MemoryRange::of(total_memory),
-            children,
-        )
-    }
-
-    /// Estimates memory tree with detailed configuration.
-    fn estimate_memory_tree_detailed(
-        &self,
-        dimensions: &ConcreteGraphDimensions,
-        node_label_count: usize,
-        property_count: usize,
-    ) -> MemoryTree {
-        let node_count = dimensions.node_count();
-        let rel_count = dimensions.rel_count_upper_bound();
-
-        // Base storage
-        let node_memory = node_count * 32;
-        let rel_memory = rel_count * 24;
-        let adjacency_memory = rel_count * 16;
-
-        // Label storage: ~8 bytes per node per label
-        let label_memory = if node_label_count > 0 {
-            node_count * node_label_count * 8
-        } else {
-            0
-        };
-
-        // Property storage: ~16 bytes per property per element (assumes mixed types)
-        let node_property_memory = node_count * property_count * 16;
-        let rel_property_memory = rel_count * property_count * 16;
-
-        // Overhead
-        let base_overhead = (node_memory + rel_memory + adjacency_memory) / 10;
-        let property_overhead = (node_property_memory + rel_property_memory) / 20;
-        let overhead_total = base_overhead + property_overhead;
-
-        // Calculate total memory
-        let mut total_memory =
-            node_memory + rel_memory + adjacency_memory + label_memory + overhead_total;
-        if node_property_memory > 0 || rel_property_memory > 0 {
-            total_memory += node_property_memory + rel_property_memory;
         }
+    }
+}
 
-        // Build memory tree
-        let mut children = Vec::new();
+fn estimate_memory_tree_simple(dimensions: &dyn GraphDimensions) -> MemoryTree {
+    let node_count = dimensions.node_count();
+    let rel_count = dimensions.rel_count_upper_bound();
 
+    let node_memory = node_count * 32;
+    let rel_memory = rel_count * 24;
+    let adjacency_memory = rel_count * 16;
+    let overhead = (node_memory + rel_memory + adjacency_memory) / 10;
+    let total_memory = node_memory + rel_memory + adjacency_memory + overhead;
+
+    let children = vec![
+        MemoryTree::leaf("Node Storage".to_string(), MemoryRange::of(node_memory)),
+        MemoryTree::leaf("Relationship Storage".to_string(), MemoryRange::of(rel_memory)),
+        MemoryTree::leaf("Adjacency Lists".to_string(), MemoryRange::of(adjacency_memory)),
+        MemoryTree::leaf("Metadata Overhead".to_string(), MemoryRange::of(overhead)),
+    ];
+
+    MemoryTree::new("Graph Store".to_string(), MemoryRange::of(total_memory), children)
+}
+
+fn estimate_memory_tree_detailed(
+    dimensions: &dyn GraphDimensions,
+    node_label_count: usize,
+    property_count: usize,
+) -> MemoryTree {
+    let node_count = dimensions.node_count();
+    let rel_count = dimensions.rel_count_upper_bound();
+
+    let node_memory = node_count * 32;
+    let rel_memory = rel_count * 24;
+    let adjacency_memory = rel_count * 16;
+
+    let label_memory = if node_label_count > 0 {
+        node_count * node_label_count * 8
+    } else {
+        0
+    };
+
+    let node_property_memory = node_count * property_count * 16;
+    let rel_property_memory = rel_count * property_count * 16;
+
+    let base_overhead = (node_memory + rel_memory + adjacency_memory) / 10;
+    let property_overhead = (node_property_memory + rel_property_memory) / 20;
+    let overhead_total = base_overhead + property_overhead;
+
+    let mut total_memory =
+        node_memory + rel_memory + adjacency_memory + label_memory + overhead_total;
+    if node_property_memory > 0 || rel_property_memory > 0 {
+        total_memory += node_property_memory + rel_property_memory;
+    }
+
+    let mut children = Vec::new();
+    children.push(MemoryTree::leaf("Node Storage".to_string(), MemoryRange::of(node_memory)));
+    children.push(MemoryTree::leaf(
+        "Relationship Storage".to_string(),
+        MemoryRange::of(rel_memory),
+    ));
+    children.push(MemoryTree::leaf(
+        "Adjacency Lists".to_string(),
+        MemoryRange::of(adjacency_memory),
+    ));
+
+    if label_memory > 0 {
         children.push(MemoryTree::leaf(
-            "Node Storage".to_string(),
-            MemoryRange::of(node_memory),
+            "Label Storage".to_string(),
+            MemoryRange::of(label_memory),
         ));
+    }
 
-        children.push(MemoryTree::leaf(
-            "Relationship Storage".to_string(),
-            MemoryRange::of(rel_memory),
-        ));
-
-        children.push(MemoryTree::leaf(
-            "Adjacency Lists".to_string(),
-            MemoryRange::of(adjacency_memory),
-        ));
-
-        if label_memory > 0 {
-            children.push(MemoryTree::leaf(
-                "Label Storage".to_string(),
-                MemoryRange::of(label_memory),
+    if node_property_memory > 0 || rel_property_memory > 0 {
+        let mut property_children = Vec::new();
+        if node_property_memory > 0 {
+            property_children.push(MemoryTree::leaf(
+                "Node Properties".to_string(),
+                MemoryRange::of(node_property_memory),
+            ));
+        }
+        if rel_property_memory > 0 {
+            property_children.push(MemoryTree::leaf(
+                "Relationship Properties".to_string(),
+                MemoryRange::of(rel_property_memory),
             ));
         }
 
-        if node_property_memory > 0 || rel_property_memory > 0 {
-            let mut property_children = Vec::new();
-
-            if node_property_memory > 0 {
-                property_children.push(MemoryTree::leaf(
-                    "Node Properties".to_string(),
-                    MemoryRange::of(node_property_memory),
-                ));
-            }
-
-            if rel_property_memory > 0 {
-                property_children.push(MemoryTree::leaf(
-                    "Relationship Properties".to_string(),
-                    MemoryRange::of(rel_property_memory),
-                ));
-            }
-
-            let property_total = node_property_memory + rel_property_memory;
-            children.push(MemoryTree::new(
-                "Property Storage".to_string(),
-                MemoryRange::of(property_total),
-                property_children,
-            ));
-        }
-
-        children.push(MemoryTree::leaf(
-            "Metadata Overhead".to_string(),
-            MemoryRange::of(overhead_total),
+        let property_total = node_property_memory + rel_property_memory;
+        children.push(MemoryTree::new(
+            "Property Storage".to_string(),
+            MemoryRange::of(property_total),
+            property_children,
         ));
-
-        MemoryTree::new(
-            "Graph Store".to_string(),
-            MemoryRange::of(total_memory),
-            children,
-        )
     }
+
+    children.push(MemoryTree::leaf(
+        "Metadata Overhead".to_string(),
+        MemoryRange::of(overhead_total),
+    ));
+
+    MemoryTree::new("Graph Store".to_string(), MemoryRange::of(total_memory), children)
 }
 
 impl Default for FictitiousGraphEstimationService {
@@ -242,7 +236,10 @@ mod tests {
 
         assert_eq!(estimation.dimensions().node_count(), 1000);
         assert_eq!(estimation.dimensions().rel_count_upper_bound(), 5000);
-        assert!(estimation.min_memory() > 0);
+        let tree = estimation
+            .estimate_memory_usage_after_loading()
+            .estimate(estimation.dimensions(), 4);
+        assert!(tree.memory_usage().min() > 0);
     }
 
     #[test]
@@ -251,11 +248,17 @@ mod tests {
         let estimation = service.estimate_detailed(1000, 5000, 2, 3);
 
         assert_eq!(estimation.dimensions().node_count(), 1000);
-        assert!(estimation.min_memory() > 0);
+        let detailed_tree = estimation
+            .estimate_memory_usage_after_loading()
+            .estimate(estimation.dimensions(), 4);
+        assert!(detailed_tree.memory_usage().min() > 0);
 
         // Detailed estimation should include label and property overhead
         let simple_estimation = service.estimate(1000, 5000);
-        assert!(estimation.min_memory() > simple_estimation.min_memory());
+        let simple_tree = simple_estimation
+            .estimate_memory_usage_after_loading()
+            .estimate(simple_estimation.dimensions(), 4);
+        assert!(detailed_tree.memory_usage().min() > simple_tree.memory_usage().min());
     }
 
     #[test]
@@ -265,9 +268,16 @@ mod tests {
         let small = service.estimate(100, 500);
         let large = service.estimate(1000, 5000);
 
+        let small_tree = small
+            .estimate_memory_usage_after_loading()
+            .estimate(small.dimensions(), 4);
+        let large_tree = large
+            .estimate_memory_usage_after_loading()
+            .estimate(large.dimensions(), 4);
+
         // Memory should scale roughly linearly with size
-        assert!(large.min_memory() > small.min_memory() * 5);
-        assert!(large.min_memory() < small.min_memory() * 15);
+        assert!(large_tree.memory_usage().min() > small_tree.memory_usage().min() * 5);
+        assert!(large_tree.memory_usage().min() < small_tree.memory_usage().min() * 15);
     }
 
     #[test]
@@ -277,7 +287,10 @@ mod tests {
 
         assert_eq!(estimation.dimensions().node_count(), 1000);
         assert_eq!(estimation.dimensions().rel_count_upper_bound(), 0);
-        assert!(estimation.min_memory() > 0); // Still has node storage overhead
+        let tree = estimation
+            .estimate_memory_usage_after_loading()
+            .estimate(estimation.dimensions(), 4);
+        assert!(tree.memory_usage().min() > 0); // Still has node storage overhead
     }
 
     #[test]
@@ -285,7 +298,9 @@ mod tests {
         let service = FictitiousGraphEstimationService::new();
         let estimation = service.estimate(1000, 5000);
 
-        let tree = estimation.memory_tree();
+        let tree = estimation
+            .estimate_memory_usage_after_loading()
+            .estimate(estimation.dimensions(), 4);
         let description = tree.description();
 
         // Should have root node
@@ -302,8 +317,15 @@ mod tests {
         // With properties
         let with_props = service.estimate_detailed(1000, 5000, 0, 5);
 
+        let without_props_tree = without_props
+            .estimate_memory_usage_after_loading()
+            .estimate(without_props.dimensions(), 4);
+        let with_props_tree = with_props
+            .estimate_memory_usage_after_loading()
+            .estimate(with_props.dimensions(), 4);
+
         // Properties should add significant overhead
-        assert!(with_props.min_memory() > without_props.min_memory());
+        assert!(with_props_tree.memory_usage().min() > without_props_tree.memory_usage().min());
     }
 
     #[test]
@@ -316,7 +338,14 @@ mod tests {
         // With labels
         let with_labels = service.estimate_detailed(1000, 5000, 3, 0);
 
+        let without_labels_tree = without_labels
+            .estimate_memory_usage_after_loading()
+            .estimate(without_labels.dimensions(), 4);
+        let with_labels_tree = with_labels
+            .estimate_memory_usage_after_loading()
+            .estimate(with_labels.dimensions(), 4);
+
         // Labels should add overhead
-        assert!(with_labels.min_memory() > without_labels.min_memory());
+        assert!(with_labels_tree.memory_usage().min() > without_labels_tree.memory_usage().min());
     }
 }

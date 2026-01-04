@@ -6,46 +6,42 @@
 
 use std::sync::Arc;
 
-use crate::applications::graph_store_catalog::services::MemoryTracker;
 use crate::core::utils::progress::JobId;
+use crate::mem::{MemoryReservationExceededException, MemoryTracker, UserEntityMemory, UserMemorySummary};
 use crate::types::user::User;
-
-/// Placeholder for UserEntityMemory
-#[derive(Clone, Debug)]
-pub struct UserEntityMemory;
-
-/// Placeholder for UserMemorySummary
-#[derive(Clone, Debug)]
-pub struct UserMemorySummary;
 
 /// Memory Facade for tracking and managing memory usage
 pub struct MemoryFacade {
-    _memory_tracker: Arc<MemoryTracker>,
-    _user: User,
+    memory_tracker: Arc<MemoryTracker>,
+    user: User,
 }
 
 impl MemoryFacade {
     pub fn new(user: User, memory_tracker: Arc<MemoryTracker>) -> Self {
         Self {
-            _memory_tracker: memory_tracker,
-            _user: user,
+            memory_tracker,
+            user,
         }
     }
 
     /// Track memory usage for a task
-    pub fn track(&self, _task_name: &str, _job_id: JobId, _memory_estimate: i64) {
-        // Placeholder implementation
+    pub fn track(
+        &self,
+        task_name: &str,
+        job_id: JobId,
+        memory_estimate: u64,
+    ) -> Result<(), MemoryReservationExceededException> {
+        self.memory_tracker
+            .try_to_track(self.user.username(), task_name, &job_id, memory_estimate)
     }
 
     /// List memory usage
     pub fn list(&self) -> Vec<UserEntityMemory> {
-        // Placeholder implementation
-        vec![]
+        self.memory_tracker.list(self.user.username())
     }
 
     /// Get memory summary
     pub fn memory_summary(&self) -> Vec<UserMemorySummary> {
-        // Placeholder implementation
-        vec![]
+        vec![self.memory_tracker.memory_summary(self.user.username())]
     }
 }

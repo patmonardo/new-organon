@@ -122,7 +122,7 @@ mod enabled {
 
         println!("Step 3: register the store in an in-memory catalog");
         let mut memory = GraphStoreMemoryContainer::new();
-        let reserved = memory.add_graph(USER, GRAPH_NAME, estimate_bytes(&store));
+        let reserved = memory.add_graph(USER, GRAPH_NAME, estimate_bytes(&store) as u64);
         println!(
             "- [{}] now tracks {} graphs consuming ~{} bytes",
             USER,

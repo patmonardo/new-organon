@@ -6,6 +6,8 @@
 
 use std::fmt;
 
+use super::estimate::Estimate;
+
 /// Represents a range of positive byte values
 ///
 /// The range can span 0 bytes when min and max are identical.
@@ -17,6 +19,21 @@ pub struct MemoryRange {
 }
 
 impl MemoryRange {
+    fn checked_add(a: usize, b: usize) -> usize {
+        a.checked_add(b)
+            .expect("MemoryRange overflow while adding")
+    }
+
+    fn checked_mul(a: usize, b: usize) -> usize {
+        a.checked_mul(b)
+            .expect("MemoryRange overflow while multiplying")
+    }
+
+    fn checked_sub(a: usize, b: usize) -> usize {
+        a.checked_sub(b)
+            .expect("MemoryRange underflow while subtracting")
+    }
+
     /// Creates a memory range with identical min and max values
     ///
     /// # Examples
@@ -89,8 +106,8 @@ impl MemoryRange {
     /// ```
     pub fn add_scalar(&self, value: usize) -> Self {
         Self {
-            min: self.min.saturating_add(value),
-            max: self.max.saturating_add(value),
+            min: Self::checked_add(self.min, value),
+            max: Self::checked_add(self.max, value),
         }
     }
 
@@ -109,8 +126,8 @@ impl MemoryRange {
     /// ```
     pub fn add(&self, other: &Self) -> Self {
         Self {
-            min: self.min.saturating_add(other.min),
-            max: self.max.saturating_add(other.max),
+            min: Self::checked_add(self.min, other.min),
+            max: Self::checked_add(self.max, other.max),
         }
     }
 
@@ -128,14 +145,16 @@ impl MemoryRange {
     /// ```
     pub fn times(&self, count: usize) -> Self {
         Self {
-            min: self.min.saturating_mul(count),
-            max: self.max.saturating_mul(count),
+            min: Self::checked_mul(self.min, count),
+            max: Self::checked_mul(self.max, count),
         }
     }
 
     /// Subtracts a scalar value
     ///
-    /// Uses saturating subtraction (won't go below 0)
+    /// # Panics
+    ///
+    /// Panics if subtracting would underflow.
     ///
     /// # Examples
     ///
@@ -149,8 +168,8 @@ impl MemoryRange {
     /// ```
     pub fn subtract(&self, value: usize) -> Self {
         Self {
-            min: self.min.saturating_sub(value),
-            max: self.max.saturating_sub(value),
+            min: Self::checked_sub(self.min, value),
+            max: Self::checked_sub(self.max, value),
         }
     }
 
@@ -169,8 +188,8 @@ impl MemoryRange {
     /// ```
     pub fn element_wise_subtract(&self, other: &Self) -> Self {
         Self {
-            min: self.min.saturating_sub(other.min),
-            max: self.max.saturating_sub(other.max),
+            min: Self::checked_sub(self.min, other.min),
+            max: Self::checked_sub(self.max, other.max),
         }
     }
 
@@ -217,9 +236,14 @@ impl MemoryRange {
 impl fmt::Display for MemoryRange {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.min == self.max {
-            write!(f, "{} bytes", self.min)
+            write!(f, "{}", Estimate::human_readable(self.min))
         } else {
-            write!(f, "[{} bytes, {} bytes]", self.min, self.max)
+            write!(
+                f,
+                "[{}, {}]",
+                Estimate::human_readable(self.min),
+                Estimate::human_readable(self.max)
+            )
         }
     }
 }
@@ -229,8 +253,8 @@ impl std::ops::Add for MemoryRange {
 
     fn add(self, other: Self) -> Self {
         Self {
-            min: self.min.saturating_add(other.min),
-            max: self.max.saturating_add(other.max),
+            min: Self::checked_add(self.min, other.min),
+            max: Self::checked_add(self.max, other.max),
         }
     }
 }
@@ -309,11 +333,10 @@ mod tests {
     }
 
     #[test]
-    fn test_saturating_operations() {
+    #[should_panic(expected = "MemoryRange underflow while subtracting")]
+    fn test_underflow_panics() {
         let range = MemoryRange::of(10);
-        let result = range.subtract(20);
-        assert_eq!(result.min(), 0); // Saturates to 0
-        assert_eq!(result.max(), 0);
+        let _ = range.subtract(20);
     }
 
     #[test]
@@ -345,10 +368,10 @@ mod tests {
     #[test]
     fn test_display() {
         let fixed = MemoryRange::of(1024);
-        assert_eq!(format!("{}", fixed), "1024 bytes");
+        assert_eq!(format!("{}", fixed), "1.00 KiB");
 
         let range = MemoryRange::of_range(1024, 2048);
-        assert_eq!(format!("{}", range), "[1024 bytes, 2048 bytes]");
+        assert_eq!(format!("{}", range), "[1.00 KiB, 2.00 KiB]");
     }
 
     #[test]

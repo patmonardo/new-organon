@@ -9,7 +9,8 @@
 //!
 //! # Modules
 //!
-//! - `graph_memory_estimation` - Container for graph dimensions + memory tree
+//! - `graph_memory_estimation` - Container for graph dimensions + deferred estimation
+//! - `database_graph_estimation` - Database-backed estimation service
 //! - `memory_estimation_result` - Builder and formatter for estimation results
 //! - `memory_budget_validator` - Validate estimations against memory budgets
 //!
@@ -25,17 +26,19 @@
 //!     .build();
 //!
 //! // Validate against budget
-//! let validator = MemoryBudgetValidator::new(8 * 1024 * 1024 * 1024); // 8 GiB
+//! let validator = MemoryBudgetValidator::new(8 * 1024 * 1024 * 1024); // 8 GiB (bytes)
 //! if validator.validate(&result) {
 //!     println!("Memory OK: {}", result.format_memory_usage());
 //! }
 //! ```
 
+mod database_graph_estimation;
 mod fictitious_graph_estimation;
 mod graph_memory_estimation;
 mod memory_budget_validator;
 mod memory_estimation_result;
 
+pub use database_graph_estimation::DatabaseGraphEstimationService;
 pub use fictitious_graph_estimation::FictitiousGraphEstimationService;
 pub use graph_memory_estimation::GraphMemoryEstimation;
 pub use memory_budget_validator::MemoryBudgetValidator;

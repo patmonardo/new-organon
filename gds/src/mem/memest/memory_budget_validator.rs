@@ -16,14 +16,17 @@ use crate::mem::{Estimate, MemoryRange};
 ///
 /// if validator.validate(&estimation) {
 ///     println!("Estimation fits within budget");
-///     println!("Remaining: {}", Estimate::human_readable(validator.remaining(&estimation)));
+///     println!(
+///         "Remaining: {}",
+///         Estimate::human_readable(validator.remaining(&estimation) as usize)
+///     );
 /// } else {
 ///     println!("Insufficient memory!");
 /// }
 /// ```
 #[derive(Debug, Clone, Copy)]
 pub struct MemoryBudgetValidator {
-    memory_budget: usize,
+    memory_budget: u64,
 }
 
 impl MemoryBudgetValidator {
@@ -32,7 +35,7 @@ impl MemoryBudgetValidator {
     /// # Arguments
     ///
     /// * `memory_budget` - The memory budget in bytes
-    pub fn new(memory_budget: usize) -> Self {
+    pub fn new(memory_budget: u64) -> Self {
         Self { memory_budget }
     }
 
@@ -47,18 +50,18 @@ impl MemoryBudgetValidator {
     ///
     /// Uses the maximum value from the range for conservative validation.
     pub fn validate_range(&self, memory_range: &MemoryRange) -> bool {
-        memory_range.max() <= self.memory_budget
+        (memory_range.max() as u64) <= self.memory_budget
     }
 
     /// Returns the memory budget.
-    pub fn budget(&self) -> usize {
+    pub fn budget(&self) -> u64 {
         self.memory_budget
     }
 
     /// Returns the remaining memory after subtracting the estimation.
     ///
     /// Returns 0 if the estimation exceeds the budget.
-    pub fn remaining(&self, estimation: &MemoryEstimationResult) -> usize {
+    pub fn remaining(&self, estimation: &MemoryEstimationResult) -> u64 {
         let required = estimation.memory_usage();
         self.memory_budget.saturating_sub(required)
     }
@@ -79,7 +82,11 @@ impl MemoryBudgetValidator {
 
     /// Formats the remaining memory in human-readable form.
     pub fn format_remaining(&self, estimation: &MemoryEstimationResult) -> String {
-        Estimate::human_readable(self.remaining(estimation))
+        Estimate::human_readable(
+            self.remaining(estimation)
+                .try_into()
+                .expect("remaining should fit into usize"),
+        )
     }
 
     /// Checks if the estimation exceeds the budget.
@@ -88,7 +95,7 @@ impl MemoryBudgetValidator {
     }
 
     /// Returns the deficit if estimation exceeds budget, 0 otherwise.
-    pub fn deficit(&self, estimation: &MemoryEstimationResult) -> usize {
+    pub fn deficit(&self, estimation: &MemoryEstimationResult) -> u64 {
         let required = estimation.memory_usage();
         required.saturating_sub(self.memory_budget)
     }

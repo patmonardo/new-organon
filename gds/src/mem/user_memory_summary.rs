@@ -6,8 +6,8 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UserMemorySummary {
     user: String,
-    total_graphs_memory: usize,
-    total_tasks_memory: usize,
+    total_graphs_memory: u64,
+    total_tasks_memory: u64,
 }
 
 impl UserMemorySummary {
@@ -22,7 +22,7 @@ impl UserMemorySummary {
     /// assert_eq!(summary.user(), "alice");
     /// assert_eq!(summary.total_memory(), 2 * 1024 * 1024 + 512 * 1024);
     /// ```
-    pub fn new(user: String, total_graphs_memory: usize, total_tasks_memory: usize) -> Self {
+    pub fn new(user: String, total_graphs_memory: u64, total_tasks_memory: u64) -> Self {
         Self {
             user,
             total_graphs_memory,
@@ -36,17 +36,17 @@ impl UserMemorySummary {
     }
 
     /// Returns the total memory consumed by graphs
-    pub fn total_graphs_memory(&self) -> usize {
+    pub fn total_graphs_memory(&self) -> u64 {
         self.total_graphs_memory
     }
 
     /// Returns the total memory consumed by tasks
-    pub fn total_tasks_memory(&self) -> usize {
+    pub fn total_tasks_memory(&self) -> u64 {
         self.total_tasks_memory
     }
 
     /// Returns the total memory consumed (graphs + tasks)
-    pub fn total_memory(&self) -> usize {
+    pub fn total_memory(&self) -> u64 {
         self.total_graphs_memory + self.total_tasks_memory
     }
 }

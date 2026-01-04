@@ -101,18 +101,17 @@ impl MemoryTree {
     }
 
     fn render_internal(&self, buffer: &mut Vec<String>, depth: usize) {
-        // Add indentation
-        for _ in 1..depth {
-            buffer.push("  ".to_string());
-        }
+        let prefix = if depth == 0 {
+            String::new()
+        } else {
+            format!("{}|-- ", "|  ".repeat(depth - 1))
+        };
 
-        if depth > 0 {
-            buffer.push("├─ ".to_string());
-        }
+        buffer.push(format!(
+            "{}{}: {}",
+            prefix, self.description, self.memory_usage
+        ));
 
-        buffer.push(format!("{}: {}", self.description, self.memory_usage));
-
-        // Recursively render components
         for component in &self.components {
             component.render_internal(buffer, depth + 1);
         }
@@ -200,8 +199,8 @@ mod tests {
 
         let rendered = tree.render();
         assert!(rendered.contains("Total"));
-        assert!(rendered.contains("Part1"));
-        assert!(rendered.contains("Part2"));
+        assert!(rendered.contains("|-- Part1"));
+        assert!(rendered.contains("|-- Part2"));
     }
 
     #[test]

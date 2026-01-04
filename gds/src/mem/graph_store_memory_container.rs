@@ -3,17 +3,17 @@
 //! Tracks memory usage per user for stored graphs.
 
 use super::user_entity_memory::UserEntityMemory;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Event representing a graph being added
 pub struct GraphStoreAddedEvent {
     user: String,
     graph_name: String,
-    memory_in_bytes: usize,
+    memory_in_bytes: u64,
 }
 
 impl GraphStoreAddedEvent {
-    pub fn new(user: String, graph_name: String, memory_in_bytes: usize) -> Self {
+    pub fn new(user: String, graph_name: String, memory_in_bytes: u64) -> Self {
         Self {
             user,
             graph_name,
@@ -29,7 +29,7 @@ impl GraphStoreAddedEvent {
         &self.graph_name
     }
 
-    pub fn memory_in_bytes(&self) -> usize {
+    pub fn memory_in_bytes(&self) -> u64 {
         self.memory_in_bytes
     }
 }
@@ -38,11 +38,16 @@ impl GraphStoreAddedEvent {
 pub struct GraphStoreRemovedEvent {
     user: String,
     graph_name: String,
+    memory_in_bytes: u64,
 }
 
 impl GraphStoreRemovedEvent {
-    pub fn new(user: String, graph_name: String) -> Self {
-        Self { user, graph_name }
+    pub fn new(user: String, graph_name: String, memory_in_bytes: u64) -> Self {
+        Self {
+            user,
+            graph_name,
+            memory_in_bytes,
+        }
     }
 
     pub fn user(&self) -> &str {
@@ -52,6 +57,10 @@ impl GraphStoreRemovedEvent {
     pub fn graph_name(&self) -> &str {
         &self.graph_name
     }
+
+    pub fn memory_in_bytes(&self) -> u64 {
+        self.memory_in_bytes
+    }
 }
 
 /// Container for tracking graph store memory usage per user
@@ -60,8 +69,8 @@ impl GraphStoreRemovedEvent {
 #[derive(Debug, Default)]
 pub struct GraphStoreMemoryContainer {
     // Map: username -> (graph_name -> memory_bytes)
-    graphs_memory: HashMap<String, HashMap<String, usize>>,
-    graph_store_reserved_memory_total: usize,
+    graphs_memory: HashMap<String, HashMap<String, u64>>,
+    graph_store_reserved_memory_total: u64,
 }
 
 impl GraphStoreMemoryContainer {
@@ -71,7 +80,7 @@ impl GraphStoreMemoryContainer {
     }
 
     /// Adds a graph and returns the new total reserved memory
-    pub fn add_graph(&mut self, user: &str, graph_name: &str, memory_in_bytes: usize) -> usize {
+    pub fn add_graph(&mut self, user: &str, graph_name: &str, memory_in_bytes: u64) -> u64 {
         self.graph_store_reserved_memory_total += memory_in_bytes;
 
         self.graphs_memory
@@ -83,12 +92,12 @@ impl GraphStoreMemoryContainer {
     }
 
     /// Adds a graph using an event and returns the new total reserved memory
-    pub fn add_graph_event(&mut self, event: GraphStoreAddedEvent) -> usize {
+    pub fn add_graph_event(&mut self, event: &GraphStoreAddedEvent) -> u64 {
         self.add_graph(event.user(), event.graph_name(), event.memory_in_bytes())
     }
 
     /// Removes a graph and returns the new total reserved memory
-    pub fn remove_graph(&mut self, user: &str, graph_name: &str) -> usize {
+    pub fn remove_graph(&mut self, user: &str, graph_name: &str) -> u64 {
         if let Some(user_graphs) = self.graphs_memory.get_mut(user) {
             if let Some(memory_to_remove) = user_graphs.remove(graph_name) {
                 if user_graphs.is_empty() {
@@ -102,12 +111,12 @@ impl GraphStoreMemoryContainer {
     }
 
     /// Removes a graph using an event and returns the new total reserved memory
-    pub fn remove_graph_event(&mut self, event: GraphStoreRemovedEvent) -> usize {
+    pub fn remove_graph_event(&mut self, event: &GraphStoreRemovedEvent) -> u64 {
         self.remove_graph(event.user(), event.graph_name())
     }
 
     /// Returns the total reserved memory across all users
-    pub fn graph_store_reserved_memory(&self) -> usize {
+    pub fn graph_store_reserved_memory(&self) -> u64 {
         self.graph_store_reserved_memory_total
     }
 
@@ -135,16 +144,18 @@ impl GraphStoreMemoryContainer {
     }
 
     /// Returns the total memory used by a specific user's graphs
-    pub fn memory_of_graphs(&self, user: &str) -> usize {
+    pub fn memory_of_graphs(&self, user: &str) -> u64 {
         self.graphs_memory
             .get(user)
             .map(|user_graphs| user_graphs.values().sum())
             .unwrap_or(0)
     }
 
-    /// Returns all users who have graphs
-    pub fn graph_users(&self) -> Vec<String> {
-        self.graphs_memory.keys().cloned().collect()
+    /// Returns all users who have graphs (unioned with an optional input set).
+    pub fn graph_users(&self, input_users: Option<HashSet<String>>) -> HashSet<String> {
+        let mut users = input_users.unwrap_or_default();
+        users.extend(self.graphs_memory.keys().cloned());
+        users
     }
 
     /// Returns the number of graphs for a specific user
@@ -235,10 +246,10 @@ mod tests {
         container.add_graph("alice", "graph1", 1000);
         container.add_graph("bob", "graph2", 2000);
 
-        let users = container.graph_users();
+        let users = container.graph_users(None);
         assert_eq!(users.len(), 2);
-        assert!(users.contains(&"alice".to_string()));
-        assert!(users.contains(&"bob".to_string()));
+        assert!(users.contains("alice"));
+        assert!(users.contains("bob"));
     }
 
     #[test]
@@ -257,12 +268,12 @@ mod tests {
         let mut container = GraphStoreMemoryContainer::new();
 
         let add_event = GraphStoreAddedEvent::new("alice".to_string(), "graph1".to_string(), 1000);
-        container.add_graph_event(add_event);
+        container.add_graph_event(&add_event);
 
         assert_eq!(container.graph_store_reserved_memory(), 1000);
 
-        let remove_event = GraphStoreRemovedEvent::new("alice".to_string(), "graph1".to_string());
-        container.remove_graph_event(remove_event);
+        let remove_event = GraphStoreRemovedEvent::new("alice".to_string(), "graph1".to_string(), 1000);
+        container.remove_graph_event(&remove_event);
 
         assert_eq!(container.graph_store_reserved_memory(), 0);
     }

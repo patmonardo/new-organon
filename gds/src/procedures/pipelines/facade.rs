@@ -6,7 +6,7 @@ use std::sync::{Arc, OnceLock};
 
 use serde_json::Value;
 
-use crate::mem::MemoryEstimateResult;
+use crate::mem::MemoryEstimationResult;
 use crate::projection::eval::pipeline::{
     link_pipeline::{LinkFeatureStepFactory, LinkPredictionSplitConfig, LinkPredictionTrainingPipeline},
     node_pipeline::classification::node_classification_training_pipeline::NodeClassificationTrainingPipeline,
@@ -66,7 +66,7 @@ pub trait LinkPredictionFacade {
         &self,
         graph_name_or_configuration: Value,
         raw_configuration: RawConfig,
-    ) -> Vec<MemoryEstimateResult>;
+    ) -> Vec<MemoryEstimationResult>;
 
     fn stream(&self, graph_name: &str, configuration: RawConfig) -> Vec<StreamResult>;
 
@@ -74,7 +74,7 @@ pub trait LinkPredictionFacade {
         &self,
         graph_name_or_configuration: Value,
         raw_configuration: RawConfig,
-    ) -> Vec<MemoryEstimateResult>;
+    ) -> Vec<MemoryEstimationResult>;
 
     fn train(&self, graph_name: &str, configuration: RawConfig) -> Vec<LinkPredictionTrainResult>;
 
@@ -82,7 +82,7 @@ pub trait LinkPredictionFacade {
         &self,
         graph_name_or_configuration: Value,
         raw_configuration: RawConfig,
-    ) -> Vec<MemoryEstimateResult>;
+    ) -> Vec<MemoryEstimationResult>;
 }
 
 pub trait NodeClassificationFacade {
@@ -124,7 +124,7 @@ pub trait NodeClassificationFacade {
         &self,
         graph_name_or_configuration: Value,
         raw_configuration: RawConfig,
-    ) -> Vec<MemoryEstimateResult>;
+    ) -> Vec<MemoryEstimationResult>;
 
     fn select_features(&self, pipeline_name: &str, node_feature_steps: Value)
         -> Vec<NodePipelineInfoResult>;
@@ -136,7 +136,7 @@ pub trait NodeClassificationFacade {
         &self,
         graph_name_or_configuration: Value,
         raw_configuration: RawConfig,
-    ) -> Vec<MemoryEstimateResult>;
+    ) -> Vec<MemoryEstimationResult>;
 
     fn train(
         &self,
@@ -148,7 +148,7 @@ pub trait NodeClassificationFacade {
         &self,
         graph_name_or_configuration: Value,
         raw_configuration: RawConfig,
-    ) -> Vec<MemoryEstimateResult>;
+    ) -> Vec<MemoryEstimationResult>;
 
     fn write(&self, graph_name: &str, configuration: RawConfig) -> Vec<WriteResult>;
 
@@ -156,7 +156,7 @@ pub trait NodeClassificationFacade {
         &self,
         graph_name_or_configuration: Value,
         raw_configuration: RawConfig,
-    ) -> Vec<MemoryEstimateResult>;
+    ) -> Vec<MemoryEstimationResult>;
 }
 
 pub trait NodeRegressionFacade {
@@ -596,7 +596,7 @@ impl LinkPredictionFacade for LocalLinkPredictionFacade {
         &self,
         _graph_name_or_configuration: Value,
         _raw_configuration: RawConfig,
-    ) -> Vec<MemoryEstimateResult> {
+    ) -> Vec<MemoryEstimationResult> {
         vec![]
     }
 
@@ -608,7 +608,7 @@ impl LinkPredictionFacade for LocalLinkPredictionFacade {
         &self,
         _graph_name_or_configuration: Value,
         _raw_configuration: RawConfig,
-    ) -> Vec<MemoryEstimateResult> {
+    ) -> Vec<MemoryEstimationResult> {
         vec![]
     }
 
@@ -624,7 +624,7 @@ impl LinkPredictionFacade for LocalLinkPredictionFacade {
         &self,
         _graph_name_or_configuration: Value,
         _raw_configuration: RawConfig,
-    ) -> Vec<MemoryEstimateResult> {
+    ) -> Vec<MemoryEstimationResult> {
         vec![]
     }
 }
@@ -828,7 +828,7 @@ impl NodeClassificationFacade for LocalNodeClassificationFacade {
         &self,
         _graph_name_or_configuration: Value,
         _raw_configuration: RawConfig,
-    ) -> Vec<MemoryEstimateResult> {
+    ) -> Vec<MemoryEstimationResult> {
         vec![]
     }
 
@@ -868,7 +868,7 @@ impl NodeClassificationFacade for LocalNodeClassificationFacade {
         &self,
         _graph_name_or_configuration: Value,
         _raw_configuration: RawConfig,
-    ) -> Vec<MemoryEstimateResult> {
+    ) -> Vec<MemoryEstimationResult> {
         vec![]
     }
 
@@ -884,7 +884,7 @@ impl NodeClassificationFacade for LocalNodeClassificationFacade {
         &self,
         _graph_name_or_configuration: Value,
         _raw_configuration: RawConfig,
-    ) -> Vec<MemoryEstimateResult> {
+    ) -> Vec<MemoryEstimationResult> {
         vec![]
     }
 
@@ -896,7 +896,7 @@ impl NodeClassificationFacade for LocalNodeClassificationFacade {
         &self,
         _graph_name_or_configuration: Value,
         _raw_configuration: RawConfig,
-    ) -> Vec<MemoryEstimateResult> {
+    ) -> Vec<MemoryEstimationResult> {
         vec![]
     }
 }

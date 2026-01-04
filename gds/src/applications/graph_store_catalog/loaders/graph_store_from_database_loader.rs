@@ -1,8 +1,7 @@
-use super::{
-    GraphProjectConfig, GraphStoreCreator, GraphStoreLoader, MemoryEstimation, ResultStore,
-};
+use super::{GraphProjectConfig, GraphStoreCreator, GraphStoreLoader, ResultStore};
 use crate::concurrency::TerminationFlag;
 use crate::core::{ConcreteGraphDimensions, GraphDimensions};
+use crate::mem::{MemoryEstimation, MemoryRange, MemoryTree};
 use crate::types::graph_store::{DatabaseId, DefaultGraphStore};
 use crate::types::random::{RandomGraphConfig, Randomizable};
 use rand::rngs::StdRng;
@@ -215,7 +214,16 @@ impl DatabaseMemoryEstimation {
 }
 
 impl MemoryEstimation for DatabaseMemoryEstimation {
-    fn estimate(&self, _dimensions: &dyn GraphDimensions) -> u64 {
-        self.estimated_bytes
+    fn description(&self) -> String {
+        "Database graph store memory estimate".to_string()
+    }
+
+    fn estimate(&self, _dimensions: &dyn GraphDimensions, _concurrency: usize) -> MemoryTree {
+        let bytes: usize = self
+            .estimated_bytes
+            .try_into()
+            .expect("estimated_bytes should fit into usize");
+
+        MemoryTree::leaf(self.description(), MemoryRange::of(bytes))
     }
 }

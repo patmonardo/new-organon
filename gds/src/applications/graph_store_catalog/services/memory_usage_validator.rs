@@ -3,6 +3,8 @@
 /// Mirrors Java MemoryUsageValidator class.
 /// Contains memory validation logic for graph operations.
 use crate::applications::services::logging::Log;
+use crate::core::utils::progress::JobId;
+use crate::mem::{MemoryRange, MemoryReservationExceededException, MemoryTracker, MemoryTreeWithDimensions};
 
 pub struct MemoryUsageValidator {
     log: Log,
@@ -35,7 +37,7 @@ impl MemoryUsageValidator {
         task_name: &str,
         config: &C,
         run_estimation: impl FnOnce(&C) -> MemoryTreeWithDimensions,
-    ) -> Result<MemoryRange, String> {
+    ) -> Result<MemoryRange, MemoryReservationExceededException> {
         let memory_tree_with_dimensions = run_estimation(config);
         let estimated_memory_range = self.compute_memory_range(&memory_tree_with_dimensions);
 
@@ -46,9 +48,9 @@ impl MemoryUsageValidator {
             &estimated_memory_range,
             available_bytes,
             self.use_max_memory_estimation,
-            &job_id,
+            job_id,
             &self.log,
-        );
+        )?;
 
         Ok(estimated_memory_range)
     }
@@ -63,144 +65,41 @@ impl MemoryUsageValidator {
         use_max_memory_estimation: bool,
         job_id: &JobId,
         log: &Log,
-    ) {
-        let required_bytes = if use_max_memory_estimation {
-            estimated_memory_range.max_bytes()
+    ) -> Result<(), MemoryReservationExceededException> {
+        let required_bytes: u64 = if use_max_memory_estimation {
+            estimated_memory_range.max() as u64
         } else {
-            estimated_memory_range.min_bytes()
+            estimated_memory_range.min() as u64
         };
 
         if required_bytes > available_bytes {
-            let memory_string = format!("{} bytes", required_bytes);
-            self.validate_memory_usage_with_details(
+            let err = MemoryReservationExceededException::new(required_bytes, available_bytes);
+            let error_message = format!(
+                "Insufficient memory for {} (jobId={}): required {} but only {} available",
                 task_name,
-                available_bytes,
-                required_bytes,
-                &memory_string,
-                log,
                 job_id,
-                &["Insufficient memory for operation"],
+                required_bytes,
+                available_bytes
             );
+            log.error(&error_message);
+            return Err(err);
         }
-    }
 
-    /// Validates memory usage with detailed error messages.
-    #[allow(clippy::too_many_arguments)]
-    fn validate_memory_usage_with_details(
-        &self,
-        task_name: &str,
-        available_bytes: u64,
-        _required_bytes: u64,
-        memory_string: &str,
-        log: &Log,
-        _job_id: &JobId,
-        _messages: &[&str],
-    ) {
-        let error_message = format!(
-            "Insufficient memory for {}: required {} but only {} available",
-            task_name, memory_string, available_bytes
-        );
-
-        log.error(&error_message);
-        panic!("{}", error_message); // In Java, this would throw an exception
+        Ok(())
     }
 
     /// Computes memory range from memory tree with dimensions.
     fn compute_memory_range(
         &self,
-        _memory_tree_with_dimensions: &MemoryTreeWithDimensions,
+        memory_tree_with_dimensions: &MemoryTreeWithDimensions,
     ) -> MemoryRange {
-        // Placeholder implementation - in real implementation would compute from tree
-        MemoryRange::new(1024, 2048)
-    }
-}
-
-/// Placeholder for MemoryTracker type.
-#[derive(Clone, Debug)]
-pub struct MemoryTracker;
-
-impl MemoryTracker {
-    pub fn new() -> Self {
-        Self
-    }
-
-    pub fn available_memory(&self) -> u64 {
-        // Placeholder implementation - in real implementation would query system memory
-        1024 * 1024 * 1024 // 1GB
-    }
-}
-
-impl Default for MemoryTracker {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// Placeholder for MemoryTreeWithDimensions type.
-#[derive(Clone, Debug)]
-pub struct MemoryTreeWithDimensions {
-    min_bytes: u64,
-    max_bytes: u64,
-}
-
-impl MemoryTreeWithDimensions {
-    pub fn new(min_bytes: u64, max_bytes: u64) -> Self {
-        Self {
-            min_bytes,
-            max_bytes,
-        }
-    }
-
-    pub fn min_bytes(&self) -> u64 {
-        self.min_bytes
-    }
-
-    pub fn max_bytes(&self) -> u64 {
-        self.max_bytes
-    }
-}
-
-/// Placeholder for MemoryRange type.
-#[derive(Clone, Debug)]
-pub struct MemoryRange {
-    min_bytes: u64,
-    max_bytes: u64,
-}
-
-impl MemoryRange {
-    pub fn new(min_bytes: u64, max_bytes: u64) -> Self {
-        Self {
-            min_bytes,
-            max_bytes,
-        }
-    }
-
-    pub fn min_bytes(&self) -> u64 {
-        self.min_bytes
-    }
-
-    pub fn max_bytes(&self) -> u64 {
-        self.max_bytes
-    }
-}
-
-/// Placeholder for JobId type.
-#[derive(Clone, Debug)]
-pub struct JobId {
-    id: String,
-}
-
-impl JobId {
-    pub fn new(id: String) -> Self {
-        Self { id }
-    }
-
-    pub fn id(&self) -> &str {
-        &self.id
+        *memory_tree_with_dimensions
+            .memory_tree()
+            .memory_usage()
     }
 }
 
 /// Trait for configurations that have a job ID.
 pub trait JobIdConfig {
-    fn job_id(&self) -> JobId;
+    fn job_id(&self) -> &JobId;
 }
