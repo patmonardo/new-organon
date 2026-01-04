@@ -8,7 +8,7 @@
 use crate::mem::MemoryRange;
 use crate::algo::bellman_ford::{BellmanFordComputationRuntime, BellmanFordStorageRuntime};
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::Result;
+use crate::procedures::traits::{PathResult as ProcedurePathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -20,7 +20,13 @@ use std::sync::Arc;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
 };
-use crate::algo::core::prelude::*;
+use crate::algo::core::result_builders::{
+    ExecutionMetadata,
+    PathFindingResult,
+    PathResult as CorePathResult,
+    PathResultBuilder,
+    ResultBuilder,
+};
 
 /// Statistics about Bellman-Ford execution
 #[derive(Debug, Clone, serde::Serialize)]
@@ -240,7 +246,7 @@ impl BellmanFordBuilder {
             &mut progress_tracker,
         )?;
 
-        let paths: Vec<PathResult> = result
+        let paths: Vec<CorePathResult> = result
             .shortest_paths
             .iter()
             .filter(|p| p.source_node >= 0 && p.target_node >= 0)
@@ -255,7 +261,7 @@ impl BellmanFordBuilder {
                     .map(|node_id| Self::checked_u64(node_id, "path").unwrap_or(0))
                     .collect();
 
-                PathResult {
+                CorePathResult {
                     source,
                     target,
                     path,
@@ -294,9 +300,14 @@ impl BellmanFordBuilder {
         Ok(path_result)
     }
 
-    pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
+    pub fn stream(self) -> Result<Box<dyn Iterator<Item = ProcedurePathResult>>> {
         let result = self.compute()?;
-        Ok(Box::new(result.paths.into_iter()))
+        Ok(Box::new(
+            result
+                .paths
+                .into_iter()
+                .map(super::core_to_procedure_path_result),
+        ))
     }
 
     pub fn stats(self) -> Result<BellmanFordStats> {

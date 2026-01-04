@@ -1,53 +1,54 @@
-use crate::config::base_types::Config;
-use crate::core::utils::progress::LeafTask;
-use crate::core::utils::progress::TaskProgressTracker;
+//! ProgressTrackerCreator (Java parity).
+//!
+//! Mirrors `ProgressTrackerCreator` in Java. The key responsibility is creating a
+//! request-scoped `ProgressTracker` (typically `TaskProgressTracker`) from:
+//! - the algorithm configuration (optional; caller decides what to encode)
+//! - a `Task` tree
+//! - request-scoped dependencies (job id + task registry)
 
-/// Interface for creating progress trackers for algorithm execution.
-/// This is a core pattern in the Applications system for tracking
-/// algorithm progress and providing user feedback.
-pub trait ProgressTrackerCreator {
-    /// Creates a progress tracker for the given configuration and task.
-    ///
-    /// # Arguments
-    /// * `config` - The algorithm configuration
-    /// * `task` - The progress task to track
-    ///
-    /// # Returns
-    /// A progress tracker for the task
-    fn create_progress_tracker<C: Config>(
-        &self,
-        config: &C,
-        task: LeafTask,
-    ) -> TaskProgressTracker;
-}
+use crate::concurrency::Concurrency;
+use crate::core::utils::progress::{ProgressTracker, Task, TaskProgressTracker};
 
-/// Default implementation of ProgressTrackerCreator.
+use super::RequestScopedDependencies;
+
 #[derive(Clone)]
-pub struct DefaultProgressTrackerCreator;
-
-impl DefaultProgressTrackerCreator {
-    pub fn new() -> Self {
-        Self
-    }
+pub struct ProgressTrackerCreator {
+    request_scoped_dependencies: RequestScopedDependencies,
 }
 
-impl Default for DefaultProgressTrackerCreator {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+/// Back-compat alias expected by some call sites.
+///
+/// Java naming often uses `DefaultProgressTrackerCreator`.
+pub type DefaultProgressTrackerCreator = ProgressTrackerCreator;
 
-impl ProgressTrackerCreator for DefaultProgressTrackerCreator {
-    fn create_progress_tracker<C: Config>(
+impl ProgressTrackerCreator {
+    pub fn new(request_scoped_dependencies: RequestScopedDependencies) -> Self {
+        Self {
+            request_scoped_dependencies,
+        }
+    }
+
+    pub fn create_progress_tracker(
         &self,
-        _config: &C,
-        task: LeafTask,
+        concurrency: Concurrency,
+        task: Task,
     ) -> TaskProgressTracker {
-        // Note: progress tracker creation is deferred.
-        // This would typically involve:
-        // 1. Creating a progress tracker with the given task
-        // 2. Configuring it with the algorithm's concurrency settings
-        // 3. Setting up logging and user feedback
-        TaskProgressTracker::new(task)
+        TaskProgressTracker::with_registry(
+            task,
+            concurrency,
+            self.request_scoped_dependencies.job_id.clone(),
+            self.request_scoped_dependencies.task_registry_factory.as_ref(),
+        )
+    }
+
+    pub fn request_scoped_dependencies(&self) -> &RequestScopedDependencies {
+        &self.request_scoped_dependencies
+    }
+
+    pub fn termination_flag(&self) -> &crate::concurrency::TerminationFlag {
+        &self.request_scoped_dependencies.termination_flag
     }
 }
+
+// Convenience: accept any tracker impl.
+pub type BoxedProgressTracker = Box<dyn ProgressTracker + Send>;

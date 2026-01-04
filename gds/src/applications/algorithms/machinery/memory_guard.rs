@@ -1,67 +1,128 @@
+//! MemoryGuard / DefaultMemoryGuard (Java parity, simplified).
+//!
+//! Java references:
+//! - `MemoryGuard`
+//! - `DefaultMemoryGuard`
+//!
+//! This layer is just memory guarding. Do not conflate with UI concerns.
+//!
+//! Differences from Java (intentional simplifications):
+//! - Java's `GraphDimensionFactory` and `MemoryRequirement` are collapsed into an
+//!   `estimation_factory` closure.
+//! - Java throws `IllegalStateException`; Rust returns a structured error.
+
+use std::fmt;
 use std::sync::Arc;
 
-use crate::types::graph_store::DefaultGraphStore;
-use crate::types::graph_store::GraphStore;
-use crate::applications::algorithms::machinery::{AlgorithmLabel, DimensionTransformer};
-use crate::config::base_types::Config;
-use crate::core::graph_dimensions::ConcreteGraphDimensions;
-use crate::core::utils::progress::JobId;
-use crate::mem::{MemoryEstimation, MemoryTracker};
 use crate::applications::services::logging::Log;
-use crate::core::GraphDimensions;
+use crate::core::loading::GraphResources;
+use crate::core::utils::progress::JobId;
+use crate::errors::MemoryEstimationError;
+use crate::mem::{MemoryRange, MemoryTracker, MemoryTreeWithDimensions};
 
-/// Memory Guard - memory protection and validation
-/// This is just memory guarding. Do not conflate with UI concerns.
-pub trait MemoryGuard {
-    /// This could be handy for tests
-    fn assert_algorithm_can_run(
-        &self,
-        username: &str,
-        estimation_factory: &dyn Fn() -> Box<dyn MemoryEstimation>,
-        graph_store: &Arc<DefaultGraphStore>,
-        configuration: &dyn Config,
-        label: &AlgorithmLabel,
-        dimension_transformer: Box<dyn DimensionTransformer>,
-    ) -> Result<(), MemoryGuardError>;
-}
+use super::Label;
 
-/// Memory Guard Error
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MemoryGuardError {
-    InsufficientMemory { required: u64, available: u64 },
-    EstimationNotImplemented,
-    Other(String),
+    InsufficientMemory {
+        label: String,
+        required_bytes: u64,
+        available_bytes: u64,
+    },
 }
 
-impl std::fmt::Display for MemoryGuardError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for MemoryGuardError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            MemoryGuardError::InsufficientMemory { required, available } => {
-                write!(f, "Memory required ({}) exceeds available memory ({})", required, available)
-            }
-            MemoryGuardError::EstimationNotImplemented => {
-                write!(f, "Memory estimation not implemented")
-            }
-            MemoryGuardError::Other(msg) => write!(f, "{}", msg),
+            Self::InsufficientMemory {
+                label,
+                required_bytes,
+                available_bytes,
+            } => write!(
+                f,
+                "Memory required to run {} ({}b) exceeds available memory ({}b)",
+                label, required_bytes, available_bytes
+            ),
         }
     }
 }
 
-impl std::error::Error for MemoryGuardError {}
+/// Java-parity hook: transform dimensions before selecting min/max.
+///
+/// This is kept deliberately small; algorithms can plug in richer logic later.
+pub trait DimensionTransformer {
+    fn transform(&self, estimate: MemoryTreeWithDimensions) -> MemoryTreeWithDimensions;
+}
 
-/// Default Memory Guard implementation
+#[derive(Debug, Clone, Copy, Default)]
+pub struct IdentityDimensionTransformer;
+
+impl DimensionTransformer for IdentityDimensionTransformer {
+    fn transform(&self, estimate: MemoryTreeWithDimensions) -> MemoryTreeWithDimensions {
+        estimate
+    }
+}
+
+/// Minimal config contract needed by the memory guard.
+pub trait AlgoBaseConfigLike {
+    fn job_id(&self) -> &JobId;
+    fn sudo(&self) -> bool {
+        false
+    }
+}
+
+/// This is just memory guarding. Do not conflate with UI concerns.
+pub trait MemoryGuard {
+    fn assert_algorithm_can_run<CONFIGURATION>(
+        &self,
+        username: &str,
+        estimation_factory: impl FnOnce(
+            &GraphResources,
+            &CONFIGURATION,
+        ) -> Result<MemoryTreeWithDimensions, MemoryEstimationError>,
+        graph_resources: &GraphResources,
+        configuration: &CONFIGURATION,
+        label: &dyn Label,
+        dimension_transformer: &dyn DimensionTransformer,
+    ) -> Result<(), MemoryGuardError>
+    where
+        CONFIGURATION: AlgoBaseConfigLike;
+}
+
+/// Java-parity: `MemoryGuard.DISABLED`.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DisabledMemoryGuard;
+
+pub const DISABLED: DisabledMemoryGuard = DisabledMemoryGuard;
+
+impl MemoryGuard for DisabledMemoryGuard {
+    fn assert_algorithm_can_run<CONFIGURATION>(
+        &self,
+        _username: &str,
+        _estimation_factory: impl FnOnce(
+            &GraphResources,
+            &CONFIGURATION,
+        ) -> Result<MemoryTreeWithDimensions, MemoryEstimationError>,
+        _graph_resources: &GraphResources,
+        _configuration: &CONFIGURATION,
+        _label: &dyn Label,
+        _dimension_transformer: &dyn DimensionTransformer,
+    ) -> Result<(), MemoryGuardError>
+    where
+        CONFIGURATION: AlgoBaseConfigLike,
+    {
+        Ok(())
+    }
+}
+
 pub struct DefaultMemoryGuard {
     log: Log,
     use_max_memory_estimation: bool,
-    memory_tracker: MemoryTracker,
+    memory_tracker: Arc<MemoryTracker>,
 }
 
 impl DefaultMemoryGuard {
-    pub fn new(
-        log: Log,
-        use_max_memory_estimation: bool,
-        memory_tracker: MemoryTracker,
-    ) -> Self {
+    pub fn create(log: Log, use_max_memory_estimation: bool, memory_tracker: Arc<MemoryTracker>) -> Self {
         Self {
             log,
             use_max_memory_estimation,
@@ -69,97 +130,68 @@ impl DefaultMemoryGuard {
         }
     }
 
-    pub fn create(
-        log: Log,
-        use_max_memory_estimation: bool,
-        memory_tracker: MemoryTracker,
-    ) -> Self {
-        Self::new(log, use_max_memory_estimation, memory_tracker)
-    }
-}
-
-impl MemoryGuard for DefaultMemoryGuard {
-    fn assert_algorithm_can_run(
-        &self,
-        username: &str,
-        estimation_factory: &dyn Fn() -> Box<dyn MemoryEstimation>,
-        graph_store: &Arc<DefaultGraphStore>,
-        configuration: &dyn Config,
-        label: &AlgorithmLabel,
-        dimension_transformer: Box<dyn DimensionTransformer>,
-    ) -> Result<(), MemoryGuardError> {
-        match MemoryRequirement::create(
-            estimation_factory,
-            graph_store,
-            dimension_transformer,
-            configuration,
-            self.use_max_memory_estimation,
-        ) {
-            Ok(memory_requirement) => {
-                let bytes_to_reserve = memory_requirement.required_memory();
-
-                // Java parity placeholder: we don't yet have job-id on the shared Config traits.
-                // Use the empty job id for now.
-                let job_id = JobId::EMPTY;
-                self.memory_tracker
-                    .try_to_track(username, label.as_string(), &job_id, bytes_to_reserve)
-                    .map_err(|e| MemoryGuardError::InsufficientMemory {
-                        required: e.bytes_required(),
-                        available: e.bytes_available(),
-                    })
-            }
-            Err(MemoryGuardError::EstimationNotImplemented) => {
-                self.log.info(&format!("Memory usage estimate not available for {}, skipping guard", label.as_string()));
-                Ok(())
-            }
-            Err(e) => Err(e),
+    fn required_bytes(&self, estimated_memory_range: &MemoryRange) -> u64 {
+        if self.use_max_memory_estimation {
+            estimated_memory_range.max() as u64
+        } else {
+            estimated_memory_range.min() as u64
         }
     }
 }
 
-/// Memory Requirement - represents memory requirements for an algorithm
-pub struct MemoryRequirement {
-    pub required_memory: u64,
-}
-
-impl MemoryRequirement {
-    pub fn new(required_memory: u64) -> Self {
-        Self { required_memory }
-    }
-
-    pub fn required_memory(&self) -> u64 {
-        self.required_memory
-    }
-
-    pub fn create(
-        estimation_factory: &dyn Fn() -> Box<dyn MemoryEstimation>,
-        graph_store: &Arc<DefaultGraphStore>,
-        dimension_transformer: Box<dyn DimensionTransformer>,
-        configuration: &dyn Config,
-        use_max_memory_estimation: bool,
-    ) -> Result<Self, MemoryGuardError> {
-        let memory_estimation = estimation_factory();
-
-        // Minimal, correct dimensions source for new Applications: use GraphStore counts.
-        // (This keeps us out of placeholder-land and matches the mem subsystem expectations.)
-        let graph_dimensions: Box<dyn GraphDimensions> = Box::new(ConcreteGraphDimensions::of(
-            graph_store.node_count(),
-            graph_store.relationship_count(),
-        ));
-        let transformed_graph_dimensions = dimension_transformer.transform(graph_dimensions);
-
-        // Until Config exposes concurrency in a shared trait, default to 1.
-        let concurrency = 1usize;
-        let memory_tree = memory_estimation.estimate(transformed_graph_dimensions.as_ref(), concurrency);
-        let memory_range = memory_tree.memory_usage();
-
-        let bytes_required = if use_max_memory_estimation {
-            memory_range.max() as u64
-        } else {
-            memory_range.min() as u64
+impl MemoryGuard for DefaultMemoryGuard {
+    fn assert_algorithm_can_run<CONFIGURATION>(
+        &self,
+        username: &str,
+        estimation_factory: impl FnOnce(
+            &GraphResources,
+            &CONFIGURATION,
+        ) -> Result<MemoryTreeWithDimensions, MemoryEstimationError>,
+        graph_resources: &GraphResources,
+        configuration: &CONFIGURATION,
+        label: &dyn Label,
+        dimension_transformer: &dyn DimensionTransformer,
+    ) -> Result<(), MemoryGuardError>
+    where
+        CONFIGURATION: AlgoBaseConfigLike,
+    {
+        let estimate = match estimation_factory(graph_resources, configuration) {
+            Ok(est) => est,
+            Err(MemoryEstimationError::NotImplemented) => {
+                self.log
+                    .info(&format!("Memory usage estimate not available for {}, skipping guard", label.as_string()));
+                return Ok(());
+            }
         };
 
-        let _ = configuration;
-        Ok(Self::new(bytes_required))
+        let estimate = dimension_transformer.transform(estimate);
+        let estimated_memory_range = *estimate.memory_tree().memory_usage();
+        let bytes_to_reserve = self.required_bytes(&estimated_memory_range);
+
+        if configuration.sudo() {
+            // Java parity: sudo bypasses guard. We best-effort reserve; if it fails, we still allow.
+            if let Err(_e) = self
+                .memory_tracker
+                .try_to_track(username, label.as_string(), configuration.job_id(), bytes_to_reserve)
+            {
+                self.log.warn(&format!(
+                    "Sudo enabled: not enough memory to reserve for {} ({}b), allowing anyway",
+                    label.as_string(), bytes_to_reserve
+                ));
+            }
+            return Ok(());
+        }
+
+        match self
+            .memory_tracker
+            .try_to_track(username, label.as_string(), configuration.job_id(), bytes_to_reserve)
+        {
+            Ok(()) => Ok(()),
+            Err(e) => Err(MemoryGuardError::InsufficientMemory {
+                label: label.as_string().to_string(),
+                required_bytes: e.bytes_required(),
+                available_bytes: e.bytes_available(),
+            }),
+        }
     }
 }

@@ -40,7 +40,7 @@
 use crate::mem::MemoryRange;
 use crate::algo::astar::{AStarComputationRuntime, AStarStorageRuntime};
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::Result;
+use crate::procedures::traits::{PathResult as ProcedurePathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -54,7 +54,13 @@ use std::sync::Arc;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
 };
-use crate::algo::core::prelude::*;
+use crate::algo::core::result_builders::{
+    ExecutionMetadata,
+    PathFindingResult,
+    PathResult as CorePathResult,
+    PathResultBuilder,
+    ResultBuilder,
+};
 
 // ============================================================================
 // Heuristic Types
@@ -390,7 +396,7 @@ impl AStarBuilder {
         let lon_values = graph_view.node_properties("longitude");
 
         let start_time = std::time::Instant::now();
-        let mut paths: Vec<PathResult> = Vec::new();
+        let mut paths: Vec<CorePathResult> = Vec::new();
         let mut nodes_visited_total: u64 = 0;
 
         for (target_u64, target_node) in target_nodes {
@@ -443,7 +449,7 @@ impl AStarBuilder {
                     })
                     .collect::<Result<Vec<_>>>()?;
 
-                paths.push(PathResult {
+                paths.push(CorePathResult {
                     source: source_u64,
                     target: target_u64,
                     path: node_path,
@@ -514,9 +520,14 @@ impl AStarBuilder {
     ///     println!("Found path: {:?}, Cost: {}", path.path, path.cost);
     /// }
     /// ```
-    pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
+    pub fn stream(self) -> Result<Box<dyn Iterator<Item = ProcedurePathResult>>> {
         let result = self.compute()?;
-        Ok(Box::new(result.paths.into_iter()))
+        Ok(Box::new(
+            result
+                .paths
+                .into_iter()
+                .map(super::core_to_procedure_path_result),
+        ))
     }
 
     /// Stats mode: Get aggregated statistics

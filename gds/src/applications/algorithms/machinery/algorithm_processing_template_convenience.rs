@@ -1,281 +1,153 @@
-use std::sync::Arc;
+//! AlgorithmProcessingTemplate convenience wiring (Java parity).
+//!
+//! Java typically exposes a convenience layer that assembles:
+//! - the processing template
+//! - the mode-specific renderer model (stats/stream/mutate/write)
+//! - optional mutate/write side effects
+//!
+//! This file keeps that "one obvious entry point per mode" surface.
 
-use crate::procedures::Graph;
-use crate::types::graph_store::DefaultGraphStore;
-use crate::applications::algorithms::machinery::{
-    AlgorithmLabel, MutateStep, WriteStep, StreamResultBuilder, StatsResultBuilder,
-    MutateResultBuilder, WriteResultBuilder, RequestScopedDependencies, WriteContext,
-    DefaultProgressTrackerCreator, DefaultMutateNodeProperty, DefaultWriteToDatabase,
+use crate::concurrency::{Concurrency, TerminationFlag};
+use crate::core::loading::GraphResources;
+use crate::core::utils::progress::{ProgressTracker, Task};
+
+use super::{
+    AlgorithmProcessingTemplate, MutateResultBuilder, MutateResultRenderer, SideEffect,
+    StatsResultBuilder, StatsResultRenderer, StreamResultBuilder, StreamResultRenderer,
+    WriteResultBuilder, WriteResultRenderer,
 };
-use crate::config::base_types::Config;
-use crate::mem::MemoryEstimation;
 
-/// Core orchestration class for algorithm processing.
-/// This is the heart of the Applications system, providing
-/// templates for different execution modes.
-#[derive(Clone)]
-pub struct AlgorithmProcessingTemplateConvenience {
-    _progress_tracker_creator: DefaultProgressTrackerCreator,
-    _mutate_node_property: DefaultMutateNodeProperty,
-    _write_to_database: DefaultWriteToDatabase,
-    _request_scoped_dependencies: RequestScopedDependencies,
-    _write_context: WriteContext,
+use super::RenderModel;
+
+pub struct AlgorithmProcessingTemplateConvenience<T> {
+    pub template: T,
 }
 
-impl AlgorithmProcessingTemplateConvenience {
-    pub fn new(
-        progress_tracker_creator: DefaultProgressTrackerCreator,
-        mutate_node_property: DefaultMutateNodeProperty,
-        write_to_database: DefaultWriteToDatabase,
-        request_scoped_dependencies: RequestScopedDependencies,
-        write_context: WriteContext,
-    ) -> Self {
-        Self {
-            _progress_tracker_creator: progress_tracker_creator,
-            _mutate_node_property: mutate_node_property,
-            _write_to_database: write_to_database,
-            _request_scoped_dependencies: request_scoped_dependencies,
-            _write_context: write_context,
-        }
+impl<T> AlgorithmProcessingTemplateConvenience<T>
+where
+    T: AlgorithmProcessingTemplate,
+{
+    pub fn new(template: T) -> Self {
+        Self { template }
     }
 
-    /// Processes a regular algorithm in mutate mode.
-    pub fn process_regular_algorithm_in_mutate_mode<
-        ConfigT: Config,
-        ResultT,
-        OutputT,
-        MetaT,
-        MutateStepT: MutateStep<ResultT, MetaT>,
-        ResultBuilderT: MutateResultBuilder<ConfigT, ResultT, OutputT, MetaT>,
-    >(
+    pub fn process_stats<ResultFromAlgorithm, ResultToCaller, E>(
         &self,
-        _graph_name: String,
-        _config: ConfigT,
-        _algorithm_label: AlgorithmLabel,
-        _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
-        _mutate_step: MutateStepT,
-        _result_builder: ResultBuilderT,
-    ) -> OutputT {
-        // Note: full mutate mode processing is deferred.
-        // This would typically involve:
-        // 1. Memory estimation
-        // 2. Graph loading
-        // 3. Algorithm execution
-        // 4. Mutation step execution
-        // 5. Result building
-
-        panic!("mutate mode processing not yet implemented")
+        graph_resources: &GraphResources,
+        concurrency: Concurrency,
+        task: Task,
+        compute: impl FnOnce(
+            &GraphResources,
+            &mut dyn ProgressTracker,
+            &TerminationFlag,
+        ) -> Result<Option<ResultFromAlgorithm>, E>,
+        builder: impl StatsResultBuilder<ResultFromAlgorithm, ResultToCaller>,
+    ) -> Result<ResultToCaller, E> {
+        let renderer = StatsResultRenderer(builder);
+        self.template
+            .process(graph_resources, concurrency, task, compute, &renderer, None)
     }
 
-    /// Processes a regular algorithm in write mode.
-    pub fn process_regular_algorithm_in_write_mode<
-        ConfigT: Config,
-        ResultT,
-        OutputT,
-        MetaT,
-        WriteStepT: WriteStep<ResultT, MetaT>,
-        ResultBuilderT: WriteResultBuilder<ConfigT, ResultT, OutputT, MetaT>,
-    >(
+    pub fn process_stream<ResultFromAlgorithm, Row, B, E>(
         &self,
-        _graph_name: String,
-        _config: ConfigT,
-        _algorithm_label: AlgorithmLabel,
-        _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
-        _write_step: WriteStepT,
-        _result_builder: ResultBuilderT,
-    ) -> OutputT {
-        // Note: full write mode processing is deferred.
-        // This would typically involve:
-        // 1. Memory estimation
-        // 2. Graph loading
-        // 3. Algorithm execution
-        // 4. Write step execution
-        // 5. Result building
-
-        panic!("write mode processing not yet implemented")
+        graph_resources: &GraphResources,
+        concurrency: Concurrency,
+        task: Task,
+        compute: impl FnOnce(
+            &GraphResources,
+            &mut dyn ProgressTracker,
+            &TerminationFlag,
+        ) -> Result<Option<ResultFromAlgorithm>, E>,
+        builder: B,
+    ) -> Result<B::Stream, E>
+    where
+        B: StreamResultBuilder<ResultFromAlgorithm, Row>,
+    {
+        let renderer = StreamResultRenderer::<Row, B>::new(builder);
+        self.template
+            .process(graph_resources, concurrency, task, compute, &renderer, None)
     }
 
-    /// Processes a regular algorithm in stream mode.
-    pub fn process_regular_algorithm_in_stream_mode<
-        ConfigT: Config,
-        ResultT,
-        OutputT,
-        ResultBuilderT: StreamResultBuilder<ResultT, OutputT>,
-    >(
+    /// Java-parity: generic entry point that takes a mode-specific `RenderModel`.
+    pub fn process_with_model<M, E>(
         &self,
-        _graph_name: String,
-        _config: ConfigT,
-        _algorithm_label: AlgorithmLabel,
-        _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
-        _result_builder: ResultBuilderT,
-    ) -> OutputT {
-        // Note: full stream mode processing is deferred.
-        // This would typically involve:
-        // 1. Memory estimation
-        // 2. Graph loading
-        // 3. Algorithm execution
-        // 4. Result building
-
-        panic!("stream mode processing not yet implemented")
+        graph_resources: &GraphResources,
+        concurrency: Concurrency,
+        task: Task,
+        compute: impl FnOnce(
+            &GraphResources,
+            &mut dyn ProgressTracker,
+            &TerminationFlag,
+        ) -> Result<Option<M::ResultFromAlgorithm>, E>,
+        model: &M,
+    ) -> Result<M::ResultToCaller, E>
+    where
+        M: RenderModel,
+    {
+        self.template.process(
+            graph_resources,
+            concurrency,
+            task,
+            compute,
+            model.renderer(),
+            model.side_effect(),
+        )
     }
 
-    /// Processes a regular algorithm in stats mode.
-    pub fn process_regular_algorithm_in_stats_mode<
-        ConfigT: Config,
-        ResultT,
-        OutputT,
-        ResultBuilderT: StatsResultBuilder<ResultT, OutputT>,
-    >(
+    pub fn process_mutate<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata, B, E>(
         &self,
-        _graph_name: String,
-        _config: ConfigT,
-        _algorithm_label: AlgorithmLabel,
-        _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
-        _result_builder: ResultBuilderT,
-    ) -> OutputT {
-        // Note: full stats mode processing is deferred.
-        // This would typically involve:
-        // 1. Memory estimation
-        // 2. Graph loading
-        // 3. Algorithm execution
-        // 4. Result building
-
-        panic!("stats mode processing not yet implemented")
+        graph_resources: &GraphResources,
+        concurrency: Concurrency,
+        task: Task,
+        configuration: Configuration,
+        compute: impl FnOnce(
+            &GraphResources,
+            &mut dyn ProgressTracker,
+            &TerminationFlag,
+        ) -> Result<Option<ResultFromAlgorithm>, E>,
+        builder: B,
+        side_effect: Option<&dyn SideEffect<ResultFromAlgorithm, Metadata>>,
+    ) -> Result<ResultToCaller, E>
+    where
+        B: MutateResultBuilder<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata>,
+    {
+        let renderer = MutateResultRenderer::new(configuration, builder);
+        self.template.process(
+            graph_resources,
+            concurrency,
+            task,
+            compute,
+            &renderer,
+            side_effect,
+        )
     }
 
-    /// Processes an algorithm with custom hooks and processing.
-    pub fn process_algorithm_in_mutate_mode<
-        ConfigT: Config,
-        ResultT,
-        OutputT,
-        MetaT,
-        MutateStepT: MutateStep<ResultT, MetaT>,
-        ResultBuilderT: MutateResultBuilder<ConfigT, ResultT, OutputT, MetaT>,
-    >(
+    pub fn process_write<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata, B, E>(
         &self,
-        _graph_name: Option<String>,
-        _config: ConfigT,
-        _algorithm_label: AlgorithmLabel,
-        _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
-        _mutate_step: MutateStepT,
-        _result_builder: ResultBuilderT,
-        _pre_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
-        _post_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
-        _post_processing_hooks: Option<Vec<Box<dyn std::any::Any>>>,
-    ) -> OutputT {
-        // Note: full algorithm processing with hooks is deferred.
-        // This would typically involve:
-        // 1. Memory estimation
-        // 2. Pre-load hook execution
-        // 3. Graph loading
-        // 4. Post-load hook execution
-        // 5. Algorithm execution
-        // 6. Mutation step execution
-        // 7. Post-processing hook execution
-        // 8. Result building
-
-        panic!("algorithm processing with hooks not yet implemented")
-    }
-
-    /// Processes an algorithm in write mode with custom hooks.
-    pub fn process_algorithm_in_write_mode<
-        ConfigT: Config,
-        ResultT,
-        OutputT,
-        MetaT,
-        WriteStepT: WriteStep<ResultT, MetaT>,
-        ResultBuilderT: WriteResultBuilder<ConfigT, ResultT, OutputT, MetaT>,
-    >(
-        &self,
-        _graph_name: Option<String>,
-        _config: ConfigT,
-        _algorithm_label: AlgorithmLabel,
-        _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
-        _write_step: WriteStepT,
-        _result_builder: ResultBuilderT,
-        _pre_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
-        _post_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
-        _post_processing_hooks: Option<Vec<Box<dyn std::any::Any>>>,
-    ) -> OutputT {
-        // Note: full algorithm processing with hooks is deferred.
-        // This would typically involve:
-        // 1. Memory estimation
-        // 2. Pre-load hook execution
-        // 3. Graph loading
-        // 4. Post-load hook execution
-        // 5. Algorithm execution
-        // 6. Write step execution
-        // 7. Post-processing hook execution
-        // 8. Result building
-
-        panic!("algorithm processing with hooks not yet implemented")
-    }
-
-    /// Processes an algorithm in stream mode with custom hooks.
-    pub fn process_algorithm_in_stream_mode<
-        ConfigT: Config,
-        ResultT,
-        OutputT,
-        ResultBuilderT: StreamResultBuilder<ResultT, OutputT>,
-    >(
-        &self,
-        _graph_name: String,
-        _config: ConfigT,
-        _algorithm_label: AlgorithmLabel,
-        _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
-        _result_builder: ResultBuilderT,
-        _pre_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
-        _post_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
-        _post_processing_hooks: Option<Vec<Box<dyn std::any::Any>>>,
-    ) -> OutputT {
-        // Note: full algorithm processing with hooks is deferred.
-        // This would typically involve:
-        // 1. Memory estimation
-        // 2. Pre-load hook execution
-        // 3. Graph loading
-        // 4. Post-load hook execution
-        // 5. Algorithm execution
-        // 6. Post-processing hook execution
-        // 7. Result building
-
-        panic!("algorithm processing with hooks not yet implemented")
-    }
-
-    /// Processes an algorithm in stats mode with custom hooks.
-    pub fn process_algorithm_in_stats_mode<
-        ConfigT: Config,
-        ResultT,
-        OutputT,
-        ResultBuilderT: StatsResultBuilder<ResultT, OutputT>,
-    >(
-        &self,
-        _graph_name: String,
-        _config: ConfigT,
-        _algorithm_label: AlgorithmLabel,
-        _estimation_fn: impl Fn() -> Box<dyn MemoryEstimation>,
-        _algorithm_fn: impl Fn(&Graph, &Arc<DefaultGraphStore>) -> ResultT,
-        _result_builder: ResultBuilderT,
-        _pre_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
-        _post_load_hooks: Option<Vec<Box<dyn std::any::Any>>>,
-        _post_processing_hooks: Option<Vec<Box<dyn std::any::Any>>>,
-    ) -> OutputT {
-        // Note: full algorithm processing with hooks is deferred.
-        // This would typically involve:
-        // 1. Memory estimation
-        // 2. Pre-load hook execution
-        // 3. Graph loading
-        // 4. Post-load hook execution
-        // 5. Algorithm execution
-        // 6. Post-processing hook execution
-        // 7. Result building
-
-        panic!("algorithm processing with hooks not yet implemented")
+        graph_resources: &GraphResources,
+        concurrency: Concurrency,
+        task: Task,
+        configuration: Configuration,
+        compute: impl FnOnce(
+            &GraphResources,
+            &mut dyn ProgressTracker,
+            &TerminationFlag,
+        ) -> Result<Option<ResultFromAlgorithm>, E>,
+        builder: B,
+        side_effect: Option<&dyn SideEffect<ResultFromAlgorithm, Metadata>>,
+    ) -> Result<ResultToCaller, E>
+    where
+        B: WriteResultBuilder<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata>,
+    {
+        // Java parity: write is a first-class mode even if its internal semantics are mocked.
+        let renderer = WriteResultRenderer::new(configuration, builder);
+        self.template.process(
+            graph_resources,
+            concurrency,
+            task,
+            compute,
+            &renderer,
+            side_effect,
+        )
     }
 }

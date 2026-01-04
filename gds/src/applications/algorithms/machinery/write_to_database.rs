@@ -1,128 +1,125 @@
+//! WriteToDatabase (Java parity scaffold).
+//!
+//! Java reference: `WriteToDatabase`.
+//! The real Java implementation writes via Neo4j exporter builders.
+//!
+//! Rust status:
+//! - We don't have Neo4j exporter APIs.
+//! - We *can* still support the control-flow shape and perform best-effort writes
+//!   to the in-memory `GraphStore` (catalog-backed) via `GraphStoreService`.
+
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
-use crate::procedures::Graph;
-use crate::types::graph_store::DefaultGraphStore;
-use crate::applications::graph_store_catalog::loaders::ResultStore;
-use crate::types::properties::node::NodePropertyValues;
-use crate::applications::algorithms::metadata::NodePropertiesWritten;
-use crate::applications::algorithms::machinery::AlgorithmLabel;
-use crate::config::base_types::Config;
+use crate::applications::services::logging::Log;
 use crate::core::utils::progress::JobId;
-use crate::graph_store::GraphStore as _;
+use crate::procedures::Graph;
+use crate::projection::NodeLabel;
+use crate::types::graph_store::{GraphStore, GraphStoreResult};
+use crate::types::properties::node::NodePropertyValues;
 
-/// Interface for writing algorithm results to the database.
-/// This is a core pattern in the Applications system for handling
-/// algorithm results that need to be persisted to the database.
-pub trait WriteToDatabase {
-    /// Writes algorithm results to the database.
-    ///
-    /// # Arguments
-    /// * `graph` - The graph that was processed
-    /// * `graph_store` - The graph store containing the graph
-    /// * `result_store` - The result store for caching results
-    /// * `config` - The algorithm configuration
-    /// * `algorithm_label` - The algorithm label for tracking
-    /// * `job_id` - The job ID for tracking progress
-    /// * `node_properties` - The node properties to write
-    ///
-    /// # Returns
-    /// Metadata about what was written
-    fn perform<C: Config>(
+use super::{
+    GraphStoreNodePropertiesWritten, GraphStoreService, Label, NodeProperty,
+    RequestScopedDependencies, WriteContext,
+};
+
+/// Minimal adapter trait to keep Java parameter-shape without importing procedure-only configs.
+pub trait WriteConfigLike {
+    fn write_concurrency(&self) -> crate::concurrency::Concurrency;
+
+    fn resolve_result_store<'a>(
         &self,
-        graph: &Graph,
-        graph_store: &Arc<DefaultGraphStore>,
-        result_store: &mut dyn ResultStore,
-        config: &C,
-        algorithm_label: AlgorithmLabel,
-        job_id: JobId,
-        node_properties: Box<dyn NodePropertyValues>,
-    ) -> NodePropertiesWritten;
-
-    /// Writes algorithm results to the database with explicit configuration.
-    ///
-    /// # Arguments
-    /// * `graph` - The graph that was processed
-    /// * `graph_store` - The graph store containing the graph
-    /// * `result_store` - The result store for caching results
-    /// * `config` - The algorithm configuration
-    /// * `write_config` - The write configuration
-    /// * `algorithm_label` - The algorithm label for tracking
-    /// * `job_id` - The job ID for tracking progress
-    /// * `node_properties` - The node properties to write
-    ///
-    /// # Returns
-    /// Metadata about what was written
-    fn perform_with_config<C: Config, W: Config>(
-        &self,
-        graph: &Graph,
-        graph_store: &Arc<DefaultGraphStore>,
-        result_store: &mut dyn ResultStore,
-        config: &C,
-        write_config: &W,
-        algorithm_label: AlgorithmLabel,
-        job_id: JobId,
-        node_properties: Box<dyn NodePropertyValues>,
-    ) -> NodePropertiesWritten;
-}
-
-/// Default implementation of WriteToDatabase.
-#[derive(Clone)]
-pub struct DefaultWriteToDatabase;
-
-impl DefaultWriteToDatabase {
-    pub fn new() -> Self {
-        Self
+        result_store: Option<&'a dyn crate::applications::graph_store_catalog::loaders::ResultStore>,
+    ) -> Option<&'a dyn crate::applications::graph_store_catalog::loaders::ResultStore> {
+        result_store
     }
 }
 
-impl Default for DefaultWriteToDatabase {
-    fn default() -> Self {
-        Self::new()
-    }
+/// Minimal adapter trait to keep Java parameter-shape.
+pub trait WritePropertyConfigLike {
+    fn write_property(&self) -> &str;
 }
 
-impl WriteToDatabase for DefaultWriteToDatabase {
-    fn perform<C: Config>(
-        &self,
-        graph: &Graph,
-        _graph_store: &Arc<DefaultGraphStore>,
-        _result_store: &mut dyn ResultStore,
-        _config: &C,
-        _algorithm_label: AlgorithmLabel,
-        _job_id: JobId,
-        _node_properties: Box<dyn NodePropertyValues>,
-    ) -> NodePropertiesWritten {
-        // Note(gds,2025-01-31): actual database writing is deferred.
-        // This would typically involve:
-        // 1. Getting the target node labels from the config
-        // 2. Getting the property name from the config
-        // 3. Writing the properties to the database
-        // 4. Updating the result store
-        // 5. Returning metadata about what was written
+pub struct WriteToDatabase {
+    pub log: Log,
+    pub request_scoped_dependencies: RequestScopedDependencies,
+    pub write_context: WriteContext,
+    pub graph_store_service: GraphStoreService,
+}
 
-        // For now, return a placeholder
-        NodePropertiesWritten::new(graph.store().node_count() as u64)
+impl WriteToDatabase {
+    pub fn new(
+        log: Log,
+        request_scoped_dependencies: RequestScopedDependencies,
+        write_context: WriteContext,
+    ) -> Self {
+        let graph_store_service = GraphStoreService::new(log.clone());
+        Self {
+            log,
+            request_scoped_dependencies,
+            write_context,
+            graph_store_service,
+        }
     }
 
-    fn perform_with_config<C: Config, W: Config>(
+    /// Java parity entry point (single property).
+    ///
+    /// Note: `graph`, `result_store`, `label`, `job_id`, and concurrency exist to preserve
+    /// the Java call shape. The in-memory store write path does not use exporters.
+    #[allow(unused_variables)]
+    pub fn perform_single_property<S: GraphStore>(
         &self,
         graph: &Graph,
-        _graph_store: &Arc<DefaultGraphStore>,
-        _result_store: &mut dyn ResultStore,
-        _config: &C,
-        _write_config: &W,
-        _algorithm_label: AlgorithmLabel,
-        _job_id: JobId,
-        _node_properties: Box<dyn NodePropertyValues>,
-    ) -> NodePropertiesWritten {
-        // Note(gds,2025-01-31): actual database writing with explicit config is deferred.
-        // This would typically involve:
-        // 1. Using the write config for target node labels and property names
-        // 2. Writing the properties to the database
-        // 3. Updating the result store
-        // 4. Returning metadata about what was written
+        graph_store: &mut S,
+        result_store: Option<&dyn crate::applications::graph_store_catalog::loaders::ResultStore>,
+        write_configuration: &dyn WriteConfigLike,
+        write_property_configuration: &dyn WritePropertyConfigLike,
+        label: &dyn Label,
+        job_id: &JobId,
+        labels_to_update: HashSet<NodeLabel>,
+        node_property_values: Arc<dyn NodePropertyValues>,
+    ) -> GraphStoreResult<GraphStoreNodePropertiesWritten> {
+        self.log.info(&format!(
+            "WriteToDatabase.perform_single_property: label={} property={} job_id={}",
+            label.as_string(),
+            write_property_configuration.write_property(),
+            job_id
+        ));
 
-        // For now, return a placeholder
-        NodePropertiesWritten::new(graph.store().node_count() as u64)
+        let node_property = NodeProperty::new(
+            write_property_configuration.write_property(),
+            node_property_values,
+        );
+        self.graph_store_service
+            .add_node_properties(graph_store, labels_to_update, &[node_property])
+    }
+
+    /// Java parity entry point (multiple properties).
+    #[allow(unused_variables)]
+    pub fn perform_property_map<S: GraphStore>(
+        &self,
+        graph: &Graph,
+        graph_store: &mut S,
+        result_store: Option<&dyn crate::applications::graph_store_catalog::loaders::ResultStore>,
+        write_configuration: &dyn WriteConfigLike,
+        label: &dyn Label,
+        job_id: &JobId,
+        labels_to_update: HashSet<NodeLabel>,
+        node_property_values_map: HashMap<String, Arc<dyn NodePropertyValues>>,
+    ) -> GraphStoreResult<GraphStoreNodePropertiesWritten> {
+        self.log.info(&format!(
+            "WriteToDatabase.perform_property_map: label={} properties={} job_id={}",
+            label.as_string(),
+            node_property_values_map.len(),
+            job_id
+        ));
+
+        let node_properties: Vec<NodeProperty> = node_property_values_map
+            .into_iter()
+            .map(|(key, values)| NodeProperty::new(key, values))
+            .collect();
+        self.graph_store_service
+            .add_node_properties(graph_store, labels_to_update, &node_properties)
     }
 }

@@ -31,7 +31,7 @@ use crate::mem::MemoryRange;
 use crate::algo::dijkstra::targets::create_targets;
 use crate::algo::dijkstra::{DijkstraComputationRuntime, DijkstraStorageRuntime};
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::Result;
+use crate::procedures::traits::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -44,7 +44,8 @@ use std::sync::Arc;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
 };
-use crate::algo::core::prelude::*;
+use crate::algo::core::prelude::{PathFindingResult, PathResultBuilder};
+use crate::algo::core::result_builders::{ExecutionMetadata, ResultBuilder};
 
 // ============================================================================
 // Statistics Type
@@ -218,11 +219,11 @@ impl DijkstraBuilder {
             &mut progress_tracker,
         )?;
 
-        let paths: Vec<PathResult> = result
+        let paths: Vec<crate::algo::core::result_builders::PathResult> = result
             .path_finding_result
             .paths()
             .filter(|p| p.source_node >= 0 && p.target_node >= 0)
-            .map(|p| PathResult {
+            .map(|p| crate::algo::core::result_builders::PathResult {
                 source: p.source_node as u64,
                 target: p.target_node as u64,
                 path: p
@@ -388,7 +389,13 @@ impl DijkstraBuilder {
     /// ```
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
         let result = self.compute()?;
-        Ok(Box::new(result.paths.into_iter()))
+        let paths = result.paths.into_iter().map(|p| PathResult {
+            source: p.source,
+            target: p.target,
+            path: p.path,
+            cost: p.cost,
+        });
+        Ok(Box::new(paths))
     }
 
     /// Stats mode: Get aggregated statistics

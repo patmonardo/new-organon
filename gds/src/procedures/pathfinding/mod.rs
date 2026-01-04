@@ -19,6 +19,10 @@ pub mod steiner_tree;
 pub mod topological_sort;
 pub mod yens;
 
+mod path_result_mapping;
+
+pub(crate) use path_result_mapping::core_to_procedure_path_result;
+
 // Re-export for easy access
 pub use all_shortest_paths::{AllShortestPathsBuilder, AllShortestPathsRow, AllShortestPathsStats};
 pub use astar::{AStarBuilder, AStarStats, Heuristic};

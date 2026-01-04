@@ -6,6 +6,7 @@
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits::Result;
 use crate::algo::kspanningtree::computation::KSpanningTreeComputationRuntime;
+use crate::mem::MemoryRange;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -227,6 +228,31 @@ impl KSpanningTreeBuilder {
             total_cost,
             execution_time_ms: elapsed.as_millis() as u64,
         })
+    }
+
+    /// Estimate memory requirements for k-spanning tree execution.
+    ///
+    /// Conservative estimate based on:
+    /// - parent + cost arrays (per node)
+    /// - a small amount of queue/working storage
+    /// - graph structure overhead
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+
+        // parent: i64, cost: f64
+        let arrays = node_count * (std::mem::size_of::<i64>() + std::mem::size_of::<f64>());
+
+        // Working storage: small multiple of node_count.
+        let working = node_count * 32;
+
+        // Graph structure overhead (adjacency lists, etc.)
+        let avg_degree = 10.0;
+        let relationship_count = (node_count as f64 * avg_degree) as usize;
+        let graph_overhead = relationship_count * 16;
+
+        let total = arrays + working + graph_overhead;
+        let overhead = total / 5; // +20%
+        MemoryRange::of_range(total, total + overhead)
     }
 }
 
