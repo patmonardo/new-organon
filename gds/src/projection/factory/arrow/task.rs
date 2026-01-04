@@ -331,13 +331,13 @@ impl AggregatedImportResult {
 ///
 /// Thread-safe atomic counters for tracking progress across tasks.
 #[derive(Debug)]
-pub struct ProgressTracker {
+pub struct ImportProgressTracker {
     records_processed: Arc<AtomicU64>,
     properties_processed: Arc<AtomicU64>,
     batches_processed: Arc<AtomicU64>,
 }
 
-impl ProgressTracker {
+impl ImportProgressTracker {
     /// Creates a new progress tracker.
     pub fn new() -> Self {
         Self {
@@ -378,13 +378,13 @@ impl ProgressTracker {
     }
 }
 
-impl Default for ProgressTracker {
+impl Default for ImportProgressTracker {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl Clone for ProgressTracker {
+impl Clone for ImportProgressTracker {
     fn clone(&self) -> Self {
         Self {
             records_processed: Arc::clone(&self.records_processed),
@@ -539,7 +539,7 @@ mod tests {
 
     #[test]
     fn test_progress_tracker() {
-        let tracker = ProgressTracker::new();
+        let tracker = ImportProgressTracker::new();
 
         assert_eq!(tracker.records_processed(), 0);
         assert_eq!(tracker.properties_processed(), 0);
@@ -558,7 +558,7 @@ mod tests {
 
     #[test]
     fn test_progress_tracker_clone() {
-        let tracker = ProgressTracker::new();
+        let tracker = ImportProgressTracker::new();
         tracker.record_batch(100, 50);
 
         let cloned = tracker.clone();

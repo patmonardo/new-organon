@@ -4,6 +4,8 @@ use super::LinkPredictionTrainConfig;
 use crate::projection::eval::pipeline::link_pipeline::{
     ExpectedSetSizes, LinkPredictionSplitConfig,
 };
+use crate::core::utils::progress::{LeafTask, Tasks};
+use crate::mem::{MemoryRange, MemoryTree};
 use std::marker::PhantomData;
 
 /// Relationship sampler for link prediction training.
@@ -127,14 +129,17 @@ impl LinkPredictionRelationshipSampler {
     /// # Returns
     ///
     /// Progress task with total work units.
-    pub fn progress_task(sizes: &ExpectedSetSizes) -> ProgressTask {
-        ProgressTask {
-            name: "Split relationships".to_string(),
-            work: sizes.train_size
-                + sizes.feature_input_size
-                + sizes.test_size
-                + sizes.test_complement_size,
-        }
+    pub fn progress_task(sizes: &ExpectedSetSizes) -> LeafTask {
+        let work = sizes
+            .train_size
+            .saturating_add(sizes.feature_input_size)
+            .saturating_add(sizes.test_size)
+            .saturating_add(sizes.test_complement_size);
+
+        Tasks::leaf_with_volume(
+            "Split relationships".to_string(),
+            usize::try_from(work).unwrap_or(usize::MAX),
+        )
     }
 
     /// Splits and samples relationships for training.
@@ -286,17 +291,17 @@ impl LinkPredictionRelationshipSampler {
         _split_config: &LinkPredictionSplitConfig,
         _target_relationship_type: &str,
         _relationship_weight: Option<&str>,
-    ) -> MemoryEstimate {
+    ) -> MemoryTree {
         // Deferred (Proper 1.0.x): implement memory estimation.
         // - Estimate positive relations (test + train directed)
         // - Estimate feature input (undirected)
         // - Estimate negative sampling
         // - Account for relationship weights if present
 
-        MemoryEstimate {
-            min_bytes: 0,
-            max_bytes: 0,
-        }
+        MemoryTree::leaf(
+            "LinkPredictionRelationshipSampler split estimation (Pre-Prim 0.0.x)".to_string(),
+            MemoryRange::of_range(0, 0),
+        )
     }
 
     // === PRIVATE METHODS (Gamma Placeholders) ===
@@ -351,18 +356,6 @@ impl LinkPredictionRelationshipSampler {
     }
 }
 
-/// Progress task descriptor.
-///
-/// **Gamma**: Lightweight progress tracking.
-#[derive(Debug, Clone)]
-pub struct ProgressTask {
-    /// Task name
-    pub name: String,
-
-    /// Estimated work units
-    pub work: u64,
-}
-
 /// Split result from edge splitting.
 ///
 /// **Gamma**: Result container for split operation.
@@ -376,18 +369,6 @@ pub struct SplitResult {
 
     /// Count of selected relationships
     pub selected_rel_count: u64,
-}
-
-/// Memory estimate.
-///
-/// **Gamma**: Memory requirements as primitive bytes.
-#[derive(Debug, Clone)]
-pub struct MemoryEstimate {
-    /// Minimum bytes required
-    pub min_bytes: u64,
-
-    /// Maximum bytes required
-    pub max_bytes: u64,
 }
 
 #[cfg(test)]
@@ -428,9 +409,9 @@ mod tests {
 
         let task = LinkPredictionRelationshipSampler::progress_task(&sizes);
 
-        assert_eq!(task.name, "Split relationships");
+        assert_eq!(task.base().description(), "Split relationships");
         // Work = test + train + feature_input + test_complement
-        assert_eq!(task.work, 100 + 90 + 810 + 900);
+        assert_eq!(task.volume(), 100 + 90 + 810 + 900);
     }
 
     #[test]
@@ -466,8 +447,8 @@ mod tests {
             LinkPredictionRelationshipSampler::split_estimation(&split_config, "KNOWS", None);
 
         // Gamma: Returns zero (not yet implemented)
-        assert_eq!(estimate.min_bytes, 0);
-        assert_eq!(estimate.max_bytes, 0);
+        assert_eq!(estimate.memory_usage().min(), 0);
+        assert_eq!(estimate.memory_usage().max(), 0);
     }
 
     #[test]
@@ -550,7 +531,7 @@ mod tests {
 
         // Gamma works with structure even without implementation
         let task = LinkPredictionRelationshipSampler::progress_task(&sizes);
-        assert!(task.work > 0);
+        assert!(task.volume() > 0);
 
         // Gamma quality: Structure enables reasoning! 🎯
     }

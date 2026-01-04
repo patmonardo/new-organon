@@ -34,8 +34,8 @@ pub use self::scanner::{
     DEFAULT_BATCH_SIZE, DEFAULT_PREFETCH_SIZE,
 };
 pub use self::task::{
-    AggregatedImportResult, ImportResult, ImportTask, ProgressTracker, TaskError, TaskFactory,
-    TaskRunner,
+    AggregatedImportResult, ImportProgressTracker, ImportResult, ImportTask, TaskError,
+    TaskFactory, TaskRunner,
 };
 
 // Module organization

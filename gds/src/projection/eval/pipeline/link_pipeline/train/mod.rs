@@ -18,6 +18,5 @@ pub use link_prediction_train_config::LinkPredictionTrainConfig;
 pub use link_prediction_train_pipeline_executor::{
     estimate_memory as estimate_executor_memory, progress_task, DatasetSplit,
     LinkPredictionTrainPipelineExecutor, LinkPredictionTrainPipelineResult, PipelineGraphFilter,
-    ProgressTask,
 };
 pub use link_prediction_train_result::LinkPredictionTrainResult;

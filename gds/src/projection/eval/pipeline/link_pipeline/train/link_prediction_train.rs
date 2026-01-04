@@ -4,6 +4,8 @@ use super::{FeaturesAndLabels, LinkPredictionTrainConfig, LinkPredictionTrainRes
 use crate::projection::eval::pipeline::link_pipeline::{
     LinkPredictionSplitConfig, LinkPredictionTrainingPipeline,
 };
+use crate::core::utils::progress::{LeafTask, Tasks};
+use crate::mem::{MemoryRange, MemoryTree};
 use std::marker::PhantomData;
 
 /// Link prediction training orchestrator.
@@ -240,49 +242,50 @@ impl LinkPredictionTrain {
         relationship_count: u64,
         split_config: &LinkPredictionSplitConfig,
         number_of_trials: usize,
-    ) -> Vec<ProgressTask> {
+    ) -> Vec<LeafTask> {
         let sizes = split_config.expected_set_sizes(relationship_count);
 
         let mut tasks = Vec::new();
 
         // 1. Extract train features
-        tasks.push(ProgressTask {
-            name: "Extract train features".to_string(),
-            work: sizes.train_size * 3,
-        });
+        tasks.push(Tasks::leaf_with_volume(
+            "Extract train features".to_string(),
+            usize::try_from(sizes.train_size.saturating_mul(3)).unwrap_or(usize::MAX),
+        ));
 
         // 2. Cross-validation tasks
         // Note: CrossValidation::progress_tasks() will be integrated in Prim.
-        tasks.push(ProgressTask {
-            name: format!(
+        tasks.push(Tasks::leaf_with_volume(
+            format!(
                 "Cross-validation ({} folds, {} trials)",
                 split_config.validation_folds(),
                 number_of_trials
             ),
-            work: sizes.train_size * number_of_trials as u64,
-        });
+            usize::try_from(sizes.train_size.saturating_mul(number_of_trials as u64))
+                .unwrap_or(usize::MAX),
+        ));
 
         // 3. Train best model
-        tasks.push(ProgressTask {
-            name: "Train best model".to_string(),
-            work: sizes.train_size * 5,
-        });
+        tasks.push(Tasks::leaf_with_volume(
+            "Train best model".to_string(),
+            usize::try_from(sizes.train_size.saturating_mul(5)).unwrap_or(usize::MAX),
+        ));
 
         // 4. Compute train metrics
-        tasks.push(ProgressTask {
-            name: "Compute train metrics".to_string(),
-            work: sizes.train_size,
-        });
+        tasks.push(Tasks::leaf_with_volume(
+            "Compute train metrics".to_string(),
+            usize::try_from(sizes.train_size).unwrap_or(usize::MAX),
+        ));
 
         // 5. Evaluate on test data
-        tasks.push(ProgressTask {
-            name: "Extract test features".to_string(),
-            work: sizes.test_size * 3,
-        });
-        tasks.push(ProgressTask {
-            name: "Compute test metrics".to_string(),
-            work: sizes.test_size,
-        });
+        tasks.push(Tasks::leaf_with_volume(
+            "Extract test features".to_string(),
+            usize::try_from(sizes.test_size.saturating_mul(3)).unwrap_or(usize::MAX),
+        ));
+        tasks.push(Tasks::leaf_with_volume(
+            "Compute test metrics".to_string(),
+            usize::try_from(sizes.test_size).unwrap_or(usize::MAX),
+        ));
 
         tasks
     }
@@ -369,37 +372,13 @@ impl LinkPredictionTrain {
     pub fn estimate_memory(
         _pipeline: &LinkPredictionTrainingPipeline,
         _train_config: &LinkPredictionTrainConfig,
-    ) -> MemoryEstimate {
+    ) -> MemoryTree {
         // Deferred: implement memory estimation.
-        MemoryEstimate {
-            min_bytes: 0,
-            max_bytes: 0,
-        }
+        MemoryTree::leaf(
+            "LinkPredictionTrain memory estimation (Pre-Prim 0.0.x)".to_string(),
+            MemoryRange::of_range(0, 0),
+        )
     }
-}
-
-/// Progress task descriptor.
-///
-/// **Proper**: Describes a unit of work for progress tracking.
-#[derive(Debug, Clone)]
-pub struct ProgressTask {
-    /// Task name
-    pub name: String,
-
-    /// Estimated work units
-    pub work: u64,
-}
-
-/// Memory estimate.
-///
-/// **Prim**: Memory requirements as primitive bytes.
-#[derive(Debug, Clone)]
-pub struct MemoryEstimate {
-    /// Minimum bytes required
-    pub min_bytes: u64,
-
-    /// Maximum bytes required
-    pub max_bytes: u64,
 }
 
 #[cfg(test)]
@@ -471,7 +450,7 @@ mod tests {
         assert!(!tasks.is_empty());
 
         // Check task names
-        let task_names: Vec<&str> = tasks.iter().map(|t| t.name.as_str()).collect();
+        let task_names: Vec<&str> = tasks.iter().map(|t| t.base().description()).collect();
         assert!(task_names.contains(&"Extract train features"));
         assert!(task_names.contains(&"Train best model"));
         assert!(task_names.contains(&"Compute train metrics"));
@@ -492,8 +471,8 @@ mod tests {
         let estimate = LinkPredictionTrain::estimate_memory(&pipeline, &config);
 
         // Pre-Prim: Returns zero (not yet implemented)
-        assert_eq!(estimate.min_bytes, 0);
-        assert_eq!(estimate.max_bytes, 0);
+        assert_eq!(estimate.memory_usage().min(), 0);
+        assert_eq!(estimate.memory_usage().max(), 0);
     }
 
     #[test]

@@ -78,6 +78,8 @@
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
+use crate::core::utils::progress::{LeafTask, UNKNOWN_VOLUME};
+use crate::mem::{MemoryRange, MemoryTree};
 use crate::projection::RelationshipType;
 
 // ============================================================================
@@ -294,17 +296,21 @@ pub fn progress_task(
     task_name: String,
     _pipeline: PhantomData<()>, // Note: placeholder for LinkPredictionTrainingPipeline (Bija).
     _relationship_count: usize,
-) -> ProgressTask {
+) -> LeafTask {
     // Note (Bija): implement in Prim 0.1.x.
     // 1. Calculate expected set sizes from split config
     // 2. Create task hierarchy:
     //    - LinkPredictionRelationshipSampler::progress_task()
     //    - NodePropertyStepExecutor::tasks()
     //    - LinkPredictionTrain::progress_tasks()
-    ProgressTask {
-        name: task_name,
-        description: "Pre-Prim 0.0.x - Progress task structure is Bija (seed)!".to_string(),
-    }
+    LeafTask::new(
+        format!(
+            "{}: {}",
+            task_name,
+            "Pre-Prim 0.0.x - Progress task structure is Bija (seed)!"
+        ),
+        UNKNOWN_VOLUME,
+    )
 }
 
 /// Estimate memory requirements for training pipeline
@@ -322,18 +328,17 @@ pub fn estimate_memory(
     _model_catalog: PhantomData<()>, // Note: placeholder for ModelCatalog (Bija).
     _algorithms_facade: PhantomData<()>, // Note: placeholder for AlgorithmsProcedureFacade (Bija).
     _username: String,
-) -> MemoryEstimate {
+) -> MemoryTree {
     // Note (Bija): implement in Prim 0.1.x.
     // 1. Validate training parameter space
     // 2. Get split estimations
     // 3. Estimate node property steps
     // 4. Estimate training
     // 5. Return max over all estimations
-    MemoryEstimate {
-        description: "LinkPredictionTrainPipelineExecutor memory estimation not yet implemented (Pre-Prim 0.0.x) - Bija!".to_string(),
-        min_bytes: 0,
-        max_bytes: 0,
-    }
+    MemoryTree::leaf(
+        "LinkPredictionTrainPipelineExecutor memory estimation not yet implemented (Pre-Prim 0.0.x) - Bija!".to_string(),
+        MemoryRange::of_range(0, 0),
+    )
 }
 
 // ============================================================================
@@ -376,25 +381,6 @@ pub struct LinkPredictionTrainPipelineResult {
     /// Training statistics (metrics, best parameters, etc.)
     /// Note (Bija): placeholder until TrainingStatistics is introduced.
     pub training_statistics: PhantomData<()>,
-}
-
-/// Progress task structure
-///
-/// **Pre-Prim 0.0.x**: The Krama of observation
-#[derive(Debug, Clone)]
-pub struct ProgressTask {
-    pub name: String,
-    pub description: String,
-}
-
-/// Memory estimate structure
-///
-/// **Pre-Prim 0.0.x**: The Prakasa of resources
-#[derive(Debug, Clone)]
-pub struct MemoryEstimate {
-    pub description: String,
-    pub min_bytes: usize,
-    pub max_bytes: usize,
 }
 
 // ============================================================================
@@ -496,8 +482,9 @@ mod tests {
         // KRAMA TEST: Progress task progression structure
         let task = progress_task("test_task".to_string(), PhantomData, 1000);
 
-        assert_eq!(task.name, "test_task");
-        assert!(task.description.contains("Bija"), "Should mention seeds");
+        let description = task.base().description();
+        assert!(description.contains("test_task"));
+        assert!(description.contains("Bija"), "Should mention seeds");
     }
 
     #[test]
@@ -511,8 +498,9 @@ mod tests {
             "test_user".to_string(),
         );
 
-        assert!(estimate.description.contains("Pre-Prim"));
-        assert!(estimate.description.contains("Bija"));
+        let range = estimate.memory_usage();
+        assert_eq!(range.min(), 0);
+        assert_eq!(range.max(), 0);
     }
 
     #[test]

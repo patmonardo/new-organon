@@ -9,9 +9,9 @@ use crate::mem::Estimate;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
-/// Memory estimation result
+/// Memory estimation result for Collections extensions.
 #[derive(Debug, Clone)]
-pub struct MemoryEstimationResult {
+pub struct CollectionMemoryEstimationResult {
     pub estimated_bytes: u64,
     pub breakdown: HashMap<String, u64>,
     pub is_conservative: bool,
@@ -21,13 +21,13 @@ pub struct MemoryEstimationResult {
 /// Memory estimation extension trait for Collections
 pub trait MemoryEstimationSupport<T> {
     /// Estimate memory usage for this collection
-    fn estimate_memory(&self) -> MemoryEstimationResult;
+    fn estimate_memory(&self) -> CollectionMemoryEstimationResult;
 
     /// Estimate memory usage with custom dimensions
     fn estimate_memory_with_dimensions(
         &self,
         dimensions: &CollectionDimensions,
-    ) -> MemoryEstimationResult;
+    ) -> CollectionMemoryEstimationResult;
 
     /// Get memory breakdown by component
     fn memory_breakdown(&self) -> HashMap<String, usize>;
@@ -309,7 +309,7 @@ where
     C: Collections<T>,
     T: Clone + Send + Sync,
 {
-    fn estimate_memory(&self) -> MemoryEstimationResult {
+    fn estimate_memory(&self) -> CollectionMemoryEstimationResult {
         let base_size = self.dimensions.element_count * self.dimensions.element_size;
         let mut total_size = base_size;
 
@@ -335,7 +335,7 @@ where
             }
         }
 
-        MemoryEstimationResult {
+        CollectionMemoryEstimationResult {
             estimated_bytes: total_size as u64,
             breakdown: breakdown.into_iter().map(|(k, v)| (k, v as u64)).collect(),
             is_conservative: self.memory_config.conservative_estimate,
@@ -346,7 +346,7 @@ where
     fn estimate_memory_with_dimensions(
         &self,
         dimensions: &CollectionDimensions,
-    ) -> MemoryEstimationResult {
+    ) -> CollectionMemoryEstimationResult {
         let base_size = dimensions.element_count * dimensions.element_size;
         let mut total_size = base_size;
 
@@ -365,7 +365,7 @@ where
             breakdown.insert("null_bitmap".to_string(), null_bitmap_size);
         }
 
-        MemoryEstimationResult {
+        CollectionMemoryEstimationResult {
             estimated_bytes: total_size as u64,
             breakdown: breakdown.into_iter().map(|(k, v)| (k, v as u64)).collect(),
             is_conservative: self.memory_config.conservative_estimate,
