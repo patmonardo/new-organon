@@ -35,7 +35,7 @@ pub fn handle_harmonic(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
         .unwrap_or(1) as usize;
 
     let estimate_submode = request
-        .get("estimateSubmode")
+        .get("submode")
         .and_then(|v| v.as_str());
 
     // Get graph store
@@ -139,7 +139,7 @@ pub fn handle_harmonic(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
             None => err(
                 op,
                 "INVALID_REQUEST",
-                "Missing 'estimateSubmode' parameter for estimate mode",
+                "Missing 'submode' parameter for estimate mode",
             ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),

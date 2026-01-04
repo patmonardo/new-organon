@@ -29,7 +29,7 @@ pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
         .unwrap_or(1) as usize;
 
     let _estimate_submode = request
-        .get("estimateSubmode")
+        .get("submode")
         .and_then(|v| v.as_str());
 
     let direction = request
@@ -54,7 +54,7 @@ pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
         .unwrap_or(0.85);
 
     let estimate_submode = request
-        .get("estimateSubmode")
+        .get("submode")
         .and_then(|v| v.as_str());
 
     let tolerance = request
@@ -191,7 +191,7 @@ pub fn handle_pagerank(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
                 None => err(
                     op,
                     "INVALID_REQUEST",
-                    "Missing 'estimateSubmode' parameter for estimate mode",
+                    "Missing 'submode' parameter for estimate mode",
                 ),
             }
         }

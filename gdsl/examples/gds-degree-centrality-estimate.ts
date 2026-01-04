@@ -61,7 +61,7 @@ export function degreeCentralityEstimateDemo(): void {
       facade: 'algorithms',
       op: 'degree_centrality',
       mode: 'estimate',
-      estimateSubmode: 'memory',
+      submode: 'memory',
       user,
       databaseId,
       graphName,

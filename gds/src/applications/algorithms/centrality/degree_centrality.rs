@@ -40,7 +40,7 @@ pub fn handle_degree_centrality(request: &Value, catalog: Arc<dyn GraphCatalog>)
         .unwrap_or(false);
 
     let estimate_submode = request
-        .get("estimateSubmode")
+        .get("submode")
         .and_then(|v| v.as_str());
 
     let concurrency = request
@@ -179,7 +179,7 @@ pub fn handle_degree_centrality(request: &Value, catalog: Arc<dyn GraphCatalog>)
                 None => err(
                     op,
                     "INVALID_REQUEST",
-                    "Missing 'estimateSubmode' parameter for estimate mode",
+                    "Missing 'submode' parameter for estimate mode",
                 ),
             }
         }

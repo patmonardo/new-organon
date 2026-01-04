@@ -444,6 +444,8 @@ mod tests {
     fn test_mutate_accepts_valid_property_name() {
         let facade = DegreeCentralityFacade::new(store());
         let result = facade.mutate("degree");
-        assert!(result.is_err()); // Not implemented yet, but validated
+        assert!(result.is_ok()); // Should succeed with valid property name
+        let mutation_result = result.unwrap();
+        assert_eq!(mutation_result.property_name, "degree");
     }
 }

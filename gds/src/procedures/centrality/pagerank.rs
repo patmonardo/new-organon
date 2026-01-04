@@ -567,7 +567,10 @@ mod tests {
     #[test]
     fn test_mutate_accepts_valid_property() {
         let facade = PageRankFacade::new(store());
-        assert!(facade.mutate("pagerank").is_err());
+        let result = facade.mutate("pagerank");
+        assert!(result.is_ok()); // Should succeed with valid property
+        let mutation_result = result.unwrap();
+        assert_eq!(mutation_result.property_name, "pagerank");
     }
 
     #[test]

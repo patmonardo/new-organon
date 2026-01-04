@@ -55,7 +55,7 @@ pub fn handle_bellman_ford(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
         .unwrap_or(4) as usize;
 
     let estimate_submode = request
-        .get("estimateSubmode")
+        .get("submode")
         .and_then(|v| v.as_str());
 
     let relationship_types =
@@ -199,7 +199,7 @@ pub fn handle_bellman_ford(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
             None => err(
                 op,
                 "INVALID_REQUEST",
-                "Missing 'estimateSubmode' parameter for estimate mode",
+                "Missing 'submode' parameter for estimate mode",
             ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
