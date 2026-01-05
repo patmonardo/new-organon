@@ -10,16 +10,13 @@
 //! - `max_iterations`: Maximum iterations (default: 10)
 //! - `random_seed`: Random seed for reproducibility (default: 42)
 
-use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
+use crate::core::utils::progress::{TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::algo::leiden::computation::leiden as leiden_fn;
-use crate::algo::leiden::{LeidenConfig, LeidenResult};
-use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
+use crate::algo::leiden::{LeidenComputationRuntime, LeidenConfig, LeidenResult, LeidenStorageRuntime};
+use crate::concurrency::TerminationFlag;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -123,42 +120,24 @@ impl LeidenFacade {
         self.validate()?;
         let start = Instant::now();
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
-
-        // Build adjacency list from graph view
-        let node_count = graph_view.node_count();
-        let mut adjacency_list = vec![Vec::new(); node_count];
-
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
-            Tasks::leaf_with_volume("leiden".to_string(), node_count),
+            Tasks::leaf_with_volume("leiden".to_string(), self.graph_store.node_count()),
         );
-        progress_tracker.begin_subtask_with_volume(node_count);
 
-        for (node_id, adj) in adjacency_list.iter_mut().enumerate() {
-            let relationships = graph_view.stream_relationships_weighted(node_id as i64, 1.0);
-            for cursor in relationships {
-                let target_id = cursor.target_id() as usize;
-                let weight = cursor.weight();
-                adj.push((target_id, weight));
-            }
-        }
+        let termination_flag = TerminationFlag::default();
 
-        // Run Leiden algorithm
-        let storage = leiden_fn(
-            node_count,
-            |node: usize| adjacency_list[node].clone(),
-            &self.config,
-        );
-        let result = storage.into_result();
+        let storage = LeidenStorageRuntime::new();
+        let mut computation = LeidenComputationRuntime::new();
 
-        progress_tracker.log_progress(node_count);
-        progress_tracker.end_subtask();
+        let result = storage
+            .compute_leiden(
+                &mut computation,
+                self.graph_store.as_ref(),
+                &self.config,
+                &mut progress_tracker,
+                &termination_flag,
+            )
+            .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
 
         Ok((result, start.elapsed().as_millis() as u64))
     }

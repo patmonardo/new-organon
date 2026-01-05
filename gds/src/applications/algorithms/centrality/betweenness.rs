@@ -33,6 +33,26 @@ pub fn handle_betweenness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
         .and_then(|v| v.as_u64())
         .unwrap_or(1) as usize;
 
+    let relationship_weight_property = request
+        .get("relationshipWeightProperty")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+
+    let sampling_strategy = request
+        .get("samplingStrategy")
+        .and_then(|v| v.as_str())
+        .unwrap_or("all");
+
+    let sampling_size = request
+        .get("samplingSize")
+        .and_then(|v| v.as_u64())
+        .map(|v| v as usize);
+
+    let random_seed = request
+        .get("randomSeed")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(42);
+
     let estimate_submode = request
         .get("submode")
         .and_then(|v| v.as_str());
@@ -52,7 +72,11 @@ pub fn handle_betweenness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
     // Create facade
     let facade = BetweennessCentralityFacade::new(graph_store)
         .direction(direction)
-        .concurrency(concurrency);
+        .concurrency(concurrency)
+        .relationship_weight_property(relationship_weight_property)
+        .sampling_strategy(sampling_strategy)
+        .sampling_size(sampling_size)
+        .random_seed(random_seed);
 
     // Execute based on mode
     match mode {

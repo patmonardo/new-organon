@@ -51,7 +51,7 @@ pub fn handle_algorithms(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
 		"hits" => algorithms_dispatch::handle_hits(request, catalog),
 
 		// Community
-		"approx_max_k_cut" => algorithms_dispatch::handle_approx_max_k_cut(request, catalog),
+		"approx_max_kcut" => algorithms_dispatch::handle_approx_max_kcut(request, catalog),
 		"conductance" => algorithms_dispatch::handle_conductance(request, catalog),
 		"k1coloring" => algorithms_dispatch::handle_k1coloring(request, catalog),
 		"kcore" => algorithms_dispatch::handle_kcore(request, catalog),

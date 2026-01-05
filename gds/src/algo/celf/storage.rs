@@ -22,35 +22,41 @@ impl SpreadPriorityQueue {
     pub fn new(node_count: usize) -> Self {
         let spreads = HugeDoubleArray::new(node_count);
         let mut heap = Vec::with_capacity(node_count);
-        let positions = vec![usize::MAX; node_count];
+        let mut positions = vec![usize::MAX; node_count];
 
-        // Initialize with all nodes
+        // Initialize with all nodes and valid positions.
         for i in 0..node_count {
+            positions[i] = i;
             heap.push(i);
         }
 
-        Self {
+        let mut q = Self {
             heap,
             positions,
             spreads,
-        }
+        };
+
+        // Values default to 0.0; heapify to establish a stable ordering.
+        q.heapify();
+        q
     }
 
     /// Add or update a node's spread value
     pub fn set(&mut self, node: usize, spread: f64) {
         self.spreads.set(node, spread);
-        if self.positions[node] == usize::MAX {
-            // New node - add to heap
+        let pos = self.positions[node];
+        if pos == usize::MAX {
+            // Not present (should be uncommon): add and bubble.
             let pos = self.heap.len();
             self.heap.push(node);
             self.positions[node] = pos;
             self.bubble_up(pos);
-        } else {
-            // Update existing - reheapify
-            let pos = self.positions[node];
-            self.bubble_up(pos);
-            self.bubble_down(pos);
+            return;
         }
+
+        // Update existing - reheapify.
+        self.bubble_up(pos);
+        self.bubble_down(pos);
     }
 
     /// Get the node with highest spread
@@ -101,6 +107,17 @@ impl SpreadPriorityQueue {
     /// Check if empty
     pub fn is_empty(&self) -> bool {
         self.heap.is_empty()
+    }
+
+    fn heapify(&mut self) {
+        if self.heap.is_empty() {
+            return;
+        }
+        // Standard heapify: bubble down from last parent.
+        let last_parent = (self.heap.len() / 2).saturating_sub(1);
+        for i in (0..=last_parent).rev() {
+            self.bubble_down(i);
+        }
     }
 
     fn less_than(&self, a: usize, b: usize) -> bool {

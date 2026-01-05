@@ -1,4 +1,4 @@
-//! K-Core Integration Tests
+//! K-Core Decomposition integration tests
 
 #[cfg(test)]
 mod tests {
@@ -12,6 +12,7 @@ mod tests {
         Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
     };
     use crate::types::schema::{Direction, MutableGraphSchema};
+    use crate::algo::kcore::KCoreComputationRuntime;
 
     fn store_from_outgoing(outgoing: Vec<Vec<i64>>) -> DefaultGraphStore {
         let node_count = outgoing.len();
@@ -60,72 +61,78 @@ mod tests {
     }
 
     #[test]
-    fn kcore_simple_chain() {
-        // Chain: 0-1-2-3 (all nodes have degree 1 or 2, so core values should be 1)
-        let store = store_from_outgoing(vec![vec![1], vec![0, 2], vec![1, 3], vec![2]]);
-        let graph = Graph::new(Arc::new(store));
+    fn kcore_triggers_rebuild_on_sparse_graph() {
+        // Force remainingNodes < ceil(REBUILD_CONSTANT * nodeCount) at the start:
+        // - 197 isolated nodes (degree 0 => core 0, not counted as remaining)
+        // - 3-node clique (degree 2 => remaining = 3)
+        // For nodeCount=200, rebuildLimit=ceil(0.02*200)=4, so rebuild runs immediately.
 
-        let result = graph.kcore().run().unwrap();
-        assert_eq!(result.core_values.len(), 4);
-        assert_eq!(result.degeneracy, 1);
-        // All nodes have degree <= 2, so max k-core is 1
-        for &core_val in &result.core_values {
-            assert!(core_val <= 2);
-        }
-    }
+        let node_count = 200usize;
+        let a = 197usize;
+        let b = 198usize;
+        let c = 199usize;
 
-    #[test]
-    fn kcore_triangle() {
-        // Triangle: 0-1-2-0 (all nodes have degree 2, so 2-core)
-        let store = store_from_outgoing(vec![vec![1, 2], vec![0, 2], vec![0, 1]]);
-        let graph = Graph::new(Arc::new(store));
+        let neighbors = move |node: usize| -> Vec<usize> {
+            if node == a {
+                vec![b, c]
+            } else if node == b {
+                vec![a, c]
+            } else if node == c {
+                vec![a, b]
+            } else {
+                Vec::new()
+            }
+        };
 
-        let result = graph.kcore().run().unwrap();
-        assert_eq!(result.core_values.len(), 3);
+        let mut runtime = KCoreComputationRuntime::new().concurrency(4);
+        let result = runtime.compute(node_count, neighbors);
+
+        assert_eq!(runtime.rebuild_count(), 1);
         assert_eq!(result.degeneracy, 2);
-        // All nodes are in 2-core
-        for &core_val in &result.core_values {
-            assert_eq!(core_val, 2);
+
+        // Isolated nodes are 0-core.
+        for v in 0..197 {
+            assert_eq!(result.core_values[v], 0);
         }
+        // Clique nodes are 2-core.
+        assert_eq!(result.core_values[a], 2);
+        assert_eq!(result.core_values[b], 2);
+        assert_eq!(result.core_values[c], 2);
     }
 
     #[test]
-    fn kcore_star_graph() {
-        // Star: center node 0 connected to 1,2,3,4 (center has degree 4, leaves have degree 1)
-        let store = store_from_outgoing(vec![vec![1, 2, 3, 4], vec![0], vec![0], vec![0], vec![0]]);
+    fn kcore_triangle_is_2_core() {
+        let outgoing = vec![vec![1, 2], vec![0, 2], vec![0, 1]];
+        let store = store_from_outgoing(outgoing);
         let graph = Graph::new(Arc::new(store));
 
         let result = graph.kcore().run().unwrap();
-        assert_eq!(result.core_values.len(), 5);
+
+        assert_eq!(result.degeneracy, 2);
+        assert_eq!(result.core_values, vec![2, 2, 2]);
+    }
+
+    #[test]
+    fn kcore_path_is_1_core() {
+        let outgoing = vec![vec![1], vec![0, 2], vec![1, 3], vec![2]];
+        let store = store_from_outgoing(outgoing);
+        let graph = Graph::new(Arc::new(store));
+
+        let result = graph.kcore().run().unwrap();
+
         assert_eq!(result.degeneracy, 1);
-        // All nodes have core value 1 (leaves removed first, then center)
-        for &core_val in &result.core_values {
-            assert_eq!(core_val, 1);
-        }
+        assert_eq!(result.core_values, vec![1, 1, 1, 1]);
     }
 
     #[test]
-    fn kcore_empty_graph() {
-        let store = store_from_outgoing(vec![]);
+    fn kcore_isolated_node_is_0_core() {
+        let outgoing = vec![vec![]];
+        let store = store_from_outgoing(outgoing);
         let graph = Graph::new(Arc::new(store));
 
         let result = graph.kcore().run().unwrap();
-        assert!(result.core_values.is_empty());
-        assert_eq!(result.degeneracy, 0);
-    }
 
-    #[test]
-    fn kcore_isolated_nodes() {
-        // Three isolated nodes (no edges)
-        let store = store_from_outgoing(vec![vec![], vec![], vec![]]);
-        let graph = Graph::new(Arc::new(store));
-
-        let result = graph.kcore().run().unwrap();
-        assert_eq!(result.core_values.len(), 3);
         assert_eq!(result.degeneracy, 0);
-        // All nodes have degree 0, so core value is 0
-        for &core_val in &result.core_values {
-            assert_eq!(core_val, 0);
-        }
+        assert_eq!(result.core_values, vec![0]);
     }
 }

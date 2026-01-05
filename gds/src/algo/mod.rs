@@ -94,7 +94,7 @@ pub mod algorithms;
 // Module structure
 
 pub mod all_shortest_paths;
-pub mod approx_max_k_cut;
+pub mod approx_max_kcut;
 pub mod articulation_points;
 pub mod astar;
 pub mod bellman_ford;
@@ -102,8 +102,8 @@ pub mod betweenness;
 pub mod bfs;
 pub mod bridges;
 pub mod celf;
-pub mod closeness;
 pub mod conductance;
+pub mod closeness;
 pub mod dag_longest_path;
 pub mod degree_centrality;
 pub mod delta_stepping;
@@ -121,6 +121,7 @@ pub mod leiden;
 pub mod local_clustering_coefficient;
 pub mod louvain;
 pub mod modularity;
+pub mod modularity_optimization;
 pub mod msbfs;
 pub mod pagerank;
 pub mod prize_collecting_steiner_tree;
@@ -131,7 +132,7 @@ pub mod spanning_tree;
 pub mod steiner_tree;
 pub mod topological_sort;
 pub mod traversal;
-pub mod triangle_count;
+pub mod triangle;
 pub mod wcc;
 pub mod yens;
 
@@ -161,10 +162,6 @@ pub use bridges::{
     BridgesStorageRuntime,
 };
 pub use celf::{CELFAlgorithmSpec, CELFComputationRuntime, CELFConfig, CELFResult};
-pub use closeness::{
-    ClosenessCentralityAlgorithmSpec, ClosenessCentralityComputationRuntime,
-    ClosenessCentralityConfig, ClosenessCentralityResult, ClosenessCentralityStorageRuntime,
-};
 pub use degree_centrality::{
     DEGREE_CENTRALITYAlgorithmSpec, DegreeCentralityComputationRuntime, DegreeCentralityConfig,
     DegreeCentralityResult, DegreeCentralityStorageRuntime,
@@ -173,10 +170,18 @@ pub use delta_stepping::{
     DELTA_STEPPINGAlgorithmSpec, DeltaSteppingComputationRuntime, DeltaSteppingConfig,
     DeltaSteppingResult, DeltaSteppingStorageRuntime,
 };
+pub use approx_max_kcut::{
+	ApproxMaxKCutComputationRuntime, ApproxMaxKCutConfig, ApproxMaxKCutResult,
+};
 pub use dfs::{DFSAlgorithmSpec, DfsComputationRuntime, DfsConfig, DfsResult, DfsStorageRuntime};
 pub use dijkstra::{
     AllTargets, DIJKSTRAAlgorithmSpec, DijkstraComputationRuntime, DijkstraConfig, DijkstraResult,
     DijkstraStorageRuntime, ManyTargets, PathFindingResult, SingleTarget, Targets, TraversalState,
+};
+pub use closeness::{
+    ClosenessCentralityAlgorithmSpec, ClosenessCentralityComputationResult,
+    ClosenessCentralityComputationRuntime, ClosenessCentralityConfig, ClosenessCentralityResult,
+    ClosenessCentralityStorageRuntime,
 };
 pub use harmonic::{
     HarmonicAlgorithmSpec, HarmonicComputationRuntime, HarmonicConfig, HarmonicResult,
@@ -229,11 +234,11 @@ pub use traversal::{
     Aggregator, ExitPredicate, ExitPredicateResult, FollowExitPredicate, OneHopAggregator,
     TargetExitPredicate,
 };
-pub use triangle_count::{
+pub use triangle::{
     TriangleCountAlgorithmSpec, TriangleCountComputationRuntime, TriangleCountConfig,
     TriangleCountResult, TriangleCountStorageRuntime,
 };
-pub use wcc::{WccAlgorithmSpec, WccComputationRuntime, WccConfig, WccResult, WccStorageRuntime};
+pub use wcc::{WCCAlgorithmSpec, WccComputationRuntime, WccConfig, WccResult, WccStorageRuntime};
 pub use yens::{
     CandidatePathsPriorityQueue, MutablePathResult, RelationshipFilterer, YENSAlgorithmSpec,
     YensComputationRuntime, YensConfig, YensResult, YensStorageRuntime,

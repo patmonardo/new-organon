@@ -1,135 +1,180 @@
 //! SCC Computation Runtime
 //!
-//! This module implements a correct Strongly Connected Components (SCC)
-//! computation using an iterative Kosaraju algorithm.
-//!
-//! Notes:
-//! - We intentionally implement the algorithm directly (no recursive DFS) to
-//!   avoid stack overflows on large graphs.
-//! - We do not copy Neo4j's Java source; we align behavior/semantics.
+//! Implements an iterative, stack-based SCC algorithm (path-based / Tarjan-family)
+//! suitable for large graphs without relying on recursion.
 
+use crate::collections::HugeLongArray;
 use crate::concurrency::TerminationFlag;
+use crate::core::utils::paged::HugeLongArrayStack;
+use crate::core::utils::progress::ProgressTracker;
+use crate::types::graph::Graph;
 
-/// SCC computation result
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SccComputationResult {
-    /// Component ID for each node
     pub components: Vec<u64>,
-    /// Number of strongly connected components found
     pub component_count: usize,
-    /// Computation time in milliseconds
     pub computation_time_ms: u64,
 }
 
-impl SccComputationResult {
-    /// Create a new SCC computation result
-    pub fn new(components: Vec<u64>, component_count: usize, computation_time_ms: u64) -> Self {
-        Self {
-            components,
-            component_count,
-            computation_time_ms,
-        }
+pub struct SccComputationRuntime {}
+
+impl Default for SccComputationRuntime {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
-/// SCC computation runtime.
-///
-/// The runtime is currently stateless; it exists to mirror the
-/// storage/computation split used across procedures.
-#[derive(Debug, Default, Clone)]
-pub struct SccComputationRuntime;
-
 impl SccComputationRuntime {
     pub fn new() -> Self {
-        Self
+        Self {}
     }
 
-    /// Compute SCCs given both outgoing and incoming adjacency lists.
-    ///
-    /// Returns a vector mapping node index → component id, and the number of components.
     pub fn compute(
         &mut self,
-        outgoing: &[Vec<usize>],
-        incoming: &[Vec<usize>],
+        graph: &dyn Graph,
+        progress_tracker: &mut dyn ProgressTracker,
         termination_flag: &TerminationFlag,
     ) -> Result<(Vec<u64>, usize), String> {
-        let node_count = outgoing.len();
-        if incoming.len() != node_count {
-            return Err("incoming adjacency size mismatch".to_string());
+        let node_count = graph.node_count();
+        if node_count == 0 {
+            return Ok((Vec::new(), 0));
         }
 
-        // First pass: compute finishing order on the original graph.
-        let mut visited = vec![false; node_count];
-        let mut order: Vec<usize> = Vec::with_capacity(node_count);
+        let mut index = HugeLongArray::new(node_count);
+        let mut component = HugeLongArray::new(node_count);
+        index.fill(-1);
+        component.fill(-1);
 
-        for start in 0..node_count {
-            if !termination_flag.running() {
-                return Err("Algorithm terminated by user".to_string());
-            }
-            if visited[start] {
+        let mut stack = HugeLongArrayStack::new(node_count);
+        let mut boundaries = HugeLongArrayStack::new(node_count);
+
+        let fallback = graph.default_property_value();
+
+        let mut next_index: i64 = 0;
+        let mut next_component_id: i64 = 0;
+
+        const NODES_LOG_BATCH: usize = 256;
+        let mut logged_batch: usize = 0;
+
+        #[derive(Debug)]
+        struct Frame {
+            node: usize,
+            neighbors: Vec<usize>,
+            next_neighbor: usize,
+        }
+
+        for start_node in 0..node_count {
+            if index.get(start_node) != -1 {
                 continue;
             }
 
-            // Iterative DFS with explicit neighbor index.
-            let mut stack: Vec<(usize, usize)> = Vec::new();
-            visited[start] = true;
-            stack.push((start, 0));
+            let mut frames: Vec<Frame> = Vec::new();
 
-            while let Some((node, next_idx)) = stack.pop() {
+            // Enter start node
+            index.set(start_node, next_index);
+            next_index += 1;
+            stack.push(start_node as i64);
+            boundaries.push(index.get(start_node));
+            logged_batch += 1;
+
+            let neighbors: Vec<usize> = graph
+                .stream_relationships(start_node as i64, fallback)
+                .map(|c| c.target_id())
+                .filter(|t| *t >= 0)
+                .map(|t| t as usize)
+                .collect();
+            frames.push(Frame {
+                node: start_node,
+                neighbors,
+                next_neighbor: 0,
+            });
+
+            loop {
                 if !termination_flag.running() {
-                    return Err("Algorithm terminated by user".to_string());
+                    return Err("terminated".to_string());
                 }
 
-                if next_idx < outgoing[node].len() {
-                    // Re-push current frame with advanced cursor.
-                    stack.push((node, next_idx + 1));
+                if logged_batch >= NODES_LOG_BATCH {
+                    progress_tracker.log_progress(logged_batch);
+                    logged_batch = 0;
+                }
 
-                    let neighbor = outgoing[node][next_idx];
-                    if neighbor < node_count && !visited[neighbor] {
-                        visited[neighbor] = true;
-                        stack.push((neighbor, 0));
+                let Some(top) = frames.last_mut() else {
+                    break;
+                };
+
+                if top.next_neighbor < top.neighbors.len() {
+                    let w = top.neighbors[top.next_neighbor];
+                    top.next_neighbor += 1;
+
+                    if index.get(w) == -1 {
+                        // Descend to unvisited neighbor
+                        index.set(w, next_index);
+                        next_index += 1;
+                        stack.push(w as i64);
+                        boundaries.push(index.get(w));
+                        logged_batch += 1;
+
+                        let w_neighbors: Vec<usize> = graph
+                            .stream_relationships(w as i64, fallback)
+                            .map(|c| c.target_id())
+                            .filter(|t| *t >= 0)
+                            .map(|t| t as usize)
+                            .collect();
+
+                        frames.push(Frame {
+                            node: w,
+                            neighbors: w_neighbors,
+                            next_neighbor: 0,
+                        });
+                        continue;
                     }
-                } else {
-                    // All neighbors processed.
-                    order.push(node);
+
+                    // If neighbor is discovered but not yet assigned, adjust boundaries.
+                    if component.get(w) == -1 {
+                        let w_index = index.get(w);
+                        while !boundaries.is_empty() && boundaries.peek() > w_index {
+                            boundaries.pop();
+                        }
+                    }
+
+                    continue;
                 }
+
+                // Finished exploring `top.node`.
+                let v = top.node;
+                let v_index = index.get(v);
+
+                if !boundaries.is_empty() && boundaries.peek() == v_index {
+                    boundaries.pop();
+
+                    loop {
+                        let w = stack.pop() as usize;
+                        component.set(w, next_component_id);
+                        if w == v {
+                            break;
+                        }
+                    }
+                    next_component_id += 1;
+                }
+
+                frames.pop();
             }
         }
 
-        // Second pass: traverse the reversed graph in reverse finishing order.
-        let mut assigned = vec![false; node_count];
-        let mut components: Vec<u64> = vec![u64::MAX; node_count];
-        let mut component_id: u64 = 0;
-
-        for &start in order.iter().rev() {
-            if !termination_flag.running() {
-                return Err("Algorithm terminated by user".to_string());
-            }
-            if assigned[start] {
-                continue;
-            }
-
-            let mut stack: Vec<usize> = vec![start];
-            assigned[start] = true;
-            components[start] = component_id;
-
-            while let Some(node) = stack.pop() {
-                if !termination_flag.running() {
-                    return Err("Algorithm terminated by user".to_string());
-                }
-
-                for &neighbor in &incoming[node] {
-                    if neighbor < node_count && !assigned[neighbor] {
-                        assigned[neighbor] = true;
-                        components[neighbor] = component_id;
-                        stack.push(neighbor);
-                    }
-                }
-            }
-
-            component_id += 1;
+        if logged_batch > 0 {
+            progress_tracker.log_progress(logged_batch);
         }
 
-        Ok((components, component_id as usize))
+        let mut components: Vec<u64> = vec![0u64; node_count];
+        for i in 0..node_count {
+            let c = component.get(i);
+            if c < 0 {
+                return Err(format!("internal error: node {i} was not assigned to a component"));
+            }
+            components[i] = c as u64;
+        }
+
+        Ok((components, next_component_id as usize))
     }
 }

@@ -63,7 +63,7 @@ mod enabled {
         let request = json!({
             "graphName": graph_name,
             "sourceNode": 0,
-            "targetNodes": [3, 8],
+            "targetNode": 3,
             "weightProperty": "weight",
             "direction": "outgoing",
             "heuristic": "euclidean",

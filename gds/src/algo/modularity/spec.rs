@@ -1,34 +1,17 @@
-//! Modularity specification: configuration and results
+use serde::{Deserialize, Serialize};
 
-/// Configuration for modularity computation
-#[derive(Clone, Debug)]
-pub struct ModularityConfig {
-    /// Community property name to evaluate
-    pub community_property: String,
-}
-
-impl Default for ModularityConfig {
-    fn default() -> Self {
-        Self {
-            community_property: "community".to_string(),
-        }
-    }
-}
-
-/// Modularity score for a single community
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct CommunityModularity {
     pub community_id: u64,
     pub modularity: f64,
 }
 
-/// Result of modularity computation
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModularityResult {
-    /// Total modularity score across all communities
+    pub node_count: usize,
+    /// Sum of all observed relationship weights across node adjacency (i.e. $2m$ for undirected graphs).
+    pub total_relationship_weight: f64,
     pub total_modularity: f64,
-    /// Number of communities
     pub community_count: usize,
-    /// Modularity score per community
     pub community_modularities: Vec<CommunityModularity>,
 }

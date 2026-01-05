@@ -243,7 +243,7 @@ impl Graph {
     }
 
     /// Approximate maximum k-cut partitioning.
-    pub fn approx_max_k_cut(&self) -> ApproxMaxKCutFacade {
+    pub fn approx_max_kcut(&self) -> ApproxMaxKCutFacade {
         ApproxMaxKCutFacade::new(Arc::clone(&self.store))
     }
 

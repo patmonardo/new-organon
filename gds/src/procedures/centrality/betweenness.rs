@@ -34,12 +34,17 @@ use crate::core::utils::progress::{
 use crate::core::utils::progress::ProgressTracker;
 use crate::mem::MemoryRange;
 use crate::algo::betweenness::BetweennessCentralityComputationRuntime;
+use crate::concurrency::TerminationFlag;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use rand::seq::SliceRandom;
+use rand::SeedableRng;
+use rand_chacha::ChaCha8Rng;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
@@ -77,6 +82,10 @@ pub struct BetweennessCentralityFacade {
     graph_store: Arc<DefaultGraphStore>,
     direction: String,
     concurrency: usize,
+    relationship_weight_property: Option<String>,
+    sampling_strategy: String,
+    sampling_size: Option<usize>,
+    random_seed: u64,
     task_registry: Arc<dyn TaskRegistryFactory>,
 }
 
@@ -86,6 +95,10 @@ impl BetweennessCentralityFacade {
             graph_store,
             direction: "both".to_string(),
             concurrency: 4,
+            relationship_weight_property: None,
+            sampling_strategy: "all".to_string(),
+            sampling_size: None,
+            random_seed: 42,
             task_registry: Arc::new(EmptyTaskRegistryFactory),
         }
     }
@@ -99,6 +112,38 @@ impl BetweennessCentralityFacade {
     /// Set concurrency level for parallel computation.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
         self.concurrency = concurrency;
+        self
+    }
+
+    /// Optional relationship weight property.
+    ///
+    /// When set, betweenness runs the weighted Brandes variant (Dijkstra forward phase).
+    pub fn relationship_weight_property(mut self, property: Option<String>) -> Self {
+        self.relationship_weight_property = property.filter(|p| !p.trim().is_empty());
+        self
+    }
+
+    /// Sampling strategy for selecting source nodes.
+    ///
+    /// Supported values:
+    /// - "all" (default): use all nodes as sources
+    /// - "random_degree": sample sources weighted by node degree
+    pub fn sampling_strategy(mut self, strategy: &str) -> Self {
+        self.sampling_strategy = strategy.to_string();
+        self
+    }
+
+    /// Optional sampling size (number of source nodes to process).
+    ///
+    /// If not set, all nodes are used.
+    pub fn sampling_size(mut self, size: Option<usize>) -> Self {
+        self.sampling_size = size;
+        self
+    }
+
+    /// Seed for sampling RNG.
+    pub fn random_seed(mut self, seed: u64) -> Self {
+        self.random_seed = seed;
         self
     }
 
@@ -131,6 +176,15 @@ impl BetweennessCentralityFacade {
                 ),
             );
         }
+        if let Some(size) = self.sampling_size {
+            if size == 0 {
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(
+                        "sampling_size must be positive".to_string(),
+                    ),
+                );
+            }
+        }
         Ok(())
     }
 
@@ -146,24 +200,84 @@ impl BetweennessCentralityFacade {
     fn compute_scores(&self) -> Result<(Vec<f64>, std::time::Duration)> {
         let start = Instant::now();
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, self.orientation())
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+        // For weighted traversal, we must select the relationship property across all rel types.
+        let rel_types: HashSet<RelationshipType> = self.graph_store.relationship_types();
+        let graph_view = if let Some(weight_prop) = &self.relationship_weight_property {
+            let selectors: HashMap<RelationshipType, String> = rel_types
+                .iter()
+                .map(|t| (t.clone(), weight_prop.clone()))
+                .collect();
+            self.graph_store
+                .get_graph_with_types_selectors_and_orientation(
+                    &rel_types,
+                    &selectors,
+                    self.orientation(),
+                )
+                .map_err(|e| {
+                    crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+                })?
+        } else {
+            self.graph_store
+                .get_graph_with_types_and_orientation(&rel_types, self.orientation())
+                .map_err(|e| {
+                    crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+                })?
+        };
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
             return Ok((Vec::new(), start.elapsed()));
         }
 
+        let sources: Vec<usize> = {
+            let requested = self.sampling_size.unwrap_or(node_count).min(node_count);
+            let strategy_norm = self
+                .sampling_strategy
+                .to_lowercase()
+                .replace('_', "")
+                .replace('-', "");
+            if requested == node_count {
+                (0..node_count).collect()
+            } else if strategy_norm == "randomdegree" {
+                // Degree-weighted sampling without replacement.
+                // Java parity direction: "randomDegree" selection strategy.
+                let mut rng = ChaCha8Rng::seed_from_u64(self.random_seed);
+                let mut heap: std::collections::BinaryHeap<SampleItem> = std::collections::BinaryHeap::new();
+                for node_idx in 0..node_count {
+                    let node_id = match Self::checked_node_id(node_idx) {
+                        Ok(value) => value,
+                        Err(_) => continue,
+                    };
+                    let degree = graph_view.degree(node_id).max(1) as f64;
+                    let mut u: f64 = rand::Rng::gen(&mut rng);
+                    if !u.is_finite() || u <= 0.0 {
+                        u = f64::MIN_POSITIVE;
+                    }
+                    // Efraimidis–Spirakis: key = -ln(u)/w ; pick K smallest keys.
+                    let key = -u.ln() / degree;
+
+                    heap.push(SampleItem { key, node: node_idx });
+                    if heap.len() > requested {
+                        heap.pop();
+                    }
+                }
+
+                heap.into_iter().map(|s| s.node).collect()
+            } else {
+                // Uniform random sampling without replacement.
+                let mut rng = ChaCha8Rng::seed_from_u64(self.random_seed);
+                let mut nodes: Vec<usize> = (0..node_count).collect();
+                nodes.shuffle(&mut rng);
+                nodes.truncate(requested);
+                nodes
+            }
+        };
+
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("betweenness".to_string(), node_count),
+            Tasks::leaf_with_volume("betweenness".to_string(), sources.len()),
             self.concurrency,
         );
-        progress_tracker.begin_subtask_with_volume(node_count);
+        progress_tracker.begin_subtask_with_volume(sources.len());
 
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {
@@ -180,16 +294,66 @@ impl BetweennessCentralityFacade {
                 .collect()
         };
 
+        let get_neighbors_weighted = |node_idx: usize| -> Vec<(usize, f64)> {
+            let node_id = match Self::checked_node_id(node_idx) {
+                Ok(value) => value,
+                Err(_) => return Vec::new(),
+            };
+
+            graph_view
+                .stream_relationships(node_id, fallback)
+                .map(|cursor| (cursor.target_id(), cursor.property()))
+                .filter(|(target, _w)| *target >= 0)
+                .map(|(target, w)| (target as usize, w))
+                .collect()
+        };
+
         let divisor = if self.orientation() == Orientation::Undirected {
             2.0
         } else {
             1.0
         };
 
-        let mut runtime = BetweennessCentralityComputationRuntime::new(node_count);
-        let result = runtime.compute(node_count, divisor, &get_neighbors);
+        let progress_handle = progress_tracker.clone();
+        let on_source_done = Arc::new(move || {
+            let mut tracker = progress_handle.clone();
+            tracker.log_progress(1);
+        });
 
-        progress_tracker.log_progress(node_count);
+        let termination = TerminationFlag::running_true();
+
+        let result = if self.relationship_weight_property.is_some() {
+            BetweennessCentralityComputationRuntime::compute_parallel_weighted(
+                node_count,
+                &sources,
+                divisor,
+                self.concurrency,
+                &termination,
+                on_source_done,
+                &get_neighbors_weighted,
+            )
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "Betweenness terminated: {e}"
+                ))
+            })?
+        } else {
+            BetweennessCentralityComputationRuntime::compute_parallel_unweighted(
+                node_count,
+                &sources,
+                divisor,
+                self.concurrency,
+                &termination,
+                on_source_done,
+                &get_neighbors,
+            )
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "Betweenness terminated: {e}"
+                ))
+            })?
+        };
+
         progress_tracker.end_subtask();
 
         Ok((result.centralities, start.elapsed()))
@@ -352,23 +516,66 @@ impl BetweennessCentralityFacade {
     pub fn estimate_memory(&self) -> MemoryRange {
         let node_count = self.graph_store.node_count();
 
-        // Memory for betweenness scores (one f64 per node)
+        // Global scores (atomic f64 per node).
         let scores_memory = node_count * std::mem::size_of::<f64>();
 
-        // Memory for Brandes algorithm structures (stacks, queues, distances)
-        // Brandes algorithm uses: predecessor lists, distance arrays, dependency arrays
-        let brandes_memory = node_count * 8 * 3; // Rough estimate for algorithm structures
+        // Per-worker state (approx):
+        // - sigma: u64 per node
+        // - delta: f64 per node
+        // - distance: i32 per node (unweighted) or f64 per node (weighted)
+        // - stack/queue/visited: usize per node
+        // - predecessors: worst-case proportional to relationships (very graph dependent)
+        let per_node_base = std::mem::size_of::<u64>()
+            + std::mem::size_of::<f64>()
+            + if self.relationship_weight_property.is_some() {
+                std::mem::size_of::<f64>()
+            } else {
+                std::mem::size_of::<i32>()
+            };
+        let per_node_worklists = 3 * std::mem::size_of::<usize>();
 
-        // Memory for BFS computations per source node
-        let bfs_memory = node_count * 4; // Queues and visited arrays
+        let per_worker = node_count * (per_node_base + per_node_worklists);
+        let workers = self.concurrency.max(1);
 
-        // Additional overhead for computation (temporary vectors, etc.)
-        let computation_overhead = 1024 * 1024; // 1MB for temporary structures
+        // Predecessors are the dominant cost in dense graphs; approximate it using relationship count.
+        let preds_estimate = self.graph_store.relationship_count() * std::mem::size_of::<usize>();
 
-        let total_memory = scores_memory + brandes_memory + bfs_memory + computation_overhead;
-        let total_with_overhead = total_memory + (total_memory / 5); // Add 20% overhead
+        // Add fixed overhead.
+        let overhead = 1024 * 1024;
 
-        MemoryRange::of_range(total_memory, total_with_overhead)
+        let min = scores_memory + workers * per_worker + overhead;
+        let max = min + preds_estimate + (min / 5);
+
+        MemoryRange::of_range(min, max)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct SampleItem {
+    key: f64,
+    node: usize,
+}
+
+impl Eq for SampleItem {}
+
+impl PartialEq for SampleItem {
+    fn eq(&self, other: &Self) -> bool {
+        self.key.to_bits() == other.key.to_bits() && self.node == other.node
+    }
+}
+
+impl Ord for SampleItem {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        // Max-heap by key.
+        self.key
+            .total_cmp(&other.key)
+            .then_with(|| self.node.cmp(&other.node))
+    }
+}
+
+impl PartialOrd for SampleItem {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 

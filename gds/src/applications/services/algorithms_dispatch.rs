@@ -98,8 +98,8 @@ pub fn handle_hits(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::algorithms::centrality::hits::handle_hits(request, catalog)
 }
 
-pub fn handle_approx_max_k_cut(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
-    crate::applications::algorithms::community::approx_max_k_cut::handle_approx_max_k_cut(
+pub fn handle_approx_max_kcut(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::approx_max_kcut::handle_approx_max_kcut(
         request, catalog,
     )
 }

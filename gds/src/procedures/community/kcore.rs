@@ -104,7 +104,7 @@ impl KCoreFacade {
                 .collect()
         };
 
-        let mut runtime = KCoreComputationRuntime::new();
+        let mut runtime = KCoreComputationRuntime::new().concurrency(self.concurrency);
         let result = runtime.compute(node_count, get_neighbors);
         let elapsed_ms = start.elapsed().as_millis() as u64;
 

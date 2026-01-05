@@ -1,21 +1,33 @@
-//! WCC Algorithm Specification
+//! WCC Algorithm Specification (executor integration)
+
 use super::computation::WccComputationRuntime;
 use super::storage::WccStorageRuntime;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::AlgorithmError;
-use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WccConfig {
+    #[serde(default = "default_concurrency")]
     pub concurrency: usize,
+
+    /// Optional threshold over relationship property values.
+    /// Only relationships with `property > threshold` are considered.
+    #[serde(default)]
+    pub threshold: Option<f64>,
+}
+
+fn default_concurrency() -> usize {
+    4
 }
 
 impl Default for WccConfig {
     fn default() -> Self {
-        Self { concurrency: 4 }
+        Self {
+            concurrency: default_concurrency(),
+            threshold: None,
+        }
     }
 }
 
@@ -25,44 +37,43 @@ pub struct WccResult {
     pub component_count: usize,
 }
 
-pub struct WccAlgorithmSpec {
-    graph_name: String,
-}
-
-impl WccAlgorithmSpec {
-    pub fn new(graph_name: String) -> Self {
-        Self { graph_name }
-    }
-
-    pub fn graph_name(&self) -> &str {
-        &self.graph_name
-    }
-}
-
 define_algorithm_spec! {
     name: "wcc",
     output_type: WccResult,
     projection_hint: Dense,
     modes: [Stream, Stats],
+
     execute: |_self, graph_store, config_input, _context| {
         let parsed_config: WccConfig = serde_json::from_value(config_input.clone())
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to parse config: {}", e)))?;
 
-        // Create runtimes
-        let storage = WccStorageRuntime::new(parsed_config.concurrency);
-        let mut computation = WccComputationRuntime::new();
+        if parsed_config.concurrency == 0 {
+            return Err(AlgorithmError::Execution("concurrency must be > 0".into()));
+        }
 
-        // Undirected view over all types by default
-        let rel_types: std::collections::HashSet<RelationshipType> = std::collections::HashSet::new();
-        let graph_view = graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to obtain graph view: {}", e)))?;
+        let storage = WccStorageRuntime::new(parsed_config.concurrency);
+        let mut computation = WccComputationRuntime::new()
+            .concurrency(parsed_config.concurrency)
+            .threshold(parsed_config.threshold);
 
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("wcc".to_string(), graph_view.relationship_count()),
+            Tasks::leaf_with_volume("wcc".to_string(), graph_store.relationship_count()),
             parsed_config.concurrency,
         );
-        let result = storage.compute_wcc(&mut computation, graph_view.as_ref(), &mut progress_tracker);
-        Ok(WccResult { components: result.components, component_count: result.component_count })
+        let termination_flag = crate::concurrency::TerminationFlag::default();
+
+        let result = storage
+            .compute_wcc(
+                &mut computation,
+                graph_store,
+                &mut progress_tracker,
+                &termination_flag,
+            )
+            .map_err(AlgorithmError::Execution)?;
+
+        Ok(WccResult {
+            components: result.components,
+            component_count: result.component_count,
+        })
     }
 }

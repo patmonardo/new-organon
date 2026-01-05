@@ -1,18 +1,18 @@
-//! K-Means clustering (community detection on node feature vectors)
+//! K-Means clustering (Java GDS parity, simplified for this crate)
 //!
-//! Clusters nodes based on an array-valued node property (e.g. an embedding).
+//! Public API is consumed by:
+//! - `gds/src/procedures/community/kmeans.rs`
+//! - `gds/src/applications/algorithms/community/kmeans.rs`
 //!
-//! This is based on Neo4j GDS `gds.alpha.kmeans` / `gds.kmeans` style semantics:
-//! - `k` clusters
-//! - initialization via Uniform sampling or KMeans++
-//! - iterative Lloyd updates
-//! - optional silhouette computation (naive O(n^2) in this Rust port)
+//! We keep `KMeansConfig`, `KMeansResult`, `KMeansSamplerType`, and
+//! `KMeansComputationRuntime` stable.
 
 pub mod computation;
-pub mod spec;
-
 #[cfg(test)]
 pub mod integration_tests;
+pub mod spec;
+pub mod storage;
 
 pub use computation::KMeansComputationRuntime;
 pub use spec::{KMeansConfig, KMeansResult, KMeansSamplerType};
+pub use storage::KMeansStorageRuntime;

@@ -5,8 +5,8 @@
 
 use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::algo::approx_max_k_cut::computation::ApproxMaxKCutComputationRuntime;
-use crate::algo::approx_max_k_cut::spec::ApproxMaxKCutConfig;
+use crate::algo::approx_max_kcut::computation::ApproxMaxKCutComputationRuntime;
+use crate::algo::approx_max_kcut::spec::ApproxMaxKCutConfig;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::projection::orientation::Orientation;
@@ -152,7 +152,7 @@ impl ApproxMaxKCutFacade {
         }
 
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("approx_max_k_cut".to_string(), self.iterations),
+            Tasks::leaf_with_volume("approx_max_kcut".to_string(), self.iterations),
             self.concurrency,
         );
         progress_tracker.begin_subtask_with_volume(self.iterations);
@@ -323,7 +323,7 @@ mod tests {
         let graph = Graph::new(Arc::new(store));
 
         let rows: Vec<_> = graph
-            .approx_max_k_cut()
+            .approx_max_kcut()
             .k(2)
             .iterations(5)
             .random_seed(42)
@@ -344,7 +344,7 @@ mod tests {
         let store = store_from_edges(4, &[(0, 1), (1, 2), (2, 3)]);
         let graph = Graph::new(Arc::new(store));
 
-        let stats = graph.approx_max_k_cut().k(2).iterations(3).stats().unwrap();
+        let stats = graph.approx_max_kcut().k(2).iterations(3).stats().unwrap();
 
         assert_eq!(stats.k, 2);
         assert_eq!(stats.node_count, 4);

@@ -15,6 +15,7 @@ use crate::procedures::traits::Result;
 use crate::algo::label_propagation::{LabelPropComputationRuntime, LabelPropResult};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
+use crate::types::default_value::LONG_DEFAULT_FALLBACK;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
@@ -116,13 +117,16 @@ impl LabelPropagationFacade {
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
+            let elapsed = start.elapsed();
             return Ok((
                 LabelPropResult {
                     labels: Vec::new(),
                     did_converge: true,
                     ran_iterations: 0,
+                    node_count: 0,
+                    execution_time: elapsed,
                 },
-                start.elapsed().as_millis() as u64,
+                elapsed.as_millis() as u64,
             ));
         }
 
@@ -148,43 +152,59 @@ impl LabelPropagationFacade {
             vec![1.0; node_count]
         };
 
-        // Seed labels
-        let seeds: Option<Vec<u64>> = if let Some(key) = &self.seed_property {
-            if graph_view.available_node_properties().contains(key) {
-                let pv = graph_view
-                    .node_properties(key)
-                    .expect("property exists by available_node_properties");
-                Some(
-                    (0..node_count)
-                        .map(|i| pv.long_value(i as u64).unwrap_or(0).max(0) as u64)
-                        .collect(),
-                )
-            } else {
-                None
-            }
-        } else {
-            None
+        // Seed labels (Java InitStep parity):
+        // - If a seedProperty exists and has a value: use it.
+        // - Otherwise: label = maxLabelId + originalNodeId + 1.
+        // This avoids collisions with node IDs while keeping determinism.
+        let seeds: Vec<u64> = {
+            let seed_pv = self.seed_property.as_ref().and_then(|key| {
+                if graph_view.available_node_properties().contains(key) {
+                    graph_view.node_properties(key)
+                } else {
+                    None
+                }
+            });
+
+            let max_label_id: i64 = seed_pv
+                .as_deref()
+                .and_then(|pv| pv.get_max_long_property_value())
+                .unwrap_or(-1);
+
+            (0..node_count)
+                .map(|i| {
+                    let node_id = i as i64;
+                    let original = graph_view.to_original_node_id(node_id).unwrap_or(node_id);
+
+                    match seed_pv.as_deref() {
+                        Some(pv) if pv.has_value(i as u64) => {
+                            pv.long_value(i as u64).unwrap_or(LONG_DEFAULT_FALLBACK) as u64
+                        }
+                        _ => (max_label_id + original + 1) as u64,
+                    }
+                })
+                .collect()
         };
 
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<(usize, f64)> {
             let node_id: NodeId = node_idx as i64;
             graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| cursor.target_id())
-                .filter(|target| *target >= 0)
-                .map(|target| (target as usize, 1.0f64))
+                .stream_relationships_weighted(node_id, fallback)
+                .map(|cursor| (cursor.target_id(), cursor.weight()))
+                .filter(|(target, _w)| *target >= 0)
+                .map(|(target, w)| (target as usize, w))
                 .collect()
         };
 
         let mut runtime =
-            LabelPropComputationRuntime::new(node_count, self.max_iterations).with_weights(weights);
-        if let Some(seeds) = seeds {
-            runtime = runtime.with_seeds(seeds);
-        }
+            LabelPropComputationRuntime::new(node_count, self.max_iterations)
+                .concurrency(self.concurrency)
+                .with_weights(weights)
+                .with_seeds(seeds);
 
-        let result = runtime.compute(node_count, get_neighbors);
-        let elapsed_ms = start.elapsed().as_millis() as u64;
+        let result = runtime.compute(node_count as u64, get_neighbors);
+        let elapsed = start.elapsed();
+        let elapsed_ms = elapsed.as_millis() as u64;
 
         progress_tracker.log_progress(self.max_iterations as usize);
         progress_tracker.end_subtask();
@@ -194,6 +214,8 @@ impl LabelPropagationFacade {
                 labels: result.labels,
                 did_converge: result.did_converge,
                 ran_iterations: result.ran_iterations,
+                node_count,
+                execution_time: elapsed,
             },
             elapsed_ms,
         ))

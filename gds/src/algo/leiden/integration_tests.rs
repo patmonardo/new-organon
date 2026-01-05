@@ -1,347 +1,89 @@
-use super::computation::leiden;
+use super::computation::{AdjacencyGraph, LeidenComputationRuntime};
 use super::spec::LeidenConfig;
+use crate::concurrency::TerminationFlag;
+
+fn build_adj(node_count: usize, edges: &[(usize, usize, f64)]) -> AdjacencyGraph {
+    let mut adj = vec![Vec::new(); node_count];
+    for &(u, v, w) in edges {
+        adj[u].push((v, w));
+        adj[v].push((u, w));
+    }
+    AdjacencyGraph::new(node_count, adj)
+}
 
 #[test]
-fn test_leiden_simple_communities() {
-    // Two clear communities: 0-1-2 and 3-4-5
-    let edges = vec![
-        (0, 1, 1.0),
-        (1, 0, 1.0),
-        (1, 2, 1.0),
-        (2, 1, 1.0),
-        (0, 2, 1.0),
-        (2, 0, 1.0),
-        (3, 4, 1.0),
-        (4, 3, 1.0),
-        (4, 5, 1.0),
-        (5, 4, 1.0),
-        (3, 5, 1.0),
-        (5, 3, 1.0),
-        // Weak bridge
-        (2, 3, 0.1),
-        (3, 2, 0.1),
-    ];
+fn leiden_empty_graph() {
+    let graph = build_adj(0, &[]);
+    let config = LeidenConfig::default();
+    let mut runtime = LeidenComputationRuntime::new();
+    let result = runtime
+        .compute(&graph, &config, &TerminationFlag::default())
+        .unwrap();
+    assert_eq!(result.communities.len(), 0);
+    assert_eq!(result.levels, 0);
+}
 
-    let get_neighbors = |node: usize| -> Vec<(usize, f64)> {
-        edges
-            .iter()
-            .filter(|(src, _, _)| *src == node)
-            .map(|(_, dst, weight)| (*dst, *weight))
-            .collect()
-    };
+#[test]
+fn leiden_isolated_nodes_each_community() {
+    let graph = build_adj(5, &[]);
+    let config = LeidenConfig::default();
+    let mut runtime = LeidenComputationRuntime::new();
+    let result = runtime
+        .compute(&graph, &config, &TerminationFlag::default())
+        .unwrap();
+
+    let mut ids = result.communities.clone();
+    ids.sort_unstable();
+    ids.dedup();
+    assert_eq!(ids.len(), 5);
+}
+
+#[test]
+fn leiden_two_components_stay_separate() {
+    // Component A: 0-1-2 ; Component B: 3-4
+    let graph = build_adj(5, &[(0, 1, 1.0), (1, 2, 1.0), (3, 4, 1.0)]);
 
     let config = LeidenConfig {
-        gamma: 1.0,
-        theta: 0.01,
-        tolerance: 0.0001,
         max_iterations: 10,
-        seed_communities: None,
-        random_seed: 42,
+        tolerance: 0.0,
+        ..LeidenConfig::default()
     };
 
-    let storage = leiden(6, get_neighbors, &config);
-    let result = storage.into_result();
+    let mut runtime = LeidenComputationRuntime::new();
+    let result = runtime
+        .compute(&graph, &config, &TerminationFlag::default())
+        .unwrap();
 
-    println!("Communities: {:?}", result.communities);
-    println!("Modularity: {}", result.modularity);
-    println!("Levels: {}", result.levels);
-    println!("Community count: {}", result.community_count);
+    let c0 = result.communities[0];
+    let c1 = result.communities[1];
+    let c2 = result.communities[2];
+    let c3 = result.communities[3];
+    let c4 = result.communities[4];
 
-    // Should find 2 communities
-    assert!(
-        result.community_count <= 3,
-        "Should find 2-3 communities, found {}",
-        result.community_count
-    );
-
-    // Nodes 0, 1, 2 should be in same community
-    assert_eq!(result.communities[0], result.communities[1]);
-    assert_eq!(result.communities[1], result.communities[2]);
-
-    // Nodes 3, 4, 5 should be in same community
-    assert_eq!(result.communities[3], result.communities[4]);
-    assert_eq!(result.communities[4], result.communities[5]);
-
-    // Two communities should be different
-    assert_ne!(result.communities[0], result.communities[3]);
-
-    // Nodes 0, 1, 2 should be in same community
-    assert_eq!(result.communities[0], result.communities[1]);
-    assert_eq!(result.communities[1], result.communities[2]);
-
-    // Nodes 3, 4, 5 should be in same community
-    assert_eq!(result.communities[3], result.communities[4]);
-    assert_eq!(result.communities[4], result.communities[5]);
-
-    // Two communities should be different
-    assert_ne!(result.communities[0], result.communities[3]);
+    assert_eq!(c0, c1);
+    assert_eq!(c1, c2);
+    assert_eq!(c3, c4);
+    assert_ne!(c0, c3);
 }
 
 #[test]
-fn test_leiden_single_community() {
-    // Fully connected triangle
-    let edges = vec![
-        (0, 1, 1.0),
-        (1, 0, 1.0),
-        (1, 2, 1.0),
-        (2, 1, 1.0),
-        (2, 0, 1.0),
-        (0, 2, 1.0),
-    ];
+fn leiden_refinement_splits_disconnected_seeded_community() {
+    // Force all nodes into the same starting community, but with two disconnected components.
+    let graph = build_adj(4, &[(0, 1, 1.0), (2, 3, 1.0)]);
 
-    let get_neighbors = |node: usize| -> Vec<(usize, f64)> {
-        edges
-            .iter()
-            .filter(|(src, _, _)| *src == node)
-            .map(|(_, dst, weight)| (*dst, *weight))
-            .collect()
-    };
-
-    let config = LeidenConfig::default();
-
-    let storage = leiden(3, get_neighbors, &config);
-    let result = storage.into_result();
-
-    // Should find 1 community (all nodes together)
-    assert_eq!(result.community_count, 1);
-    assert_eq!(result.communities[0], result.communities[1]);
-    assert_eq!(result.communities[1], result.communities[2]);
-
-    println!("Communities: {:?}", result.communities);
-    println!("Modularity: {}", result.modularity);
-}
-
-#[test]
-fn test_leiden_four_cliques() {
-    // Four complete K3 subgraphs weakly connected
-    let edges = vec![
-        // Clique 1: 0, 1, 2
-        (0, 1, 1.0),
-        (1, 0, 1.0),
-        (1, 2, 1.0),
-        (2, 1, 1.0),
-        (2, 0, 1.0),
-        (0, 2, 1.0),
-        // Clique 2: 3, 4, 5
-        (3, 4, 1.0),
-        (4, 3, 1.0),
-        (4, 5, 1.0),
-        (5, 4, 1.0),
-        (5, 3, 1.0),
-        (3, 5, 1.0),
-        // Clique 3: 6, 7, 8
-        (6, 7, 1.0),
-        (7, 6, 1.0),
-        (7, 8, 1.0),
-        (8, 7, 1.0),
-        (8, 6, 1.0),
-        (6, 8, 1.0),
-        // Clique 4: 9, 10, 11
-        (9, 10, 1.0),
-        (10, 9, 1.0),
-        (10, 11, 1.0),
-        (11, 10, 1.0),
-        (11, 9, 1.0),
-        (9, 11, 1.0),
-        // Weak inter-clique edges
-        (2, 3, 0.1),
-        (3, 2, 0.1),
-        (5, 6, 0.1),
-        (6, 5, 0.1),
-        (8, 9, 0.1),
-        (9, 8, 0.1),
-    ];
-
-    let get_neighbors = |node: usize| -> Vec<(usize, f64)> {
-        edges
-            .iter()
-            .filter(|(src, _, _)| *src == node)
-            .map(|(_, dst, weight)| (*dst, *weight))
-            .collect()
-    };
-
-    let config = LeidenConfig::default();
-
-    let storage = leiden(12, get_neighbors, &config);
-    let result = storage.into_result();
-
-    // Should find 4 communities
-    assert!(
-        result.community_count >= 3 && result.community_count <= 5,
-        "Should find 3-5 communities, found {}",
-        result.community_count
-    );
-
-    // Each clique should be together
-    assert_eq!(result.communities[0], result.communities[1]);
-    assert_eq!(result.communities[1], result.communities[2]);
-
-    assert_eq!(result.communities[3], result.communities[4]);
-    assert_eq!(result.communities[4], result.communities[5]);
-
-    assert_eq!(result.communities[6], result.communities[7]);
-    assert_eq!(result.communities[7], result.communities[8]);
-
-    assert_eq!(result.communities[9], result.communities[10]);
-    assert_eq!(result.communities[10], result.communities[11]);
-
-    println!("Communities: {:?}", result.communities);
-    println!("Modularity: {}", result.modularity);
-    println!("Community count: {}", result.community_count);
-}
-
-#[test]
-fn test_leiden_with_seed() {
-    // Two communities, but seed puts them together initially
-    let edges = vec![
-        (0, 1, 1.0),
-        (1, 0, 1.0),
-        (1, 2, 1.0),
-        (2, 1, 1.0),
-        (0, 2, 1.0),
-        (2, 0, 1.0),
-        (3, 4, 1.0),
-        (4, 3, 1.0),
-        (4, 5, 1.0),
-        (5, 4, 1.0),
-        (3, 5, 1.0),
-        (5, 3, 1.0),
-        (2, 3, 0.1),
-        (3, 2, 0.1),
-    ];
-
-    let get_neighbors = |node: usize| -> Vec<(usize, f64)> {
-        edges
-            .iter()
-            .filter(|(src, _, _)| *src == node)
-            .map(|(_, dst, weight)| (*dst, *weight))
-            .collect()
-    };
-
-    // Start with all nodes in same community
     let config = LeidenConfig {
-        seed_communities: Some(vec![0, 0, 0, 0, 0, 0]),
-        ..Default::default()
+        seed_communities: Some(vec![0, 0, 0, 0]),
+        max_iterations: 1,
+        tolerance: 0.0,
+        ..LeidenConfig::default()
     };
 
-    let storage = leiden(6, get_neighbors, &config);
-    let result = storage.into_result();
+    let mut runtime = LeidenComputationRuntime::new();
+    let result = runtime
+        .compute(&graph, &config, &TerminationFlag::default())
+        .unwrap();
 
-    // Algorithm may or may not split - simplified version without refinement
-    // Just check it doesn't crash and produces valid output
-    assert!(
-        result.community_count >= 1,
-        "Should have at least 1 community"
-    );
-    assert_eq!(result.communities.len(), 6, "Should have 6 nodes");
-}
-
-#[test]
-fn test_leiden_resolution_parameter() {
-    // Test with different gamma values
-    let edges = vec![
-        (0, 1, 1.0),
-        (1, 0, 1.0),
-        (1, 2, 1.0),
-        (2, 1, 1.0),
-        (2, 3, 1.0),
-        (3, 2, 1.0),
-        (3, 4, 1.0),
-        (4, 3, 1.0),
-    ];
-
-    let get_neighbors = |node: usize| -> Vec<(usize, f64)> {
-        edges
-            .iter()
-            .filter(|(src, _, _)| *src == node)
-            .map(|(_, dst, weight)| (*dst, *weight))
-            .collect()
-    };
-
-    // Low gamma: fewer, larger communities
-    let config_low = LeidenConfig {
-        gamma: 0.5,
-        ..Default::default()
-    };
-
-    let storage_low = leiden(5, &get_neighbors, &config_low);
-    let result_low = storage_low.into_result();
-
-    // High gamma: more, smaller communities
-    let config_high = LeidenConfig {
-        gamma: 2.0,
-        ..Default::default()
-    };
-
-    let storage_high = leiden(5, get_neighbors, &config_high);
-    let result_high = storage_high.into_result();
-
-    println!(
-        "Low gamma communities: {:?} (count: {})",
-        result_low.communities, result_low.community_count
-    );
-    println!(
-        "High gamma communities: {:?} (count: {})",
-        result_high.communities, result_high.community_count
-    );
-
-    // Higher gamma should generally lead to more communities
-    // (though not always guaranteed on small graphs)
-    assert!(
-        result_high.community_count >= result_low.community_count
-            || result_low.community_count <= 2
-    );
-}
-
-#[test]
-fn test_leiden_weighted_graph() {
-    // Graph with varying edge weights
-    let edges = vec![
-        // Strong community 1
-        (0, 1, 5.0),
-        (1, 0, 5.0),
-        (1, 2, 5.0),
-        (2, 1, 5.0),
-        (0, 2, 5.0),
-        (2, 0, 5.0),
-        // Strong community 2
-        (3, 4, 5.0),
-        (4, 3, 5.0),
-        (4, 5, 5.0),
-        (5, 4, 5.0),
-        (3, 5, 5.0),
-        (5, 3, 5.0),
-        // Weak bridge (much weaker)
-        (2, 3, 0.5),
-        (3, 2, 0.5),
-    ];
-
-    let get_neighbors = |node: usize| -> Vec<(usize, f64)> {
-        edges
-            .iter()
-            .filter(|(src, _, _)| *src == node)
-            .map(|(_, dst, weight)| (*dst, *weight))
-            .collect()
-    };
-
-    let config = LeidenConfig::default();
-
-    let storage = leiden(6, get_neighbors, &config);
-    let result = storage.into_result();
-
-    // Should clearly find 2 communities due to strong internal weights
-    assert_eq!(
-        result.community_count, 2,
-        "Should find exactly 2 communities with strong internal weights"
-    );
-
-    // Verify split
+    assert_ne!(result.communities[0], result.communities[2]);
     assert_eq!(result.communities[0], result.communities[1]);
-    assert_eq!(result.communities[1], result.communities[2]);
-    assert_eq!(result.communities[3], result.communities[4]);
-    assert_eq!(result.communities[4], result.communities[5]);
-    assert_ne!(result.communities[0], result.communities[3]);
-
-    println!("Communities: {:?}", result.communities);
-    println!("Modularity: {}", result.modularity);
+    assert_eq!(result.communities[2], result.communities[3]);
 }

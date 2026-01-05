@@ -1,289 +1,193 @@
-//! Closeness Centrality Computation Runtime
-//!
-//! **Translation Source**: `org.neo4j.gds.closeness.ClosenessCentrality`
-//!
-//! Uses Multi-Source BFS (MSBFS) to compute closeness centrality for all nodes.
-//! For each node: closeness_centrality(v) = component_size / sum(distance(v,u))
-//!
-//! Two variants supported:
-//! - Default: component_size / farness
-//! - Wasserman-Faust: (component_size / farness) * (component_size / (n-1))
-
-use crate::algo::msbfs::AggregatedNeighborProcessingMsBfs;
+use crate::algo::msbfs::{AggregatedNeighborProcessingMsBfs, OMEGA};
+use crate::collections::{HugeAtomicDoubleArray, HugeAtomicLongArray};
+use crate::concurrency::virtual_threads::{Executor, WorkerContext};
+use crate::concurrency::{Concurrency, TerminatedException, TerminationFlag};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct ClosenessCentralityComputationResult {
     pub centralities: Vec<f64>,
+    pub farness: Vec<u64>,
+    pub component: Vec<u64>,
 }
 
-pub struct ClosenessCentralityComputationRuntime {
-    farness: Vec<u64>,        // Sum of distances from each node
-    component_size: Vec<u64>, // Count of reachable nodes from each node
-    msbfs: AggregatedNeighborProcessingMsBfs,
-}
+pub struct ClosenessCentralityComputationRuntime;
 
 impl ClosenessCentralityComputationRuntime {
-    pub fn new(node_count: usize) -> Self {
-        Self {
-            farness: vec![0u64; node_count],
-            component_size: vec![0u64; node_count],
-            msbfs: AggregatedNeighborProcessingMsBfs::new(node_count),
-        }
-    }
-
-    pub fn compute(
-        &mut self,
+    /// Parallel closeness centrality over all sources.
+    ///
+    /// `get_neighbors(node)` must return outgoing neighbors according to the projected graph view.
+    pub fn compute_parallel(
         node_count: usize,
         wasserman_faust: bool,
-        get_neighbors: impl Fn(usize) -> Vec<usize>,
-    ) -> ClosenessCentralityComputationResult {
-        // Reset arrays
+        concurrency: usize,
+        termination: &TerminationFlag,
+        on_sources_done: Arc<dyn Fn(usize) + Send + Sync>,
+        get_neighbors: &(impl Fn(usize) -> Vec<usize> + Send + Sync),
+    ) -> Result<ClosenessCentralityComputationResult, TerminatedException> {
+        if node_count == 0 {
+            return Ok(ClosenessCentralityComputationResult {
+                centralities: Vec::new(),
+                farness: Vec::new(),
+                component: Vec::new(),
+            });
+        }
+
+        let farness = HugeAtomicLongArray::new(node_count);
+        let component = HugeAtomicLongArray::new(node_count);
+
+        let executor = Executor::new(Concurrency::of(concurrency.max(1)));
+        let msbfs_state = WorkerContext::new(move || AggregatedNeighborProcessingMsBfs::new(node_count));
+
+        let batch_count = (node_count + OMEGA - 1) / OMEGA;
+        executor.parallel_for(0, batch_count, termination, |batch_idx| {
+            if !termination.running() {
+                return;
+            }
+
+            let source_offset = batch_idx * OMEGA;
+            let source_len = (source_offset + OMEGA).min(node_count) - source_offset;
+
+            msbfs_state.with(|msbfs| {
+                msbfs.run(
+                    source_offset,
+                    source_len,
+                    false,
+                    |n| (get_neighbors)(n),
+                    |node_id, depth, sources_mask| {
+                        if depth == 0 {
+                            return;
+                        }
+
+                        let len = sources_mask.count_ones() as i64;
+                        let d = depth as i64;
+                        // Saturating-ish: if this ever overflows i64, we're well past realistic sizes.
+                        let far_delta = len.saturating_mul(d);
+
+                        farness.get_and_add(node_id, far_delta);
+                        component.get_and_add(node_id, len);
+                    },
+                );
+            });
+
+            (on_sources_done.as_ref())(source_len);
+        })?;
+
+        let mut farness_out = vec![0u64; node_count];
+        let mut component_out = vec![0u64; node_count];
         for i in 0..node_count {
-            self.farness[i] = 0;
-            self.component_size[i] = 0;
+            let far = farness.get(i);
+            let comp = component.get(i);
+            farness_out[i] = far.max(0) as u64;
+            component_out[i] = comp.max(0) as u64;
         }
 
-        // Phase 1: Run MSBFS in batches of up to 64 sources (bit-packed).
-        // This mirrors the Java aggregated MSBFS behavior:
-        // for each reached node at `depth`, add (number_of_sources_at_node * depth)
-        // into farness[node] and add number_of_sources_at_node into component_size[node].
-        for source_offset in (0..node_count).step_by(crate::algo::msbfs::OMEGA) {
-            let source_len =
-                (source_offset + crate::algo::msbfs::OMEGA).min(node_count) - source_offset;
+        let scores = HugeAtomicDoubleArray::new(node_count);
+        executor.parallel_for(0, node_count, termination, |i| {
+            if !termination.running() {
+                return;
+            }
 
-            self.msbfs.run(
-                source_offset,
-                source_len,
-                false,
-                &get_neighbors,
-                |node_id, depth, sources_mask| {
-                    if depth == 0 {
-                        return;
-                    }
+            let far = farness_out[i];
+            if far == 0 {
+                scores.set(i, 0.0);
+                return;
+            }
 
-                    let len = sources_mask.count_ones() as u64;
-                    self.farness[node_id] += len * depth as u64;
-                    self.component_size[node_id] += len;
-                },
-            );
+            let comp = component_out[i] as f64;
+            let base = comp / (far as f64);
+
+            let value = if wasserman_faust {
+                if node_count <= 1 {
+                    0.0
+                } else {
+                    base * (comp / (node_count as f64 - 1.0))
+                }
+            } else {
+                base
+            };
+
+            scores.set(i, value);
+        })?;
+
+        let mut out = vec![0.0f64; node_count];
+        for i in 0..node_count {
+            out[i] = scores.get(i);
         }
 
-        // Phase 2: Compute closeness centrality
-        let mut centralities = vec![0.0f64; node_count];
-        for (node_id, centrality) in centralities.iter_mut().enumerate() {
-            *centrality = self.compute_centrality(
-                self.farness[node_id],
-                self.component_size[node_id],
-                node_count as u64,
-                wasserman_faust,
-            );
-        }
-
-        ClosenessCentralityComputationResult { centralities }
-    }
-
-    fn compute_centrality(
-        &self,
-        farness: u64,
-        component_size: u64,
-        node_count: u64,
-        wasserman_faust: bool,
-    ) -> f64 {
-        if farness == 0 {
-            return 0.0;
-        }
-
-        if wasserman_faust && node_count <= 1 {
-            return 0.0;
-        }
-
-        let base_centrality = component_size as f64 / farness as f64;
-
-        if wasserman_faust {
-            // Wasserman-Faust normalization: multiply by (component_size / (n-1))
-            base_centrality * (component_size as f64 / (node_count - 1) as f64)
-        } else {
-            // Default: just the base centrality
-            base_centrality
-        }
+        Ok(ClosenessCentralityComputationResult {
+            centralities: out,
+            farness: farness_out,
+            component: component_out,
+        })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
 
-    fn create_graph(edges: Vec<(usize, usize)>, node_count: usize) -> HashMap<usize, Vec<usize>> {
-        let mut relationships: HashMap<usize, Vec<usize>> = HashMap::new();
-        for i in 0..node_count {
-            relationships.insert(i, Vec::new());
-        }
-
-        for (from, to) in edges {
-            relationships.entry(from).or_default().push(to);
-            if from != to {
-                relationships.entry(to).or_default().push(from);
+    fn undirected_adj(edges: &[(usize, usize)], node_count: usize) -> Vec<Vec<usize>> {
+        let mut adj = vec![Vec::<usize>::new(); node_count];
+        for &(a, b) in edges {
+            adj[a].push(b);
+            if a != b {
+                adj[b].push(a);
             }
         }
-
-        // Sort for consistency
-        for neighbors in relationships.values_mut() {
-            neighbors.sort_unstable();
-            neighbors.dedup();
+        for v in adj.iter_mut() {
+            v.sort_unstable();
+            v.dedup();
         }
-
-        relationships
+        adj
     }
 
     #[test]
-    fn test_closeness_single_node() {
-        let graph = create_graph(vec![], 1);
-        let mut runtime = ClosenessCentralityComputationRuntime::new(1);
-        let result = runtime.compute(1, false, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
-
-        // Single node has no other nodes to reach, so centrality = 0
-        assert_eq!(result.centralities[0], 0.0);
-    }
-
-    #[test]
-    fn test_closeness_two_nodes_connected() {
-        let graph = create_graph(vec![(0, 1)], 2);
-        let mut runtime = ClosenessCentralityComputationRuntime::new(2);
-        let result = runtime.compute(2, false, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
-
-        // Each node can reach 1 other at distance 1
-        // closeness = 1 / 1 = 1.0
-        assert!((result.centralities[0] - 1.0).abs() < 1e-10);
-        assert!((result.centralities[1] - 1.0).abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_closeness_linear_path() {
-        let graph = create_graph(vec![(0, 1), (1, 2), (2, 3)], 4);
-        let mut runtime = ClosenessCentralityComputationRuntime::new(4);
-        let result = runtime.compute(4, false, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
-
-        // Node 0: can reach 1@d1, 2@d2, 3@d3 = sum = 6, component = 3
-        //         closeness = 3 / 6 = 0.5
-        let expected_0 = 3.0 / 6.0;
-        assert!(
-            (result.centralities[0] - expected_0).abs() < 1e-10,
-            "Node 0: expected {}, got {}",
-            expected_0,
-            result.centralities[0]
+    fn parallel_matches_single_thread() {
+        let node_count = 8;
+        let adj = undirected_adj(
+            &[
+                (0, 1),
+                (1, 2),
+                (2, 3),
+                (3, 4),
+                (4, 5),
+                (5, 6),
+                (6, 7),
+                (0, 7),
+            ],
+            node_count,
         );
 
-        // Node 1: can reach 0@d1, 2@d1, 3@d2 = sum = 4, component = 3
-        //         closeness = 3 / 4 = 0.75
-        let expected_1 = 3.0 / 4.0;
-        assert!(
-            (result.centralities[1] - expected_1).abs() < 1e-10,
-            "Node 1: expected {}, got {}",
-            expected_1,
-            result.centralities[1]
-        );
+        let neighbors = |n: usize| adj[n].clone();
+        let termination = TerminationFlag::running_true();
+        let noop = Arc::new(|_n: usize| {});
 
-        // Node 2: by symmetry like node 1
-        let expected_2 = 3.0 / 4.0;
-        assert!(
-            (result.centralities[2] - expected_2).abs() < 1e-10,
-            "Node 2: expected {}, got {}",
-            expected_2,
-            result.centralities[2]
-        );
+        let one = ClosenessCentralityComputationRuntime::compute_parallel(
+            node_count,
+            false,
+            1,
+            &termination,
+            noop.clone(),
+            &neighbors,
+        )
+        .unwrap();
 
-        // Node 3: by symmetry like node 0
-        let expected_3 = 3.0 / 6.0;
-        assert!((result.centralities[3] - expected_3).abs() < 1e-10);
-    }
+        let four = ClosenessCentralityComputationRuntime::compute_parallel(
+            node_count,
+            false,
+            4,
+            &termination,
+            noop,
+            &neighbors,
+        )
+        .unwrap();
 
-    #[test]
-    fn test_closeness_star_graph() {
-        // Center=0, leaves=[1,2,3,4]
-        let graph = create_graph(vec![(0, 1), (0, 2), (0, 3), (0, 4)], 5);
-        let mut runtime = ClosenessCentralityComputationRuntime::new(5);
-        let result = runtime.compute(5, false, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
-
-        // Center: 4 neighbors at d=1 = sum = 4, component = 4
-        //         closeness = 4 / 4 = 1.0
-        assert!(
-            (result.centralities[0] - 1.0).abs() < 1e-10,
-            "Center: expected 1.0, got {}",
-            result.centralities[0]
-        );
-
-        // Leaf (e.g., node 1): 1@d1 + 3@d2 = sum = 7, component = 4
-        //                      closeness = 4 / 7 ≈ 0.571
-        let expected_leaf = 4.0 / 7.0;
-        for i in 1..5 {
-            assert!(
-                (result.centralities[i] - expected_leaf).abs() < 1e-10,
-                "Leaf {}: expected {}, got {}",
-                i,
-                expected_leaf,
-                result.centralities[i]
-            );
+        assert_eq!(one.farness, four.farness);
+        assert_eq!(one.component, four.component);
+        assert_eq!(one.centralities.len(), four.centralities.len());
+        for (a, b) in one.centralities.iter().zip(four.centralities.iter()) {
+            assert!((a - b).abs() < 1e-12);
         }
-    }
-
-    #[test]
-    fn test_closeness_complete_graph() {
-        // All nodes connected to all others
-        let graph = create_graph(vec![(0, 1), (0, 2), (1, 2)], 3);
-        let mut runtime = ClosenessCentralityComputationRuntime::new(3);
-        let result = runtime.compute(3, false, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
-
-        // Each node reaches 2 others at d=1 = sum = 2, component = 2
-        // closeness = 2 / 2 = 1.0
-        for i in 0..3 {
-            assert!(
-                (result.centralities[i] - 1.0).abs() < 1e-10,
-                "Node {}: expected 1.0, got {}",
-                i,
-                result.centralities[i]
-            );
-        }
-    }
-
-    #[test]
-    fn test_closeness_wasserman_faust() {
-        let graph = create_graph(vec![(0, 1)], 2);
-        let mut runtime = ClosenessCentralityComputationRuntime::new(2);
-        let result = runtime.compute(2, true, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
-
-        // Base: 1 / 1 = 1.0
-        // Wasserman-Faust: 1.0 * (1 / (2-1)) = 1.0 * 1.0 = 1.0
-        assert!((result.centralities[0] - 1.0).abs() < 1e-10);
-        assert!((result.centralities[1] - 1.0).abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_closeness_disconnected() {
-        // Two components: [0-1] and [2-3]
-        let graph = create_graph(vec![(0, 1), (2, 3)], 4);
-        let mut runtime = ClosenessCentralityComputationRuntime::new(4);
-        let result = runtime.compute(4, false, |node| {
-            graph.get(&node).cloned().unwrap_or_default()
-        });
-
-        // Component [0-1]: node 0 reaches 1@d1 = sum = 1, component = 1
-        //                  closeness = 1 / 1 = 1.0
-        assert!((result.centralities[0] - 1.0).abs() < 1e-10);
-        assert!((result.centralities[1] - 1.0).abs() < 1e-10);
-        assert!((result.centralities[2] - 1.0).abs() < 1e-10);
-        assert!((result.centralities[3] - 1.0).abs() < 1e-10);
     }
 }

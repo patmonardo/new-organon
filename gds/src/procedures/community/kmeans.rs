@@ -22,6 +22,7 @@ pub use crate::algo::kmeans::KMeansSamplerType;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::types::ValueType;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
@@ -234,14 +235,38 @@ impl KMeansFacade {
 
         let mut points: Vec<Vec<f64>> = Vec::with_capacity(node_count);
         for i in 0..node_count {
-            let arr = match pv.double_array_value(i as u64) {
-                Ok(value) => value,
-                Err(e) => {
+            let arr: Vec<f64> = match pv.value_type() {
+                ValueType::DoubleArray => match pv.double_array_value(i as u64) {
+                    Ok(value) => value,
+                    Err(e) => {
+                        progress_tracker.end_subtask_with_failure();
+                        return Err(
+                            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                                "failed to read node_property '{}' for node {}: {}",
+                                config.node_property, i, e
+                            )),
+                        );
+                    }
+                },
+                ValueType::FloatArray => match pv.float_array_value(i as u64) {
+                    Ok(value) => value.into_iter().map(|x| x as f64).collect(),
+                    Err(e) => {
+                        progress_tracker.end_subtask_with_failure();
+                        return Err(
+                            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                                "failed to read node_property '{}' for node {}: {}",
+                                config.node_property, i, e
+                            )),
+                        );
+                    }
+                },
+                other => {
                     progress_tracker.end_subtask_with_failure();
                     return Err(
                         crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                            "failed to read node_property '{}' for node {}: {}",
-                            config.node_property, i, e
+                            "node_property '{}' must be FLOAT_ARRAY or DOUBLE_ARRAY, got {}",
+                            config.node_property,
+                            other.name()
                         )),
                     );
                 }

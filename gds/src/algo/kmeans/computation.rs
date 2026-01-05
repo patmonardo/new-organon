@@ -1,9 +1,21 @@
-use super::spec::{KMeansConfig, KMeansResult, KMeansSamplerType};
-use rand::distributions::WeightedIndex;
-use rand::prelude::*;
-use rand_chacha::ChaCha8Rng;
-use std::collections::HashSet;
+//! K-Means computation runtime.
+//!
+//! Parity goals (conceptual, not line-by-line Java translation):
+//! - Supports UNIFORM and KMEANSPP initialization.
+//! - Uses swaps-based iteration stopping (Java `KmeansIterationStopper`).
+//! - Supports seeded centroids (fully specified).
+//! - Optional per-node silhouette (centroid-based approximation).
 
+use super::spec::{KMeansConfig, KMeansResult, KMeansSamplerType};
+use crate::concurrency::{install_with_concurrency, Concurrency};
+use rand::prelude::*;
+use rand::seq::index::sample;
+use rayon::prelude::*;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+const UNASSIGNED: u64 = u64::MAX;
+
+#[derive(Debug, Default, Clone)]
 pub struct KMeansComputationRuntime;
 
 impl KMeansComputationRuntime {
@@ -12,8 +24,8 @@ impl KMeansComputationRuntime {
     }
 
     pub fn compute(&mut self, points: &[Vec<f64>], config: &KMeansConfig) -> KMeansResult {
-        let node_count = points.len();
-        if node_count == 0 {
+        let n = points.len();
+        if n == 0 {
             return KMeansResult {
                 communities: Vec::new(),
                 distance_from_center: Vec::new(),
@@ -27,190 +39,311 @@ impl KMeansComputationRuntime {
         }
 
         let dims = points[0].len();
-        let mut best: Option<KMeansResult> = None;
+        let k = config.k.max(1).min(n);
+        let max_iterations = config.max_iterations.max(1);
+        let concurrency = Concurrency::from_usize(config.concurrency.max(1));
 
-        for restart in 0..config.number_of_restarts.max(1) {
-            let mut rng = seeded_rng(config.random_seed, restart);
-
-            let mut centers = if !config.seed_centroids.is_empty() {
-                config.seed_centroids.clone()
-            } else {
-                initialize_centroids(points, config.k, dims, config.sampler_type, &mut rng)
-            };
-
-            let mut communities = vec![u64::MAX; node_count];
-            let mut distance_from_center = vec![0.0; node_count];
-
-            let swaps_bound: u64 = ((node_count as f64) * config.delta_threshold).floor() as u64;
-            let mut ran_iterations = 0;
-
-            for iter in 0..config.max_iterations.max(1) {
-                ran_iterations = iter + 1;
-
-                let mut swaps: u64 = 0;
-                let mut counts = vec![0u64; config.k];
-                let mut sums = vec![vec![0.0; dims]; config.k];
-
-                for (i, point) in points.iter().enumerate() {
-                    let (closest, dist) = closest_center(point, &centers);
-                    if communities[i] != closest as u64 {
-                        swaps += 1;
-                        communities[i] = closest as u64;
-                    }
-                    distance_from_center[i] = dist;
-                    counts[closest] += 1;
-                    for d in 0..dims {
-                        sums[closest][d] += point[d];
-                    }
-                }
-
-                // Update centers; handle empty clusters by re-seeding to a random point.
-                for c in 0..config.k {
-                    if counts[c] == 0 {
-                        let idx = rng.gen_range(0..node_count);
-                        centers[c] = points[idx].clone();
-                    } else {
-                        let denom = counts[c] as f64;
-                        for d in 0..dims {
-                            centers[c][d] = sums[c][d] / denom;
-                        }
-                    }
-                }
-
-                // Stop rule (matches Java intent): after first iteration, stop when swaps <= bound.
-                if iter >= 1 && swaps <= swaps_bound {
-                    break;
-                }
-            }
-
-            let avg_distance = if node_count == 0 {
-                0.0
-            } else {
-                distance_from_center.iter().sum::<f64>() / (node_count as f64)
-            };
-
-            let (silhouette, avg_silhouette) = if config.compute_silhouette {
-                let sil = compute_silhouette(points, &communities, config.k);
-                let avg = if sil.is_empty() {
-                    0.0
-                } else {
-                    sil.iter().sum::<f64>() / (sil.len() as f64)
-                };
-                (Some(sil), avg)
+        // Seeded centroids behave like a single "restart".
+        if !config.seed_centroids.is_empty() {
+            let mut centers = normalize_seeded_centers(&config.seed_centroids, k, dims);
+            let (communities, distances, ran_iterations) = kmeans_swaps_loop(
+                points,
+                &mut centers,
+                max_iterations,
+                config.delta_threshold,
+                concurrency,
+            );
+            let avg_dist = average(&distances);
+            let (silhouette, avg_sil) = if config.compute_silhouette {
+                let s = silhouette_centroid(points, &centers, &communities);
+                let a = average(&s);
+                (Some(s), a)
             } else {
                 (None, 0.0)
             };
 
-            let result = KMeansResult {
+            return KMeansResult {
                 communities,
-                distance_from_center,
+                distance_from_center: distances,
                 centers,
-                average_distance_to_centroid: avg_distance,
+                average_distance_to_centroid: avg_dist,
                 silhouette,
-                average_silhouette: avg_silhouette,
+                average_silhouette: avg_sil,
                 ran_iterations,
-                restarts: restart + 1,
-            };
-
-            best = match best {
-                None => Some(result),
-                Some(prev) => {
-                    // Prefer higher silhouette when enabled, else lower distance.
-                    let better = if config.compute_silhouette {
-                        result.average_silhouette > prev.average_silhouette
-                    } else {
-                        result.average_distance_to_centroid < prev.average_distance_to_centroid
-                    };
-                    Some(if better { result } else { prev })
-                }
+                restarts: 1,
             };
         }
 
-        best.expect("node_count > 0 implies best is set")
+        let restarts = config.number_of_restarts.max(1);
+        let mut best: Option<(Vec<u64>, Vec<f64>, Vec<Vec<f64>>, f64, u32)> = None;
+
+        for restart in 0..restarts {
+            let seed = config
+                .random_seed
+                .unwrap_or(0xC0FFEE)
+                .wrapping_add(restart as u64);
+            let mut rng = StdRng::seed_from_u64(seed);
+
+            let mut centers = match config.sampler_type {
+                KMeansSamplerType::Uniform => sample_uniform(points, k, &mut rng),
+                KMeansSamplerType::KmeansPlusPlus => sample_kmeanspp(points, k, &mut rng),
+            };
+            if centers.is_empty() {
+                continue;
+            }
+            ensure_center_dims(&mut centers, dims);
+
+            let (communities, distances, ran_iterations) = kmeans_swaps_loop(
+                points,
+                &mut centers,
+                max_iterations,
+                config.delta_threshold,
+                concurrency,
+            );
+            let avg_dist = average(&distances);
+
+            match &best {
+                Some((_bc, _bd, _bcenters, best_avg, _bi)) if avg_dist >= *best_avg => {}
+                _ => {
+                    best = Some((communities, distances, centers, avg_dist, ran_iterations));
+                }
+            }
+        }
+
+        let (communities, distances, centers, avg_dist, ran_iterations) = best.unwrap_or_else(|| {
+            let mut centers = Vec::with_capacity(k);
+            for i in 0..k {
+                centers.push(points[i].clone());
+            }
+            ensure_center_dims(&mut centers, dims);
+            let (communities, distances, ran_iterations) = kmeans_swaps_loop(
+                points,
+                &mut centers,
+                max_iterations,
+                config.delta_threshold,
+                concurrency,
+            );
+            let avg_dist = average(&distances);
+            (communities, distances, centers, avg_dist, ran_iterations)
+        });
+
+        let (silhouette, avg_sil) = if config.compute_silhouette {
+            let s = silhouette_centroid(points, &centers, &communities);
+            let a = average(&s);
+            (Some(s), a)
+        } else {
+            (None, 0.0)
+        };
+
+        KMeansResult {
+            communities,
+            distance_from_center: distances,
+            centers,
+            average_distance_to_centroid: avg_dist,
+            silhouette,
+            average_silhouette: avg_sil,
+            ran_iterations,
+            restarts,
+        }
     }
 }
 
-impl Default for KMeansComputationRuntime {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-fn seeded_rng(base_seed: Option<u64>, restart: u32) -> ChaCha8Rng {
-    let seed =
-        base_seed.unwrap_or(0xC0FFEE_u64) ^ ((restart as u64).wrapping_mul(0x9E3779B97F4A7C15));
-    ChaCha8Rng::seed_from_u64(seed)
-}
-
-fn initialize_centroids(
+fn kmeans_swaps_loop(
     points: &[Vec<f64>],
+    centers: &mut Vec<Vec<f64>>,
+    max_iterations: u32,
+    delta_threshold: f64,
+    concurrency: Concurrency,
+) -> (Vec<u64>, Vec<f64>, u32) {
+    let n = points.len();
+    let k = centers.len().max(1);
+    let dims = centers[0].len();
+
+    let swaps_bound: u64 = ((n as f64) * delta_threshold) as u64;
+
+    let mut communities = vec![UNASSIGNED; n];
+    let mut distances = vec![0.0f64; n];
+    let mut ran_iterations = 0u32;
+
+    for iteration in 1..=max_iterations {
+        let swaps = AtomicU64::new(0);
+        let mut next_communities = vec![0u64; n];
+        let mut next_distances = vec![0.0f64; n];
+
+        install_with_concurrency(concurrency, || {
+            next_communities
+                .par_iter_mut()
+                .zip(next_distances.par_iter_mut())
+                .enumerate()
+                .for_each(|(i, (comm_out, dist_out))| {
+                    let (best_c, best_d2) = closest_centroid(&points[i], centers);
+                    let prev = communities[i];
+                    if prev != best_c {
+                        swaps.fetch_add(1, Ordering::Relaxed);
+                    }
+                    *comm_out = best_c;
+                    *dist_out = best_d2.sqrt();
+                });
+        });
+
+        communities = next_communities;
+        distances = next_distances;
+
+        recompute_centroids(points, &communities, centers, k, dims, concurrency);
+
+        ran_iterations = iteration;
+        let swaps = swaps.load(Ordering::Relaxed);
+        if iteration == max_iterations {
+            break;
+        }
+        if iteration > 1 && swaps <= swaps_bound {
+            break;
+        }
+    }
+
+    (communities, distances, ran_iterations)
+}
+
+fn recompute_centroids(
+    points: &[Vec<f64>],
+    communities: &[u64],
+    centers: &mut [Vec<f64>],
     k: usize,
     dims: usize,
-    sampler: KMeansSamplerType,
-    rng: &mut ChaCha8Rng,
-) -> Vec<Vec<f64>> {
-    let node_count = points.len();
-    if k == 0 {
-        return Vec::new();
-    }
+    concurrency: Concurrency,
+) {
+    let (sums, counts) = install_with_concurrency(concurrency, || {
+        points
+            .par_iter()
+            .zip(communities.par_iter())
+            .fold(
+                || (vec![0.0f64; k * dims], vec![0usize; k]),
+                |(mut sums, mut counts), (point, &cid)| {
+                    let c = (cid as usize).min(k - 1);
+                    counts[c] += 1;
+                    let base = c * dims;
+                    for d in 0..dims {
+                        sums[base + d] += point[d];
+                    }
+                    (sums, counts)
+                },
+            )
+            .reduce(
+                || (vec![0.0f64; k * dims], vec![0usize; k]),
+                |(mut a_sums, mut a_counts), (b_sums, b_counts)| {
+                    for i in 0..a_sums.len() {
+                        a_sums[i] += b_sums[i];
+                    }
+                    for i in 0..k {
+                        a_counts[i] += b_counts[i];
+                    }
+                    (a_sums, a_counts)
+                },
+            )
+    });
 
-    match sampler {
-        KMeansSamplerType::Uniform => {
-            let mut sampled = HashSet::new();
-            let mut centers = Vec::with_capacity(k);
-            while centers.len() < k {
-                let idx = rng.gen_range(0..node_count);
-                if sampled.insert(idx) {
-                    let mut centroid = vec![0.0; dims];
-                    centroid.clone_from_slice(&points[idx]);
-                    centers.push(points[idx].clone());
-                }
-            }
-            centers
+    // Java parity: clusters with 0 assigned nodes keep their previous centroid.
+    for c in 0..k {
+        let count = counts[c];
+        if count == 0 {
+            continue;
         }
-        KMeansSamplerType::KmeansPlusPlus => {
-            let mut centers: Vec<Vec<f64>> = Vec::with_capacity(k);
-            let first = rng.gen_range(0..node_count);
-            centers.push(points[first].clone());
-
-            while centers.len() < k {
-                let mut weights: Vec<f64> = Vec::with_capacity(node_count);
-                for p in points {
-                    let (closest, _dist) = closest_center(p, &centers);
-                    let dist2 = distance_squared(p, &centers[closest]);
-                    weights.push(dist2.max(0.0));
-                }
-
-                // If all weights are zero (identical points), fall back to uniform.
-                if weights.iter().all(|&w| w == 0.0) {
-                    let idx = rng.gen_range(0..node_count);
-                    centers.push(points[idx].clone());
-                    continue;
-                }
-
-                let dist = WeightedIndex::new(&weights).expect("non-negative weights");
-                let idx = dist.sample(rng);
-                centers.push(points[idx].clone());
-            }
-            centers
+        let base = c * dims;
+        for d in 0..dims {
+            centers[c][d] = sums[base + d] / (count as f64);
         }
     }
 }
 
-fn closest_center(point: &[f64], centers: &[Vec<f64>]) -> (usize, f64) {
-    let mut best_idx = 0usize;
-    let mut best_dist2 = f64::INFINITY;
-    for (i, c) in centers.iter().enumerate() {
-        let d2 = distance_squared(point, c);
-        if d2 < best_dist2 {
-            best_dist2 = d2;
-            best_idx = i;
+fn closest_centroid(point: &[f64], centers: &[Vec<f64>]) -> (u64, f64) {
+    let mut best_c = 0usize;
+    let mut best_d2 = f64::INFINITY;
+    for (ci, c) in centers.iter().enumerate() {
+        let d2 = squared_euclidean(point, c);
+        if d2 < best_d2 || (d2 == best_d2 && ci < best_c) {
+            best_d2 = d2;
+            best_c = ci;
         }
     }
-    (best_idx, best_dist2.sqrt())
+    (best_c as u64, best_d2)
 }
 
-fn distance_squared(a: &[f64], b: &[f64]) -> f64 {
+fn sample_uniform(points: &[Vec<f64>], k: usize, rng: &mut impl Rng) -> Vec<Vec<f64>> {
+    let n = points.len();
+    if k >= n {
+        return points.to_vec();
+    }
+
+    let indices = sample(rng, n, k).into_vec();
+    indices.into_iter().map(|i| points[i].clone()).collect()
+}
+
+fn sample_kmeanspp(points: &[Vec<f64>], k: usize, rng: &mut impl Rng) -> Vec<Vec<f64>> {
+    let n = points.len();
+    if k >= n {
+        return points.to_vec();
+    }
+
+    let mut centers: Vec<Vec<f64>> = Vec::with_capacity(k);
+    centers.push(points[rng.gen_range(0..n)].clone());
+
+    let mut min_d2: Vec<f64> = vec![0.0; n];
+
+    while centers.len() < k {
+        for (i, p) in points.iter().enumerate() {
+            min_d2[i] = centers
+                .iter()
+                .map(|c| squared_euclidean(p, c))
+                .fold(f64::INFINITY, f64::min);
+        }
+
+        let total: f64 = min_d2.iter().sum();
+        if !total.is_finite() || total <= 0.0 {
+            let remaining = k - centers.len();
+            centers.extend(sample_uniform(points, remaining, rng));
+            break;
+        }
+
+        let mut threshold = rng.gen::<f64>() * total;
+        let mut chosen = 0usize;
+        for (i, w) in min_d2.iter().enumerate() {
+            threshold -= *w;
+            if threshold <= 0.0 {
+                chosen = i;
+                break;
+            }
+        }
+
+        centers.push(points[chosen].clone());
+    }
+
+    centers
+}
+
+fn normalize_seeded_centers(seeded: &[Vec<f64>], k: usize, dims: usize) -> Vec<Vec<f64>> {
+    let mut centers = Vec::with_capacity(k);
+    for i in 0..k {
+        if let Some(c) = seeded.get(i) {
+            centers.push(c.clone());
+        } else {
+            centers.push(vec![0.0; dims]);
+        }
+    }
+    ensure_center_dims(&mut centers, dims);
+    centers
+}
+
+fn ensure_center_dims(centers: &mut [Vec<f64>], dims: usize) {
+    for c in centers.iter_mut() {
+        if c.len() < dims {
+            c.resize(dims, 0.0);
+        } else if c.len() > dims {
+            c.truncate(dims);
+        }
+    }
+}
+
+fn squared_euclidean(a: &[f64], b: &[f64]) -> f64 {
     a.iter()
         .zip(b.iter())
         .map(|(x, y)| {
@@ -220,69 +353,41 @@ fn distance_squared(a: &[f64], b: &[f64]) -> f64 {
         .sum()
 }
 
-fn compute_silhouette(points: &[Vec<f64>], communities: &[u64], k: usize) -> Vec<f64> {
+fn average(values: &[f64]) -> f64 {
+    if values.is_empty() {
+        return 0.0;
+    }
+    values.iter().sum::<f64>() / values.len() as f64
+}
+
+fn silhouette_centroid(points: &[Vec<f64>], centers: &[Vec<f64>], communities: &[u64]) -> Vec<f64> {
     let n = points.len();
-    if n == 0 || k == 0 {
+    if n == 0 {
         return Vec::new();
     }
-
-    let mut members: Vec<Vec<usize>> = vec![Vec::new(); k];
-    for (i, &c) in communities.iter().enumerate() {
-        if (c as usize) < k {
-            members[c as usize].push(i);
-        }
+    if centers.len() <= 1 {
+        return vec![0.0; n];
     }
 
     let mut out = vec![0.0f64; n];
     for i in 0..n {
         let ci = communities[i] as usize;
-        if ci >= k {
-            continue;
-        }
+        let a = squared_euclidean(&points[i], &centers[ci]).sqrt();
 
-        // a(i): mean distance to points in same cluster
-        let same = &members[ci];
-        let a = if same.len() <= 1 {
-            0.0
-        } else {
-            let mut sum = 0.0;
-            for &j in same {
-                if j == i {
-                    continue;
-                }
-                sum += distance(points[i].as_slice(), points[j].as_slice());
-            }
-            sum / ((same.len() - 1) as f64)
-        };
-
-        // b(i): minimum mean distance to points in other clusters
         let mut b = f64::INFINITY;
-        for (c, cluster_members) in members.iter().enumerate().take(k) {
-            if c == ci || cluster_members.is_empty() {
+        for (cj, c) in centers.iter().enumerate() {
+            if cj == ci {
                 continue;
             }
-            let mut sum = 0.0;
-            for &j in cluster_members {
-                sum += distance(points[i].as_slice(), points[j].as_slice());
+            let d = squared_euclidean(&points[i], c).sqrt();
+            if d < b {
+                b = d;
             }
-            let mean = sum / (members[c].len() as f64);
-            if mean < b {
-                b = mean;
-            }
-        }
-
-        if !b.is_finite() {
-            out[i] = 0.0;
-            continue;
         }
 
         let denom = a.max(b);
-        out[i] = if denom == 0.0 { 0.0 } else { (b - a) / denom };
+        out[i] = if denom > 0.0 { (b - a) / denom } else { 0.0 };
     }
 
     out
-}
-
-fn distance(a: &[f64], b: &[f64]) -> f64 {
-    distance_squared(a, b).sqrt()
 }

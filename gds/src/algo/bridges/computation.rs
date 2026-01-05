@@ -2,11 +2,27 @@
 //!
 //! **Translation Source**: `org.neo4j.gds.bridges.Bridges`
 //!
-//! This module implements Tarjan's algorithm for finding bridges using iterative DFS.
+//! Finds all bridge edges in an undirected graph using Tarjan-style DFS.
+//! Uses an explicit stack of events to avoid recursion.
 
 use crate::collections::{BitSet, HugeLongArray};
 
-/// Stack event for iterative DFS
+/// A bridge edge as `(min(from,to), max(from,to))`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Bridge {
+    pub from: u64,
+    pub to: u64,
+}
+
+impl Bridge {
+    pub fn create(from: usize, to: usize) -> Self {
+        let a = from.min(to) as u64;
+        let b = from.max(to) as u64;
+        Self { from: a, to: b }
+    }
+}
+
+/// Stack event for iterative DFS.
 #[derive(Debug, Clone, Copy)]
 pub struct StackEvent {
     pub event_node: usize,
@@ -32,26 +48,16 @@ impl StackEvent {
     }
 }
 
-/// Bridge edge
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Bridge {
-    pub from: u64,
-    pub to: u64,
-}
-
-/// Bridges computation result
 #[derive(Clone)]
 pub struct BridgesComputationResult {
     pub bridges: Vec<Bridge>,
 }
 
-/// Bridges computation runtime
 pub struct BridgesComputationRuntime {
     visited: BitSet,
     tin: HugeLongArray,
     low: HugeLongArray,
     timer: i64,
-    bridges: Vec<Bridge>,
 }
 
 impl BridgesComputationRuntime {
@@ -61,51 +67,52 @@ impl BridgesComputationRuntime {
             tin: HugeLongArray::new(node_count),
             low: HugeLongArray::new(node_count),
             timer: 0,
-            bridges: Vec::new(),
         }
     }
 
-    /// Compute bridges for a graph
-    pub fn compute<F>(&mut self, node_count: usize, get_neighbors: F) -> BridgesComputationResult
-    where
-        F: Fn(usize) -> Vec<usize>,
-    {
-        // Clear state
+    /// Compute all bridge edges.
+    ///
+    /// `get_neighbors(node)` must provide an undirected neighbor list.
+    pub fn compute(
+        &mut self,
+        node_count: usize,
+        get_neighbors: impl Fn(usize) -> Vec<usize>,
+    ) -> BridgesComputationResult {
         self.timer = 0;
-        self.bridges.clear();
         self.visited.clear_all();
 
-        // Initialize tin and low to -1
         for i in 0..node_count {
             self.tin.set(i, -1);
             self.low.set(i, -1);
         }
 
-        // Process each unvisited node
+        let mut bridges: Vec<Bridge> = Vec::new();
+
         for i in 0..node_count {
             if !self.visited.get(i) {
-                self.dfs(i, &get_neighbors);
+                self.dfs(i, &get_neighbors, &mut bridges);
             }
         }
 
-        BridgesComputationResult {
-            bridges: self.bridges.clone(),
-        }
+        BridgesComputationResult { bridges }
     }
 
-    fn dfs<F>(&mut self, start_node: usize, get_neighbors: &F)
-    where
-        F: Fn(usize) -> Vec<usize>,
-    {
+    fn dfs(
+        &mut self,
+        start_node: usize,
+        get_neighbors: &impl Fn(usize) -> Vec<usize>,
+        bridges: &mut Vec<Bridge>,
+    ) {
         let mut stack: Vec<StackEvent> = Vec::new();
-
-        // Push initial event
         stack.push(StackEvent::upcoming_visit(start_node, None));
 
         while let Some(event) = stack.pop() {
             if event.last_visit {
-                // Last visit - process backtracking
-                let v = event.trigger_node.unwrap();
+                // Backtracking phase (Java: lastVisit())
+                let v = match event.trigger_node {
+                    Some(v) => v,
+                    None => continue,
+                };
                 let to = event.event_node;
 
                 let low_v = self.low.get(v);
@@ -114,46 +121,92 @@ impl BridgesComputationRuntime {
 
                 let tin_v = self.tin.get(v);
                 if low_to > tin_v {
-                    // This is a bridge
-                    self.bridges.push(Bridge {
-                        from: std::cmp::min(v as u64, to as u64),
-                        to: std::cmp::max(v as u64, to as u64),
-                    });
+                    bridges.push(Bridge::create(v, to));
                 }
-            } else {
-                // First visit - process node
-                let v = event.event_node;
-                let p = event.trigger_node;
 
-                if !self.visited.get(v) {
-                    self.visited.set(v);
-                    self.tin.set(v, self.timer);
-                    self.low.set(v, self.timer);
-                    self.timer += 1;
+                continue;
+            }
 
-                    // Push post-visit event if not root
-                    if let Some(parent) = p {
-                        stack.push(StackEvent::last_visit(v, parent));
-                    }
+            // Forward phase (Java: upcomingVisit())
+            let node = event.event_node;
+            let trigger = event.trigger_node;
 
-                    // Process neighbors (skip parent edge once)
-                    let neighbors = get_neighbors(v);
-                    let mut parent_skipped = false;
+            if !self.visited.get(node) {
+                self.visited.set(node);
+                self.tin.set(node, self.timer);
+                self.low.set(node, self.timer);
+                self.timer += 1;
 
-                    for to in neighbors {
-                        if Some(to) == p && !parent_skipped {
-                            parent_skipped = true;
-                            continue;
-                        }
-                        stack.push(StackEvent::upcoming_visit(to, Some(v)));
-                    }
-                } else if let Some(parent) = p {
-                    // Back edge - update low value
-                    let low_p = self.low.get(parent);
-                    let tin_v = self.tin.get(v);
-                    self.low.set(parent, std::cmp::min(low_p, tin_v));
+                if let Some(p) = trigger {
+                    // Post event must be before exploring neighbors
+                    stack.push(StackEvent::last_visit(node, p));
                 }
+
+                let mut parent_skipped = false;
+                for to in get_neighbors(node) {
+                    if Some(to) == trigger && !parent_skipped {
+                        // Skip exactly one parent edge (handles multi-edges)
+                        parent_skipped = true;
+                        continue;
+                    }
+                    stack.push(StackEvent::upcoming_visit(to, Some(node)));
+                }
+            } else if let Some(v) = trigger {
+                // Back edge: update low(trigger) with tin(to)
+                let low_v = self.low.get(v);
+                let tin_to = self.tin.get(node);
+                self.low.set(v, std::cmp::min(low_v, tin_to));
             }
         }
+    }
+}
+
+impl Default for BridgesComputationRuntime {
+    fn default() -> Self {
+        Self::new(0)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn undirected_adj(edges: &[(usize, usize)], node_count: usize) -> Vec<Vec<usize>> {
+        let mut adj = vec![Vec::<usize>::new(); node_count];
+        for &(a, b) in edges {
+            adj[a].push(b);
+            if a != b {
+                adj[b].push(a);
+            }
+        }
+        adj
+    }
+
+    #[test]
+    fn finds_bridges_in_line() {
+        // 0-1-2
+        let node_count = 3;
+        let adj = undirected_adj(&[(0, 1), (1, 2)], node_count);
+        let neighbors = |n: usize| adj[n].clone();
+
+        let mut rt = BridgesComputationRuntime::new(node_count);
+        let result = rt.compute(node_count, neighbors);
+
+        assert_eq!(result.bridges.len(), 2);
+        assert!(result.bridges.contains(&Bridge::create(0, 1)));
+        assert!(result.bridges.contains(&Bridge::create(1, 2)));
+    }
+
+    #[test]
+    fn no_bridges_in_triangle() {
+        // 0-1-2-0
+        let node_count = 3;
+        let adj = undirected_adj(&[(0, 1), (1, 2), (2, 0)], node_count);
+        let neighbors = |n: usize| adj[n].clone();
+
+        let mut rt = BridgesComputationRuntime::new(node_count);
+        let result = rt.compute(node_count, neighbors);
+
+        assert!(result.bridges.is_empty());
     }
 }

@@ -5,15 +5,13 @@
 //! Parameters (Java GDS aligned):
 //! - `concurrency`: accepted for parity; current runtime is single-threaded.
 
+use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::algo::wcc::{WccComputationRuntime, WccStorageRuntime};
-use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -125,23 +123,24 @@ impl WccFacade {
         self.validate()?;
         let start = Instant::now();
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
-
         let storage = WccStorageRuntime::new(self.concurrency);
-        let mut computation = WccComputationRuntime::new();
+        let mut computation = WccComputationRuntime::new().concurrency(self.concurrency);
 
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("wcc".to_string(), graph_view.relationship_count()),
+            Tasks::leaf_with_volume("wcc".to_string(), self.graph_store.relationship_count()),
             self.concurrency,
         );
 
-        let result = storage.compute_wcc(&mut computation, graph_view.as_ref(), &mut progress_tracker);
+        let termination_flag = TerminationFlag::default();
+
+        let result = storage
+            .compute_wcc(
+                &mut computation,
+                self.graph_store.as_ref(),
+                &mut progress_tracker,
+                &termination_flag,
+            )
+            .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
 
         Ok((
             crate::algo::wcc::WccResult {

@@ -1,154 +1,160 @@
-//! Label Propagation Computation Runtime
+//! Label Propagation computation runtime
 //!
-//! **Translation Source**: `org.neo4j.gds.labelpropagation.LabelPropagation`
+//! Java parity references:
+//! - `org.neo4j.gds.labelpropagation.LabelPropagation`
+//! - `InitStep` / `ComputeStep` / `ComputeStepConsumer`
 //!
-//! Detects communities by iteratively propagating labels through the graph.
-//! Each node votes for its neighbor labels and adopts the most popular one.
+//! Notes:
+//! - Uses deterministic in-place (Gauss–Seidel) updates in node-id order.
+//!   This avoids oscillations on bipartite components while preserving a stable tie-break.
+//! - Voting is weighted by relationship weight * target-node weight.
+//! - Tie-breaker matches Java: smallest label ID wins when weights equal.
 
+use crate::concurrency::{install_with_concurrency, Concurrency};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 
-/// Result of label propagation computation
-#[derive(Clone)]
-pub struct LabelPropComputationResult {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct LabelPropResult {
     pub labels: Vec<u64>,
     pub did_converge: bool,
     pub ran_iterations: u64,
 }
 
-/// Label Propagation computation runtime
+#[derive(Debug, Clone)]
 pub struct LabelPropComputationRuntime {
-    labels: Vec<u64>,
-    next_labels: Vec<u64>,
+    node_count: usize,
     max_iterations: u64,
-    seed_labels: Option<Vec<u64>>,
+    concurrency: usize,
     node_weights: Vec<f64>,
+    initial_labels: Option<Vec<u64>>, // must match node_count when present
 }
 
 impl LabelPropComputationRuntime {
     pub fn new(node_count: usize, max_iterations: u64) -> Self {
         Self {
-            labels: vec![0u64; node_count],
-            next_labels: vec![0u64; node_count],
+            node_count,
             max_iterations,
-            seed_labels: None,
-            node_weights: vec![1.0f64; node_count],
+            concurrency: 1,
+            node_weights: vec![1.0; node_count],
+            initial_labels: None,
         }
     }
 
-    pub fn with_seeds(mut self, seed_labels: Vec<u64>) -> Self {
-        self.seed_labels = Some(seed_labels);
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency.max(1);
         self
     }
 
     pub fn with_weights(mut self, weights: Vec<f64>) -> Self {
-        self.node_weights = weights;
+        if weights.len() == self.node_count {
+            self.node_weights = weights;
+        }
         self
     }
 
-    /// Compute label propagation
-    pub fn compute(
-        &mut self,
-        node_count: usize,
-        get_neighbors: impl Fn(usize) -> Vec<(usize, f64)>, // (neighbor, weight)
-    ) -> LabelPropComputationResult {
-        // Phase 1: Initialize labels
-        self.init_labels(node_count, &get_neighbors);
+    /// Sets the initial labels for all nodes.
+    ///
+    /// This corresponds to Java's `InitStep` output.
+    pub fn with_seeds(mut self, labels: Vec<u64>) -> Self {
+        if labels.len() == self.node_count {
+            self.initial_labels = Some(labels);
+        }
+        self
+    }
 
-        // Phase 2: Iteratively propagate labels
-        let mut did_converge = false;
+    pub fn compute<F>(&mut self, node_count: u64, neighbors: F) -> LabelPropResult
+    where
+        F: Fn(usize) -> Vec<(usize, f64)> + Sync,
+    {
+        let node_count = node_count as usize;
+        if node_count == 0 {
+            return LabelPropResult {
+                labels: Vec::new(),
+                did_converge: true,
+                ran_iterations: 0,
+            };
+        }
+
+        // Init step (either provided labels or identity labels).
+        let mut labels: Vec<u64> = if let Some(init) = self.initial_labels.take() {
+            init
+        } else {
+            (0..node_count as u64).collect()
+        };
+
+        let concurrency = Concurrency::from_usize(self.concurrency);
+
         let mut ran_iterations = 0u64;
+        let mut did_converge = false;
 
-        for iteration in 0..self.max_iterations {
-            ran_iterations = iteration + 1;
-            let changed = self.compute_iteration(node_count, &get_neighbors);
+        while ran_iterations < self.max_iterations {
+            let any_changed = AtomicBool::new(false);
 
-            if !changed {
+            // Deterministic in-place update in node order.
+            // Concurrency is currently not used; we keep the install wrapper to match runtime setup.
+            install_with_concurrency(concurrency, || {
+                let mut tally = VoteTally::new();
+
+                for node_id in 0..node_count {
+                    tally.clear();
+
+                    let current_label = labels[node_id];
+                    let mut best_label = current_label;
+                    let mut best_weight = f64::NEG_INFINITY;
+
+                    for (target, rel_weight) in neighbors(node_id) {
+                        let node_weight = *self.node_weights.get(target).unwrap_or(&1.0);
+                        let vote_weight = rel_weight * node_weight;
+                        let candidate_label = labels[target];
+                        tally.add_vote(candidate_label, vote_weight);
+                    }
+
+                    for (&label, &weight) in tally.votes.iter() {
+                        if weight > best_weight || (weight == best_weight && label < best_label) {
+                            best_weight = weight;
+                            best_label = label;
+                        }
+                    }
+
+                    if best_label != current_label {
+                        labels[node_id] = best_label;
+                        any_changed.store(true, Ordering::Relaxed);
+                    }
+                }
+            });
+
+            ran_iterations += 1;
+            if !any_changed.load(Ordering::Relaxed) {
                 did_converge = true;
                 break;
             }
-
-            // Swap labels for next iteration
-            std::mem::swap(&mut self.labels, &mut self.next_labels);
         }
 
-        LabelPropComputationResult {
-            labels: self.labels.clone(),
+        LabelPropResult {
+            labels,
             did_converge,
             ran_iterations,
         }
     }
+}
 
-    /// Initialize labels from seeds or node IDs
-    fn init_labels(
-        &mut self,
-        node_count: usize,
-        _get_neighbors: &impl Fn(usize) -> Vec<(usize, f64)>,
-    ) {
-        if let Some(ref seeds) = self.seed_labels {
-            // Use provided seed labels
-            self.labels[..node_count].copy_from_slice(&seeds[..node_count]);
-        } else {
-            // Initialize with node IDs
-            for i in 0..node_count {
-                self.labels[i] = i as u64;
-            }
+struct VoteTally {
+    votes: HashMap<u64, f64>,
+}
+
+impl VoteTally {
+    fn new() -> Self {
+        Self {
+            votes: HashMap::with_capacity(64),
         }
-
-        self.next_labels.copy_from_slice(&self.labels);
     }
 
-    /// Execute one iteration of label propagation
-    fn compute_iteration(
-        &mut self,
-        node_count: usize,
-        get_neighbors: &impl Fn(usize) -> Vec<(usize, f64)>,
-    ) -> bool {
-        let mut changed = false;
-
-        for node_id in 0..node_count {
-            let old_label = self.labels[node_id];
-
-            // Collect votes from neighbors
-            let mut votes: HashMap<u64, f64> = HashMap::new();
-            let neighbors = get_neighbors(node_id);
-
-            for (neighbor_id, edge_weight) in neighbors {
-                let neighbor_label = self.labels[neighbor_id];
-                let neighbor_weight = self.node_weights[neighbor_id];
-                let vote_weight = edge_weight * neighbor_weight;
-
-                *votes.entry(neighbor_label).or_insert(0.0) += vote_weight;
-            }
-
-            // Tally votes and find best label
-            let new_label = self.tally_votes(old_label, votes);
-
-            if new_label != old_label {
-                changed = true;
-            }
-
-            self.next_labels[node_id] = new_label;
-        }
-
-        changed
+    fn clear(&mut self) {
+        self.votes.clear();
     }
 
-    /// Find label with most votes (ties broken by lowest label ID)
-    fn tally_votes(&self, current_label: u64, votes: HashMap<u64, f64>) -> u64 {
-        if votes.is_empty() {
-            return current_label;
-        }
-
-        let mut best_label = current_label;
-        let mut best_weight = f64::NEG_INFINITY;
-
-        for (label, weight) in votes {
-            if weight > best_weight || (weight == best_weight && label < best_label) {
-                best_weight = weight;
-                best_label = label;
-            }
-        }
-
-        best_label
+    fn add_vote(&mut self, label: u64, weight: f64) {
+        *self.votes.entry(label).or_insert(0.0) += weight;
     }
 }

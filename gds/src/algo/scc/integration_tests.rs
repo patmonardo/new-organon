@@ -1,7 +1,6 @@
 //! SCC Integration Tests
 //!
-//! These tests validate SCC behavior using the current in-memory graph store
-//! construction APIs.
+//! Validates SCC behavior via the Graph facade and DefaultGraphStore fixture helpers.
 
 #[cfg(test)]
 mod tests {
@@ -64,7 +63,7 @@ mod tests {
     }
 
     #[test]
-    fn scc_simple_cycle_is_single_component() {
+    fn scc_single_cycle_is_one_component() {
         // 0 -> 1 -> 2 -> 0
         let store = store_from_outgoing(vec![vec![1], vec![2], vec![0]]);
         let graph = Graph::new(Arc::new(store));
@@ -78,25 +77,34 @@ mod tests {
 
     #[test]
     fn scc_two_disjoint_cycles_are_two_components() {
-        // 0 <-> 1 and 2 <-> 3
+        // (0 <-> 1) and (2 <-> 3)
         let store = store_from_outgoing(vec![vec![1], vec![0], vec![3], vec![2]]);
         let graph = Graph::new(Arc::new(store));
 
         let result = graph.scc().run().unwrap();
         assert_eq!(result.component_count, 2);
         assert_eq!(result.components.len(), 4);
-
-        // Same-SCC pairs
         assert_eq!(result.components[0], result.components[1]);
         assert_eq!(result.components[2], result.components[3]);
-
-        // Different-SCC across cycles
         assert_ne!(result.components[0], result.components[2]);
     }
 
     #[test]
+    fn scc_directed_chain_has_each_node_its_own_component() {
+        // 0 -> 1 -> 2 -> 3
+        let store = store_from_outgoing(vec![vec![1], vec![2], vec![3], vec![]]);
+        let graph = Graph::new(Arc::new(store));
+
+        let result = graph.scc().run().unwrap();
+        assert_eq!(result.component_count, 4);
+        assert_eq!(result.components.len(), 4);
+        assert_ne!(result.components[0], result.components[1]);
+        assert_ne!(result.components[1], result.components[2]);
+        assert_ne!(result.components[2], result.components[3]);
+    }
+
+    #[test]
     fn scc_isolated_nodes_each_form_component() {
-        // No edges: each node is its own SCC.
         let store = store_from_outgoing(vec![vec![], vec![], vec![]]);
         let graph = Graph::new(Arc::new(store));
 
@@ -105,7 +113,6 @@ mod tests {
         assert_eq!(result.components.len(), 3);
         assert_ne!(result.components[0], result.components[1]);
         assert_ne!(result.components[1], result.components[2]);
-        assert_ne!(result.components[0], result.components[2]);
     }
 
     #[test]

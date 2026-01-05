@@ -1,76 +1,85 @@
-//! Conductance storage: accumulates edge counts per community
+use super::computation::ConductanceComputationRuntime;
+use super::spec::{ConductanceConfig, ConductanceResult};
+use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::ProgressTracker;
+use crate::projection::orientation::Orientation;
+use crate::projection::RelationshipType;
+use crate::types::properties::node::NodePropertyValues;
+use crate::types::prelude::GraphStore;
+use std::collections::HashSet;
+use std::sync::Arc;
 
-use std::collections::HashMap;
-use std::sync::Mutex;
+pub struct ConductanceStorageRuntime {}
 
-/// Storage for conductance computation
-pub struct ConductanceStorageRuntime {
-    /// Internal edge weight (edges within each community)
-    internal_counts: Mutex<HashMap<u64, f64>>,
-    /// External edge weight (edges crossing community boundaries)
-    external_counts: Mutex<HashMap<u64, f64>>,
+impl ConductanceStorageRuntime {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn compute_conductance(
+        &self,
+        computation: &mut ConductanceComputationRuntime,
+        graph_store: &impl GraphStore,
+        config: &ConductanceConfig,
+        progress_tracker: &mut dyn ProgressTracker,
+        termination_flag: &TerminationFlag,
+    ) -> Result<ConductanceResult, String> {
+        let rel_types: HashSet<RelationshipType> = HashSet::new();
+        let graph = graph_store
+            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
+            .map_err(|e| format!("failed to build graph view: {e}"))?;
+
+        let node_count = graph.node_count();
+        if node_count == 0 {
+            return Ok(ConductanceResult {
+                community_conductances: std::collections::HashMap::new(),
+                global_average_conductance: 0.0,
+            });
+        }
+
+        if config.community_property.is_empty() {
+            return Err("community_property cannot be empty".to_string());
+        }
+
+        let community_props: Arc<dyn NodePropertyValues> = graph
+            .node_properties(&config.community_property)
+            .ok_or_else(|| format!("Community property '{}' not found", config.community_property))?;
+
+        // Root task ("Conductance") and its Java-parity subtasks are driven here.
+        progress_tracker.begin_subtask_with_description("Conductance");
+
+        // 1) Count relationships
+        progress_tracker.begin_subtask_with_description_and_volume(
+            "count relationships",
+            node_count,
+        );
+        let locals = computation.count_relationships(
+            Arc::clone(&graph),
+            Arc::clone(&community_props),
+            config,
+            termination_flag,
+        )?;
+        // We don't log per-partition here (tracker isn't thread-shared); mark phase complete.
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask_with_description("count relationships");
+
+        // 2) Accumulate counts
+        progress_tracker.begin_subtask_with_description("accumulate counts");
+        let counts = computation.accumulate_counts(locals);
+        progress_tracker.end_subtask_with_description("accumulate counts");
+
+        // 3) Compute conductances
+        progress_tracker.begin_subtask_with_description("perform conductance computations");
+        let result = computation.compute_conductances(counts);
+        progress_tracker.end_subtask_with_description("perform conductance computations");
+
+        progress_tracker.end_subtask_with_description("Conductance");
+        Ok(result)
+    }
 }
 
 impl Default for ConductanceStorageRuntime {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-impl ConductanceStorageRuntime {
-    pub fn new() -> Self {
-        Self {
-            internal_counts: Mutex::new(HashMap::new()),
-            external_counts: Mutex::new(HashMap::new()),
-        }
-    }
-
-    /// Add internal edge weight for a community
-    pub fn add_internal(&self, community_id: u64, weight: f64) {
-        let mut counts = self.internal_counts.lock().unwrap();
-        *counts.entry(community_id).or_insert(0.0) += weight;
-    }
-
-    /// Add external edge weight for a community
-    pub fn add_external(&self, community_id: u64, weight: f64) {
-        let mut counts = self.external_counts.lock().unwrap();
-        *counts.entry(community_id).or_insert(0.0) += weight;
-    }
-
-    /// Compute conductances from accumulated counts
-    pub fn compute_conductances(self) -> (HashMap<u64, f64>, f64) {
-        let internal_counts = self.internal_counts.into_inner().unwrap();
-        let external_counts = self.external_counts.into_inner().unwrap();
-
-        let mut community_conductances = HashMap::new();
-        let mut sum = 0.0;
-        let mut count = 0;
-
-        // Get all communities that have any edges
-        let mut all_communities: Vec<u64> = internal_counts
-            .keys()
-            .chain(external_counts.keys())
-            .copied()
-            .collect();
-        all_communities.sort_unstable();
-        all_communities.dedup();
-
-        for community_id in all_communities {
-            let internal = internal_counts.get(&community_id).copied().unwrap_or(0.0);
-            let external = external_counts.get(&community_id).copied().unwrap_or(0.0);
-
-            // Conductance = external / (external + internal)
-            let total = external + internal;
-            if total > 0.0 {
-                let conductance = external / total;
-                community_conductances.insert(community_id, conductance);
-                sum += conductance;
-                count += 1;
-            }
-        }
-
-        let average = if count > 0 { sum / count as f64 } else { 0.0 };
-
-        (community_conductances, average)
     }
 }

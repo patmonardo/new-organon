@@ -3,7 +3,7 @@
 //! Handles JSON requests for ApproxMaxKCut community detection operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::community::approx_max_k_cut::{
+use crate::procedures::community::approx_max_kcut::{
     ApproxMaxKCutFacade, ApproxMaxKCutRow,
 };
 use crate::types::catalog::GraphCatalog;
@@ -11,7 +11,7 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 
 /// Handle ApproxMaxKCut requests
-pub fn handle_approx_max_k_cut(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+pub fn handle_approx_max_kcut(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     let op = "approxMaxKCut";
 
     // Parse request parameters

@@ -1,7 +1,12 @@
 //! WCC Storage Runtime
+
 use super::computation::{WccComputationResult, WccComputationRuntime};
+use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
-use crate::types::graph::Graph;
+use crate::projection::Orientation;
+use crate::projection::RelationshipType;
+use crate::types::prelude::GraphStore;
+use std::collections::HashSet;
 
 pub struct WccStorageRuntime {
     #[allow(dead_code)]
@@ -13,35 +18,27 @@ impl WccStorageRuntime {
         Self { concurrency }
     }
 
-    /// Compute WCC given an oriented/filtered Graph view (use undirected semantics)
+    /// Compute WCC given a graph store. Uses a directed (natural) view; WCC unions
+    /// endpoints so results correspond to weak connectivity.
     pub fn compute_wcc(
         &self,
         computation: &mut WccComputationRuntime,
-        graph: &dyn Graph,
+        graph_store: &impl GraphStore,
         progress_tracker: &mut dyn ProgressTracker,
-    ) -> WccComputationResult {
-        let node_count = graph.node_count();
-        let fallback = graph.default_property_value();
+        termination_flag: &TerminationFlag,
+    ) -> Result<WccComputationResult, String> {
+        let rel_types: HashSet<RelationshipType> = HashSet::new();
+        let graph_view = graph_store
+            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
+            .map_err(|e| format!("Failed to obtain graph view: {e}"))?;
 
-        progress_tracker.begin_subtask_with_volume(node_count);
+        progress_tracker.begin_subtask_with_volume(graph_view.relationship_count());
 
-        // Undirected: neighbors are union of out and in targets; dedupe via Vec + sort/unique is overkill per node, so we push both directions; computation uses union-find so duplicates are harmless.
-        let get_neighbors = |node: usize| -> Vec<usize> {
-            let id = node as u64;
-            let mut out: Vec<usize> = graph
-                .stream_relationships(id as i64, fallback)
-                .map(|c| c.target_id() as usize)
-                .collect();
-            let mut inc: Vec<usize> = graph
-                .stream_inverse_relationships(id as i64, fallback)
-                .map(|c| c.source_id() as usize)
-                .collect();
-            out.append(&mut inc);
-            out
-        };
+        let result = computation
+            .compute(graph_view.as_ref(), progress_tracker, termination_flag)
+            .map_err(|e| format!("WCC computation failed: {e}"))?;
 
-        let result = computation.compute(node_count, get_neighbors, progress_tracker);
         progress_tracker.end_subtask();
-        result
+        Ok(result)
     }
 }

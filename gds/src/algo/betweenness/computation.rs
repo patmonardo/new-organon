@@ -9,7 +9,11 @@
 //! Formula: betweenness(v) = sum of (sigma[s,v] / sigma[s,t]) * delta[t]
 //!                           for all s,t where path goes through v
 
-use std::collections::VecDeque;
+use crate::collections::HugeAtomicDoubleArray;
+use crate::concurrency::virtual_threads::{Executor, WorkerContext};
+use crate::concurrency::{Concurrency, TerminatedException, TerminationFlag};
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, VecDeque};
 
 #[derive(Clone)]
 pub struct BetweennessCentralityComputationResult {
@@ -63,6 +67,109 @@ impl BetweennessCentralityComputationRuntime {
         BetweennessCentralityComputationResult {
             centralities: self.centralities.clone(),
         }
+    }
+
+    /// Parallel (and optionally sampled) unweighted betweenness centrality.
+    ///
+    /// This follows the Brandes algorithm but parallelizes across source nodes.
+    /// Results are accumulated into a shared atomic double array.
+    pub fn compute_parallel_unweighted(
+        node_count: usize,
+        sources: &[usize],
+        divisor: f64,
+        concurrency: usize,
+        termination: &TerminationFlag,
+        on_source_done: std::sync::Arc<dyn Fn() + Send + Sync>,
+        get_neighbors: &(impl Fn(usize) -> Vec<usize> + Send + Sync),
+    ) -> Result<BetweennessCentralityComputationResult, TerminatedException> {
+        if node_count == 0 || sources.is_empty() {
+            return Ok(BetweennessCentralityComputationResult {
+                centralities: Vec::new(),
+            });
+        }
+
+        let centralities = HugeAtomicDoubleArray::new(node_count);
+        let executor = Executor::new(Concurrency::of(concurrency.max(1)));
+
+        let task_state = WorkerContext::new(move || UnweightedTaskState::new(node_count));
+
+        executor.parallel_for(0, sources.len(), termination, |i| {
+            let source = sources[i];
+            if source >= node_count {
+                return;
+            }
+            task_state.with(|state| {
+                state.run_source(source, node_count, termination, get_neighbors, &centralities);
+            });
+            (on_source_done.as_ref())();
+        })?;
+
+        let mut out = vec![0.0f64; node_count];
+        if divisor != 0.0 {
+            for i in 0..node_count {
+                out[i] = centralities.get(i) / divisor;
+            }
+        } else {
+            for i in 0..node_count {
+                out[i] = centralities.get(i);
+            }
+        }
+
+        Ok(BetweennessCentralityComputationResult { centralities: out })
+    }
+
+    /// Parallel (and optionally sampled) weighted betweenness centrality.
+    ///
+    /// Weighted variant uses Dijkstra in the forward phase (Brandes, 2001).
+    pub fn compute_parallel_weighted(
+        node_count: usize,
+        sources: &[usize],
+        divisor: f64,
+        concurrency: usize,
+        termination: &TerminationFlag,
+        on_source_done: std::sync::Arc<dyn Fn() + Send + Sync>,
+        get_neighbors_weighted: &(impl Fn(usize) -> Vec<(usize, f64)> + Send + Sync),
+    ) -> Result<BetweennessCentralityComputationResult, TerminatedException> {
+        if node_count == 0 || sources.is_empty() {
+            return Ok(BetweennessCentralityComputationResult {
+                centralities: Vec::new(),
+            });
+        }
+
+        let centralities = HugeAtomicDoubleArray::new(node_count);
+        let executor = Executor::new(Concurrency::of(concurrency.max(1)));
+
+        let task_state = WorkerContext::new(move || WeightedTaskState::new(node_count));
+
+        executor.parallel_for(0, sources.len(), termination, |i| {
+            let source = sources[i];
+            if source >= node_count {
+                return;
+            }
+            task_state.with(|state| {
+                state.run_source(
+                    source,
+                    node_count,
+                    termination,
+                    get_neighbors_weighted,
+                    &centralities,
+                );
+            });
+            (on_source_done.as_ref())();
+        })?;
+
+        let mut out = vec![0.0f64; node_count];
+        if divisor != 0.0 {
+            for i in 0..node_count {
+                out[i] = centralities.get(i) / divisor;
+            }
+        } else {
+            for i in 0..node_count {
+                out[i] = centralities.get(i);
+            }
+        }
+
+        Ok(BetweennessCentralityComputationResult { centralities: out })
     }
 
     /// Phase 1: Forward BFS from source node
@@ -138,6 +245,279 @@ impl BetweennessCentralityComputationRuntime {
             if node != source_node {
                 self.centralities[node] += self.delta[node];
             }
+        }
+    }
+}
+
+struct UnweightedTaskState {
+    sigma: Vec<u64>,
+    delta: Vec<f64>,
+    distances: Vec<i32>,
+    predecessors: Vec<Vec<usize>>,
+    stack: Vec<usize>,
+    queue: VecDeque<usize>,
+    visited: Vec<usize>,
+}
+
+impl UnweightedTaskState {
+    fn new(node_count: usize) -> Self {
+        Self {
+            sigma: vec![0; node_count],
+            delta: vec![0.0; node_count],
+            distances: vec![-1; node_count],
+            predecessors: vec![Vec::new(); node_count],
+            stack: Vec::with_capacity(node_count.min(1024)),
+            queue: VecDeque::new(),
+            visited: Vec::with_capacity(node_count.min(1024)),
+        }
+    }
+
+    fn run_source(
+        &mut self,
+        source: usize,
+        node_count: usize,
+        termination: &TerminationFlag,
+        get_neighbors: &impl Fn(usize) -> Vec<usize>,
+        centralities: &HugeAtomicDoubleArray,
+    ) {
+        if !termination.running() {
+            return;
+        }
+
+        self.stack.clear();
+        self.queue.clear();
+        self.visited.clear();
+
+        self.sigma[source] = 1;
+        self.delta[source] = 0.0;
+        self.distances[source] = 0;
+        self.predecessors[source].clear();
+        self.visited.push(source);
+        self.queue.push_back(source);
+
+        while let Some(v) = self.queue.pop_front() {
+            if !termination.running() {
+                return;
+            }
+            self.stack.push(v);
+            let v_dist = self.distances[v];
+            let v_sigma = self.sigma[v];
+            if v_sigma == 0 {
+                continue;
+            }
+
+            for w in get_neighbors(v) {
+                if w >= node_count {
+                    continue;
+                }
+
+                let next_dist = v_dist + 1;
+                if self.distances[w] < 0 {
+                    // First time seen in this source run.
+                    self.distances[w] = next_dist;
+                    self.sigma[w] = 0;
+                    self.delta[w] = 0.0;
+                    self.predecessors[w].clear();
+                    self.visited.push(w);
+                    self.queue.push_back(w);
+                }
+
+                if self.distances[w] == next_dist {
+                    self.sigma[w] = self.sigma[w].saturating_add(v_sigma);
+                    self.predecessors[w].push(v);
+                }
+            }
+        }
+
+        // Backward dependency propagation.
+        while let Some(w) = self.stack.pop() {
+            if !termination.running() {
+                return;
+            }
+            let w_sigma = self.sigma[w] as f64;
+            if w_sigma == 0.0 {
+                continue;
+            }
+
+            // For each predecessor v of w.
+            let contrib_base = 1.0 + self.delta[w];
+            for &v in &self.predecessors[w] {
+                let v_sigma = self.sigma[v] as f64;
+                if v_sigma == 0.0 {
+                    continue;
+                }
+                self.delta[v] += (v_sigma / w_sigma) * contrib_base;
+            }
+
+            if w != source {
+                centralities.get_and_add(w, self.delta[w]);
+            }
+        }
+
+        // Reset per-node markers for the next source.
+        for &v in &self.visited {
+            self.distances[v] = -1;
+            self.sigma[v] = 0;
+            self.delta[v] = 0.0;
+            self.predecessors[v].clear();
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct HeapItem {
+    dist: f64,
+    node: usize,
+}
+
+impl Eq for HeapItem {}
+
+impl PartialEq for HeapItem {
+    fn eq(&self, other: &Self) -> bool {
+        self.dist.to_bits() == other.dist.to_bits() && self.node == other.node
+    }
+}
+
+impl Ord for HeapItem {
+    fn cmp(&self, other: &Self) -> Ordering {
+        // Reverse by distance to make BinaryHeap act like a min-heap.
+        other
+            .dist
+            .total_cmp(&self.dist)
+            .then_with(|| self.node.cmp(&other.node))
+    }
+}
+
+impl PartialOrd for HeapItem {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+struct WeightedTaskState {
+    sigma: Vec<u64>,
+    delta: Vec<f64>,
+    distances: Vec<f64>,
+    predecessors: Vec<Vec<usize>>,
+    stack: Vec<usize>,
+    heap: BinaryHeap<HeapItem>,
+    visited: Vec<usize>,
+}
+
+impl WeightedTaskState {
+    fn new(node_count: usize) -> Self {
+        Self {
+            sigma: vec![0; node_count],
+            delta: vec![0.0; node_count],
+            distances: vec![f64::INFINITY; node_count],
+            predecessors: vec![Vec::new(); node_count],
+            stack: Vec::with_capacity(node_count.min(1024)),
+            heap: BinaryHeap::new(),
+            visited: Vec::with_capacity(node_count.min(1024)),
+        }
+    }
+
+    fn run_source(
+        &mut self,
+        source: usize,
+        node_count: usize,
+        termination: &TerminationFlag,
+        get_neighbors_weighted: &impl Fn(usize) -> Vec<(usize, f64)>,
+        centralities: &HugeAtomicDoubleArray,
+    ) {
+        if !termination.running() {
+            return;
+        }
+
+        const EPS: f64 = 1e-12;
+
+        self.stack.clear();
+        self.heap.clear();
+        self.visited.clear();
+
+        self.sigma[source] = 1;
+        self.delta[source] = 0.0;
+        self.distances[source] = 0.0;
+        self.predecessors[source].clear();
+        self.visited.push(source);
+        self.heap.push(HeapItem {
+            dist: 0.0,
+            node: source,
+        });
+
+        while let Some(HeapItem { dist: d, node: v }) = self.heap.pop() {
+            if !termination.running() {
+                return;
+            }
+            if d > self.distances[v] + EPS {
+                continue;
+            }
+
+            self.stack.push(v);
+            let v_sigma = self.sigma[v];
+            if v_sigma == 0 {
+                continue;
+            }
+
+            for (w, weight) in get_neighbors_weighted(v) {
+                if w >= node_count {
+                    continue;
+                }
+                if !weight.is_finite() || weight < 0.0 {
+                    // Dijkstra requires non-negative finite weights.
+                    continue;
+                }
+                let alt = d + weight;
+
+                if self.distances[w].is_infinite() {
+                    // First time seen in this source run.
+                    self.predecessors[w].clear();
+                    self.sigma[w] = 0;
+                    self.delta[w] = 0.0;
+                    self.visited.push(w);
+                }
+
+                if alt + EPS < self.distances[w] {
+                    self.distances[w] = alt;
+                    self.heap.push(HeapItem { dist: alt, node: w });
+                    self.predecessors[w].clear();
+                    self.predecessors[w].push(v);
+                    self.sigma[w] = v_sigma;
+                } else if (alt - self.distances[w]).abs() <= EPS {
+                    self.predecessors[w].push(v);
+                    self.sigma[w] = self.sigma[w].saturating_add(v_sigma);
+                }
+            }
+        }
+
+        while let Some(w) = self.stack.pop() {
+            if !termination.running() {
+                return;
+            }
+            let w_sigma = self.sigma[w] as f64;
+            if w_sigma == 0.0 {
+                continue;
+            }
+
+            let contrib_base = 1.0 + self.delta[w];
+            for &v in &self.predecessors[w] {
+                let v_sigma = self.sigma[v] as f64;
+                if v_sigma == 0.0 {
+                    continue;
+                }
+                self.delta[v] += (v_sigma / w_sigma) * contrib_base;
+            }
+
+            if w != source {
+                centralities.get_and_add(w, self.delta[w]);
+            }
+        }
+
+        for &v in &self.visited {
+            self.distances[v] = f64::INFINITY;
+            self.sigma[v] = 0;
+            self.delta[v] = 0.0;
+            self.predecessors[v].clear();
         }
     }
 }

@@ -12,12 +12,11 @@ use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::algo::triangle_count::TriangleCountComputationRuntime;
-use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
-use crate::types::graph::id_map::NodeId;
+use crate::algo::triangle::{
+    TriangleCountComputationRuntime, TriangleCountConfig, TriangleCountStorageRuntime,
+};
+use crate::concurrency::TerminationFlag;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -84,15 +83,7 @@ impl TriangleCountFacade {
         self.validate()?;
         let start = Instant::now();
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
-
-        let node_count = graph_view.node_count();
+        let node_count = self.graph_store.node_count();
         if node_count == 0 {
             return Ok((Vec::new(), 0, start.elapsed()));
         }
@@ -102,34 +93,24 @@ impl TriangleCountFacade {
         );
         progress_tracker.begin_subtask_with_volume(node_count);
 
-        let max_degree = self.max_degree;
-        let fallback = graph_view.default_property_value();
-        let get_neighbors = |node_idx: usize| -> Vec<usize> {
-            let node_id: NodeId = node_idx as i64;
 
-            // Degree filter (performance / approximation).
-            if (graph_view.degree(node_id) as u64) > max_degree {
-                return Vec::new();
-            }
-
-            let mut neighbors: Vec<usize> = graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| cursor.target_id())
-                .filter(|target| *target >= 0)
-                .map(|target| target as usize)
-                .collect();
-
-            // Ensure stable counting (dedup parallel edges).
-            neighbors.sort_unstable();
-            neighbors.dedup();
-            neighbors
+        let config = TriangleCountConfig {
+            concurrency: self.concurrency,
+            max_degree: self.max_degree,
         };
 
+        let termination_flag = TerminationFlag::default();
+        let storage = TriangleCountStorageRuntime::new();
         let mut runtime = TriangleCountComputationRuntime::new();
-        let result = runtime.compute(node_count, get_neighbors);
-
-        progress_tracker.log_progress(node_count);
-        progress_tracker.end_subtask();
+        let result = storage
+            .compute_triangle_count(
+                &mut runtime,
+                self.graph_store.as_ref(),
+                &config,
+                &mut progress_tracker,
+                &termination_flag,
+            )
+            .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
 
         Ok((
             result.local_triangles,
@@ -187,9 +168,9 @@ impl TriangleCountFacade {
     }
 
     /// Full result: returns both local and global counts.
-    pub fn run(&self) -> Result<crate::algo::triangle_count::TriangleCountResult> {
+    pub fn run(&self) -> Result<crate::algo::triangle::TriangleCountResult> {
         let (local, global, _elapsed) = self.compute()?;
-        Ok(crate::algo::triangle_count::TriangleCountResult {
+        Ok(crate::algo::triangle::TriangleCountResult {
             local_triangles: local,
             global_triangles: global,
         })

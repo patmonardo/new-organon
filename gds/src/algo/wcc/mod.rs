@@ -1,8 +1,9 @@
 //! Weakly Connected Components (WCC) Algorithm
 //!
-//! **Translation Source**: `org.neo4j.gds.wcc.Wcc`
+//! **Translation Source**: `org.neo4j.gds.wcc.Wcc` (+ `SampledStrategy`, `UnsampledStrategy`)
 //!
-//! Finds all weakly connected components in an undirected graph.
+//! Computes connected components under *undirected* semantics.
+//! For directed graphs, each relationship still connects its endpoints.
 
 pub mod computation;
 #[cfg(test)]
@@ -11,5 +12,5 @@ pub mod spec;
 pub mod storage;
 
 pub use computation::WccComputationRuntime;
-pub use spec::{WccAlgorithmSpec, WccConfig, WccResult};
+pub use spec::{WCCAlgorithmSpec, WccConfig, WccResult};
 pub use storage::WccStorageRuntime;

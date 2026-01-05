@@ -1,166 +1,233 @@
-//! K1Coloring Computation Runtime
+//! K1-Coloring computation runtime
 //!
-//! **Translation Source**: `org.neo4j.gds.k1coloring.K1Coloring`
+//! Java parity references:
+//! - `org.neo4j.gds.k1coloring.K1Coloring`
+//! - `org.neo4j.gds.k1coloring.ColoringStep`
+//! - `org.neo4j.gds.k1coloring.ValidationStep`
 //!
-//! Greedy graph coloring algorithm ensuring no two adjacent nodes share the same color.
-//! Uses iterative phases: Coloring (assign colors) and Validation (detect conflicts).
+//! The algorithm alternates between:
+//! 1) greedy coloring of a working set of nodes
+//! 2) validation which schedules conflicting nodes for recoloring
 
-use crate::collections::BitSet;
+use crate::collections::{BitSet, HugeAtomicLongArray};
+use crate::concurrency::{install_with_concurrency, Concurrency};
+use crate::core::graph_dimensions::GraphDimensions;
+use crate::core::utils::paged::HugeAtomicBitSet;
+use crate::mem::{Estimate, MemoryEstimation, MemoryRange, MemoryTree};
+use rayon::prelude::*;
 
-/// K1Coloring computation result
-#[derive(Clone)]
-pub struct K1ColoringComputationResult {
+pub const INITIAL_FORBIDDEN_COLORS: usize = 1000;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct K1ColoringRunResult {
     pub colors: Vec<u64>,
     pub ran_iterations: u64,
     pub did_converge: bool,
 }
 
-/// K1Coloring computation runtime
+#[derive(Debug, Clone)]
 pub struct K1ColoringComputationRuntime {
-    /// Current color assignments for each node
-    colors: Vec<u64>,
-    /// Nodes pending coloring (current iteration)
-    nodes_to_color_current: BitSet,
-    /// Nodes pending coloring (next iteration)
-    nodes_to_color_next: BitSet,
-    /// Max iterations
+    _node_count: usize,
     max_iterations: u64,
-    /// Current iteration count
-    ran_iterations: u64,
-    /// Forbidden colors for current node being colored
-    forbidden_colors: BitSet,
-    /// Scratch list of forbidden color indices to clear (sparse reset)
-    forbidden_touched: Vec<usize>,
+    concurrency: usize,
 }
-
-pub const INITIAL_FORBIDDEN_COLORS: usize = 1000;
-const INITIAL_COLOR: u64 = INITIAL_FORBIDDEN_COLORS as u64;
 
 impl K1ColoringComputationRuntime {
     pub fn new(node_count: usize, max_iterations: u64) -> Self {
         Self {
-            colors: vec![INITIAL_COLOR; node_count],
-            nodes_to_color_current: BitSet::new(node_count),
-            nodes_to_color_next: BitSet::new(node_count),
+            _node_count: node_count,
             max_iterations,
-            ran_iterations: 0,
-            forbidden_colors: BitSet::new(INITIAL_FORBIDDEN_COLORS),
-            forbidden_touched: Vec::new(),
+            concurrency: 1,
         }
     }
 
-    /// Run K1Coloring algorithm
-    pub fn compute(
-        &mut self,
-        node_count: usize,
-        get_neighbors: impl Fn(usize) -> Vec<usize>,
-    ) -> K1ColoringComputationResult {
-        // (Re)initialize state for this run.
-        if self.colors.len() != node_count {
-            self.colors = vec![INITIAL_COLOR; node_count];
-            self.nodes_to_color_current = BitSet::new(node_count);
-            self.nodes_to_color_next = BitSet::new(node_count);
-        } else {
-            self.colors.fill(INITIAL_COLOR);
-            self.nodes_to_color_current.clear_all();
-            self.nodes_to_color_next.clear_all();
-        }
-        self.ran_iterations = 0;
-        self.forbidden_colors.clear_all();
-        self.forbidden_touched.clear();
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency.max(1);
+        self
+    }
 
-        // Initialize: all nodes need coloring.
+    pub fn compute<F>(&mut self, node_count: usize, neighbors: F) -> K1ColoringRunResult
+    where
+        F: Fn(usize) -> Vec<usize> + Sync,
+    {
+        if node_count == 0 {
+            return K1ColoringRunResult {
+                colors: Vec::new(),
+                ran_iterations: 0,
+                did_converge: true,
+            };
+        }
+
+        if self.max_iterations == 0 {
+            return K1ColoringRunResult {
+                colors: vec![0; node_count],
+                ran_iterations: 0,
+                did_converge: false,
+            };
+        }
+
+        let colors = HugeAtomicLongArray::new(node_count);
         for i in 0..node_count {
-            self.nodes_to_color_current.set(i);
+            colors.set(i, INITIAL_FORBIDDEN_COLORS as i64);
         }
 
-        // Iterative coloring and validation
-        while self.ran_iterations < self.max_iterations
-            && self.nodes_to_color_current.cardinality() > 0
-        {
-            // Phase 1: Color all nodes in current set
-            self.coloring_phase(node_count, &get_neighbors);
-
-            // Phase 2: Validate and mark conflicts for next iteration
-            self.validation_phase(node_count, &get_neighbors);
-
-            self.ran_iterations += 1;
-
-            // Swap for next iteration
-            std::mem::swap(
-                &mut self.nodes_to_color_current,
-                &mut self.nodes_to_color_next,
-            );
+        let mut current_nodes = HugeAtomicBitSet::new(node_count);
+        let mut next_nodes = HugeAtomicBitSet::new(node_count);
+        for i in 0..node_count {
+            current_nodes.set(i);
         }
 
-        let did_converge = self.ran_iterations < self.max_iterations;
+        let mut ran_iterations = 0u64;
 
-        K1ColoringComputationResult {
-            colors: self.colors.clone(),
-            ran_iterations: self.ran_iterations,
+        while ran_iterations < self.max_iterations && !current_nodes.is_empty() {
+            // Materialize the current working set for stable parallel iteration.
+            let mut nodes_to_color = Vec::with_capacity(current_nodes.cardinality());
+            current_nodes.for_each_set_bit(|n| {
+                if n < node_count {
+                    nodes_to_color.push(n);
+                }
+            });
+
+            self.run_coloring(&colors, &nodes_to_color, &neighbors);
+
+            next_nodes.clear();
+            self.run_validation(&colors, &nodes_to_color, &neighbors, &next_nodes);
+
+            ran_iterations += 1;
+
+            // Swap working sets.
+            std::mem::swap(&mut current_nodes, &mut next_nodes);
+        }
+
+        let did_converge = current_nodes.is_empty();
+
+        let mut out = vec![0u64; node_count];
+        for i in 0..node_count {
+            out[i] = colors.get(i) as u64;
+        }
+
+        K1ColoringRunResult {
+            colors: out,
+            ran_iterations,
             did_converge,
         }
     }
 
-    /// Phase 1: Assign colors to all nodes in current set
-    fn coloring_phase(&mut self, node_count: usize, get_neighbors: &impl Fn(usize) -> Vec<usize>) {
-        let mut maybe = self.nodes_to_color_current.next_set_bit(0);
-        while let Some(node_id) = maybe {
-            // Mark neighbor colors as forbidden (sparse reset).
-            let neighbors = get_neighbors(node_id);
-            for &neighbor in &neighbors {
-                if neighbor == node_id || neighbor >= node_count {
-                    continue;
-                }
-                let color_idx = self.colors[neighbor] as usize;
-                if !self.forbidden_colors.get(color_idx) {
-                    self.forbidden_colors.set(color_idx);
-                    self.forbidden_touched.push(color_idx);
-                }
-            }
+    fn run_coloring<F>(&self, colors: &HugeAtomicLongArray, nodes: &[usize], neighbors: &F)
+    where
+        F: Fn(usize) -> Vec<usize> + Sync,
+    {
+        let concurrency = Concurrency::from_usize(self.concurrency);
+        install_with_concurrency(concurrency, || {
+            nodes.par_iter().for_each_init(
+                || BitSet::new(INITIAL_FORBIDDEN_COLORS),
+                |forbidden, &node_id| {
+                    forbidden.clear_all();
 
-            let mut next_color: usize = 0;
-            while self.forbidden_colors.get(next_color) {
-                next_color += 1;
-            }
-            self.colors[node_id] = next_color as u64;
+                    for target in neighbors(node_id) {
+                        if target == node_id {
+                            continue;
+                        }
+                        let c = colors.get(target);
+                        if c >= 0 {
+                            forbidden.set(c as usize);
+                        }
+                    }
 
-            for &idx in &self.forbidden_touched {
-                self.forbidden_colors.clear(idx);
-            }
-            self.forbidden_touched.clear();
-
-            maybe = self.nodes_to_color_current.next_set_bit(node_id + 1);
-        }
+                    let mut next_color = 0usize;
+                    while forbidden.get(next_color) {
+                        next_color += 1;
+                    }
+                    colors.set(node_id, next_color as i64);
+                },
+            );
+        });
     }
 
-    /// Phase 2: Validate coloring and mark conflicts
-    fn validation_phase(
-        &mut self,
-        node_count: usize,
-        get_neighbors: &impl Fn(usize) -> Vec<usize>,
-    ) {
-        self.nodes_to_color_next.clear_all();
+    fn run_validation<F>(
+        &self,
+        colors: &HugeAtomicLongArray,
+        nodes: &[usize],
+        neighbors: &F,
+        next_nodes: &HugeAtomicBitSet,
+    ) where
+        F: Fn(usize) -> Vec<usize> + Sync,
+    {
+        let concurrency = Concurrency::from_usize(self.concurrency);
+        install_with_concurrency(concurrency, || {
+            nodes.par_iter().for_each(|&source| {
+                let source_color = colors.get(source);
+                for target in neighbors(source) {
+                    if target == source {
+                        continue;
+                    }
 
-        let mut maybe = self.nodes_to_color_current.next_set_bit(0);
-        while let Some(node_id) = maybe {
-            let node_color = self.colors[node_id];
-            let neighbors = get_neighbors(node_id);
-
-            for &neighbor in &neighbors {
-                if neighbor == node_id || neighbor >= node_count {
-                    continue;
+                    if source_color == colors.get(target) && !next_nodes.get(target) {
+                        next_nodes.set(source);
+                        break;
+                    }
                 }
-
-                // Mirrors Java:
-                // if colors[source]==colors[target] && !nextNodesToColor.get(target) { nextNodesToColor.set(source); break; }
-                if node_color == self.colors[neighbor] && !self.nodes_to_color_next.get(neighbor) {
-                    self.nodes_to_color_next.set(node_id);
-                    break;
-                }
-            }
-
-            maybe = self.nodes_to_color_current.next_set_bit(node_id + 1);
-        }
+            });
+        });
     }
+}
+
+// -------------------------------------------------------------------------------------------------
+// Memory estimation (Java parity-ish)
+// -------------------------------------------------------------------------------------------------
+
+#[derive(Debug, Clone)]
+pub struct K1ColoringMemoryEstimation;
+
+impl MemoryEstimation for K1ColoringMemoryEstimation {
+    fn description(&self) -> String {
+        "K1Coloring".to_string()
+    }
+
+    fn estimate(&self, dimensions: &dyn GraphDimensions, concurrency: usize) -> MemoryTree {
+        let node_count = dimensions.node_count();
+
+        let colors = Estimate::size_of_long_array(node_count);
+        // Two bitsets (current + next) over nodes.
+        let nodes_to_color = 2 * Estimate::size_of_bitset(node_count);
+        // Per-thread forbidden colors (starts at 1000 bits; may grow at runtime).
+        let forbidden_colors = Estimate::size_of_bitset(INITIAL_FORBIDDEN_COLORS);
+
+        let resident = vec![
+            MemoryTree::leaf(
+                "this.instance".into(),
+                MemoryRange::of(Estimate::BYTES_OBJECT_HEADER),
+            ),
+            MemoryTree::leaf("colors".into(), MemoryRange::of(colors)),
+            MemoryTree::leaf("nodesToColor".into(), MemoryRange::of(nodes_to_color)),
+        ];
+
+        let temporary = vec![MemoryTree::leaf(
+            "forbiddenColors(perThread)".into(),
+            MemoryRange::of(forbidden_colors).times(concurrency.max(1)),
+        )];
+
+        let resident_tree = MemoryTree::new(
+            "residentMemory".into(),
+            sum_ranges(&resident),
+            resident,
+        );
+        let temporary_tree = MemoryTree::new(
+            "temporaryMemory".into(),
+            sum_ranges(&temporary),
+            temporary,
+        );
+
+        MemoryTree::new(
+            "K1Coloring".into(),
+            sum_ranges(&[resident_tree.clone(), temporary_tree.clone()]),
+            vec![resident_tree, temporary_tree],
+        )
+    }
+}
+
+fn sum_ranges(children: &[MemoryTree]) -> MemoryRange {
+    children
+        .iter()
+        .fold(MemoryRange::empty(), |acc, t| acc.add(t.memory_usage()))
 }

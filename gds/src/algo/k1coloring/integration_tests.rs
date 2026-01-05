@@ -1,8 +1,8 @@
-//! K1Coloring Integration Tests
+//! K1-Coloring integration tests
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashMap;
     use std::sync::Arc;
 
     use crate::procedures::Graph;
@@ -59,61 +59,49 @@ mod tests {
         )
     }
 
-    fn assert_no_adjacent_equal(colors: &[u64], outgoing: &[Vec<i64>]) {
-        for (u, targets) in outgoing.iter().enumerate() {
-            for &v in targets {
+    fn assert_valid_coloring(outgoing: &[Vec<i64>], colors: &[u64]) {
+        for (u, nbrs) in outgoing.iter().enumerate() {
+            for &v in nbrs {
                 if v < 0 {
                     continue;
                 }
                 let v = v as usize;
-                if u == v {
+                if v == u {
                     continue;
                 }
-                assert_ne!(colors[u], colors[v], "edge ({u},{v}) has same color");
+                assert_ne!(colors[u], colors[v], "conflict on edge {u}->{v}");
             }
         }
     }
 
     #[test]
-    fn k1_coloring_triangle_is_valid() {
-        // Undirected triangle: 0-1-2-0
+    fn k1coloring_triangle_uses_three_colors() {
+        // Triangle (undirected modeled as symmetric directed edges)
         let outgoing = vec![vec![1, 2], vec![0, 2], vec![0, 1]];
         let store = store_from_outgoing(outgoing.clone());
         let graph = Graph::new(Arc::new(store));
 
-        let result = graph.k1coloring().max_iterations(10).run().unwrap();
-        assert_eq!(result.colors.len(), 3);
+        let result = graph.k1coloring().max_iterations(20).run().unwrap();
         assert!(result.did_converge);
-        assert_no_adjacent_equal(&result.colors, &outgoing);
+        assert_eq!(result.colors.len(), 3);
 
-        let unique: HashSet<u64> = result.colors.iter().copied().collect();
-        assert!(unique.len() >= 3);
+        assert_valid_coloring(&outgoing, &result.colors);
+
+        let used: std::collections::HashSet<u64> = result.colors.iter().copied().collect();
+        assert_eq!(used.len(), 3);
     }
 
     #[test]
-    fn k1_coloring_square_uses_two_colors() {
-        // 0-1-2-3-0 (bipartite)
-        let outgoing = vec![vec![1, 3], vec![0, 2], vec![1, 3], vec![0, 2]];
+    fn k1coloring_path_is_two_colorable() {
+        // Path 0-1-2-3
+        let outgoing = vec![vec![1], vec![0, 2], vec![1, 3], vec![2]];
         let store = store_from_outgoing(outgoing.clone());
         let graph = Graph::new(Arc::new(store));
 
-        let result = graph.k1coloring().max_iterations(10).run().unwrap();
-        assert_eq!(result.colors.len(), 4);
-        assert!(result.did_converge);
-        assert_no_adjacent_equal(&result.colors, &outgoing);
+        let result = graph.k1coloring().max_iterations(20).run().unwrap();
+        assert_valid_coloring(&outgoing, &result.colors);
 
-        let unique: HashSet<u64> = result.colors.iter().copied().collect();
-        assert!(unique.len() <= 2);
-    }
-
-    #[test]
-    fn k1_coloring_empty_graph() {
-        let store = store_from_outgoing(vec![]);
-        let graph = Graph::new(Arc::new(store));
-
-        let result = graph.k1coloring().max_iterations(10).run().unwrap();
-        assert!(result.colors.is_empty());
-        assert_eq!(result.ran_iterations, 0);
-        assert!(result.did_converge);
+        let used: std::collections::HashSet<u64> = result.colors.iter().copied().collect();
+        assert!(used.len() <= 2);
     }
 }

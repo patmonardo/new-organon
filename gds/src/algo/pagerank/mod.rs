@@ -1,42 +1,22 @@
-//! PageRank Algorithm - Path Knowledge in Practice
+//! PageRank (Java GDS parity, simplified)
 //!
-//! PageRank embodies the **Path of Jna dividing itself into Prajna and Jnana**:
-//!
-//! ```text
-//! Jna (Absolute network potential)
-//!     ↓ (divides via Dharma)
-//! Prajna ↔ Jnana
-//! (distributed edge potential) ↔ (aggregated node knowledge)
-//!     ↑ (via message-passing Functor)
-//! ```
-//!
-//! ## Architecture
-//!
-//! - **`spec.rs`**: PageRankAlgorithmSpec (implements AlgorithmSpec trait)
-//! - **`storage.rs`**: Storage runtime (reads PropertyValues, manages state across iterations)
-//! - **`computation.rs`**: Computation runtime (accumulates scores, propagates messages)
-//! - **`executor.rs`** (if needed): Iteration control, convergence detection
-//!
-//! ## How PageRank Walks the Path
-//!
-//! Each iteration:
-//! 1. **Validator** (apprehends): Recognizes current score form in storage
-//! 2. **Projector** (reproduces): Reveals duality (storage scores ↔ message-passing compute)
-//! 3. **Functor** (recognition): Converts PropertyValues → computations and back
-//! 4. **Execution**: Scores propagate via edges (Prajna → Jnana)
-//! 5. **Convergence**: When new scores stabilize, Path's step completes
-//!
-//! See `doc/adr0020_pagerank_path_knowledge.md` for philosophy.
+//! Standard algorithm module layout:
+//! - `spec`: AlgorithmSpec integration (executor)
+//! - `storage`: GraphStore-facing accessors (thin for PageRank)
+//! - `computation`: core PageRank loop + memory estimation
 
 pub mod computation;
-pub mod degree_functions;
-pub mod memory_estimation;
 pub mod spec;
 pub mod storage;
 
-pub use computation::{run_pagerank, PageRankRunResult, PAGE_RANK};
-pub use degree_functions::{
-    average_degree, eigenvector_degree_function, pagerank_degree_function, DegreeFunction,
+#[cfg(test)]
+pub mod integration_tests;
+
+pub use computation::{
+    estimate_pagerank_memory, run_pagerank, PageRankComputationResult, PageRankMemoryEstimation,
+    PageRankRunResult,
 };
-pub use memory_estimation::{estimate_pagerank_memory, PageRankMemoryEstimation};
-pub use spec::{PageRankAlgorithmSpec, PageRankComputationResult};
+pub use spec::{PageRankConfigInput, PageRankResult, PAGERANKAlgorithmSpec};
+
+// Keep public surface stable for `gds/src/algo/mod.rs` re-exports.
+pub type PageRankAlgorithmSpec = PAGERANKAlgorithmSpec;

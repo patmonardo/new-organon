@@ -1,4 +1,4 @@
-pub mod approx_max_k_cut;
+pub mod approx_max_kcut;
 pub mod conductance;
 pub mod k1coloring;
 pub mod kcore;
@@ -12,7 +12,7 @@ pub mod scc;
 pub mod triangle_count;
 pub mod wcc;
 
-pub use approx_max_k_cut::*;
+pub use approx_max_kcut::*;
 pub use conductance::*;
 pub use k1coloring::*;
 pub use kcore::*;

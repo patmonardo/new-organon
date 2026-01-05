@@ -1,15 +1,19 @@
-//! Bridges Algorithm
+//! Bridges (Java GDS parity)
 //!
-//! **Translation Source**: `org.neo4j.gds.bridges.Bridges`
-//!
-//! This module finds all bridges (cut edges) in an undirected graph.
+//! Standard algorithm module layout:
+//! - `spec`: config + result + AlgorithmSpec integration
+//! - `storage`: GraphStore-facing accessors (undirected neighbor access)
+//! - `computation`: pure compute runtime (iterative DFS stack events)
 
 pub mod computation;
-#[cfg(test)]
-pub mod integration_tests;
 pub mod spec;
 pub mod storage;
 
-pub use computation::BridgesComputationRuntime;
-pub use spec::{BridgesAlgorithmSpec, BridgesConfig, BridgesResult};
+#[cfg(test)]
+pub mod integration_tests;
+
+pub use computation::{Bridge, BridgesComputationResult, BridgesComputationRuntime};
+pub use spec::{BridgesConfig, BridgesResult, BRIDGESAlgorithmSpec};
 pub use storage::BridgesStorageRuntime;
+
+pub type BridgesAlgorithmSpec = BRIDGESAlgorithmSpec;

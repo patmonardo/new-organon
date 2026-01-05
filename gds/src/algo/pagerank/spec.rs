@@ -1,458 +1,125 @@
-//! PageRank Algorithm Specification
-//!
-//! This module implements the `AlgorithmSpec` trait for PageRank.
-//! It is the **Species** manifestation of the abstract **Genus** (PageRank principle).
+//! PageRank algorithm specification (executor integration)
 
+use crate::config::base_types::AlgoBaseConfig;
 use crate::config::PageRankConfig;
-use crate::core::utils::progress::{ProgressTracker, Tasks};
-use crate::projection::eval::procedure::{
-    AfterLoadValidator, AlgorithmError, AlgorithmSpec, ComputationResult, ConfigError,
-    ConsumerError, ExecutionContext, ExecutionMode, LogLevel, ProjectionHint,
-    ValidationConfiguration, ValidationError,
-};
-use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use serde_json::{json, Value as JsonValue};
-use std::time::Instant;
+use crate::define_algorithm_spec;
+use crate::projection::eval::procedure::*;
+use crate::projection::Orientation;
+use crate::projection::RelationshipType;
+use crate::core::utils::progress::{ProgressTracker, Tasks, TaskProgressTracker};
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::time::{Duration, Instant};
 
 use super::computation::run_pagerank;
 
-// ============================================================================
-// Algorithm Specification
-// ============================================================================
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PageRankConfigInput {
+    #[serde(default = "default_concurrency")]
+    pub concurrency: usize,
 
-/// PageRank Algorithm Specification
-///
-/// This is the **Species** - concrete manifestation of the PageRank algorithm.
-/// It implements the `AlgorithmSpec` trait required by `ProcedureExecutor`.
-///
-/// ## Architecture
-///
-/// This struct bridges three concepts:
-/// - **Genus** (principle) = "iterative message passing for centrality"
-/// - **Species** (instance) = PageRankAlgorithmSpec with specific parameters
-/// - **Functor** (mapping) = GraphStore ↔ PageRank scores projection
-///
-/// ## The AlgorithmSpec Contract
-///
-/// The executor calls these methods in order:
-/// 1. `preprocess_config()` - Enhance config with context
-/// 2. `parse_config()` - Parse and validate JSON
-/// 3. `validation_config()` - Get validators
-/// 4. `execute()` - Run the algorithm
-/// 5. `consume_result()` - Format output
-pub struct PageRankAlgorithmSpec {
-    /// Name of the graph to load
-    graph_name: String,
+    #[serde(default = "default_max_iterations", rename = "maxIterations")]
+    pub max_iterations: usize,
+
+    #[serde(default = "default_tolerance")]
+    pub tolerance: f64,
+
+    #[serde(default = "default_damping_factor", rename = "dampingFactor")]
+    pub damping_factor: f64,
+
+    #[serde(default, rename = "sourceNodes")]
+    pub source_nodes: Option<Vec<u64>>,
 }
 
-impl PageRankAlgorithmSpec {
-    /// Create a new PageRank algorithm specification
-    pub fn new(graph_name: String) -> Self {
-        Self { graph_name }
+fn default_concurrency() -> usize {
+    4
+}
+
+fn default_max_iterations() -> usize {
+    20
+}
+
+fn default_tolerance() -> f64 {
+    1e-7
+}
+
+fn default_damping_factor() -> f64 {
+    0.85
+}
+
+impl Default for PageRankConfigInput {
+    fn default() -> Self {
+        Self {
+            concurrency: default_concurrency(),
+            max_iterations: default_max_iterations(),
+            tolerance: default_tolerance(),
+            damping_factor: default_damping_factor(),
+            source_nodes: None,
+        }
     }
 }
 
-// ============================================================================
-// AlgorithmSpec Implementation
-// ============================================================================
-
-/// PageRank computation result
-#[derive(Debug, Clone)]
-pub struct PageRankComputationResult {
-    /// PageRank scores for each node
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PageRankResult {
     pub scores: Vec<f64>,
-    /// Number of iterations performed
-    pub iterations: usize,
-    /// Whether the algorithm converged
-    pub converged: bool,
-    /// Execution time
-    pub execution_time: std::time::Duration,
+    pub ran_iterations: usize,
+    pub did_converge: bool,
+    pub node_count: usize,
+    pub execution_time: Duration,
 }
 
-impl AlgorithmSpec for PageRankAlgorithmSpec {
-    /// Output type: PageRankComputationResult
-    type Output = PageRankComputationResult;
+define_algorithm_spec! {
+    name: "pagerank",
+    output_type: PageRankResult,
+    projection_hint: VertexCentric,
+    modes: [Stream, Stats],
 
-    /// Algorithm name (for logging and catalog)
-    fn name(&self) -> &str {
-        "pagerank"
-    }
+    execute: |_self, graph_store, config, _context| {
+        let parsed: PageRankConfigInput = serde_json::from_value(config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
 
-    /// Graph to load
-    fn graph_name(&self) -> &str {
-        &self.graph_name
-    }
-
-    /// Projection hint: prefer dense arrays
-    ///
-    /// PageRank iterates all nodes and their neighbors, so dense arrays
-    /// with cursor iteration provide the best performance.
-    fn projection_hint(&self) -> ProjectionHint {
-        ProjectionHint::Dense
-    }
-
-    /// Parse JSON configuration
-    ///
-    /// Uses the config system's `PageRankConfig` builder pattern for validation.
-    /// The config system handles validation (damping factor range, positive values, etc.).
-    ///
-    /// **Input JSON Format**:
-    /// ```json
-    /// {
-    ///   "dampingFactor": 0.85,
-    ///   "tolerance": 1e-6,
-    ///   "maxIterations": 100,
-    ///   "sourceNodes": ["node1", "node2"],
-    ///   "weightProperty": "weight"
-    /// }
-    /// ```
-    fn parse_config(&self, input: &JsonValue) -> Result<JsonValue, ConfigError> {
-        // Extract fields manually (since PageRankConfig doesn't derive Deserialize from define_config!)
-        let mut builder = PageRankConfig::builder();
-
-        if let Some(df) = input.get("dampingFactor").and_then(|v| v.as_f64()) {
-            builder = builder.damping_factor(df);
+        if parsed.concurrency == 0 {
+            return Err(AlgorithmError::Execution("concurrency must be > 0".into()));
         }
 
-        if let Some(tol) = input.get("tolerance").and_then(|v| v.as_f64()) {
-            builder = builder.tolerance(tol);
-        }
+        let start = Instant::now();
 
-        if let Some(max_iter) = input.get("maxIterations").and_then(|v| v.as_u64()) {
-            builder = builder.max_iterations(max_iter as usize);
-        }
+        let rel_types: HashSet<RelationshipType> = HashSet::new();
+        let graph_view = graph_store
+            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
-        if let Some(src_nodes) = input.get("sourceNodes").and_then(|v| v.as_array()) {
-            let nodes: Vec<String> = src_nodes
-                .iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                .collect();
-
-            // In this Rust runtime, `sourceNodes` are interpreted as internal node IDs (0..n).
-            // Enforce numeric strings early so later execution doesn't silently drop entries.
-            for s in &nodes {
-                if s.parse::<u64>().is_err() {
-                    return Err(ConfigError::InvalidValue {
-                        param: "sourceNodes".to_string(),
-                        message: format!("expected numeric string node ids; got '{s}'"),
-                    });
-                }
-            }
-            builder = builder.source_nodes(Some(nodes));
-        }
-
-        // Build and validate using config system
-        let config = builder.build().map_err(|e| ConfigError::InvalidValue {
-            param: "config".to_string(),
-            message: format!("Config validation failed: {}", e),
-        })?;
-
-        // Return validated config as JSON (with weight_property included)
-        // Note: weight_property is not in PageRankConfig yet, extract separately
-        let weight_property = input
-            .get("weightProperty")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
-
-        Ok(json!({
-            "dampingFactor": config.damping_factor,
-            "tolerance": config.tolerance,
-            "maxIterations": config.max_iterations,
-            "sourceNodes": config.source_nodes,
-            "weightProperty": weight_property,
-        }))
-    }
-
-    /// Get validation configuration
-    ///
-    /// Returns validators for **two-phase validation**:
-    ///
-    /// 1. **Before-load validation** (config only):
-    ///    - Range checks (damping factor, tolerance) → Handled by `PageRankConfig::builder().build()` validation
-    ///    - Required parameters → Handled by config defaults
-    ///
-    ///    Note: Most validation is already done by the config system in `parse_config()`,
-    ///    so before-load validators are typically not needed here.
-    ///
-    /// 2. **After-load validation** (config + graph):
-    ///    - Validate `sourceNodes` are valid internal node IDs (if specified)
-    ///    - Graph must have nodes (handled by executor)
-    ///
-    /// **Current Status**: Returns `empty()` because:
-    /// - Config system already validates parameters in `parse_config()` via `PageRankConfig::builder().build()`
-    /// - Graph-specific validators are implemented as after-load validators
-    ///
-    /// Note: `weightProperty` is currently accepted but ignored by the runtime wiring,
-    /// so we intentionally do not validate its existence yet.
-    fn validation_config(&self, _context: &ExecutionContext) -> ValidationConfiguration {
-        ValidationConfiguration::new()
-            .add_after_load(PageRankSourceNodesExistIfSpecifiedValidator)
-    }
-
-    /// Execute the algorithm
-    ///
-    /// **Flow**:
-    /// 1. Extract config
-    /// 2. Create PageRankStorageRuntime (Gross pole - GraphStore)
-    /// 3. Create PageRankComputationRuntime (Subtle pole - scores)
-    /// 4. Run iterative PageRank algorithm
-    /// 5. Return result
-    ///
-    /// This is where the Functor machinery works in practice:
-    /// - Storage Runtime knows how to access GraphStore
-    /// - Computation Runtime knows how to manage PageRank scores
-    /// - Functor maps between them via message passing
-    fn execute<G: GraphStore>(
-        &self,
-        graph_store: &G,
-        config: &JsonValue,
-        context: &ExecutionContext,
-    ) -> Result<ComputationResult<Self::Output>, AlgorithmError> {
-        // Extract configuration values from parsed JSON
-        let damping_factor = config
-            .get("dampingFactor")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.85);
-
-        let tolerance = config
-            .get("tolerance")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0000001);
-
-        let max_iterations = config
-            .get("maxIterations")
-            .and_then(|v| v.as_u64())
-            .unwrap_or(20) as usize;
-
-        // Extract weight_property (currently not supported by the Pregel runtime wiring)
-        let weight_property = config
-            .get("weightProperty")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
-
-        // Convert sourceNodes from numeric strings to internal node IDs (u64).
-        // Note: The current Rust runtime treats sourceNodes as internal/mapped ids.
-        let source_nodes = config
-            .get("sourceNodes")
-            .and_then(|v| v.as_array())
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|v| v.as_str().and_then(|s| s.parse::<u64>().ok()))
-                    .collect::<Vec<u64>>()
-            });
-
-        context.log(
-            LogLevel::Info,
-            &format!(
-                "Computing PageRank with damping={}, tolerance={}, max_iterations={} on graph with {} nodes",
-                damping_factor,
-                tolerance,
-                max_iterations,
-                graph_store.node_count()
-            ),
-        );
-
-        let timer = Instant::now();
-
-        if weight_property.is_some() {
-            context.log(
-                LogLevel::Warn,
-                "PageRank weightProperty is currently ignored (weighted Pregel messaging not wired yet)",
-            );
-        }
-
-        // Build a validated PageRankConfig for the Pregel runner.
         let pr_config = PageRankConfig::builder()
-            .damping_factor(damping_factor)
-            .tolerance(tolerance)
-            .max_iterations(max_iterations)
+            .base(AlgoBaseConfig {
+                concurrency: parsed.concurrency,
+                ..AlgoBaseConfig::default()
+            })
+            .max_iterations(parsed.max_iterations)
+            .damping_factor(parsed.damping_factor)
+            .tolerance(parsed.tolerance)
             .build()
             .map_err(|e| AlgorithmError::Execution(format!("PageRankConfig invalid: {e}")))?;
 
-        // Use the store's default graph view (natural orientation).
-        let graph = graph_store.get_graph();
+        let sources = parsed.source_nodes.map(|v| v.into_iter().collect());
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(Tasks::leaf_with_volume(
-            "pagerank".to_string(),
-            max_iterations,
-        ));
-        progress_tracker.begin_subtask_with_volume(max_iterations);
-
-        let source_set = source_nodes.map(|v| v.into_iter().collect());
-        let run_result = run_pagerank(graph, pr_config, source_set);
-
-        progress_tracker.log_progress(max_iterations);
-        progress_tracker.end_subtask();
-
-        let elapsed = timer.elapsed();
-
-        context.log(
-            LogLevel::Info,
-            &format!(
-                "PageRank completed: {} iterations, converged={}, time={:?}",
-                run_result.ran_iterations, run_result.did_converge, elapsed
-            ),
+        // Lightweight progress hook (executor can override/ignore).
+        let mut progress = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("pagerank".to_string(), parsed.max_iterations),
+            parsed.concurrency,
         );
+        progress.begin_subtask_with_volume(parsed.max_iterations);
 
-        // Create result
-        let result = PageRankComputationResult {
-            scores: run_result.scores,
-            iterations: run_result.ran_iterations,
-            converged: run_result.did_converge,
-            execution_time: elapsed,
-        };
+        let run = run_pagerank(graph_view, pr_config, sources);
 
-        // Return result wrapped in ComputationResult
-        Ok(ComputationResult::new(result, elapsed))
-    }
+        progress.log_progress(parsed.max_iterations);
+        progress.end_subtask();
 
-    /// Consume result and produce final output
-    ///
-    /// **Mode Handling**:
-    /// - `STREAM` - Return the PageRank scores
-    /// - `STATS` - Return the scores with metadata
-    /// - Other - Error (PageRank is read-only)
-    fn consume_result(
-        &self,
-        result: ComputationResult<Self::Output>,
-        mode: &ExecutionMode,
-    ) -> Result<Self::Output, ConsumerError> {
-        match mode {
-            ExecutionMode::Stream => {
-                // Stream mode: return raw PageRank result
-                Ok(result.into_result())
-            }
-            ExecutionMode::Stats => {
-                // Stats mode: return PageRank result with metadata
-                Ok(result.into_result())
-            }
-            other => {
-                // PageRank is read-only, doesn't support other modes
-                Err(ConsumerError::UnsupportedMode(*other))
-            }
-        }
-    }
-}
-
-// ============================================================================
-// After-load Validators
-// ============================================================================
-
-struct PageRankSourceNodesExistIfSpecifiedValidator;
-
-impl AfterLoadValidator for PageRankSourceNodesExistIfSpecifiedValidator {
-    fn validate(
-        &self,
-        graph_store: &DefaultGraphStore,
-        config: &JsonValue,
-    ) -> Result<(), ValidationError> {
-        let Some(arr) = config.get("sourceNodes").and_then(|v| v.as_array()) else {
-            return Ok(());
-        };
-
-        let node_count = graph_store.node_count() as u64;
-
-        for raw in arr {
-            let Some(s) = raw.as_str() else {
-                return Err(ValidationError::InvalidValue {
-                    param: "sourceNodes".to_string(),
-                    message: "expected array of numeric strings".to_string(),
-                });
-            };
-            let id = s.parse::<u64>().map_err(|_| ValidationError::InvalidValue {
-                param: "sourceNodes".to_string(),
-                message: format!("expected numeric string node ids; got '{s}'"),
-            })?;
-
-            if id >= node_count {
-                return Err(ValidationError::InvalidValue {
-                    param: "sourceNodes".to_string(),
-                    message: format!("node id {id} out of range [0, {node_count})"),
-                });
-            }
-        }
-
-        Ok(())
-    }
-
-    fn name(&self) -> &str {
-        "PageRankSourceNodesExistIfSpecifiedValidator"
-    }
-}
-
-// ============================================================================
-// Tests
-// ============================================================================
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_pagerank_algorithm_name() {
-        let spec = PageRankAlgorithmSpec::new("test_graph".to_string());
-        assert_eq!(spec.name(), "pagerank");
-    }
-
-    #[test]
-    fn test_pagerank_graph_name() {
-        let spec = PageRankAlgorithmSpec::new("my_graph".to_string());
-        assert_eq!(spec.graph_name(), "my_graph");
-    }
-
-    #[test]
-    fn test_pagerank_projection_hint() {
-        let spec = PageRankAlgorithmSpec::new("test_graph".to_string());
-        assert_eq!(spec.projection_hint(), ProjectionHint::Dense);
-    }
-
-    #[test]
-    fn test_pagerank_parse_config_valid() {
-        let spec = PageRankAlgorithmSpec::new("test_graph".to_string());
-
-        let input = json!({
-            "dampingFactor": 0.9,
-            "tolerance": 1e-5,
-            "maxIterations": 50,
-            "sourceNodes": ["0", "1"],
-            "weightProperty": "weight"
-        });
-
-        let result = spec.parse_config(&input);
-        assert!(result.is_ok());
-        let config = result.unwrap();
-        assert_eq!(config.get("dampingFactor").unwrap().as_f64().unwrap(), 0.9);
-        assert_eq!(config.get("tolerance").unwrap().as_f64().unwrap(), 1e-5);
-        assert_eq!(config.get("maxIterations").unwrap().as_u64().unwrap(), 50);
-    }
-
-    #[test]
-    fn test_pagerank_parse_config_invalid_damping_factor() {
-        let spec = PageRankAlgorithmSpec::new("test_graph".to_string());
-
-        let input = json!({
-            "dampingFactor": 1.5, // Invalid: > 1
-        });
-
-        let result = spec.parse_config(&input);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_pagerank_parse_config_defaults() {
-        let spec = PageRankAlgorithmSpec::new("test_graph".to_string());
-
-        let input = json!({}); // Empty config
-
-        let result = spec.parse_config(&input);
-        assert!(result.is_ok());
-        let config = result.unwrap();
-        // Config system defaults: dampingFactor=0.85, tolerance=0.0000001, maxIterations=20
-        assert_eq!(config.get("dampingFactor").unwrap().as_f64().unwrap(), 0.85);
-        assert_eq!(
-            config.get("tolerance").unwrap().as_f64().unwrap(),
-            0.0000001
-        );
-        assert_eq!(config.get("maxIterations").unwrap().as_u64().unwrap(), 20);
+        Ok(PageRankResult {
+            scores: run.scores,
+            ran_iterations: run.ran_iterations,
+            did_converge: run.did_converge,
+            node_count: graph_store.node_count(),
+            execution_time: start.elapsed(),
+        })
     }
 }

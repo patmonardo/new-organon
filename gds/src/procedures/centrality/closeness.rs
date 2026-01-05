@@ -16,7 +16,7 @@ use crate::core::utils::progress::ProgressTracker;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
-use crate::algo::msbfs::AggregatedNeighborProcessingMsBfs;
+use crate::algo::closeness::ClosenessCentralityComputationRuntime;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -135,16 +135,36 @@ impl ClosenessCentralityFacade {
             return Ok((Vec::new(), start.elapsed()));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("closeness".to_string(), node_count),
-            self.concurrency,
+        let farness_task = std::sync::Arc::new(
+            crate::core::utils::progress::Task::leaf(
+                "Farness computation".to_string(),
+                node_count,
+            ),
         );
-        progress_tracker.begin_subtask_with_volume(node_count);
+        let closeness_task = std::sync::Arc::new(
+            crate::core::utils::progress::Task::leaf(
+                "Closeness computation".to_string(),
+                node_count,
+            ),
+        );
+        let root_task = Tasks::task(
+            "closeness".to_string(),
+            vec![farness_task, closeness_task],
+        );
 
-        let mut farness = vec![0u64; node_count];
-        let mut component = vec![0u64; node_count];
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+            root_task,
+            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+            crate::core::utils::progress::JobId::new(),
+            self.task_registry.as_ref(),
+        );
 
-        let mut msbfs = AggregatedNeighborProcessingMsBfs::new(node_count);
+        // Start root then the farness leaf.
+        progress_tracker.begin_subtask();
+        progress_tracker.begin_subtask_with_description_and_volume(
+            "Farness computation",
+            node_count,
+        );
 
         let fallback = graph_view.default_property_value();
         let get_neighbors = |node_idx: usize| -> Vec<usize> {
@@ -161,52 +181,43 @@ impl ClosenessCentralityFacade {
                 .collect()
         };
 
-        for source_offset in (0..node_count).step_by(crate::algo::msbfs::OMEGA) {
-            let source_len =
-                (source_offset + crate::algo::msbfs::OMEGA).min(node_count) - source_offset;
+        let termination = crate::concurrency::TerminationFlag::running_true();
 
-            msbfs.run(
-                source_offset,
-                source_len,
-                false,
-                get_neighbors,
-                |node_id, depth, sources_mask| {
-                    if depth == 0 {
-                        return;
-                    }
-                    let len = sources_mask.count_ones() as u64;
-                    farness[node_id] += len * depth as u64;
-                    component[node_id] += len;
-                },
-            );
-        }
+        let farness_progress_handle = progress_tracker.clone();
+        let on_sources_done = Arc::new(move |sources_done: usize| {
+            let mut tracker = farness_progress_handle.clone();
+            tracker.log_progress(sources_done);
+        });
 
-        let mut centralities = vec![0.0f64; node_count];
-        for idx in 0..node_count {
-            let far = farness[idx];
-            if far == 0 {
-                centralities[idx] = 0.0;
-                continue;
-            }
+        let result = ClosenessCentralityComputationRuntime::compute_parallel(
+            node_count,
+            self.wasserman_faust,
+            self.concurrency,
+            &termination,
+            on_sources_done,
+            &get_neighbors,
+        )
+        .map_err(|e| {
+            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                "Closeness terminated: {e}"
+            ))
+        })?;
 
-            let comp = component[idx] as f64;
-            let base = comp / far as f64;
+        progress_tracker.end_subtask_with_description("Farness computation");
 
-            if self.wasserman_faust {
-                centralities[idx] = if node_count <= 1 {
-                    0.0
-                } else {
-                    base * (comp / (node_count as f64 - 1.0))
-                };
-            } else {
-                centralities[idx] = base;
-            }
-        }
-
+        // The runtime computes scores in parallel already; keep a second task for Java parity.
+        progress_tracker.begin_subtask_with_description_and_volume(
+            "Closeness computation",
+            node_count,
+        );
         progress_tracker.log_progress(node_count);
-        progress_tracker.end_subtask();
+        progress_tracker.end_subtask_with_description("Closeness computation");
 
-        Ok((centralities, start.elapsed()))
+        // End root.
+        progress_tracker.end_subtask();
+        progress_tracker.release();
+
+        Ok((result.centralities, start.elapsed()))
     }
 
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
@@ -318,24 +329,26 @@ impl ClosenessCentralityFacade {
     pub fn estimate_memory(&self) -> MemoryRange {
         let node_count = self.graph_store.node_count();
 
+        let concurrency = self.concurrency.max(1);
+
         // Memory for closeness scores (one f64 per node)
         let scores_memory = node_count * std::mem::size_of::<f64>();
 
-        // Memory for farness and component arrays (u64 per node each)
-        let farness_memory = node_count * std::mem::size_of::<u64>();
-        let component_memory = node_count * std::mem::size_of::<u64>();
+        // Atomic accumulation arrays for farness/component (i64 per node each)
+        let farness_memory = node_count * std::mem::size_of::<i64>();
+        let component_memory = node_count * std::mem::size_of::<i64>();
 
-        // Memory for MSBFS processing
-        let msbfs_memory = node_count * 8; // Rough estimate for MSBFS structures
+        // Per-worker MSBFS bitsets: visit, visit_next, seen (u64 per node each)
+        let msbfs_per_worker = 3 * node_count * std::mem::size_of::<u64>();
+        let msbfs_memory = msbfs_per_worker * concurrency;
 
-        // Additional overhead for computation (temporary vectors, etc.)
-        let computation_overhead = 1024 * 1024; // 1MB for temporary structures
+        // Additional overhead for executor + temporary vectors.
+        let overhead = 1024 * 1024; // 1MB
 
-        let total_memory =
-            scores_memory + farness_memory + component_memory + msbfs_memory + computation_overhead;
-        let total_with_overhead = total_memory + (total_memory / 5); // Add 20% overhead
+        let total = scores_memory + farness_memory + component_memory + msbfs_memory + overhead;
+        let total_with_overhead = total + (total / 5);
 
-        MemoryRange::of_range(total_memory, total_with_overhead)
+        MemoryRange::of_range(total, total_with_overhead)
     }
 }
 

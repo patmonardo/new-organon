@@ -99,7 +99,7 @@ impl Label for AlgorithmLabel {
             Algorithm::Louvain => "Louvain",
             Algorithm::LongestPath => "LongestPath",
             Algorithm::Modularity => "Modularity",
-            Algorithm::ModularityOptimization => "ModularityOptimization",
+            Algorithm::modularity_optimization => "modularity_optimization",
             Algorithm::NodeSimilarity => "Node Similarity",
             Algorithm::Node2Vec => "Node2Vec",
             Algorithm::PageRank => "PageRank",

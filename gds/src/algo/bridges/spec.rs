@@ -1,32 +1,97 @@
 //! Bridges Algorithm Specification
-use serde::{Deserialize, Serialize};
+//!
+//! Java parity reference: `org.neo4j.gds.bridges.Bridges`.
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+use crate::define_algorithm_spec;
+use crate::projection::eval::procedure::*;
+use crate::core::utils::progress::{ProgressTracker, Tasks};
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
+use super::computation::{Bridge, BridgesComputationRuntime};
+use super::storage::BridgesStorageRuntime;
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct BridgesConfig {
+    #[serde(default = "default_concurrency")]
     pub concurrency: usize,
+}
+
+fn default_concurrency() -> usize {
+    4
 }
 
 impl Default for BridgesConfig {
     fn default() -> Self {
-        Self { concurrency: 4 }
+        Self {
+            concurrency: default_concurrency(),
+        }
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+impl BridgesConfig {
+    pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+        if self.concurrency == 0 {
+            return Err(crate::config::validation::ConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be positive".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct BridgesResult {
-    pub bridges: Vec<(u64, u64)>,
+    pub bridges: Vec<Bridge>,
+    pub node_count: usize,
+    pub execution_time: Duration,
 }
 
-pub struct BridgesAlgorithmSpec {
-    graph_name: String,
-}
+define_algorithm_spec! {
+    name: "bridges",
+    output_type: BridgesResult,
+    projection_hint: Dense,
+    modes: [Stream, Stats],
 
-impl BridgesAlgorithmSpec {
-    pub fn new(graph_name: String) -> Self {
-        Self { graph_name }
-    }
+    execute: |self, graph_store, config, context| {
+        let parsed_config: BridgesConfig = serde_json::from_value(config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {}", e)))?;
+        parsed_config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {}", e)))?;
 
-    pub fn graph_name(&self) -> &str {
-        &self.graph_name
+        let start = Instant::now();
+
+        let storage = BridgesStorageRuntime::new(graph_store)?;
+        let node_count = storage.node_count();
+
+        context.log(
+            LogLevel::Info,
+            &format!(
+                "Computing bridges (concurrency={}) on graph with {} nodes",
+                parsed_config.concurrency,
+                node_count
+            ),
+        );
+
+        let tracker = Arc::new(Mutex::new(crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("bridges".to_string(), node_count),
+            parsed_config.concurrency,
+        )));
+        tracker.lock().unwrap().begin_subtask_with_volume(node_count);
+
+        let neighbors = |n: usize| storage.neighbors(n);
+        let mut runtime = BridgesComputationRuntime::new(node_count);
+        let result = runtime.compute(node_count, neighbors);
+
+        tracker.lock().unwrap().log_progress(node_count);
+        tracker.lock().unwrap().end_subtask();
+
+        Ok(BridgesResult {
+            bridges: result.bridges,
+            node_count,
+            execution_time: start.elapsed(),
+        })
     }
 }

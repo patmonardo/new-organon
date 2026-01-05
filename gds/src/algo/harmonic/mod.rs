@@ -1,16 +1,19 @@
-//! Harmonic Centrality Algorithm
+//! Harmonic Centrality (Java GDS parity)
 //!
-//! **Translation Source**: `org.neo4j.gds.harmonic.HarmonicCentrality`
-//!
-//! Distance-based centrality using harmonic mean of reciprocal distances.
-//! Uses Multi-Source BFS for efficient computation.
+//! Standard algorithm module layout:
+//! - `spec`: config + result + AlgorithmSpec integration
+//! - `storage`: GraphStore-facing accessors (oriented neighbor access)
+//! - `computation`: pure compute runtime (MSBFS/ANP semantics)
 
 pub mod computation;
-#[cfg(test)]
-pub mod integration_tests;
 pub mod spec;
 pub mod storage;
 
+#[cfg(test)]
+pub mod integration_tests;
+
 pub use computation::HarmonicComputationRuntime;
-pub use spec::{HarmonicAlgorithmSpec, HarmonicConfig, HarmonicResult};
+pub use spec::{HarmonicConfig, HarmonicDirection, HarmonicResult, HARMONICAlgorithmSpec};
 pub use storage::HarmonicStorageRuntime;
+
+pub type HarmonicAlgorithmSpec = HARMONICAlgorithmSpec;

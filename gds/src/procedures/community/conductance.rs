@@ -3,17 +3,15 @@
 //! Evaluates community quality by measuring the proportion of edges
 //! that cross community boundaries.
 
-use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
+use crate::core::utils::progress::TaskRegistry;
 use crate::mem::MemoryRange;
-use crate::algo::conductance::computation::ConductanceComputationRuntime;
-use crate::algo::conductance::spec::ConductanceConfig;
+use crate::algo::conductance::{
+    ConductanceComputationRuntime, ConductanceConfig, ConductanceStorageRuntime,
+};
+use crate::concurrency::Concurrency;
 use crate::procedures::builder_base::{MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
-use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Result row for conductance stream mode
@@ -40,6 +38,8 @@ pub struct ConductanceFacade {
     graph_store: Arc<DefaultGraphStore>,
     community_property: String,
     has_relationship_weight_property: bool,
+    concurrency: usize,
+    min_batch_size: usize,
     task_registry: Option<TaskRegistry>,
 }
 
@@ -49,12 +49,24 @@ impl ConductanceFacade {
             graph_store,
             community_property,
             has_relationship_weight_property: false,
+            concurrency: 4,
+            min_batch_size: 10_000,
             task_registry: None,
         }
     }
 
     pub fn relationship_weight_property(mut self, use_weights: bool) -> Self {
         self.has_relationship_weight_property = use_weights;
+        self
+    }
+
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
+        self
+    }
+
+    pub fn min_batch_size(mut self, min_batch_size: usize) -> Self {
+        self.min_batch_size = min_batch_size;
         self
     }
 
@@ -74,86 +86,47 @@ impl ConductanceFacade {
         Ok(())
     }
 
-    fn checked_node_id(value: usize) -> Result<NodeId> {
-        NodeId::try_from(value as i64).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "node_id must fit into i64 (got {})",
-                value
-            ))
-        })
-    }
-
     fn compute(&self) -> Result<(std::collections::HashMap<u64, f64>, f64)> {
         self.validate()?;
 
-        // Conductance works on directed graphs (Natural orientation)
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
-
-        let node_count = graph_view.node_count();
+        let node_count = self.graph_store.node_count();
         if node_count == 0 {
             return Ok((std::collections::HashMap::new(), 0.0));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
-            Tasks::leaf_with_volume("conductance".to_string(), node_count),
-        );
-        progress_tracker.begin_subtask_with_volume(node_count);
-
-        // Get community property values
-        let community_props = graph_view
-            .node_properties(&self.community_property)
-            .ok_or_else(|| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Community property '{}' not found",
-                    self.community_property
-                ))
-            })?;
-
-        let fallback = graph_view.default_property_value();
-
-        // Get community assignment for each node
-        let get_community = |node_idx: usize| -> Option<u64> {
-            let node_id = Self::checked_node_id(node_idx).ok()? as u64;
-            match community_props.long_value(node_id) {
-                Ok(community) if community >= 0 => Some(community as u64),
-                _ => None,
-            }
-        };
-
-        // Get neighbors with weights
-        let get_neighbors = |node_idx: usize| -> Vec<(usize, f64)> {
-            let node_id = match Self::checked_node_id(node_idx) {
-                Ok(value) => value,
-                Err(_) => return Vec::new(),
-            };
-
-            graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| {
-                    let target = cursor.target_id() as usize;
-                    let weight = cursor.property();
-                    (target, weight)
-                })
-                .collect()
-        };
-
         let config = ConductanceConfig {
+            concurrency: self.concurrency,
+            min_batch_size: self.min_batch_size,
             has_relationship_weight_property: self.has_relationship_weight_property,
+            community_property: self.community_property.clone(),
         };
 
-        let runtime = ConductanceComputationRuntime::new(config);
-        let result = runtime.compute(node_count, get_community, get_neighbors);
+        let base_task = crate::algo::conductance::progress_task(node_count);
+        let registry_factory = crate::core::utils::progress::EmptyTaskRegistryFactory;
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+            base_task,
+            Concurrency::of(self.concurrency.max(1)),
+            crate::core::utils::progress::JobId::new(),
+            &registry_factory,
+        );
 
-        progress_tracker.log_progress(node_count);
-        progress_tracker.end_subtask();
+        let termination_flag = crate::concurrency::TerminationFlag::default();
+        let storage = ConductanceStorageRuntime::new();
+        let mut runtime = ConductanceComputationRuntime::new();
+        let result = storage
+            .compute_conductance(
+                &mut runtime,
+                self.graph_store.as_ref(),
+                &config,
+                &mut progress_tracker,
+                &termination_flag,
+            )
+            .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
 
-        Ok((result.community_conductances, result.average_conductance))
+        Ok((
+            result.community_conductances,
+            result.global_average_conductance,
+        ))
     }
 
     /// Stream mode: yields conductance per community

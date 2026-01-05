@@ -1,6 +1,5 @@
 //! Louvain Integration Tests
 //!
-//! Note: the current Louvain procedure is a placeholder (returns all zeros).
 //! These tests are smoke checks to ensure the facade wiring works end-to-end.
 
 #[cfg(test)]
@@ -64,16 +63,18 @@ mod tests {
     }
 
     #[test]
-    fn louvain_placeholder_returns_one_community_for_non_empty_graph() {
+    fn louvain_splits_isolated_nodes() {
+        // 0--1 connected, 2 isolated => expect two communities.
         let store = store_from_outgoing(vec![vec![1], vec![0], vec![]]);
         let graph = Graph::new(Arc::new(store));
 
         let result = graph.louvain().run().unwrap();
         assert_eq!(result.data.len(), 3);
-        assert!(result.data.iter().all(|&c| c == 0));
+        assert_eq!(result.data[0], result.data[1]);
+        assert_ne!(result.data[2], result.data[0]);
 
         let stats = graph.louvain().stats().unwrap();
-        assert_eq!(stats.community_count, 1);
+        assert_eq!(stats.community_count, 2);
     }
 
     #[test]

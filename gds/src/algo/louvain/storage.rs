@@ -1,6 +1,7 @@
-use crate::types::graph::Graph;
 use crate::core::utils::progress::ProgressTracker;
+use crate::types::graph::Graph;
 
+use crate::algo::modularity_optimization::modularity_optimizationInput;
 use super::computation::LouvainComputationRuntime;
 use super::spec::LouvainResult;
 
@@ -21,28 +22,26 @@ impl LouvainStorageRuntime {
         progress_tracker: &mut dyn ProgressTracker,
     ) -> LouvainResult {
         let node_count = graph.node_count();
-        let fallback = graph.default_property_value();
+        // For Louvain, treat unweighted relationships as weight=1.0 (matches other procedures).
+        let weight_fallback = 1.0;
 
         progress_tracker.begin_subtask_with_volume(node_count);
 
-        let get_neighbors = |node: usize| -> Vec<usize> {
-            let id = node as u64;
-            let mut out: Vec<usize> = graph
-                .stream_relationships(id as i64, fallback)
-                .map(|c| c.target_id() as usize)
-                .collect();
-            let mut inc: Vec<usize> = graph
-                .stream_inverse_relationships(id as i64, fallback)
-                .map(|c| c.source_id() as usize)
-                .collect();
-            out.append(&mut inc);
-            out
-        };
+        let mut adj: Vec<Vec<(usize, f64)>> = vec![Vec::new(); node_count];
+        for node_id in 0..node_count {
+            let stream = graph.stream_relationships(node_id as i64, weight_fallback);
+            for cursor in stream {
+                let t = cursor.target_id();
+                if t >= 0 {
+                    adj[node_id].push((t as usize, cursor.property()));
+                }
+            }
+            progress_tracker.log_progress(1);
+        }
 
-        let result = computation.compute(node_count, get_neighbors);
+        let input = modularity_optimizationInput::new(node_count, adj);
+        let result = computation.compute(&input);
 
-        // Placeholder implementation: count nodes as the only work unit.
-        progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();
 
         result

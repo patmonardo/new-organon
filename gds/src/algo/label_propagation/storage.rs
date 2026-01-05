@@ -1,21 +1,29 @@
-//! Label Propagation Storage Runtime
-//!
-//! Storage runtime is responsible for building graph-facing adapters and invoking the
-//! computation runtime. (Matches the other procedure modules' split.)
+//! Label Propagation storage runtime
 
+use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::Orientation;
+use crate::projection::RelationshipType;
+use crate::types::prelude::GraphStore;
+use std::collections::HashSet;
+use std::sync::Arc;
+
+use crate::types::graph::Graph;
+
+#[derive(Clone)]
 pub struct LabelPropStorageRuntime {
-    #[allow(dead_code)]
-    concurrency: usize,
+    graph: Arc<dyn Graph>,
 }
 
 impl LabelPropStorageRuntime {
-    pub fn new(concurrency: usize) -> Self {
-        Self { concurrency }
+    pub fn new<G: GraphStore>(graph_store: &G) -> Result<Self, AlgorithmError> {
+        let rel_types: HashSet<RelationshipType> = HashSet::new();
+        let graph = graph_store
+            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
+        Ok(Self { graph })
     }
-}
 
-impl Default for LabelPropStorageRuntime {
-    fn default() -> Self {
-        Self::new(num_cpus::get().max(1))
+    pub fn graph(&self) -> Arc<dyn Graph> {
+        Arc::clone(&self.graph)
     }
 }

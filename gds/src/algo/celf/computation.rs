@@ -5,8 +5,9 @@
 
 use super::spec::CELFConfig;
 use super::storage::{SeedSetBuilder, SpreadPriorityQueue};
-use crate::collections::BitSet;
-use crate::collections::HugeDoubleArray;
+use crate::collections::{BitSet, HugeAtomicDoubleArray};
+use crate::concurrency::virtual_threads::{Executor, WorkerContext};
+use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::paged::HugeLongArrayStack;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -22,7 +23,11 @@ impl CELFComputationRuntime {
         Self { config, node_count }
     }
 
-    /// Main CELF computation
+    /// Main CELF computation.
+    ///
+    /// Structure follows Java GDS:
+    /// 1) Greedy init: compute spread for all nodes and pick best.
+    /// 2) Lazy forward: iteratively update marginal gains for top candidates in batches.
     pub fn compute<F>(&self, get_neighbors: F) -> HashMap<u64, f64>
     where
         F: Fn(usize) -> Vec<usize> + Send + Sync,
@@ -61,13 +66,31 @@ impl CELFComputationRuntime {
     where
         F: Fn(usize) -> Vec<usize> + Send + Sync,
     {
-        let mut single_spread = HugeDoubleArray::new(self.node_count);
+        let single_spread = HugeAtomicDoubleArray::new(self.node_count);
 
-        // Compute spread for each node independently
-        for node_id in 0..self.node_count {
-            let spread = self.compute_single_node_spread(node_id, get_neighbors);
-            single_spread.set(node_id, spread);
-        }
+        let concurrency = self.config.concurrency.max(1);
+        let executor = Executor::new(Concurrency::of(concurrency));
+        let termination = TerminationFlag::running_true();
+
+        let storage = WorkerContext::new({
+            let node_count = self.node_count;
+            move || ICInitStorage::new(node_count)
+        });
+
+        // Compute spread for each node independently (parallel).
+        // Each node gets its own base seed so results are deterministic under parallelism.
+        let base_seed = self.config.random_seed;
+        let mc = self.config.monte_carlo_simulations.max(1);
+        let p = self.config.propagation_probability;
+
+        // Ignore termination errors for now (we always use running_true in this runtime).
+        let _ = executor.parallel_for(0, self.node_count, &termination, |node_id| {
+            storage.with(|s| {
+                let spread =
+                    s.compute_single_node_spread(node_id, get_neighbors, p, mc, base_seed);
+                single_spread.set(node_id, spread);
+            });
+        });
 
         // Build priority queue from spreads
         let mut queue = SpreadPriorityQueue::new(self.node_count);
@@ -79,41 +102,6 @@ impl CELFComputationRuntime {
         let best_spread = single_spread.get(best_node);
 
         (best_node, queue, best_spread)
-    }
-
-    /// Compute spread for a single seed node via Monte Carlo
-    fn compute_single_node_spread<F>(&self, seed: usize, get_neighbors: &F) -> f64
-    where
-        F: Fn(usize) -> Vec<usize>,
-    {
-        let mut total_spread = 0.0;
-        let mut rng = StdRng::seed_from_u64(self.config.random_seed);
-
-        for _sim in 0..self.config.monte_carlo_simulations {
-            let mut active = BitSet::new(self.node_count);
-            let mut stack = HugeLongArrayStack::new(self.node_count);
-
-            active.set(seed);
-            stack.push(seed as i64);
-
-            while !stack.is_empty() {
-                let current = stack.pop() as usize;
-                let neighbors = get_neighbors(current);
-
-                for &neighbor in &neighbors {
-                    if !active.get(neighbor)
-                        && rng.gen::<f64>() < self.config.propagation_probability
-                    {
-                        active.set(neighbor);
-                        stack.push(neighbor as i64);
-                    }
-                }
-            }
-
-            total_spread += active.cardinality() as f64;
-        }
-
-        total_spread / self.config.monte_carlo_simulations as f64
     }
 
     /// Lazy forward selection for remaining k-1 seeds
@@ -130,7 +118,22 @@ impl CELFComputationRuntime {
     {
         let mut seed_nodes = vec![first_seed];
         let mut last_update = vec![0; self.node_count];
-        let batch_size = self.config.batch_size.min(spreads_queue.size());
+        let batch_size = self.config.batch_size.min(spreads_queue.size().max(1));
+
+        let concurrency = self.config.concurrency.max(1);
+        let executor = Executor::new(Concurrency::of(concurrency));
+        let termination = TerminationFlag::running_true();
+
+        let lazy_storage = WorkerContext::new({
+            let node_count = self.node_count;
+            let max_seed_set = seed_set_size;
+            let max_batch = self.config.batch_size.max(1);
+            move || ICLazyForwardStorage::new(node_count, max_seed_set, max_batch)
+        });
+
+        let mc = self.config.monte_carlo_simulations.max(1);
+        let p = self.config.propagation_probability;
+        let base_seed = self.config.random_seed;
 
         for iteration in 1..seed_set_size {
             // Lazy evaluation: re-evaluate top candidates until we find one that's current
@@ -149,11 +152,65 @@ impl CELFComputationRuntime {
                     }
                 }
 
-                // Re-evaluate batch with current seed set
-                let candidate_spreads =
-                    self.compute_marginal_gains(&seed_nodes, &candidates, get_neighbors);
+                // Re-evaluate batch with current seed set (parallel over simulations).
+                let mut candidate_spreads = vec![0.0f64; candidates.len()];
+                let seeds_snapshot = seed_nodes.clone();
+                let candidates_snapshot = candidates.clone();
 
-                // Update queue with new marginal gains
+                // Partition simulations across workers.
+                let sim_count = mc;
+                let chunk = (sim_count + concurrency - 1) / concurrency;
+                let task_count = (sim_count + chunk - 1) / chunk;
+
+                let partials: std::sync::Arc<Vec<std::sync::Mutex<Vec<f64>>>> =
+                    std::sync::Arc::new(
+                        (0..task_count)
+                            .map(|_| {
+                                std::sync::Mutex::new(vec![0.0f64; candidates_snapshot.len()])
+                            })
+                            .collect(),
+                    );
+
+                let _ = executor.parallel_for(0, task_count, &termination, |task_idx| {
+                    let start = task_idx * chunk;
+                    let end = (start + chunk).min(sim_count);
+                    if start >= end {
+                        return;
+                    }
+
+                    lazy_storage.with(|s| {
+                        s.set_seed_set(&seeds_snapshot);
+                        let mut local = vec![0.0f64; candidates_snapshot.len()];
+                        for sim in start..end {
+                            s.run_simulation_for_candidates(
+                                sim as u64,
+                                base_seed,
+                                p,
+                                get_neighbors,
+                                &candidates_snapshot,
+                                &mut local,
+                            );
+                        }
+                        let mut locked = partials[task_idx].lock().unwrap();
+                        for i in 0..local.len() {
+                            locked[i] += local[i];
+                        }
+                    });
+                });
+
+                for t in 0..task_count {
+                    let locked = partials[t].lock().unwrap();
+                    for i in 0..candidate_spreads.len() {
+                        candidate_spreads[i] += locked[i];
+                    }
+                }
+
+                // Java divides by monteCarloSimulations when writing into queue.
+                for i in 0..candidate_spreads.len() {
+                    candidate_spreads[i] /= sim_count as f64;
+                }
+
+                // Update queue with new marginal gains.
                 for (i, &candidate) in candidates.iter().enumerate() {
                     let marginal_gain = candidate_spreads[i] - *cumulative_gain;
                     spreads_queue.set(candidate, marginal_gain);
@@ -170,93 +227,143 @@ impl CELFComputationRuntime {
             *cumulative_gain += marginal_spread;
         }
     }
+}
 
-    /// Compute marginal gains for candidates given current seed set
-    fn compute_marginal_gains<F>(
-        &self,
-        seed_nodes: &[usize],
-        candidates: &[usize],
+struct ICInitStorage {
+    active: BitSet,
+    stack: HugeLongArrayStack,
+}
+
+impl ICInitStorage {
+    fn new(node_count: usize) -> Self {
+        Self {
+            active: BitSet::new(node_count),
+            stack: HugeLongArrayStack::new(node_count),
+        }
+    }
+
+    fn compute_single_node_spread<F>(
+        &mut self,
+        seed_node: usize,
         get_neighbors: &F,
-    ) -> Vec<f64>
+        propagation_probability: f64,
+        monte_carlo_simulations: usize,
+        base_seed: u64,
+    ) -> f64
     where
         F: Fn(usize) -> Vec<usize>,
     {
-        let mut spreads = vec![0.0; candidates.len()];
-        let mut rng = StdRng::seed_from_u64(self.config.random_seed);
+        let mut total = 0.0;
+        for sim in 0..monte_carlo_simulations {
+            self.active.clear_all();
+            self.stack.clear();
 
-        for _sim in 0..self.config.monte_carlo_simulations {
-            // First, propagate from seed set
-            let mut seed_active = BitSet::new(self.node_count);
-            let mut stack = HugeLongArrayStack::new(self.node_count);
+            self.active.set(seed_node);
+            self.stack.push(seed_node as i64);
 
-            for &seed in seed_nodes {
-                seed_active.set(seed);
-                stack.push(seed as i64);
-            }
-
-            self.propagate(&mut seed_active, &mut stack, &mut rng, get_neighbors);
-
-            // Then evaluate each candidate's marginal contribution
-            for (idx, &candidate) in candidates.iter().enumerate() {
-                if !seed_active.get(candidate) {
-                    let mut candidate_active = BitSet::new(self.node_count);
-                    let mut cand_stack = HugeLongArrayStack::new(self.node_count);
-
-                    candidate_active.set(candidate);
-                    cand_stack.push(candidate as i64);
-
-                    // Propagate from candidate, avoiding seed_active nodes
-                    while !cand_stack.is_empty() {
-                        let current = cand_stack.pop() as usize;
-                        let neighbors = get_neighbors(current);
-
-                        for &neighbor in &neighbors {
-                            if !seed_active.get(neighbor)
-                                && !candidate_active.get(neighbor)
-                                && rng.gen::<f64>() < self.config.propagation_probability
-                            {
-                                candidate_active.set(neighbor);
-                                cand_stack.push(neighbor as i64);
-                            }
-                        }
+            let mut rng = StdRng::seed_from_u64(base_seed.wrapping_add(sim as u64));
+            while !self.stack.is_empty() {
+                let current = self.stack.pop() as usize;
+                for neighbor in (get_neighbors)(current) {
+                    if !self.active.get(neighbor) && rng.gen::<f64>() < propagation_probability {
+                        self.active.set(neighbor);
+                        self.stack.push(neighbor as i64);
                     }
-
-                    spreads[idx] +=
-                        (seed_active.cardinality() + candidate_active.cardinality()) as f64;
-                } else {
-                    spreads[idx] += seed_active.cardinality() as f64;
                 }
             }
+
+            total += self.active.cardinality() as f64;
         }
 
-        // Average over simulations
-        for spread in &mut spreads {
-            *spread /= self.config.monte_carlo_simulations as f64;
-        }
+        total / monte_carlo_simulations as f64
+    }
+}
 
-        spreads
+struct ICLazyForwardStorage {
+    seed_set_nodes: Vec<usize>,
+    seed_active: BitSet,
+    candidate_active: BitSet,
+    stack: HugeLongArrayStack,
+}
+
+impl ICLazyForwardStorage {
+    fn new(node_count: usize, max_seed_set: usize, _max_batch: usize) -> Self {
+        Self {
+            seed_set_nodes: Vec::with_capacity(max_seed_set.max(1)),
+            seed_active: BitSet::new(node_count),
+            candidate_active: BitSet::new(node_count),
+            stack: HugeLongArrayStack::new(node_count),
+        }
     }
 
-    /// Propagate activation through the graph
-    fn propagate<F>(
-        &self,
-        active: &mut BitSet,
-        stack: &mut HugeLongArrayStack,
-        rng: &mut StdRng,
+    fn set_seed_set(&mut self, seeds: &[usize]) {
+        self.seed_set_nodes.clear();
+        self.seed_set_nodes.extend_from_slice(seeds);
+    }
+
+    fn run_simulation_for_candidates<F>(
+        &mut self,
+        sim: u64,
+        base_seed: u64,
+        propagation_probability: f64,
         get_neighbors: &F,
+        candidates: &[usize],
+        out: &mut [f64],
     ) where
         F: Fn(usize) -> Vec<usize>,
     {
-        while !stack.is_empty() {
-            let current = stack.pop() as usize;
-            let neighbors = get_neighbors(current);
+        debug_assert!(out.len() == candidates.len());
 
-            for &neighbor in &neighbors {
-                if !active.get(neighbor) && rng.gen::<f64>() < self.config.propagation_probability {
-                    active.set(neighbor);
-                    stack.push(neighbor as i64);
+        // 1) Seed traverse.
+        self.seed_active.clear_all();
+        self.stack.clear();
+
+        for &seed in &self.seed_set_nodes {
+            self.seed_active.set(seed);
+            self.stack.push(seed as i64);
+        }
+
+        let mut rng = StdRng::seed_from_u64(base_seed.wrapping_add(sim));
+        while !self.stack.is_empty() {
+            let node = self.stack.pop() as usize;
+            for neighbor in (get_neighbors)(node) {
+                if !self.seed_active.get(neighbor) && rng.gen::<f64>() < propagation_probability {
+                    self.seed_active.set(neighbor);
+                    self.stack.push(neighbor as i64);
                 }
             }
+        }
+
+        let seed_card = self.seed_active.cardinality() as f64;
+
+        // 2) Candidate traverse (per candidate).
+        for (j, &candidate) in candidates.iter().enumerate() {
+            if self.seed_active.get(candidate) {
+                out[j] += seed_card;
+                continue;
+            }
+
+            self.candidate_active.clear_all();
+            self.stack.clear();
+            self.candidate_active.set(candidate);
+            self.stack.push(candidate as i64);
+
+            // Use a deterministic but different stream for candidate traversal.
+            let mut cand_rng = StdRng::seed_from_u64(base_seed.wrapping_add(sim).wrapping_add(0x9E3779B97F4A7C15));
+            while !self.stack.is_empty() {
+                let node = self.stack.pop() as usize;
+                for neighbor in (get_neighbors)(node) {
+                    if !self.seed_active.get(neighbor)
+                        && !self.candidate_active.get(neighbor)
+                        && cand_rng.gen::<f64>() < propagation_probability
+                    {
+                        self.candidate_active.set(neighbor);
+                        self.stack.push(neighbor as i64);
+                    }
+                }
+            }
+
+            out[j] += seed_card + (self.candidate_active.cardinality() as f64);
         }
     }
 }

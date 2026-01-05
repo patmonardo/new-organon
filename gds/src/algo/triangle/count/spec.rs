@@ -1,9 +1,10 @@
-//! Triangle Count Specification
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TriangleCountConfig {
+    /// Reserved for future parallel implementation.
     pub concurrency: usize,
+    /// Skip nodes with degree > max_degree (performance / approximation).
     pub max_degree: u64,
 }
 

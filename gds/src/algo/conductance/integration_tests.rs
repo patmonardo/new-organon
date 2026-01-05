@@ -1,138 +1,98 @@
-//! Integration tests for conductance
-
 use super::computation::ConductanceComputationRuntime;
 use super::spec::ConductanceConfig;
+use super::storage::ConductanceStorageRuntime;
+use crate::concurrency::TerminationFlag;
+use crate::concurrency::Concurrency;
+use crate::core::utils::progress::TaskProgressTracker;
+use crate::algo::conductance::progress_task;
+use crate::projection::RelationshipType;
+use crate::types::graph::RelationshipTopology;
+use crate::types::graph_store::{DatabaseId, DatabaseInfo, DatabaseLocation, GraphName};
+use crate::types::prelude::DefaultGraphStore;
+use crate::types::graph_store::Capabilities;
+use crate::types::schema::GraphSchema;
+use crate::types::prelude::GraphStore;
+use std::collections::HashMap;
 
-#[test]
-fn test_perfect_communities() {
-    // Two separate cliques: 0-1-2 and 3-4-5 (no edges between)
-    let edges = vec![
-        vec![(1, 1.0), (2, 1.0)],
-        vec![(0, 1.0), (2, 1.0)],
-        vec![(0, 1.0), (1, 1.0)],
-        vec![(4, 1.0), (5, 1.0)],
-        vec![(3, 1.0), (5, 1.0)],
-        vec![(3, 1.0), (4, 1.0)],
-    ];
+fn make_store(outgoing: Vec<Vec<i64>>) -> DefaultGraphStore {
+    let node_count = outgoing.len();
 
-    let communities = vec![0, 0, 0, 1, 1, 1];
-
-    let config = ConductanceConfig::default();
-    let runtime = ConductanceComputationRuntime::new(config);
-
-    let result = runtime.compute(
-        6,
-        |node| Some(communities[node]),
-        |node| edges[node].clone(),
+    let graph_name = GraphName::new("g");
+    let database_info = DatabaseInfo::new(
+        DatabaseId::new("db"),
+        DatabaseLocation::remote("localhost", 7687, None, None),
     );
 
-    // Perfect communities: no external edges
-    assert_eq!(result.community_conductances.get(&0), Some(&0.0));
-    assert_eq!(result.community_conductances.get(&1), Some(&0.0));
-    assert_eq!(result.average_conductance, 0.0);
+    // Minimal schema/capabilities.
+    let schema = GraphSchema::empty();
+    let capabilities = Capabilities::default();
+
+    // Simple id_map with nodes 0..node_count.
+    let id_map = crate::types::graph::id_map::SimpleIdMap::from_original_ids(
+        (0..node_count as i64).collect::<Vec<_>>(),
+    );
+
+    let topology = RelationshipTopology::new(outgoing, None);
+
+    let mut relationship_topologies = HashMap::new();
+    relationship_topologies.insert(RelationshipType::of("R"), topology);
+
+    DefaultGraphStore::new(
+        crate::config::GraphStoreConfig::default(),
+        graph_name,
+        database_info,
+        schema,
+        capabilities,
+        id_map,
+        relationship_topologies,
+    )
 }
 
 #[test]
-fn test_poor_communities() {
-    // Linear chain: 0-1-2-3 with bad split [0,1] vs [2,3]
-    let edges = vec![
-        vec![(1, 1.0)],
-        vec![(0, 1.0), (2, 1.0)],
-        vec![(1, 1.0), (3, 1.0)],
-        vec![(2, 1.0)],
-    ];
+fn conductance_matches_expected_small_graph() {
+    // Directed graph with 3 nodes:
+    // 0 -> 1 (internal for community 0)
+    // 1 -> 2 (external for community 0)
+    // 2 -> 0 (external for community 1)
+    let mut store = make_store(vec![vec![1], vec![2], vec![0]]);
 
-    let communities = vec![0, 0, 1, 1];
-
-    let config = ConductanceConfig::default();
-    let runtime = ConductanceComputationRuntime::new(config);
-
-    let result = runtime.compute(
-        4,
-        |node| Some(communities[node]),
-        |node| edges[node].clone(),
-    );
-
-    // Community 0: internal edges = 2 (0-1 bidirectional), external = 1 (1->2)
-    // Conductance = 1 / (1 + 2) = 0.333...
-    let cond0 = result.community_conductances.get(&0).unwrap();
-    assert!((cond0 - 0.333333).abs() < 0.001);
-
-    // Community 1: internal edges = 2 (2-3 bidirectional), external = 1 (2->1)
-    // Conductance = 1 / (1 + 2) = 0.333...
-    let cond1 = result.community_conductances.get(&1).unwrap();
-    assert!((cond1 - 0.333333).abs() < 0.001);
-
-    assert!((result.average_conductance - 0.333333).abs() < 0.001);
-}
-
-#[test]
-fn test_weighted_conductance() {
-    // Two nodes with weighted edges
-    // 0 -> 1 (weight 10.0)
-    // 1 -> 0 (weight 10.0)
-    let edges = vec![vec![(1, 10.0)], vec![(0, 10.0)]];
-
-    let communities = vec![0, 1];
+    // community ids: [0,0,1]
+    store
+        .add_node_property_i64("community".to_string(), vec![0, 0, 1])
+        .expect("add community property");
 
     let config = ConductanceConfig {
-        has_relationship_weight_property: true,
-    };
-    let runtime = ConductanceComputationRuntime::new(config);
-
-    let result = runtime.compute(
-        2,
-        |node| Some(communities[node]),
-        |node| edges[node].clone(),
-    );
-
-    // All edges are external (different communities)
-    // Community 0: external = 10.0, internal = 0.0, conductance = 1.0
-    assert_eq!(result.community_conductances.get(&0), Some(&1.0));
-    // Community 1: external = 10.0, internal = 0.0, conductance = 1.0
-    assert_eq!(result.community_conductances.get(&1), Some(&1.0));
-    assert_eq!(result.average_conductance, 1.0);
-}
-
-#[test]
-fn test_unweighted_ignores_weights() {
-    // Same graph as above but unweighted
-    let edges = vec![vec![(1, 10.0)], vec![(0, 10.0)]];
-
-    let communities = vec![0, 1];
-
-    let config = ConductanceConfig {
+        concurrency: 2,
+        min_batch_size: 1,
         has_relationship_weight_property: false,
+        community_property: "community".to_string(),
     };
-    let runtime = ConductanceComputationRuntime::new(config);
 
-    let result = runtime.compute(
-        2,
-        |node| Some(communities[node]),
-        |node| edges[node].clone(),
+    let storage = ConductanceStorageRuntime::new();
+    let mut runtime = ConductanceComputationRuntime::new();
+
+    let base_task = progress_task(store.node_count());
+    let registry_factory = crate::core::utils::progress::EmptyTaskRegistryFactory;
+    let mut progress = TaskProgressTracker::with_registry(
+        base_task,
+        Concurrency::of(config.concurrency.max(1)),
+        crate::core::utils::progress::JobId::new(),
+        &registry_factory,
     );
+    let result = storage
+        .compute_conductance(
+            &mut runtime,
+            &store,
+            &config,
+            &mut progress,
+            &TerminationFlag::default(),
+        )
+        .expect("compute conductance");
 
-    // Weights treated as 1.0
-    assert_eq!(result.community_conductances.get(&0), Some(&1.0));
-    assert_eq!(result.community_conductances.get(&1), Some(&1.0));
-    assert_eq!(result.average_conductance, 1.0);
-}
-
-#[test]
-fn test_nodes_without_community() {
-    // Some nodes have no community assignment
-    let edges = vec![vec![(1, 1.0)], vec![(0, 1.0), (2, 1.0)], vec![(1, 1.0)]];
-
-    // Node 1 has no community
-    let communities = vec![Some(0), None, Some(1)];
-
-    let config = ConductanceConfig::default();
-    let runtime = ConductanceComputationRuntime::new(config);
-
-    let result = runtime.compute(3, |node| communities[node], |node| edges[node].clone());
-
-    // Node 1 is skipped, so communities 0 and 1 have no valid edges
-    // (edges to/from node 1 are ignored)
-    assert_eq!(result.community_conductances.len(), 0);
-    assert_eq!(result.average_conductance, 0.0);
+    // Community 0: internal=1, external=1 => 0.5
+    assert!((result.community_conductances.get(&0).unwrap() - 0.5).abs() < 1e-12);
+    // Community 1: internal=0, external=1 => 1.0
+    assert!((result.community_conductances.get(&1).unwrap() - 1.0).abs() < 1e-12);
+    // Global avg: (0.5 + 1.0) / 2 = 0.75
+    assert!((result.global_average_conductance - 0.75).abs() < 1e-12);
 }

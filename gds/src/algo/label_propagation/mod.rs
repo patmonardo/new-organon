@@ -1,15 +1,16 @@
-//! Label Propagation Module
+//! Label Propagation (Java GDS parity)
 //!
-//! Implements label propagation algorithm for community detection
-//! by iteratively propagating labels through node voting.
+//! Standard algorithm module layout:
+//! - `spec`: config + result + executor AlgorithmSpec integration
+//! - `storage`: GraphStore-facing accessors
+//! - `computation`: core label propagation runtime
 
 pub mod computation;
+#[cfg(test)]
+pub mod integration_tests;
 pub mod spec;
 pub mod storage;
 
-#[cfg(test)]
-mod integration_tests;
-
 pub use computation::LabelPropComputationRuntime;
-pub use spec::{LabelPropAlgorithmSpec, LabelPropConfig, LabelPropResult};
+pub use spec::{LABEL_PROPAGATIONAlgorithmSpec, LabelPropAlgorithmSpec, LabelPropConfig, LabelPropResult};
 pub use storage::LabelPropStorageRuntime;
