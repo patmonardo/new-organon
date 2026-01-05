@@ -1,5 +1,6 @@
 use crate::algo::similarity::{NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult};
 use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::mem::MemoryRange;
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
@@ -242,6 +243,29 @@ impl FilteredNodeSimilarityBuilder {
         Err(AlgorithmError::Execution(
             "Filtered Node Similarity mutate/write is not implemented yet".to_string(),
         ))
+    }
+
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+
+        // Worst-case is still bounded by top_k per node.
+        let pair_count = node_count.saturating_mul(self.top_k);
+
+        let results_memory = pair_count * 32;
+        let per_node_scratch = node_count * 32;
+        let weight_memory = if self.weight_property.is_some() {
+            node_count * 8
+        } else {
+            0
+        };
+
+        // Label filtering can require temporary ID sets.
+        let label_filter_memory = node_count * 8;
+
+        let total =
+            results_memory + per_node_scratch + weight_memory + label_filter_memory;
+        let overhead = total / 5;
+        MemoryRange::of_range(total, total + overhead)
     }
 }
 

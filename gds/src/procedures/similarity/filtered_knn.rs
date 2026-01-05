@@ -1,3 +1,4 @@
+use crate::mem::MemoryRange;
 use crate::procedures::traits::Result;
 use crate::algo::similarity::filteredknn::{
     FilteredKnnComputationRuntime, FilteredKnnConfig, FilteredKnnResultRow,
@@ -195,6 +196,34 @@ impl FilteredKnnBuilder {
             compute_millis: stats.compute_millis,
             success: stats.success,
         })
+    }
+
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+
+        let property_count = if self.node_properties.is_empty() {
+            1
+        } else {
+            self.node_properties.len() + 1
+        };
+
+        // Filtering by labels usually reduces work, but memory estimate remains conservative.
+        let pair_count = node_count.saturating_mul(self.k);
+
+        let results_memory = pair_count * 32;
+        let per_node_scratch = node_count * 24;
+        let per_property_scratch = property_count * node_count * 8;
+
+        // Label filter sets/vectors
+        let label_filter_memory =
+            (self.source_node_labels.len() + self.target_node_labels.len()) * 64;
+
+        let total = results_memory
+            + per_node_scratch
+            + per_property_scratch
+            + label_filter_memory;
+        let overhead = total / 5;
+        MemoryRange::of_range(total, total + overhead)
     }
 }
 

@@ -1,3 +1,4 @@
+use crate::mem::MemoryRange;
 use crate::procedures::traits::Result;
 pub use crate::algo::similarity::knn::{KnnNodePropertySpec, SimilarityMetric};
 use crate::algo::similarity::knn::{KnnConfig, KnnResultRow};
@@ -170,6 +171,31 @@ impl KnnBuilder {
             compute_millis: stats.compute_millis,
             success: stats.success,
         })
+    }
+
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+
+        let property_count = if self.node_properties.is_empty() {
+            1
+        } else {
+            // multi-property mode includes primary property
+            self.node_properties.len() + 1
+        };
+
+        let pair_count = node_count.saturating_mul(self.k);
+
+        // Rough accounting:
+        // - results: (source, target, similarity) + Vec overhead
+        // - per-node scratch (indices, counters)
+        // - per-property scratch
+        let results_memory = pair_count * 32;
+        let per_node_scratch = node_count * 24;
+        let per_property_scratch = property_count * node_count * 8;
+
+        let total = results_memory + per_node_scratch + per_property_scratch;
+        let overhead = total / 5;
+        MemoryRange::of_range(total, total + overhead)
     }
 }
 

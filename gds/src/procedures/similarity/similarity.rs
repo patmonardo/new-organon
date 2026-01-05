@@ -1,5 +1,6 @@
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits::Result;
+use crate::mem::MemoryRange;
 use crate::algo::similarity::{
     NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult,
 };
@@ -185,5 +186,27 @@ impl SimilarityBuilder {
         Err(AlgorithmError::Execution(
             "Node Similarity mutate/write is not implemented yet".to_string(),
         ))
+    }
+
+    pub fn estimate_memory(&self) -> MemoryRange {
+        let node_count = self.graph_store.node_count();
+
+        // Worst-case output is bounded by top_k per node.
+        let pair_count = node_count.saturating_mul(self.top_k);
+
+        // Results + scratch arrays for weights/accumulators.
+        let results_memory = pair_count * 32;
+        let per_node_scratch = node_count * 32;
+
+        // Weight property access can add additional per-node scratch.
+        let weight_memory = if self.weight_property.is_some() {
+            node_count * 8
+        } else {
+            0
+        };
+
+        let total = results_memory + per_node_scratch + weight_memory;
+        let overhead = total / 5;
+        MemoryRange::of_range(total, total + overhead)
     }
 }

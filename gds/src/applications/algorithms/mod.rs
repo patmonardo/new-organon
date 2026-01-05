@@ -30,5 +30,13 @@ pub use machine_learning::*;
 pub use machinery::*;
 pub use metadata::*;
 pub use miscellaneous::*;
-pub use pathfinding::*;
-pub use similarity::*;
+pub use pathfinding::{
+	handle_all_shortest_paths, handle_astar, handle_bellman_ford, handle_bfs,
+	handle_dag_longest_path, handle_delta_stepping, handle_dijkstra, handle_dfs,
+	handle_kspanningtree, handle_random_walk, handle_spanning_tree,
+	handle_steiner_tree, handle_topological_sort, handle_yens,
+};
+pub use similarity::{
+	handle_filtered_knn, handle_filtered_node_similarity, handle_knn,
+	handle_node_similarity,
+};
