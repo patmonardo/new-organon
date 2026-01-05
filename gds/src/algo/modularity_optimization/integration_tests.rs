@@ -1,11 +1,11 @@
-use super::computation::{modularity_optimizationComputationRuntime, modularity_optimizationInput};
-use super::spec::modularity_optimizationConfig;
+use super::computation::{ModularityOptimizationComputationRuntime, ModularityOptimizationInput};
+use super::spec::ModularityOptimizationConfig;
 
 #[test]
 fn modopt_empty_ok() {
-    let mut rt = modularity_optimizationComputationRuntime::new();
-    let cfg = modularity_optimizationConfig::default();
-    let input = modularity_optimizationInput::new(0, Vec::new());
+    let mut rt = ModularityOptimizationComputationRuntime::new();
+    let cfg = ModularityOptimizationConfig::default();
+    let input = ModularityOptimizationInput::new(0, Vec::new());
     let result = rt.compute(&input, &cfg);
     assert!(result.communities.is_empty());
     assert_eq!(result.modularity, 0.0);
@@ -14,9 +14,9 @@ fn modopt_empty_ok() {
 #[test]
 fn modopt_separates_isolated_node() {
     // 0--1 connected, 2 isolated.
-    let mut rt = modularity_optimizationComputationRuntime::new();
-    let cfg = modularity_optimizationConfig::default();
-    let input = modularity_optimizationInput::new(
+    let mut rt = ModularityOptimizationComputationRuntime::new();
+    let cfg = ModularityOptimizationConfig::default();
+    let input = ModularityOptimizationInput::new(
         3,
         vec![vec![(1, 1.0)], vec![(0, 1.0)], vec![]],
     );

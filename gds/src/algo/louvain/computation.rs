@@ -1,6 +1,6 @@
 use super::spec::LouvainResult;
 use crate::algo::modularity_optimization::{
-    modularity_optimizationComputationRuntime, modularity_optimizationConfig, modularity_optimizationInput,
+    ModularityOptimizationComputationRuntime, ModularityOptimizationConfig, ModularityOptimizationInput,
 };
 use std::collections::HashMap;
 
@@ -19,7 +19,7 @@ impl LouvainComputationRuntime {
         }
     }
 
-    pub fn compute(&mut self, input: &modularity_optimizationInput) -> LouvainResult {
+    pub fn compute(&mut self, input: &ModularityOptimizationInput) -> LouvainResult {
         if input.node_count == 0 {
             return LouvainResult { data: Vec::new() };
         }
@@ -30,8 +30,8 @@ impl LouvainComputationRuntime {
         let mut working_graph = input.clone();
         let mut last_modularity = f64::NEG_INFINITY;
 
-        let mut modopt = modularity_optimizationComputationRuntime::new();
-        let modopt_config = modularity_optimizationConfig {
+        let mut modopt = ModularityOptimizationComputationRuntime::new();
+        let modopt_config = ModularityOptimizationConfig {
             max_iterations: 20,
             tolerance: self.tolerance,
             gamma: self.gamma,
@@ -82,10 +82,10 @@ impl LouvainComputationRuntime {
 }
 
 fn aggregate(
-    graph: &modularity_optimizationInput,
+    graph: &ModularityOptimizationInput,
     assignment: &[usize],
     new_node_count: usize,
-) -> modularity_optimizationInput {
+) -> ModularityOptimizationInput {
     // Build undirected edges between communities by aggregating weights.
     // We process each undirected edge once by only counting (u,v) where u < v.
     let mut edge_weights: HashMap<(usize, usize), f64> = HashMap::new();
@@ -112,7 +112,7 @@ fn aggregate(
         }
     }
 
-    modularity_optimizationInput::new(new_node_count, new_adj)
+    ModularityOptimizationInput::new(new_node_count, new_adj)
 }
 
 impl Default for LouvainComputationRuntime {

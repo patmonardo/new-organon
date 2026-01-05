@@ -9,5 +9,5 @@ pub mod spec;
 #[cfg(test)]
 mod integration_tests;
 
-pub use computation::{modularity_optimizationComputationRuntime, modularity_optimizationInput};
-pub use spec::{modularity_optimizationConfig, modularity_optimizationResult};
+pub use computation::{ModularityOptimizationComputationRuntime, ModularityOptimizationInput};
+pub use spec::{ModularityOptimizationConfig, ModularityOptimizationResult};

@@ -1,14 +1,14 @@
-use super::spec::{modularity_optimizationConfig, modularity_optimizationResult};
+use super::spec::{ModularityOptimizationConfig, ModularityOptimizationResult};
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
-pub struct modularity_optimizationInput {
+pub struct ModularityOptimizationInput {
     pub node_count: usize,
     /// Weighted adjacency list.
     pub adj: Vec<Vec<(usize, f64)>>,
 }
 
-impl modularity_optimizationInput {
+impl ModularityOptimizationInput {
     pub fn new(node_count: usize, adj: Vec<Vec<(usize, f64)>>) -> Self {
         Self { node_count, adj }
     }
@@ -26,9 +26,9 @@ impl modularity_optimizationInput {
     }
 }
 
-pub struct modularity_optimizationComputationRuntime {}
+pub struct ModularityOptimizationComputationRuntime {}
 
-impl modularity_optimizationComputationRuntime {
+impl ModularityOptimizationComputationRuntime {
     pub fn new() -> Self {
         Self {}
     }
@@ -38,11 +38,11 @@ impl modularity_optimizationComputationRuntime {
     /// Returns a community assignment over nodes in `input`.
     pub fn compute(
         &mut self,
-        input: &modularity_optimizationInput,
-        config: &modularity_optimizationConfig,
-    ) -> modularity_optimizationResult {
+        input: &ModularityOptimizationInput,
+        config: &ModularityOptimizationConfig,
+    ) -> ModularityOptimizationResult {
         if input.node_count == 0 {
-            return modularity_optimizationResult {
+            return ModularityOptimizationResult {
                 communities: Vec::new(),
                 modularity: 0.0,
                 ran_iterations: 0,
@@ -53,7 +53,7 @@ impl modularity_optimizationComputationRuntime {
         let degrees = input.degrees();
         let two_m = input.total_relationship_weight(&degrees);
         if two_m == 0.0 {
-            return modularity_optimizationResult {
+            return ModularityOptimizationResult {
                 communities: (0..input.node_count as u64).collect(),
                 modularity: 0.0,
                 ran_iterations: 0,
@@ -116,7 +116,7 @@ impl modularity_optimizationComputationRuntime {
         let (compressed, _) = compress_assignment(&assignment);
         let modularity = modularity_from_assignment(input, &compressed, &degrees, two_m, config.gamma);
 
-        modularity_optimizationResult {
+        ModularityOptimizationResult {
             communities: compressed.into_iter().map(|c| c as u64).collect(),
             modularity,
             ran_iterations,
@@ -141,7 +141,7 @@ fn compress_assignment(assignment: &[usize]) -> (Vec<usize>, usize) {
 }
 
 fn modularity_from_assignment(
-    graph: &modularity_optimizationInput,
+    graph: &ModularityOptimizationInput,
     assignment: &[usize],
     degrees: &[f64],
     two_m: f64,
@@ -169,7 +169,7 @@ fn modularity_from_assignment(
     q
 }
 
-impl Default for modularity_optimizationComputationRuntime {
+impl Default for ModularityOptimizationComputationRuntime {
     fn default() -> Self {
         Self::new()
     }

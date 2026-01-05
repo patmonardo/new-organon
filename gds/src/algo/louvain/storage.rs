@@ -1,7 +1,7 @@
 use crate::core::utils::progress::ProgressTracker;
 use crate::types::graph::Graph;
 
-use crate::algo::modularity_optimization::modularity_optimizationInput;
+use crate::algo::modularity_optimization::ModularityOptimizationInput;
 use super::computation::LouvainComputationRuntime;
 use super::spec::LouvainResult;
 
@@ -39,7 +39,7 @@ impl LouvainStorageRuntime {
             progress_tracker.log_progress(1);
         }
 
-        let input = modularity_optimizationInput::new(node_count, adj);
+        let input = ModularityOptimizationInput::new(node_count, adj);
         let result = computation.compute(&input);
 
         progress_tracker.end_subtask();

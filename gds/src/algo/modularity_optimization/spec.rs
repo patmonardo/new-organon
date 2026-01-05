@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct modularity_optimizationConfig {
+pub struct ModularityOptimizationConfig {
     pub max_iterations: usize,
     pub tolerance: f64,
     /// Modularity resolution parameter. $\gamma = 1$ is classic modularity.
     pub gamma: f64,
 }
 
-impl Default for modularity_optimizationConfig {
+impl Default for ModularityOptimizationConfig {
     fn default() -> Self {
         Self {
             max_iterations: 20,
@@ -19,7 +19,7 @@ impl Default for modularity_optimizationConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct modularity_optimizationResult {
+pub struct ModularityOptimizationResult {
     pub communities: Vec<u64>,
     pub modularity: f64,
     pub ran_iterations: usize,
