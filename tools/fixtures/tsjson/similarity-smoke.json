@@ -1,0 +1,188 @@
+[
+  {
+    "facade": "graph_store",
+    "op": "put",
+    "user": { "username": "alice", "isAdmin": true },
+    "databaseId": "db1",
+    "graphName": "sim-graph",
+    "snapshot": {
+      "nodes": [0, 1, 2, 3],
+      "relationships": [
+        { "type": "R", "source": 0, "target": 1 },
+        { "type": "R", "source": 1, "target": 2 },
+        { "type": "R", "source": 2, "target": 3 },
+        { "type": "R", "source": 0, "target": 2 }
+      ],
+      "nodeProperties": {
+        "x": [1.0, 2.0, 3.0, 4.0],
+        "y": [0.0, 1.0, 0.0, 1.0]
+      }
+    }
+  },
+
+  {
+    "facade": "algorithms",
+    "op": "knn",
+    "user": { "username": "alice", "isAdmin": true },
+    "databaseId": "db1",
+    "graphName": "sim-graph",
+    "mode": "stream",
+    "concurrency": 1,
+    "nodeProperties": ["x"],
+    "topK": 2,
+    "similarityMetric": "DEFAULT"
+  },
+  {
+    "facade": "algorithms",
+    "op": "knn",
+    "user": { "username": "alice", "isAdmin": true },
+    "databaseId": "db1",
+    "graphName": "sim-graph",
+    "mode": "stats",
+    "concurrency": 1,
+    "nodeProperties": ["x"],
+    "topK": 2,
+    "similarityMetric": "DEFAULT"
+  },
+  {
+    "facade": "algorithms",
+    "op": "knn",
+    "user": { "username": "alice", "isAdmin": true },
+    "databaseId": "db1",
+    "graphName": "sim-graph",
+    "mode": "estimate",
+    "submode": "memory",
+    "concurrency": 1,
+    "nodeProperties": ["x"],
+    "topK": 2,
+    "similarityMetric": "DEFAULT"
+  },
+
+  {
+    "facade": "algorithms",
+    "op": "filtered_knn",
+    "user": { "username": "alice", "isAdmin": true },
+    "databaseId": "db1",
+    "graphName": "sim-graph",
+    "mode": "stream",
+    "concurrency": 1,
+    "nodeProperties": ["x"],
+    "topK": 2,
+    "similarityMetric": "DEFAULT",
+    "sourceNodeLabels": [],
+    "targetNodeLabels": []
+  },
+  {
+    "facade": "algorithms",
+    "op": "filtered_knn",
+    "user": { "username": "alice", "isAdmin": true },
+    "databaseId": "db1",
+    "graphName": "sim-graph",
+    "mode": "stats",
+    "concurrency": 1,
+    "nodeProperties": ["x"],
+    "topK": 2,
+    "similarityMetric": "DEFAULT",
+    "sourceNodeLabels": [],
+    "targetNodeLabels": []
+  },
+  {
+    "facade": "algorithms",
+    "op": "filtered_knn",
+    "user": { "username": "alice", "isAdmin": true },
+    "databaseId": "db1",
+    "graphName": "sim-graph",
+    "mode": "estimate",
+    "submode": "memory",
+    "concurrency": 1,
+    "nodeProperties": ["x"],
+    "topK": 2,
+    "similarityMetric": "DEFAULT",
+    "sourceNodeLabels": [],
+    "targetNodeLabels": []
+  },
+
+  {
+    "facade": "algorithms",
+    "op": "node_similarity",
+    "user": { "username": "alice", "isAdmin": true },
+    "databaseId": "db1",
+    "graphName": "sim-graph",
+    "mode": "stream",
+    "concurrency": 1,
+    "similarityMetric": "jaccard",
+    "topK": 5,
+    "similarityCutoff": 0.0
+  },
+  {
+    "facade": "algorithms",
+    "op": "node_similarity",
+    "user": { "username": "alice", "isAdmin": true },
+    "databaseId": "db1",
+    "graphName": "sim-graph",
+    "mode": "stats",
+    "concurrency": 1,
+    "similarityMetric": "jaccard",
+    "topK": 5,
+    "similarityCutoff": 0.0
+  },
+  {
+    "facade": "algorithms",
+    "op": "node_similarity",
+    "user": { "username": "alice", "isAdmin": true },
+    "databaseId": "db1",
+    "graphName": "sim-graph",
+    "mode": "estimate",
+    "submode": "memory",
+    "concurrency": 1,
+    "similarityMetric": "jaccard",
+    "topK": 5,
+    "similarityCutoff": 0.0
+  },
+
+  {
+    "facade": "algorithms",
+    "op": "filtered_node_similarity",
+    "user": { "username": "alice", "isAdmin": true },
+    "databaseId": "db1",
+    "graphName": "sim-graph",
+    "mode": "stream",
+    "concurrency": 1,
+    "similarityMetric": "jaccard",
+    "topK": 5,
+    "similarityCutoff": 0.0
+  },
+  {
+    "facade": "algorithms",
+    "op": "filtered_node_similarity",
+    "user": { "username": "alice", "isAdmin": true },
+    "databaseId": "db1",
+    "graphName": "sim-graph",
+    "mode": "stats",
+    "concurrency": 1,
+    "similarityMetric": "jaccard",
+    "topK": 5,
+    "similarityCutoff": 0.0
+  },
+  {
+    "facade": "algorithms",
+    "op": "filtered_node_similarity",
+    "user": { "username": "alice", "isAdmin": true },
+    "databaseId": "db1",
+    "graphName": "sim-graph",
+    "mode": "estimate",
+    "submode": "memory",
+    "concurrency": 1,
+    "similarityMetric": "jaccard",
+    "topK": 5,
+    "similarityCutoff": 0.0
+  },
+
+  {
+    "facade": "graph_store_catalog",
+    "op": "dropGraph",
+    "user": { "username": "alice", "isAdmin": true },
+    "databaseId": "db1",
+    "graphName": "sim-graph"
+  }
+]
