@@ -5,7 +5,6 @@
 //! This module implements the "Subtle pole" for BFS algorithm - ephemeral computation state.
 
 use crate::types::graph::id_map::NodeId;
-use std::collections::HashMap;
 
 /// BFS Computation Runtime - handles ephemeral computation state
 ///
@@ -18,20 +17,20 @@ pub struct BfsComputationRuntime {
     pub track_paths: bool,
     /// Concurrency level
     pub concurrency: usize,
-    /// Visited nodes with their distances
-    visited_nodes: HashMap<NodeId, u32>,
+    /// Visited nodes (BitSet equivalent)
+    visited: Vec<bool>,
     /// Maximum depth constraint
     max_depth: Option<u32>,
 }
 
 impl BfsComputationRuntime {
     /// Create new BFS computation runtime
-    pub fn new(source_node: NodeId, track_paths: bool, concurrency: usize) -> Self {
+    pub fn new(source_node: NodeId, track_paths: bool, concurrency: usize, node_count: usize) -> Self {
         Self {
             source_node,
             track_paths,
             concurrency,
-            visited_nodes: HashMap::new(),
+            visited: vec![false; node_count],
             max_depth: None,
         }
     }
@@ -40,21 +39,14 @@ impl BfsComputationRuntime {
     ///
     /// Translation of: `BFSComputation.initialize()` (lines 76-100)
     /// This resets the internal state for a new traversal
-    pub fn initialize(&mut self, source_node: NodeId, max_depth: Option<u32>) {
+    pub fn initialize(&mut self, source_node: NodeId, max_depth: Option<u32>, node_count: usize) {
         self.source_node = source_node;
         self.max_depth = max_depth;
-        self.visited_nodes.clear();
-
-        // Add source node at distance 0
-        self.visited_nodes.insert(source_node, 0);
-    }
-
-    /// Add a visited node with its distance
-    ///
-    /// Translation of: `BFSComputation.addVisitedNode()` (lines 101-125)
-    /// This tracks nodes as they are discovered during traversal
-    pub fn add_visited_node(&mut self, node: NodeId, distance: u32) {
-        self.visited_nodes.insert(node, distance);
+        self.visited = vec![false; node_count];
+        // Add source node
+        if (source_node as usize) < self.visited.len() {
+            self.visited[source_node as usize] = true;
+        }
     }
 
     /// Check if a node has been visited
@@ -62,15 +54,14 @@ impl BfsComputationRuntime {
     /// Translation of: `BFSComputation.isVisited()` (lines 126-140)
     /// This checks the visited state of a node
     pub fn is_visited(&self, node: NodeId) -> bool {
-        self.visited_nodes.contains_key(&node)
+        (node as usize) < self.visited.len() && self.visited[node as usize]
     }
 
-    /// Get distance of a visited node
-    ///
-    /// Translation of: `BFSComputation.getDistance()` (lines 141-155)
-    /// This retrieves the distance of a previously visited node
-    pub fn get_distance(&self, node: NodeId) -> Option<u32> {
-        self.visited_nodes.get(&node).copied()
+    /// Set a node as visited
+    pub fn set_visited(&mut self, node: NodeId) {
+        if (node as usize) < self.visited.len() {
+            self.visited[node as usize] = true;
+        }
     }
 
     /// Get total number of visited nodes
@@ -78,27 +69,16 @@ impl BfsComputationRuntime {
     /// Translation of: `BFSComputation.getVisitedCount()` (lines 156-170)
     /// This returns the count of visited nodes
     pub fn visited_count(&self) -> usize {
-        self.visited_nodes.len()
-    }
-
-    /// Get all visited nodes with their distances
-    ///
-    /// Translation of: `BFSComputation.getVisitedNodes()` (lines 171-185)
-    /// This returns all visited nodes as a vector of (node, distance) pairs
-    pub fn get_visited_nodes(&self) -> Vec<(NodeId, u32)> {
-        self.visited_nodes
-            .iter()
-            .map(|(&node, &distance)| (node, distance))
-            .collect()
+        self.visited.iter().filter(|&&v| v).count()
     }
 
     /// Check if max depth constraint is satisfied
     ///
     /// Translation of: `BFSComputation.checkMaxDepth()` (lines 186-200)
     /// This validates depth constraints during traversal
-    pub fn check_max_depth(&self, current_depth: u32) -> bool {
+    pub fn check_max_depth(&self, current_depth: f64) -> bool {
         match self.max_depth {
-            Some(max_depth) => current_depth <= max_depth,
+            Some(max_depth) => current_depth < max_depth as f64,
             None => true,
         }
     }

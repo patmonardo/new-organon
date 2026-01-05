@@ -81,12 +81,8 @@ impl BfsConfig {
 /// This contains the results of BFS traversal
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BfsResult {
-    /// Visited nodes with their distances from source
-    pub visited_nodes: Vec<(NodeId, u32)>,
-    /// Paths found (if track_paths was enabled)
-    pub paths: Vec<BfsPathResult>,
-    /// Total nodes visited
-    pub nodes_visited: usize,
+    /// Visited nodes in traversal order
+    pub visited_nodes: Vec<NodeId>,
     /// Computation time in milliseconds
     pub computation_time_ms: u64,
 }
@@ -124,14 +120,6 @@ define_algorithm_spec! {
             parsed_config.target_nodes.clone(),
             parsed_config.max_depth,
             parsed_config.track_paths,
-            parsed_config.concurrency,
-            parsed_config.delta,
-        );
-
-        let mut computation = BfsComputationRuntime::new(
-            parsed_config.source_node,
-            parsed_config.track_paths,
-            parsed_config.concurrency,
         );
 
         // Execute BFS algorithm with a filtered/oriented view (defaults: all types, NATURAL)
@@ -139,6 +127,15 @@ define_algorithm_spec! {
         let graph_view = graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to obtain graph view: {}", e)))?;
+
+        let node_count = graph_view.node_count() as usize;
+
+        let mut computation = BfsComputationRuntime::new(
+            parsed_config.source_node,
+            parsed_config.track_paths,
+            parsed_config.concurrency,
+            node_count,
+        );
 
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
             Tasks::leaf("BFS".to_string()),

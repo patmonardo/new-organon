@@ -206,6 +206,11 @@ impl BellmanFordComputationRuntime {
     pub fn track_paths(&self) -> bool {
         self.track_paths
     }
+
+    /// Get all visited nodes (nodes with finite distances)
+    pub fn get_visited_nodes(&self) -> Vec<NodeId> {
+        self.distances.keys().cloned().collect()
+    }
 }
 
 #[cfg(test)]

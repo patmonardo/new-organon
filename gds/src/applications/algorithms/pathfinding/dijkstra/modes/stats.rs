@@ -1,14 +1,16 @@
 use crate::applications::algorithms::machinery::{
-    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
-    FnStatsResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
+    AlgorithmMachinery, AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
+    ProgressTrackerCreator, RequestScopedDependencies,
 };
+use crate::applications::algorithms::pathfinding::shared::{PathFindingStatsResultBuilder, TraversalResult};
 use crate::applications::algorithms::pathfinding::dijkstra::request::DijkstraRequest;
-use crate::applications::algorithms::pathfinding::shared::{err, timings_json};
+use crate::applications::algorithms::pathfinding::shared::err;
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::GraphResources;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::procedures::pathfinding::DijkstraStats;
-use serde_json::{json, Value};
+use crate::algo::dijkstra::targets::create_targets;
+use crate::graph_store::GraphStore;
+use serde_json::Value;
 
 pub fn run(op: &str, request: &DijkstraRequest, graph_resources: &GraphResources) -> Value {
     let deps = RequestScopedDependencies::new(
@@ -23,35 +25,53 @@ pub fn run(op: &str, request: &DijkstraRequest, graph_resources: &GraphResources
     let task = Tasks::leaf("Dijkstra::stats".to_string()).base().clone();
 
     let compute = |gr: &GraphResources,
-                   _tracker: &mut dyn ProgressTracker,
+                   tracker: &mut dyn ProgressTracker,
                    _termination: &TerminationFlag|
-     -> Result<Option<DijkstraStats>, String> {
-        let mut builder = gr.facade().dijkstra().source(request.source);
-        if !request.targets.is_empty() {
-            builder = builder.targets(request.targets.clone());
-        }
-        builder = builder
-            .weight_property(&request.weight_property)
-            .direction(&request.direction)
-            .track_relationships(request.track_relationships)
-            .concurrency(request.common.concurrency.value());
+     -> Result<Option<TraversalResult>, String> {
+        // Get the graph view for algorithm
+        let rel_types: std::collections::HashSet<crate::projection::RelationshipType> = std::collections::HashSet::new();
+        let graph_view = gr.graph_store.get_graph_with_types_and_orientation(&rel_types, crate::projection::orientation::Orientation::Natural)
+            .map_err(|e| format!("Failed to get graph view: {}", e))?;
 
-        let stats: DijkstraStats = builder.stats().map_err(|e| e.to_string())?;
-        Ok(Some(stats))
+        let source_node = request.source as i64;
+
+        // Create targets
+        let targets = create_targets(request.targets.iter().map(|&x| x as i64).collect());
+
+        // Create algorithm runtime
+        let mut storage = crate::algo::dijkstra::DijkstraStorageRuntime::new(
+            source_node,
+            request.track_relationships,
+            1, // concurrency
+            false, // use_heuristic
+        );
+
+        let mut computation = crate::algo::dijkstra::DijkstraComputationRuntime::new(
+            source_node,
+            request.track_relationships,
+            1, // concurrency
+            false, // use_heuristic
+        );
+
+        let direction = if request.direction == "incoming" { 1 } else { 0 };
+
+        let result = AlgorithmMachinery::run_algorithms_and_manage_progress_tracker(
+            tracker,
+            false, // release_progress_tracker
+            crate::concurrency::Concurrency::of(request.common.concurrency.value()),
+            |tracker| {
+                storage.compute_dijkstra(&mut computation, targets, Some(graph_view.as_ref()), direction, tracker)
+                    .map(|_| computation.get_visited_nodes().iter().map(|&n| n as i64).collect())
+                    .map_err(|e| format!("Dijkstra algorithm failed: {:?}", e))
+            },
+        )?;
+
+        Ok(Some(result))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<DijkstraStats>, timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stats",
-            "data": stats,
-            "timings": timings_json(timings)
-        })
-    });
+    let result_builder = PathFindingStatsResultBuilder::new();
 
-    match convenience.process_stats(graph_resources, request.common.concurrency, task, compute, builder)
-    {
+    match convenience.process_stats(graph_resources, request.common.concurrency, task, compute, result_builder) {
         Ok(v) => v,
         Err(e) => err(op, "EXECUTION_ERROR", &format!("Dijkstra stats failed: {e}")),
     }

@@ -6,12 +6,12 @@
 //! and algorithm orchestration.
 
 use super::computation::DfsComputationRuntime;
-use super::spec::{DfsPathResult, DfsResult};
+use super::spec::DfsResult;
 use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
-use std::collections::{HashMap, VecDeque};
+use std::collections::VecDeque;
 
 /// DFS Storage Runtime - handles persistent data access and algorithm orchestration
 ///
@@ -51,7 +51,7 @@ impl DfsStorageRuntime {
     /// Compute DFS traversal
     ///
     /// Translation of: `DFS.compute()` (lines 1.051.0-200)
-    /// This orchestrates the main DFS algorithm loop using a stack
+    /// This orchestrates the main DFS algorithm loop using stacks
     pub fn compute_dfs(
         &self,
         computation: &mut DfsComputationRuntime,
@@ -69,115 +69,52 @@ impl DfsStorageRuntime {
             progress_tracker.begin_subtask_with_volume(volume);
         }
 
-        // Initialize computation runtime
-        computation.initialize(self.source_node, self.max_depth);
+        let node_count = graph.map(|g| g.node_count()).unwrap_or(1000) as usize;
+        computation.initialize(self.source_node, self.max_depth, node_count);
 
-        // DFS stack for depth-first traversal
-        let mut stack: VecDeque<(NodeId, u32)> = VecDeque::new();
-        stack.push_back((self.source_node, 0)); // (node, depth)
+        // DFS stacks for depth-first traversal
+        let mut nodes: VecDeque<NodeId> = VecDeque::new();
+        let mut sources: VecDeque<NodeId> = VecDeque::new();
+        let mut weights: VecDeque<f64> = VecDeque::new();
 
-        // Track visited nodes and their discovery order
-        let mut visited: HashMap<NodeId, u32> = HashMap::new();
-        let mut discovery_order = 0;
-        visited.insert(self.source_node, discovery_order);
-        discovery_order += 1;
+        nodes.push_back(self.source_node);
+        sources.push_back(self.source_node);
+        weights.push_back(0.0);
 
-        // Track paths if requested
-        let mut paths = Vec::new();
-        let mut predecessors: HashMap<NodeId, NodeId> = HashMap::new();
+        let mut result = Vec::new();
 
         // Main DFS loop
-        while let Some((current_node, current_depth)) = stack.pop_back() {
-            // Check max depth constraint
-            if let Some(max_depth) = self.max_depth {
-                if current_depth >= max_depth {
-                    continue;
-                }
-            }
+        while let (Some(node), Some(_source), Some(weight)) = (nodes.pop_back(), sources.pop_back(), weights.pop_back()) {
+            result.push(node);
 
-            // Check if we found a target
-            if !self.target_nodes.is_empty() && self.target_nodes.contains(&current_node) {
-                if self.track_paths {
-                    if let Some(path) =
-                        self.reconstruct_path(self.source_node, current_node, &predecessors)
-                    {
-                        paths.push(path);
-                    }
-                }
-
-                // If we have targets and found all, we can stop early
-                if paths.len() == self.target_nodes.len() {
-                    break;
-                }
-            }
-
-            // Get neighbors and add to stack (in reverse order for consistent traversal)
-            let mut neighbors = self.get_neighbors(graph, current_node);
             // Progress is tracked in terms of relationships examined.
-            progress_tracker.log_progress(neighbors.len());
-            neighbors.reverse(); // Reverse to maintain consistent order
-
-            for neighbor in neighbors {
-                if let std::collections::hash_map::Entry::Vacant(entry) = visited.entry(neighbor) {
-                    entry.insert(discovery_order);
-                    discovery_order += 1;
-                    stack.push_back((neighbor, current_depth + 1));
-
-                    if self.track_paths {
-                        predecessors.insert(neighbor, current_node);
-                    }
-                }
+            if let Some(g) = graph {
+                progress_tracker.log_progress(g.degree(node));
             }
 
-            // Update computation runtime
-            computation.add_visited_node(current_node, current_depth);
+            // Check max depth
+            if computation.check_max_depth(weight) {
+                if let Some(g) = graph {
+                for relationship in g.stream_relationships(node, 1.0) {
+                    let t = relationship.target_id();
+                    if !computation.is_visited(t) {
+                        computation.set_visited(t);
+                        sources.push_back(node);
+                        nodes.push_back(t);
+                        weights.push_back(weight + 1.0);
+                    }
+                }
+                }
+            }
         }
 
         let computation_time = start_time.elapsed().as_millis() as u64;
 
-        let visited_count = visited.len();
-        let mut visited_nodes: Vec<(NodeId, u32)> = visited.into_iter().collect();
-        visited_nodes.sort_by_key(|(_, order)| *order);
-
         progress_tracker.end_subtask();
 
         Ok(DfsResult {
-            visited_nodes,
-            paths,
-            nodes_visited: visited_count,
+            visited_nodes: result,
             computation_time_ms: computation_time,
-        })
-    }
-
-    /// Reconstruct path from source to target
-    ///
-    /// Translation of: `DFS.reconstructPath()` (lines 201.0-250)
-    /// This builds the path result from predecessor information
-    fn reconstruct_path(
-        &self,
-        source: NodeId,
-        target: NodeId,
-        predecessors: &HashMap<NodeId, NodeId>,
-    ) -> Option<DfsPathResult> {
-        let mut path = Vec::new();
-        let mut current = target;
-
-        // Reconstruct path backwards
-        while current != source {
-            path.push(current);
-            current = *predecessors.get(&current)?;
-        }
-        path.push(source);
-
-        // Reverse to get forward path
-        path.reverse();
-
-        let path_length = path.len() - 1;
-        Some(DfsPathResult {
-            source_node: source,
-            target_node: target,
-            node_ids: path,
-            path_length: path_length as u32,
         })
     }
 
@@ -217,7 +154,7 @@ mod tests {
     #[test]
     fn test_dfs_path_computation() {
         let storage = DfsStorageRuntime::new(0, vec![3], None, true, 1);
-        let mut computation = DfsComputationRuntime::new(0, true, 1);
+        let mut computation = DfsComputationRuntime::new(0, true, 1, 10);
 
         let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("DFS".to_string()));
 
@@ -225,14 +162,14 @@ mod tests {
             .compute_dfs(&mut computation, None, &mut progress_tracker)
             .unwrap();
 
-        assert!(result.nodes_visited > 0);
-        assert!(!result.paths.is_empty());
+        assert!(!result.visited_nodes.is_empty());
+        assert!(result.visited_nodes.contains(&0));
     }
 
     #[test]
     fn test_dfs_path_same_source_target() {
         let storage = DfsStorageRuntime::new(0, vec![0], None, true, 1);
-        let mut computation = DfsComputationRuntime::new(0, true, 1);
+        let mut computation = DfsComputationRuntime::new(0, true, 1, 10);
 
         let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("DFS".to_string()));
 
@@ -240,17 +177,14 @@ mod tests {
             .compute_dfs(&mut computation, None, &mut progress_tracker)
             .unwrap();
 
-        assert!(result.nodes_visited >= 1);
-        assert!(!result.paths.is_empty());
-        assert_eq!(result.paths[0].source_node, 0);
-        assert_eq!(result.paths[0].target_node, 0);
-        assert_eq!(result.paths[0].path_length, 0);
+        assert!(!result.visited_nodes.is_empty());
+        assert_eq!(result.visited_nodes[0], 0);
     }
 
     #[test]
     fn test_dfs_max_depth_constraint() {
         let storage = DfsStorageRuntime::new(0, vec![], Some(1), false, 1);
-        let mut computation = DfsComputationRuntime::new(0, false, 1);
+        let mut computation = DfsComputationRuntime::new(0, false, 1, 10);
 
         let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("DFS".to_string()));
 
@@ -258,7 +192,8 @@ mod tests {
             .compute_dfs(&mut computation, None, &mut progress_tracker)
             .unwrap();
 
-        // With max_depth=1, we should only visit nodes at distance 0 and 1
-        assert!(result.nodes_visited <= 3); // Source + immediate neighbors
+        // With max_depth=1, should visit source and its neighbors
+        assert!(!result.visited_nodes.is_empty());
+        assert!(result.visited_nodes.len() <= 3); // Source + immediate neighbors
     }
 }

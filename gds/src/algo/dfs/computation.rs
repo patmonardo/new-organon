@@ -5,7 +5,6 @@
 //! This module implements the "Subtle pole" for DFS algorithm - ephemeral computation state.
 
 use crate::types::graph::id_map::NodeId;
-use std::collections::HashMap;
 
 /// DFS Computation Runtime - handles ephemeral computation state
 ///
@@ -18,20 +17,20 @@ pub struct DfsComputationRuntime {
     pub track_paths: bool,
     /// Concurrency level
     pub concurrency: usize,
-    /// Visited nodes with their discovery order
-    visited_nodes: HashMap<NodeId, u32>,
+    /// Visited nodes (BitSet equivalent)
+    visited: Vec<bool>,
     /// Maximum depth constraint
     max_depth: Option<u32>,
 }
 
 impl DfsComputationRuntime {
     /// Create new DFS computation runtime
-    pub fn new(source_node: NodeId, track_paths: bool, concurrency: usize) -> Self {
+    pub fn new(source_node: NodeId, track_paths: bool, concurrency: usize, node_count: usize) -> Self {
         Self {
             source_node,
             track_paths,
             concurrency,
-            visited_nodes: HashMap::new(),
+            visited: vec![false; node_count],
             max_depth: None,
         }
     }
@@ -40,23 +39,14 @@ impl DfsComputationRuntime {
     ///
     /// Translation of: `DFSComputation.initialize()` (lines 76-100)
     /// This resets the internal state for a new traversal
-    pub fn initialize(&mut self, source_node: NodeId, max_depth: Option<u32>) {
+    pub fn initialize(&mut self, source_node: NodeId, max_depth: Option<u32>, node_count: usize) {
         self.source_node = source_node;
         self.max_depth = max_depth;
-        self.visited_nodes.clear();
-
-        // Add source node at discovery order 0
-        self.visited_nodes.insert(source_node, 0);
-    }
-
-    /// Add a visited node with its discovery order
-    ///
-    /// Translation of: `DFSComputation.addVisitedNode()` (lines 101-125)
-    /// This tracks nodes as they are discovered during traversal
-    pub fn add_visited_node(&mut self, node: NodeId, _depth: u32) {
-        // Discovery order is the current size of visited nodes
-        let discovery_order = self.visited_nodes.len() as u32;
-        self.visited_nodes.insert(node, discovery_order);
+        self.visited = vec![false; node_count];
+        // Add source node
+        if (source_node as usize) < self.visited.len() {
+            self.visited[source_node as usize] = true;
+        }
     }
 
     /// Check if a node has been visited
@@ -64,15 +54,14 @@ impl DfsComputationRuntime {
     /// Translation of: `DFSComputation.isVisited()` (lines 126-140)
     /// This checks the visited state of a node
     pub fn is_visited(&self, node: NodeId) -> bool {
-        self.visited_nodes.contains_key(&node)
+        (node as usize) < self.visited.len() && self.visited[node as usize]
     }
 
-    /// Get discovery order of a visited node
-    ///
-    /// Translation of: `DFSComputation.getDiscoveryOrder()` (lines 141-155)
-    /// This retrieves the discovery order of a previously visited node
-    pub fn get_discovery_order(&self, node: NodeId) -> Option<u32> {
-        self.visited_nodes.get(&node).copied()
+    /// Set a node as visited
+    pub fn set_visited(&mut self, node: NodeId) {
+        if (node as usize) < self.visited.len() {
+            self.visited[node as usize] = true;
+        }
     }
 
     /// Get total number of visited nodes
@@ -80,27 +69,16 @@ impl DfsComputationRuntime {
     /// Translation of: `DFSComputation.getVisitedCount()` (lines 156-170)
     /// This returns the count of visited nodes
     pub fn visited_count(&self) -> usize {
-        self.visited_nodes.len()
-    }
-
-    /// Get all visited nodes with their discovery orders
-    ///
-    /// Translation of: `DFSComputation.getVisitedNodes()` (lines 171-185)
-    /// This returns all visited nodes as a vector of (node, discovery_order) pairs
-    pub fn get_visited_nodes(&self) -> Vec<(NodeId, u32)> {
-        self.visited_nodes
-            .iter()
-            .map(|(&node, &order)| (node, order))
-            .collect()
+        self.visited.iter().filter(|&&v| v).count()
     }
 
     /// Check if max depth constraint is satisfied
     ///
     /// Translation of: `DFSComputation.checkMaxDepth()` (lines 186-200)
     /// This validates depth constraints during traversal
-    pub fn check_max_depth(&self, current_depth: u32) -> bool {
+    pub fn check_max_depth(&self, current_depth: f64) -> bool {
         match self.max_depth {
-            Some(max_depth) => current_depth <= max_depth,
+            Some(max_depth) => current_depth < max_depth as f64,
             None => true,
         }
     }
@@ -112,7 +90,7 @@ mod tests {
 
     #[test]
     fn test_dfs_computation_runtime_creation() {
-        let runtime = DfsComputationRuntime::new(0, true, 4);
+        let runtime = DfsComputationRuntime::new(0, true, 4, 10);
         assert_eq!(runtime.source_node, 0);
         assert!(runtime.track_paths);
         assert_eq!(runtime.concurrency, 4);
@@ -121,64 +99,38 @@ mod tests {
 
     #[test]
     fn test_dfs_computation_runtime_initialization() {
-        let mut runtime = DfsComputationRuntime::new(0, true, 1);
-        runtime.initialize(5, Some(10));
+        let mut runtime = DfsComputationRuntime::new(0, true, 1, 10);
+        runtime.initialize(5, Some(10), 10);
 
         assert_eq!(runtime.source_node, 5);
         assert_eq!(runtime.max_depth, Some(10));
         assert_eq!(runtime.visited_count(), 1);
         assert!(runtime.is_visited(5));
-        assert_eq!(runtime.get_discovery_order(5), Some(0));
     }
 
     #[test]
     fn test_dfs_computation_runtime_visited_operations() {
-        let mut runtime = DfsComputationRuntime::new(0, false, 1);
-        runtime.initialize(0, None);
+        let mut runtime = DfsComputationRuntime::new(0, false, 1, 10);
+        runtime.initialize(0, None, 10);
 
         assert!(!runtime.is_visited(1));
-        assert_eq!(runtime.get_discovery_order(1), None);
 
-        runtime.add_visited_node(1, 1);
+        runtime.set_visited(1);
         assert!(runtime.is_visited(1));
-        assert_eq!(runtime.get_discovery_order(1), Some(1));
         assert_eq!(runtime.visited_count(), 2);
     }
 
     #[test]
     fn test_dfs_computation_runtime_max_depth_check() {
-        let mut runtime = DfsComputationRuntime::new(0, false, 1);
-        runtime.initialize(0, Some(3));
+        let mut runtime = DfsComputationRuntime::new(0, false, 1, 10);
+        runtime.initialize(0, Some(3), 10);
 
-        assert!(runtime.check_max_depth(0));
-        assert!(runtime.check_max_depth(1));
-        assert!(runtime.check_max_depth(3));
-        assert!(!runtime.check_max_depth(4));
+        assert!(runtime.check_max_depth(0.0));
+        assert!(runtime.check_max_depth(1.0));
+        assert!(runtime.check_max_depth(2.9));
+        assert!(!runtime.check_max_depth(3.0));
 
-        runtime.initialize(0, None);
-        assert!(runtime.check_max_depth(100)); // No limit
-    }
-
-    #[test]
-    fn test_dfs_computation_runtime_get_visited_nodes() {
-        let mut runtime = DfsComputationRuntime::new(0, false, 1);
-        runtime.initialize(0, None);
-
-        runtime.add_visited_node(1, 1);
-        runtime.add_visited_node(2, 2);
-
-        let visited = runtime.get_visited_nodes();
-        assert_eq!(visited.len(), 3);
-
-        // Check that all expected nodes are present
-        let nodes: Vec<NodeId> = visited.iter().map(|(node, _)| *node).collect();
-        assert!(nodes.contains(&0));
-        assert!(nodes.contains(&1));
-        assert!(nodes.contains(&2));
-
-        // Check discovery order is sequential
-        let mut orders: Vec<u32> = visited.iter().map(|(_, order)| *order).collect();
-        orders.sort();
-        assert_eq!(orders, vec![0, 1, 2]);
+        runtime.initialize(0, None, 10);
+        assert!(runtime.check_max_depth(100.0)); // No limit
     }
 }

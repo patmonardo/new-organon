@@ -1,12 +1,14 @@
 use crate::applications::algorithms::machinery::{
-    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
-    FnStatsResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
+    AlgorithmMachinery, AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
+    ProgressTrackerCreator, RequestScopedDependencies,
 };
+use crate::applications::algorithms::pathfinding::shared::{PathFindingStreamResultBuilder, TraversalResult};
 use crate::applications::algorithms::pathfinding::bellman_ford::request::BellmanFordRequest;
-use crate::applications::algorithms::pathfinding::shared::{err, timings_json};
+use crate::applications::algorithms::pathfinding::shared::err;
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::GraphResources;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
+use crate::graph_store::GraphStore;
 use crate::procedures::traits::PathResult;
 use serde_json::{json, Value};
 
@@ -23,41 +25,59 @@ pub fn run(op: &str, request: &BellmanFordRequest, graph_resources: &GraphResour
     let task = Tasks::leaf("BellmanFord::stream".to_string()).base().clone();
 
     let compute = |gr: &GraphResources,
-                   _tracker: &mut dyn ProgressTracker,
+                   tracker: &mut dyn ProgressTracker,
                    _termination: &TerminationFlag|
-     -> Result<Option<Vec<PathResult>>, String> {
-        let mut builder = gr
-            .facade()
-            .bellman_ford()
-            .source(request.source)
-            .weight_property(&request.weight_property)
-            .direction(&request.direction)
-            .track_negative_cycles(request.track_negative_cycles)
-            .track_paths(request.track_paths)
-            .concurrency(request.common.concurrency.value());
+     -> Result<Option<TraversalResult>, String> {
+        // Get the graph view for algorithm
+        let rel_types: std::collections::HashSet<crate::projection::RelationshipType> = std::collections::HashSet::new();
+        let graph_view = gr.graph_store.get_graph_with_types_and_orientation(&rel_types, crate::projection::orientation::Orientation::Natural)
+            .map_err(|e| format!("Failed to get graph view: {}", e))?;
 
-        if !request.relationship_types.is_empty() {
-            builder = builder.relationship_types(request.relationship_types.clone());
-        }
+        let source_node = request.source as i64;
 
-        let iter = builder.stream().map_err(|e| e.to_string())?;
-        let rows: Vec<PathResult> = iter.collect();
-        Ok(Some(rows))
+        // Create algorithm runtime
+        let mut storage = crate::algo::bellman_ford::BellmanFordStorageRuntime::new(
+            source_node,
+            request.track_negative_cycles,
+            request.track_paths,
+            1, // concurrency
+        );
+
+        let mut computation = crate::algo::bellman_ford::BellmanFordComputationRuntime::new(
+            source_node,
+            request.track_negative_cycles,
+            request.track_paths,
+            1, // concurrency
+        );
+
+        let direction = if request.direction == "incoming" { 1 } else { 0 };
+
+        let result = AlgorithmMachinery::run_algorithms_and_manage_progress_tracker(
+            tracker,
+            false, // release_progress_tracker
+            crate::concurrency::Concurrency::of(request.common.concurrency.value()),
+            |tracker| {
+                storage.compute_bellman_ford(&mut computation, Some(graph_view.as_ref()), direction, tracker)
+                    .map(|_| computation.get_visited_nodes().into_iter().map(|n| n as i64).collect())
+                    .map_err(|e| format!("Bellman-Ford algorithm failed: {:?}", e))
+            },
+        )?;
+
+        Ok(Some(result))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources, rows: Option<Vec<PathResult>>, timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stream",
-            "data": rows.unwrap_or_default(),
-            "timings": timings_json(timings)
-        })
-    });
+    let result_builder = PathFindingStreamResultBuilder::new(request.track_paths);
 
-    match convenience.process_stats(graph_resources, request.common.concurrency, task, compute, builder)
-    {
-        Ok(v) => v,
+    match convenience.process_stream(graph_resources, request.common.concurrency, task, compute, result_builder) {
+        Ok(stream) => {
+            let rows: Vec<PathResult> = stream.collect();
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stream",
+                "data": rows
+            })
+        },
         Err(e) => err(op, "EXECUTION_ERROR", &format!("Bellman-Ford stream failed: {e}")),
     }
 }

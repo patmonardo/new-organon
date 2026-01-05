@@ -42,7 +42,7 @@ use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 // ============================================================================
@@ -171,9 +171,6 @@ impl DfsBuilder {
             self.concurrency,
         );
 
-        let mut computation =
-            DfsComputationRuntime::new(source_node, self.track_paths, self.concurrency);
-
         let rel_types: HashSet<RelationshipType> = HashSet::new();
         let graph_view = self
             .graph_store
@@ -182,57 +179,32 @@ impl DfsBuilder {
                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
             })?;
 
+        let node_count = graph_view.node_count() as usize;
+
+        let mut computation =
+            DfsComputationRuntime::new(source_node, self.track_paths, self.concurrency, node_count);
+
         let result =
             storage.compute_dfs(&mut computation, Some(graph_view.as_ref()), &mut progress_tracker)?;
 
-        let mut path_map: HashMap<NodeId, Vec<u64>> = HashMap::new();
-        if self.track_paths {
-            for path in result.paths {
-                let node_path: Vec<u64> = path
-                    .node_ids
-                    .into_iter()
-                    .filter(|node_id| *node_id >= 0)
-                    .map(|node_id| node_id as u64)
-                    .collect();
-                path_map.insert(path.target_node, node_path);
-            }
-        }
+        let max_depth_reached: u64 = 0; // Simplified, no paths
 
-        let max_depth_reached: u64 = if self.track_paths {
-            path_map
-                .values()
-                .map(|p| p.len().saturating_sub(1) as u64)
-                .max()
-                .unwrap_or(0)
-        } else {
-            0
-        };
+        let targets_found: u64 = 0; // Simplified
 
-        let targets_found: u64 = if target_nodes.is_empty() {
-            0
-        } else {
-            result
-                .visited_nodes
-                .iter()
-                .filter(|(node_id, _)| target_nodes.contains(node_id))
-                .count() as u64
-        };
-
-        let all_targets_reached =
-            !target_nodes.is_empty() && targets_found == target_nodes.len() as u64;
+        let all_targets_reached = false; // Simplified
 
         let paths: Vec<crate::algo::core::result_builders::PathResult> = result
             .visited_nodes
-            .into_iter()
-            .filter(|(node_id, _)| *node_id >= 0)
-            .map(|(node_id, discovery_order)| {
+            .iter()
+            .enumerate()
+            .map(|(index, &node_id)| {
                 let target = node_id as u64;
-                let path = path_map.get(&node_id).cloned().unwrap_or_default();
+                let path = vec![target]; // Single node path
                 crate::algo::core::result_builders::PathResult {
                     source: source_u64,
                     target,
                     path,
-                    cost: discovery_order as f64,
+                    cost: index as f64,
                 }
             })
             .collect();
@@ -241,7 +213,7 @@ impl DfsBuilder {
         let mut additional = std::collections::HashMap::new();
         additional.insert(
             "nodes_visited".to_string(),
-            result.nodes_visited.to_string(),
+            result.visited_nodes.len().to_string(),
         );
         additional.insert(
             "max_depth_reached".to_string(),

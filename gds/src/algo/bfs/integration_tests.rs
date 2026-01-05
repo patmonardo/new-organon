@@ -44,12 +44,11 @@ fn test_bfs_config_validation() {
 
 #[test]
 fn test_bfs_storage_runtime() {
-    let storage = BfsStorageRuntime::new(0, vec![3], Some(5), true, 4, 1);
+    let storage = BfsStorageRuntime::new(0, vec![3], Some(5), true);
     assert_eq!(storage.source_node, 0);
     assert_eq!(storage.target_nodes, vec![3]);
     assert_eq!(storage.max_depth, Some(5));
     assert!(storage.track_paths);
-    assert_eq!(storage.concurrency, 4);
 }
 
 #[test]
@@ -75,7 +74,7 @@ fn test_bfs_focused_macro_integration() {
 
 #[test]
 fn test_bfs_storage_computation_integration() {
-    let storage = BfsStorageRuntime::new(0, vec![3], None, true, 1, 1);
+    let storage = BfsStorageRuntime::new(0, vec![3], None, true);
     let mut computation = BfsComputationRuntime::new(0, true, 1);
 
     let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("BFS".to_string()));

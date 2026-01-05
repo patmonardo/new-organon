@@ -198,6 +198,15 @@ impl DeltaSteppingComputationRuntime {
         self.source_node
     }
 
+    /// Get all visited nodes (nodes with finite distance)
+    pub fn get_visited_nodes(&self) -> Vec<NodeId> {
+        self.distances
+            .iter()
+            .filter(|(_, &distance)| distance < f64::INFINITY)
+            .map(|(&node_id, _)| node_id)
+            .collect()
+    }
+
     /// Get delta parameter
     pub fn delta(&self) -> f64 {
         self.delta

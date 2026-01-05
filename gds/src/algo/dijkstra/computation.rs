@@ -199,6 +199,11 @@ impl DijkstraComputationRuntime {
         self.visited.contains(&node_id)
     }
 
+    /// Get all visited nodes
+    pub fn get_visited_nodes(&self) -> &HashSet<NodeId> {
+        &self.visited
+    }
+
     /// Set the predecessor of a node
     ///
     /// Translation of: `predecessors.put()` method (lines 229, 236)

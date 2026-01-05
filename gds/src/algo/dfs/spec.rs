@@ -78,12 +78,8 @@ impl DfsConfig {
 /// This contains the results of DFS traversal
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DfsResult {
-    /// Visited nodes with their discovery order
-    pub visited_nodes: Vec<(NodeId, u32)>,
-    /// Paths found (if track_paths was enabled)
-    pub paths: Vec<DfsPathResult>,
-    /// Total nodes visited
-    pub nodes_visited: usize,
+    /// Visited nodes in traversal order
+    pub visited_nodes: Vec<NodeId>,
     /// Computation time in milliseconds
     pub computation_time_ms: u64,
 }
@@ -124,17 +120,20 @@ define_algorithm_spec! {
             parsed_config.concurrency,
         );
 
-        let mut computation = DfsComputationRuntime::new(
-            parsed_config.source_node,
-            parsed_config.track_paths,
-            parsed_config.concurrency,
-        );
-
         // Execute DFS algorithm with a filtered/oriented view (defaults: all types, NATURAL)
         let rel_types: std::collections::HashSet<RelationshipType> = std::collections::HashSet::new();
         let graph_view = graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to obtain graph view: {}", e)))?;
+
+        let node_count = graph_view.node_count() as usize;
+
+        let mut computation = DfsComputationRuntime::new(
+            parsed_config.source_node,
+            parsed_config.track_paths,
+            parsed_config.concurrency,
+            node_count,
+        );
 
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
             Tasks::leaf("DFS".to_string()),
@@ -157,20 +156,12 @@ mod tests {
     #[test]
     fn test_dfs_result() {
         let result = DfsResult {
-            visited_nodes: vec![(0, 0), (1, 1), (2, 2)],
-            paths: vec![DfsPathResult {
-                source_node: 0,
-                target_node: 2,
-                node_ids: vec![0, 1, 2],
-                path_length: 2,
-            }],
-            nodes_visited: 3,
+            visited_nodes: vec![0, 1, 2],
             computation_time_ms: 5,
         };
 
         assert_eq!(result.visited_nodes.len(), 3);
-        assert_eq!(result.paths.len(), 1);
-        assert_eq!(result.nodes_visited, 3);
+        assert_eq!(result.computation_time_ms, 5);
     }
 
     #[test]

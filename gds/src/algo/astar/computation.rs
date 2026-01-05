@@ -178,6 +178,11 @@ impl AStarComputationRuntime {
     pub fn get_total_cost(&self, target: NodeId) -> f64 {
         self.get_g_cost(target)
     }
+
+    /// Get all visited nodes
+    pub fn get_visited_nodes(&self) -> Vec<NodeId> {
+        self.visited.iter().cloned().collect()
+    }
 }
 
 impl Default for AStarComputationRuntime {
