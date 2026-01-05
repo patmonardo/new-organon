@@ -179,9 +179,8 @@ pub use dijkstra::{
     DijkstraStorageRuntime, ManyTargets, PathFindingResult, SingleTarget, Targets, TraversalState,
 };
 pub use closeness::{
-    ClosenessCentralityAlgorithmSpec, ClosenessCentralityComputationResult,
-    ClosenessCentralityComputationRuntime, ClosenessCentralityConfig, ClosenessCentralityResult,
-    ClosenessCentralityStorageRuntime,
+    ClosenessCentralityAlgorithmSpec, ClosenessCentralityComputationRuntime,
+    ClosenessCentralityConfig, ClosenessCentralityResult, ClosenessCentralityStorageRuntime,
 };
 pub use harmonic::{
     HarmonicAlgorithmSpec, HarmonicComputationRuntime, HarmonicConfig, HarmonicResult,

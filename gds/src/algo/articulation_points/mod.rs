@@ -1,19 +1,21 @@
-//! Articulation Points Algorithm
+//! Articulation Points (Java GDS parity)
 //!
-//! **Translation Source**: `org.neo4j.gds.articulationpoints.ArticulationPoints`
-//!
-//! This module provides the Articulation Points algorithm using iterative DFS
-//! to avoid stack overflow on large graphs.
+//! Standard algorithm module layout:
+//! - `spec`: config + result + AlgorithmSpec integration
+//! - `storage`: GraphStore-facing accessors (undirected neighbor access)
+//! - `computation`: pure compute runtime (iterative DFS stack events)
 
 pub mod computation;
-#[cfg(test)]
-pub mod integration_tests;
 pub mod spec;
 pub mod storage;
 
-// Re-export main types
-pub use computation::ArticulationPointsComputationRuntime;
-pub use spec::{
-    ArticulationPointsAlgorithmSpec, ArticulationPointsConfig, ArticulationPointsResult,
+#[cfg(test)]
+pub mod integration_tests;
+
+pub use computation::{
+    ArticulationPointsComputationResult, ArticulationPointsComputationRuntime,
 };
+pub use spec::{ArticulationPointsConfig, ArticulationPointsResult, ARTICULATION_POINTSAlgorithmSpec};
 pub use storage::ArticulationPointsStorageRuntime;
+
+pub type ArticulationPointsAlgorithmSpec = ARTICULATION_POINTSAlgorithmSpec;

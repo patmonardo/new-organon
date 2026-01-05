@@ -87,7 +87,7 @@ This document inventories the execution **modes** exposed by the Rust `gds` *pro
 
 | Procedure | stream | stats | run | mutate | write | estimate_memory |
 |---|---:|---:|---:|---:|---:|---:|
-| gds/src/procedures/community/approx_max_k_cut.rs | ok | ok | — | stub | stub | ok |
+| gds/src/procedures/community/approx_max_kcut.rs | ok | ok | — | stub | stub | ok |
 | gds/src/procedures/community/conductance.rs | ok | ok | — | stub | stub | ok |
 | gds/src/procedures/community/k1coloring.rs | ok | ok | ok | stub | stub | ok |
 | gds/src/procedures/community/kcore.rs | ok | ok | ok | stub | stub | ok |
@@ -197,7 +197,7 @@ This section is intentionally redundant with the tables above, but grouped by th
 - gds/src/procedures/community/kmeans.rs
 
 **Stubbed `mutate(...)` (explicit “not implemented”)**
-- gds/src/procedures/community/approx_max_k_cut.rs
+- gds/src/procedures/community/approx_max_kcut.rs
 - gds/src/procedures/community/conductance.rs
 - gds/src/procedures/community/k1coloring.rs
 - gds/src/procedures/community/kcore.rs
@@ -211,7 +211,7 @@ This section is intentionally redundant with the tables above, but grouped by th
 - gds/src/procedures/community/wcc.rs
 
 **Stubbed `write(...)` (explicit “not implemented”)**
-- gds/src/procedures/community/approx_max_k_cut.rs
+- gds/src/procedures/community/approx_max_kcut.rs
 - gds/src/procedures/community/conductance.rs
 - gds/src/procedures/community/k1coloring.rs
 - gds/src/procedures/community/kcore.rs

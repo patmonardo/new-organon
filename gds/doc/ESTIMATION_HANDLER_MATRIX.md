@@ -15,7 +15,7 @@ This table scans `gds/src/applications/algorithms/**` request handlers for `mode
 | centrality | harmonic | gds/src/applications/algorithms/centrality/harmonic.rs | yes | estimate_memory |
 | centrality | hits | gds/src/applications/algorithms/centrality/hits.rs | yes | estimate_memory |
 | centrality | pagerank | gds/src/applications/algorithms/centrality/pagerank.rs | yes | estimate_memory |
-| community | approxMaxKCut | gds/src/applications/algorithms/community/approx_max_k_cut.rs | no |  |
+| community | approxMaxKCut | gds/src/applications/algorithms/community/approx_max_kcut.rs | no |  |
 | community | conductance | gds/src/applications/algorithms/community/conductance.rs | yes | estimate_memory |
 | community | k1coloring | gds/src/applications/algorithms/community/k1coloring.rs | yes | estimate_memory |
 | community | kcore | gds/src/applications/algorithms/community/kcore.rs | yes | estimate_memory |

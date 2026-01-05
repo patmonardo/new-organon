@@ -1,112 +1,87 @@
+use crate::algo::hits::HITSAlgorithmSpec;
+use crate::projection::eval::procedure::AlgorithmSpec;
+
 #[cfg(test)]
 mod tests {
-    use crate::procedures::graph::Graph;
-    use crate::types::graph_store::DefaultGraphStore;
-    use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
-    use std::sync::Arc;
+    use super::*;
+
+    use crate::algo::hits::HitsStorageRuntime;
+    use crate::config::GraphStoreConfig;
+    use crate::core::utils::progress::tasks::NoopProgressTracker;
+    use crate::types::graph::RelationshipTopology;
+    use crate::types::graph::id_map::SimpleIdMap;
+    use crate::types::graph_store::{Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName, GraphStore};
+    use crate::types::schema::{Direction, GraphSchema, MutableGraphSchema, NodeLabel, RelationshipType};
 
     #[test]
-    fn test_hits_smoke() {
-        // Create a simple random graph
-        let config = RandomGraphConfig {
-            seed: Some(42),
-            node_count: 5,
-            relationships: vec![RandomRelationshipConfig::new("REL", 0.6)],
-            ..RandomGraphConfig::default()
-        };
-        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
-        let graph = Graph::new(store);
-
-        let (hubs, auths) = graph
-            .hits()
-            .max_iterations(20)
-            .tolerance(1e-4)
-            .run()
-            .expect("HITS should succeed");
-
-        assert_eq!(hubs.len(), 5);
-        assert_eq!(auths.len(), 5);
-
-        // Verify normalization (L2 norm ~1.0)
-        let _hub_norm: f64 = hubs.iter().map(|h| h * h).sum::<f64>().sqrt();
-        let auth_norm: f64 = auths.iter().map(|a| a * a).sum::<f64>().sqrt();
-
-        // At least authorities should be reasonably normalized
-        assert!(auth_norm > 0.5, "Auths should have meaningful values");
+    fn test_hits_algorithm_spec_contract_basics() {
+        let algorithm = HITSAlgorithmSpec::new("test_graph".to_string());
+        assert_eq!(algorithm.name(), "hits");
+        assert_eq!(algorithm.graph_name(), "test_graph");
     }
 
     #[test]
-    fn test_hits_stream() {
-        let config = RandomGraphConfig {
-            seed: Some(7),
-            node_count: 4,
-            relationships: vec![RandomRelationshipConfig::new("REL", 0.7)],
-            ..RandomGraphConfig::default()
-        };
-        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
-        let graph = Graph::new(store);
-
-        let rows: Vec<_> = graph
-            .hits()
-            .stream()
-            .expect("HITS stream should succeed")
-            .collect();
-
-        assert_eq!(rows.len(), 4);
-
-        // Verify row structure
-        for row in &rows {
-            assert!(row.node_id < 4);
-            assert!(row.score >= 0.0, "Hub scores should be non-negative");
-            assert!(row.score.is_finite(), "Scores should be finite");
-        }
-    }
-
-    #[test]
-    fn test_hits_stats() {
-        let config = RandomGraphConfig {
-            seed: Some(123),
-            node_count: 3,
-            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
-            ..RandomGraphConfig::default()
-        };
-        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
-        let graph = Graph::new(store);
-
-        let stats = graph
-            .hits()
-            .max_iterations(10)
-            .stats()
-            .expect("HITS stats should succeed");
-
-        assert!(stats.iterations <= 10, "Should respect max iterations");
-        // Millisecond-resolution timers can legitimately report 0ms for very fast runs,
-        // especially when the test suite is warm/cached.
-        assert!(
-            stats.execution_time_ms < 60_000,
-            "Execution time should be tracked (and reasonable)"
+    fn hits_tiny_graph_identifies_top_hub_and_authority() {
+        // Build a tiny directed graph with a unique top authority and hub:
+        // 0 -> 1, 0 -> 2, 0 -> 3
+        // 1 -> 3
+        // 2 -> 3
+        let cfg = GraphStoreConfig::default();
+        let graph_name = GraphName::new("hits_tiny");
+        let db_info = DatabaseInfo::new(
+            DatabaseId::new("test-db"),
+            DatabaseLocation::remote("localhost", 7687, None, None),
         );
-    }
+        let capabilities = Capabilities::default();
 
-    #[test]
-    fn test_hits_empty() {
-        // Single node, no edges
-        let config = RandomGraphConfig {
-            seed: Some(1),
-            node_count: 1,
-            relationships: vec![],
-            ..RandomGraphConfig::default()
-        };
-        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
-        let graph = Graph::new(store);
+        let mut schema = MutableGraphSchema::empty();
+        schema.node_schema_mut().add_label(NodeLabel::all_nodes());
+        let rel_type = RelationshipType::of("R");
+        schema
+            .relationship_schema_mut()
+            .add_relationship_type(rel_type.clone(), Direction::Directed);
+        let schema: GraphSchema = schema.build();
 
-        let result = graph.hits().run();
+        let id_map = SimpleIdMap::from_original_ids([0, 1, 2, 3]);
+        let outgoing = vec![vec![1, 2, 3], vec![3], vec![3], vec![]];
+        let topo = RelationshipTopology::new(outgoing, None);
+        let mut topologies = std::collections::HashMap::new();
+        topologies.insert(rel_type, topo);
 
-        // Should handle empty graph gracefully
-        assert!(
-            result.is_ok(),
-            "HITS should handle empty graph: {:?}",
-            result.err()
-        );
+        let store = DefaultGraphStore::new(cfg, graph_name, db_info, schema, capabilities, id_map, topologies);
+        assert_eq!(GraphStore::node_count(&store), 4);
+
+        let storage = HitsStorageRuntime::with_default_projection(&store)
+            .expect("hits storage projection");
+
+        let mut tracker = NoopProgressTracker;
+        let result = storage.run(25, 1e-8, 1, &mut tracker);
+
+        // Expect clear extremes:
+        // - Node 3 is the best authority (many incoming links)
+        // - Node 0 is the best hub (points to many nodes incl. the best authority)
+        // - Node 0 has no incoming links → lowest authority
+        // - Node 3 has no outgoing links → lowest hub
+        let eps = 1e-12;
+
+        let hub0 = result.hub_scores[0];
+        let hub1 = result.hub_scores[1];
+        let hub2 = result.hub_scores[2];
+        let hub3 = result.hub_scores[3];
+
+        let auth0 = result.authority_scores[0];
+        let auth1 = result.authority_scores[1];
+        let auth2 = result.authority_scores[2];
+        let auth3 = result.authority_scores[3];
+
+        assert!(hub0 > hub1 + eps);
+        assert!(hub0 > hub2 + eps);
+        assert!(hub1 >= hub3 - eps);
+        assert!(hub2 >= hub3 - eps);
+
+        assert!(auth3 > auth1 + eps);
+        assert!(auth3 > auth2 + eps);
+        assert!(auth1 >= auth0 - eps);
+        assert!(auth2 >= auth0 - eps);
     }
 }

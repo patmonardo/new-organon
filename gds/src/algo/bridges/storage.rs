@@ -8,8 +8,11 @@ use crate::projection::{Orientation, RelationshipType};
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use crate::types::prelude::GraphStore;
+use crate::concurrency::{TerminatedException, TerminationFlag};
 use std::collections::HashSet;
 use std::sync::Arc;
+
+use super::computation::{Bridge, BridgesComputationRuntime};
 
 pub struct BridgesStorageRuntime<'a, G: GraphStore> {
     graph_store: &'a G,
@@ -28,6 +31,10 @@ impl<'a, G: GraphStore> BridgesStorageRuntime<'a, G> {
 
     pub fn node_count(&self) -> usize {
         self.graph.node_count()
+    }
+
+    pub fn relationship_count(&self) -> usize {
+        self.graph.relationship_count()
     }
 
     pub fn graph_store(&self) -> &'a G {
@@ -51,5 +58,50 @@ impl<'a, G: GraphStore> BridgesStorageRuntime<'a, G> {
             .filter(|target| *target >= 0)
             .map(|target| target as usize)
             .collect()
+    }
+
+    /// Storage-owned top-level controller for bridges.
+    ///
+    /// This method owns:
+    /// - iteration over all nodes
+    /// - termination checks
+    /// - progress callback semantics
+    /// - stack sizing (uses `relationship_count()` for Java parity)
+    pub fn compute_parallel(
+        &self,
+        concurrency: usize,
+        termination: &TerminationFlag,
+        on_node_scanned: Arc<dyn Fn() + Send + Sync>,
+    ) -> Result<Vec<Bridge>, TerminatedException> {
+        let _ = concurrency; // Bridges is currently single-threaded.
+
+        let node_count = self.node_count();
+        if node_count == 0 {
+            return Ok(Vec::new());
+        }
+
+        // Java parity: stack sized by relationship count.
+        let mut runtime = BridgesComputationRuntime::new_with_stack_capacity(
+            node_count,
+            self.relationship_count(),
+        );
+        runtime.reset(node_count);
+
+        let neighbors = |n: usize| self.neighbors(n);
+        let mut bridges: Vec<Bridge> = Vec::new();
+
+        for i in 0..node_count {
+            if !termination.running() {
+                return Err(TerminatedException);
+            }
+
+            if !runtime.is_visited(i) {
+                runtime.dfs_component(i, &neighbors, &mut bridges);
+            }
+
+            (on_node_scanned.as_ref())();
+        }
+
+        Ok(bridges)
     }
 }

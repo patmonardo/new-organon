@@ -58,26 +58,28 @@ pub struct BridgesComputationRuntime {
     tin: HugeLongArray,
     low: HugeLongArray,
     timer: i64,
+    stack: Vec<StackEvent>,
 }
 
 impl BridgesComputationRuntime {
     pub fn new(node_count: usize) -> Self {
+        Self::new_with_stack_capacity(node_count, 0)
+    }
+
+    /// Create a runtime with a reusable DFS stack.
+    ///
+    /// For Java parity, pass `relationship_count` as `stack_capacity`.
+    pub fn new_with_stack_capacity(node_count: usize, stack_capacity: usize) -> Self {
         Self {
             visited: BitSet::new(node_count),
             tin: HugeLongArray::new(node_count),
             low: HugeLongArray::new(node_count),
             timer: 0,
+            stack: Vec::with_capacity(stack_capacity),
         }
     }
 
-    /// Compute all bridge edges.
-    ///
-    /// `get_neighbors(node)` must provide an undirected neighbor list.
-    pub fn compute(
-        &mut self,
-        node_count: usize,
-        get_neighbors: impl Fn(usize) -> Vec<usize>,
-    ) -> BridgesComputationResult {
+    pub fn reset(&mut self, node_count: usize) {
         self.timer = 0;
         self.visited.clear_all();
 
@@ -85,28 +87,48 @@ impl BridgesComputationRuntime {
             self.tin.set(i, -1);
             self.low.set(i, -1);
         }
+        self.stack.clear();
+    }
+
+    pub fn is_visited(&self, node: usize) -> bool {
+        self.visited.get(node)
+    }
+
+    /// Compute all bridge edges.
+    ///
+    /// This is a convenience wrapper; in the preferred architecture, the storage runtime
+    /// owns the outer loop and calls `dfs_component()`.
+    pub fn compute(
+        &mut self,
+        node_count: usize,
+        get_neighbors: impl Fn(usize) -> Vec<usize>,
+    ) -> BridgesComputationResult {
+        self.reset(node_count);
 
         let mut bridges: Vec<Bridge> = Vec::new();
 
         for i in 0..node_count {
             if !self.visited.get(i) {
-                self.dfs(i, &get_neighbors, &mut bridges);
+                self.dfs_component(i, &get_neighbors, &mut bridges);
             }
         }
 
         BridgesComputationResult { bridges }
     }
 
-    fn dfs(
+    /// Explore a connected component starting at `start_node`, adding any bridges found.
+    ///
+    /// `get_neighbors(node)` must provide an undirected neighbor list.
+    pub fn dfs_component(
         &mut self,
         start_node: usize,
         get_neighbors: &impl Fn(usize) -> Vec<usize>,
         bridges: &mut Vec<Bridge>,
     ) {
-        let mut stack: Vec<StackEvent> = Vec::new();
-        stack.push(StackEvent::upcoming_visit(start_node, None));
+        self.stack.clear();
+        self.stack.push(StackEvent::upcoming_visit(start_node, None));
 
-        while let Some(event) = stack.pop() {
+        while let Some(event) = self.stack.pop() {
             if event.last_visit {
                 // Backtracking phase (Java: lastVisit())
                 let v = match event.trigger_node {
@@ -139,7 +161,7 @@ impl BridgesComputationRuntime {
 
                 if let Some(p) = trigger {
                     // Post event must be before exploring neighbors
-                    stack.push(StackEvent::last_visit(node, p));
+                    self.stack.push(StackEvent::last_visit(node, p));
                 }
 
                 let mut parent_skipped = false;
@@ -149,7 +171,7 @@ impl BridgesComputationRuntime {
                         parent_skipped = true;
                         continue;
                     }
-                    stack.push(StackEvent::upcoming_visit(to, Some(node)));
+                    self.stack.push(StackEvent::upcoming_visit(to, Some(node)));
                 }
             } else if let Some(v) = trigger {
                 // Back edge: update low(trigger) with tin(to)

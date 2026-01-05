@@ -190,8 +190,22 @@ impl LeidenFacade {
 
     /// Estimate memory usage.
     pub fn estimate_memory(&self) -> Result<MemoryRange> {
-        // Note: memory estimation is deferred.
-        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
+        // Leiden maintains community assignments and modularity-related working state.
+        // Estimate is dominated by per-node arrays; relationship count affects traversal.
+        let node_count = self.graph_store.node_count();
+        let relationship_count = self.graph_store.relationship_count();
+
+        // Per node: community id + per-level bookkeeping (conservative).
+        let per_node = 128usize;
+        // Per relationship: scan/aggregation.
+        let per_relationship = 8usize;
+
+        let base: usize = 128 * 1024;
+        let total = base
+            .saturating_add(node_count.saturating_mul(per_node))
+            .saturating_add(relationship_count.saturating_mul(per_relationship));
+
+        Ok(MemoryRange::of_range(total, total.saturating_mul(3)))
     }
 }
 

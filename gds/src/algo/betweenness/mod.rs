@@ -1,18 +1,21 @@
-//! Betweenness Centrality Algorithm
+//! Betweenness Centrality (Brandes)
 //!
-//! **Translation Source**: `org.neo4j.gds.betweenness.BetweennessCentrality`
+//! Translation target: Neo4j GDS `org.neo4j.gds.betweenness.*`.
 //!
-//! Measures node importance based on how often a node lies on shortest paths.
-//! Uses two-phase algorithm: forward BFS + backward dependency propagation.
+//! Module layout follows the standard "algo" pattern used across this crate:
+//! - `spec`: config + result + AlgorithmSpec integration
+//! - `storage`: GraphStore-facing view + neighbor/weight access
+//! - `computation`: pure Brandes runtime (parallel over sources)
 
 pub mod computation;
-#[cfg(test)]
-pub mod integration_tests;
 pub mod spec;
 pub mod storage;
 
 pub use computation::BetweennessCentralityComputationRuntime;
-pub use spec::{
-    BetweennessCentralityAlgorithmSpec, BetweennessCentralityConfig, BetweennessCentralityResult,
-};
+pub use spec::{BetweennessCentralityConfig, BetweennessCentralityResult, BETWEENNESSAlgorithmSpec};
 pub use storage::BetweennessCentralityStorageRuntime;
+
+pub type BetweennessCentralityAlgorithmSpec = BETWEENNESSAlgorithmSpec;
+
+#[cfg(test)]
+mod integration_tests;

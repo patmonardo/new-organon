@@ -258,9 +258,13 @@ impl PageRankFacade {
             .clone()
             .map(|v| v.into_iter().collect::<std::collections::HashSet<u64>>());
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("pagerank".to_string(), self.iterations as usize),
-            self.concurrency,
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+            Tasks::leaf_with_volume("pagerank".to_string(), self.iterations as usize)
+                .base()
+                .clone(),
+            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+            crate::core::utils::progress::JobId::new(),
+            self.task_registry.as_ref(),
         );
         progress_tracker.begin_subtask_with_volume(self.iterations as usize);
 

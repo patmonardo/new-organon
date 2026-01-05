@@ -16,12 +16,11 @@ use crate::core::utils::progress::ProgressTracker;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
-use crate::algo::closeness::ClosenessCentralityComputationRuntime;
+use crate::algo::closeness::ClosenessCentralityStorageRuntime;
+use crate::concurrency::TerminationFlag;
 use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -122,15 +121,8 @@ impl ClosenessCentralityFacade {
     fn compute_scores(&self) -> Result<(Vec<f64>, std::time::Duration)> {
         let start = Instant::now();
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, self.orientation())
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
-
-        let node_count = graph_view.node_count();
+        let storage = ClosenessCentralityStorageRuntime::new(self.graph_store.as_ref(), self.orientation())?;
+        let node_count = storage.node_count();
         if node_count == 0 {
             return Ok((Vec::new(), start.elapsed()));
         }
@@ -166,22 +158,7 @@ impl ClosenessCentralityFacade {
             node_count,
         );
 
-        let fallback = graph_view.default_property_value();
-        let get_neighbors = |node_idx: usize| -> Vec<usize> {
-            let node_id = match Self::checked_node_id(node_idx) {
-                Ok(value) => value,
-                Err(_) => return Vec::new(),
-            };
-
-            graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| cursor.target_id())
-                .filter(|target| *target >= 0)
-                .map(|target| target as usize)
-                .collect()
-        };
-
-        let termination = crate::concurrency::TerminationFlag::running_true();
+        let termination = TerminationFlag::running_true();
 
         let farness_progress_handle = progress_tracker.clone();
         let on_sources_done = Arc::new(move |sources_done: usize| {
@@ -189,19 +166,21 @@ impl ClosenessCentralityFacade {
             tracker.log_progress(sources_done);
         });
 
-        let result = ClosenessCentralityComputationRuntime::compute_parallel(
-            node_count,
-            self.wasserman_faust,
-            self.concurrency,
-            &termination,
-            on_sources_done,
-            &get_neighbors,
-        )
-        .map_err(|e| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "Closeness terminated: {e}"
-            ))
-        })?;
+        let on_closeness_done = Arc::new(|_nodes_done: usize| {});
+
+        let centralities = storage
+            .compute_parallel(
+                self.wasserman_faust,
+                self.concurrency,
+                &termination,
+                on_sources_done,
+                on_closeness_done,
+            )
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "Closeness terminated: {e}"
+                ))
+            })?;
 
         progress_tracker.end_subtask_with_description("Farness computation");
 
@@ -217,7 +196,7 @@ impl ClosenessCentralityFacade {
         progress_tracker.end_subtask();
         progress_tracker.release();
 
-        Ok((result.centralities, start.elapsed()))
+        Ok((centralities, start.elapsed()))
     }
 
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {

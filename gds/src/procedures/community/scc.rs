@@ -135,8 +135,21 @@ impl SccFacade {
 
     /// Estimate memory usage.
     pub fn estimate_memory(&self) -> Result<MemoryRange> {
-        // Note: memory estimation is deferred.
-        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
+        // SCC typically uses several per-node arrays (index/lowlink/stack flags) and a stack.
+        let node_count = self.graph_store.node_count();
+        let relationship_count = self.graph_store.relationship_count();
+
+        // Per node: multiple u64/usize arrays + stack membership.
+        let per_node = 128usize;
+        // Per relationship: traversal over outgoing edges.
+        let per_relationship = 8usize;
+
+        let base: usize = 64 * 1024;
+        let total = base
+            .saturating_add(node_count.saturating_mul(per_node))
+            .saturating_add(relationship_count.saturating_mul(per_relationship));
+
+        Ok(MemoryRange::of_range(total, total.saturating_mul(2)))
     }
 
     /// Full result: returns the procedure-level SCC result.

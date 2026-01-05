@@ -1,63 +1,77 @@
-//! HITS Specification
-//!
-//! This module implements the `AlgorithmSpec` trait for HITS.
+//! HITS algorithm specification
 
+use crate::algo::hits::storage::HitsStorageRuntime;
+use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::define_algorithm_spec;
-use crate::core::utils::progress::Tasks;
 use crate::projection::eval::procedure::*;
-use std::time::Duration;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
-use crate::projection::{Orientation, RelationshipType};
-use std::collections::HashSet;
-
-use super::computation::run_hits;
-use super::storage::HitsStorageRuntime;
-
-// ============================================================================
-// Configuration
-// ============================================================================
-
-/// HITS Configuration
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct HitsConfig {
-    /// Convergence tolerance
-    pub tolerance: f64,
-    /// Maximum number of iterations
+    #[serde(default = "default_max_iterations")]
     pub max_iterations: usize,
+
+    #[serde(default = "default_tolerance")]
+    pub tolerance: f64,
+
+    #[serde(default = "default_concurrency")]
+    pub concurrency: usize,
+}
+
+fn default_max_iterations() -> usize {
+    20
+}
+
+fn default_tolerance() -> f64 {
+    1e-4
+}
+
+fn default_concurrency() -> usize {
+    4
 }
 
 impl Default for HitsConfig {
     fn default() -> Self {
         Self {
-            tolerance: 1e-6,
-            max_iterations: 100,
+            max_iterations: default_max_iterations(),
+            tolerance: default_tolerance(),
+            concurrency: default_concurrency(),
         }
     }
 }
 
-// ============================================================================
-// Result
-// ============================================================================
-
-/// HITS Result
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct HitsResult {
-    /// Hub scores for each node
-    pub hub_scores: Vec<f64>,
-    /// Authority scores for each node
-    pub authority_scores: Vec<f64>,
-    /// Number of iterations run
-    pub iterations: usize,
-    /// Whether the algorithm converged
-    pub did_converge: bool,
-    /// Execution time
-    pub execution_time: Duration,
+impl HitsConfig {
+    pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+        if self.concurrency == 0 {
+            return Err(crate::config::validation::ConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be positive".to_string(),
+            });
+        }
+        if self.max_iterations == 0 {
+            return Err(crate::config::validation::ConfigError::InvalidParameter {
+                parameter: "maxIterations".to_string(),
+                reason: "maxIterations must be positive".to_string(),
+            });
+        }
+        if self.tolerance <= 0.0 {
+            return Err(crate::config::validation::ConfigError::InvalidParameter {
+                parameter: "tolerance".to_string(),
+                reason: "tolerance must be positive".to_string(),
+            });
+        }
+        Ok(())
+    }
 }
 
-// ============================================================================
-// Algorithm Spec (Using macro for boilerplate)
-// ============================================================================
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct HitsResult {
+    pub hub_scores: Vec<f64>,
+    pub authority_scores: Vec<f64>,
+    pub iterations: usize,
+    pub converged: bool,
+    pub execution_time: Duration,
+}
 
 define_algorithm_spec! {
     name: "hits",
@@ -65,56 +79,33 @@ define_algorithm_spec! {
     projection_hint: Dense,
     modes: [Stream, Stats],
 
-    execute: |self, graph_store, config, context| {
-        // Parse configuration
-        let parsed_config: HitsConfig = serde_json::from_value(config.clone())
-            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {}", e)))?;
-
-        context.log(
-            LogLevel::Info,
-            &format!(
-                "Computing HITS on graph with {} nodes",
-                graph_store.node_count()
-            ),
-        );
+    execute: |_self, graph_store, config, _context| {
+        let parsed: HitsConfig = serde_json::from_value(config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        parsed
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
 
         let start = Instant::now();
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(Tasks::leaf_with_volume(
-            "hits".to_string(),
-            parsed_config.max_iterations,
-        ));
+        let storage = HitsStorageRuntime::with_default_projection(graph_store)?;
 
-        // Create storage runtime
-        let storage = HitsStorageRuntime::new(graph_store)?;
-
-        // Build an unfiltered natural-orientation view.
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph = graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| AlgorithmError::Execution(format!("Failed to get graph: {}", e)))?;
-
-        let result = run_hits(
-            graph,
-            parsed_config.max_iterations,
-            parsed_config.tolerance,
-            &mut progress_tracker,
+        let mut tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("hits".to_string(), parsed.max_iterations),
+            parsed.concurrency,
         );
 
-        context.log(
-            LogLevel::Info,
-            &format!(
-                "HITS computed: {} nodes, iterations: {}",
-                storage.node_count(),
-                result.iterations_ran
-            ),
-        );
+        tracker.begin_subtask_with_volume(parsed.max_iterations);
+
+        let run = storage.run(parsed.max_iterations, parsed.tolerance, parsed.concurrency, &mut tracker);
+
+        tracker.end_subtask();
 
         Ok(HitsResult {
-            hub_scores: result.hub_scores,
-            authority_scores: result.authority_scores,
-            iterations: result.iterations_ran,
-            did_converge: result.did_converge,
+            hub_scores: run.hub_scores,
+            authority_scores: run.authority_scores,
+            iterations: run.iterations_ran,
+            converged: run.did_converge,
             execution_time: start.elapsed(),
         })
     }

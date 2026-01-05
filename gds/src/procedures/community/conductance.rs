@@ -179,8 +179,22 @@ impl ConductanceFacade {
 
     /// Estimate memory usage.
     pub fn estimate_memory(&self) -> Result<MemoryRange> {
-        // Note: memory estimation is deferred.
-        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
+        // Conductance keeps per-node community ids and accumulators per community.
+        // Dominant memory is linear in node count; relationship count influences traversal overhead.
+        let node_count = self.graph_store.node_count();
+        let relationship_count = self.graph_store.relationship_count();
+
+        // Per node: community id + temporary sums.
+        let per_node = 64usize;
+        // Per relationship: traversal bookkeeping (very conservative).
+        let per_relationship = 8usize;
+
+        let base: usize = 32 * 1024;
+        let total = base
+            .saturating_add(node_count.saturating_mul(per_node))
+            .saturating_add(relationship_count.saturating_mul(per_relationship));
+
+        Ok(MemoryRange::of_range(total, total.saturating_mul(2)))
     }
 }
 

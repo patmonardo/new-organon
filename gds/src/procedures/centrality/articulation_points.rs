@@ -11,7 +11,9 @@ use crate::core::utils::progress::{
 };
 use crate::core::utils::progress::ProgressTracker;
 use crate::mem::MemoryRange;
-use crate::algo::articulation_points::computation::ArticulationPointsComputationRuntime;
+use crate::algo::articulation_points::computation::{
+    ArticulationPointsComputationRuntime, STACK_EVENT_SIZE_BYTES,
+};
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
 use crate::projection::orientation::Orientation;
@@ -94,13 +96,18 @@ impl ArticulationPointsFacade {
             })?;
 
         let node_count = graph_view.node_count();
+        let relationship_count = graph_view.relationship_count();
         if node_count == 0 {
             return Ok(crate::collections::BitSet::new(0));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("articulation_points".to_string(), node_count),
-            self.concurrency,
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+            Tasks::leaf_with_volume("articulation_points".to_string(), node_count)
+                .base()
+                .clone(),
+            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+            crate::core::utils::progress::JobId::new(),
+            self.task_registry.as_ref(),
         );
         progress_tracker.begin_subtask_with_volume(node_count);
 
@@ -120,7 +127,11 @@ impl ArticulationPointsFacade {
         };
 
         let mut runtime = ArticulationPointsComputationRuntime::new(node_count);
-        let result = runtime.compute(node_count, get_neighbors);
+        let result = runtime.compute_with_relationship_count(
+            node_count,
+            relationship_count,
+            get_neighbors,
+        );
 
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();
@@ -143,18 +154,25 @@ impl ArticulationPointsFacade {
     /// ```
     pub fn estimate_memory(&self) -> MemoryRange {
         let node_count = self.graph_store.node_count();
+        let relationship_count = self.graph_store.relationship_count();
 
-        // Memory for bitset (approximately node_count / 8 bytes)
-        let bitset_memory = (node_count + 7) / 8;
+        let bitset_bytes = (node_count + 7) / 8;
+        let visited_bytes = bitset_bytes;
+        let articulation_bytes = bitset_bytes;
 
-        // Memory for DFS stack and discovery arrays in articulation points algorithm
-        let dfs_memory = node_count * 12; // Rough estimate: 3 integers per node (discovery, low, parent)
+        // tin/low/children: i64 per node (HugeLongArray is long-backed).
+        let per_node_arrays_bytes = node_count.saturating_mul(3).saturating_mul(8);
 
-        // Additional overhead for computation (temporary vectors, etc.)
-        let computation_overhead = 1024 * 1024; // 1MB for temporary structures
+        // Java parity: DFS event stack sized by relationship count.
+        let stack_bytes = relationship_count.saturating_mul(STACK_EVENT_SIZE_BYTES);
 
-        let total_memory = bitset_memory + dfs_memory + computation_overhead;
-        let total_with_overhead = total_memory + (total_memory / 5); // Add 20% overhead
+        let total_memory = visited_bytes
+            .saturating_add(articulation_bytes)
+            .saturating_add(per_node_arrays_bytes)
+            .saturating_add(stack_bytes);
+
+        // Conservative overhead for Vec/BitSet headers + allocator slack.
+        let total_with_overhead = total_memory.saturating_add(total_memory / 5);
 
         MemoryRange::of_range(total_memory, total_with_overhead)
     }
@@ -181,13 +199,18 @@ impl ArticulationPointsFacade {
             })?;
 
         let node_count = graph_view.node_count();
+        let relationship_count = graph_view.relationship_count();
         if node_count == 0 {
             return Ok((crate::collections::BitSet::new(0), start.elapsed()));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("articulation_points".to_string(), node_count),
-            self.concurrency,
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+            Tasks::leaf_with_volume("articulation_points".to_string(), node_count)
+                .base()
+                .clone(),
+            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+            crate::core::utils::progress::JobId::new(),
+            self.task_registry.as_ref(),
         );
         progress_tracker.begin_subtask_with_volume(node_count);
 
@@ -207,7 +230,11 @@ impl ArticulationPointsFacade {
         };
 
         let mut runtime = ArticulationPointsComputationRuntime::new(node_count);
-        let result = runtime.compute(node_count, get_neighbors);
+        let result = runtime.compute_with_relationship_count(
+            node_count,
+            relationship_count,
+            get_neighbors,
+        );
 
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();

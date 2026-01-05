@@ -198,16 +198,15 @@ impl ApproxMaxKCutFacade {
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = ApproxMaxKCutRow>>> {
         let (communities, _cost, _node_count) = self.compute()?;
 
-        let rows: Vec<ApproxMaxKCutRow> = communities
-            .into_iter()
-            .enumerate()
-            .map(|(node_idx, community)| ApproxMaxKCutRow {
-                node_id: node_idx as u64,
-                community,
-            })
-            .collect();
-
-        Ok(Box::new(rows.into_iter()))
+        Ok(Box::new(
+            communities
+                .into_iter()
+                .enumerate()
+                .map(|(node_idx, community)| ApproxMaxKCutRow {
+                    node_id: node_idx as u64,
+                    community,
+                }),
+        ))
     }
 
     /// Stats mode: returns aggregated statistics
@@ -243,8 +242,24 @@ impl ApproxMaxKCutFacade {
 
     /// Estimate memory usage.
     pub fn estimate_memory(&self) -> Result<MemoryRange> {
-        // Note: memory estimation is deferred.
-        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
+        // ApproxMaxKCut builds adjacency + reverse adjacency in the computation runtime.
+        // Rough estimate (bytes):
+        // - communities (u8) + a few per-node arrays: O(n)
+        // - adjacency + reverse adjacency: O(m)
+        let node_count = self.graph_store.node_count();
+        let relationship_count = self.graph_store.relationship_count();
+
+        // Per node: labels + bookkeeping + Vec headers (conservative).
+        let per_node = 96usize;
+        // Per relationship: store (usize,f64) pairs in adjacency and reverse (two copies).
+        let per_relationship = 48usize;
+
+        let base: usize = 64 * 1024; // fixed overhead
+        let total = base
+            .saturating_add(node_count.saturating_mul(per_node))
+            .saturating_add(relationship_count.saturating_mul(per_relationship));
+
+        Ok(MemoryRange::of_range(total, total.saturating_mul(3)))
     }
 }
 

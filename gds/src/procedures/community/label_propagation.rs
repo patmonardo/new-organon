@@ -275,8 +275,21 @@ impl LabelPropagationFacade {
 
     /// Estimate memory usage.
     pub fn estimate_memory(&self) -> Result<MemoryRange> {
-        // Note: memory estimation is deferred.
-        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
+        // Label Propagation keeps two label buffers and scans relationships for message passing.
+        let node_count = self.graph_store.node_count();
+        let relationship_count = self.graph_store.relationship_count();
+
+        // Per node: current+next labels (u64) + convergence bookkeeping.
+        let per_node = 96usize;
+        // Per relationship: transient accumulation while streaming.
+        let per_relationship = 8usize;
+
+        let base: usize = 64 * 1024;
+        let total = base
+            .saturating_add(node_count.saturating_mul(per_node))
+            .saturating_add(relationship_count.saturating_mul(per_relationship));
+
+        Ok(MemoryRange::of_range(total, total.saturating_mul(2)))
     }
 
     /// Full result: returns the procedure-level Label Propagation result.

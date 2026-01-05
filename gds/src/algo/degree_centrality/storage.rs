@@ -1,136 +1,189 @@
-//! Degree Centrality Storage Runtime
+//! Degree Centrality storage runtime
 //!
-//! This module implements the **Gross pole** of the Functor machinery for Degree Centrality.
-//! It represents persistent data structures (GraphStore and graph topology).
-//!
-//! **Translation Source**: `org.neo4j.gds.degree.DegreeCentrality.java`
-//! **Key Features**: Orientation handling, weighted/unweighted, parallel execution
+//! Storage owns top-level control:
+//! - graph projection (orientation + optional weight selector)
+//! - concurrency and partitioning
+//! - termination checks
+//! - progress callbacks
 
+use crate::algo::degree_centrality::computation::DegreeCentralityComputationRuntime;
+use crate::collections::HugeAtomicDoubleArray;
+use crate::concurrency::virtual_threads::Executor;
+use crate::concurrency::{Concurrency, TerminatedException, TerminationFlag};
 use crate::projection::eval::procedure::AlgorithmError;
-use crate::projection::orientation as projection_orientation;
+use crate::projection::{Orientation as ProjectionOrientation, RelationshipType};
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use crate::types::prelude::GraphStore;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-/// Edge orientation for degree computation
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Orientation {
-    /// Natural orientation (outgoing edges)
     Natural,
-    /// Reverse orientation (incoming edges)
     Reverse,
-    /// Undirected (both incoming and outgoing)
     Undirected,
 }
 
-fn to_projection_orientation(orientation: Orientation) -> projection_orientation::Orientation {
-    match orientation {
-        Orientation::Natural => projection_orientation::Orientation::Natural,
-        Orientation::Reverse => projection_orientation::Orientation::Reverse,
-        Orientation::Undirected => projection_orientation::Orientation::Undirected,
+impl Default for Orientation {
+    fn default() -> Self {
+        Self::Natural
     }
 }
 
-/// Storage Runtime for Degree Centrality
-///
-/// This is the **Gross pole** - persistent data structures.
-/// It knows how to access the graph structure and compute node degrees.
-///
-/// ## The Pole's Role
-///
-/// In the Functor machinery:
-/// - **Storage Runtime** (Gross) = persistent GraphStore and graph topology
-/// - **Computation Runtime** (Subtle) = ephemeral degree scores and statistics
-/// - **Functor** = the mapping between them via degree computation
+impl Orientation {
+    fn to_projection(self) -> ProjectionOrientation {
+        match self {
+            Orientation::Natural => ProjectionOrientation::Natural,
+            Orientation::Reverse => ProjectionOrientation::Reverse,
+            Orientation::Undirected => ProjectionOrientation::Undirected,
+        }
+    }
+}
+
 pub struct DegreeCentralityStorageRuntime<'a, G: GraphStore> {
-    /// Reference to the graph store
     graph_store: &'a G,
-    /// Oriented graph view used for degree computations.
     graph: Arc<dyn Graph>,
-    /// Edge orientation for computation
-    orientation: Orientation,
-    /// Whether to use relationship weights
-    has_relationship_weight_property: bool,
+    weighted: bool,
 }
 
 impl<'a, G: GraphStore> DegreeCentralityStorageRuntime<'a, G> {
-    /// Create a new storage runtime
-    pub fn new(graph_store: &'a G) -> Result<Self, AlgorithmError> {
-        Self::with_settings(graph_store, Orientation::Natural, false)
-    }
-
-    /// Create with specific orientation and weight settings
     pub fn with_settings(
         graph_store: &'a G,
         orientation: Orientation,
-        has_relationship_weight_property: bool,
+        weighted: bool,
     ) -> Result<Self, AlgorithmError> {
-        let rel_types = HashSet::new();
-        let graph = graph_store
-            .get_graph_with_types_and_orientation(
-                &rel_types,
-                to_projection_orientation(orientation),
-            )
-            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
+        let rel_types: HashSet<RelationshipType> = graph_store.relationship_types();
+
+        let graph = if weighted {
+            // Java parity default weight property name.
+            let selectors: HashMap<RelationshipType, String> = rel_types
+                .iter()
+                .map(|t| (t.clone(), "weight".to_string()))
+                .collect();
+
+            graph_store
+                .get_graph_with_types_selectors_and_orientation(
+                    &rel_types,
+                    &selectors,
+                    orientation.to_projection(),
+                )
+                .map_err(|e| AlgorithmError::Graph(e.to_string()))?
+        } else {
+            graph_store
+                .get_graph_with_types_and_orientation(&rel_types, orientation.to_projection())
+                .map_err(|e| AlgorithmError::Graph(e.to_string()))?
+        };
 
         Ok(Self {
             graph_store,
             graph,
-            orientation,
-            has_relationship_weight_property,
+            weighted,
         })
     }
 
-    /// Get reference to graph store
-    pub fn graph_store(&self) -> &'a G {
-        self.graph_store
-    }
-
-    /// Access the graph view used for computations.
-    pub fn graph(&self) -> &Arc<dyn Graph> {
-        &self.graph
-    }
-
-    /// Get node degree from storage
-    ///
-    /// This projects from GraphStore (Gross - persistent topology)
-    /// to f64 (Subtle - degree count/weight).
-    ///
-    /// **This is where the Functor machinery actually works**:
-    /// GraphStore (Gross) → f64 (Subtle)
-    ///
-    /// **Translation of Java logic**:
-    /// - NATURAL: Use graph.degree() directly
-    /// - REVERSE: Count incoming edges
-    /// - UNDIRECTED: Count both incoming and outgoing
-    /// - Weighted: Sum relationship weights
-    /// - Unweighted: Count relationship count
-    pub fn get_node_degree(&self, node_id: NodeId) -> Result<f64, AlgorithmError> {
-        if self.has_relationship_weight_property {
-            Ok(self
-                .graph
-                .stream_relationships_weighted(node_id, self.graph.default_property_value())
-                .map(|cursor| cursor.weight())
-                .sum())
-        } else {
-            Ok(self.graph.degree(node_id) as f64)
-        }
-    }
-
-    /// Get total number of nodes
     pub fn node_count(&self) -> usize {
         self.graph.node_count()
     }
 
-    /// Get orientation setting
-    pub fn orientation(&self) -> Orientation {
-        self.orientation
+    pub fn graph_store(&self) -> &'a G {
+        self.graph_store
     }
 
-    /// Check if using relationship weights
-    pub fn has_relationship_weight_property(&self) -> bool {
-        self.has_relationship_weight_property
+    pub fn weighted(&self) -> bool {
+        self.weighted
+    }
+
+    fn degree_unweighted(&self, node_idx: usize) -> f64 {
+        let node_id = match NodeId::try_from(node_idx as i64) {
+            Ok(id) => id,
+            Err(_) => return 0.0,
+        };
+        self.graph.degree(node_id) as f64
+    }
+
+    fn degree_weighted(&self, node_idx: usize) -> f64 {
+        let node_id = match NodeId::try_from(node_idx as i64) {
+            Ok(id) => id,
+            Err(_) => return 0.0,
+        };
+
+        // Java parity default: missing weight => 0.0.
+        let fallback = 0.0;
+        self.graph
+            .stream_relationships(node_id, fallback)
+            .map(|cursor| cursor.property())
+            .sum::<f64>()
+    }
+
+    pub fn compute_parallel(
+        &self,
+        concurrency: usize,
+        termination: &TerminationFlag,
+        on_nodes_done: Arc<dyn Fn(usize) + Send + Sync>,
+    ) -> Result<Vec<f64>, TerminatedException> {
+        let node_count = self.node_count();
+        if node_count == 0 {
+            return Ok(Vec::new());
+        }
+
+        let concurrency = concurrency.max(1);
+        let out = HugeAtomicDoubleArray::new(node_count);
+
+        let target_batches = concurrency * 8;
+        let batch_size = ((node_count + target_batches - 1) / target_batches).max(1);
+        let batch_count = (node_count + batch_size - 1) / batch_size;
+
+        let executor = Executor::new(Concurrency::of(concurrency));
+
+        if self.weighted {
+            let degree = |n: usize| self.degree_weighted(n);
+            executor.parallel_for(0, batch_count, termination, |batch_idx| {
+                if !termination.running() {
+                    return;
+                }
+
+                let start = batch_idx * batch_size;
+                let end = (start + batch_size).min(node_count);
+
+                DegreeCentralityComputationRuntime::compute_range(
+                    start,
+                    end,
+                    termination,
+                    &out,
+                    &degree,
+                );
+
+                (on_nodes_done.as_ref())(end - start);
+            })?;
+        } else {
+            let degree = |n: usize| self.degree_unweighted(n);
+            executor.parallel_for(0, batch_count, termination, |batch_idx| {
+                if !termination.running() {
+                    return;
+                }
+
+                let start = batch_idx * batch_size;
+                let end = (start + batch_size).min(node_count);
+
+                DegreeCentralityComputationRuntime::compute_range(
+                    start,
+                    end,
+                    termination,
+                    &out,
+                    &degree,
+                );
+
+                (on_nodes_done.as_ref())(end - start);
+            })?;
+        }
+
+        let mut result = vec![0.0f64; node_count];
+        for i in 0..node_count {
+            result[i] = out.get(i);
+        }
+
+        Ok(result)
     }
 }

@@ -128,9 +128,13 @@ impl HarmonicCentralityFacade {
             return Ok((Vec::new(), start.elapsed()));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("harmonic".to_string(), node_count),
-            self.concurrency,
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+            Tasks::leaf_with_volume("harmonic".to_string(), node_count)
+                .base()
+                .clone(),
+            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+            crate::core::utils::progress::JobId::new(),
+            self.task_registry.as_ref(),
         );
         progress_tracker.begin_subtask_with_volume(node_count);
 

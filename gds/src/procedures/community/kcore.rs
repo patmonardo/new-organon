@@ -160,8 +160,21 @@ impl KCoreFacade {
 
     /// Estimate memory usage.
     pub fn estimate_memory(&self) -> Result<MemoryRange> {
-        // Note: memory estimation is deferred.
-        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
+        // K-Core keeps per-node degree/core arrays and uses relationship streaming.
+        let node_count = self.graph_store.node_count();
+        let relationship_count = self.graph_store.relationship_count();
+
+        // Per node: degree (usize) + core (u64) + bucket/work queues.
+        let per_node = 96usize;
+        // Per relationship: one pass over edges.
+        let per_relationship = 8usize;
+
+        let base: usize = 32 * 1024;
+        let total = base
+            .saturating_add(node_count.saturating_mul(per_node))
+            .saturating_add(relationship_count.saturating_mul(per_relationship));
+
+        Ok(MemoryRange::of_range(total, total.saturating_mul(2)))
     }
 
     /// Full result: returns the procedure-level k-core result.

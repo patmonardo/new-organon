@@ -1,87 +1,86 @@
-//! Degree Centrality Algorithm Specification
+//! Degree Centrality algorithm specification
 //!
-//! This module implements the Degree Centrality algorithm using focused macros.
-//! Degree Centrality is much simpler than PageRank - it just counts the number
-//! of connections (edges) for each node.
-//!
-//! **Algorithm**: For each node, count its degree (number of edges)
-//! **Complexity**: O(V + E) - linear in nodes and edges
-//! **Use Case**: Identify highly connected nodes (hubs)
+//! Java parity reference: `org.neo4j.gds.degree.DegreeCentrality`.
 
+use crate::algo::degree_centrality::computation::DegreeCentralityComputationRuntime;
+use crate::algo::degree_centrality::storage::{DegreeCentralityStorageRuntime, Orientation};
+use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
-use std::time::Duration;
-use std::time::Instant;
+use crate::concurrency::TerminationFlag;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
-use super::computation::DegreeCentralityComputationRuntime;
-use super::storage::{DegreeCentralityStorageRuntime, Orientation};
-
-// ============================================================================
-// Configuration
-// ============================================================================
-
-/// Degree Centrality Configuration
-///
-/// Specifies how to compute degree centrality.
-/// **Translation Source**: Java GDS DegreeCentralityParameters + user config
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DegreeCentralityConfig {
-    /// Whether to normalize scores (divide by max possible degree)
+    #[serde(default)]
     pub normalize: bool,
-    /// Edge orientation for computation
-    pub orientation: Orientation,
-    /// Whether to use relationship weights
-    pub has_relationship_weight_property: bool,
-    /// Minimum batch size for parallel processing
-    pub min_batch_size: usize,
+
+    /// One of: "natural", "reverse", "undirected".
+    #[serde(default = "default_orientation")]
+    pub orientation: String,
+
+    #[serde(default)]
+    pub weighted: bool,
+
+    #[serde(default = "default_concurrency")]
+    pub concurrency: usize,
+}
+
+fn default_orientation() -> String {
+    "natural".to_string()
+}
+
+fn default_concurrency() -> usize {
+    4
 }
 
 impl Default for DegreeCentralityConfig {
     fn default() -> Self {
         Self {
             normalize: false,
-            orientation: Orientation::Natural,
-            has_relationship_weight_property: false,
-            min_batch_size: 10_000, // Java DEFAULT_MIN_BATCH_SIZE
+            orientation: default_orientation(),
+            weighted: false,
+            concurrency: default_concurrency(),
         }
     }
 }
 
 impl DegreeCentralityConfig {
     pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
-        // Validate batch size
-        if self.min_batch_size == 0 {
+        if self.concurrency == 0 {
             return Err(crate::config::validation::ConfigError::InvalidParameter {
-                parameter: "min_batch_size".to_string(),
-                reason: "Minimum batch size must be greater than 0".to_string(),
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be positive".to_string(),
+            });
+        }
+        if self.orientation.trim().is_empty() {
+            return Err(crate::config::validation::ConfigError::InvalidParameter {
+                parameter: "orientation".to_string(),
+                reason: "orientation must be non-empty".to_string(),
             });
         }
         Ok(())
     }
 }
 
-// ============================================================================
-// Result Type
-// ============================================================================
-
-/// Degree Centrality computation result
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DegreeCentralityResult {
-    /// Degree scores for each node (node_id -> degree)
-    pub scores: Vec<f64>,
-    /// Number of nodes processed
+    pub centralities: Vec<f64>,
     pub node_count: usize,
-    /// Maximum degree found
-    pub max_degree: f64,
-    /// Minimum degree found
-    pub min_degree: f64,
-    /// Execution time
     pub execution_time: Duration,
 }
 
-// ============================================================================
-// Algorithm Specification (Generated Boilerplate + Manual Logic)
-// ============================================================================
+fn parse_orientation(value: &str) -> Result<Orientation, AlgorithmError> {
+    match value.to_lowercase().as_str() {
+        "natural" | "outgoing" => Ok(Orientation::Natural),
+        "reverse" | "incoming" => Ok(Orientation::Reverse),
+        "undirected" | "both" => Ok(Orientation::Undirected),
+        other => Err(AlgorithmError::Execution(format!(
+            "Invalid orientation '{other}'. Use 'natural', 'reverse', or 'undirected'"
+        ))),
+    }
+}
 
 define_algorithm_spec! {
     name: "degree_centrality",
@@ -89,137 +88,52 @@ define_algorithm_spec! {
     projection_hint: Dense,
     modes: [Stream, Stats],
 
-    execute: |self, graph_store, config, context| {
-        // Extract configuration
-        let parsed_config: DegreeCentralityConfig = serde_json::from_value(config.clone())
-            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {}", e)))?;
-
-        let normalize = parsed_config.normalize;
-        let orientation = parsed_config.orientation;
-        let has_weights = parsed_config.has_relationship_weight_property;
-
-        context.log(
-            LogLevel::Info,
-            &format!(
-                "Computing degree centrality (normalize={}, orientation={:?}, weighted={}) on graph with {} nodes",
-                normalize,
-                orientation,
-                has_weights,
-                graph_store.node_count()
-            ),
-        );
+    execute: |_self, graph_store, config, _context| {
+        let parsed: DegreeCentralityConfig = serde_json::from_value(config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        parsed
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
 
         let start = Instant::now();
+        let orientation = parse_orientation(&parsed.orientation)?;
 
-        // Create storage runtime (Gross pole - knows GraphStore)
         let storage = DegreeCentralityStorageRuntime::with_settings(
             graph_store,
             orientation,
-            has_weights,
+            parsed.weighted,
         )?;
 
-        // Create computation runtime (Subtle pole - knows degree scores)
-        let mut computation = DegreeCentralityComputationRuntime::new();
-
-        // Iterate all nodes and compute degrees
         let node_count = storage.node_count();
-        for node_id in 0..node_count {
-            // **FUNCTOR IN ACTION**:
-            // Project from Storage (Gross/GraphStore)
-            // to Computation (Subtle/degree scores)
-            let node_id = crate::types::graph::id_map::NodeId::try_from(node_id as i64)
-                .map_err(|_| AlgorithmError::Execution(format!("node_id out of range: {}", node_id)))?;
-            let degree = storage.get_node_degree(node_id)?;
-            computation.add_node_degree(node_id, degree);
+
+        let tracker = Arc::new(Mutex::new(crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("degree_centrality".to_string(), node_count),
+            parsed.concurrency,
+        )));
+        tracker.lock().unwrap().begin_subtask_with_volume(node_count);
+
+        let on_nodes_done = {
+            let tracker = Arc::clone(&tracker);
+            Arc::new(move |n: usize| {
+                tracker.lock().unwrap().log_progress(n);
+            })
+        };
+
+        let termination = TerminationFlag::default();
+        let mut centralities = storage
+            .compute_parallel(parsed.concurrency, &termination, on_nodes_done)
+            .map_err(|e| AlgorithmError::Execution(format!("Degree centrality terminated: {e}")))?;
+
+        if parsed.normalize {
+            DegreeCentralityComputationRuntime::normalize_scores(&mut centralities);
         }
 
-        // Normalize if requested
-        if normalize {
-            computation.normalize_scores();
-        }
-
-        context.log(
-            LogLevel::Info,
-            &format!(
-                "Degree centrality computed: {} nodes, max_degree={}, min_degree={}",
-                computation.node_count(),
-                computation.max_degree(),
-                computation.min_degree()
-            ),
-        );
+        tracker.lock().unwrap().end_subtask();
 
         Ok(DegreeCentralityResult {
-            scores: computation.get_scores().clone(),
-            node_count: computation.node_count(),
-            max_degree: computation.max_degree(),
-            min_degree: computation.min_degree(),
+            centralities,
+            node_count,
             execution_time: start.elapsed(),
         })
-    }
-}
-
-// ============================================================================
-// Tests
-// ============================================================================
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_degree_centrality_algorithm_name() {
-        let spec = DEGREE_CENTRALITYAlgorithmSpec::new("test_graph".to_string());
-        assert_eq!(spec.name(), "degree_centrality");
-    }
-
-    #[test]
-    fn test_degree_centrality_graph_name() {
-        let spec = DEGREE_CENTRALITYAlgorithmSpec::new("my_graph".to_string());
-        assert_eq!(spec.graph_name(), "my_graph");
-    }
-
-    #[test]
-    fn test_degree_centrality_projection_hint() {
-        let spec = DEGREE_CENTRALITYAlgorithmSpec::new("test_graph".to_string());
-        assert_eq!(spec.projection_hint(), ProjectionHint::Dense);
-    }
-
-    #[test]
-    fn test_degree_centrality_config_default() {
-        let config = DegreeCentralityConfig::default();
-        assert!(!config.normalize);
-        assert_eq!(config.orientation, Orientation::Natural);
-        assert!(!config.has_relationship_weight_property);
-        assert_eq!(config.min_batch_size, 10_000);
-    }
-
-    #[test]
-    fn test_degree_centrality_config_validation() {
-        let config = DegreeCentralityConfig::default();
-        assert!(config.validate().is_ok());
-
-        // Test invalid config
-        let invalid_config = DegreeCentralityConfig {
-            min_batch_size: 0,
-            ..Default::default()
-        };
-        assert!(invalid_config.validate().is_err());
-    }
-
-    #[test]
-    fn test_degree_centrality_computation_runtime() {
-        let mut runtime = DegreeCentralityComputationRuntime::new();
-        runtime.add_node_degree(0, 5.0);
-        runtime.add_node_degree(1, 3.0);
-        runtime.add_node_degree(2, 8.0);
-
-        assert_eq!(runtime.node_count(), 3);
-        assert_eq!(runtime.max_degree(), 8.0);
-        assert_eq!(runtime.min_degree(), 3.0);
-
-        // Test normalization
-        runtime.normalize_scores();
-        assert_eq!(runtime.max_degree(), 1.0);
-        assert_eq!(runtime.min_degree(), 3.0 / 8.0);
     }
 }

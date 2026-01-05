@@ -5,10 +5,11 @@
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::concurrency::TerminationFlag;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use super::computation::{Bridge, BridgesComputationRuntime};
+use super::computation::Bridge;
 use super::storage::BridgesStorageRuntime;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -81,15 +82,22 @@ define_algorithm_spec! {
         )));
         tracker.lock().unwrap().begin_subtask_with_volume(node_count);
 
-        let neighbors = |n: usize| storage.neighbors(n);
-        let mut runtime = BridgesComputationRuntime::new(node_count);
-        let result = runtime.compute(node_count, neighbors);
+        let on_node_scanned = {
+            let tracker = Arc::clone(&tracker);
+            Arc::new(move || {
+                tracker.lock().unwrap().log_progress(1);
+            })
+        };
 
-        tracker.lock().unwrap().log_progress(node_count);
+        let termination = TerminationFlag::default();
+        let bridges = storage
+            .compute_parallel(parsed_config.concurrency, &termination, on_node_scanned)
+            .map_err(|e| AlgorithmError::Execution(format!("Bridges terminated: {e}")))?;
+
         tracker.lock().unwrap().end_subtask();
 
         Ok(BridgesResult {
-            bridges: result.bridges,
+            bridges,
             node_count,
             execution_time: start.elapsed(),
         })

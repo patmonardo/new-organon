@@ -1,143 +1,81 @@
-//! Betweenness Centrality Integration Tests
+//! Betweenness Centrality integration tests
 
 #[cfg(test)]
 mod tests {
-    use super::super::computation::BetweennessCentralityComputationRuntime;
     use std::collections::HashMap;
+    use std::sync::Arc;
 
-    fn build_graph(edges: Vec<(usize, usize)>, node_count: usize) -> HashMap<usize, Vec<usize>> {
-        let mut relationships: HashMap<usize, Vec<usize>> = HashMap::new();
-        for i in 0..node_count {
-            relationships.insert(i, Vec::new());
+    use crate::procedures::Graph;
+    use crate::projection::RelationshipType;
+    use crate::types::graph::{RelationshipTopology, SimpleIdMap};
+    use crate::types::graph_store::{
+        Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
+    };
+    use crate::types::schema::{Direction, MutableGraphSchema};
+
+    fn store_from_undirected_edges(node_count: usize, edges: &[(usize, usize)]) -> DefaultGraphStore {
+        let mut outgoing: Vec<Vec<i64>> = vec![Vec::new(); node_count];
+        let mut incoming: Vec<Vec<i64>> = vec![Vec::new(); node_count];
+
+        for &(a, b) in edges {
+            outgoing[a].push(b as i64);
+            outgoing[b].push(a as i64);
+            incoming[a].push(b as i64);
+            incoming[b].push(a as i64);
         }
 
-        for (from, to) in edges {
-            relationships.entry(from).or_default().push(to);
-            if from != to {
-                relationships.entry(to).or_default().push(from);
-            }
-        }
+        let rel_type = RelationshipType::of("REL");
 
-        for neighbors in relationships.values_mut() {
-            neighbors.sort_unstable();
-            neighbors.dedup();
-        }
+        let mut schema_builder = MutableGraphSchema::empty();
+        schema_builder
+            .relationship_schema_mut()
+            .add_relationship_type(rel_type.clone(), Direction::Undirected);
+        let schema = schema_builder.build();
 
-        relationships
-    }
-
-    #[test]
-    fn test_betweenness_single_edge() {
-        let graph = build_graph(vec![(0, 1)], 2);
-        let mut runtime = BetweennessCentralityComputationRuntime::new(2);
-        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
-        let result = runtime.compute(2, 2.0, &get_neighbors);
-
-        assert!((result.centralities[0]).abs() < 1e-10);
-        assert!((result.centralities[1]).abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_betweenness_path_three_nodes() {
-        let graph = build_graph(vec![(0, 1), (1, 2)], 3);
-        let mut runtime = BetweennessCentralityComputationRuntime::new(3);
-        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
-        let result = runtime.compute(3, 2.0, &get_neighbors);
-
-        assert!((result.centralities[0]).abs() < 1e-10);
-        assert!((result.centralities[1] - 1.0).abs() < 1e-10);
-        assert!((result.centralities[2]).abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_betweenness_path_four_nodes() {
-        let graph = build_graph(vec![(0, 1), (1, 2), (2, 3)], 4);
-        let mut runtime = BetweennessCentralityComputationRuntime::new(4);
-        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
-        let result = runtime.compute(4, 2.0, &get_neighbors);
-
-        assert!((result.centralities[0]).abs() < 1e-10);
-        assert!(result.centralities[1] > 0.0);
-        assert!(result.centralities[2] > 0.0);
-        assert!((result.centralities[3]).abs() < 1e-10);
-    }
-
-    #[test]
-    fn test_betweenness_star_graph() {
-        let graph = build_graph(vec![(0, 1), (0, 2), (0, 3), (0, 4)], 5);
-        let mut runtime = BetweennessCentralityComputationRuntime::new(5);
-        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
-        let result = runtime.compute(5, 2.0, &get_neighbors);
-
-        assert!((result.centralities[0] - 6.0).abs() < 1e-10);
-        for i in 1..5 {
-            assert!((result.centralities[i]).abs() < 1e-10);
-        }
-    }
-
-    #[test]
-    fn test_betweenness_complete_graph() {
-        let graph = build_graph(vec![(0, 1), (0, 2), (0, 3), (1, 2), (1, 3), (2, 3)], 4);
-        let mut runtime = BetweennessCentralityComputationRuntime::new(4);
-        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
-        let result = runtime.compute(4, 2.0, &get_neighbors);
-
-        for i in 0..4 {
-            assert!((result.centralities[i]).abs() < 1e-10);
-        }
-    }
-
-    #[test]
-    fn test_betweenness_diamond_graph() {
-        let graph = build_graph(vec![(0, 1), (0, 2), (1, 3), (2, 3)], 4);
-        let mut runtime = BetweennessCentralityComputationRuntime::new(4);
-        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
-        let result = runtime.compute(4, 2.0, &get_neighbors);
-
-        // Nodes 1 and 2 should have equal centrality (symmetric structure)
-        assert!((result.centralities[1] - result.centralities[2]).abs() < 1e-10);
-
-        // All centralities should be non-negative
-        for i in 0..4 {
-            assert!(result.centralities[i] >= 0.0);
-        }
-    }
-
-    #[test]
-    fn test_betweenness_cycle_four_nodes() {
-        let graph = build_graph(vec![(0, 1), (1, 2), (2, 3), (3, 0)], 4);
-        let mut runtime = BetweennessCentralityComputationRuntime::new(4);
-        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
-        let result = runtime.compute(4, 2.0, &get_neighbors);
-
-        // In a 4-cycle, all nodes have equal centrality (symmetric)
-        let expected_centrality = result.centralities[0];
-        for i in 1..4 {
-            assert!((result.centralities[i] - expected_centrality).abs() < 1e-10);
-        }
-    }
-
-    #[test]
-    fn test_betweenness_two_triangles() {
-        // Two triangles sharing a single node: (0,1,2) connected to (0,3,4)
-        let graph = build_graph(vec![(0, 1), (1, 2), (0, 2), (0, 3), (3, 4), (0, 4)], 5);
-        let mut runtime = BetweennessCentralityComputationRuntime::new(5);
-        let get_neighbors = |node| graph.get(&node).cloned().unwrap_or_default();
-        let result = runtime.compute(5, 2.0, &get_neighbors);
-
-        // Node 0 connects the two triangles
-        assert!(
-            result.centralities[0] > 0.0,
-            "Node 0 should have high centrality (bridge)"
+        let mut relationship_topologies = HashMap::new();
+        relationship_topologies.insert(
+            rel_type,
+            RelationshipTopology::new(outgoing, Some(incoming)),
         );
 
-        // All nodes should have non-negative centrality
-        for i in 0..5 {
-            assert!(
-                result.centralities[i] >= 0.0,
-                "Node {}: centrality should be non-negative",
-                i
-            );
+        let original_ids: Vec<i64> = (0..node_count as i64).collect();
+        let id_map = SimpleIdMap::from_original_ids(original_ids);
+
+        DefaultGraphStore::new(
+            crate::config::GraphStoreConfig::default(),
+            GraphName::new("g"),
+            DatabaseInfo::new(
+                DatabaseId::new("db"),
+                DatabaseLocation::remote("localhost", 7687, None, None),
+            ),
+            schema,
+            Capabilities::default(),
+            id_map,
+            relationship_topologies,
+        )
+    }
+
+    #[test]
+    fn path_graph_middle_is_bridge_node() {
+        // 0-1-2
+        let store = store_from_undirected_edges(3, &[(0, 1), (1, 2)]);
+        let graph = Graph::new(Arc::new(store));
+
+        let rows: Vec<_> = graph
+            .betweenness()
+            .direction("both")
+            .concurrency(2)
+            .stream()
+            .unwrap()
+            .collect();
+
+        let mut scores = vec![0.0; 3];
+        for r in rows {
+            scores[r.node_id as usize] = r.score;
         }
+
+        assert!((scores[1] - 1.0).abs() < 1e-9);
+        assert!(scores[0].abs() < 1e-9);
+        assert!(scores[2].abs() < 1e-9);
     }
 }

@@ -273,9 +273,13 @@ impl BetweennessCentralityFacade {
             }
         };
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("betweenness".to_string(), sources.len()),
-            self.concurrency,
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+            Tasks::leaf_with_volume("betweenness".to_string(), sources.len())
+                .base()
+                .clone(),
+            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+            crate::core::utils::progress::JobId::new(),
+            self.task_registry.as_ref(),
         );
         progress_tracker.begin_subtask_with_volume(sources.len());
 

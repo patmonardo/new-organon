@@ -6,10 +6,8 @@ use crate::core::utils::progress::{
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
-use crate::algo::hits::computation::run_hits;
-use crate::projection::RelationshipType;
+use crate::algo::hits::HitsStorageRuntime;
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -98,25 +96,20 @@ impl HitsCentralityFacade {
     /// ```
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
         self.validate()?;
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph = self
-            .graph_store
-            .get_graph_with_types_and_orientation(
-                &rel_types,
-                crate::projection::Orientation::Natural,
-            )
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+        let storage = HitsStorageRuntime::with_default_projection(self.graph_store.as_ref())?;
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("hits".to_string(), self.max_iterations),
-            self.concurrency,
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+            Tasks::leaf_with_volume("hits".to_string(), self.max_iterations)
+                .base()
+                .clone(),
+            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+            crate::core::utils::progress::JobId::new(),
+            self.task_registry.as_ref(),
         );
-        let result = run_hits(
-            graph,
+        let result = storage.run(
             self.max_iterations,
             self.tolerance,
+            self.concurrency,
             &mut progress_tracker,
         );
 
@@ -146,25 +139,20 @@ impl HitsCentralityFacade {
         self.validate()?;
         let start = Instant::now();
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph = self
-            .graph_store
-            .get_graph_with_types_and_orientation(
-                &rel_types,
-                crate::projection::Orientation::Natural,
-            )
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+        let storage = HitsStorageRuntime::with_default_projection(self.graph_store.as_ref())?;
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("hits".to_string(), self.max_iterations),
-            self.concurrency,
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+            Tasks::leaf_with_volume("hits".to_string(), self.max_iterations)
+                .base()
+                .clone(),
+            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+            crate::core::utils::progress::JobId::new(),
+            self.task_registry.as_ref(),
         );
-        let result = run_hits(
-            graph,
+        let result = storage.run(
             self.max_iterations,
             self.tolerance,
+            self.concurrency,
             &mut progress_tracker,
         );
         let elapsed = start.elapsed();
@@ -178,25 +166,20 @@ impl HitsCentralityFacade {
 
     /// Run the algorithm and return hub and authority scores
     pub fn run(&self) -> Result<(Vec<f64>, Vec<f64>)> {
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph = self
-            .graph_store
-            .get_graph_with_types_and_orientation(
-                &rel_types,
-                crate::projection::Orientation::Natural,
-            )
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+        let storage = HitsStorageRuntime::with_default_projection(self.graph_store.as_ref())?;
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("hits".to_string(), self.max_iterations),
-            self.concurrency,
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+            Tasks::leaf_with_volume("hits".to_string(), self.max_iterations)
+                .base()
+                .clone(),
+            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+            crate::core::utils::progress::JobId::new(),
+            self.task_registry.as_ref(),
         );
-        let result = run_hits(
-            graph,
+        let result = storage.run(
             self.max_iterations,
             self.tolerance,
+            self.concurrency,
             &mut progress_tracker,
         );
         Ok((result.hub_scores, result.authority_scores))

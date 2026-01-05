@@ -1,95 +1,69 @@
-//! Degree Centrality Computation Runtime
-//!
-//! This module implements the **Subtle pole** of the Functor machinery for Degree Centrality.
-//! It represents ephemeral computation state (degree scores and statistics).
+use crate::collections::HugeAtomicDoubleArray;
+use crate::concurrency::TerminationFlag;
 
-/// Computation Runtime for Degree Centrality
+/// Pure kernel helpers for degree centrality.
 ///
-/// This is the **Subtle pole** - ephemeral computation state.
-/// It manages the algorithm's degree computation and statistics.
-///
-/// ## The Pole's Role
-///
-/// In the Functor machinery:
-/// - **Storage Runtime** (Gross) = persistent GraphStore and graph topology
-/// - **Computation Runtime** (Subtle) = ephemeral degree scores and statistics
-/// - **Functor** = the mapping between them via degree computation
-#[derive(Debug, Clone)]
-pub struct DegreeCentralityComputationRuntime {
-    /// Degree scores for each node
-    scores: Vec<f64>,
-    /// Maximum degree found
-    max_degree: f64,
-    /// Minimum degree found
-    min_degree: f64,
-    /// Number of nodes processed
-    node_count: usize,
-}
+/// Storage owns orchestration (partitioning, concurrency, termination, progress).
+pub struct DegreeCentralityComputationRuntime;
 
 impl DegreeCentralityComputationRuntime {
-    /// Create a new computation runtime
-    pub fn new() -> Self {
-        Self {
-            scores: Vec::new(),
-            max_degree: 0.0,
-            min_degree: 0.0,
-            node_count: 0,
-        }
-    }
-
-    /// Add a degree score for a node
-    ///
-    /// This is the core operation of the Subtle pole.
-    /// Degrees coming from GraphStore (Gross) are accumulated here.
-    pub fn add_node_degree(&mut self, _node_id: crate::types::graph::id_map::NodeId, degree: f64) {
-        self.scores.push(degree);
-
-        // Update min/max tracking
-        if self.max_degree < degree {
-            self.max_degree = degree;
-        }
-        if self.min_degree > degree || self.min_degree == 0.0 {
-            self.min_degree = degree;
-        }
-
-        self.node_count += 1;
-    }
-
-    /// Normalize scores by maximum degree
-    pub fn normalize_scores(&mut self) {
-        if self.max_degree > 0.0 {
-            let scale_factor = self.max_degree;
-            for score in &mut self.scores {
-                *score /= scale_factor;
+    pub fn compute_range(
+        start: usize,
+        end: usize,
+        termination: &TerminationFlag,
+        out: &HugeAtomicDoubleArray,
+        degree_fn: &(impl Fn(usize) -> f64 + Send + Sync),
+    ) {
+        for node in start..end {
+            if !termination.running() {
+                return;
             }
-            self.max_degree = 1.0;
-            self.min_degree /= scale_factor;
+            out.set(node, (degree_fn)(node));
         }
     }
 
-    /// Get all scores
-    pub fn get_scores(&self) -> &Vec<f64> {
-        &self.scores
-    }
+    /// Normalizes scores by dividing by the maximum score.
+    ///
+    /// If all scores are zero, this is a no-op.
+    pub fn normalize_scores(scores: &mut [f64]) {
+        let mut max = 0.0f64;
+        for &v in scores.iter() {
+            if v > max {
+                max = v;
+            }
+        }
 
-    /// Get maximum degree
-    pub fn max_degree(&self) -> f64 {
-        self.max_degree
-    }
-
-    /// Get minimum degree
-    pub fn min_degree(&self) -> f64 {
-        self.min_degree
-    }
-
-    /// Get node count
-    pub fn node_count(&self) -> usize {
-        self.node_count
+        if max > 0.0 {
+            for v in scores.iter_mut() {
+                *v /= max;
+            }
+        }
     }
 }
 
 impl Default for DegreeCentralityComputationRuntime {
     fn default() -> Self {
-        Self::new()
+        Self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalize_is_noop_for_all_zero() {
+        let mut scores = vec![0.0, 0.0, 0.0];
+        DegreeCentralityComputationRuntime::normalize_scores(&mut scores);
+        assert_eq!(scores, vec![0.0, 0.0, 0.0]);
+    }
+
+    #[test]
+    fn normalize_divides_by_max() {
+        let mut scores = vec![1.0, 2.0, 4.0];
+        DegreeCentralityComputationRuntime::normalize_scores(&mut scores);
+        assert!((scores[0] - 0.25).abs() < 1e-12);
+        assert!((scores[1] - 0.5).abs() < 1e-12);
+        assert!((scores[2] - 1.0).abs() < 1e-12);
     }
 }

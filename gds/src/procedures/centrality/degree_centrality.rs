@@ -32,13 +32,14 @@ use crate::algo::degree_centrality::{
 pub use crate::algo::degree_centrality::storage::Orientation;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
-use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 // Import upgraded systems
-use crate::core::utils::progress::{ProgressTracker, TaskRegistryFactory, Tasks};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+};
 
 // ============================================================================
 // Statistics Type
@@ -148,15 +149,6 @@ impl DegreeCentralityFacade {
         Ok(())
     }
 
-    fn checked_node_id(value: usize) -> Result<NodeId> {
-        NodeId::try_from(value as i64).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "node_id must fit into i64 (got {})",
-                value
-            ))
-        })
-    }
-
     fn compute_scores(self) -> Result<(Vec<f64>, std::time::Duration)> {
         self.validate()?;
 
@@ -168,36 +160,55 @@ impl DegreeCentralityFacade {
             self.has_relationship_weight_property,
         )?;
 
-        let mut computation = DegreeCentralityComputationRuntime::new();
-
         let node_count = storage.node_count();
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("degree_centrality".to_string(), node_count),
-            self.concurrency,
+        let empty_factory = EmptyTaskRegistryFactory;
+        let registry_factory: &dyn TaskRegistryFactory = match self.task_registry_factory.as_deref()
+        {
+            Some(factory) => factory,
+            None => &empty_factory,
+        };
+
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+            Tasks::leaf_with_volume("degree_centrality".to_string(), node_count)
+                .base()
+                .clone(),
+            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+            crate::core::utils::progress::JobId::new(),
+            registry_factory,
         );
         progress_tracker.begin_subtask_with_volume(node_count);
 
-        for node_id in 0..node_count {
-            let node_id = match Self::checked_node_id(node_id) {
-                Ok(id) => id,
-                Err(err) => {
-                    progress_tracker.end_subtask_with_failure();
-                    return Err(err);
-                }
-            };
-            let degree = storage.get_node_degree(node_id)?;
-            computation.add_node_degree(node_id, degree);
-        }
+        let tracker = Arc::new(Mutex::new(progress_tracker));
+        let on_nodes_done = {
+            let tracker = Arc::clone(&tracker);
+            Arc::new(move |n: usize| {
+                tracker.lock().unwrap().log_progress(n);
+            })
+        };
+
+        let termination = crate::concurrency::TerminationFlag::default();
+        let mut scores = match storage.compute_parallel(
+            self.concurrency,
+            &termination,
+            on_nodes_done,
+        ) {
+            Ok(scores) => scores,
+            Err(e) => {
+                tracker.lock().unwrap().end_subtask_with_failure();
+                return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
+                    format!("Degree centrality terminated: {e}"),
+                ));
+            }
+        };
 
         if self.normalize {
-            computation.normalize_scores();
+            DegreeCentralityComputationRuntime::normalize_scores(&mut scores);
         }
 
-        progress_tracker.log_progress(node_count);
-        progress_tracker.end_subtask();
+        tracker.lock().unwrap().end_subtask();
 
-        Ok((computation.get_scores().clone(), start.elapsed()))
+        Ok((scores, start.elapsed()))
     }
 
     /// Stream mode: Get degree for each node

@@ -1,36 +1,30 @@
+//! Closeness Centrality compute kernels
+//!
+//! Java parity reference:
+//! - `org.neo4j.gds.closeness.ClosenessCentrality`
+//!
+//! This module intentionally contains no GraphStore/projection logic.
+//! The storage runtime owns orchestration and provides neighbor access.
+
 use crate::algo::msbfs::{AggregatedNeighborProcessingMsBfs, OMEGA};
 use crate::collections::{HugeAtomicDoubleArray, HugeAtomicLongArray};
 use crate::concurrency::virtual_threads::{Executor, WorkerContext};
 use crate::concurrency::{Concurrency, TerminatedException, TerminationFlag};
 use std::sync::Arc;
 
-#[derive(Clone)]
-pub struct ClosenessCentralityComputationResult {
-    pub centralities: Vec<f64>,
-    pub farness: Vec<u64>,
-    pub component: Vec<u64>,
-}
-
 pub struct ClosenessCentralityComputationRuntime;
 
 impl ClosenessCentralityComputationRuntime {
-    /// Parallel closeness centrality over all sources.
-    ///
-    /// `get_neighbors(node)` must return outgoing neighbors according to the projected graph view.
-    pub fn compute_parallel(
+    /// Phase 1: compute per-node farness and component size using ANP MSBFS batching.
+    pub fn compute_farness_parallel(
         node_count: usize,
-        wasserman_faust: bool,
         concurrency: usize,
         termination: &TerminationFlag,
         on_sources_done: Arc<dyn Fn(usize) + Send + Sync>,
         get_neighbors: &(impl Fn(usize) -> Vec<usize> + Send + Sync),
-    ) -> Result<ClosenessCentralityComputationResult, TerminatedException> {
+    ) -> Result<(Vec<u64>, Vec<u64>), TerminatedException> {
         if node_count == 0 {
-            return Ok(ClosenessCentralityComputationResult {
-                centralities: Vec::new(),
-                farness: Vec::new(),
-                component: Vec::new(),
-            });
+            return Ok((Vec::new(), Vec::new()));
         }
 
         let farness = HugeAtomicLongArray::new(node_count);
@@ -61,7 +55,6 @@ impl ClosenessCentralityComputationRuntime {
 
                         let len = sources_mask.count_ones() as i64;
                         let d = depth as i64;
-                        // Saturating-ish: if this ever overflows i64, we're well past realistic sizes.
                         let far_delta = len.saturating_mul(d);
 
                         farness.get_and_add(node_id, far_delta);
@@ -82,25 +75,45 @@ impl ClosenessCentralityComputationRuntime {
             component_out[i] = comp.max(0) as u64;
         }
 
+        Ok((farness_out, component_out))
+    }
+
+    /// Phase 2: compute closeness scores from farness + component.
+    pub fn compute_closeness_parallel(
+        node_count: usize,
+        wasserman_faust: bool,
+        concurrency: usize,
+        termination: &TerminationFlag,
+        farness: &[u64],
+        component: &[u64],
+        on_nodes_done: Arc<dyn Fn(usize) + Send + Sync>,
+    ) -> Result<Vec<f64>, TerminatedException> {
+        if node_count == 0 {
+            return Ok(Vec::new());
+        }
+
+        let executor = Executor::new(Concurrency::of(concurrency.max(1)));
         let scores = HugeAtomicDoubleArray::new(node_count);
+
         executor.parallel_for(0, node_count, termination, |i| {
             if !termination.running() {
                 return;
             }
 
-            let far = farness_out[i];
+            let far = farness[i];
             if far == 0 {
                 scores.set(i, 0.0);
                 return;
             }
 
-            let comp = component_out[i] as f64;
+            let comp = component[i] as f64;
             let base = comp / (far as f64);
 
             let value = if wasserman_faust {
                 if node_count <= 1 {
                     0.0
                 } else {
+                    // Java: (comp/far) * (comp/(nodeCount-1))
                     base * (comp / (node_count as f64 - 1.0))
                 }
             } else {
@@ -110,16 +123,15 @@ impl ClosenessCentralityComputationRuntime {
             scores.set(i, value);
         })?;
 
+        // Report progress as one chunk for the whole phase.
+        (on_nodes_done.as_ref())(node_count);
+
         let mut out = vec![0.0f64; node_count];
         for i in 0..node_count {
             out[i] = scores.get(i);
         }
 
-        Ok(ClosenessCentralityComputationResult {
-            centralities: out,
-            farness: farness_out,
-            component: component_out,
-        })
+        Ok(out)
     }
 }
 
@@ -143,51 +155,61 @@ mod tests {
     }
 
     #[test]
-    fn parallel_matches_single_thread() {
-        let node_count = 8;
-        let adj = undirected_adj(
-            &[
-                (0, 1),
-                (1, 2),
-                (2, 3),
-                (3, 4),
-                (4, 5),
-                (5, 6),
-                (6, 7),
-                (0, 7),
-            ],
-            node_count,
-        );
-
+    fn farness_and_scores_are_deterministic() {
+        let node_count = 6;
+        let adj = undirected_adj(&[(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)], node_count);
         let neighbors = |n: usize| adj[n].clone();
-        let termination = TerminationFlag::running_true();
-        let noop = Arc::new(|_n: usize| {});
 
-        let one = ClosenessCentralityComputationRuntime::compute_parallel(
+        let termination = TerminationFlag::running_true();
+        let noop_sources = Arc::new(|_n: usize| {});
+
+        let (f1, c1) = ClosenessCentralityComputationRuntime::compute_farness_parallel(
             node_count,
-            false,
-            1,
+            2,
             &termination,
-            noop.clone(),
+            noop_sources.clone(),
             &neighbors,
         )
         .unwrap();
 
-        let four = ClosenessCentralityComputationRuntime::compute_parallel(
+        let (f2, c2) = ClosenessCentralityComputationRuntime::compute_farness_parallel(
             node_count,
-            false,
             4,
             &termination,
-            noop,
+            noop_sources,
             &neighbors,
         )
         .unwrap();
 
-        assert_eq!(one.farness, four.farness);
-        assert_eq!(one.component, four.component);
-        assert_eq!(one.centralities.len(), four.centralities.len());
-        for (a, b) in one.centralities.iter().zip(four.centralities.iter()) {
-            assert!((a - b).abs() < 1e-12);
+        assert_eq!(f1, f2);
+        assert_eq!(c1, c2);
+
+        let noop_nodes = Arc::new(|_n: usize| {});
+        let s1 = ClosenessCentralityComputationRuntime::compute_closeness_parallel(
+            node_count,
+            false,
+            2,
+            &termination,
+            &f1,
+            &c1,
+            noop_nodes.clone(),
+        )
+        .unwrap();
+
+        let s2 = ClosenessCentralityComputationRuntime::compute_closeness_parallel(
+            node_count,
+            true,
+            2,
+            &termination,
+            &f1,
+            &c1,
+            noop_nodes,
+        )
+        .unwrap();
+
+        // Wasserman-Faust should not exceed base when comp <= node_count.
+        for (base, wf) in s1.iter().zip(s2.iter()) {
+            assert!(*wf <= *base + 1e-12 || node_count <= 1);
         }
     }
 }

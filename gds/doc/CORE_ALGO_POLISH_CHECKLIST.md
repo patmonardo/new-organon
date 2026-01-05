@@ -19,7 +19,7 @@ Target: standardize estimation to one token (likely `estimate_memory`) across co
 | centrality | harmonic | gds/src/applications/algorithms/centrality/harmonic.rs | estimate_memory |
 | centrality | hits | gds/src/applications/algorithms/centrality/hits.rs | estimate_memory |
 | centrality | pagerank | gds/src/applications/algorithms/centrality/pagerank.rs | estimate_memory |
-| community | approxMaxKCut | gds/src/applications/algorithms/community/approx_max_k_cut.rs |  |
+| community | approxMaxKCut | gds/src/applications/algorithms/community/approx_max_kcut.rs |  |
 | community | conductance | gds/src/applications/algorithms/community/conductance.rs | estimate_memory |
 | community | k1coloring | gds/src/applications/algorithms/community/k1coloring.rs | estimate_memory |
 | community | kcore | gds/src/applications/algorithms/community/kcore.rs | estimate_memory |
@@ -71,7 +71,7 @@ Target: ensure every core procedure has an `estimate_memory()` and eliminate obv
 | centrality | gds/src/procedures/centrality/harmonic.rs | no |
 | centrality | gds/src/procedures/centrality/hits.rs | no |
 | centrality | gds/src/procedures/centrality/pagerank.rs | no |
-| community | gds/src/procedures/community/approx_max_k_cut.rs | yes |
+| community | gds/src/procedures/community/approx_max_kcut.rs | yes |
 | community | gds/src/procedures/community/conductance.rs | yes |
 | community | gds/src/procedures/community/k1coloring.rs | yes |
 | community | gds/src/procedures/community/kcore.rs | yes |

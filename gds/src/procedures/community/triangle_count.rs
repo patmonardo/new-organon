@@ -163,8 +163,22 @@ impl TriangleCountFacade {
 
     /// Estimate memory usage.
     pub fn estimate_memory(&self) -> Result<MemoryRange> {
-        // Note: memory estimation is deferred.
-        Ok(MemoryRange::of_range(0, 1024 * 1024)) // placeholder
+        // Triangle count stores per-node local counts and uses neighbor traversal.
+        // Some implementations keep adjacency lists; we estimate proportional to (n + m).
+        let node_count = self.graph_store.node_count();
+        let relationship_count = self.graph_store.relationship_count();
+
+        // Per node: u64 local triangle count + temporary counters.
+        let per_node = 64usize;
+        // Per relationship: potential adjacency materialization (conservative).
+        let per_relationship = 24usize;
+
+        let base: usize = 64 * 1024;
+        let total = base
+            .saturating_add(node_count.saturating_mul(per_node))
+            .saturating_add(relationship_count.saturating_mul(per_relationship));
+
+        Ok(MemoryRange::of_range(total, total.saturating_mul(3)))
     }
 
     /// Full result: returns both local and global counts.

@@ -1,17 +1,19 @@
-//! Closeness Centrality Algorithm (parallel, Java GDS parity direction)
+//! Closeness Centrality (Java GDS parity)
 //!
-//! Translation target: Neo4j GDS `org.neo4j.gds.closeness.*`.
-//!
-//! Implementation notes:
-//! - Phase 1: compute per-node farness and reachable-source counts using ANP MSBFS batching.
-//! - Phase 2: compute closeness scores from (component, farness) in parallel.
+//! Standard algorithm module layout:
+//! - `spec`: config + result + AlgorithmSpec integration
+//! - `storage`: GraphStore-facing controller (projection + orchestration)
+//! - `computation`: pure compute kernels (MSBFS farness + score computation)
 
 pub mod computation;
 pub mod spec;
 pub mod storage;
 
-pub use computation::{ClosenessCentralityComputationResult, ClosenessCentralityComputationRuntime};
-pub use spec::{
-	ClosenessCentralityAlgorithmSpec, ClosenessCentralityConfig, ClosenessCentralityResult,
-};
+#[cfg(test)]
+pub mod integration_tests;
+
+pub use computation::ClosenessCentralityComputationRuntime;
+pub use spec::{ClosenessCentralityConfig, ClosenessCentralityResult, CLOSENESSAlgorithmSpec};
 pub use storage::ClosenessCentralityStorageRuntime;
+
+pub type ClosenessCentralityAlgorithmSpec = CLOSENESSAlgorithmSpec;
