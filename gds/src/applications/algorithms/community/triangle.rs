@@ -1,18 +1,15 @@
-//! Triangle Count algorithm dispatch handler.
+//! Triangle algorithm dispatch handler.
 //!
-//! Handles JSON requests for Triangle Count operations,
-//! delegating to the facade layer for execution.
+//! Handles JSON requests for Triangle operations, delegating to the facade layer.
 
-use crate::procedures::community::triangle_count::{
-    TriangleCountFacade, TriangleCountRow,
-};
+use crate::procedures::community::triangle::{TriangleFacade, TriangleRow};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-/// Handle Triangle Count requests
-pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
-    let op = "triangleCount";
+/// Handle Triangle requests
+pub fn handle_triangle(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    let op = "triangle";
 
     // Parse request parameters
     let graph_name = match request.get("graphName").and_then(|v| v.as_str()) {
@@ -30,10 +27,7 @@ pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) ->
         .and_then(|v| v.as_u64())
         .unwrap_or(1) as usize;
 
-    let max_degree = request
-        .get("maxDegree")
-        .and_then(|v| v.as_u64())
-        .map(|v| v as usize);
+    let max_degree = request.get("maxDegree").and_then(|v| v.as_u64());
 
     // Get graph store
     let graph_store = match catalog.get(graph_name) {
@@ -48,17 +42,17 @@ pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) ->
     };
 
     // Create facade
-    let mut facade = TriangleCountFacade::new(graph_store).concurrency(concurrency);
+    let mut facade = TriangleFacade::new(graph_store).concurrency(concurrency);
 
     if let Some(max_deg) = max_degree {
-        facade = facade.max_degree(max_deg as u64);
+        facade = facade.max_degree(max_deg);
     }
 
     // Execute based on mode
     match mode {
         "stream" => match facade.stream() {
             Ok(rows_iter) => {
-                let rows: Vec<TriangleCountRow> = rows_iter.collect();
+                let rows: Vec<TriangleRow> = rows_iter.collect();
                 json!({
                     "ok": true,
                     "op": op,
@@ -68,7 +62,7 @@ pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) ->
             Err(e) => err(
                 op,
                 "EXECUTION_ERROR",
-                &format!("Triangle Count execution failed: {:?}", e),
+                &format!("Triangle execution failed: {:?}", e),
             ),
         },
         "stats" => match facade.stats() {
@@ -80,7 +74,7 @@ pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) ->
             Err(e) => err(
                 op,
                 "EXECUTION_ERROR",
-                &format!("Triangle Count stats failed: {:?}", e),
+                &format!("Triangle stats failed: {:?}", e),
             ),
         },
         "mutate" => match facade.mutate() {
@@ -92,7 +86,7 @@ pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) ->
             Err(e) => err(
                 op,
                 "EXECUTION_ERROR",
-                &format!("Triangle Count mutate failed: {:?}", e),
+                &format!("Triangle mutate failed: {:?}", e),
             ),
         },
         "write" => match facade.write() {
@@ -104,7 +98,7 @@ pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) ->
             Err(e) => err(
                 op,
                 "EXECUTION_ERROR",
-                &format!("Triangle Count write failed: {:?}", e),
+                &format!("Triangle write failed: {:?}", e),
             ),
         },
         "estimate" => match facade.estimate_memory() {
@@ -116,7 +110,7 @@ pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) ->
             Err(e) => err(
                 op,
                 "EXECUTION_ERROR",
-                &format!("Triangle Count memory estimation failed: {:?}", e),
+                &format!("Triangle memory estimation failed: {:?}", e),
             ),
         },
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),

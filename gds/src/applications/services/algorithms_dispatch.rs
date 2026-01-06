@@ -130,13 +130,6 @@ pub fn handle_leiden(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::algorithms::community::leiden::handle_leiden(request, catalog)
 }
 
-pub fn handle_local_clustering_coefficient(
-    request: &Value,
-    catalog: Arc<dyn GraphCatalog>,
-) -> Value {
-    crate::applications::algorithms::community::local_clustering_coefficient::handle_local_clustering_coefficient(request, catalog)
-}
-
 pub fn handle_louvain(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::algorithms::community::louvain::handle_louvain(request, catalog)
 }
@@ -149,10 +142,8 @@ pub fn handle_scc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     crate::applications::algorithms::community::scc::handle_scc(request, catalog)
 }
 
-pub fn handle_triangle_count(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
-    crate::applications::algorithms::community::triangle_count::handle_triangle_count(
-        request, catalog,
-    )
+pub fn handle_triangle(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
+    crate::applications::algorithms::community::triangle::handle_triangle(request, catalog)
 }
 
 pub fn handle_wcc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {

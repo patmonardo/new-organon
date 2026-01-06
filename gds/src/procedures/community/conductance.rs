@@ -3,13 +3,15 @@
 //! Evaluates community quality by measuring the proportion of edges
 //! that cross community boundaries.
 
-use crate::core::utils::progress::TaskRegistry;
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory,
+};
 use crate::mem::MemoryRange;
 use crate::algo::conductance::{
     ConductanceComputationRuntime, ConductanceConfig, ConductanceStorageRuntime,
 };
 use crate::concurrency::Concurrency;
-use crate::procedures::builder_base::{MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
@@ -83,6 +85,8 @@ impl ConductanceFacade {
                 ),
             );
         }
+        ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
+        ConfigValidator::in_range(self.min_batch_size as f64, 1.0, 1_000_000_000.0, "min_batch_size")?;
         Ok(())
     }
 
@@ -102,12 +106,12 @@ impl ConductanceFacade {
         };
 
         let base_task = crate::algo::conductance::progress_task(node_count);
-        let registry_factory = crate::core::utils::progress::EmptyTaskRegistryFactory;
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+        let registry_factory = self.registry_factory();
+        let mut progress_tracker = TaskProgressTracker::with_registry(
             base_task,
             Concurrency::of(self.concurrency.max(1)),
-            crate::core::utils::progress::JobId::new(),
-            &registry_factory,
+            JobId::new(),
+            registry_factory.as_ref(),
         );
 
         let termination_flag = crate::concurrency::TerminationFlag::default();
@@ -127,6 +131,22 @@ impl ConductanceFacade {
             result.community_conductances,
             result.global_average_conductance,
         ))
+    }
+
+    fn registry_factory(&self) -> Box<dyn TaskRegistryFactory> {
+        struct PrebuiltTaskRegistryFactory(TaskRegistry);
+
+        impl TaskRegistryFactory for PrebuiltTaskRegistryFactory {
+            fn new_instance(&self, _job_id: JobId) -> TaskRegistry {
+                self.0.clone()
+            }
+        }
+
+        if let Some(registry) = &self.task_registry {
+            Box::new(PrebuiltTaskRegistryFactory(registry.clone()))
+        } else {
+            Box::new(EmptyTaskRegistryFactory)
+        }
     }
 
     /// Stream mode: yields conductance per community

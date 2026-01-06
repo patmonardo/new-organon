@@ -16,8 +16,7 @@ use super::centrality::{
 
 use super::community::{
     ApproxMaxKCutFacade, ConductanceFacade, K1ColoringFacade, KCoreFacade, KMeansFacade,
-    LabelPropagationFacade, LocalClusteringCoefficientFacade, LouvainFacade, ModularityFacade,
-    SccFacade, TriangleCountFacade, WccFacade,
+    LabelPropagationFacade, LouvainFacade, ModularityFacade, SccFacade, TriangleFacade, WccFacade,
 };
 
 use super::embeddings::{
@@ -193,13 +192,8 @@ impl Graph {
     }
 
     /// Triangle Count (per-node triangles + global triangle count).
-    pub fn triangle_count(&self) -> TriangleCountFacade {
-        TriangleCountFacade::new(Arc::clone(&self.store))
-    }
-
-    /// Local Clustering Coefficient (per-node coefficient + average).
-    pub fn local_clustering_coefficient(&self) -> LocalClusteringCoefficientFacade {
-        LocalClusteringCoefficientFacade::new(Arc::clone(&self.store))
+    pub fn triangle(&self) -> TriangleFacade {
+        TriangleFacade::new(Arc::clone(&self.store))
     }
 
     /// Strongly Connected Components (directed graph SCCs).

@@ -58,13 +58,10 @@ pub fn handle_algorithms(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
 		"kmeans" => algorithms_dispatch::handle_kmeans(request, catalog),
 		"label_propagation" => algorithms_dispatch::handle_label_propagation(request, catalog),
 		"leiden" => algorithms_dispatch::handle_leiden(request, catalog),
-		"local_clustering_coefficient" => {
-			algorithms_dispatch::handle_local_clustering_coefficient(request, catalog)
-		}
 		"louvain" => algorithms_dispatch::handle_louvain(request, catalog),
 		"modularity" => algorithms_dispatch::handle_modularity(request, catalog),
 		"scc" => algorithms_dispatch::handle_scc(request, catalog),
-		"triangle_count" => algorithms_dispatch::handle_triangle_count(request, catalog),
+		"triangle" => algorithms_dispatch::handle_triangle(request, catalog),
 		"wcc" => algorithms_dispatch::handle_wcc(request, catalog),
 
 		// Similarity

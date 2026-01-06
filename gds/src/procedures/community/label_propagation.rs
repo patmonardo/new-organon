@@ -8,15 +8,14 @@
 //! - `node_weight_property`: optional node weight property (defaults to 1.0).
 //! - `seed_property`: optional seed labels property.
 
-use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
+use crate::core::utils::progress::{TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::algo::label_propagation::{LabelPropComputationRuntime, LabelPropResult};
-use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
-use crate::types::default_value::LONG_DEFAULT_FALLBACK;
-use crate::types::graph::id_map::NodeId;
+use crate::algo::label_propagation::{
+    LabelPropComputationRuntime, LabelPropConfig, LabelPropResult, LabelPropStorageRuntime,
+};
+use crate::concurrency::TerminationFlag;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -107,107 +106,40 @@ impl LabelPropagationFacade {
         self.validate()?;
         let start = Instant::now();
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
-
-        let node_count = graph_view.node_count();
-        if node_count == 0 {
-            let elapsed = start.elapsed();
-            return Ok((
-                LabelPropResult {
-                    labels: Vec::new(),
-                    did_converge: true,
-                    ran_iterations: 0,
-                    node_count: 0,
-                    execution_time: elapsed,
-                },
-                elapsed.as_millis() as u64,
-            ));
-        }
-
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(Tasks::leaf_with_volume(
-                "label_propagation".to_string(),
-                self.max_iterations as usize,
-            ));
-        progress_tracker.begin_subtask_with_volume(self.max_iterations as usize);
-
-        // Node weights
-        let weights: Vec<f64> = if let Some(key) = &self.node_weight_property {
-            if graph_view.available_node_properties().contains(key) {
-                let pv = graph_view
-                    .node_properties(key)
-                    .expect("property exists by available_node_properties");
-                (0..node_count)
-                    .map(|i| pv.double_value(i as u64).unwrap_or(1.0))
-                    .collect()
-            } else {
-                vec![1.0; node_count]
-            }
-        } else {
-            vec![1.0; node_count]
+        let config = LabelPropConfig {
+            concurrency: self.concurrency,
+            max_iterations: self.max_iterations,
+            node_weight_property: self.node_weight_property.clone(),
+            seed_property: self.seed_property.clone(),
         };
 
-        // Seed labels (Java InitStep parity):
-        // - If a seedProperty exists and has a value: use it.
-        // - Otherwise: label = maxLabelId + originalNodeId + 1.
-        // This avoids collisions with node IDs while keeping determinism.
-        let seeds: Vec<u64> = {
-            let seed_pv = self.seed_property.as_ref().and_then(|key| {
-                if graph_view.available_node_properties().contains(key) {
-                    graph_view.node_properties(key)
-                } else {
-                    None
-                }
-            });
+        let storage = LabelPropStorageRuntime::new(self.graph_store.as_ref())?;
+        let node_count = storage.node_count();
 
-            let max_label_id: i64 = seed_pv
-                .as_deref()
-                .and_then(|pv| pv.get_max_long_property_value())
-                .unwrap_or(-1);
+        let base_task = Tasks::leaf_with_volume(
+            "label_propagation".to_string(),
+            node_count.saturating_add(self.max_iterations as usize),
+        );
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            base_task,
+            self.concurrency,
+        );
 
-            (0..node_count)
-                .map(|i| {
-                    let node_id = i as i64;
-                    let original = graph_view.to_original_node_id(node_id).unwrap_or(node_id);
+        let termination_flag = TerminationFlag::default();
 
-                    match seed_pv.as_deref() {
-                        Some(pv) if pv.has_value(i as u64) => {
-                            pv.long_value(i as u64).unwrap_or(LONG_DEFAULT_FALLBACK) as u64
-                        }
-                        _ => (max_label_id + original + 1) as u64,
-                    }
-                })
-                .collect()
-        };
-
-        let fallback = graph_view.default_property_value();
-        let get_neighbors = |node_idx: usize| -> Vec<(usize, f64)> {
-            let node_id: NodeId = node_idx as i64;
-            graph_view
-                .stream_relationships_weighted(node_id, fallback)
-                .map(|cursor| (cursor.target_id(), cursor.weight()))
-                .filter(|(target, _w)| *target >= 0)
-                .map(|(target, w)| (target as usize, w))
-                .collect()
-        };
-
-        let mut runtime =
+        let runtime =
             LabelPropComputationRuntime::new(node_count, self.max_iterations)
-                .concurrency(self.concurrency)
-                .with_weights(weights)
-                .with_seeds(seeds);
+                .concurrency(self.concurrency);
 
-        let result = runtime.compute(node_count as u64, get_neighbors);
+        let result = storage.compute_label_propagation(
+            runtime,
+            &config,
+            &mut progress_tracker,
+            &termination_flag,
+        )?;
+
         let elapsed = start.elapsed();
         let elapsed_ms = elapsed.as_millis() as u64;
-
-        progress_tracker.log_progress(self.max_iterations as usize);
-        progress_tracker.end_subtask();
 
         Ok((
             LabelPropResult {

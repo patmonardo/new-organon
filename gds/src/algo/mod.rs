@@ -118,7 +118,6 @@ pub mod kmeans;
 pub mod kspanningtree;
 pub mod label_propagation;
 pub mod leiden;
-pub mod local_clustering_coefficient;
 pub mod louvain;
 pub mod modularity;
 pub mod modularity_optimization;
@@ -207,11 +206,6 @@ pub use label_propagation::{
     LabelPropAlgorithmSpec, LabelPropComputationRuntime, LabelPropConfig, LabelPropResult,
     LabelPropStorageRuntime,
 };
-pub use local_clustering_coefficient::{
-    LOCAL_CLUSTERING_COEFFICIENTAlgorithmSpec, LocalClusteringCoefficientComputationRuntime,
-    LocalClusteringCoefficientConfig, LocalClusteringCoefficientResult,
-    LocalClusteringCoefficientStorageRuntime,
-};
 
 // Embeddings
 pub use embeddings::{FastRPAlgorithmSpec, FastRPConfig, FastRPResult};
@@ -235,8 +229,8 @@ pub use traversal::{
     TargetExitPredicate,
 };
 pub use triangle::{
-    TriangleCountAlgorithmSpec, TriangleCountComputationRuntime, TriangleCountConfig,
-    TriangleCountResult, TriangleCountStorageRuntime,
+    TriangleAlgorithmSpec, TriangleComputationRuntime, TriangleConfig, TriangleResult,
+    TriangleStorageRuntime,
 };
 pub use wcc::{WCCAlgorithmSpec, WccComputationRuntime, WccConfig, WccResult, WccStorageRuntime};
 pub use yens::{

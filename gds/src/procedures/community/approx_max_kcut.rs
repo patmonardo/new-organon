@@ -3,17 +3,15 @@
 //! Partitions nodes into k communities to maximize (or minimize) the
 //! weight of edges crossing between communities using GRASP.
 
-use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
+use crate::core::utils::progress::{TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::algo::approx_max_kcut::computation::ApproxMaxKCutComputationRuntime;
+use crate::algo::approx_max_kcut::storage::ApproxMaxKCutStorageRuntime;
 use crate::algo::approx_max_kcut::spec::ApproxMaxKCutConfig;
+use crate::concurrency::TerminationFlag;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
-use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Result row for approx max k-cut stream mode
@@ -125,56 +123,21 @@ impl ApproxMaxKCutFacade {
         Ok(())
     }
 
-    fn checked_node_id(value: usize) -> Result<NodeId> {
-        NodeId::try_from(value as i64).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "node_id must fit into i64 (got {})",
-                value
-            ))
-        })
-    }
-
     fn compute(&self) -> Result<(Vec<u8>, f64, usize)> {
         self.validate()?;
-
-        // ApproxMaxKCut works on undirected graphs (Natural orientation)
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
-
-        let node_count = graph_view.node_count();
+        let node_count = self.graph_store.node_count();
         if node_count == 0 {
             return Ok((Vec::new(), 0.0, 0));
         }
 
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("approx_max_kcut".to_string(), self.iterations),
+            Tasks::leaf_with_volume(
+                "approx_max_kcut".to_string(),
+                node_count.saturating_add(self.iterations),
+            ),
             self.concurrency,
         );
-        progress_tracker.begin_subtask_with_volume(self.iterations);
-
-        let fallback = graph_view.default_property_value();
-
-        // Get neighbors with weights
-        let get_neighbors = |node_idx: usize| -> Vec<(usize, f64)> {
-            let node_id = match Self::checked_node_id(node_idx) {
-                Ok(value) => value,
-                Err(_) => return Vec::new(),
-            };
-
-            graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| {
-                    let target = cursor.target_id() as usize;
-                    let weight = cursor.property();
-                    (target, weight)
-                })
-                .collect()
-        };
+        let termination_flag = TerminationFlag::default();
 
         let config = ApproxMaxKCutConfig {
             k: self.k,
@@ -185,11 +148,17 @@ impl ApproxMaxKCutFacade {
             min_community_sizes: self.min_community_sizes.clone(),
         };
 
-        let runtime = ApproxMaxKCutComputationRuntime::new(config);
-        let result = runtime.compute(node_count, get_neighbors);
-
-        progress_tracker.log_progress(self.iterations);
-        progress_tracker.end_subtask();
+        let storage = ApproxMaxKCutStorageRuntime::new();
+        let mut runtime = ApproxMaxKCutComputationRuntime::new(config.clone());
+        let result = storage
+            .compute_approx_max_kcut(
+                &mut runtime,
+                self.graph_store.as_ref(),
+                &config,
+                &mut progress_tracker,
+                &termination_flag,
+            )
+            .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
 
         Ok((result.communities, result.cut_cost, node_count))
     }

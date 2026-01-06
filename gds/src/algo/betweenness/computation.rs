@@ -369,7 +369,7 @@ mod tests {
 
         let termination = TerminationFlag::running_true();
         let noop = Arc::new(|| {});
-        let mut computation = BetweennessCentralityComputationRuntime::new(node_count);
+        let computation = BetweennessCentralityComputationRuntime::new(node_count);
         computation.compute_parallel_unweighted(
             &[0, 1, 2],
             2.0,
@@ -395,7 +395,7 @@ mod tests {
 
         let termination = TerminationFlag::running_true();
         let noop = Arc::new(|| {});
-        let mut computation = BetweennessCentralityComputationRuntime::new(node_count);
+        let computation = BetweennessCentralityComputationRuntime::new(node_count);
         computation.compute_parallel_unweighted(
             &[0, 1, 2, 3],
             2.0,
@@ -430,7 +430,7 @@ mod tests {
 
         let termination = TerminationFlag::running_true();
         let noop = Arc::new(|| {});
-        let mut computation = BetweennessCentralityComputationRuntime::new(node_count);
+        let computation = BetweennessCentralityComputationRuntime::new(node_count);
         computation.compute_parallel_weighted(
             &[0, 1, 2],
             2.0,

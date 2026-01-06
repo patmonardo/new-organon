@@ -21,7 +21,7 @@
 //!     ├─ Centrality facades (PageRank, DegreeCentrality, etc.)
 //!     ├─ Community facades (Louvain, LabelPropagation, etc.)
 //!     ├─ Path facades (Dijkstra, BFS, DFS, etc.)
-//!     └─ Other facades (TriangleCount, K-Core, etc.)
+//!     └─ Other facades (Triangle, K-Core, etc.)
 //!     ↓
 //! Algorithm Spec (procedures/*/spec.rs)
 //!     ↓

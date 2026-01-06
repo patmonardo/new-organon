@@ -3,16 +3,15 @@
 //! Measures community quality by comparing actual edges within communities
 //! to expected edges if the network were random.
 
-use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
+use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::algo::modularity::computation::ModularityComputationRuntime;
-use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
-use crate::types::graph::id_map::NodeId;
+use crate::algo::modularity::{
+    ModularityComputationRuntime, ModularityResult, ModularityStorageRuntime,
+};
+use crate::concurrency::TerminationFlag;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Result row for modularity stream mode
@@ -66,99 +65,36 @@ impl ModularityFacade {
         Ok(())
     }
 
-    fn checked_node_id(value: usize) -> Result<NodeId> {
-        NodeId::try_from(value as i64).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "node_id must fit into i64 (got {})",
-                value
-            ))
-        })
-    }
-
-    fn compute(&self) -> Result<(f64, Vec<(u64, f64)>)> {
+    fn compute(&self) -> Result<ModularityResult> {
         self.validate()?;
 
-        // Modularity works on undirected graphs
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+        let storage = ModularityStorageRuntime::new(self.graph_store.as_ref())?;
+        let computation = ModularityComputationRuntime::new();
+        let termination_flag = TerminationFlag::default();
 
-        let node_count = graph_view.node_count();
-        if node_count == 0 {
-            return Ok((0.0, Vec::new()));
-        }
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf_with_volume(
+            "modularity".to_string(),
+            storage.node_count(),
+        ));
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
-            Tasks::leaf_with_volume("modularity".to_string(), node_count),
-        );
-        progress_tracker.begin_subtask_with_volume(node_count);
-
-        // Get community property values
-        let community_props = graph_view
-            .node_properties(&self.community_property)
-            .ok_or_else(|| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Community property '{}' not found",
-                    self.community_property
-                ))
-            })?;
-
-        let fallback = graph_view.default_property_value();
-
-        // Get community assignment for each node
-        let get_community = |node_idx: usize| -> Option<u64> {
-            let node_id = Self::checked_node_id(node_idx).ok()? as u64;
-            match community_props.long_value(node_id) {
-                Ok(community) if community >= 0 => Some(community as u64),
-                _ => None,
-            }
-        };
-
-        // Get neighbors with weights
-        let get_neighbors = |node_idx: usize| -> Vec<(usize, f64)> {
-            let node_id = match Self::checked_node_id(node_idx) {
-                Ok(value) => value,
-                Err(_) => return Vec::new(),
-            };
-
-            graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| {
-                    let target = cursor.target_id() as usize;
-                    let weight = cursor.property();
-                    (target, weight)
-                })
-                .collect()
-        };
-
-        let runtime = ModularityComputationRuntime::new();
-        let result = runtime.compute(node_count, get_community, get_neighbors);
-
-        progress_tracker.log_progress(node_count);
-        progress_tracker.end_subtask();
-
-        let community_scores: Vec<(u64, f64)> = result
-            .community_modularities
-            .into_iter()
-            .map(|cm| (cm.community_id, cm.modularity))
-            .collect();
-
-        Ok((result.total_modularity, community_scores))
+        storage.compute_modularity(
+            &computation,
+            &self.community_property,
+            &mut progress_tracker,
+            &termination_flag,
+        )
     }
 
     /// Stream mode: yields modularity per community
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = ModularityRow>>> {
-        let (_total, scores) = self.compute()?;
+        let result = self.compute()?;
 
-        let mut rows: Vec<ModularityRow> = scores
+        let mut rows: Vec<ModularityRow> = result
+            .community_modularities
             .into_iter()
-            .map(|(community, modularity)| ModularityRow {
-                community,
-                modularity,
+            .map(|cm| ModularityRow {
+                community: cm.community_id,
+                modularity: cm.modularity,
             })
             .collect();
 
@@ -170,11 +106,11 @@ impl ModularityFacade {
 
     /// Stats mode: returns aggregated statistics
     pub fn stats(&self) -> Result<ModularityStats> {
-        let (total_modularity, scores) = self.compute()?;
+        let result = self.compute()?;
 
         Ok(ModularityStats {
-            total_modularity,
-            community_count: scores.len(),
+            total_modularity: result.total_modularity,
+            community_count: result.community_modularities.len(),
         })
     }
 

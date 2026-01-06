@@ -2,7 +2,9 @@
 
 use crate::algo::k1coloring::storage::K1ColoringStorageRuntime;
 use crate::algo::k1coloring::K1ColoringComputationRuntime;
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::Tasks;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use serde::{Deserialize, Serialize};
@@ -89,37 +91,21 @@ define_algorithm_spec! {
         let _start = Instant::now();
 
         let storage = K1ColoringStorageRuntime::new(graph_store)?;
-        let graph = storage.graph();
-        let node_count = graph.node_count();
+        let node_count = storage.node_count();
 
-        let mut progress = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("k1coloring".to_string(), parsed.max_iterations as usize),
-            parsed.concurrency,
-        );
-        progress.begin_subtask_with_volume(parsed.max_iterations as usize);
+        let task = Tasks::leaf_with_volume("k1coloring".to_string(), parsed.max_iterations as usize);
 
-        let fallback = graph.default_property_value();
-        let neighbors = |node_idx: usize| -> Vec<usize> {
-            graph
-                .stream_relationships(node_idx as i64, fallback)
-                .map(|cursor| cursor.target_id())
-                .filter(|t| *t >= 0)
-                .map(|t| t as usize)
-                .collect()
-        };
+        let mut progress = TaskProgressTracker::with_concurrency(task, parsed.concurrency);
+        let termination_flag = TerminationFlag::default();
 
         let mut runtime = K1ColoringComputationRuntime::new(node_count as usize, parsed.max_iterations)
             .concurrency(parsed.concurrency);
 
-        let run = runtime.compute(node_count as usize, neighbors);
-
-        progress.log_progress(parsed.max_iterations as usize);
-        progress.end_subtask();
-
-        Ok(K1ColoringResult {
-            colors: run.colors,
-            ran_iterations: run.ran_iterations,
-            did_converge: run.did_converge,
-        })
+        storage.compute_k1coloring(
+            &mut runtime,
+            &parsed,
+            &mut progress,
+            &termination_flag,
+        )
     }
 }

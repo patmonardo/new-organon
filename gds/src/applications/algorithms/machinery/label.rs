@@ -94,7 +94,6 @@ impl Label for AlgorithmLabel {
             Algorithm::KNN => "K-Nearest Neighbours",
             Algorithm::KSpanningTree => "K Spanning Tree",
             Algorithm::LabelPropagation => "Label Propagation",
-            Algorithm::LCC => "LocalClusteringCoefficient",
             Algorithm::Leiden => "Leiden",
             Algorithm::Louvain => "Louvain",
             Algorithm::LongestPath => "LongestPath",
@@ -114,8 +113,7 @@ impl Label for AlgorithmLabel {
             Algorithm::SteinerTree => "SteinerTree",
             Algorithm::TopologicalSort => "TopologicalSort",
             Algorithm::ToUndirected => "ToUndirected",
-            Algorithm::TriangleCount => "TriangleCount",
-            Algorithm::Triangles => "Triangles",
+            Algorithm::Triangles => "Triangle",
             Algorithm::WCC => "WCC",
             Algorithm::Yens => "Yens",
         }

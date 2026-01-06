@@ -1,17 +1,17 @@
-use super::computation::TriangleCountComputationRuntime;
+use super::computation::TriangleComputationRuntime;
 
 #[test]
-fn triangle_count_empty() {
-    let mut rt = TriangleCountComputationRuntime::new();
+fn triangle_empty() {
+    let mut rt = TriangleComputationRuntime::new();
     let result = rt.compute(0, |_| Vec::new());
     assert_eq!(result.global_triangles, 0);
     assert!(result.local_triangles.is_empty());
 }
 
 #[test]
-fn triangle_count_single_triangle() {
+fn triangle_single_triangle() {
     // 0-1-2-0
-    let mut rt = TriangleCountComputationRuntime::new();
+    let mut rt = TriangleComputationRuntime::new();
     let neighbors = |n: usize| match n {
         0 => vec![1, 2],
         1 => vec![0, 2],
@@ -25,9 +25,9 @@ fn triangle_count_single_triangle() {
 }
 
 #[test]
-fn triangle_count_two_triangles_share_edge() {
+fn triangle_two_share_edge() {
     // Triangles: (0,1,2) and (0,1,3)
-    let mut rt = TriangleCountComputationRuntime::new();
+    let mut rt = TriangleComputationRuntime::new();
     let neighbors = |n: usize| match n {
         0 => vec![1, 2, 3],
         1 => vec![0, 2, 3],

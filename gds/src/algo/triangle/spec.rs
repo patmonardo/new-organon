@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TriangleCountConfig {
+pub struct TriangleConfig {
     /// Reserved for future parallel implementation.
     pub concurrency: usize,
     /// Skip nodes with degree > max_degree (performance / approximation).
     pub max_degree: u64,
 }
 
-impl Default for TriangleCountConfig {
+impl Default for TriangleConfig {
     fn default() -> Self {
         Self {
             concurrency: 4,
@@ -18,16 +18,16 @@ impl Default for TriangleCountConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TriangleCountResult {
+pub struct TriangleResult {
     pub local_triangles: Vec<u64>,
     pub global_triangles: u64,
 }
 
-pub struct TriangleCountAlgorithmSpec {
+pub struct TriangleAlgorithmSpec {
     graph_name: String,
 }
 
-impl TriangleCountAlgorithmSpec {
+impl TriangleAlgorithmSpec {
     pub fn new(graph_name: String) -> Self {
         Self { graph_name }
     }

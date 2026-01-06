@@ -7,8 +7,10 @@
 //! Parameters:
 //! - `concurrency`: accepted for Java GDS alignment; currently unused.
 
-use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::{TaskRegistry, Tasks};
+use crate::concurrency::{Concurrency, TerminationFlag};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory, Tasks,
+};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
@@ -68,9 +70,14 @@ impl SccFacade {
         let mut computation = SccComputationRuntime::new();
         let storage = SccStorageRuntime::new(self.concurrency);
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("scc".to_string(), self.graph_store.node_count()),
-            self.concurrency,
+        let leaf = Tasks::leaf_with_volume("scc".to_string(), self.graph_store.node_count());
+        let base_task = leaf.base().clone();
+        let registry_factory = self.registry_factory();
+        let mut progress_tracker = TaskProgressTracker::with_registry(
+            base_task,
+            Concurrency::of(self.concurrency.max(1)),
+            JobId::new(),
+            registry_factory.as_ref(),
         );
         let termination_flag = TerminationFlag::default();
 
@@ -155,5 +162,21 @@ impl SccFacade {
     /// Full result: returns the procedure-level SCC result.
     pub fn run(&self) -> Result<SccResult> {
         self.compute()
+    }
+
+    fn registry_factory(&self) -> Box<dyn TaskRegistryFactory> {
+        struct PrebuiltTaskRegistryFactory(TaskRegistry);
+
+        impl TaskRegistryFactory for PrebuiltTaskRegistryFactory {
+            fn new_instance(&self, _job_id: JobId) -> TaskRegistry {
+                self.0.clone()
+            }
+        }
+
+        if let Some(registry) = &self.task_registry {
+            Box::new(PrebuiltTaskRegistryFactory(registry.clone()))
+        } else {
+            Box::new(EmptyTaskRegistryFactory)
+        }
     }
 }

@@ -10,18 +10,13 @@ pub mod kcore;
 pub mod kmeans;
 pub mod label_propagation;
 pub mod leiden;
-pub mod local_clustering_coefficient;
 pub mod louvain;
 pub mod modularity;
 pub mod scc;
-pub mod triangle_count;
+pub mod triangle;
 pub mod wcc;
 
-pub use local_clustering_coefficient::{
-    LocalClusteringCoefficientFacade, LocalClusteringCoefficientRow,
-    LocalClusteringCoefficientStats,
-};
-pub use triangle_count::{TriangleCountFacade, TriangleCountRow, TriangleCountStats};
+pub use triangle::{TriangleFacade, TriangleRow, TriangleStats};
 
 pub use scc::{SccFacade, SccRow, SccStats};
 

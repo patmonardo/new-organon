@@ -14,15 +14,13 @@
 //! - `seed_centroids`
 //! - `random_seed`
 
-use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
+use crate::core::utils::progress::{TaskRegistry, Tasks};
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits::Result;
-use crate::algo::kmeans::{KMeansComputationRuntime, KMeansConfig, KMeansResult};
+use crate::algo::kmeans::{KMeansComputationRuntime, KMeansConfig, KMeansResult, KMeansStorageRuntime};
 pub use crate::algo::kmeans::KMeansSamplerType;
-use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
+use crate::concurrency::TerminationFlag;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use crate::types::ValueType;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
@@ -148,150 +146,25 @@ impl KMeansFacade {
         self.validate_basic()?;
         let start = Instant::now();
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
-
-        let node_count = graph_view.node_count();
-        if node_count == 0 {
-            return Ok((
-                KMeansResult {
-                    communities: Vec::new(),
-                    distance_from_center: Vec::new(),
-                    centers: Vec::new(),
-                    average_distance_to_centroid: 0.0,
-                    silhouette: self.config.compute_silhouette.then_some(Vec::new()),
-                    average_silhouette: 0.0,
-                    ran_iterations: 0,
-                    restarts: 0,
-                },
-                start.elapsed().as_millis() as u64,
-            ));
-        }
-
-        if !graph_view
-            .available_node_properties()
-            .contains(&self.config.node_property)
-        {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "node_property '{}' not found on graph",
-                    self.config.node_property
-                )),
-            );
-        }
-
-        let pv = graph_view
-            .node_properties(&self.config.node_property)
-            .ok_or_else(|| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "node_property '{}' not available",
-                    self.config.node_property
-                ))
-            })?;
-
-        let dims = pv.dimension().ok_or_else(|| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "node_property '{}' has no dimension (no values?)",
-                self.config.node_property
-            ))
-        })?;
-
         let config = self.config.clone();
-
-        if !config.seed_centroids.is_empty() {
-            if config.seed_centroids.len() != config.k {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                        "seed_centroids must contain exactly k={} centroids, got {}",
-                        config.k,
-                        config.seed_centroids.len()
-                    )),
-                );
-            }
-            for (i, c) in config.seed_centroids.iter().enumerate() {
-                if c.len() != dims {
-                    return Err(
-                        crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                            "seed_centroids[{}] dimension mismatch: expected {}, got {}",
-                            i,
-                            dims,
-                            c.len()
-                        )),
-                    );
-                }
-            }
-        }
+        let node_count = self.graph_store.node_count();
 
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("kmeans".to_string(), node_count),
             config.concurrency,
         );
-        progress_tracker.begin_subtask_with_volume(node_count);
 
-        let mut points: Vec<Vec<f64>> = Vec::with_capacity(node_count);
-        for i in 0..node_count {
-            let arr: Vec<f64> = match pv.value_type() {
-                ValueType::DoubleArray => match pv.double_array_value(i as u64) {
-                    Ok(value) => value,
-                    Err(e) => {
-                        progress_tracker.end_subtask_with_failure();
-                        return Err(
-                            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                                "failed to read node_property '{}' for node {}: {}",
-                                config.node_property, i, e
-                            )),
-                        );
-                    }
-                },
-                ValueType::FloatArray => match pv.float_array_value(i as u64) {
-                    Ok(value) => value.into_iter().map(|x| x as f64).collect(),
-                    Err(e) => {
-                        progress_tracker.end_subtask_with_failure();
-                        return Err(
-                            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                                "failed to read node_property '{}' for node {}: {}",
-                                config.node_property, i, e
-                            )),
-                        );
-                    }
-                },
-                other => {
-                    progress_tracker.end_subtask_with_failure();
-                    return Err(
-                        crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                            "node_property '{}' must be FLOAT_ARRAY or DOUBLE_ARRAY, got {}",
-                            config.node_property,
-                            other.name()
-                        )),
-                    );
-                }
-            };
-
-            if arr.len() != dims {
-                progress_tracker.end_subtask_with_failure();
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                        "node_property '{}' dimension mismatch at node {}: expected {}, got {}",
-                        config.node_property,
-                        i,
-                        dims,
-                        arr.len()
-                    )),
-                );
-            }
-            points.push(arr);
-        }
-
+        let termination_flag = TerminationFlag::default();
+        let storage = KMeansStorageRuntime::new();
         let mut runtime = KMeansComputationRuntime::new();
-        let result = runtime.compute(&points, &config);
 
-        progress_tracker.log_progress(node_count);
-        progress_tracker.end_subtask();
+        let result = storage.compute_kmeans(
+            &mut runtime,
+            self.graph_store.as_ref(),
+            &config,
+            &mut progress_tracker,
+            &termination_flag,
+        )?;
 
         Ok((result, start.elapsed().as_millis() as u64))
     }

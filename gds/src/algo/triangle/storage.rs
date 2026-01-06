@@ -1,5 +1,5 @@
-use super::computation::TriangleCountComputationRuntime;
-use super::spec::{TriangleCountConfig, TriangleCountResult};
+use super::computation::TriangleComputationRuntime;
+use super::spec::{TriangleConfig, TriangleResult};
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
 use crate::projection::orientation::Orientation;
@@ -7,21 +7,21 @@ use crate::projection::RelationshipType;
 use crate::types::prelude::GraphStore;
 use std::collections::HashSet;
 
-pub struct TriangleCountStorageRuntime {}
+pub struct TriangleStorageRuntime {}
 
-impl TriangleCountStorageRuntime {
+impl TriangleStorageRuntime {
     pub fn new() -> Self {
         Self {}
     }
 
-    pub fn compute_triangle_count(
+    pub fn compute(
         &self,
-        computation: &mut TriangleCountComputationRuntime,
+        computation: &mut TriangleComputationRuntime,
         graph_store: &impl GraphStore,
-        config: &TriangleCountConfig,
+        config: &TriangleConfig,
         progress_tracker: &mut dyn ProgressTracker,
         termination_flag: &TerminationFlag,
-    ) -> Result<TriangleCountResult, String> {
+    ) -> Result<TriangleResult, String> {
         let rel_types: HashSet<RelationshipType> = HashSet::new();
         let graph_view = graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
@@ -29,13 +29,13 @@ impl TriangleCountStorageRuntime {
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
-            return Ok(TriangleCountResult {
+            return Ok(TriangleResult {
                 local_triangles: Vec::new(),
                 global_triangles: 0,
             });
         }
 
-        // For triangle count we only need topology, not weights.
+        // For triangle enumeration we only need topology, not weights.
         let fallback = graph_view.default_property_value();
 
         progress_tracker.begin_subtask_with_volume(node_count);
@@ -67,7 +67,7 @@ impl TriangleCountStorageRuntime {
     }
 }
 
-impl Default for TriangleCountStorageRuntime {
+impl Default for TriangleStorageRuntime {
     fn default() -> Self {
         Self::new()
     }

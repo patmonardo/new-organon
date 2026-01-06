@@ -10,13 +10,21 @@
 //! 2) validation which schedules conflicting nodes for recoloring
 
 use crate::collections::{BitSet, HugeAtomicLongArray};
-use crate::concurrency::{install_with_concurrency, Concurrency};
+use crate::concurrency::{install_with_concurrency, Concurrency, TerminationFlag};
 use crate::core::graph_dimensions::GraphDimensions;
 use crate::core::utils::paged::HugeAtomicBitSet;
 use crate::mem::{Estimate, MemoryEstimation, MemoryRange, MemoryTree};
 use rayon::prelude::*;
 
 pub const INITIAL_FORBIDDEN_COLORS: usize = 1000;
+
+/// Per-iteration progress surface for controller-driven tracking.
+#[derive(Debug, Clone, Copy)]
+pub struct K1IterationProgress {
+    pub iteration: u64,
+    pub colored: usize,
+    pub validated: usize,
+}
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct K1ColoringRunResult {
@@ -46,9 +54,16 @@ impl K1ColoringComputationRuntime {
         self
     }
 
-    pub fn compute<F>(&mut self, node_count: usize, neighbors: F) -> K1ColoringRunResult
+    pub fn compute<F, P>(
+        &mut self,
+        node_count: usize,
+        neighbors: F,
+        termination_flag: &TerminationFlag,
+        mut progress: P,
+    ) -> K1ColoringRunResult
     where
         F: Fn(usize) -> Vec<usize> + Sync,
+        P: FnMut(K1IterationProgress),
     {
         if node_count == 0 {
             return K1ColoringRunResult {
@@ -80,6 +95,9 @@ impl K1ColoringComputationRuntime {
         let mut ran_iterations = 0u64;
 
         while ran_iterations < self.max_iterations && !current_nodes.is_empty() {
+            if !termination_flag.running() {
+                break;
+            }
             // Materialize the current working set for stable parallel iteration.
             let mut nodes_to_color = Vec::with_capacity(current_nodes.cardinality());
             current_nodes.for_each_set_bit(|n| {
@@ -88,10 +106,28 @@ impl K1ColoringComputationRuntime {
                 }
             });
 
-            self.run_coloring(&colors, &nodes_to_color, &neighbors);
+            self.run_coloring(&colors, &nodes_to_color, &neighbors, termination_flag);
+
+            progress(K1IterationProgress {
+                iteration: ran_iterations,
+                colored: nodes_to_color.len(),
+                validated: 0,
+            });
 
             next_nodes.clear();
-            self.run_validation(&colors, &nodes_to_color, &neighbors, &next_nodes);
+            self.run_validation(
+                &colors,
+                &nodes_to_color,
+                &neighbors,
+                &next_nodes,
+                termination_flag,
+            );
+
+            progress(K1IterationProgress {
+                iteration: ran_iterations,
+                colored: 0,
+                validated: nodes_to_color.len(),
+            });
 
             ran_iterations += 1;
 
@@ -99,7 +135,7 @@ impl K1ColoringComputationRuntime {
             std::mem::swap(&mut current_nodes, &mut next_nodes);
         }
 
-        let did_converge = current_nodes.is_empty();
+        let did_converge = termination_flag.running() && current_nodes.is_empty();
 
         let mut out = vec![0u64; node_count];
         for i in 0..node_count {
@@ -113,7 +149,13 @@ impl K1ColoringComputationRuntime {
         }
     }
 
-    fn run_coloring<F>(&self, colors: &HugeAtomicLongArray, nodes: &[usize], neighbors: &F)
+    fn run_coloring<F>(
+        &self,
+        colors: &HugeAtomicLongArray,
+        nodes: &[usize],
+        neighbors: &F,
+        termination_flag: &TerminationFlag,
+    )
     where
         F: Fn(usize) -> Vec<usize> + Sync,
     {
@@ -122,6 +164,10 @@ impl K1ColoringComputationRuntime {
             nodes.par_iter().for_each_init(
                 || BitSet::new(INITIAL_FORBIDDEN_COLORS),
                 |forbidden, &node_id| {
+                    if !termination_flag.running() {
+                        return;
+                    }
+
                     forbidden.clear_all();
 
                     for target in neighbors(node_id) {
@@ -150,12 +196,17 @@ impl K1ColoringComputationRuntime {
         nodes: &[usize],
         neighbors: &F,
         next_nodes: &HugeAtomicBitSet,
+        termination_flag: &TerminationFlag,
     ) where
         F: Fn(usize) -> Vec<usize> + Sync,
     {
         let concurrency = Concurrency::from_usize(self.concurrency);
         install_with_concurrency(concurrency, || {
             nodes.par_iter().for_each(|&source| {
+                if !termination_flag.running() {
+                    return;
+                }
+
                 let source_color = colors.get(source);
                 for target in neighbors(source) {
                     if target == source {

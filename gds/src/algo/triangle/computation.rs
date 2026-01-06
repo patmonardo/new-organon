@@ -1,11 +1,11 @@
-use super::spec::TriangleCountResult;
-use crate::algo::triangle::intersect::{
+use super::intersect::{
     AdjacencyProvider, GraphIntersect, RelationshipIntersect, RelationshipIntersectConfig,
 };
+use super::spec::TriangleResult;
 
-pub struct TriangleCountComputationRuntime {}
+pub struct TriangleComputationRuntime {}
 
-impl TriangleCountComputationRuntime {
+impl TriangleComputationRuntime {
     pub fn new() -> Self {
         Self {}
     }
@@ -22,7 +22,7 @@ impl TriangleCountComputationRuntime {
         &mut self,
         node_count: usize,
         get_neighbors: impl Fn(usize) -> Vec<usize>,
-    ) -> TriangleCountResult {
+    ) -> TriangleResult {
         self.compute_with_max_degree(node_count, get_neighbors, u64::MAX)
     }
 
@@ -31,9 +31,9 @@ impl TriangleCountComputationRuntime {
         node_count: usize,
         get_neighbors: impl Fn(usize) -> Vec<usize>,
         max_degree: u64,
-    ) -> TriangleCountResult {
+    ) -> TriangleResult {
         if node_count == 0 {
-            return TriangleCountResult {
+            return TriangleResult {
                 local_triangles: Vec::new(),
                 global_triangles: 0,
             };
@@ -80,14 +80,14 @@ impl TriangleCountComputationRuntime {
             intersect.intersect_all(a, &mut consumer);
         }
 
-        TriangleCountResult {
+        TriangleResult {
             local_triangles: local,
             global_triangles: global,
         }
     }
 }
 
-impl Default for TriangleCountComputationRuntime {
+impl Default for TriangleComputationRuntime {
     fn default() -> Self {
         Self::new()
     }

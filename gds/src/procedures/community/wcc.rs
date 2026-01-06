@@ -5,8 +5,10 @@
 //! Parameters (Java GDS aligned):
 //! - `concurrency`: accepted for parity; current runtime is single-threaded.
 
-use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::{TaskRegistry, Tasks};
+use crate::concurrency::{Concurrency, TerminationFlag};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory, Tasks,
+};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
@@ -126,9 +128,14 @@ impl WccFacade {
         let storage = WccStorageRuntime::new(self.concurrency);
         let mut computation = WccComputationRuntime::new().concurrency(self.concurrency);
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("wcc".to_string(), self.graph_store.relationship_count()),
-            self.concurrency,
+        let leaf = Tasks::leaf_with_volume("wcc".to_string(), self.graph_store.relationship_count());
+        let base_task = leaf.base().clone();
+        let registry_factory = self.registry_factory();
+        let mut progress_tracker = TaskProgressTracker::with_registry(
+            base_task,
+            Concurrency::of(self.concurrency.max(1)),
+            JobId::new(),
+            registry_factory.as_ref(),
         );
 
         let termination_flag = TerminationFlag::default();
@@ -149,6 +156,22 @@ impl WccFacade {
             },
             start.elapsed().as_millis() as u64,
         ))
+    }
+
+    fn registry_factory(&self) -> Box<dyn TaskRegistryFactory> {
+        struct PrebuiltTaskRegistryFactory(TaskRegistry);
+
+        impl TaskRegistryFactory for PrebuiltTaskRegistryFactory {
+            fn new_instance(&self, _job_id: JobId) -> TaskRegistry {
+                self.0.clone()
+            }
+        }
+
+        if let Some(registry) = &self.task_registry {
+            Box::new(PrebuiltTaskRegistryFactory(registry.clone()))
+        } else {
+            Box::new(EmptyTaskRegistryFactory)
+        }
     }
 
     /// Full result: returns the procedure-level WCC result.

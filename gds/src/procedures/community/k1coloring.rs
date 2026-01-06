@@ -7,14 +7,14 @@
 //! - `max_iterations`: maximum number of coloring/validation iterations (must be >= 1).
 //! - `batch_size`: accepted for parity; currently unused.
 
-use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
+use crate::core::utils::progress::{TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::algo::k1coloring::{K1ColoringComputationRuntime, K1ColoringResult};
-use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
-use crate::types::graph::id_map::NodeId;
+use crate::algo::k1coloring::{
+    K1ColoringComputationRuntime, K1ColoringConfig, K1ColoringResult, K1ColoringStorageRuntime,
+};
+use crate::concurrency::TerminationFlag;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -93,15 +93,14 @@ impl K1ColoringFacade {
         self.validate()?;
         let start = Instant::now();
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+        let config = K1ColoringConfig {
+            concurrency: self.concurrency,
+            max_iterations: self.max_iterations,
+            min_batch_size: self.batch_size,
+        };
 
-        let node_count = graph_view.node_count();
+        let storage = K1ColoringStorageRuntime::new(self.graph_store.as_ref())?;
+        let node_count = storage.node_count();
         if node_count == 0 {
             return Ok((
                 K1ColoringResult {
@@ -113,39 +112,27 @@ impl K1ColoringFacade {
             ));
         }
 
-        let volume = self.max_iterations as usize;
+        let base_task = Tasks::leaf_with_volume("k1coloring".to_string(), self.max_iterations as usize);
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("k1coloring".to_string(), volume),
-                self.concurrency,
-            );
-        progress_tracker.begin_subtask_with_volume(volume);
+            base_task,
+            self.concurrency,
+        );
 
-        let fallback = graph_view.default_property_value();
-        let get_neighbors = |node_idx: usize| -> Vec<usize> {
-            let node_id: NodeId = node_idx as i64;
-            graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| cursor.target_id())
-                .filter(|target| *target >= 0)
-                .map(|target| target as usize)
-                .collect()
-        };
+        let termination_flag = TerminationFlag::default();
 
-        let mut runtime = K1ColoringComputationRuntime::new(node_count, self.max_iterations);
-        let result = runtime.compute(node_count, get_neighbors);
+        let mut runtime = K1ColoringComputationRuntime::new(node_count, self.max_iterations)
+            .concurrency(self.concurrency);
+
+        let result = storage.compute_k1coloring(
+            &mut runtime,
+            &config,
+            &mut progress_tracker,
+            &termination_flag,
+        )?;
+
         let elapsed_ms = start.elapsed().as_millis() as u64;
 
-        progress_tracker.log_progress(volume);
-        progress_tracker.end_subtask();
-
-        Ok((
-            K1ColoringResult {
-                colors: result.colors,
-                ran_iterations: result.ran_iterations,
-                did_converge: result.did_converge,
-            },
-            elapsed_ms,
-        ))
+        Ok((result, elapsed_ms))
     }
 
     /// Stream mode: yields `(node_id, color_id)` for every node.
@@ -203,8 +190,8 @@ impl K1ColoringFacade {
     /// Estimate memory usage.
     pub fn estimate_memory(&self) -> Result<MemoryRange> {
         // K1Coloring maintains a color assignment per node and iterates neighbors.
-        let node_count = self.graph_store.node_count();
-        let relationship_count = self.graph_store.relationship_count();
+        let node_count = GraphStore::node_count(self.graph_store.as_ref());
+        let relationship_count = GraphStore::relationship_count(self.graph_store.as_ref());
 
         // Per node: u64 color + temporary neighbor set buffers.
         let per_node = 80usize;

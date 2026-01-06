@@ -29,15 +29,15 @@ impl ConductanceComputationRuntime {
 
         let concurrency = Concurrency::of(config.concurrency.max(1));
 
-        // Java parity: Count relationships using degree-aware partitioning.
-        let decreased_concurrency = (concurrency.value() * 4).min(node_count).max(1);
+        // Java parity: Count relationships using degree-aware partitioning with the requested concurrency.
+        let partition_concurrency = concurrency.value().min(node_count).max(1);
         let degree_partitions: Vec<DegreePartition> = PartitionUtils::degree_partition(
             node_count,
             graph.relationship_count(),
             Box::new(GraphDegrees {
                 graph: Arc::clone(&graph),
             }),
-            decreased_concurrency,
+            partition_concurrency,
             |p| p,
             Some(config.min_batch_size.max(1)),
         );
@@ -171,6 +171,10 @@ impl ConductanceComputationRuntime {
             };
 
             let denom = external + internal;
+            if denom <= 0.0 {
+                continue;
+            }
+
             let conductance = external / denom;
 
             community_conductances.insert(*community, conductance);

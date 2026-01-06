@@ -120,24 +120,25 @@ impl LeidenFacade {
         self.validate()?;
         let start = Instant::now();
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
-            Tasks::leaf_with_volume("leiden".to_string(), self.graph_store.node_count()),
+        let storage = LeidenStorageRuntime::new(self.graph_store.as_ref())?;
+        let node_count = storage.node_count();
+
+        let base_task = Tasks::leaf_with_volume(
+            "leiden".to_string(),
+            node_count.saturating_add(self.config.max_iterations),
         );
+        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(base_task);
 
         let termination_flag = TerminationFlag::default();
 
-        let storage = LeidenStorageRuntime::new();
         let mut computation = LeidenComputationRuntime::new();
 
-        let result = storage
-            .compute_leiden(
-                &mut computation,
-                self.graph_store.as_ref(),
-                &self.config,
-                &mut progress_tracker,
-                &termination_flag,
-            )
-            .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+        let result = storage.compute_leiden(
+            &mut computation,
+            &self.config,
+            &mut progress_tracker,
+            &termination_flag,
+        )?;
 
         Ok((result, start.elapsed().as_millis() as u64))
     }

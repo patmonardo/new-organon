@@ -1,7 +1,12 @@
 //! K-Core storage runtime
 //!
-//! K-core decomposition operates over an undirected view.
+//! Controller: owns the undirected graph view, drives progress, and delegates
+//! stateful work to the computation runtime.
 
+use super::computation::{KCoreComputationResult, KCoreComputationRuntime};
+use super::spec::KCoreConfig;
+use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::ProgressTracker;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::Orientation;
 use crate::projection::RelationshipType;
@@ -31,5 +36,43 @@ impl KCoreStorageRuntime {
 
     pub fn node_count(&self) -> usize {
         self.graph.node_count() as usize
+    }
+
+    /// Controller entrypoint: obtains the undirected view, wires progress, and calls computation.
+    pub fn compute_kcore(
+        &self,
+        computation: &mut KCoreComputationRuntime,
+        _config: &KCoreConfig,
+        progress_tracker: &mut dyn ProgressTracker,
+        termination_flag: &TerminationFlag,
+    ) -> Result<KCoreComputationResult, AlgorithmError> {
+        let node_count = self.graph.node_count() as usize;
+        if node_count == 0 {
+            return Ok(KCoreComputationResult {
+                core_values: Vec::new(),
+                degeneracy: 0,
+            });
+        }
+
+        termination_flag.assert_running();
+        progress_tracker.begin_subtask_with_volume(node_count);
+
+        let fallback = self.graph.default_property_value();
+        let graph = Arc::clone(&self.graph);
+        let neighbors = move |node_idx: usize| -> Vec<usize> {
+            graph
+                .stream_relationships(node_idx as i64, fallback)
+                .map(|cursor| cursor.target_id())
+                .filter(|t| *t >= 0)
+                .map(|t| t as usize)
+                .collect()
+        };
+
+        let result = computation.compute(node_count, neighbors);
+
+        progress_tracker.log_progress(node_count);
+        progress_tracker.end_subtask();
+
+        Ok(result)
     }
 }

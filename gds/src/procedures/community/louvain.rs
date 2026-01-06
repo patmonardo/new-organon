@@ -10,21 +10,17 @@
 //! Parameters:
 //! - `concurrency`
 
-use crate::core::utils::progress::TaskRegistry;
+use crate::core::utils::progress::{TaskRegistry, TaskProgressTracker, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::algo::louvain::{
     LouvainComputationRuntime, LouvainConfig, LouvainResult, LouvainStorageRuntime,
 };
-use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
+use crate::concurrency::TerminationFlag;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
-
-use crate::core::utils::progress::Tasks;
 
 /// Per-node Louvain assignment row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
@@ -148,27 +144,16 @@ impl LouvainFacade {
         self.validate()?;
         let start = Instant::now();
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
-
-        let storage = LouvainStorageRuntime::new(self.config.concurrency);
+        let storage = LouvainStorageRuntime::new(self.graph_store.as_ref(), self.config.concurrency)?;
         let mut computation = LouvainComputationRuntime::new();
+        let termination_flag = TerminationFlag::default();
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("louvain".to_string(), graph_view.relationship_count()),
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("louvain".to_string(), storage.node_count()),
             self.config.concurrency,
         );
 
-        let result = storage.compute_louvain(
-            &mut computation,
-            graph_view.as_ref(),
-            &mut progress_tracker,
-        );
+        let result = storage.compute_louvain(&mut computation, &mut progress_tracker, &termination_flag)?;
         Ok((result, start.elapsed().as_millis() as u64))
     }
 

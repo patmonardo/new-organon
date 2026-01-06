@@ -5,16 +5,15 @@
 //! Parameters (Java GDS aligned):
 //! - `concurrency`: accepted for parity; currently unused.
 
-use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
+use crate::core::utils::progress::{TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::algo::kcore::{KCoreComputationResult, KCoreComputationRuntime};
-use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
-use crate::types::graph::id_map::NodeId;
+use crate::algo::kcore::{
+    KCoreComputationResult, KCoreComputationRuntime, KCoreConfig, KCoreStorageRuntime,
+};
+use crate::concurrency::TerminationFlag;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -68,15 +67,12 @@ impl KCoreFacade {
         self.validate()?;
         let start = Instant::now();
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+        let config = KCoreConfig {
+            concurrency: self.concurrency,
+        };
 
-        let node_count = graph_view.node_count();
+        let storage = KCoreStorageRuntime::new(self.graph_store.as_ref())?;
+        let node_count = storage.node_count();
         if node_count == 0 {
             return Ok((
                 KCoreComputationResult {
@@ -87,29 +83,23 @@ impl KCoreFacade {
             ));
         }
 
+        let base_task = Tasks::leaf_with_volume("kcore".to_string(), node_count);
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("kcore".to_string(), node_count),
+            base_task,
             self.concurrency,
         );
-        progress_tracker.begin_subtask_with_volume(node_count);
 
-        let fallback = graph_view.default_property_value();
-        let get_neighbors = |node_idx: usize| -> Vec<usize> {
-            let node_id: NodeId = node_idx as i64;
-            graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| cursor.target_id())
-                .filter(|target| *target >= 0)
-                .map(|target| target as usize)
-                .collect()
-        };
+        let termination_flag = TerminationFlag::default();
 
         let mut runtime = KCoreComputationRuntime::new().concurrency(self.concurrency);
-        let result = runtime.compute(node_count, get_neighbors);
-        let elapsed_ms = start.elapsed().as_millis() as u64;
+        let result = storage.compute_kcore(
+            &mut runtime,
+            &config,
+            &mut progress_tracker,
+            &termination_flag,
+        )?;
 
-        progress_tracker.log_progress(node_count);
-        progress_tracker.end_subtask();
+        let elapsed_ms = start.elapsed().as_millis() as u64;
 
         Ok((result, elapsed_ms))
     }
@@ -161,8 +151,8 @@ impl KCoreFacade {
     /// Estimate memory usage.
     pub fn estimate_memory(&self) -> Result<MemoryRange> {
         // K-Core keeps per-node degree/core arrays and uses relationship streaming.
-        let node_count = self.graph_store.node_count();
-        let relationship_count = self.graph_store.relationship_count();
+        let node_count = GraphStore::node_count(self.graph_store.as_ref());
+        let relationship_count = GraphStore::relationship_count(self.graph_store.as_ref());
 
         // Per node: degree (usize) + core (u64) + bucket/work queues.
         let per_node = 96usize;
