@@ -1,10 +1,8 @@
-use crate::core::utils::progress::ProgressTracker;
 use crate::pregel::{
-    ComputeContext, DefaultValue, InitContext, MasterComputeContext, Messages, Pregel, PregelSchema,
-    PregelSchemaBuilder, SyncQueueMessageIterator, SyncQueueMessenger, Visibility,
+    ComputeContext, DefaultValue, InitContext, MasterComputeContext, Messages, PregelResult,
+    PregelSchema, PregelSchemaBuilder, SyncQueueMessageIterator, Visibility,
 };
 use crate::ValueType;
-use crate::types::graph::Graph;
 use std::sync::Arc;
 
 use super::storage::{HitsPregelRuntimeConfig, HitsRunResult};
@@ -55,178 +53,181 @@ fn hits_schema() -> PregelSchema {
 
 /// Run HITS on a pre-projected graph.
 ///
-/// Storage owns orchestration (projection, choosing messenger/config). This function is the
-/// pure-ish Pregel kernel wiring: schema + init/compute/master.
-pub fn run_hits(
-    graph: Arc<dyn Graph>,
-    max_iterations: usize,
+/// Pure state runtime for HITS.
+///
+/// Provides Pregel schema/init/compute/master functions and finalization without owning graph
+/// access or execution orchestration.
+#[derive(Clone, Debug)]
+pub struct HitsComputationRuntime {
     tolerance: f64,
-    concurrency: usize,
-    _progress_tracker: &mut dyn ProgressTracker,
-) -> HitsRunResult {
-    let supersteps = 1usize.saturating_add(max_iterations.saturating_mul(4));
+}
 
-    let config = HitsPregelRuntimeConfig {
-        concurrency: concurrency.max(1),
-        max_iterations: supersteps,
-    };
+impl HitsComputationRuntime {
+    pub fn new(tolerance: f64) -> Self {
+        Self { tolerance }
+    }
 
-    let schema = hits_schema();
+    pub fn schema(&self) -> PregelSchema {
+        hits_schema()
+    }
 
-    let init_fn = Arc::new(|context: &mut InitContext<HitsPregelRuntimeConfig>| {
-        context.set_node_value(HUB_KEY, 1.0);
-        context.set_node_value(AUTH_KEY, 1.0);
-        context.set_node_value(HUB_PREV_KEY, 1.0);
-        context.set_node_value(AUTH_PREV_KEY, 1.0);
-        context.set_node_value(HUB_TMP_KEY, 0.0);
-        context.set_node_value(AUTH_TMP_KEY, 0.0);
-        context.set_node_value("value", 0.0);
-    });
+    pub fn init_fn(&self) -> Arc<dyn Fn(&mut InitContext<HitsPregelRuntimeConfig>) + Send + Sync> {
+        Arc::new(|context: &mut InitContext<HitsPregelRuntimeConfig>| {
+            context.set_node_value(HUB_KEY, 1.0);
+            context.set_node_value(AUTH_KEY, 1.0);
+            context.set_node_value(HUB_PREV_KEY, 1.0);
+            context.set_node_value(AUTH_PREV_KEY, 1.0);
+            context.set_node_value(HUB_TMP_KEY, 0.0);
+            context.set_node_value(AUTH_TMP_KEY, 0.0);
+            context.set_node_value("value", 0.0);
+        })
+    }
 
-    let compute_fn = Arc::new(
-        |context: &mut ComputeContext<HitsPregelRuntimeConfig, SyncQueueMessageIterator>,
-         messages: &mut Messages<SyncQueueMessageIterator>| {
+    pub fn compute_fn(
+        &self,
+    ) -> Arc<
+        dyn Fn(&mut ComputeContext<HitsPregelRuntimeConfig, SyncQueueMessageIterator>, &mut Messages<SyncQueueMessageIterator>)
+            + Send
+            + Sync,
+    > {
+        Arc::new(
+            |context: &mut ComputeContext<HitsPregelRuntimeConfig, SyncQueueMessageIterator>,
+             messages: &mut Messages<SyncQueueMessageIterator>| {
+                let superstep = context.superstep();
+
+                // Superstep 0: seed by sending hubs along outgoing edges.
+                if superstep == 0 {
+                    let hub = context.double_node_value(HUB_KEY);
+                    context.send_to_neighbors(hub);
+                    return;
+                }
+
+                match (superstep - 1) % 4 {
+                    // CALC_AUTHS: sum incoming hubs
+                    0 => {
+                        let mut sum = 0.0f64;
+                        for m in messages.by_ref() {
+                            sum += m;
+                        }
+                        context.set_node_value(AUTH_TMP_KEY, sum);
+                    }
+                    // SEND_AUTHS: send (normalized) authority backwards (to incoming neighbors)
+                    1 => {
+                        let auth = context.double_node_value(AUTH_KEY);
+                        context.send_to_incoming_neighbors(auth);
+                    }
+                    // CALC_HUBS: sum incoming authorities
+                    2 => {
+                        let mut sum = 0.0f64;
+                        for m in messages.by_ref() {
+                            sum += m;
+                        }
+                        context.set_node_value(HUB_TMP_KEY, sum);
+                    }
+                    // SEND_HUBS: send (normalized) hubs along outgoing edges
+                    _ => {
+                        let hub = context.double_node_value(HUB_KEY);
+                        context.send_to_neighbors(hub);
+                    }
+                }
+            },
+        )
+    }
+
+    pub fn master_compute_fn(
+        &self,
+    ) -> impl Fn(&mut MasterComputeContext<HitsPregelRuntimeConfig>) -> bool + Send + Sync + 'static {
+        let tolerance = self.tolerance;
+
+        move |context: &mut MasterComputeContext<HitsPregelRuntimeConfig>| {
             let superstep = context.superstep();
-
-            // Superstep 0: seed by sending hubs along outgoing edges.
             if superstep == 0 {
-                let hub = context.double_node_value(HUB_KEY);
-                context.send_to_neighbors(hub);
-                return;
+                return false;
             }
 
             match (superstep - 1) % 4 {
-                // CALC_AUTHS: sum incoming hubs
+                // NORMALIZE_AUTHS
                 0 => {
-                    let mut sum = 0.0f64;
-                    for m in messages.by_ref() {
-                        sum += m;
+                    let mut sum_sq = 0.0f64;
+                    let node_count = context.node_count();
+                    for node_id in 0..node_count {
+                        let v = context.double_node_value(node_id, AUTH_TMP_KEY);
+                        sum_sq += v * v;
                     }
-                    context.set_node_value(AUTH_TMP_KEY, sum);
+
+                    let norm = sum_sq.sqrt();
+                    let denom = if norm > 0.0 { norm } else { 1.0 };
+
+                    for node_id in 0..node_count {
+                        let prev = context.double_node_value(node_id, AUTH_KEY);
+                        let next = context.double_node_value(node_id, AUTH_TMP_KEY) / denom;
+
+                        context.set_double_node_value(node_id, AUTH_PREV_KEY, prev);
+                        context.set_double_node_value(node_id, AUTH_KEY, next);
+                    }
+
+                    false
                 }
-                // SEND_AUTHS: send (normalized) authority backwards (to incoming neighbors)
-                1 => {
-                    let auth = context.double_node_value(AUTH_KEY);
-                    context.send_to_incoming_neighbors(auth);
-                }
-                // CALC_HUBS: sum incoming authorities
+                // NORMALIZE_HUBS + convergence check
                 2 => {
-                    let mut sum = 0.0f64;
-                    for m in messages.by_ref() {
-                        sum += m;
+                    let mut sum_sq = 0.0f64;
+                    let node_count = context.node_count();
+                    for node_id in 0..node_count {
+                        let v = context.double_node_value(node_id, HUB_TMP_KEY);
+                        sum_sq += v * v;
                     }
-                    context.set_node_value(HUB_TMP_KEY, sum);
-                }
-                // SEND_HUBS: send (normalized) hubs along outgoing edges
-                _ => {
-                    let hub = context.double_node_value(HUB_KEY);
-                    context.send_to_neighbors(hub);
-                }
-            }
-        },
-    );
 
-    let master_compute_fn = move |context: &mut MasterComputeContext<HitsPregelRuntimeConfig>| {
-        let superstep = context.superstep();
-        if superstep == 0 {
-            return false;
+                    let norm = sum_sq.sqrt();
+                    let denom = if norm > 0.0 { norm } else { 1.0 };
+
+                    let mut max_delta = 0.0f64;
+                    for node_id in 0..node_count {
+                        let prev_hub = context.double_node_value(node_id, HUB_KEY);
+                        let next_hub = context.double_node_value(node_id, HUB_TMP_KEY) / denom;
+
+                        let prev_auth = context.double_node_value(node_id, AUTH_PREV_KEY);
+                        let next_auth = context.double_node_value(node_id, AUTH_KEY);
+
+                        let d_hub = (prev_hub - next_hub).abs();
+                        let d_auth = (prev_auth - next_auth).abs();
+                        max_delta = max_delta.max(d_hub.max(d_auth));
+
+                        context.set_double_node_value(node_id, HUB_PREV_KEY, prev_hub);
+                        context.set_double_node_value(node_id, HUB_KEY, next_hub);
+                    }
+
+                    max_delta <= tolerance
+                }
+                _ => false,
+            }
         }
-
-        match (superstep - 1) % 4 {
-            // NORMALIZE_AUTHS
-            0 => {
-                let mut sum_sq = 0.0f64;
-                let node_count = context.node_count();
-                for node_id in 0..node_count {
-                    let v = context.double_node_value(node_id, AUTH_TMP_KEY);
-                    sum_sq += v * v;
-                }
-
-                let norm = sum_sq.sqrt();
-                let denom = if norm > 0.0 { norm } else { 1.0 };
-
-                for node_id in 0..node_count {
-                    let prev = context.double_node_value(node_id, AUTH_KEY);
-                    let next = context.double_node_value(node_id, AUTH_TMP_KEY) / denom;
-
-                    context.set_double_node_value(node_id, AUTH_PREV_KEY, prev);
-                    context.set_double_node_value(node_id, AUTH_KEY, next);
-                }
-
-                false
-            }
-            // NORMALIZE_HUBS + convergence check
-            2 => {
-                let mut sum_sq = 0.0f64;
-                let node_count = context.node_count();
-                for node_id in 0..node_count {
-                    let v = context.double_node_value(node_id, HUB_TMP_KEY);
-                    sum_sq += v * v;
-                }
-
-                let norm = sum_sq.sqrt();
-                let denom = if norm > 0.0 { norm } else { 1.0 };
-
-                let mut max_delta = 0.0f64;
-                for node_id in 0..node_count {
-                    let prev_hub = context.double_node_value(node_id, HUB_KEY);
-                    let next_hub = context.double_node_value(node_id, HUB_TMP_KEY) / denom;
-
-                    let prev_auth = context.double_node_value(node_id, AUTH_PREV_KEY);
-                    let next_auth = context.double_node_value(node_id, AUTH_KEY);
-
-                    let d_hub = (prev_hub - next_hub).abs();
-                    let d_auth = (prev_auth - next_auth).abs();
-                    max_delta = max_delta.max(d_hub.max(d_auth));
-
-                    context.set_double_node_value(node_id, HUB_PREV_KEY, prev_hub);
-                    context.set_double_node_value(node_id, HUB_KEY, next_hub);
-                }
-
-                max_delta <= tolerance
-            }
-            _ => false,
-        }
-    };
-
-    let messenger = Arc::new(SyncQueueMessenger::new(graph.node_count()));
-
-    let result = Pregel::new(
-        Arc::clone(&graph),
-        config,
-        schema,
-        init_fn,
-        compute_fn,
-        messenger,
-        None,
-    )
-    .with_master_compute_fn(master_compute_fn)
-    .run();
-
-    let node_values = Arc::clone(&result.node_values);
-    let node_count = graph.node_count();
-
-    let mut hubs = vec![0.0f64; node_count];
-    let mut auths = vec![0.0f64; node_count];
-
-    for node_id in 0..node_count {
-        hubs[node_id] = node_values.double_value(HUB_KEY, node_id);
-        auths[node_id] = node_values.double_value(AUTH_KEY, node_id);
     }
 
-    // Translate pregel supersteps back into algorithm iterations.
-    let ran_supersteps = result.ran_iterations;
-    let ran_iterations = if ran_supersteps <= 1 {
-        0
-    } else {
-        // After the initial seed step, each full HITS iteration consumes 4 supersteps.
-        ((ran_supersteps - 1) / 4).max(1)
-    };
+    pub fn finalize(&self, result: &PregelResult, node_count: usize) -> HitsRunResult {
+        let node_values = Arc::clone(&result.node_values);
 
-    HitsRunResult {
-        hub_scores: hubs,
-        authority_scores: auths,
-        iterations_ran: ran_iterations,
-        did_converge: result.did_converge,
+        let mut hubs = vec![0.0f64; node_count];
+        let mut auths = vec![0.0f64; node_count];
+
+        for node_id in 0..node_count {
+            hubs[node_id] = node_values.double_value(HUB_KEY, node_id);
+            auths[node_id] = node_values.double_value(AUTH_KEY, node_id);
+        }
+
+        // Translate pregel supersteps back into algorithm iterations.
+        let ran_supersteps = result.ran_iterations;
+        let ran_iterations = if ran_supersteps <= 1 {
+            0
+        } else {
+            // After the initial seed step, each full HITS iteration consumes 4 supersteps.
+            ((ran_supersteps - 1) / 4).max(1)
+        };
+
+        HitsRunResult {
+            hub_scores: hubs,
+            authority_scores: auths,
+            iterations_ran: ran_iterations,
+            did_converge: result.did_converge,
+        }
     }
 }

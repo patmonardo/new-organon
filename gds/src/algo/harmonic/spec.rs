@@ -110,7 +110,7 @@ define_algorithm_spec! {
         );
 
         let storage = HarmonicStorageRuntime::with_orientation(graph_store, orientation)?;
-        let neighbors = |n: usize| storage.neighbors(n);
+        let computation = HarmonicComputationRuntime::new(storage.node_count());
 
         let tracker = Arc::new(Mutex::new(crate::core::utils::progress::TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("harmonic".to_string(), node_count),
@@ -126,14 +126,9 @@ define_algorithm_spec! {
         };
 
         let termination = TerminationFlag::default();
-        let centralities = HarmonicComputationRuntime::compute_parallel(
-            storage.node_count(),
-            concurrency,
-            &termination,
-            on_sources_done,
-            &neighbors,
-        )
-        .map_err(|e| AlgorithmError::Execution(format!("Harmonic terminated: {}", e)))?;
+        let centralities = storage
+            .compute_parallel(&computation, concurrency, &termination, on_sources_done)
+            .map_err(|e| AlgorithmError::Execution(format!("Harmonic terminated: {}", e)))?;
 
         tracker.lock().unwrap().end_subtask();
 

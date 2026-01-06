@@ -2,17 +2,18 @@
 //!
 //! Live wiring for Cost-Effective Lazy Forward influence maximization.
 
+use crate::algo::celf::computation::CELFComputationRuntime;
+use crate::algo::celf::storage::CELFStorageRuntime;
+use crate::algo::celf::spec::CELFConfig;
+use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::algo::celf::computation::CELFComputationRuntime;
-use crate::algo::celf::spec::CELFConfig;
 use crate::procedures::builder_base::{MutationResult, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
-use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
-use crate::types::graph::id_map::NodeId;
-use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::{HashMap, HashSet};
+use crate::graph_store::GraphStore;
+use crate::projection::eval::procedure::AlgorithmError;
+use crate::types::prelude::DefaultGraphStore;
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -90,28 +91,11 @@ impl CELFFacade {
         self
     }
 
-    fn checked_node_id(value: usize) -> Result<NodeId> {
-        NodeId::try_from(value as i64).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "node_id must fit into i64 (got {})",
-                value
-            ))
-        })
-    }
-
     fn compute_seed_set(&self) -> Result<(HashMap<u64, f64>, std::time::Duration)> {
         let start = Instant::now();
 
-        // CELF typically runs on directed graphs (default NATURAL orientation)
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
-
-        let node_count = graph_view.node_count();
+        let storage = CELFStorageRuntime::new(&*self.graph_store)?;
+        let node_count = storage.node_count();
         if node_count == 0 {
             return Ok((HashMap::new(), start.elapsed()));
         }
@@ -122,23 +106,12 @@ impl CELFFacade {
             );
         progress_tracker.begin_subtask_with_volume(self.config.seed_set_size);
 
-        let fallback = graph_view.default_property_value();
-        let get_neighbors = |node_idx: usize| -> Vec<usize> {
-            let node_id = match Self::checked_node_id(node_idx) {
-                Ok(value) => value,
-                Err(_) => return Vec::new(),
-            };
-
-            graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| cursor.target_id())
-                .filter(|target| *target >= 0)
-                .map(|target| target as usize)
-                .collect()
-        };
-
         let runtime = CELFComputationRuntime::new(self.config.clone(), node_count);
-        let seed_set = runtime.compute(get_neighbors);
+        let termination = TerminationFlag::running_true();
+
+        let seed_set = storage
+            .compute_celf(&runtime, &termination)
+            .map_err(|e| AlgorithmError::Execution(format!("CELF terminated: {e}")))?;
 
         progress_tracker.log_progress(self.config.seed_set_size);
         progress_tracker.end_subtask();

@@ -119,6 +119,7 @@ impl<'a, G: GraphStore> DegreeCentralityStorageRuntime<'a, G> {
 
     pub fn compute_parallel(
         &self,
+        computation: &DegreeCentralityComputationRuntime,
         concurrency: usize,
         termination: &TerminationFlag,
         on_nodes_done: Arc<dyn Fn(usize) + Send + Sync>,
@@ -147,7 +148,7 @@ impl<'a, G: GraphStore> DegreeCentralityStorageRuntime<'a, G> {
                 let start = batch_idx * batch_size;
                 let end = (start + batch_size).min(node_count);
 
-                DegreeCentralityComputationRuntime::compute_range(
+                computation.compute_range(
                     start,
                     end,
                     termination,
@@ -167,7 +168,7 @@ impl<'a, G: GraphStore> DegreeCentralityStorageRuntime<'a, G> {
                 let start = batch_idx * batch_size;
                 let end = (start + batch_size).min(node_count);
 
-                DegreeCentralityComputationRuntime::compute_range(
+                computation.compute_range(
                     start,
                     end,
                     termination,

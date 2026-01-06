@@ -32,11 +32,12 @@ use crate::config::PageRankConfig;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
-use crate::algo::pagerank::run_pagerank;
+use crate::algo::pagerank::{
+    computation::PageRankComputationRuntime,
+    storage::PageRankStorageRuntime,
+};
 use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -230,13 +231,10 @@ impl PageRankFacade {
         self.validate()?;
         let start = Instant::now();
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, self.orientation())
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+        let storage = PageRankStorageRuntime::with_orientation(
+            self.graph_store.as_ref(),
+            self.orientation(),
+        )?;
 
         let pr_config = PageRankConfig::builder()
             .base(AlgoBaseConfig {
@@ -258,6 +256,13 @@ impl PageRankFacade {
             .clone()
             .map(|v| v.into_iter().collect::<std::collections::HashSet<u64>>());
 
+        let computation = PageRankComputationRuntime::new(
+            pr_config.max_iterations,
+            pr_config.damping_factor,
+            pr_config.tolerance,
+            source_set,
+        );
+
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
             Tasks::leaf_with_volume("pagerank".to_string(), self.iterations as usize)
                 .base()
@@ -268,7 +273,11 @@ impl PageRankFacade {
         );
         progress_tracker.begin_subtask_with_volume(self.iterations as usize);
 
-        let run = run_pagerank(graph_view, pr_config, source_set);
+        let run = storage.run(
+            &computation,
+            self.concurrency,
+            &mut progress_tracker,
+        );
 
         progress_tracker.log_progress(self.iterations as usize);
         progress_tracker.end_subtask();

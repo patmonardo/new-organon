@@ -12,7 +12,7 @@ use crate::concurrency::{TerminatedException, TerminationFlag};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use super::computation::BetweennessCentralityComputationRuntime;
+use crate::algo::betweenness::computation::{BetweennessCentralityComputationRuntime, BetweennessCentralityComputationResult};
 
 pub struct BetweennessCentralityStorageRuntime<'a, G: GraphStore> {
     graph_store: &'a G,
@@ -183,44 +183,37 @@ impl<'a, G: GraphStore> BetweennessCentralityStorageRuntime<'a, G> {
     }
 
     /// Execute betweenness centrality for the given sources, dispatching to weighted/unweighted.
-    pub fn compute_parallel(
+    pub fn compute_betweenness(
         &self,
+        computation: &mut BetweennessCentralityComputationRuntime,
         sources: &[usize],
         divisor: f64,
         concurrency: usize,
         termination: &TerminationFlag,
         on_source_done: Arc<dyn Fn() + Send + Sync>,
-    ) -> Result<Vec<f64>, TerminatedException> {
-        let node_count = self.node_count();
-
+    ) -> Result<BetweennessCentralityComputationResult, TerminatedException> {
         if self.has_weights {
             let neigh = |n: usize| self.neighbors_weighted(n);
-            Ok(
-                BetweennessCentralityComputationRuntime::compute_parallel_weighted(
-                    node_count,
-                    sources,
-                    divisor,
-                    concurrency,
-                    termination,
-                    on_source_done,
-                    &neigh,
-                )?
-                .centralities,
-            )
+            computation.compute_parallel_weighted(
+                sources,
+                divisor,
+                concurrency,
+                termination,
+                on_source_done,
+                &neigh,
+            )?;
         } else {
             let neigh = |n: usize| self.neighbors(n);
-            Ok(
-                BetweennessCentralityComputationRuntime::compute_parallel_unweighted(
-                    node_count,
-                    sources,
-                    divisor,
-                    concurrency,
-                    termination,
-                    on_source_done,
-                    &neigh,
-                )?
-                .centralities,
-            )
+            computation.compute_parallel_unweighted(
+                sources,
+                divisor,
+                concurrency,
+                termination,
+                on_source_done,
+                &neigh,
+            )?;
         }
+
+        Ok(computation.finalize_result())
     }
 }

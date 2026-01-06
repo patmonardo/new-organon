@@ -9,7 +9,7 @@ use crate::concurrency::TerminationFlag;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use super::computation::Bridge;
+use super::computation::{Bridge, BridgesComputationRuntime};
 use super::storage::BridgesStorageRuntime;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -89,10 +89,17 @@ define_algorithm_spec! {
             })
         };
 
-        let termination = TerminationFlag::default();
+        let termination = TerminationFlag::running_true();
+
+        let mut computation = BridgesComputationRuntime::new_with_stack_capacity(
+            storage.node_count(),
+            storage.relationship_count(),
+        );
+
         let bridges = storage
-            .compute_parallel(parsed_config.concurrency, &termination, on_node_scanned)
-            .map_err(|e| AlgorithmError::Execution(format!("Bridges terminated: {e}")))?;
+            .compute_bridges(&mut computation, &termination, on_node_scanned)
+            .map_err(|e| AlgorithmError::Execution(format!("Bridges terminated: {e}")))?
+            .bridges;
 
         tracker.lock().unwrap().end_subtask();
 

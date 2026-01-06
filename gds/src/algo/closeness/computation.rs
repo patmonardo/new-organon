@@ -12,11 +12,17 @@ use crate::concurrency::virtual_threads::{Executor, WorkerContext};
 use crate::concurrency::{Concurrency, TerminatedException, TerminationFlag};
 use std::sync::Arc;
 
+/// Computation runtime for closeness centrality (state-only, no graph access)
 pub struct ClosenessCentralityComputationRuntime;
 
 impl ClosenessCentralityComputationRuntime {
+    pub fn new() -> Self {
+        Self
+    }
+
     /// Phase 1: compute per-node farness and component size using ANP MSBFS batching.
     pub fn compute_farness_parallel(
+        &self,
         node_count: usize,
         concurrency: usize,
         termination: &TerminationFlag,
@@ -80,6 +86,7 @@ impl ClosenessCentralityComputationRuntime {
 
     /// Phase 2: compute closeness scores from farness + component.
     pub fn compute_closeness_parallel(
+        &self,
         node_count: usize,
         wasserman_faust: bool,
         concurrency: usize,
@@ -163,7 +170,9 @@ mod tests {
         let termination = TerminationFlag::running_true();
         let noop_sources = Arc::new(|_n: usize| {});
 
-        let (f1, c1) = ClosenessCentralityComputationRuntime::compute_farness_parallel(
+        let runtime = ClosenessCentralityComputationRuntime::new();
+
+        let (f1, c1) = runtime.compute_farness_parallel(
             node_count,
             2,
             &termination,
@@ -172,7 +181,7 @@ mod tests {
         )
         .unwrap();
 
-        let (f2, c2) = ClosenessCentralityComputationRuntime::compute_farness_parallel(
+        let (f2, c2) = runtime.compute_farness_parallel(
             node_count,
             4,
             &termination,
@@ -185,27 +194,29 @@ mod tests {
         assert_eq!(c1, c2);
 
         let noop_nodes = Arc::new(|_n: usize| {});
-        let s1 = ClosenessCentralityComputationRuntime::compute_closeness_parallel(
-            node_count,
-            false,
-            2,
-            &termination,
-            &f1,
-            &c1,
-            noop_nodes.clone(),
-        )
-        .unwrap();
+        let s1 = runtime
+            .compute_closeness_parallel(
+                node_count,
+                false,
+                2,
+                &termination,
+                &f1,
+                &c1,
+                noop_nodes.clone(),
+            )
+            .unwrap();
 
-        let s2 = ClosenessCentralityComputationRuntime::compute_closeness_parallel(
-            node_count,
-            true,
-            2,
-            &termination,
-            &f1,
-            &c1,
-            noop_nodes,
-        )
-        .unwrap();
+        let s2 = runtime
+            .compute_closeness_parallel(
+                node_count,
+                true,
+                2,
+                &termination,
+                &f1,
+                &c1,
+                noop_nodes,
+            )
+            .unwrap();
 
         // Wasserman-Faust should not exceed base when comp <= node_count.
         for (base, wf) in s1.iter().zip(s2.iter()) {

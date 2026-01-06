@@ -9,14 +9,19 @@
 //! Stub/ProcedureExecutor infrastructure. Algorithm execution happens directly via a registry
 //! pattern. Stubs can be added later when needed for Form Pipeline extensibility.
 
+use crate::algo::pagerank::{
+    computation::PageRankComputationRuntime,
+    storage::PageRankStorageRuntime,
+};
 use crate::collections::backends::vec::VecDouble;
 use crate::config::PageRankConfig;
-use crate::algo::pagerank::run_pagerank;
+use crate::core::utils::progress::tasks::NoopProgressTracker;
 use crate::projection::eval::pipeline::{
     ExecutableNodePropertyStep, NodePropertyStepContextConfig,
 };
 use crate::projection::NodeLabel;
 use crate::projection::RelationshipType;
+use crate::projection::Orientation;
 use crate::types::graph_store::GraphStore;
 use crate::types::properties::node::DefaultDoubleNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -224,14 +229,27 @@ impl ExecutableNodePropertyStep for NodePropertyStep {
                     .map(|t| RelationshipType::of(t.clone()))
                     .collect();
 
-                let graph = graph_store.get_graph_with_types(&rel_types).map_err(|e| {
+                let storage = PageRankStorageRuntime::with_relationship_types_and_orientation(
+                    graph_store,
+                    &rel_types,
+                    Orientation::Natural,
+                )
+                .map_err(|e| {
                     Box::new(NodePropertyStepError::ExecutionFailed {
                         algorithm: self.algorithm_name.clone(),
                         message: format!("failed to build graph view: {e}"),
                     }) as Box<dyn StdError>
                 })?;
 
-                let result = run_pagerank(graph, config, None);
+                let computation = PageRankComputationRuntime::new(
+                    config.max_iterations,
+                    config.damping_factor,
+                    config.tolerance,
+                    None,
+                );
+
+                let mut tracker = NoopProgressTracker;
+                let result = storage.run(&computation, config.base.concurrency, &mut tracker);
 
                 let node_count = graph_store.node_count();
                 if result.scores.len() != node_count {

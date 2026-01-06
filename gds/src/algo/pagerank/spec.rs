@@ -5,13 +5,12 @@ use crate::config::PageRankConfig;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use crate::projection::Orientation;
-use crate::projection::RelationshipType;
 use crate::core::utils::progress::{ProgressTracker, Tasks, TaskProgressTracker};
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use std::time::{Duration, Instant};
 
-use super::computation::run_pagerank;
+use super::computation::PageRankComputationRuntime;
+use super::storage::PageRankStorageRuntime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PageRankConfigInput {
@@ -84,10 +83,10 @@ define_algorithm_spec! {
 
         let start = Instant::now();
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
+        let storage = PageRankStorageRuntime::with_orientation(
+            graph_store,
+            Orientation::Natural,
+        )?;
 
         let pr_config = PageRankConfig::builder()
             .base(AlgoBaseConfig {
@@ -102,6 +101,13 @@ define_algorithm_spec! {
 
         let sources = parsed.source_nodes.map(|v| v.into_iter().collect());
 
+        let computation = PageRankComputationRuntime::new(
+            pr_config.max_iterations,
+            pr_config.damping_factor,
+            pr_config.tolerance,
+            sources,
+        );
+
         // Lightweight progress hook (executor can override/ignore).
         let mut progress = TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("pagerank".to_string(), parsed.max_iterations),
@@ -109,7 +115,7 @@ define_algorithm_spec! {
         );
         progress.begin_subtask_with_volume(parsed.max_iterations);
 
-        let run = run_pagerank(graph_view, pr_config, sources);
+        let run = storage.run(&computation, parsed.concurrency, &mut progress);
 
         progress.log_progress(parsed.max_iterations);
         progress.end_subtask();

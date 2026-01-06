@@ -1,5 +1,6 @@
 //! HITS algorithm specification
 
+use crate::algo::hits::computation::HitsComputationRuntime;
 use crate::algo::hits::storage::HitsStorageRuntime;
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::define_algorithm_spec;
@@ -89,6 +90,7 @@ define_algorithm_spec! {
         let start = Instant::now();
 
         let storage = HitsStorageRuntime::with_default_projection(graph_store)?;
+        let computation = HitsComputationRuntime::new(parsed.tolerance);
 
         let mut tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("hits".to_string(), parsed.max_iterations),
@@ -97,7 +99,7 @@ define_algorithm_spec! {
 
         tracker.begin_subtask_with_volume(parsed.max_iterations);
 
-        let run = storage.run(parsed.max_iterations, parsed.tolerance, parsed.concurrency, &mut tracker);
+        let run = storage.run(&computation, parsed.max_iterations, parsed.concurrency, &mut tracker);
 
         tracker.end_subtask();
 

@@ -1,9 +1,12 @@
 //! Harmonic Centrality Storage Runtime
 //!
-//! This is the GraphStore-facing layer for Harmonic centrality.
-//! It provides an oriented graph view and a neighbor callback compatible with
-//! the MSBFS aggregated neighbor processing runtime.
+//! Storage owns graph access, orientation, and concurrency orchestration. Computation
+//! remains state-only.
 
+use crate::algo::harmonic::computation::HarmonicComputationRuntime;
+use crate::algo::msbfs::{AggregatedNeighborProcessingMsBfs, OMEGA};
+use crate::concurrency::virtual_threads::{Executor, WorkerContext};
+use crate::concurrency::{Concurrency, TerminatedException, TerminationFlag};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::{Orientation, RelationshipType};
 use crate::types::graph::id_map::NodeId;
@@ -55,5 +58,43 @@ impl<'a, G: GraphStore> HarmonicStorageRuntime<'a, G> {
             .filter(|target| *target >= 0)
             .map(|target| target as usize)
             .collect()
+    }
+
+    /// Controller entrypoint: orchestrates MSBFS batches, termination, and progress reporting.
+    pub fn compute_parallel(
+        &self,
+        computation: &HarmonicComputationRuntime,
+        concurrency: usize,
+        termination: &TerminationFlag,
+        on_sources_done: Arc<dyn Fn(usize) + Send + Sync>,
+    ) -> Result<Vec<f64>, TerminatedException> {
+        let node_count = self.node_count();
+        if node_count == 0 {
+            return Ok(Vec::new());
+        }
+
+        debug_assert_eq!(node_count, computation.node_count());
+
+        let executor = Executor::new(Concurrency::of(concurrency.max(1)));
+        let msbfs_state = WorkerContext::new(move || AggregatedNeighborProcessingMsBfs::new(node_count));
+        let neighbors = |n: usize| self.neighbors(n);
+
+        let batch_count = (node_count + OMEGA - 1) / OMEGA;
+        executor.parallel_for(0, batch_count, termination, |batch_idx| {
+            if !termination.running() {
+                return;
+            }
+
+            let source_offset = batch_idx * OMEGA;
+            let source_len = (source_offset + OMEGA).min(node_count) - source_offset;
+
+            msbfs_state.with(|msbfs| {
+                computation.run_batch(msbfs, source_offset, source_len, termination, &neighbors);
+            });
+
+            (on_sources_done.as_ref())(source_len);
+        })?;
+
+        Ok(computation.finalize())
     }
 }

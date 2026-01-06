@@ -6,7 +6,6 @@ pub mod closeness;
 pub mod degree_centrality;
 pub mod harmonic;
 pub mod hits;
-pub mod hits_hook_generator;
 pub mod pagerank;
 
 pub use articulation_points::*;
@@ -17,5 +16,4 @@ pub use closeness::*;
 pub use degree_centrality::*;
 pub use harmonic::*;
 pub use hits::*;
-pub use hits_hook_generator::*;
 pub use pagerank::*;

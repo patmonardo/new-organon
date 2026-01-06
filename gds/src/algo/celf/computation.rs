@@ -28,7 +28,11 @@ impl CELFComputationRuntime {
     /// Structure follows Java GDS:
     /// 1) Greedy init: compute spread for all nodes and pick best.
     /// 2) Lazy forward: iteratively update marginal gains for top candidates in batches.
-    pub fn compute<F>(&self, get_neighbors: F) -> HashMap<u64, f64>
+    pub fn compute<F>(
+        &self,
+        get_neighbors: F,
+        termination: &TerminationFlag,
+    ) -> HashMap<u64, f64>
     where
         F: Fn(usize) -> Vec<usize> + Send + Sync,
     {
@@ -39,7 +43,8 @@ impl CELFComputationRuntime {
         let seed_set_size = self.config.seed_set_size.min(self.node_count);
 
         // Phase 1: Greedy initialization - find first seed node
-        let (first_seed, mut spreads_queue, mut gain) = self.greedy_init(&get_neighbors);
+        let (first_seed, mut spreads_queue, mut gain) =
+            self.greedy_init(&get_neighbors, termination);
 
         let mut seed_set = SeedSetBuilder::new();
         seed_set.add_seed(first_seed, gain);
@@ -56,13 +61,18 @@ impl CELFComputationRuntime {
             &mut seed_set,
             &mut gain,
             seed_set_size,
+            termination,
         );
 
         seed_set.build()
     }
 
     /// Greedy initialization: compute spread for all nodes, select best
-    fn greedy_init<F>(&self, get_neighbors: &F) -> (usize, SpreadPriorityQueue, f64)
+    fn greedy_init<F>(
+        &self,
+        get_neighbors: &F,
+        termination: &TerminationFlag,
+    ) -> (usize, SpreadPriorityQueue, f64)
     where
         F: Fn(usize) -> Vec<usize> + Send + Sync,
     {
@@ -70,7 +80,6 @@ impl CELFComputationRuntime {
 
         let concurrency = self.config.concurrency.max(1);
         let executor = Executor::new(Concurrency::of(concurrency));
-        let termination = TerminationFlag::running_true();
 
         let storage = WorkerContext::new({
             let node_count = self.node_count;
@@ -84,7 +93,7 @@ impl CELFComputationRuntime {
         let p = self.config.propagation_probability;
 
         // Ignore termination errors for now (we always use running_true in this runtime).
-        let _ = executor.parallel_for(0, self.node_count, &termination, |node_id| {
+        let _ = executor.parallel_for(0, self.node_count, termination, |node_id| {
             storage.with(|s| {
                 let spread =
                     s.compute_single_node_spread(node_id, get_neighbors, p, mc, base_seed);
@@ -113,6 +122,7 @@ impl CELFComputationRuntime {
         seed_set: &mut SeedSetBuilder,
         cumulative_gain: &mut f64,
         seed_set_size: usize,
+        termination: &TerminationFlag,
     ) where
         F: Fn(usize) -> Vec<usize> + Send + Sync,
     {
@@ -122,7 +132,6 @@ impl CELFComputationRuntime {
 
         let concurrency = self.config.concurrency.max(1);
         let executor = Executor::new(Concurrency::of(concurrency));
-        let termination = TerminationFlag::running_true();
 
         let lazy_storage = WorkerContext::new({
             let node_count = self.node_count;
@@ -171,7 +180,7 @@ impl CELFComputationRuntime {
                             .collect(),
                     );
 
-                let _ = executor.parallel_for(0, task_count, &termination, |task_idx| {
+                let _ = executor.parallel_for(0, task_count, termination, |task_idx| {
                     let start = task_idx * chunk;
                     let end = (start + chunk).min(sim_count);
                     if start >= end {

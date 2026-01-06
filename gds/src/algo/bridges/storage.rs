@@ -12,7 +12,7 @@ use crate::concurrency::{TerminatedException, TerminationFlag};
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::computation::{Bridge, BridgesComputationRuntime};
+use super::computation::{Bridge, BridgesComputationRuntime, BridgesComputationResult};
 
 pub struct BridgesStorageRuntime<'a, G: GraphStore> {
     graph_store: &'a G,
@@ -74,18 +74,31 @@ impl<'a, G: GraphStore> BridgesStorageRuntime<'a, G> {
         on_node_scanned: Arc<dyn Fn() + Send + Sync>,
     ) -> Result<Vec<Bridge>, TerminatedException> {
         let _ = concurrency; // Bridges is currently single-threaded.
-
-        let node_count = self.node_count();
-        if node_count == 0 {
-            return Ok(Vec::new());
-        }
-
-        // Java parity: stack sized by relationship count.
-        let mut runtime = BridgesComputationRuntime::new_with_stack_capacity(
-            node_count,
+        let mut computation = BridgesComputationRuntime::new_with_stack_capacity(
+            self.node_count(),
             self.relationship_count(),
         );
-        runtime.reset(node_count);
+
+        self.compute_bridges(&mut computation, termination, on_node_scanned)
+            .map(|result| result.bridges)
+    }
+
+    /// Compute bridges using the Procedure-First Controller Pattern.
+    ///
+    /// Storage acts as controller, orchestrating the DFS traversal and delegating
+    /// state operations to the computation runtime.
+    pub fn compute_bridges(
+        &self,
+        computation: &mut BridgesComputationRuntime,
+        termination: &TerminationFlag,
+        on_node_scanned: Arc<dyn Fn() + Send + Sync>,
+    ) -> Result<BridgesComputationResult, TerminatedException> {
+        let node_count = self.node_count();
+        if node_count == 0 {
+            return Ok(BridgesComputationResult { bridges: Vec::new() });
+        }
+
+        computation.reset(node_count);
 
         let neighbors = |n: usize| self.neighbors(n);
         let mut bridges: Vec<Bridge> = Vec::new();
@@ -95,13 +108,13 @@ impl<'a, G: GraphStore> BridgesStorageRuntime<'a, G> {
                 return Err(TerminatedException);
             }
 
-            if !runtime.is_visited(i) {
-                runtime.dfs_component(i, &neighbors, &mut bridges);
+            if !computation.is_visited(i) {
+                computation.dfs_component(i, &neighbors, &mut bridges);
             }
 
             (on_node_scanned.as_ref())();
         }
 
-        Ok(bridges)
+        Ok(BridgesComputationResult { bridges })
     }
 }

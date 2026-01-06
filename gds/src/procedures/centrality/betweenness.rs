@@ -34,16 +34,13 @@ use crate::core::utils::progress::{
 use crate::core::utils::progress::ProgressTracker;
 use crate::mem::MemoryRange;
 use crate::algo::betweenness::BetweennessCentralityComputationRuntime;
+use crate::algo::betweenness::storage::BetweennessCentralityStorageRuntime;
 use crate::concurrency::TerminationFlag;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
-use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use rand::seq::SliceRandom;
-use rand::SeedableRng;
-use rand_chacha::ChaCha8Rng;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -188,15 +185,6 @@ impl BetweennessCentralityFacade {
         Ok(())
     }
 
-    fn checked_node_id(value: usize) -> Result<NodeId> {
-        NodeId::try_from(value as i64).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "node_id must fit into i64 (got {})",
-                value
-            ))
-        })
-    }
-
     fn compute_scores(&self) -> Result<(Vec<f64>, std::time::Duration)> {
         let start = Instant::now();
 
@@ -229,48 +217,17 @@ impl BetweennessCentralityFacade {
             return Ok((Vec::new(), start.elapsed()));
         }
 
+        // Create storage and computation runtimes
+        let storage = BetweennessCentralityStorageRuntime::new(
+            &*self.graph_store,
+            self.orientation(),
+            self.relationship_weight_property.as_deref(),
+        )?;
+        let mut computation = BetweennessCentralityComputationRuntime::new(node_count);
+
         let sources: Vec<usize> = {
             let requested = self.sampling_size.unwrap_or(node_count).min(node_count);
-            let strategy_norm = self
-                .sampling_strategy
-                .to_lowercase()
-                .replace('_', "")
-                .replace('-', "");
-            if requested == node_count {
-                (0..node_count).collect()
-            } else if strategy_norm == "randomdegree" {
-                // Degree-weighted sampling without replacement.
-                // Java parity direction: "randomDegree" selection strategy.
-                let mut rng = ChaCha8Rng::seed_from_u64(self.random_seed);
-                let mut heap: std::collections::BinaryHeap<SampleItem> = std::collections::BinaryHeap::new();
-                for node_idx in 0..node_count {
-                    let node_id = match Self::checked_node_id(node_idx) {
-                        Ok(value) => value,
-                        Err(_) => continue,
-                    };
-                    let degree = graph_view.degree(node_id).max(1) as f64;
-                    let mut u: f64 = rand::Rng::gen(&mut rng);
-                    if !u.is_finite() || u <= 0.0 {
-                        u = f64::MIN_POSITIVE;
-                    }
-                    // Efraimidis–Spirakis: key = -ln(u)/w ; pick K smallest keys.
-                    let key = -u.ln() / degree;
-
-                    heap.push(SampleItem { key, node: node_idx });
-                    if heap.len() > requested {
-                        heap.pop();
-                    }
-                }
-
-                heap.into_iter().map(|s| s.node).collect()
-            } else {
-                // Uniform random sampling without replacement.
-                let mut rng = ChaCha8Rng::seed_from_u64(self.random_seed);
-                let mut nodes: Vec<usize> = (0..node_count).collect();
-                nodes.shuffle(&mut rng);
-                nodes.truncate(requested);
-                nodes
-            }
+            storage.select_sources(&self.sampling_strategy, Some(requested), self.random_seed)
         };
 
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
@@ -282,35 +239,6 @@ impl BetweennessCentralityFacade {
             self.task_registry.as_ref(),
         );
         progress_tracker.begin_subtask_with_volume(sources.len());
-
-        let fallback = graph_view.default_property_value();
-        let get_neighbors = |node_idx: usize| -> Vec<usize> {
-            let node_id = match Self::checked_node_id(node_idx) {
-                Ok(value) => value,
-                Err(_) => return Vec::new(),
-            };
-
-            graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| cursor.target_id())
-                .filter(|target| *target >= 0)
-                .map(|target| target as usize)
-                .collect()
-        };
-
-        let get_neighbors_weighted = |node_idx: usize| -> Vec<(usize, f64)> {
-            let node_id = match Self::checked_node_id(node_idx) {
-                Ok(value) => value,
-                Err(_) => return Vec::new(),
-            };
-
-            graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| (cursor.target_id(), cursor.property()))
-                .filter(|(target, _w)| *target >= 0)
-                .map(|(target, w)| (target as usize, w))
-                .collect()
-        };
 
         let divisor = if self.orientation() == Orientation::Undirected {
             2.0
@@ -326,37 +254,19 @@ impl BetweennessCentralityFacade {
 
         let termination = TerminationFlag::running_true();
 
-        let result = if self.relationship_weight_property.is_some() {
-            BetweennessCentralityComputationRuntime::compute_parallel_weighted(
-                node_count,
-                &sources,
-                divisor,
-                self.concurrency,
-                &termination,
-                on_source_done,
-                &get_neighbors_weighted,
-            )
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Betweenness terminated: {e}"
-                ))
-            })?
-        } else {
-            BetweennessCentralityComputationRuntime::compute_parallel_unweighted(
-                node_count,
-                &sources,
-                divisor,
-                self.concurrency,
-                &termination,
-                on_source_done,
-                &get_neighbors,
-            )
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Betweenness terminated: {e}"
-                ))
-            })?
-        };
+        // Call storage.compute_betweenness - Applications talk only to procedures
+        let result = storage.compute_betweenness(
+            &mut computation,
+            &sources,
+            divisor,
+            self.concurrency,
+            &termination,
+            on_source_done,
+        ).map_err(|e| {
+            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                "Betweenness terminated: {e}"
+            ))
+        })?;
 
         progress_tracker.end_subtask();
 
@@ -554,34 +464,7 @@ impl BetweennessCentralityFacade {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-struct SampleItem {
-    key: f64,
-    node: usize,
-}
-
-impl Eq for SampleItem {}
-
-impl PartialEq for SampleItem {
-    fn eq(&self, other: &Self) -> bool {
-        self.key.to_bits() == other.key.to_bits() && self.node == other.node
-    }
-}
-
-impl Ord for SampleItem {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        // Max-heap by key.
-        self.key
-            .total_cmp(&other.key)
-            .then_with(|| self.node.cmp(&other.node))
-    }
-}
-
-impl PartialOrd for SampleItem {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
+// Sampling logic no longer needs a standalone item wrapper.
 
 // ============================================================================
 // Tests

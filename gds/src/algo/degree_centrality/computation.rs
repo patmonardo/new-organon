@@ -7,7 +7,12 @@ use crate::concurrency::TerminationFlag;
 pub struct DegreeCentralityComputationRuntime;
 
 impl DegreeCentralityComputationRuntime {
+    pub fn new() -> Self {
+        Self
+    }
+
     pub fn compute_range(
+        &self,
         start: usize,
         end: usize,
         termination: &TerminationFlag,
@@ -25,7 +30,7 @@ impl DegreeCentralityComputationRuntime {
     /// Normalizes scores by dividing by the maximum score.
     ///
     /// If all scores are zero, this is a no-op.
-    pub fn normalize_scores(scores: &mut [f64]) {
+    pub fn normalize_scores(&self, scores: &mut [f64]) {
         let mut max = 0.0f64;
         for &v in scores.iter() {
             if v > max {
@@ -54,14 +59,14 @@ mod tests {
     #[test]
     fn normalize_is_noop_for_all_zero() {
         let mut scores = vec![0.0, 0.0, 0.0];
-        DegreeCentralityComputationRuntime::normalize_scores(&mut scores);
+        DegreeCentralityComputationRuntime::new().normalize_scores(&mut scores);
         assert_eq!(scores, vec![0.0, 0.0, 0.0]);
     }
 
     #[test]
     fn normalize_divides_by_max() {
         let mut scores = vec![1.0, 2.0, 4.0];
-        DegreeCentralityComputationRuntime::normalize_scores(&mut scores);
+        DegreeCentralityComputationRuntime::new().normalize_scores(&mut scores);
         assert!((scores[0] - 0.25).abs() < 1e-12);
         assert!((scores[1] - 0.5).abs() < 1e-12);
         assert!((scores[2] - 1.0).abs() < 1e-12);

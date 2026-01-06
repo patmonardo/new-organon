@@ -5,6 +5,7 @@ use crate::core::utils::progress::Tasks;
 use crate::core::utils::progress::ProgressTracker;
 use crate::projection::eval::procedure::*;
 use crate::projection::Orientation;
+use crate::algo::betweenness::BetweennessCentralityComputationRuntime;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
@@ -120,6 +121,8 @@ define_algorithm_spec! {
         );
         let divisor = if orientation == Orientation::Undirected { 2.0 } else { 1.0 };
 
+        let mut computation = BetweennessCentralityComputationRuntime::new(node_count);
+
         let tracker = Arc::new(Mutex::new(crate::core::utils::progress::TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("betweenness".to_string(), sources.len()),
             parsed.concurrency,
@@ -134,8 +137,9 @@ define_algorithm_spec! {
             })
         };
 
-        let centralities = storage
-            .compute_parallel(
+        let result = storage
+            .compute_betweenness(
+                &mut computation,
                 &sources,
                 divisor,
                 parsed.concurrency,
@@ -147,7 +151,7 @@ define_algorithm_spec! {
         tracker.lock().unwrap().end_subtask();
 
         Ok(BetweennessCentralityResult {
-            centralities,
+            centralities: result.centralities,
             node_count,
             execution_time: start.elapsed(),
         })

@@ -13,9 +13,10 @@ pub mod storage;
 pub mod integration_tests;
 
 pub use computation::{
-    estimate_pagerank_memory, run_pagerank, PageRankComputationResult, PageRankMemoryEstimation,
+    estimate_pagerank_memory, PageRankComputationRuntime, PageRankMemoryEstimation,
     PageRankRunResult,
 };
+pub use storage::PageRankStorageRuntime;
 pub use spec::{PageRankConfigInput, PageRankResult, PAGERANKAlgorithmSpec};
 
 // Keep public surface stable for `gds/src/algo/mod.rs` re-exports.

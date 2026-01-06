@@ -7,14 +7,11 @@ use crate::core::utils::progress::{
 };
 use crate::core::utils::progress::ProgressTracker;
 use crate::mem::MemoryRange;
+use crate::algo::bridges::storage::BridgesStorageRuntime;
 use crate::algo::bridges::computation::{Bridge, BridgesComputationRuntime};
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
-use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
-use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -81,16 +78,14 @@ impl BridgesFacade {
 
     /// Run the algorithm and return the bridges
     pub fn run(&self) -> Result<Vec<Bridge>> {
-        // Bridges are defined on undirected graphs
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+        // Create both runtimes (factory pattern)
+        let storage = BridgesStorageRuntime::new(&*self.graph_store)?;
+        let mut computation = BridgesComputationRuntime::new_with_stack_capacity(
+            storage.node_count(),
+            storage.relationship_count(),
+        );
 
-        let node_count = graph_view.node_count();
+        let node_count = storage.node_count();
         if node_count == 0 {
             return Ok(Vec::new());
         }
@@ -105,23 +100,20 @@ impl BridgesFacade {
         );
         progress_tracker.begin_subtask_with_volume(node_count);
 
-        let fallback = graph_view.default_property_value();
-        let get_neighbors = |node_idx: usize| -> Vec<usize> {
-            let node_id = match Self::checked_node_id(node_idx) {
-                Ok(value) => value,
-                Err(_) => return Vec::new(),
-            };
+        let termination = crate::concurrency::TerminationFlag::running_true();
+        let progress_handle = progress_tracker.clone();
+        let on_node_scanned = Arc::new(move || {
+            let mut tracker = progress_handle.clone();
+            tracker.log_progress(1);
+        });
 
-            graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| cursor.target_id())
-                .filter(|target| *target >= 0)
-                .map(|target| target as usize)
-                .collect()
-        };
-
-        let mut runtime = BridgesComputationRuntime::new(node_count);
-        let result = runtime.compute(node_count, get_neighbors);
+        // Call storage.compute_bridges() - Applications talk only to procedures
+        let result = storage.compute_bridges(&mut computation, &termination, on_node_scanned)
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "Bridges terminated: {e}"
+                ))
+            })?;
 
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();
@@ -167,7 +159,7 @@ impl BridgesFacade {
     /// ```
     pub fn stats(&self) -> Result<BridgesStats> {
         self.validate()?;
-        let (bridges, elapsed) = self.compute_bridges()?;
+        let (bridges, elapsed): (Vec<Bridge>, std::time::Duration) = self.compute_bridges()?;
 
         Ok(BridgesStats {
             bridge_count: bridges.len(),
@@ -243,28 +235,17 @@ impl BridgesFacade {
         MemoryRange::of_range(total_memory, total_with_overhead)
     }
 
-    fn checked_node_id(value: usize) -> Result<NodeId> {
-        NodeId::try_from(value as i64).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "node_id must fit into i64 (got {})",
-                value
-            ))
-        })
-    }
-
     fn compute_bridges(&self) -> Result<(Vec<Bridge>, std::time::Duration)> {
         let start = Instant::now();
 
-        // Bridges are defined on undirected graphs
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+        // Create both runtimes (factory pattern)
+        let storage = BridgesStorageRuntime::new(&*self.graph_store)?;
+        let mut computation = BridgesComputationRuntime::new_with_stack_capacity(
+            storage.node_count(),
+            storage.relationship_count(),
+        );
 
-        let node_count = graph_view.node_count();
+        let node_count = storage.node_count();
         if node_count == 0 {
             return Ok((Vec::new(), start.elapsed()));
         }
@@ -279,23 +260,20 @@ impl BridgesFacade {
         );
         progress_tracker.begin_subtask_with_volume(node_count);
 
-        let fallback = graph_view.default_property_value();
-        let get_neighbors = |node_idx: usize| -> Vec<usize> {
-            let node_id = match Self::checked_node_id(node_idx) {
-                Ok(value) => value,
-                Err(_) => return Vec::new(),
-            };
+        let termination = crate::concurrency::TerminationFlag::running_true();
+        let progress_handle = progress_tracker.clone();
+        let on_node_scanned = Arc::new(move || {
+            let mut tracker = progress_handle.clone();
+            tracker.log_progress(1);
+        });
 
-            graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| cursor.target_id())
-                .filter(|target| *target >= 0)
-                .map(|target| target as usize)
-                .collect()
-        };
-
-        let mut runtime = BridgesComputationRuntime::new(node_count);
-        let result = runtime.compute(node_count, get_neighbors);
+        // Call storage.compute_bridges() - Applications talk only to procedures
+        let result = storage.compute_bridges(&mut computation, &termination, on_node_scanned)
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "Bridges terminated: {e}"
+                ))
+            })?;
 
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();

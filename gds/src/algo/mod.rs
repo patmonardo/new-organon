@@ -187,7 +187,8 @@ pub use harmonic::{
     HarmonicStorageRuntime,
 };
 pub use hits::{
-    run_hits, HITSAlgorithmSpec, HitsConfig, HitsResult, HitsRunResult, HitsStorageRuntime,
+    HITSAlgorithmSpec, HitsComputationRuntime, HitsConfig, HitsResult, HitsRunResult,
+    HitsStorageRuntime,
 };
 pub use k1coloring::{
     K1ColoringAlgorithmSpec, K1ColoringComputationRuntime, K1ColoringConfig, K1ColoringResult,
@@ -221,8 +222,8 @@ pub use louvain::{
 };
 pub use msbfs::{AggregatedNeighborProcessingMsBfs, OMEGA};
 pub use pagerank::{
-    estimate_pagerank_memory, run_pagerank, PageRankAlgorithmSpec, PageRankComputationResult,
-    PageRankMemoryEstimation, PageRankRunResult,
+    estimate_pagerank_memory, PageRankAlgorithmSpec, PageRankComputationRuntime,
+    PageRankMemoryEstimation, PageRankRunResult, PageRankStorageRuntime,
 };
 pub use scc::{SCCAlgorithmSpec, SccComputationRuntime, SccConfig, SccResult, SccStorageRuntime};
 pub use spanning_tree::{

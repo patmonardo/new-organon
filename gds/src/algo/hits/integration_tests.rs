@@ -5,6 +5,7 @@ use crate::projection::eval::procedure::AlgorithmSpec;
 mod tests {
     use super::*;
 
+    use crate::algo::hits::computation::HitsComputationRuntime;
     use crate::algo::hits::HitsStorageRuntime;
     use crate::config::GraphStoreConfig;
     use crate::core::utils::progress::tasks::NoopProgressTracker;
@@ -53,9 +54,10 @@ mod tests {
 
         let storage = HitsStorageRuntime::with_default_projection(&store)
             .expect("hits storage projection");
+        let computation = HitsComputationRuntime::new(1e-8);
 
         let mut tracker = NoopProgressTracker;
-        let result = storage.run(25, 1e-8, 1, &mut tracker);
+        let result = storage.run(&computation, 25, 1, &mut tracker);
 
         // Expect clear extremes:
         // - Node 3 is the best authority (many incoming links)

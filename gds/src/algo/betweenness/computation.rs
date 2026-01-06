@@ -17,25 +17,36 @@ pub struct BetweennessCentralityComputationResult {
     pub centralities: Vec<f64>,
 }
 
-pub struct BetweennessCentralityComputationRuntime;
+pub struct BetweennessCentralityComputationRuntime {
+    centrality: HugeAtomicDoubleArray,
+    node_count: usize,
+}
 
 impl BetweennessCentralityComputationRuntime {
+    pub fn new(node_count: usize) -> Self {
+        Self {
+            centrality: HugeAtomicDoubleArray::new(node_count),
+            node_count,
+        }
+    }
+
+    pub fn finalize_result(&self) -> BetweennessCentralityComputationResult {
+        let mut centralities = vec![0.0; self.node_count];
+        for i in 0..self.node_count {
+            centralities[i] = self.centrality.get(i);
+        }
+        BetweennessCentralityComputationResult { centralities }
+    }
     pub fn compute_parallel_unweighted(
-        node_count: usize,
+        &self,
         sources: &[usize],
         divisor: f64,
         concurrency: usize,
         termination: &TerminationFlag,
         on_source_done: Arc<dyn Fn() + Send + Sync>,
         get_neighbors: &(impl Fn(usize) -> Vec<usize> + Send + Sync),
-    ) -> Result<BetweennessCentralityComputationResult, TerminatedException> {
-        if node_count == 0 || sources.is_empty() {
-            return Ok(BetweennessCentralityComputationResult {
-                centralities: vec![0.0; node_count],
-            });
-        }
-
-        let centrality = HugeAtomicDoubleArray::new(node_count);
+    ) -> Result<(), TerminatedException> {
+        let node_count = self.node_count;
         let executor = Executor::new(Concurrency::of(concurrency.max(1)));
         let state = WorkerContext::new(move || UnweightedState::new(node_count));
 
@@ -46,36 +57,25 @@ impl BetweennessCentralityComputationRuntime {
 
             let source = sources[idx];
             state.with(|st| {
-                st.compute_source(source, divisor, &centrality, termination, get_neighbors);
+                st.compute_source(source, divisor, &self.centrality, termination, get_neighbors);
             });
 
             (on_source_done.as_ref())();
         })?;
 
-        let mut out = vec![0.0f64; node_count];
-        for i in 0..node_count {
-            out[i] = centrality.get(i);
-        }
-
-        Ok(BetweennessCentralityComputationResult { centralities: out })
+        Ok(())
     }
 
     pub fn compute_parallel_weighted(
-        node_count: usize,
+        &self,
         sources: &[usize],
         divisor: f64,
         concurrency: usize,
         termination: &TerminationFlag,
         on_source_done: Arc<dyn Fn() + Send + Sync>,
         get_neighbors_weighted: &(impl Fn(usize) -> Vec<(usize, f64)> + Send + Sync),
-    ) -> Result<BetweennessCentralityComputationResult, TerminatedException> {
-        if node_count == 0 || sources.is_empty() {
-            return Ok(BetweennessCentralityComputationResult {
-                centralities: vec![0.0; node_count],
-            });
-        }
-
-        let centrality = HugeAtomicDoubleArray::new(node_count);
+    ) -> Result<(), TerminatedException> {
+        let node_count = self.node_count;
         let executor = Executor::new(Concurrency::of(concurrency.max(1)));
         let state = WorkerContext::new(move || WeightedState::new(node_count));
 
@@ -86,24 +86,19 @@ impl BetweennessCentralityComputationRuntime {
 
             let source = sources[idx];
             state.with(|st| {
-                st.compute_source(source, divisor, &centrality, termination, get_neighbors_weighted);
+                st.compute_source(source, divisor, &self.centrality, termination, get_neighbors_weighted);
             });
 
             (on_source_done.as_ref())();
         })?;
 
-        let mut out = vec![0.0f64; node_count];
-        for i in 0..node_count {
-            out[i] = centrality.get(i);
-        }
-
-        Ok(BetweennessCentralityComputationResult { centralities: out })
+        Ok(())
     }
 }
 
 impl Default for BetweennessCentralityComputationRuntime {
     fn default() -> Self {
-        Self
+        Self::new(0)
     }
 }
 
@@ -374,8 +369,8 @@ mod tests {
 
         let termination = TerminationFlag::running_true();
         let noop = Arc::new(|| {});
-        let result = BetweennessCentralityComputationRuntime::compute_parallel_unweighted(
-            node_count,
+        let mut computation = BetweennessCentralityComputationRuntime::new(node_count);
+        computation.compute_parallel_unweighted(
             &[0, 1, 2],
             2.0,
             2,
@@ -384,6 +379,7 @@ mod tests {
             &neighbors,
         )
         .unwrap();
+        let result = computation.finalize_result();
 
         assert!((result.centralities[1] - 1.0).abs() < 1e-9);
         assert!(result.centralities[0].abs() < 1e-9);
@@ -399,8 +395,8 @@ mod tests {
 
         let termination = TerminationFlag::running_true();
         let noop = Arc::new(|| {});
-        let result = BetweennessCentralityComputationRuntime::compute_parallel_unweighted(
-            node_count,
+        let mut computation = BetweennessCentralityComputationRuntime::new(node_count);
+        computation.compute_parallel_unweighted(
             &[0, 1, 2, 3],
             2.0,
             2,
@@ -409,6 +405,7 @@ mod tests {
             &neighbors,
         )
         .unwrap();
+        let result = computation.finalize_result();
 
         // In a 4-cycle, each node has the same betweenness.
         for i in 1..node_count {
@@ -433,8 +430,8 @@ mod tests {
 
         let termination = TerminationFlag::running_true();
         let noop = Arc::new(|| {});
-        let result = BetweennessCentralityComputationRuntime::compute_parallel_weighted(
-            node_count,
+        let mut computation = BetweennessCentralityComputationRuntime::new(node_count);
+        computation.compute_parallel_weighted(
             &[0, 1, 2],
             2.0,
             2,
@@ -443,6 +440,7 @@ mod tests {
             &neighbors,
         )
         .unwrap();
+        let result = computation.finalize_result();
 
         assert!(result.centralities[1] > 0.0);
         assert!(result.centralities[0] >= 0.0);

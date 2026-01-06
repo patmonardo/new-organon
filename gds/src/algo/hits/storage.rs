@@ -5,15 +5,15 @@
 //! - selecting Pregel runtime config/messenger
 //! - (eventually) termination and progress bridging
 
+use crate::algo::hits::computation::HitsComputationRuntime;
 use crate::core::utils::progress::ProgressTracker;
+use crate::pregel::{Pregel, SyncQueueMessenger};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::{Orientation, RelationshipType};
 use crate::types::graph::Graph;
 use crate::types::prelude::GraphStore;
 use std::collections::HashSet;
 use std::sync::Arc;
-
-use super::computation;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct HitsRunResult {
@@ -90,17 +90,39 @@ impl<'a, G: GraphStore> HitsStorageRuntime<'a, G> {
 
     pub fn run(
         &self,
+        computation: &HitsComputationRuntime,
         max_iterations: usize,
-        tolerance: f64,
         concurrency: usize,
         progress_tracker: &mut dyn ProgressTracker,
     ) -> HitsRunResult {
-        computation::run_hits(
+        let supersteps = 1usize.saturating_add(max_iterations.saturating_mul(4));
+
+        let config = HitsPregelRuntimeConfig {
+            concurrency: concurrency.max(1),
+            max_iterations: supersteps,
+        };
+
+        let schema = computation.schema();
+        let init_fn = computation.init_fn();
+        let compute_fn = computation.compute_fn();
+        let master_compute_fn = computation.master_compute_fn();
+
+        let messenger = Arc::new(SyncQueueMessenger::new(self.graph.node_count()));
+
+        let result = Pregel::new(
             Arc::clone(&self.graph),
-            max_iterations,
-            tolerance,
-            concurrency,
-            progress_tracker,
+            config,
+            schema,
+            init_fn,
+            compute_fn,
+            messenger,
+            None,
         )
+        .with_master_compute_fn(master_compute_fn)
+        .run();
+
+        progress_tracker.log_progress(max_iterations);
+
+        computation.finalize(&result, self.graph.node_count())
     }
 }

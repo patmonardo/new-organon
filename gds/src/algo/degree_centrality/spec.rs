@@ -120,12 +120,14 @@ define_algorithm_spec! {
         };
 
         let termination = TerminationFlag::default();
+        let computation = DegreeCentralityComputationRuntime::new();
+
         let mut centralities = storage
-            .compute_parallel(parsed.concurrency, &termination, on_nodes_done)
+            .compute_parallel(&computation, parsed.concurrency, &termination, on_nodes_done)
             .map_err(|e| AlgorithmError::Execution(format!("Degree centrality terminated: {e}")))?;
 
         if parsed.normalize {
-            DegreeCentralityComputationRuntime::normalize_scores(&mut centralities);
+            computation.normalize_scores(&mut centralities);
         }
 
         tracker.lock().unwrap().end_subtask();

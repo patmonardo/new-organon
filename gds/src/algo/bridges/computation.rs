@@ -79,21 +79,6 @@ impl BridgesComputationRuntime {
         }
     }
 
-    pub fn reset(&mut self, node_count: usize) {
-        self.timer = 0;
-        self.visited.clear_all();
-
-        for i in 0..node_count {
-            self.tin.set(i, -1);
-            self.low.set(i, -1);
-        }
-        self.stack.clear();
-    }
-
-    pub fn is_visited(&self, node: usize) -> bool {
-        self.visited.get(node)
-    }
-
     /// Compute all bridge edges.
     ///
     /// This is a convenience wrapper; in the preferred architecture, the storage runtime
@@ -108,12 +93,29 @@ impl BridgesComputationRuntime {
         let mut bridges: Vec<Bridge> = Vec::new();
 
         for i in 0..node_count {
-            if !self.visited.get(i) {
+            if !self.is_visited(i) {
                 self.dfs_component(i, &get_neighbors, &mut bridges);
             }
         }
 
         BridgesComputationResult { bridges }
+    }
+
+    /// Reset the computation state for a new run.
+    pub fn reset(&mut self, node_count: usize) {
+        self.timer = 0;
+        self.visited.clear_all();
+
+        for i in 0..node_count {
+            self.tin.set(i, -1);
+            self.low.set(i, -1);
+        }
+        self.stack.clear();
+    }
+
+    /// Check if a node has been visited.
+    pub fn is_visited(&self, node: usize) -> bool {
+        self.visited.get(node)
     }
 
     /// Explore a connected component starting at `start_node`, adding any bridges found.

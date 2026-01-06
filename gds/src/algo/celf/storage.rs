@@ -2,10 +2,19 @@
 //!
 //! Internal data structures for CELF computation.
 
+use super::computation::CELFComputationRuntime;
 use crate::collections::BitSet;
 use crate::collections::HugeDoubleArray;
 use crate::core::utils::paged::HugeLongArrayStack;
-use std::collections::HashMap;
+use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::{Orientation, RelationshipType};
+use crate::types::graph::id_map::NodeId;
+use crate::types::graph::Graph;
+use crate::types::prelude::GraphStore;
+use crate::concurrency::{TerminationFlag, TerminatedException};
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+use std::marker::PhantomData;
 
 /// Priority queue for node spreads with custom ordering
 /// (higher spread = higher priority; ties broken by smaller node ID)
@@ -179,6 +188,52 @@ impl SpreadPriorityQueue {
     }
 }
 
+/// Storage runtime for CELF: handles graph access and orchestrates controller call.
+pub struct CELFStorageRuntime<'a, G: GraphStore> {
+    graph: Arc<dyn Graph>,
+    _marker: PhantomData<&'a G>,
+}
+
+impl<'a, G: GraphStore> CELFStorageRuntime<'a, G> {
+    pub fn new(graph_store: &'a G) -> Result<Self, AlgorithmError> {
+        let rel_types: HashSet<RelationshipType> = HashSet::new();
+        let graph = graph_store
+            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
+
+        Ok(Self { graph, _marker: PhantomData })
+    }
+
+    pub fn node_count(&self) -> usize {
+        self.graph.node_count()
+    }
+
+    pub fn neighbors(&self, node_idx: usize) -> Vec<usize> {
+        let node_id = match NodeId::try_from(node_idx as i64) {
+            Ok(id) => id,
+            Err(_) => return Vec::new(),
+        };
+
+        let fallback = self.graph.default_property_value();
+        self.graph
+            .stream_relationships(node_id, fallback)
+            .map(|cursor| cursor.target_id())
+            .filter(|target| *target >= 0)
+            .map(|target| target as usize)
+            .collect()
+    }
+
+    pub fn compute_celf(
+        &self,
+        computation: &CELFComputationRuntime,
+        termination: &TerminationFlag,
+    ) -> Result<HashMap<u64, f64>, TerminatedException> {
+        // compute() uses parallel executors that obey the provided termination flag.
+        // No additional controller-side loops here; storage owns graph access and neighbors.
+        let neighbors = |n: usize| self.neighbors(n);
+        Ok(computation.compute(neighbors, termination))
+    }
+}
 /// Storage for Independent Cascade simulation state
 pub struct ICStorage {
     /// Nodes activated by seed set

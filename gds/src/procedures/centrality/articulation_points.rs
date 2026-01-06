@@ -14,6 +14,7 @@ use crate::mem::MemoryRange;
 use crate::algo::articulation_points::computation::{
     ArticulationPointsComputationRuntime, STACK_EVENT_SIZE_BYTES,
 };
+use crate::algo::articulation_points::storage::ArticulationPointsStorageRuntime;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
 use crate::projection::orientation::Orientation;
@@ -96,7 +97,7 @@ impl ArticulationPointsFacade {
             })?;
 
         let node_count = graph_view.node_count();
-        let relationship_count = graph_view.relationship_count();
+        let _relationship_count = graph_view.relationship_count();
         if node_count == 0 {
             return Ok(crate::collections::BitSet::new(0));
         }
@@ -111,27 +112,12 @@ impl ArticulationPointsFacade {
         );
         progress_tracker.begin_subtask_with_volume(node_count);
 
-        let fallback = graph_view.default_property_value();
-        let get_neighbors = |node_idx: usize| -> Vec<usize> {
-            let node_id = match Self::checked_node_id(node_idx) {
-                Ok(value) => value,
-                Err(_) => return Vec::new(),
-            };
+        // Create both runtimes (factory pattern)
+        let storage = ArticulationPointsStorageRuntime::new(&*self.graph_store)?;
+        let mut computation = ArticulationPointsComputationRuntime::new(node_count);
 
-            graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| cursor.target_id())
-                .filter(|target| *target >= 0)
-                .map(|target| target as usize)
-                .collect()
-        };
-
-        let mut runtime = ArticulationPointsComputationRuntime::new(node_count);
-        let result = runtime.compute_with_relationship_count(
-            node_count,
-            relationship_count,
-            get_neighbors,
-        );
+        // Call storage.compute_articulation_points - Applications talk only to procedures
+        let result = storage.compute_articulation_points(&mut computation, Some(graph_view.as_ref()), &mut progress_tracker)?;
 
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();

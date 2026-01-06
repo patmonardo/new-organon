@@ -12,6 +12,6 @@ pub mod storage;
 #[cfg(test)]
 pub mod integration_tests;
 
-pub use computation::run_hits;
+pub use computation::HitsComputationRuntime;
 pub use spec::{HITSAlgorithmSpec, HitsConfig, HitsResult};
 pub use storage::{HitsRunResult, HitsStorageRuntime};

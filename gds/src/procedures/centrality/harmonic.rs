@@ -17,13 +17,11 @@ use crate::core::utils::progress::ProgressTracker;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
-use crate::algo::msbfs::AggregatedNeighborProcessingMsBfs;
+use crate::algo::harmonic::{HarmonicComputationRuntime, HarmonicStorageRuntime};
+use crate::concurrency::TerminationFlag;
 use crate::projection::orientation::Orientation;
-use crate::projection::RelationshipType;
-use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 /// Statistics about harmonic centrality.
@@ -103,27 +101,15 @@ impl HarmonicCentralityFacade {
         Ok(())
     }
 
-    fn checked_node_id(value: usize) -> Result<NodeId> {
-        NodeId::try_from(value as i64).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "node_id must fit into i64 (got {})",
-                value
-            ))
-        })
-    }
-
     fn compute_scores(&self) -> Result<(Vec<f64>, std::time::Duration)> {
         let start = Instant::now();
 
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, self.orientation())
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+        let storage = HarmonicStorageRuntime::with_orientation(
+            self.graph_store.as_ref(),
+            self.orientation(),
+        )?;
 
-        let node_count = graph_view.node_count();
+        let node_count = storage.node_count();
         if node_count == 0 {
             return Ok((Vec::new(), start.elapsed()));
         }
@@ -138,56 +124,35 @@ impl HarmonicCentralityFacade {
         );
         progress_tracker.begin_subtask_with_volume(node_count);
 
-        let mut centralities = vec![0.0f64; node_count];
-        let mut msbfs = AggregatedNeighborProcessingMsBfs::new(node_count);
+        let computation = HarmonicComputationRuntime::new(node_count);
+        let termination = TerminationFlag::default();
 
-        let fallback = graph_view.default_property_value();
-        let get_neighbors = |node_idx: usize| -> Vec<usize> {
-            let node_id = match Self::checked_node_id(node_idx) {
-                Ok(value) => value,
-                Err(_) => return Vec::new(),
-            };
-
-            graph_view
-                .stream_relationships(node_id, fallback)
-                .map(|cursor| cursor.target_id())
-                .filter(|target| *target >= 0)
-                .map(|target| target as usize)
-                .collect()
+        let tracker = Arc::new(Mutex::new(progress_tracker));
+        let on_sources_done = {
+            let tracker = Arc::clone(&tracker);
+            Arc::new(move |n: usize| {
+                tracker.lock().unwrap().log_progress(n);
+            })
         };
 
-        for source_offset in (0..node_count).step_by(crate::algo::msbfs::OMEGA) {
-            let source_len =
-                (source_offset + crate::algo::msbfs::OMEGA).min(node_count) - source_offset;
-
-            msbfs.run(
-                source_offset,
-                source_len,
-                false,
-                get_neighbors,
-                |node_id, depth, sources_mask| {
-                    if depth == 0 {
-                        return;
-                    }
-                    let len = sources_mask.count_ones() as f64;
-                    centralities[node_id] += len * (1.0 / depth as f64);
-                },
-            );
-        }
-
-        if node_count > 1 {
-            let norm = (node_count - 1) as f64;
-            for score in &mut centralities {
-                *score /= norm;
+        let scores = match storage.compute_parallel(
+            &computation,
+            self.concurrency,
+            &termination,
+            on_sources_done,
+        ) {
+            Ok(scores) => scores,
+            Err(e) => {
+                tracker.lock().unwrap().end_subtask_with_failure();
+                return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
+                    format!("Harmonic terminated: {e}"),
+                ));
             }
-        } else {
-            centralities[0] = 0.0;
-        }
+        };
 
-        progress_tracker.log_progress(node_count);
-        progress_tracker.end_subtask();
+        tracker.lock().unwrap().end_subtask();
 
-        Ok((centralities, start.elapsed()))
+        Ok((scores, start.elapsed()))
     }
 
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {

@@ -9,6 +9,7 @@
 //! - Centrality formula: `componentSize / farness`
 //! - Optional Wasserman–Faust normalization
 
+use crate::algo::closeness::computation::ClosenessCentralityComputationRuntime;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
 };
@@ -117,6 +118,8 @@ impl ClosenessCentralityFacade {
             return Ok((Vec::new(), start.elapsed()));
         }
 
+        let computation = ClosenessCentralityComputationRuntime::new();
+
         let farness_task = std::sync::Arc::new(
             crate::core::utils::progress::Task::leaf(
                 "Farness computation".to_string(),
@@ -160,6 +163,7 @@ impl ClosenessCentralityFacade {
 
         let centralities = storage
             .compute_parallel(
+                &computation,
                 self.wasserman_faust,
                 self.concurrency,
                 &termination,

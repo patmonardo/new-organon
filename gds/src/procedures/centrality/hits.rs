@@ -6,7 +6,10 @@ use crate::core::utils::progress::{
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
-use crate::algo::hits::HitsStorageRuntime;
+use crate::algo::hits::{
+    computation::HitsComputationRuntime,
+    HitsStorageRuntime,
+};
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
 use std::time::Instant;
@@ -106,9 +109,10 @@ impl HitsCentralityFacade {
             crate::core::utils::progress::JobId::new(),
             self.task_registry.as_ref(),
         );
+        let computation = HitsComputationRuntime::new(self.tolerance);
         let result = storage.run(
+            &computation,
             self.max_iterations,
-            self.tolerance,
             self.concurrency,
             &mut progress_tracker,
         );
@@ -149,9 +153,10 @@ impl HitsCentralityFacade {
             crate::core::utils::progress::JobId::new(),
             self.task_registry.as_ref(),
         );
+        let computation = HitsComputationRuntime::new(self.tolerance);
         let result = storage.run(
+            &computation,
             self.max_iterations,
-            self.tolerance,
             self.concurrency,
             &mut progress_tracker,
         );
@@ -176,9 +181,10 @@ impl HitsCentralityFacade {
             crate::core::utils::progress::JobId::new(),
             self.task_registry.as_ref(),
         );
+        let computation = HitsComputationRuntime::new(self.tolerance);
         let result = storage.run(
+            &computation,
             self.max_iterations,
-            self.tolerance,
             self.concurrency,
             &mut progress_tracker,
         );

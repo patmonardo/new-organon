@@ -12,6 +12,7 @@ use crate::concurrency::TerminationFlag;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use super::computation::ClosenessCentralityComputationRuntime;
 use super::storage::ClosenessCentralityStorageRuntime;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -88,6 +89,7 @@ define_algorithm_spec! {
 
         let storage = ClosenessCentralityStorageRuntime::new(graph_store, orientation(&parsed.direction))?;
         let node_count = storage.node_count();
+        let computation = ClosenessCentralityComputationRuntime::new();
 
         // Storage owns the pipeline; we track it as one leaf task.
         // Java parity uses a 2-phase task tree; we collapse into a single leaf here.
@@ -115,9 +117,10 @@ define_algorithm_spec! {
             })
         };
 
-        let termination = TerminationFlag::default();
+        let termination = TerminationFlag::running_true();
         let centralities = storage
             .compute_parallel(
+                &computation,
                 parsed.wasserman_faust,
                 parsed.concurrency,
                 &termination,

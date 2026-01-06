@@ -12,14 +12,14 @@ pub const STACK_EVENT_SIZE_BYTES: usize = std::mem::size_of::<StackEvent>();
 
 /// Stack event for iterative DFS.
 #[derive(Debug, Clone, Copy)]
-struct StackEvent {
-    event_node: usize,
-    trigger_node: Option<usize>,
-    last_visit: bool,
+pub struct StackEvent {
+    pub event_node: usize,
+    pub trigger_node: Option<usize>,
+    pub last_visit: bool,
 }
 
 impl StackEvent {
-    fn upcoming_visit(node: usize, trigger_node: Option<usize>) -> Self {
+    pub fn upcoming_visit(node: usize, trigger_node: Option<usize>) -> Self {
         Self {
             event_node: node,
             trigger_node,
@@ -27,7 +27,7 @@ impl StackEvent {
         }
     }
 
-    fn last_visit(node: usize, trigger_node: usize) -> Self {
+    pub fn last_visit(node: usize, trigger_node: usize) -> Self {
         Self {
             event_node: node,
             trigger_node: Some(trigger_node),
@@ -35,7 +35,7 @@ impl StackEvent {
         }
     }
 
-    fn is_last_visit(&self) -> bool {
+    pub fn is_last_visit(&self) -> bool {
         self.last_visit
     }
 }
@@ -67,6 +67,74 @@ impl ArticulationPointsComputationRuntime {
             children: HugeLongArray::new(node_count),
             timer: 0,
             articulation_points: BitSet::new(node_count),
+        }
+    }
+
+    pub fn initialize(&mut self, node_count: usize) {
+        self.timer = 0;
+        self.visited.clear_all();
+        self.articulation_points.clear_all();
+
+        for i in 0..node_count {
+            self.tin.set(i, -1);
+            self.low.set(i, -1);
+            self.children.set(i, 0);
+        }
+    }
+
+    pub fn is_visited(&self, node: usize) -> bool {
+        self.visited.get(node)
+    }
+
+    pub fn set_visited(&mut self, node: usize) {
+        self.visited.set(node);
+    }
+
+    pub fn get_tin(&self, node: usize) -> i64 {
+        self.tin.get(node)
+    }
+
+    pub fn set_tin(&mut self, node: usize, value: i64) {
+        self.tin.set(node, value);
+    }
+
+    pub fn get_low(&self, node: usize) -> i64 {
+        self.low.get(node)
+    }
+
+    pub fn set_low(&mut self, node: usize, value: i64) {
+        self.low.set(node, value);
+    }
+
+    pub fn get_children(&self, node: usize) -> i64 {
+        self.children.get(node)
+    }
+
+    pub fn set_children(&mut self, node: usize, value: i64) {
+        self.children.set(node, value);
+    }
+
+    pub fn add_to_children(&mut self, node: usize, delta: i64) {
+        self.children.add_to(node, delta);
+    }
+
+    pub fn increment_timer(&mut self) -> i64 {
+        let current = self.timer;
+        self.timer += 1;
+        current
+    }
+
+    pub fn set_articulation_point(&mut self, node: usize) {
+        self.articulation_points.set(node);
+    }
+
+    pub fn clear_articulation_point(&mut self, node: usize) {
+        self.articulation_points.clear(node);
+    }
+
+    pub fn finalize_result(&self) -> ArticulationPointsComputationResult {
+        ArticulationPointsComputationResult {
+            articulation_points: self.articulation_points.clone(),
         }
     }
 

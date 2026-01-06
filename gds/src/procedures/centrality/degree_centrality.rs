@@ -188,7 +188,10 @@ impl DegreeCentralityFacade {
         };
 
         let termination = crate::concurrency::TerminationFlag::default();
+        let computation = DegreeCentralityComputationRuntime::new();
+
         let mut scores = match storage.compute_parallel(
+            &computation,
             self.concurrency,
             &termination,
             on_nodes_done,
@@ -203,7 +206,7 @@ impl DegreeCentralityFacade {
         };
 
         if self.normalize {
-            DegreeCentralityComputationRuntime::normalize_scores(&mut scores);
+            computation.normalize_scores(&mut scores);
         }
 
         tracker.lock().unwrap().end_subtask();
