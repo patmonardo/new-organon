@@ -184,7 +184,7 @@ impl FilteredKnnBuilder {
             })
             .collect();
 
-        let stats = crate::algo::core::result::similarity::similarity_stats(
+        let stats = crate::algo::common::result::similarity::similarity_stats(
             || tuples.into_iter(),
             true,
         );

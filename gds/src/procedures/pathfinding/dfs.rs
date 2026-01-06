@@ -33,8 +33,8 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::algo::core::prelude::{PathFindingResult, PathResultBuilder};
-use crate::algo::core::result_builders::{ExecutionMetadata, ResultBuilder};
+use crate::algo::common::prelude::{PathFindingResult, PathResultBuilder};
+use crate::algo::common::result_builders::{ExecutionMetadata, ResultBuilder};
 use crate::algo::dfs::{DfsComputationRuntime, DfsStorageRuntime};
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{PathResult, Result};
@@ -193,14 +193,14 @@ impl DfsBuilder {
 
         let all_targets_reached = false; // Simplified
 
-        let paths: Vec<crate::algo::core::result_builders::PathResult> = result
+        let paths: Vec<crate::algo::common::result_builders::PathResult> = result
             .visited_nodes
             .iter()
             .enumerate()
             .map(|(index, &node_id)| {
                 let target = node_id as u64;
                 let path = vec![target]; // Single node path
-                crate::algo::core::result_builders::PathResult {
+                crate::algo::common::result_builders::PathResult {
                     source: source_u64,
                     target,
                     path,
@@ -244,7 +244,7 @@ impl DfsBuilder {
             .with_metadata(metadata)
             .build()
             .map_err(
-                |e: crate::algo::core::result_builders::ResultBuilderError| {
+                |e: crate::algo::common::result_builders::ResultBuilderError| {
                     crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
                 },
             )?;

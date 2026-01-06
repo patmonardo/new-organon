@@ -54,7 +54,7 @@ use std::sync::Arc;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
 };
-use crate::algo::core::result_builders::{
+use crate::algo::common::result_builders::{
     ExecutionMetadata,
     PathFindingResult,
     PathResult as CorePathResult,

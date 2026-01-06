@@ -1,155 +1,187 @@
 //! ScaleProperties procedure facade.
 //!
-//! This is a lightweight wrapper over the core scaler implementations under
-//! `crate::algo::core::scaling`.
+//! Provides stream/stats/min-max scaling helpers mirroring the Java
+//! miscellaneous facade surface. This intentionally keeps the logic simple
+//! and avoids optimizations; the applications layer already wires modes.
 
-use crate::algo::core::scaling::{MinMaxScaler, Scaler};
+use crate::algo::common::scaling::MinMaxScaler;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::types::properties::node::NodePropertyValues;
 use crate::types::ValueType;
+use serde::Serialize;
+use std::collections::HashMap;
 use std::sync::Arc;
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ScalePropertiesStreamRow {
-    pub node_id: u64,
-    pub value: f64,
+	pub node_id: u64,
+	pub value: f64,
 }
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, Serialize)]
 pub struct ScalePropertiesStats {
-    pub scaler: String,
-    pub stats: std::collections::HashMap<String, Vec<f64>>,
+	pub scaler: String,
+	pub stats: HashMap<String, Vec<f64>>,
 }
 
-/// Scales a numeric node property.
-///
-/// Currently implements min-max scaling.
+/// Min-max scaling facade (single property, Java-compatible surface).
 pub struct ScalePropertiesFacade {
-    graph_store: Arc<DefaultGraphStore>,
-    source_property: String,
-    concurrency: usize,
+	graph_store: Arc<DefaultGraphStore>,
+	source_property: String,
+	concurrency: usize,
 }
 
 impl ScalePropertiesFacade {
-    pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
-        Self {
-            graph_store,
-            source_property: String::new(),
-            concurrency: 1,
-        }
-    }
+	pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
+		Self {
+			graph_store,
+			source_property: String::new(),
+			concurrency: 1,
+		}
+	}
 
-    pub fn source_property(mut self, key: impl Into<String>) -> Self {
-        self.source_property = key.into();
-        self
-    }
+	pub fn source_property(mut self, key: impl Into<String>) -> Self {
+		self.source_property = key.into();
+		self
+	}
 
-    pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
-        self
-    }
+	pub fn concurrency(mut self, concurrency: usize) -> Self {
+		self.concurrency = concurrency;
+		self
+	}
 
-    fn validate(&self) -> Result<()> {
-        ConfigValidator::non_empty_string(&self.source_property, "source_property")?;
-        if self.concurrency == 0 {
-            return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                "concurrency must be > 0".to_string(),
-            ));
-        }
-        Ok(())
-    }
+	fn validate(&self) -> Result<()> {
+		ConfigValidator::non_empty_string(&self.source_property, "source_property")?;
+		if self.concurrency == 0 {
+			return Err(AlgorithmError::Execution(
+				"concurrency must be > 0".to_string(),
+			));
+		}
+		Ok(())
+	}
 
-    fn property_fn(&self) -> Result<Box<dyn Fn(u64) -> f64 + Send + Sync>> {
-        self.validate()?;
+	fn property_values(&self) -> Result<Arc<dyn NodePropertyValues>> {
+		self.validate()?;
 
-        let pv = GraphStore::node_property_values(self.graph_store.as_ref(), &self.source_property)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "missing node property '{}': {e}",
-                    self.source_property
-                ))
-            })?;
+		let pv = GraphStore::node_property_values(self.graph_store.as_ref(), &self.source_property)
+			.map_err(|e| {
+				AlgorithmError::Execution(format!(
+					"missing node property '{}': {e}",
+					self.source_property
+				))
+			})?;
 
-        let value_type = pv.value_type();
-        match value_type {
-            ValueType::Long => Ok(Box::new(move |node_id: u64| {
-                pv.long_value(node_id).unwrap_or(0) as f64
-            })),
-            ValueType::Double => Ok(Box::new(move |node_id: u64| {
-                pv.double_value(node_id).unwrap_or(0.0)
-            })),
-            other => Err(crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "scaleProperties expects Long/Double node property (got {other:?})",
-            ))),
-        }
-    }
+		match pv.value_type() {
+			ValueType::Long | ValueType::Double => Ok(pv),
+			other => Err(AlgorithmError::Execution(format!(
+				"scaleProperties expects Long/Double node property (got {other:?})",
+			))),
+		}
+	}
 
-    fn compute(self) -> Result<(Vec<f64>, crate::algo::core::scaling::ScalerStatistics)> {
-        let node_count = GraphStore::node_count(self.graph_store.as_ref()) as u64;
-        let property_fn = self.property_fn()?;
+	fn min_max(&self, pv: &Arc<dyn NodePropertyValues>) -> Result<(f64, f64)> {
+		let node_count = GraphStore::node_count(self.graph_store.as_ref()) as u64;
+		let mut min = f64::MAX;
+		let mut max = f64::MIN;
 
-        let scaler: Box<dyn Scaler> =
-            MinMaxScaler::create(node_count, &property_fn, self.concurrency);
-        let stats = scaler.statistics().clone();
+		for node_id in 0..node_count {
+			let value = match pv.value_type() {
+				ValueType::Long => pv.long_value(node_id).unwrap_or(0) as f64,
+				ValueType::Double => pv.double_value(node_id).unwrap_or(0.0),
+				_ => 0.0,
+			};
+			if value < min {
+				min = value;
+			}
+			if value > max {
+				max = value;
+			}
+		}
 
-        let mut values = Vec::with_capacity(node_count as usize);
-        for node_id in 0..node_count {
-            values.push(scaler.scale_property(node_id, property_fn.as_ref()));
-        }
-        Ok((values, stats))
-    }
+		if min == f64::MAX || max == f64::MIN {
+			return Err(AlgorithmError::Execution(
+				"no values found while scaling".to_string(),
+			));
+		}
 
-    pub fn stream(self) -> Result<Box<dyn Iterator<Item = ScalePropertiesStreamRow>>> {
-        let (values, _stats) = self.compute()?;
-        let iter = values
-            .into_iter()
-            .enumerate()
-            .map(|(node_id, value)| ScalePropertiesStreamRow {
-                node_id: node_id as u64,
-                value,
-            });
-        Ok(Box::new(iter))
-    }
+		Ok((min, max))
+	}
 
-    pub fn stats(self) -> Result<ScalePropertiesStats> {
-        let (_values, stats) = self.compute()?;
-        Ok(ScalePropertiesStats {
-            scaler: "minMax".to_string(),
-            stats: stats.as_map().clone(),
-        })
-    }
+	pub fn stream(&self) -> Result<Box<dyn Iterator<Item = ScalePropertiesStreamRow>>> {
+		let pv = self.property_values()?;
+		let node_count = GraphStore::node_count(self.graph_store.as_ref()) as u64;
+		let (min, max) = self.min_max(&pv)?;
+		let range = (max - min).abs();
 
-    /// Memory range estimate (min/max bytes).
-    ///
-    /// This is a conservative heuristic based on the dominant allocations:
-    /// - scaled output values (one `f64` per node)
-    /// - temporary vector for streaming/stats (one `f64` per node)
-    /// - small fixed overhead for stats and per-worker buffers
-    pub fn estimate_memory(&self) -> MemoryRange {
-        let node_count = self.graph_store.node_count();
+		let rows: Vec<ScalePropertiesStreamRow> = if range == 0.0 {
+			(0..node_count)
+				.map(|node_id| ScalePropertiesStreamRow {
+					node_id,
+					value: 0.0,
+				})
+				.collect()
+		} else {
+			let property_fn: Box<dyn Fn(u64) -> f64 + Send + Sync> = match pv.value_type() {
+				ValueType::Long => Box::new(move |node_id: u64| pv.long_value(node_id).unwrap_or(0) as f64),
+				_ => Box::new(move |node_id: u64| pv.double_value(node_id).unwrap_or(0.0)),
+			};
 
-        let scaled_values = node_count * std::mem::size_of::<f64>();
-        let scratch_values = node_count * std::mem::size_of::<f64>();
+			let scaler: Box<dyn crate::algo::common::scaling::Scaler> =
+				MinMaxScaler::create(node_count, &property_fn, self.concurrency);
 
-        let stats_overhead = 64 * 1024;
-        let concurrency_overhead = self.concurrency * 8 * 1024;
+			(0..node_count)
+				.map(|node_id| ScalePropertiesStreamRow {
+					node_id,
+					value: scaler.scale_property(node_id, property_fn.as_ref()),
+				})
+				.collect()
+		};
 
-        let total = scaled_values + scratch_values + stats_overhead + concurrency_overhead;
-        let total_with_overhead = total + (total / 5);
-        MemoryRange::of_range(total, total_with_overhead)
-    }
+		Ok(Box::new(rows.into_iter()))
+	}
 
-    pub fn mutate(self, _target_property: &str) -> Result<MutationResult> {
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "scaleProperties mutate is not implemented yet".to_string(),
-        ))
-    }
+	pub fn stats(&self) -> Result<ScalePropertiesStats> {
+		let pv = self.property_values()?;
+		let (min, max) = self.min_max(&pv)?;
+		let mut stats = HashMap::new();
+		stats.insert("min".to_string(), vec![min]);
+		stats.insert("max".to_string(), vec![max]);
+		stats.insert("maxMinDiff".to_string(), vec![max - min]);
 
-    pub fn write(self, _target_property: &str) -> Result<WriteResult> {
-        Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-            "scaleProperties write is not implemented yet".to_string(),
-        ))
-    }
+		Ok(ScalePropertiesStats {
+			scaler: "minMax".to_string(),
+			stats,
+		})
+	}
+
+	pub fn estimate_memory(&self) -> MemoryRange {
+		let node_count = self.graph_store.node_count();
+
+		let scaled_values = node_count * std::mem::size_of::<f64>();
+		let scratch_values = node_count * std::mem::size_of::<f64>();
+
+		let stats_overhead = 64 * 1024;
+		let concurrency_overhead = self.concurrency * 8 * 1024;
+
+		let total = scaled_values + scratch_values + stats_overhead + concurrency_overhead;
+		let total_with_overhead = total + (total / 5);
+		MemoryRange::of_range(total, total_with_overhead)
+	}
+
+	pub fn mutate(&self, _property: &str) -> Result<MutationResult> {
+		Err(AlgorithmError::Execution(
+			"scaleProperties mutate is not implemented yet".to_string(),
+		))
+	}
+
+	pub fn write(&self, _property: &str) -> Result<WriteResult> {
+		Err(AlgorithmError::Execution(
+			"scaleProperties write is not implemented yet".to_string(),
+		))
+	}
 }
+

@@ -121,6 +121,16 @@ impl<C: PregelRuntimeConfig, I: crate::pregel::MessageIterator> ComputeContext<C
         self.base.graph_arc()
     }
 
+    /// Returns the corresponding node id in the original graph for the current node id.
+    pub fn to_original_id(&self) -> i64 {
+        self.base.to_original_id()
+    }
+
+    /// Returns the corresponding node id in the original graph for the given internal node id.
+    pub fn to_original_id_of(&self, internal_node_id: u64) -> i64 {
+        self.base.to_original_id_of(internal_node_id)
+    }
+
     /// Returns the degree (number of relationships) of the currently processed node.
     pub fn degree(&self) -> usize {
         self.base.degree()

@@ -1,4 +1,4 @@
-//! Procedure Core - Common utilities from Java GDS algo-common
+//! Procedure Common - Common utilities from Java GDS algo-common
 //!
 //! **Translation Source**: `org.neo4j.gds` package in algo-common
 //! **Translation Protocol**: TP-006 (Gamma-level architectural translation)
@@ -11,7 +11,7 @@
 //! ## Architecture
 //!
 //! ```text
-//! procedure/core/              (Java GDS algo-common)
+//! procedure/common/              (Java GDS algo-common)
 //! ├── result/                  (org.neo4j.gds.result)
 //! │   ├── centrality.rs       (CentralityStatistics, AbstractCentralityResultBuilder)
 //! │   ├── community.rs        (CommunityStatistics, AbstractCommunityResultBuilder)
@@ -79,7 +79,7 @@
 //! ## Usage Example
 //!
 //! ```rust,ignore
-//! use gds::algo::core::prelude::*;
+//! use gds::algo::common::prelude::*;
 //! use gds::core::utils::progress::*;
 //! use gds::mem::*;
 //!
@@ -111,7 +111,7 @@
 //! );
 //! ```
 
-//! Procedure Core - Common utilities from Java GDS algo-common
+//! Procedure Common - Common utilities from Java GDS algo-common
 //!
 //! **Translation Source**: `org.neo4j.gds` package in algo-common
 //! **Translation Protocol**: TP-006 (Gamma-level architectural translation)
@@ -125,7 +125,7 @@
 //! ## Architecture
 //!
 //! ```text
-//! procedure/core/              (Java GDS algo-common)
+//! procedure/common/              (Java GDS algo-common)
 //! ├── result/                  (org.neo4j.gds.result)
 //! │   ├── centrality.rs       (CentralityStatistics, AbstractCentralityResultBuilder)
 //! │   ├── community.rs        (CommunityStatistics, AbstractCommunityResultBuilder)
@@ -190,7 +190,7 @@
 //! ## Usage Example
 //!
 //! ```rust,ignore
-//! use gds::algo::core::prelude::*;
+//! use gds::algo::common::prelude::*;
 //!
 //! // Use result statistics
 //! let stats = CentralityStatistics::compute(

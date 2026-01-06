@@ -66,6 +66,21 @@ impl<C: PregelRuntimeConfig> InitContext<C> {
         self.base.config()
     }
 
+    /// Access the underlying graph Arc for advanced algorithms.
+    pub fn graph_arc(&self) -> Arc<dyn Graph> {
+        self.base.graph_arc()
+    }
+
+    /// Returns the corresponding node id in the original graph for the current node id.
+    pub fn to_original_id(&self) -> i64 {
+        self.base.to_original_id()
+    }
+
+    /// Returns the corresponding node id in the original graph for the given internal node id.
+    pub fn to_original_id_of(&self, internal_node_id: u64) -> i64 {
+        self.base.to_original_id_of(internal_node_id)
+    }
+
     /// Set a double node value for the given property key.
     ///
     /// # Java equivalent

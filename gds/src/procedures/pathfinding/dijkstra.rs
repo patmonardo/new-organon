@@ -44,8 +44,8 @@ use std::sync::Arc;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
 };
-use crate::algo::core::prelude::{PathFindingResult, PathResultBuilder};
-use crate::algo::core::result_builders::{ExecutionMetadata, ResultBuilder};
+use crate::algo::common::prelude::{PathFindingResult, PathResultBuilder};
+use crate::algo::common::result_builders::{ExecutionMetadata, ResultBuilder};
 
 // ============================================================================
 // Statistics Type
@@ -219,11 +219,11 @@ impl DijkstraBuilder {
             &mut progress_tracker,
         )?;
 
-        let paths: Vec<crate::algo::core::result_builders::PathResult> = result
+        let paths: Vec<crate::algo::common::result_builders::PathResult> = result
             .path_finding_result
             .paths()
             .filter(|p| p.source_node >= 0 && p.target_node >= 0)
-            .map(|p| crate::algo::core::result_builders::PathResult {
+            .map(|p| crate::algo::common::result_builders::PathResult {
                 source: p.source_node as u64,
                 target: p.target_node as u64,
                 path: p

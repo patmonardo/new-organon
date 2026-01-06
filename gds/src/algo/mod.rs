@@ -79,11 +79,11 @@
 //! layer which provides projection-aware algorithm specifications.
 //!
 //! See: `src/projection/eval/procedure/` for the consciousness layer.
-/// Core utilities from Java GDS algo-common
+/// Common utilities from Java GDS algo-common
 /// - Result builders and statistics (centrality, community, similarity)
 /// - Feature scaling for ML pipelines
 /// - Common algorithm utilities
-pub mod core;
+pub mod common;
 
 /// Algorithm infrastructure (Genera)
 /// - Centrality algorithm utilities
@@ -112,6 +112,7 @@ pub mod dijkstra;
 pub mod embeddings;
 pub mod harmonic;
 pub mod hits;
+pub mod index_inverse;
 pub mod k1coloring;
 pub mod kcore;
 pub mod kmeans;
@@ -119,12 +120,14 @@ pub mod kspanningtree;
 pub mod label_propagation;
 pub mod leiden;
 pub mod louvain;
+pub mod indirect_exposure;
 pub mod modularity;
 pub mod modularity_optimization;
 pub mod msbfs;
 pub mod pagerank;
 pub mod prize_collecting_steiner_tree;
 pub mod random_walk;
+pub mod scale_properties;
 pub mod scc;
 pub mod similarity;
 pub mod spanning_tree;
@@ -132,6 +135,8 @@ pub mod steiner_tree;
 pub mod topological_sort;
 pub mod traversal;
 pub mod triangle;
+pub mod undirected;
+pub mod walking;
 pub mod wcc;
 pub mod yens;
 
@@ -189,6 +194,10 @@ pub use hits::{
     HITSAlgorithmSpec, HitsComputationRuntime, HitsConfig, HitsResult, HitsRunResult,
     HitsStorageRuntime,
 };
+pub use index_inverse::{
+    IndexInverseAlgorithmSpec, IndexInverseComputationRuntime, IndexInverseConfig,
+    IndexInverseResult, IndexInverseStorageRuntime,
+};
 pub use k1coloring::{
     K1ColoringAlgorithmSpec, K1ColoringComputationRuntime, K1ColoringConfig, K1ColoringResult,
     K1ColoringStorageRuntime,
@@ -201,6 +210,10 @@ pub use kmeans::{KMeansComputationRuntime, KMeansConfig, KMeansResult, KMeansSam
 pub use kspanningtree::{
     KSpanningTreeAlgorithmSpec, KSpanningTreeComputationRuntime, KSpanningTreeConfig,
     KSpanningTreeResult, KSpanningTreeStorageRuntime,
+};
+pub use indirect_exposure::{
+    IndirectExposureAlgorithmSpec, IndirectExposureComputationRuntime, IndirectExposureConfig,
+    IndirectExposureResult, IndirectExposureStorageRuntime,
 };
 pub use label_propagation::{
     LabelPropAlgorithmSpec, LabelPropComputationRuntime, LabelPropConfig, LabelPropResult,
@@ -219,6 +232,10 @@ pub use pagerank::{
     estimate_pagerank_memory, PageRankAlgorithmSpec, PageRankComputationRuntime,
     PageRankMemoryEstimation, PageRankRunResult, PageRankStorageRuntime,
 };
+pub use scale_properties::{
+    ScalePropertiesAlgorithmSpec, ScalePropertiesComputationRuntime, ScalePropertiesConfig,
+    ScalePropertiesResult, ScalePropertiesScaler, ScalePropertiesStorageRuntime,
+};
 pub use scc::{SCCAlgorithmSpec, SccComputationRuntime, SccConfig, SccResult, SccStorageRuntime};
 pub use spanning_tree::{
     SPANNING_TREEAlgorithmSpec, SpanningGraph, SpanningTree, SpanningTreeComputationRuntime,
@@ -231,6 +248,14 @@ pub use traversal::{
 pub use triangle::{
     TriangleAlgorithmSpec, TriangleComputationRuntime, TriangleConfig, TriangleResult,
     TriangleStorageRuntime,
+};
+pub use undirected::{
+    ToUndirectedAlgorithmSpec, ToUndirectedComputationRuntime, ToUndirectedConfig,
+    ToUndirectedResult, ToUndirectedStorageRuntime,
+};
+pub use walking::{
+    CollapsePathAlgorithmSpec, CollapsePathComputationRuntime, CollapsePathConfig,
+    CollapsePathResult, CollapsePathStorageRuntime,
 };
 pub use wcc::{WCCAlgorithmSpec, WccComputationRuntime, WccConfig, WccResult, WccStorageRuntime};
 pub use yens::{

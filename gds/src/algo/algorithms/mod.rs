@@ -67,7 +67,7 @@
 //!
 //! ```rust,ignore
 //! use gds::algo::algorithms::centrality::*;
-//! use gds::algo::core::*;
+//! use gds::algo::common::*;
 //!
 //! // Compute PageRank distribution using centrality infrastructure
 //! let distribution = PageRankDistributionComputer::compute_distribution(

@@ -7,7 +7,7 @@
 //! This module provides distribution computation for PageRank and other centrality algorithms.
 
 use super::result::CentralityAlgorithmResult;
-use crate::algo::core::result::centrality::centrality_statistics;
+use crate::algo::common::result::centrality::centrality_statistics;
 use std::collections::HashMap;
 
 /// PageRank distribution result

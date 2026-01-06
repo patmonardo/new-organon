@@ -23,7 +23,7 @@
 //! ## Usage
 //!
 //! ```rust,ignore
-//! use gds::algo::core::scaling::*;
+//! use gds::algo::common::scaling::*;
 //!
 //! let property_fn = |node_id: u64| (node_id as f64) * 10.0;
 //! let scaler = MinMaxScaler::create(100, &property_fn, 4);

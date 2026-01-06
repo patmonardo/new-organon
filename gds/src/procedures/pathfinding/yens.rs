@@ -6,8 +6,8 @@
 
 use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
-use crate::algo::core::prelude::{PathFindingResult, PathResultBuilder};
-use crate::algo::core::result_builders::ResultBuilder;
+use crate::algo::common::prelude::{PathFindingResult, PathResultBuilder};
+use crate::algo::common::result_builders::ResultBuilder;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{PathResult, Result};
 use crate::algo::yens::{YensComputationRuntime, YensStorageRuntime};
@@ -231,7 +231,7 @@ impl YensBuilder {
             &mut progress_tracker,
         )?;
 
-        let paths: Vec<crate::algo::core::result_builders::PathResult> = result
+        let paths: Vec<crate::algo::common::result_builders::PathResult> = result
             .paths
             .into_iter()
             .map(|p| {
@@ -243,7 +243,7 @@ impl YensBuilder {
                     .map(|node_id| Self::checked_u64(node_id, "path"))
                     .collect::<Result<Vec<_>>>()?;
 
-                Ok(crate::algo::core::result_builders::PathResult {
+                Ok(crate::algo::common::result_builders::PathResult {
                     source,
                     target,
                     path,
@@ -264,7 +264,7 @@ impl YensBuilder {
             self.track_relationships.to_string(),
         );
 
-        let metadata = crate::algo::core::result_builders::ExecutionMetadata {
+        let metadata = crate::algo::common::result_builders::ExecutionMetadata {
             execution_time: start.elapsed(),
             iterations: None,
             converged: None,
@@ -277,7 +277,7 @@ impl YensBuilder {
             .with_metadata(metadata)
             .build()
             .map_err(
-                |e: crate::algo::core::result_builders::ResultBuilderError| {
+                |e: crate::algo::common::result_builders::ResultBuilderError| {
                     crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
                 },
             )?;

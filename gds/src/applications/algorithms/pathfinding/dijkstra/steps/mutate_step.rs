@@ -1,5 +1,5 @@
 use crate::core::loading::GraphResources;
-use crate::algo::core::result_builders::PathResult;
+use crate::algo::common::result_builders::PathResult;
 use crate::types::catalog::GraphCatalog;
 use crate::types::graph_store::GraphStore;
 use serde::Serialize;

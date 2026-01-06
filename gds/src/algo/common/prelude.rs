@@ -5,7 +5,7 @@
 //! ## Usage
 //!
 //! ```rust,ignore
-//! use gds::algo::core::prelude::*;
+//! use gds::algo::common::prelude::*;
 //! ```
 
 // Re-export result processing

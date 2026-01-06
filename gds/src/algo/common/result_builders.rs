@@ -6,8 +6,8 @@
 //! This module provides result building capabilities for different algorithm types,
 //! integrating with our statistics and progress tracking modules.
 
-use crate::algo::core::scaling::Scaler;
-use crate::algo::core::statistics::{
+use crate::algo::common::scaling::Scaler;
+use crate::algo::common::statistics::{
     Histogram, StatisticalSummary, StatisticsConfig, StatisticsEngine,
 };
 use serde::{Deserialize, Serialize};
@@ -695,7 +695,7 @@ impl ResultBuilder<SimilarityResult> for SimilarityResultBuilder {
 #[derive(Debug, thiserror::Error)]
 pub enum ResultBuilderError {
     #[error("Statistics computation failed: {0}")]
-    StatisticsError(#[from] crate::algo::core::statistics::StatisticsError),
+    StatisticsError(#[from] crate::algo::common::statistics::StatisticsError),
 
     #[error("Invalid result data: {0}")]
     InvalidData(String),
