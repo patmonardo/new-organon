@@ -41,9 +41,7 @@ pub fn run(op: &str, request: &KSpanningTreeRequest, graph_resources: &GraphReso
         Ok(Some(stats))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       stats: Option<KSpanningTreeStats>,
-                                       timings| {
+    let builder = FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<KSpanningTreeStats>, timings| {
         json!({
             "ok": true,
             "op": op,

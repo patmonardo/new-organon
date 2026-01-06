@@ -22,10 +22,10 @@ use crate::core::utils::progress::{ProgressTracker, TaskRegistryFactory, Tasks};
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct DagLongestPathRow {
     pub index: u64,
-    pub source_node: u64,
-    pub target_node: u64,
+    pub source_node: NodeId,
+    pub target_node: NodeId,
     pub total_cost: f64,
-    pub node_ids: Vec<u64>,
+    pub node_ids: Vec<NodeId>,
     pub costs: Vec<f64>,
 }
 
@@ -88,15 +88,6 @@ impl DagLongestPathBuilder {
         Ok(())
     }
 
-    fn checked_node_id(value: usize) -> Result<NodeId> {
-        NodeId::try_from(value as i64).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "node_id must fit into i64 (got {})",
-                value
-            ))
-        })
-    }
-
     fn compute(self) -> Result<(Vec<DagLongestPathRow>, std::time::Duration)> {
         self.validate()?;
 
@@ -125,8 +116,8 @@ impl DagLongestPathBuilder {
         let fallback = graph_view.default_property_value();
 
         // Get neighbors with weights
-        let get_neighbors = |node_idx: usize| -> Vec<(usize, f64)> {
-            let node_id = match Self::checked_node_id(node_idx) {
+        let get_neighbors = move |node_idx: NodeId| -> Vec<(NodeId, f64)> {
+            let node_id = match NodeId::try_from(node_idx) {
                 Ok(value) => value,
                 Err(_) => return Vec::new(),
             };
@@ -139,7 +130,7 @@ impl DagLongestPathBuilder {
                         return None;
                     }
                     let weight = cursor.property();
-                    Some((target as usize, weight))
+                    Some((target, weight))
                 })
                 .collect()
         };

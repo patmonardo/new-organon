@@ -298,6 +298,7 @@ impl BfsBuilder {
     /// }
     /// ```
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
+        self.validate()?;
         let source_u64 = self.source.expect("validate() ensures source is set");
         let traversal_order = self.compute()?;
 

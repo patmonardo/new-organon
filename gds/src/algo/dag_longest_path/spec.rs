@@ -3,6 +3,7 @@
 //! **Translation Source**: `org.neo4j.gds.dag.longestPath.DagLongestPathBaseConfig`
 
 use serde::{Deserialize, Serialize};
+use crate::types::graph::id_map::NodeId;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DagLongestPathConfig {
@@ -15,13 +16,13 @@ pub struct PathRow {
     /// Index of this path
     pub index: u64,
     /// Source node of the path
-    pub source_node: u64,
+    pub source_node: NodeId,
     /// Target node of the path
-    pub target_node: u64,
+    pub target_node: NodeId,
     /// Total cost of the path
     pub total_cost: f64,
     /// Sequence of node IDs in the path
-    pub node_ids: Vec<u64>,
+    pub node_ids: Vec<NodeId>,
     /// Costs at each step in the path
     pub costs: Vec<f64>,
 }

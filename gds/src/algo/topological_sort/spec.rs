@@ -3,6 +3,7 @@
 //! **Translation Source**: `org.neo4j.gds.dag.topologicalsort.TopologicalSortBaseConfig`
 
 use serde::{Deserialize, Serialize};
+use crate::types::graph::id_map::NodeId;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TopologicalSortConfig {
@@ -19,7 +20,7 @@ fn default_compute_max_distance() -> bool {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TopologicalSortResult {
     /// Sorted nodes in topological order
-    pub sorted_nodes: Vec<u64>,
+    pub sorted_nodes: Vec<NodeId>,
     /// Optional maximum distance from source for each node
     pub max_source_distances: Option<Vec<f64>>,
 }

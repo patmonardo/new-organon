@@ -5,9 +5,9 @@ mod tests {
     #[test]
     fn test_simple_dag() {
         // 0 -> 1 -> 2
-        let edges: Vec<Vec<(usize, f64)>> = vec![vec![(1, 1.0)], vec![(2, 1.0)], vec![]];
+        let edges: Vec<Vec<(i64, f64)>> = vec![vec![(1, 1.0)], vec![(2, 1.0)], vec![]];
 
-        let get_neighbors = |node: usize| edges[node].clone();
+        let get_neighbors = move |node: i64| edges[node as usize].clone();
 
         let mut runtime = DagLongestPathComputationRuntime::new(3);
         let result = runtime.compute(3, get_neighbors);
@@ -26,14 +26,14 @@ mod tests {
     fn test_diamond_dag() {
         // 0 -> 1 (weight 1) -> 3 (weight 1)
         //  \-> 2 (weight 2) ->/  (weight 1)
-        let edges: Vec<Vec<(usize, f64)>> = vec![
+        let edges: Vec<Vec<(i64, f64)>> = vec![
             vec![(1, 1.0), (2, 2.0)],
             vec![(3, 1.0)],
             vec![(3, 1.0)],
             vec![],
         ];
 
-        let get_neighbors = |node: usize| edges[node].clone();
+        let get_neighbors = move |node: i64| edges[node as usize].clone();
 
         let mut runtime = DagLongestPathComputationRuntime::new(4);
         let result = runtime.compute(4, get_neighbors);
@@ -49,9 +49,9 @@ mod tests {
     #[test]
     fn test_weighted_dag() {
         // 0 -> 1 (weight 5) -> 2 (weight 3)
-        let edges: Vec<Vec<(usize, f64)>> = vec![vec![(1, 5.0)], vec![(2, 3.0)], vec![]];
+        let edges: Vec<Vec<(i64, f64)>> = vec![vec![(1, 5.0)], vec![(2, 3.0)], vec![]];
 
-        let get_neighbors = |node: usize| edges[node].clone();
+        let get_neighbors = move |node: i64| edges[node as usize].clone();
 
         let mut runtime = DagLongestPathComputationRuntime::new(3);
         let result = runtime.compute(3, get_neighbors);
@@ -63,9 +63,9 @@ mod tests {
     #[test]
     fn test_disconnected_dag() {
         // 0 -> 1, 2 -> 3 (two separate chains)
-        let edges: Vec<Vec<(usize, f64)>> = vec![vec![(1, 1.0)], vec![], vec![(3, 1.0)], vec![]];
+        let edges: Vec<Vec<(i64, f64)>> = vec![vec![(1, 1.0)], vec![], vec![(3, 1.0)], vec![]];
 
-        let get_neighbors = |node: usize| edges[node].clone();
+        let get_neighbors = move |node: i64| edges[node as usize].clone();
 
         let mut runtime = DagLongestPathComputationRuntime::new(4);
         let result = runtime.compute(4, get_neighbors);

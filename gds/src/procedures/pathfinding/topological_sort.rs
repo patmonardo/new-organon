@@ -21,7 +21,7 @@ use crate::core::utils::progress::{EmptyTaskRegistryFactory, ProgressTracker, Ta
 /// Result row for topological sort stream mode
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct TopologicalSortRow {
-    pub node_id: u64,
+    pub node_id: NodeId,
     pub max_distance: Option<f64>,
 }
 
@@ -79,15 +79,6 @@ impl TopologicalSortBuilder {
         self
     }
 
-    fn checked_node_id(value: usize) -> Result<NodeId> {
-        NodeId::try_from(value as i64).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "node_id must fit into i64 (got {})",
-                value
-            ))
-        })
-    }
-
     fn validate(&self) -> Result<()> {
         if self.concurrency == 0 {
             return Err(
@@ -99,7 +90,7 @@ impl TopologicalSortBuilder {
         Ok(())
     }
 
-    fn compute(self) -> Result<(Vec<u64>, Option<Vec<f64>>, std::time::Duration)> {
+    fn compute(self) -> Result<(Vec<NodeId>, Option<Vec<f64>>, std::time::Duration)> {
         self.validate()?;
 
         // Set up progress tracking
@@ -135,8 +126,8 @@ impl TopologicalSortBuilder {
         let fallback = graph_view.default_property_value();
 
         // Get neighbors with weights
-        let get_neighbors = |node_idx: usize| -> Vec<(usize, f64)> {
-            let node_id = match Self::checked_node_id(node_idx) {
+        let get_neighbors = |node_idx: NodeId| -> Vec<(NodeId, f64)> {
+            let node_id = match NodeId::try_from(node_idx) {
                 Ok(value) => value,
                 Err(_) => return Vec::new(),
             };
@@ -149,7 +140,7 @@ impl TopologicalSortBuilder {
                         return None;
                     }
                     let weight = cursor.property();
-                    Some((target as usize, weight))
+                    Some((target, weight))
                 })
                 .collect()
         };
@@ -176,7 +167,7 @@ impl TopologicalSortBuilder {
             .into_iter()
             .map(|node_id| TopologicalSortRow {
                 node_id,
-                max_distance: max_distances.as_ref().map(|d| d[node_id as usize]),
+                max_distance: max_distances.as_ref().and_then(|d| d.get(node_id as usize).copied()),
             })
             .collect();
 

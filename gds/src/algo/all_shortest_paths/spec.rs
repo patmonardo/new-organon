@@ -192,7 +192,7 @@ define_algorithm_spec! {
 
         // Create storage runtime (Gross pole - knows Graph)
         let storage = AllShortestPathsStorageRuntime::with_settings(
-            graph,
+            graph.as_ref(),
             algorithm_type,
             concurrency,
         );

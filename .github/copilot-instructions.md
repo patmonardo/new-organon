@@ -10,6 +10,21 @@
 ## Codegen boundaries (read before generating)
 - See `.github/codegen-boundaries.md` for the intended split between **GDSL/SDSL (TS user space)** and **GDS (Rust kernel)**.
 
+## ARCHITECTURAL IMPERATIVE - READ THIS FIRST
+**APPLICATIONS/EXAMPLES:** **NEVER EVER EVER** call into any `::algo::` modules.
+**APPLICATIONS/EXAMPLES:** **ONLY ONLY ONLY** call into `::procedures::` modules.
+
+Procedures are allowed to call into `::algo::{storage,computation}` as part of the required controller pattern.
+
+## Procedure-First Controller Pattern (Required)
+- **Applications talk only to procedures.** Do not call `::algo::` modules from applications.
+- A **procedure** is the top-level compute entrypoint. It:
+  - Validates and normalizes inputs.
+  - Creates both the **storage runtime** (controller) and **computation runtime** (ephemeral state).
+  - Calls `storage.compute_{algo}(...)` as the **single top-level driver**.
+- The **storage runtime** orchestrates the algorithm loop, graph access, concurrency control, progress tracking, and delegates state operations to the computation runtime.
+- The **computation runtime** is pure state management (no graph access).
+
 ## Repo workflows (do this)
 - Install: `pnpm install`
 - Build all TS packages: `pnpm -r build`

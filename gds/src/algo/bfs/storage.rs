@@ -67,28 +67,26 @@ impl BfsStorageRuntime {
         let node_count = graph.map(|g| g.node_count()).unwrap_or(1000) as usize;
         computation.initialize(self.source_node, self.max_depth, node_count);
 
-        // BFS queue
-        let mut queue = std::collections::VecDeque::new();
-        queue.push_back(self.source_node);
+        // BFS queue (node, depth)
+        let mut queue: std::collections::VecDeque<(NodeId, u32)> = std::collections::VecDeque::new();
+        computation.set_visited(self.source_node);
+        queue.push_back((self.source_node, 0));
 
         let mut result = Vec::new();
 
-        while let Some(current_node) = queue.pop_front() {
-            if computation.is_visited(current_node) {
-                continue;
-            }
-            computation.set_visited(current_node);
+        while let Some((current_node, depth)) = queue.pop_front() {
             result.push(current_node);
 
             // Get neighbors
             let neighbors = self.get_neighbors(graph, current_node);
             progress_tracker.log_progress(neighbors.len());
 
-            // Check max depth - simplified
-            if computation.check_max_depth(0.0) {
+            // Respect max depth: only expand when `depth < max_depth`
+            if computation.check_max_depth(depth as f64) {
                 for neighbor in neighbors {
                     if !computation.is_visited(neighbor) {
-                        queue.push_back(neighbor);
+                        computation.set_visited(neighbor);
+                        queue.push_back((neighbor, depth.saturating_add(1)));
                     }
                 }
             }
@@ -99,7 +97,7 @@ impl BfsStorageRuntime {
         progress_tracker.end_subtask();
 
         Ok(BfsResult {
-            visited_nodes: result.into_iter().map(|n| n as i64).collect(),
+            visited_nodes: result,
             computation_time_ms: computation_time,
         })
     }
@@ -141,7 +139,7 @@ mod tests {
     #[test]
     fn test_bfs_path_computation() {
         let storage = BfsStorageRuntime::new(0, vec![3], None, true);
-        let mut computation = BfsComputationRuntime::new(0, true, 1);
+        let mut computation = BfsComputationRuntime::new(0, true, 1, 10);
 
         let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("BFS".to_string()));
 
@@ -149,13 +147,13 @@ mod tests {
             .compute_bfs(&mut computation, None, &mut progress_tracker)
             .unwrap();
 
-        assert!(result.nodes_visited > 0);
+        assert!(!result.visited_nodes.is_empty());
     }
 
     #[test]
     fn test_bfs_path_same_source_target() {
         let storage = BfsStorageRuntime::new(0, vec![0], None, true);
-        let mut computation = BfsComputationRuntime::new(0, true, 1);
+        let mut computation = BfsComputationRuntime::new(0, true, 1, 10);
 
         let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("BFS".to_string()));
 
@@ -163,13 +161,13 @@ mod tests {
             .compute_bfs(&mut computation, None, &mut progress_tracker)
             .unwrap();
 
-        assert!(result.nodes_visited >= 1);
+        assert!(result.visited_nodes.len() >= 1);
     }
 
     #[test]
     fn test_bfs_max_depth_constraint() {
         let storage = BfsStorageRuntime::new(0, vec![], Some(1), false);
-        let mut computation = BfsComputationRuntime::new(0, false, 1);
+        let mut computation = BfsComputationRuntime::new(0, false, 1, 10);
 
         let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("BFS".to_string()));
 
@@ -178,6 +176,6 @@ mod tests {
             .unwrap();
 
         // With max_depth=1, we should only visit nodes at distance 0 and 1
-        assert!(result.nodes_visited <= 3); // Source + immediate neighbors
+        assert!(result.visited_nodes.len() <= 3); // Source + immediate neighbors
     }
 }

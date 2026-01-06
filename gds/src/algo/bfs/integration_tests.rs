@@ -53,13 +53,13 @@ fn test_bfs_storage_runtime() {
 
 #[test]
 fn test_bfs_computation_runtime() {
-    let mut computation = BfsComputationRuntime::new(0, true, 4);
-    computation.initialize(0, Some(5));
+    let mut computation = BfsComputationRuntime::new(0, true, 4, 10);
+    computation.initialize(0, Some(5), 10);
 
     assert_eq!(computation.source_node, 0);
-    assert!(computation.check_max_depth(5));
-    assert_eq!(computation.visited_count(), 1);
-    assert!(computation.is_visited(0));
+    assert!(computation.check_max_depth(4.0));
+    assert!(!computation.check_max_depth(5.0));
+    assert_eq!(computation.visited_count(), 0);
 }
 
 #[test]
@@ -75,49 +75,31 @@ fn test_bfs_focused_macro_integration() {
 #[test]
 fn test_bfs_storage_computation_integration() {
     let storage = BfsStorageRuntime::new(0, vec![3], None, true);
-    let mut computation = BfsComputationRuntime::new(0, true, 1);
+    let mut computation = BfsComputationRuntime::new(0, true, 1, 10);
 
     let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("BFS".to_string()));
     let bfs_result = storage
         .compute_bfs(&mut computation, None, &mut progress_tracker)
         .unwrap();
 
-    assert!(bfs_result.nodes_visited > 0);
-    assert!(!bfs_result.paths.is_empty());
-
-    // Verify path structure
-    for path in &bfs_result.paths {
-        assert_eq!(path.source_node, 0);
-        assert!(!path.node_ids.is_empty());
-        assert_eq!(path.node_ids[0], 0);
-        assert_eq!(path.path_length, (path.node_ids.len() - 1) as u32);
-    }
+    assert!(!bfs_result.visited_nodes.is_empty());
 }
 
 #[test]
 fn test_bfs_result_serialization() {
     let result = BfsResult {
-        visited_nodes: vec![(0, 0), (1, 1), (2, 1), (3, 2)],
-        paths: vec![super::spec::BfsPathResult {
-            source_node: 0,
-            target_node: 3,
-            node_ids: vec![0, 1, 3],
-            path_length: 2,
-        }],
-        nodes_visited: 4,
+        visited_nodes: vec![0, 1, 2, 3],
         computation_time_ms: 5,
     };
 
     // Test serialization
     let json = serde_json::to_string(&result).unwrap();
     assert!(json.contains("visited_nodes"));
-    assert!(json.contains("paths"));
-    assert!(json.contains("nodes_visited"));
+    assert!(json.contains("computation_time_ms"));
 
     // Test deserialization
     let deserialized: BfsResult = serde_json::from_str(&json).unwrap();
-    assert_eq!(deserialized.nodes_visited, 4);
-    assert_eq!(deserialized.paths.len(), 1);
+    assert_eq!(deserialized.visited_nodes.len(), 4);
     assert_eq!(deserialized.computation_time_ms, 5);
 }
 

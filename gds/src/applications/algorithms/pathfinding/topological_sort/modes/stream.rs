@@ -26,13 +26,13 @@ pub fn run(op: &str, request: &TopologicalSortRequest, graph_resources: &GraphRe
                    _tracker: &mut dyn ProgressTracker,
                    _termination: &TerminationFlag|
      -> Result<Option<Vec<TopologicalSortRow>>, String> {
-        let iter = gr
+        let builder = gr
             .facade()
             .topological_sort()
             .compute_max_distance(request.compute_max_distance)
-            .concurrency(request.common.concurrency.value())
-            .stream()
-            .map_err(|e| e.to_string())?;
+            .concurrency(request.common.concurrency.value());
+
+        let iter = builder.stream().map_err(|e| e.to_string())?;
         Ok(Some(iter.collect()))
     };
 

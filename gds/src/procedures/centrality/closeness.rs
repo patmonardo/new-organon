@@ -19,7 +19,6 @@ use crate::procedures::traits::{CentralityScore, Result};
 use crate::algo::closeness::ClosenessCentralityStorageRuntime;
 use crate::concurrency::TerminationFlag;
 use crate::projection::orientation::Orientation;
-use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
 use std::time::Instant;
@@ -107,15 +106,6 @@ impl ClosenessCentralityFacade {
             );
         }
         Ok(())
-    }
-
-    fn checked_node_id(value: usize) -> Result<NodeId> {
-        NodeId::try_from(value as i64).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "node_id must fit into i64 (got {})",
-                value
-            ))
-        })
     }
 
     fn compute_scores(&self) -> Result<(Vec<f64>, std::time::Duration)> {

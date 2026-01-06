@@ -41,11 +41,12 @@ pub fn run(op: &str, request: &YensRequest, graph_resources: &GraphResources) ->
         }
 
         let iter = builder.stream().map_err(|e| e.to_string())?;
-        let rows: Vec<PathResult> = iter.collect();
-        Ok(Some(rows))
+        Ok(Some(iter.collect()))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources, rows: Option<Vec<PathResult>>, timings| {
+    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
+                                       rows: Option<Vec<PathResult>>,
+                                       timings| {
         json!({
             "ok": true,
             "op": op,

@@ -11,7 +11,6 @@ use crate::core::utils::progress::ProgressTracker;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use std::sync::mpsc;
-use std::sync::Arc;
 
 /// Algorithm type for All Shortest Paths
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -33,19 +32,19 @@ pub enum AlgorithmType {
 /// - **Storage Runtime** (Gross) = persistent GraphStore and graph topology
 /// - **Computation Runtime** (Subtle) = ephemeral shortest path results
 /// - **Functor** = the mapping between them via shortest path computation
-pub struct AllShortestPathsStorageRuntime {
+pub struct AllShortestPathsStorageRuntime<'a> {
     /// Graph view to traverse
-    graph: Arc<dyn Graph>,
+    graph: &'a dyn Graph,
     /// Algorithm type (weighted vs unweighted)
     algorithm_type: AlgorithmType,
     /// Number of parallel workers
     concurrency: usize,
 }
 
-impl AllShortestPathsStorageRuntime {
+impl<'a> AllShortestPathsStorageRuntime<'a> {
     /// Create with specific settings
     pub fn with_settings(
-        graph: Arc<dyn Graph>,
+        graph: &'a dyn Graph,
         algorithm_type: AlgorithmType,
         concurrency: usize,
     ) -> Self {
@@ -321,7 +320,7 @@ impl AllShortestPathsStorageRuntime {
         const LOG_BATCH: usize = 16;
 
         let result = (|| {
-            let (sender, receiver) = mpsc::channel();
+            let (sender, receiver) = mpsc::channel::<ShortestPathResult>();
 
             // For now, process sequentially to avoid lifetime issues
             // Note: parallel processing with more precise lifetime management is deferred.

@@ -231,7 +231,7 @@ impl AllShortestPathsBuilder {
             })?;
 
         let storage = AllShortestPathsStorageRuntime::with_settings(
-            Arc::clone(&graph_view),
+            graph_view.as_ref(),
             algorithm_type,
             self.concurrency,
         );

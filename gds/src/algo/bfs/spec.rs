@@ -157,20 +157,12 @@ mod tests {
     #[test]
     fn test_bfs_result() {
         let result = BfsResult {
-            visited_nodes: vec![(0, 0), (1, 1), (2, 1)],
-            paths: vec![BfsPathResult {
-                source_node: 0,
-                target_node: 2,
-                node_ids: vec![0, 1, 2],
-                path_length: 2,
-            }],
-            nodes_visited: 3,
             computation_time_ms: 5,
+            visited_nodes: vec![0, 1, 2],
         };
 
         assert_eq!(result.visited_nodes.len(), 3);
-        assert_eq!(result.paths.len(), 1);
-        assert_eq!(result.nodes_visited, 3);
+        assert_eq!(result.visited_nodes[0], 0);
     }
 
     #[test]

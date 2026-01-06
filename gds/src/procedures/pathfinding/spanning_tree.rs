@@ -6,6 +6,7 @@ use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::algo::spanning_tree::SpanningTreeStorageRuntime;
+use crate::algo::SpanningTreeComputationRuntime;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -234,8 +235,19 @@ impl SpanningTreeBuilder {
         );
 
         let start = std::time::Instant::now();
-        let tree = storage.compute_spanning_tree_with_graph(
-            graph_view.as_ref(),
+
+        // Create computation runtime (factory pattern)
+        let mut computation = SpanningTreeComputationRuntime::new(
+            start_node_id,
+            self.compute_minimum,
+            graph_view.node_count() as u32,
+            self.concurrency,
+        );
+
+        // Call storage.compute_spanning_tree() - Applications never call ::algo:: directly
+        let tree = storage.compute_spanning_tree(
+            &mut computation,
+            Some(graph_view.as_ref()),
             direction_byte,
             &mut progress_tracker,
         )?;

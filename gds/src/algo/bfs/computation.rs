@@ -43,10 +43,6 @@ impl BfsComputationRuntime {
         self.source_node = source_node;
         self.max_depth = max_depth;
         self.visited = vec![false; node_count];
-        // Add source node
-        if (source_node as usize) < self.visited.len() {
-            self.visited[source_node as usize] = true;
-        }
     }
 
     /// Check if a node has been visited
@@ -90,7 +86,7 @@ mod tests {
 
     #[test]
     fn test_bfs_computation_runtime_creation() {
-        let runtime = BfsComputationRuntime::new(0, true, 4);
+        let runtime = BfsComputationRuntime::new(0, true, 4, 10);
         assert_eq!(runtime.source_node, 0);
         assert!(runtime.track_paths);
         assert_eq!(runtime.concurrency, 4);
@@ -99,59 +95,38 @@ mod tests {
 
     #[test]
     fn test_bfs_computation_runtime_initialization() {
-        let mut runtime = BfsComputationRuntime::new(0, true, 1);
-        runtime.initialize(5, Some(10));
+        let mut runtime = BfsComputationRuntime::new(0, true, 1, 10);
+        runtime.initialize(5, Some(10), 10);
 
         assert_eq!(runtime.source_node, 5);
         assert_eq!(runtime.max_depth, Some(10));
-        assert_eq!(runtime.visited_count(), 1);
-        assert!(runtime.is_visited(5));
-        assert_eq!(runtime.get_distance(5), Some(0));
+        assert_eq!(runtime.visited_count(), 0);
+        assert!(!runtime.is_visited(5));
     }
 
     #[test]
     fn test_bfs_computation_runtime_visited_operations() {
-        let mut runtime = BfsComputationRuntime::new(0, false, 1);
-        runtime.initialize(0, None);
+        let mut runtime = BfsComputationRuntime::new(0, false, 1, 10);
+        runtime.initialize(0, None, 10);
 
         assert!(!runtime.is_visited(1));
-        assert_eq!(runtime.get_distance(1), None);
 
-        runtime.add_visited_node(1, 1);
+        runtime.set_visited(1);
         assert!(runtime.is_visited(1));
-        assert_eq!(runtime.get_distance(1), Some(1));
-        assert_eq!(runtime.visited_count(), 2);
+        assert_eq!(runtime.visited_count(), 1);
     }
 
     #[test]
     fn test_bfs_computation_runtime_max_depth_check() {
-        let mut runtime = BfsComputationRuntime::new(0, false, 1);
-        runtime.initialize(0, Some(3));
+        let mut runtime = BfsComputationRuntime::new(0, false, 1, 10);
+        runtime.initialize(0, Some(3), 10);
 
-        assert!(runtime.check_max_depth(0));
-        assert!(runtime.check_max_depth(1));
-        assert!(runtime.check_max_depth(3));
-        assert!(!runtime.check_max_depth(4));
+        assert!(runtime.check_max_depth(0.0));
+        assert!(runtime.check_max_depth(1.0));
+        assert!(!runtime.check_max_depth(3.0));
+        assert!(!runtime.check_max_depth(4.0));
 
-        runtime.initialize(0, None);
-        assert!(runtime.check_max_depth(100)); // No limit
-    }
-
-    #[test]
-    fn test_bfs_computation_runtime_get_visited_nodes() {
-        let mut runtime = BfsComputationRuntime::new(0, false, 1);
-        runtime.initialize(0, None);
-
-        runtime.add_visited_node(1, 1);
-        runtime.add_visited_node(2, 2);
-
-        let visited = runtime.get_visited_nodes();
-        assert_eq!(visited.len(), 3);
-
-        // Check that all expected nodes are present
-        let nodes: Vec<NodeId> = visited.iter().map(|(node, _)| *node).collect();
-        assert!(nodes.contains(&0));
-        assert!(nodes.contains(&1));
-        assert!(nodes.contains(&2));
+        runtime.initialize(0, None, 10);
+        assert!(runtime.check_max_depth(100.0)); // No limit
     }
 }

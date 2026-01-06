@@ -118,22 +118,6 @@ impl DfsStorageRuntime {
         })
     }
 
-    /// Get neighbors of a node (graph-backed when available; mock fallback)
-    fn get_neighbors(&self, graph: Option<&dyn Graph>, node: NodeId) -> Vec<NodeId> {
-        if let Some(g) = graph {
-            let fallback: f64 = 1.0;
-            let stream = g.stream_relationships(node, fallback);
-            stream.into_iter().map(|c| c.target_id()).collect()
-        } else {
-            match node {
-                0 => vec![1, 2],
-                1 => vec![0, 3],
-                2 => vec![0, 3],
-                3 => vec![1, 2],
-                _ => vec![],
-            }
-        }
-    }
 }
 
 #[cfg(test)]

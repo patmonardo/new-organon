@@ -3,15 +3,15 @@
 //! Computes k spanning trees by first computing an MST using Prim's algorithm,
 //! then progressively pruning to maintain exactly k nodes.
 
-use crate::procedures::builder_base::ConfigValidator;
+use crate::algo::kspanningtree::storage::KSpanningTreeStorageRuntime;
 use crate::procedures::traits::Result;
 use crate::algo::kspanningtree::computation::KSpanningTreeComputationRuntime;
 use crate::mem::MemoryRange;
 use crate::projection::orientation::Orientation;
+use crate::procedures::builder_base::ConfigValidator;
 use crate::projection::RelationshipType;
-use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::core::utils::progress::Tasks;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
@@ -96,15 +96,6 @@ impl KSpanningTreeBuilder {
         Ok(())
     }
 
-    fn checked_node_id(value: usize) -> Result<NodeId> {
-        NodeId::try_from(value as i64).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "node_id must fit into i64 (got {})",
-                value
-            ))
-        })
-    }
-
     #[allow(clippy::type_complexity)]
     fn compute(&self) -> Result<(Vec<i64>, Vec<f64>, f64, u64, std::time::Duration)> {
         self.validate()?;
@@ -139,46 +130,23 @@ impl KSpanningTreeBuilder {
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
             Tasks::leaf_with_volume("kspanningtree".to_string(), node_count),
         );
-        progress_tracker.begin_subtask_with_volume(node_count);
 
-        let fallback = graph_view.default_property_value();
-
-        // Get neighbors with weights
-        let get_neighbors = |node_idx: usize| -> Vec<(usize, f64)> {
-            let node_id = match Self::checked_node_id(node_idx) {
-                Ok(value) => value,
-                Err(_) => return Vec::new(),
-            };
-
-            graph_view
-                .stream_relationships(node_id, fallback)
-                .filter_map(|cursor| {
-                    let target = cursor.target_id();
-                    if target < 0 {
-                        return None;
-                    }
-                    let weight = if let Some(ref _prop) = self.weight_property {
-                        // Note: property-backed weights are deferred until property access is available.
-                        1.0
-                    } else {
-                        1.0
-                    };
-                    Some((target as usize, weight))
-                })
-                .collect()
-        };
-
-        let mut runtime = KSpanningTreeComputationRuntime::new(node_count);
-        let result = runtime.compute(
-            node_count,
-            source as usize,
+        // Create storage runtime (Gross pole - controller)
+        let storage = KSpanningTreeStorageRuntime::new(
+            source as i64,
             self.k,
-            &self.objective,
-            get_neighbors,
+            self.objective.clone(),
         );
 
-        progress_tracker.log_progress(node_count);
-        progress_tracker.end_subtask();
+        // Create computation runtime (Subtle pole - state management)
+        let mut computation = KSpanningTreeComputationRuntime::new(node_count);
+
+        // Call storage.compute_kspanningtree() - Applications never call ::algo:: directly
+        let result = storage.compute_kspanningtree(
+            &mut computation,
+            Some(graph_view.as_ref()),
+            &mut progress_tracker,
+        )?;
 
         Ok((
             result.parent,

@@ -8,6 +8,8 @@ use super::spec::TopologicalSortResult;
 use super::storage::TopologicalSortStorageRuntime;
 use std::collections::VecDeque;
 use std::sync::atomic::Ordering;
+use crate::types::graph::Graph;
+use crate::types::graph::id_map::NodeId;
 
 pub struct TopologicalSortComputationRuntime {
     storage: TopologicalSortStorageRuntime,
@@ -24,25 +26,25 @@ impl TopologicalSortComputationRuntime {
     pub fn compute(
         &mut self,
         node_count: usize,
-        get_neighbors: impl Fn(usize) -> Vec<(usize, f64)>, // (neighbor, weight)
+        get_neighbors: impl Fn(NodeId) -> Vec<(NodeId, f64)>, // (neighbor, weight)
     ) -> TopologicalSortResult {
         // Phase 1: Initialize in-degrees
-        for node_id in 0..node_count {
+        for node_id in 0..(node_count as i64) {
             for (target, _) in get_neighbors(node_id) {
-                self.storage.in_degrees[target].fetch_add(1, Ordering::SeqCst);
+                self.storage.in_degrees[target as usize].fetch_add(1, Ordering::SeqCst);
             }
         }
 
         // Phase 2: Traverse from nodes with in-degree 0
-        let mut queue: VecDeque<usize> = VecDeque::new();
+        let mut queue: VecDeque<NodeId> = VecDeque::new();
 
         // Find all nodes with in-degree 0
-        for node_id in 0..node_count {
-            if self.storage.in_degrees[node_id].load(Ordering::SeqCst) == 0 {
+        for node_id in 0..(node_count as i64) {
+            if self.storage.in_degrees[node_id as usize].load(Ordering::SeqCst) == 0 {
                 queue.push_back(node_id);
                 // Initialize distance for source nodes
                 if let Some(ref distances) = self.storage.max_source_distances {
-                    distances[node_id].store(0.0_f64.to_bits() as usize, Ordering::SeqCst);
+                    distances[node_id as usize].store(0.0_f64.to_bits() as i64, Ordering::SeqCst);
                 }
             }
         }
@@ -52,7 +54,7 @@ impl TopologicalSortComputationRuntime {
             self.storage.add_node(source);
 
             let source_distance = if let Some(ref distances) = self.storage.max_source_distances {
-                f64::from_bits(distances[source].load(Ordering::SeqCst) as u64)
+                f64::from_bits(distances[source as usize].load(Ordering::SeqCst) as u64)
             } else {
                 0.0
             };
@@ -61,13 +63,13 @@ impl TopologicalSortComputationRuntime {
                 // Update longest path distance if computing
                 if let Some(ref distances) = self.storage.max_source_distances {
                     loop {
-                        let current_bits = distances[target].load(Ordering::SeqCst);
+                        let current_bits = distances[target as usize].load(Ordering::SeqCst);
                         let current = f64::from_bits(current_bits as u64);
                         let new_distance = source_distance + weight;
 
                         if new_distance > current {
-                            let new_bits = new_distance.to_bits() as usize;
-                            if distances[target]
+                            let new_bits = new_distance.to_bits() as i64;
+                            if distances[target as usize]
                                 .compare_exchange(
                                     current_bits,
                                     new_bits,
@@ -85,7 +87,7 @@ impl TopologicalSortComputationRuntime {
                 }
 
                 // Decrement in-degree
-                let prev_in_degree = self.storage.in_degrees[target].fetch_sub(1, Ordering::SeqCst);
+                let prev_in_degree = self.storage.in_degrees[target as usize].fetch_sub(1, Ordering::SeqCst);
 
                 // If in-degree becomes 0, add to queue
                 if prev_in_degree == 1 {
@@ -100,8 +102,8 @@ impl TopologicalSortComputationRuntime {
 
         for i in 0..size {
             let node = self.storage.sorted_nodes[i].load(Ordering::SeqCst);
-            if node != usize::MAX {
-                sorted_nodes.push(node as u64);
+            if node != -1 {
+                sorted_nodes.push(node);
             }
         }
 
@@ -115,5 +117,27 @@ impl TopologicalSortComputationRuntime {
             sorted_nodes,
             max_source_distances,
         }
+    }
+
+    /// Compute topological sort using a graph for neighbor access
+    pub fn compute_with_graph(&mut self, graph: &dyn Graph) -> TopologicalSortResult {
+        let node_count = graph.node_count() as usize;
+        let fallback = graph.default_property_value();
+
+        let get_neighbors = |node_idx: NodeId| -> Vec<(NodeId, f64)> {
+            graph
+                .stream_relationships(node_idx, fallback)
+                .filter_map(|cursor| {
+                    let target = cursor.target_id();
+                    if target < 0 {
+                        return None;
+                    }
+                    let weight = cursor.property();
+                    Some((target, weight))
+                })
+                .collect()
+        };
+
+        self.compute(node_count, get_neighbors)
     }
 }
