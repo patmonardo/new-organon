@@ -12,6 +12,8 @@ use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use std::sync::mpsc;
 
+use super::computation::AllShortestPathsComputationRuntime;
+
 /// Algorithm type for All Shortest Paths
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum AlgorithmType {
@@ -310,6 +312,7 @@ impl<'a> AllShortestPathsStorageRuntime<'a> {
     /// need to handle the GraphStore lifetime properly.
     pub fn compute_all_shortest_paths_streaming(
         &self,
+        computation: &mut AllShortestPathsComputationRuntime,
         direction: u8,
         progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<mpsc::Receiver<ShortestPathResult>, AlgorithmError> {
@@ -322,6 +325,8 @@ impl<'a> AllShortestPathsStorageRuntime<'a> {
         let result = (|| {
             let (sender, receiver) = mpsc::channel::<ShortestPathResult>();
 
+            let mut receiver_dropped = false;
+
             // For now, process sequentially to avoid lifetime issues
             // Note: parallel processing with more precise lifetime management is deferred.
             for source_node in 0..node_count as NodeId {
@@ -329,10 +334,17 @@ impl<'a> AllShortestPathsStorageRuntime<'a> {
 
                 // Send results to stream
                 for result in results {
+                    computation.add_result(result.clone());
+
                     if sender.send(result).is_err() {
-                        // Receiver was dropped, stop processing
+                        // Receiver was dropped; stop processing early to avoid wasted work.
+                        receiver_dropped = true;
                         break;
                     }
+                }
+
+                if receiver_dropped {
+                    break;
                 }
 
                 processed_sources += 1;

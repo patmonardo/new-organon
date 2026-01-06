@@ -210,12 +210,14 @@ define_algorithm_spec! {
             );
 
             let receiver = storage
-                .compute_all_shortest_paths_streaming(direction_byte, &mut progress_tracker)?;
+                .compute_all_shortest_paths_streaming(
+                    &mut computation,
+                    direction_byte,
+                    &mut progress_tracker,
+                )?;
 
             // Collect results from stream
-            for result in receiver.iter() {
-                computation.add_result(result);
-
+            for _result in receiver.iter() {
                 // Check max_results limit
                 if let Some(max) = parsed_config.max_results {
                     if computation.total_results() >= max {

@@ -4,7 +4,7 @@
 //! Supports unweighted (BFS) and weighted (Dijkstra) variants.
 
 use crate::mem::MemoryRange;
-use crate::algo::all_shortest_paths::{AlgorithmType, AllShortestPathsStorageRuntime};
+use crate::algo::all_shortest_paths::{AlgorithmType, AllShortestPathsComputationRuntime, AllShortestPathsStorageRuntime};
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::projection::orientation::Orientation;
@@ -236,6 +236,8 @@ impl AllShortestPathsBuilder {
             self.concurrency,
         );
 
+        let mut computation = AllShortestPathsComputationRuntime::new();
+
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("all_shortest_paths".to_string(), graph_view.node_count()),
             self.concurrency,
@@ -243,30 +245,19 @@ impl AllShortestPathsBuilder {
 
         let start = std::time::Instant::now();
         let receiver = storage
-            .compute_all_shortest_paths_streaming(direction_byte, &mut progress_tracker)?;
+            .compute_all_shortest_paths_streaming(
+                &mut computation,
+                direction_byte,
+                &mut progress_tracker,
+            )?;
 
         let node_count = graph_view.node_count() as u64;
         let mut rows: Vec<AllShortestPathsRow> = Vec::new();
-
-        let mut max_distance = 0.0;
-        let mut min_distance = f64::INFINITY;
-        let mut infinite_distances: u64 = 0;
 
         for result in receiver.into_iter() {
             if let Some(max) = self.max_results {
                 if rows.len() >= max {
                     break;
-                }
-            }
-
-            if result.distance.is_infinite() {
-                infinite_distances += 1;
-            } else {
-                if result.distance > max_distance {
-                    max_distance = result.distance;
-                }
-                if result.distance < min_distance {
-                    min_distance = result.distance;
                 }
             }
 
@@ -280,16 +271,12 @@ impl AllShortestPathsBuilder {
             });
         }
 
-        if min_distance == f64::INFINITY {
-            min_distance = 0.0;
-        }
-
         let stats = AllShortestPathsStats {
             node_count,
             result_count: rows.len() as u64,
-            max_distance,
-            min_distance,
-            infinite_distances,
+            max_distance: computation.max_distance(),
+            min_distance: computation.min_distance(),
+            infinite_distances: computation.infinite_distances() as u64,
             execution_time_ms: start.elapsed().as_millis() as u64,
         };
 
