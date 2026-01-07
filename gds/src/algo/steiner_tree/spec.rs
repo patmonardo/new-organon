@@ -1,13 +1,14 @@
+use crate::types::graph::id_map::NodeId;
 use serde::{Deserialize, Serialize};
 
 /// Configuration for Steiner Tree algorithm
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SteinerTreeConfig {
     /// Source node from which to start the tree
-    pub source_node: u64,
+    pub source_node: NodeId,
 
     /// Terminal nodes that must be included in the tree
-    pub target_nodes: Vec<u64>,
+    pub target_nodes: Vec<NodeId>,
 
     /// Optional relationship weight property
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -20,7 +21,9 @@ pub struct SteinerTreeConfig {
     pub delta: f64,
 
     /// Whether to apply rerouting optimization (default: true)
-    /// Rerouting can improve solution quality but adds overhead
+    ///
+    /// Note: pruning of non-terminal leaves is always applied; this flag only
+    /// controls optional rerouting/post-optimizations.
     #[serde(default = "default_apply_rerouting")]
     pub apply_rerouting: bool,
 }

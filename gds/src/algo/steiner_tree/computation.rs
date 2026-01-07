@@ -1,226 +1,229 @@
-use crate::algo::steiner_tree::spec::{
-    SteinerTreeConfig, SteinerTreeResult, PRUNED, ROOT_NODE,
-};
-use crate::algo::steiner_tree::storage::SteinerTreeStorage;
-use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashSet, VecDeque};
+use crate::algo::steiner_tree::spec::{PRUNED, ROOT_NODE};
+use crate::types::graph::id_map::NodeId;
+use std::collections::VecDeque;
 
-/// Priority queue entry for Dijkstra's algorithm
-#[derive(Debug, Clone)]
-struct DijkstraEntry {
-    node: usize,
-    cost: f64,
-    parent: i64,
-}
-
-impl PartialEq for DijkstraEntry {
-    fn eq(&self, other: &Self) -> bool {
-        self.cost.eq(&other.cost)
-    }
-}
-
-impl Eq for DijkstraEntry {}
-
-impl PartialOrd for DijkstraEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for DijkstraEntry {
-    fn cmp(&self, other: &Self) -> Ordering {
-        // Reverse order for min-heap
-        other
-            .cost
-            .partial_cmp(&self.cost)
-            .unwrap_or(Ordering::Equal)
-    }
-}
-
-/// Computation runtime for Steiner Tree
+/// Pure state runtime for Steiner Tree.
+///
+/// Storage owns graph access and drives the algorithm loop.
 pub struct SteinerTreeComputationRuntime {
-    config: SteinerTreeConfig,
+    node_count: usize,
+    delta: f64,
+
+    // Final output state (tree)
+    parent: Vec<i64>,
+    parent_cost: Vec<f64>,
+    in_tree: Vec<bool>,
+
+    // Search state (per-iteration)
+    distances: Vec<f64>,
+    predecessor: Vec<i64>,
+    predecessor_edge_weight: Vec<f64>,
+    bins: Vec<VecDeque<NodeId>>,
 }
 
 impl SteinerTreeComputationRuntime {
-    pub fn new(config: SteinerTreeConfig) -> Self {
-        Self { config }
-    }
-
-    /// Compute Steiner Tree using closure-based interface
-    ///
-    /// # Arguments
-    /// * `node_count` - Total number of nodes in the graph
-    /// * `get_neighbors` - Function that returns (target_node, weight) pairs for a given node
-    pub fn compute<F>(&self, node_count: usize, get_neighbors: F) -> SteinerTreeResult
-    where
-        F: Fn(usize) -> Vec<(usize, f64)>,
-    {
-        let mut storage = SteinerTreeStorage::new(node_count);
-
-        // Validate configuration
-        if self.config.source_node as usize >= node_count {
-            // Return empty result on error
-            return storage.into_result();
-        }
-
-        let terminals: HashSet<usize> = self
-            .config
-            .target_nodes
-            .iter()
-            .map(|&t| t as usize)
-            .collect();
-
-        for &terminal in &terminals {
-            if terminal >= node_count {
-                return storage.into_result();
-            }
-        }
-
-        if terminals.is_empty() {
-            return storage.into_result();
-        }
-
-        // Initialize source
-        let source = self.config.source_node as usize;
-        storage.parent[source] = ROOT_NODE;
-        storage.effective_node_count = 1;
-
-        // Run shortest paths to all terminals
-        self.run_shortest_paths_to_terminals(&mut storage, &terminals, &get_neighbors);
-
-        // Prune nodes not on paths to terminals if rerouting enabled
-        if self.config.apply_rerouting {
-            self.prune_non_terminal_leaves(&mut storage, &terminals);
-        }
-
-        // Calculate effective target nodes count
-        storage.effective_target_nodes_count = terminals
-            .iter()
-            .filter(|&&t| storage.parent[t] != PRUNED)
-            .count() as u64;
-
-        storage.into_result()
-    }
-
-    /// Run Dijkstra from source to find paths to all terminals
-    fn run_shortest_paths_to_terminals<F>(
-        &self,
-        storage: &mut SteinerTreeStorage,
-        _terminals: &HashSet<usize>,
-        get_neighbors: &F,
-    ) where
-        F: Fn(usize) -> Vec<(usize, f64)>,
-    {
-        let node_count = storage.parent.len();
-        let mut distances = vec![f64::INFINITY; node_count];
-        let mut visited = vec![false; node_count];
-        let mut heap = BinaryHeap::new();
-
-        // Start from source
-        let source = self.config.source_node as usize;
-        distances[source] = 0.0;
-        heap.push(DijkstraEntry {
-            node: source,
-            cost: 0.0,
-            parent: ROOT_NODE,
-        });
-
-        while let Some(entry) = heap.pop() {
-            let node_id = entry.node;
-
-            if visited[node_id] {
-                continue;
-            }
-            visited[node_id] = true;
-
-            // Update parent if this is first visit
-            storage.parent[node_id] = entry.parent;
-            if entry.parent != ROOT_NODE && entry.parent >= 0 {
-                storage.parent_cost[node_id] = entry.cost - distances[entry.parent as usize];
-                storage.total_cost += storage.parent_cost[node_id];
-            }
-
-            if entry.parent != ROOT_NODE {
-                storage.effective_node_count += 1;
-            }
-
-            // Explore neighbors
-            let neighbors = get_neighbors(node_id);
-            for (target, weight) in neighbors {
-                if visited[target] {
-                    continue;
-                }
-
-                let new_cost = entry.cost + weight;
-
-                if new_cost < distances[target] {
-                    distances[target] = new_cost;
-                    heap.push(DijkstraEntry {
-                        node: target,
-                        cost: new_cost,
-                        parent: node_id as i64,
-                    });
-                }
-            }
+    pub fn new(delta: f64, node_count: usize) -> Self {
+        Self {
+            node_count,
+            delta,
+            parent: vec![PRUNED; node_count],
+            parent_cost: vec![0.0; node_count],
+            in_tree: vec![false; node_count],
+            distances: vec![f64::INFINITY; node_count],
+            predecessor: vec![PRUNED; node_count],
+            predecessor_edge_weight: vec![0.0; node_count],
+            bins: Vec::new(),
         }
     }
 
-    /// Prune leaf nodes that are not terminals
-    fn prune_non_terminal_leaves(
-        &self,
-        storage: &mut SteinerTreeStorage,
-        terminals: &HashSet<usize>,
-    ) {
-        let node_count = storage.parent.len();
+    pub fn initialize_tree(&mut self, source: NodeId) {
+        self.parent.fill(PRUNED);
+        self.parent_cost.fill(0.0);
+        self.in_tree.fill(false);
+
+        let source_idx = source as usize;
+        if source_idx < self.node_count {
+            self.parent[source_idx] = ROOT_NODE;
+            self.in_tree[source_idx] = true;
+        }
+    }
+
+    pub fn parent_array(&self) -> &[i64] {
+        &self.parent
+    }
+
+    pub fn parent_cost_array(&self) -> &[f64] {
+        &self.parent_cost
+    }
+
+    pub fn reset_search(&mut self, merged_to_source: &[bool]) -> VecDeque<NodeId> {
+        self.distances.fill(f64::INFINITY);
+        self.predecessor.fill(PRUNED);
+        self.predecessor_edge_weight.fill(0.0);
+        self.bins.clear();
+
+        let mut frontier = VecDeque::new();
+        for (idx, merged) in merged_to_source.iter().enumerate() {
+            if *merged {
+                self.distances[idx] = 0.0;
+                frontier.push_back(idx as NodeId);
+            }
+        }
+        frontier
+    }
+
+    pub fn distance(&self, node: NodeId) -> f64 {
+        self.distances
+            .get(node as usize)
+            .copied()
+            .unwrap_or(f64::INFINITY)
+    }
+
+    pub fn predecessor(&self, node: NodeId) -> Option<NodeId> {
+        let p = *self.predecessor.get(node as usize)?;
+        if p >= 0 {
+            Some(p as NodeId)
+        } else {
+            None
+        }
+    }
+
+    pub fn predecessor_edge_weight(&self, node: NodeId) -> f64 {
+        self.predecessor_edge_weight
+            .get(node as usize)
+            .copied()
+            .unwrap_or(0.0)
+    }
+
+    pub fn try_relax(&mut self, source: NodeId, target: NodeId, weight: f64) -> bool {
+        let source_idx = source as usize;
+        let target_idx = target as usize;
+        if source_idx >= self.node_count || target_idx >= self.node_count {
+            return false;
+        }
+
+        let new_distance = self.distances[source_idx] + weight;
+        if new_distance < self.distances[target_idx] {
+            self.distances[target_idx] = new_distance;
+            self.predecessor[target_idx] = source as i64;
+            self.predecessor_edge_weight[target_idx] = weight;
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn add_to_bin(&mut self, node: NodeId, bin_index: usize) {
+        while self.bins.len() <= bin_index {
+            self.bins.push(VecDeque::new());
+        }
+        self.bins[bin_index].push_back(node);
+    }
+
+    pub fn find_next_non_empty_bin(&self, start_index: usize) -> Option<usize> {
+        for i in start_index..self.bins.len() {
+            if !self.bins[i].is_empty() {
+                return Some(i);
+            }
+        }
+        None
+    }
+
+    pub fn drain_bin(&mut self, bin_index: usize) -> Vec<NodeId> {
+        if bin_index < self.bins.len() {
+            self.bins[bin_index].drain(..).collect()
+        } else {
+            Vec::new()
+        }
+    }
+
+    /// Merge a predecessor-chain path into the output tree.
+    pub fn merge_path_into_tree(
+        &mut self,
+        terminal: NodeId,
+        merged_to_source: &mut [bool],
+    ) -> bool {
+        let mut current = terminal;
+        let mut merged_any = false;
+
+        while (current as usize) < self.node_count && !merged_to_source[current as usize] {
+            let pred = match self.predecessor(current) {
+                Some(p) => p,
+                None => break,
+            };
+
+            let current_idx = current as usize;
+            merged_to_source[current_idx] = true;
+            merged_any = true;
+
+            if !self.in_tree[current_idx] {
+                self.parent[current_idx] = pred as i64;
+                self.parent_cost[current_idx] = self.predecessor_edge_weight(current);
+                self.in_tree[current_idx] = true;
+            }
+
+            current = pred;
+        }
+
+        merged_any
+    }
+
+    pub fn prune_non_terminal_leaves(&mut self, is_terminal: &[bool], source: NodeId) {
+        let node_count = self.node_count;
         let mut child_count = vec![0u32; node_count];
 
-        // Count children for each node
         for node_id in 0..node_count {
-            let parent = storage.parent[node_id];
+            let parent = self.parent[node_id];
             if parent >= 0 {
                 child_count[parent as usize] += 1;
             }
         }
 
-        // Queue nodes for potential pruning
         let mut queue = VecDeque::new();
-        for (node_id, &child_count_val) in child_count.iter().enumerate().take(node_count) {
-            if storage.parent[node_id] != PRUNED
-                && storage.parent[node_id] != ROOT_NODE
-                && child_count_val == 0
-                && !terminals.contains(&node_id)
-            {
-                queue.push_back(node_id);
+        for node_id in 0..node_count {
+            if self.parent[node_id] == PRUNED || self.parent[node_id] == ROOT_NODE {
+                continue;
+            }
+            if node_id == source as usize {
+                continue;
+            }
+            if child_count[node_id] == 0 && !is_terminal[node_id] {
+                queue.push_back(node_id as NodeId);
             }
         }
 
-        // Prune leaves that are not terminals
-        while let Some(node_id) = queue.pop_front() {
-            let parent = storage.parent[node_id];
-
+        while let Some(node) = queue.pop_front() {
+            let node_idx = node as usize;
+            let parent = self.parent[node_idx];
             if parent < 0 {
                 continue;
             }
 
-            // Remove this node
-            let cost = storage.parent_cost[node_id];
-            storage.parent[node_id] = PRUNED;
-            storage.parent_cost[node_id] = 0.0;
-            storage.total_cost -= cost;
-            storage.effective_node_count -= 1;
+            self.parent[node_idx] = PRUNED;
+            self.parent_cost[node_idx] = 0.0;
+            self.in_tree[node_idx] = false;
 
-            // Update parent's child count
             let parent_idx = parent as usize;
-            child_count[parent_idx] -= 1;
+            child_count[parent_idx] = child_count[parent_idx].saturating_sub(1);
 
-            // If parent is now a leaf and not a terminal, queue it
-            if child_count[parent_idx] == 0
-                && storage.parent[parent_idx] != ROOT_NODE
-                && !terminals.contains(&parent_idx)
+            if parent_idx != source as usize
+                && self.parent[parent_idx] != ROOT_NODE
+                && self.parent[parent_idx] != PRUNED
+                && child_count[parent_idx] == 0
+                && !is_terminal[parent_idx]
             {
-                queue.push_back(parent_idx);
+                queue.push_back(parent_idx as NodeId);
             }
         }
+    }
+
+    #[allow(dead_code)]
+    pub fn node_count(&self) -> usize {
+        self.node_count
+    }
+
+    #[allow(dead_code)]
+    pub fn delta(&self) -> f64 {
+        self.delta
     }
 }

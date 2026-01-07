@@ -1,10 +1,17 @@
-use crate::algo::prize_collecting_steiner_tree::computation::PCSTreeComputationRuntime;
-use crate::algo::prize_collecting_steiner_tree::spec::{PCSTreeConfig, PRUNED};
+use crate::algo::prize_collecting_steiner_tree::{
+    PCSTreeComputationRuntime, PCSTreeConfig, PCSTreeStorageRuntime, PRUNED, ROOT_NODE,
+};
+use crate::core::utils::progress::{TaskProgressTracker, Tasks};
+use crate::types::graph::id_map::NodeId;
 
-fn create_neighbors(edges: Vec<Vec<(usize, f64)>>) -> impl Fn(usize) -> Vec<(usize, f64)> {
-    move |node: usize| {
+fn create_neighbors(edges: Vec<Vec<(usize, f64)>>) -> impl Fn(NodeId) -> Vec<(NodeId, f64)> {
+    move |node: NodeId| {
+        let node = node as usize;
         if node < edges.len() {
-            edges[node].clone()
+            edges[node]
+                .iter()
+                .map(|(t, w)| (*t as NodeId, *w))
+                .collect()
         } else {
             Vec::new()
         }
@@ -30,8 +37,17 @@ fn test_pcst_simple_high_prize_node() {
         relationship_weight_property: Some("weight".to_string()),
     };
 
-    let runtime = PCSTreeComputationRuntime::new(config);
-    let result = runtime.compute(4, get_neighbors);
+    let storage = PCSTreeStorageRuntime::new(config.clone(), 1);
+    let mut computation = PCSTreeComputationRuntime::new(config.prizes.clone(), 4);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("pcst".to_string()));
+    let result = storage
+        .compute_prize_collecting_steiner_tree_with_neighbors(
+            &mut computation,
+            4,
+            &get_neighbors,
+            &mut progress_tracker,
+        )
+        .unwrap();
 
     // Node 2 has prize 10.0 - should definitely be included
     assert_ne!(
@@ -77,8 +93,17 @@ fn test_pcst_pruning_low_value_branch() {
         relationship_weight_property: Some("weight".to_string()),
     };
 
-    let runtime = PCSTreeComputationRuntime::new(config);
-    let result = runtime.compute(5, get_neighbors);
+    let storage = PCSTreeStorageRuntime::new(config.clone(), 1);
+    let mut computation = PCSTreeComputationRuntime::new(config.prizes.clone(), 5);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("pcst".to_string()));
+    let result = storage
+        .compute_prize_collecting_steiner_tree_with_neighbors(
+            &mut computation,
+            5,
+            &get_neighbors,
+            &mut progress_tracker,
+        )
+        .unwrap();
 
     // Node 2 should be in tree (highest prize)
     assert_ne!(result.parent_array[2], PRUNED);
@@ -117,8 +142,17 @@ fn test_pcst_all_high_prizes() {
         relationship_weight_property: Some("weight".to_string()),
     };
 
-    let runtime = PCSTreeComputationRuntime::new(config);
-    let result = runtime.compute(3, get_neighbors);
+    let storage = PCSTreeStorageRuntime::new(config.clone(), 1);
+    let mut computation = PCSTreeComputationRuntime::new(config.prizes.clone(), 3);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("pcst".to_string()));
+    let result = storage
+        .compute_prize_collecting_steiner_tree_with_neighbors(
+            &mut computation,
+            3,
+            &get_neighbors,
+            &mut progress_tracker,
+        )
+        .unwrap();
 
     // All nodes should be included
     assert_eq!(result.effective_node_count, 3);
@@ -149,8 +183,17 @@ fn test_pcst_expensive_edges() {
         relationship_weight_property: Some("weight".to_string()),
     };
 
-    let runtime = PCSTreeComputationRuntime::new(config);
-    let result = runtime.compute(3, get_neighbors);
+    let storage = PCSTreeStorageRuntime::new(config.clone(), 1);
+    let mut computation = PCSTreeComputationRuntime::new(config.prizes.clone(), 3);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("pcst".to_string()));
+    let result = storage
+        .compute_prize_collecting_steiner_tree_with_neighbors(
+            &mut computation,
+            3,
+            &get_neighbors,
+            &mut progress_tracker,
+        )
+        .unwrap();
 
     // Should include only 1 or 2 nodes (connecting is too expensive)
     assert!(result.effective_node_count <= 2);
@@ -183,8 +226,17 @@ fn test_pcst_balanced_tradeoff() {
         relationship_weight_property: Some("weight".to_string()),
     };
 
-    let runtime = PCSTreeComputationRuntime::new(config);
-    let result = runtime.compute(4, get_neighbors);
+    let storage = PCSTreeStorageRuntime::new(config.clone(), 1);
+    let mut computation = PCSTreeComputationRuntime::new(config.prizes.clone(), 4);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("pcst".to_string()));
+    let result = storage
+        .compute_prize_collecting_steiner_tree_with_neighbors(
+            &mut computation,
+            4,
+            &get_neighbors,
+            &mut progress_tracker,
+        )
+        .unwrap();
 
     // Should include 3-4 nodes
     assert!(result.effective_node_count >= 3);
@@ -208,12 +260,68 @@ fn test_pcst_zero_prizes() {
         relationship_weight_property: Some("weight".to_string()),
     };
 
-    let runtime = PCSTreeComputationRuntime::new(config);
-    let result = runtime.compute(2, get_neighbors);
+    let storage = PCSTreeStorageRuntime::new(config.clone(), 1);
+    let mut computation = PCSTreeComputationRuntime::new(config.prizes.clone(), 2);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("pcst".to_string()));
+    let result = storage
+        .compute_prize_collecting_steiner_tree_with_neighbors(
+            &mut computation,
+            2,
+            &get_neighbors,
+            &mut progress_tracker,
+        )
+        .unwrap();
 
     // Should include at least 1 node
     assert!(result.effective_node_count >= 1);
 
     // Net value should be 0 or slightly negative
     assert!(result.net_value <= 0.01);
+}
+
+#[test]
+fn test_pcst_root_is_present() {
+    let edges = vec![vec![(1, 1.0)], vec![(0, 1.0)]];
+    let get_neighbors = create_neighbors(edges);
+    let config = PCSTreeConfig {
+        prizes: vec![2.0, 1.0],
+        relationship_weight_property: None,
+    };
+
+    let storage = PCSTreeStorageRuntime::new(config.clone(), 1);
+    let mut computation = PCSTreeComputationRuntime::new(config.prizes.clone(), 2);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("pcst".to_string()));
+    let result = storage
+        .compute_prize_collecting_steiner_tree_with_neighbors(
+            &mut computation,
+            2,
+            &get_neighbors,
+            &mut progress_tracker,
+        )
+        .unwrap();
+
+    // Node 0 has highest prize.
+    assert_eq!(result.parent_array[0], ROOT_NODE);
+}
+
+#[test]
+fn test_pcst_prizes_length_mismatch_errors() {
+    let edges = vec![vec![(1, 1.0)], vec![(0, 1.0)]];
+    let get_neighbors = create_neighbors(edges);
+    let config = PCSTreeConfig {
+        prizes: vec![1.0],
+        relationship_weight_property: None,
+    };
+
+    let storage = PCSTreeStorageRuntime::new(config.clone(), 1);
+    let mut computation = PCSTreeComputationRuntime::new(config.prizes.clone(), 2);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("pcst".to_string()));
+    let out = storage.compute_prize_collecting_steiner_tree_with_neighbors(
+        &mut computation,
+        2,
+        &get_neighbors,
+        &mut progress_tracker,
+    );
+
+    assert!(out.is_err());
 }

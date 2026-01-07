@@ -6,16 +6,19 @@
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::algo::steiner_tree::computation::SteinerTreeComputationRuntime;
-use crate::algo::steiner_tree::SteinerTreeConfig;
+use crate::algo::steiner_tree::{
+    SteinerTreeComputationRuntime, SteinerTreeConfig, SteinerTreeStorageRuntime,
+};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
+use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::core::utils::progress::{ProgressTracker, TaskRegistryFactory, Tasks};
+use crate::core::utils::progress::{TaskRegistryFactory, Tasks};
 
 /// Result row for Steiner tree stream mode
 #[derive(Debug, Clone, serde::Serialize)]
@@ -126,6 +129,14 @@ impl SteinerTreeBuilder {
             );
         }
 
+        if self.delta <= 0.0 {
+            return Err(
+                crate::projection::eval::procedure::AlgorithmError::Execution(
+                    "delta must be > 0".to_string(),
+                ),
+            );
+        }
+
         ConfigValidator::in_range(self.delta, 0.0, 100.0, "delta")?;
 
         Ok(())
@@ -135,14 +146,31 @@ impl SteinerTreeBuilder {
         self.validate()?;
         let start = std::time::Instant::now();
 
-        // Steiner tree works on undirected graphs
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+        // Steiner tree works on undirected graphs.
+        // Use all relationship types by default.
+        let rel_types: HashSet<RelationshipType> = self.graph_store.relationship_types();
+
+        let graph_view = if let Some(prop) = self.relationship_weight_property.as_ref() {
+            let selectors: HashMap<RelationshipType, String> = rel_types
+                .iter()
+                .map(|t| (t.clone(), prop.clone()))
+                .collect();
+            self.graph_store
+                .get_graph_with_types_selectors_and_orientation(
+                    &rel_types,
+                    &selectors,
+                    Orientation::Undirected,
+                )
+                .map_err(|e| {
+                    crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+                })?
+        } else {
+            self.graph_store
+                .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
+                .map_err(|e| {
+                    crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+                })?
+        };
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -161,36 +189,39 @@ impl SteinerTreeBuilder {
             Tasks::leaf_with_volume("steiner_tree".to_string(), node_count),
             self.concurrency,
         );
-        progress_tracker.begin_subtask_with_volume(node_count);
 
-        let fallback = graph_view.default_property_value();
-
-        // Get neighbors with weights
-        let get_neighbors = |node_idx: usize| -> Vec<(usize, f64)> {
-            graph_view
-                .stream_relationships(node_idx as i64, fallback)
-                .filter_map(|cursor| {
-                    let target = cursor.target_id();
-                    if target >= 0 {
-                        let weight = 1.0; // Note: weight property lookup is deferred.
-                        Some((target as usize, weight))
-                    } else {
-                        None
-                    }
+        let source_node: NodeId = NodeId::try_from(self.source_node).map_err(|_| {
+            crate::projection::eval::procedure::AlgorithmError::Execution(
+                format!("source_node must fit into i64 (got {})", self.source_node),
+            )
+        })?;
+        let target_nodes: Vec<NodeId> = self
+            .target_nodes
+            .iter()
+            .map(|&t| {
+                NodeId::try_from(t).map_err(|_| {
+                    crate::projection::eval::procedure::AlgorithmError::Execution(
+                        format!("target_nodes must fit into i64 (got {t})"),
+                    )
                 })
-                .collect()
-        };
+            })
+            .collect::<Result<Vec<_>>>()?;
 
         let config = SteinerTreeConfig {
-            source_node: self.source_node,
-            target_nodes: self.target_nodes.clone(),
+            source_node,
+            target_nodes,
             relationship_weight_property: self.relationship_weight_property.clone(),
             delta: self.delta,
             apply_rerouting: self.apply_rerouting,
         };
 
-        let runtime = SteinerTreeComputationRuntime::new(config);
-        let result = runtime.compute(node_count, get_neighbors);
+        let storage = SteinerTreeStorageRuntime::new(config, self.concurrency);
+        let mut computation = SteinerTreeComputationRuntime::new(self.delta, node_count);
+        let result = storage.compute_steiner_tree(
+            &mut computation,
+            Some(graph_view.as_ref()),
+            &mut progress_tracker,
+        )?;
 
         let mut rows = Vec::new();
         for (node_idx, &parent) in result.parent_array.iter().enumerate() {
@@ -217,9 +248,6 @@ impl SteinerTreeBuilder {
             total_cost: result.total_cost,
             computation_time_ms: start.elapsed().as_millis() as u64,
         };
-
-        progress_tracker.log_progress(node_count);
-        progress_tracker.end_subtask();
 
         Ok((rows, stats))
     }

@@ -11,12 +11,12 @@ This document reviews the architectural compliance of pathfinding algorithms wit
 ## Current Status Summary
 
 **Total Pathfinding Algorithms**: 15
-- ✅ **Fully Architecturally Sound** (7 algorithms): BFS, DFS, A*, Bellman-Ford, Dijkstra, Delta Stepping, Yen's
-- ⚠️ **Partially Compliant** (2 algorithms): all_shortest_paths, kspanningtree, spanning_tree (have compute_ methods but don't use computation runtime properly)
-- ❌ **Non-Compliant** (6 algorithms): dag_longest_path, prize_collecting_steiner_tree, random_walk, steiner_tree, topological_sort
+- ✅ **Fully Architecturally Sound** (9 algorithms): BFS, DFS, A*, Bellman-Ford, Dijkstra, Delta Stepping, Yen's, steiner_tree, prize_collecting_steiner_tree
+- ⚠️ **Partially Compliant** (3 algorithms): all_shortest_paths, kspanningtree, spanning_tree (have compute_ methods but don't use computation runtime properly)
+- ❌ **Non-Compliant** (3 algorithms): dag_longest_path, random_walk, topological_sort
 
-**Reviewed**: 7/7 fully compliant algorithms (100% complete)
-**Remaining Issues**: 2 partially compliant + 6 non-compliant algorithms to address
+**Reviewed**: 9/9 fully compliant algorithms (100% complete)
+**Remaining Issues**: 3 partially compliant + 3 non-compliant algorithms to address
 
 ## BFS Algorithm - ✅ **Architecturally Sound**
 
@@ -391,9 +391,7 @@ pub fn compute_yens(
 
 ### Missing compute_{algo} Methods
 - `dag_longest_path/storage.rs` - no compute_ methods
-- `prize_collecting_steiner_tree/storage.rs` - no compute_ methods  
 - `random_walk/storage.rs` - no compute_ methods
-- `steiner_tree/storage.rs` - no compute_ methods
 - `topological_sort/storage.rs` - no compute_ methods
 
 ## Universal Pattern Summary

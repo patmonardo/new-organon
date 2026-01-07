@@ -1,4 +1,5 @@
 use crate::algo::similarity::knn::computation::KnnNnDescentConfig;
+use crate::algo::similarity::knn::computation::KnnNnDescentStats;
 use crate::algo::similarity::knn::metrics::SimilarityComputer;
 use std::sync::Arc;
 
@@ -26,8 +27,28 @@ impl FilteredKnnComputationRuntime {
         source_allowed: Option<Arc<Vec<bool>>>,
         target_allowed: Option<Arc<Vec<bool>>>,
     ) -> Vec<FilteredKnnComputationResult> {
+        self.compute_nn_descent_with_stats(
+            node_count,
+            initial_neighbors,
+            cfg,
+            similarity,
+            source_allowed,
+            target_allowed,
+        )
+        .0
+    }
+
+    pub fn compute_nn_descent_with_stats(
+        &self,
+        node_count: usize,
+        initial_neighbors: Vec<Vec<u64>>,
+        cfg: KnnNnDescentConfig,
+        similarity: Arc<dyn SimilarityComputer>,
+        source_allowed: Option<Arc<Vec<bool>>>,
+        target_allowed: Option<Arc<Vec<bool>>>,
+    ) -> (Vec<FilteredKnnComputationResult>, KnnNnDescentStats) {
         let engine = crate::algo::similarity::knn::KnnComputationRuntime::new();
-        let (rows, _stats) = engine.compute_nn_descent(
+        let (rows, stats) = engine.compute_nn_descent(
             node_count,
             initial_neighbors,
             cfg,
@@ -36,12 +57,15 @@ impl FilteredKnnComputationRuntime {
             target_allowed,
         );
 
-        rows.into_iter()
+        let mapped = rows
+            .into_iter()
             .map(|r| FilteredKnnComputationResult {
                 source: r.source,
                 target: r.target,
                 similarity: r.similarity,
             })
-            .collect()
+            .collect();
+
+        (mapped, stats)
     }
 }

@@ -13,6 +13,8 @@
 
 pub const OMEGA: usize = 64;
 
+use crate::concurrency::TerminationFlag;
+
 #[derive(Debug, Clone)]
 pub struct AggregatedNeighborProcessingMsBfs {
     node_count: usize,
@@ -47,6 +49,28 @@ impl AggregatedNeighborProcessingMsBfs {
         source_len: usize,
         allow_start_node_traversal: bool,
         get_neighbors: G,
+        per_node_action: F,
+    ) where
+        G: Fn(usize) -> Vec<usize>,
+        F: FnMut(usize, u32, u64),
+    {
+        self.run_with_termination(
+            source_offset,
+            source_len,
+            allow_start_node_traversal,
+            None,
+            get_neighbors,
+            per_node_action,
+        )
+    }
+
+    pub fn run_with_termination<G, F>(
+        &mut self,
+        source_offset: usize,
+        source_len: usize,
+        allow_start_node_traversal: bool,
+        termination: Option<&TerminationFlag>,
+        get_neighbors: G,
         mut per_node_action: F,
     ) where
         G: Fn(usize) -> Vec<usize>,
@@ -68,8 +92,20 @@ impl AggregatedNeighborProcessingMsBfs {
         let mut depth: u32 = 0;
 
         loop {
+            if let Some(t) = termination {
+                if !t.running() {
+                    return;
+                }
+            }
+
             // Phase 1: traverse nodes currently in visit set.
             for node_id in 0..self.node_count {
+                if let Some(t) = termination {
+                    if !t.running() {
+                        return;
+                    }
+                }
+
                 let node_visit = self.visit[node_id];
                 if node_visit == 0 {
                     continue;
@@ -81,6 +117,12 @@ impl AggregatedNeighborProcessingMsBfs {
 
                 // prepareNextVisit: OR node_visit bits into neighbors' next set.
                 for neighbor in get_neighbors(node_id) {
+                    if let Some(t) = termination {
+                        if !t.running() {
+                            return;
+                        }
+                    }
+
                     if neighbor < self.node_count {
                         self.visit_next[neighbor] |= node_visit;
                     }
@@ -92,6 +134,12 @@ impl AggregatedNeighborProcessingMsBfs {
             // Phase 2: compute next frontier and update seen.
             let mut has_next = false;
             for node_id in 0..self.node_count {
+                if let Some(t) = termination {
+                    if !t.running() {
+                        return;
+                    }
+                }
+
                 let next = self.visit_next[node_id] & !self.seen[node_id];
                 if next != 0 {
                     self.seen[node_id] |= next;
@@ -118,14 +166,39 @@ impl AggregatedNeighborProcessingMsBfs {
         G: Fn(usize) -> Vec<usize> + Copy,
         F: FnMut(usize, u32, u64) + Copy,
     {
+        self.run_all_sources_batched_with_termination(
+            allow_start_node_traversal,
+            None,
+            get_neighbors,
+            per_node_action,
+        )
+    }
+
+    pub fn run_all_sources_batched_with_termination<G, F>(
+        &mut self,
+        allow_start_node_traversal: bool,
+        termination: Option<&TerminationFlag>,
+        get_neighbors: G,
+        mut per_node_action: F,
+    ) where
+        G: Fn(usize) -> Vec<usize> + Copy,
+        F: FnMut(usize, u32, u64) + Copy,
+    {
         for source_offset in (0..self.node_count).step_by(OMEGA) {
+            if let Some(t) = termination {
+                if !t.running() {
+                    return;
+                }
+            }
+
             let source_len = (source_offset + OMEGA).min(self.node_count) - source_offset;
-            self.run(
+            self.run_with_termination(
                 source_offset,
                 source_len,
                 allow_start_node_traversal,
+                termination,
                 get_neighbors,
-                per_node_action,
+                &mut per_node_action,
             );
         }
     }

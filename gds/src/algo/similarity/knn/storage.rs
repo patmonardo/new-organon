@@ -1,4 +1,7 @@
-use super::computation::{KnnComputationResult, KnnComputationRuntime, KnnNnDescentConfig};
+use super::computation::{
+    KnnComputationResult, KnnComputationRuntime, KnnNnDescentConfig,
+    KnnNnDescentStats,
+};
 use super::metrics::{KnnNodePropertySpec, SimilarityComputer, SimilarityMetric};
 use crate::core::utils::progress::ProgressTracker;
 use crate::ml::core::samplers::RandomWalkSampler;
@@ -60,6 +63,44 @@ impl KnnStorageRuntime {
         initial_sampler: KnnSamplerType,
         progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<Vec<KnnComputationResult>, AlgorithmError> {
+        Ok(self
+            .compute_single_with_stats(
+                computation,
+                graph_store,
+                node_property,
+                k,
+                sampled_k,
+                max_iterations,
+                similarity_cutoff,
+                metric,
+                perturbation_rate,
+                random_joins,
+                update_threshold,
+                random_seed,
+                initial_sampler,
+                progress_tracker,
+            )?
+            .0)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn compute_single_with_stats(
+        &self,
+        computation: &KnnComputationRuntime,
+        graph_store: &impl GraphStore,
+        node_property: &str,
+        k: usize,
+        sampled_k: usize,
+        max_iterations: usize,
+        similarity_cutoff: f64,
+        metric: SimilarityMetric,
+        perturbation_rate: f64,
+        random_joins: usize,
+        update_threshold: u64,
+        random_seed: Option<u64>,
+        initial_sampler: KnnSamplerType,
+        progress_tracker: &mut dyn ProgressTracker,
+    ) -> Result<(Vec<KnnComputationResult>, KnnNnDescentStats), AlgorithmError> {
         let node_count = graph_store.node_count();
         progress_tracker.begin_subtask_with_volume(node_count);
 
@@ -94,15 +135,14 @@ impl KnnStorageRuntime {
             };
 
             Ok(self.with_thread_pool(|| {
-                let (rows, _stats) = computation.compute_nn_descent(
+                computation.compute_nn_descent(
                     node_count,
                     initial_neighbors,
                     cfg,
                     similarity,
                     None,
                     None,
-                );
-                rows
+                )
             }))
         })();
 
@@ -135,6 +175,42 @@ impl KnnStorageRuntime {
         initial_sampler: KnnSamplerType,
         progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<Vec<KnnComputationResult>, AlgorithmError> {
+        Ok(self
+            .compute_multi_with_stats(
+                computation,
+                graph_store,
+                node_properties,
+                k,
+                sampled_k,
+                max_iterations,
+                similarity_cutoff,
+                perturbation_rate,
+                random_joins,
+                update_threshold,
+                random_seed,
+                initial_sampler,
+                progress_tracker,
+            )?
+            .0)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn compute_multi_with_stats(
+        &self,
+        computation: &KnnComputationRuntime,
+        graph_store: &impl GraphStore,
+        node_properties: &[KnnNodePropertySpec],
+        k: usize,
+        sampled_k: usize,
+        max_iterations: usize,
+        similarity_cutoff: f64,
+        perturbation_rate: f64,
+        random_joins: usize,
+        update_threshold: u64,
+        random_seed: Option<u64>,
+        initial_sampler: KnnSamplerType,
+        progress_tracker: &mut dyn ProgressTracker,
+    ) -> Result<(Vec<KnnComputationResult>, KnnNnDescentStats), AlgorithmError> {
         let node_count = graph_store.node_count();
         progress_tracker.begin_subtask_with_volume(node_count);
 
@@ -189,15 +265,14 @@ impl KnnStorageRuntime {
             };
 
             Ok(self.with_thread_pool(|| {
-                let (rows, _stats) = computation.compute_nn_descent(
+                computation.compute_nn_descent(
                     node_count,
                     initial_neighbors,
                     cfg,
                     similarity,
                     None,
                     None,
-                );
-                rows
+                )
             }))
         })();
 

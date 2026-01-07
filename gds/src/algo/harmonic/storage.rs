@@ -89,7 +89,13 @@ impl<'a, G: GraphStore> HarmonicStorageRuntime<'a, G> {
             let source_len = (source_offset + OMEGA).min(node_count) - source_offset;
 
             msbfs_state.with(|msbfs| {
-                computation.run_batch(msbfs, source_offset, source_len, termination, &neighbors);
+                computation.run_batch_with_termination(
+                    msbfs,
+                    source_offset,
+                    source_len,
+                    termination,
+                    &neighbors,
+                );
             });
 
             (on_sources_done.as_ref())(source_len);

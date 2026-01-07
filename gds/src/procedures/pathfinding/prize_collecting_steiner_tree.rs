@@ -1,16 +1,18 @@
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::algo::prize_collecting_steiner_tree::computation::PCSTreeComputationRuntime;
-use crate::algo::prize_collecting_steiner_tree::PCSTreeConfig;
+use crate::algo::prize_collecting_steiner_tree::{
+    PCSTreeComputationRuntime, PCSTreeConfig, PCSTreeStorageRuntime,
+};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
+use std::collections::HashMap;
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::core::utils::progress::{ProgressTracker, TaskRegistryFactory, Tasks};
+use crate::core::utils::progress::{TaskRegistryFactory, Tasks};
 
 /// Result row for Prize-Collecting Steiner Tree stream mode
 #[derive(Debug, Clone, serde::Serialize)]
@@ -115,14 +117,31 @@ impl PCSTreeBuilder {
 
         let start = std::time::Instant::now();
 
-        // PCST works on undirected graphs
-        let rel_types: HashSet<RelationshipType> = HashSet::new();
-        let graph_view = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+        // PCST works on undirected graphs.
+        // Use all relationship types by default.
+        let rel_types: HashSet<RelationshipType> = self.graph_store.relationship_types();
+
+        let graph_view = if let Some(prop) = self.relationship_weight_property.as_ref() {
+            let selectors: HashMap<RelationshipType, String> = rel_types
+                .iter()
+                .map(|t| (t.clone(), prop.clone()))
+                .collect();
+            self.graph_store
+                .get_graph_with_types_selectors_and_orientation(
+                    &rel_types,
+                    &selectors,
+                    Orientation::Undirected,
+                )
+                .map_err(|e| {
+                    crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+                })?
+        } else {
+            self.graph_store
+                .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
+                .map_err(|e| {
+                    crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+                })?
+        };
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -152,33 +171,21 @@ impl PCSTreeBuilder {
             Tasks::leaf_with_volume("prize_collecting_steiner_tree".to_string(), node_count),
             self.concurrency,
         );
-        progress_tracker.begin_subtask_with_volume(node_count);
 
-        let fallback = graph_view.default_property_value();
-
-        // Get neighbors with weights
-        let get_neighbors = |node_idx: usize| -> Vec<(usize, f64)> {
-            graph_view
-                .stream_relationships(node_idx as i64, fallback)
-                .filter_map(|cursor| {
-                    let target = cursor.target_id();
-                    if target >= 0 {
-                        let weight = cursor.property();
-                        Some((target as usize, weight))
-                    } else {
-                        None
-                    }
-                })
-                .collect()
-        };
-
+        // Build config + runtimes.
+        // Storage runtime owns graph access and drives the algorithm.
+        let prizes = self.prizes;
         let config = PCSTreeConfig {
-            prizes: self.prizes,
+            prizes: prizes.clone(),
             relationship_weight_property: self.relationship_weight_property,
         };
-
-        let runtime = PCSTreeComputationRuntime::new(config);
-        let result = runtime.compute(node_count, get_neighbors);
+        let storage = PCSTreeStorageRuntime::new(config, self.concurrency);
+        let mut computation = PCSTreeComputationRuntime::new(prizes, node_count);
+        let result = storage.compute_prize_collecting_steiner_tree(
+            &mut computation,
+            Some(graph_view.as_ref()),
+            &mut progress_tracker,
+        )?;
 
         let mut rows = Vec::new();
         for (node_idx, &parent) in result.parent_array.iter().enumerate() {
@@ -206,9 +213,6 @@ impl PCSTreeBuilder {
             net_value: result.net_value,
             computation_time_ms: start.elapsed().as_millis() as u64,
         };
-
-        progress_tracker.log_progress(node_count);
-        progress_tracker.end_subtask();
 
         Ok((rows, stats))
     }

@@ -3,6 +3,7 @@ use crate::algo::similarity::knn::metrics::{
     KnnNodePropertySpec, SimilarityComputer, SimilarityMetric,
 };
 use crate::algo::similarity::knn::computation::KnnNnDescentConfig;
+use crate::algo::similarity::knn::computation::KnnNnDescentStats;
 use crate::algo::similarity::knn::storage::{KnnSamplerType, KnnStorageRuntime};
 use crate::core::utils::progress::ProgressTracker;
 use crate::projection::eval::procedure::AlgorithmError;
@@ -57,6 +58,48 @@ impl FilteredKnnStorageRuntime {
         target_node_labels: &[NodeLabel],
         progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<Vec<FilteredKnnComputationResult>, AlgorithmError> {
+        Ok(self
+            .compute_single_with_stats(
+                computation,
+                graph_store,
+                node_property,
+                k,
+                sampled_k,
+                max_iterations,
+                similarity_cutoff,
+                metric,
+                perturbation_rate,
+                random_joins,
+                update_threshold,
+                random_seed,
+                initial_sampler,
+                source_node_labels,
+                target_node_labels,
+                progress_tracker,
+            )?
+            .0)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn compute_single_with_stats(
+        &self,
+        computation: &FilteredKnnComputationRuntime,
+        graph_store: &impl GraphStore,
+        node_property: &str,
+        k: usize,
+        sampled_k: usize,
+        max_iterations: usize,
+        similarity_cutoff: f64,
+        metric: SimilarityMetric,
+        perturbation_rate: f64,
+        random_joins: usize,
+        update_threshold: u64,
+        random_seed: Option<u64>,
+        initial_sampler: KnnSamplerType,
+        source_node_labels: &[NodeLabel],
+        target_node_labels: &[NodeLabel],
+        progress_tracker: &mut dyn ProgressTracker,
+    ) -> Result<(Vec<FilteredKnnComputationResult>, KnnNnDescentStats), AlgorithmError> {
         let node_count = graph_store.node_count();
         progress_tracker.begin_subtask_with_volume(node_count);
 
@@ -97,7 +140,7 @@ impl FilteredKnnStorageRuntime {
             };
 
             Ok(self.with_thread_pool(|| {
-                computation.compute_nn_descent(
+                computation.compute_nn_descent_with_stats(
                     node_count,
                     initial_neighbors,
                     cfg,
@@ -140,6 +183,46 @@ impl FilteredKnnStorageRuntime {
         target_node_labels: &[NodeLabel],
         progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<Vec<FilteredKnnComputationResult>, AlgorithmError> {
+        Ok(self
+            .compute_multi_with_stats(
+                computation,
+                graph_store,
+                node_properties,
+                k,
+                sampled_k,
+                max_iterations,
+                similarity_cutoff,
+                perturbation_rate,
+                random_joins,
+                update_threshold,
+                random_seed,
+                initial_sampler,
+                source_node_labels,
+                target_node_labels,
+                progress_tracker,
+            )?
+            .0)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn compute_multi_with_stats(
+        &self,
+        computation: &FilteredKnnComputationRuntime,
+        graph_store: &impl GraphStore,
+        node_properties: &[KnnNodePropertySpec],
+        k: usize,
+        sampled_k: usize,
+        max_iterations: usize,
+        similarity_cutoff: f64,
+        perturbation_rate: f64,
+        random_joins: usize,
+        update_threshold: u64,
+        random_seed: Option<u64>,
+        initial_sampler: KnnSamplerType,
+        source_node_labels: &[NodeLabel],
+        target_node_labels: &[NodeLabel],
+        progress_tracker: &mut dyn ProgressTracker,
+    ) -> Result<(Vec<FilteredKnnComputationResult>, KnnNnDescentStats), AlgorithmError> {
         let node_count = graph_store.node_count();
         progress_tracker.begin_subtask_with_volume(node_count);
 
@@ -200,7 +283,7 @@ impl FilteredKnnStorageRuntime {
             };
 
             Ok(self.with_thread_pool(|| {
-                computation.compute_nn_descent(
+                computation.compute_nn_descent_with_stats(
                     node_count,
                     initial_neighbors,
                     cfg,

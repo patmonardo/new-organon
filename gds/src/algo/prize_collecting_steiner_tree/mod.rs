@@ -7,4 +7,4 @@ mod integration_tests;
 
 pub use computation::PCSTreeComputationRuntime;
 pub use spec::{PCSTreeConfig, PCSTreeResult, PRUNED, ROOT_NODE};
-pub use storage::PCSTreeStorage;
+pub use storage::PCSTreeStorageRuntime;

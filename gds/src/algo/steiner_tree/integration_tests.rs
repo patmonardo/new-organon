@@ -1,10 +1,18 @@
-use crate::algo::steiner_tree::computation::SteinerTreeComputationRuntime;
-use crate::algo::steiner_tree::spec::{SteinerTreeConfig, PRUNED, ROOT_NODE};
+use crate::algo::steiner_tree::{
+    SteinerTreeComputationRuntime, SteinerTreeConfig, SteinerTreeStorageRuntime,
+    PRUNED, ROOT_NODE,
+};
+use crate::core::utils::progress::{TaskProgressTracker, Tasks};
+use crate::types::graph::id_map::NodeId;
 
-fn create_neighbors(edges: Vec<Vec<(usize, f64)>>) -> impl Fn(usize) -> Vec<(usize, f64)> {
-    move |node: usize| {
+fn create_neighbors(edges: Vec<Vec<(usize, f64)>>) -> impl Fn(NodeId) -> Vec<(NodeId, f64)> {
+    move |node: NodeId| {
+        let node = node as usize;
         if node < edges.len() {
-            edges[node].clone()
+            edges[node]
+                .iter()
+                .map(|(t, w)| (*t as NodeId, *w))
+                .collect()
         } else {
             Vec::new()
         }
@@ -27,8 +35,12 @@ fn test_steiner_tree_simple_path() {
         apply_rerouting: true,
     };
 
-    let runtime = SteinerTreeComputationRuntime::new(config);
-    let result = runtime.compute(4, get_neighbors);
+    let storage = SteinerTreeStorageRuntime::new(config, 1);
+    let mut computation = SteinerTreeComputationRuntime::new(1.0, 4);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
+    let result = storage
+        .compute_steiner_tree_with_neighbors(&mut computation, 4, &get_neighbors, &mut progress_tracker)
+        .unwrap();
 
     // Check path: 0 is root, 1->0, 2->1, 3->2
     assert_eq!(result.parent_array[0], ROOT_NODE);
@@ -70,8 +82,12 @@ fn test_steiner_tree_multiple_terminals() {
         apply_rerouting: true,
     };
 
-    let runtime = SteinerTreeComputationRuntime::new(config);
-    let result = runtime.compute(5, get_neighbors);
+    let storage = SteinerTreeStorageRuntime::new(config, 1);
+    let mut computation = SteinerTreeComputationRuntime::new(1.0, 5);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
+    let result = storage
+        .compute_steiner_tree_with_neighbors(&mut computation, 5, &get_neighbors, &mut progress_tracker)
+        .unwrap();
 
     // All nodes should be in tree
     assert_eq!(result.parent_array[0], ROOT_NODE);
@@ -114,8 +130,12 @@ fn test_steiner_tree_with_pruning() {
         apply_rerouting: true,
     };
 
-    let runtime = SteinerTreeComputationRuntime::new(config);
-    let result = runtime.compute(5, get_neighbors);
+    let storage = SteinerTreeStorageRuntime::new(config, 1);
+    let mut computation = SteinerTreeComputationRuntime::new(1.0, 5);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
+    let result = storage
+        .compute_steiner_tree_with_neighbors(&mut computation, 5, &get_neighbors, &mut progress_tracker)
+        .unwrap();
 
     // Check tree structure
     assert_eq!(result.parent_array[0], ROOT_NODE);
@@ -157,8 +177,12 @@ fn test_steiner_tree_weighted_edges() {
         apply_rerouting: true,
     };
 
-    let runtime = SteinerTreeComputationRuntime::new(config);
-    let result = runtime.compute(4, get_neighbors);
+    let storage = SteinerTreeStorageRuntime::new(config, 1);
+    let mut computation = SteinerTreeComputationRuntime::new(1.0, 4);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
+    let result = storage
+        .compute_steiner_tree_with_neighbors(&mut computation, 4, &get_neighbors, &mut progress_tracker)
+        .unwrap();
 
     // Should take cheaper path through node 2
     assert_eq!(result.parent_array[0], ROOT_NODE);
@@ -174,8 +198,10 @@ fn test_steiner_tree_weighted_edges() {
 }
 
 #[test]
-fn test_steiner_tree_no_pruning() {
-    // Same as pruning test but without pruning enabled
+fn test_steiner_tree_pruning_is_always_applied() {
+    // Same as pruning test but with apply_rerouting disabled.
+    // We still prune non-terminal leaves because pruning is part of Steiner semantics;
+    // apply_rerouting controls optional post-optimizations.
     let edges = vec![
         vec![(1, 1.0), (2, 1.0), (3, 1.0)],
         vec![(4, 1.0)],
@@ -193,20 +219,24 @@ fn test_steiner_tree_no_pruning() {
         apply_rerouting: false, // Pruning disabled
     };
 
-    let runtime = SteinerTreeComputationRuntime::new(config);
-    let result = runtime.compute(5, get_neighbors);
+    let storage = SteinerTreeStorageRuntime::new(config, 1);
+    let mut computation = SteinerTreeComputationRuntime::new(1.0, 5);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
+    let result = storage
+        .compute_steiner_tree_with_neighbors(&mut computation, 5, &get_neighbors, &mut progress_tracker)
+        .unwrap();
 
-    // Node 3 should still be included
+    // Node 3 should be pruned (not on any terminal path)
     assert_eq!(result.parent_array[0], ROOT_NODE);
     assert_eq!(result.parent_array[1], 0);
     assert_eq!(result.parent_array[2], 0);
-    assert_eq!(result.parent_array[3], 0); // Not pruned
+    assert_eq!(result.parent_array[3], PRUNED);
     assert_eq!(result.parent_array[4], 1);
 
-    // Total cost: 4 edges
-    assert!((result.total_cost - 4.0).abs() < 0.01);
+    // Total cost: 3 edges (0->1, 0->2, 1->4)
+    assert!((result.total_cost - 3.0).abs() < 0.01);
 
-    assert_eq!(result.effective_node_count, 5);
+    assert_eq!(result.effective_node_count, 4);
     assert_eq!(result.effective_target_nodes_count, 2);
 }
 
@@ -231,8 +261,12 @@ fn test_steiner_tree_unreachable_terminal() {
         apply_rerouting: true,
     };
 
-    let runtime = SteinerTreeComputationRuntime::new(config);
-    let result = runtime.compute(3, get_neighbors);
+    let storage = SteinerTreeStorageRuntime::new(config, 1);
+    let mut computation = SteinerTreeComputationRuntime::new(1.0, 3);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
+    let result = storage
+        .compute_steiner_tree_with_neighbors(&mut computation, 3, &get_neighbors, &mut progress_tracker)
+        .unwrap();
 
     // Node 1 reachable, node 2 not
     assert_eq!(result.parent_array[0], ROOT_NODE);
@@ -241,4 +275,104 @@ fn test_steiner_tree_unreachable_terminal() {
 
     assert_eq!(result.effective_node_count, 2); // 0, 1
     assert_eq!(result.effective_target_nodes_count, 1); // Only node 1
+}
+
+#[test]
+fn test_steiner_tree_delta_must_be_positive() {
+    let edges = vec![vec![(1, 1.0)], vec![]];
+    let get_neighbors = create_neighbors(edges);
+    let config = SteinerTreeConfig {
+        source_node: 0,
+        target_nodes: vec![1],
+        relationship_weight_property: None,
+        delta: 0.0,
+        apply_rerouting: true,
+    };
+
+    let storage = SteinerTreeStorageRuntime::new(config, 1);
+    let mut computation = SteinerTreeComputationRuntime::new(0.0, 2);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
+    let out = storage.compute_steiner_tree_with_neighbors(
+        &mut computation,
+        2,
+        &get_neighbors,
+        &mut progress_tracker,
+    );
+
+    assert!(out.is_err());
+}
+
+#[test]
+fn test_steiner_tree_target_nodes_must_not_be_empty() {
+    let edges = vec![vec![(1, 1.0)], vec![]];
+    let get_neighbors = create_neighbors(edges);
+    let config = SteinerTreeConfig {
+        source_node: 0,
+        target_nodes: vec![],
+        relationship_weight_property: None,
+        delta: 1.0,
+        apply_rerouting: true,
+    };
+
+    let storage = SteinerTreeStorageRuntime::new(config, 1);
+    let mut computation = SteinerTreeComputationRuntime::new(1.0, 2);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
+    let out = storage.compute_steiner_tree_with_neighbors(
+        &mut computation,
+        2,
+        &get_neighbors,
+        &mut progress_tracker,
+    );
+
+    assert!(out.is_err());
+}
+
+#[test]
+fn test_steiner_tree_source_node_out_of_bounds_errors() {
+    let edges = vec![vec![(1, 1.0)], vec![]];
+    let get_neighbors = create_neighbors(edges);
+    let config = SteinerTreeConfig {
+        source_node: 9,
+        target_nodes: vec![1],
+        relationship_weight_property: None,
+        delta: 1.0,
+        apply_rerouting: true,
+    };
+
+    let storage = SteinerTreeStorageRuntime::new(config, 1);
+    let mut computation = SteinerTreeComputationRuntime::new(1.0, 2);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
+    let out = storage.compute_steiner_tree_with_neighbors(
+        &mut computation,
+        2,
+        &get_neighbors,
+        &mut progress_tracker,
+    );
+
+    assert!(out.is_err());
+}
+
+#[test]
+fn test_steiner_tree_target_node_out_of_bounds_errors() {
+    let edges = vec![vec![(1, 1.0)], vec![]];
+    let get_neighbors = create_neighbors(edges);
+    let config = SteinerTreeConfig {
+        source_node: 0,
+        target_nodes: vec![9],
+        relationship_weight_property: None,
+        delta: 1.0,
+        apply_rerouting: true,
+    };
+
+    let storage = SteinerTreeStorageRuntime::new(config, 1);
+    let mut computation = SteinerTreeComputationRuntime::new(1.0, 2);
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
+    let out = storage.compute_steiner_tree_with_neighbors(
+        &mut computation,
+        2,
+        &get_neighbors,
+        &mut progress_tracker,
+    );
+
+    assert!(out.is_err());
 }

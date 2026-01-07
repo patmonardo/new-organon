@@ -6,6 +6,7 @@ use crate::algo::similarity::filtered_knn::{
 };
 use crate::algo::similarity::knn::metrics::{KnnNodePropertySpec, SimilarityMetric};
 use crate::algo::similarity::knn::storage::KnnSamplerType;
+use crate::algo::similarity::knn::KnnNnDescentStats;
 use crate::core::utils::progress::Tasks;
 use crate::projection::NodeLabel;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -17,6 +18,12 @@ use std::sync::Arc;
 pub struct FilteredKnnStats {
     #[serde(rename = "nodesCompared")]
     pub nodes_compared: u64,
+    #[serde(rename = "ranIterations")]
+    pub ran_iterations: u64,
+    #[serde(rename = "didConverge")]
+    pub did_converge: bool,
+    #[serde(rename = "nodePairsConsidered")]
+    pub node_pairs_considered: u64,
     #[serde(rename = "similarityPairs")]
     pub similarity_pairs: u64,
     #[serde(rename = "similarityDistribution")]
@@ -167,7 +174,7 @@ impl FilteredKnnBuilder {
         }
     }
 
-    fn compute_rows(self) -> Result<Vec<FilteredKnnResultRow>> {
+    fn compute_rows_and_nn_stats(self) -> Result<(Vec<FilteredKnnResultRow>, KnnNnDescentStats)> {
         let config = self.build_config();
         let computation = FilteredKnnComputationRuntime::new();
         let storage = FilteredKnnStorageRuntime::new(config.concurrency);
@@ -177,8 +184,8 @@ impl FilteredKnnBuilder {
             config.concurrency,
         );
 
-        let results = if config.node_properties.is_empty() {
-            storage.compute_single(
+        let (results, nn_stats) = if config.node_properties.is_empty() {
+            storage.compute_single_with_stats(
                 &computation,
                 self.graph_store.as_ref(),
                 &config.node_property,
@@ -216,7 +223,7 @@ impl FilteredKnnBuilder {
             }
             combined.extend(config.node_properties.iter().cloned());
 
-            storage.compute_multi(
+            storage.compute_multi_with_stats(
                 &computation,
                 self.graph_store.as_ref(),
                 &combined,
@@ -238,10 +245,17 @@ impl FilteredKnnBuilder {
             )?
         };
 
-        Ok(results
-            .into_iter()
-            .map(FilteredKnnResultRow::from)
-            .collect())
+        Ok((
+            results
+                .into_iter()
+                .map(FilteredKnnResultRow::from)
+                .collect(),
+            nn_stats,
+        ))
+    }
+
+    fn compute_rows(self) -> Result<Vec<FilteredKnnResultRow>> {
+        Ok(self.compute_rows_and_nn_stats()?.0)
     }
 
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = FilteredKnnResultRow>>> {
@@ -250,7 +264,7 @@ impl FilteredKnnBuilder {
     }
 
     pub fn stats(self) -> Result<FilteredKnnStats> {
-        let rows = self.compute_rows()?;
+        let (rows, nn_stats) = self.compute_rows_and_nn_stats()?;
 
         let mut sources = HashSet::new();
         let tuples: Vec<(u64, u64, f64)> = rows
@@ -268,6 +282,9 @@ impl FilteredKnnBuilder {
 
         Ok(FilteredKnnStats {
             nodes_compared: sources.len() as u64,
+            ran_iterations: nn_stats.ran_iterations as u64,
+            did_converge: nn_stats.did_converge,
+            node_pairs_considered: nn_stats.node_pairs_considered,
             similarity_pairs: rows.len() as u64,
             similarity_distribution: stats.summary(),
             compute_millis: stats.compute_millis,
@@ -326,5 +343,26 @@ mod tests {
             .err();
 
         assert!(err.is_some());
+    }
+
+    #[test]
+    fn stats_exposes_nn_descent_metadata() {
+        let config = RandomGraphConfig {
+            node_count: 25,
+            seed: Some(7),
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+
+        let max_iterations = 3;
+        let stats = FilteredKnnBuilder::new(Arc::clone(&store), "random_score")
+            .k(5)
+            .max_iterations(max_iterations)
+            .stats()
+            .unwrap();
+
+        assert!(stats.ran_iterations <= max_iterations as u64);
+        // Non-negative by construction (u64); ensure it is wired through.
+        let _ = stats.node_pairs_considered;
     }
 }

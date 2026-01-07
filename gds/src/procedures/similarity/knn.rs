@@ -3,6 +3,7 @@ use crate::procedures::traits::Result;
 pub use crate::algo::similarity::knn::{KnnNodePropertySpec, SimilarityMetric};
 use crate::algo::similarity::knn::{KnnConfig, KnnResultRow};
 use crate::algo::similarity::knn::storage::KnnSamplerType;
+use crate::algo::similarity::knn::KnnNnDescentStats;
 use crate::core::utils::progress::Tasks;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde::{Deserialize, Serialize};
@@ -13,6 +14,12 @@ use std::sync::Arc;
 pub struct KnnStats {
     #[serde(rename = "nodesCompared")]
     pub nodes_compared: u64,
+    #[serde(rename = "ranIterations")]
+    pub ran_iterations: u64,
+    #[serde(rename = "didConverge")]
+    pub did_converge: bool,
+    #[serde(rename = "nodePairsConsidered")]
+    pub node_pairs_considered: u64,
     #[serde(rename = "similarityPairs")]
     pub similarity_pairs: u64,
     #[serde(rename = "similarityDistribution")]
@@ -147,7 +154,7 @@ impl KnnBuilder {
         }
     }
 
-    fn compute_rows(self) -> Result<Vec<KnnResultRow>> {
+    fn compute_rows_and_nn_stats(self) -> Result<(Vec<KnnResultRow>, KnnNnDescentStats)> {
         let config = self.build_config();
         let computation = crate::algo::similarity::knn::KnnComputationRuntime::new();
         let storage =
@@ -158,8 +165,8 @@ impl KnnBuilder {
             config.concurrency,
         );
 
-        let results = if config.node_properties.is_empty() {
-            storage.compute_single(
+        let (results, nn_stats) = if config.node_properties.is_empty() {
+            storage.compute_single_with_stats(
                 &computation,
                 self.graph_store.as_ref(),
                 &config.node_property,
@@ -196,7 +203,7 @@ impl KnnBuilder {
             }
             combined.extend(config.node_properties.iter().cloned());
 
-            storage.compute_multi(
+            storage.compute_multi_with_stats(
                 &computation,
                 self.graph_store.as_ref(),
                 &combined,
@@ -216,7 +223,14 @@ impl KnnBuilder {
             )?
         };
 
-        Ok(results.into_iter().map(KnnResultRow::from).collect())
+        Ok((
+            results.into_iter().map(KnnResultRow::from).collect(),
+            nn_stats,
+        ))
+    }
+
+    fn compute_rows(self) -> Result<Vec<KnnResultRow>> {
+        Ok(self.compute_rows_and_nn_stats()?.0)
     }
 
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = KnnResultRow>>> {
@@ -225,7 +239,7 @@ impl KnnBuilder {
     }
 
     pub fn stats(self) -> Result<KnnStats> {
-        let rows = self.compute_rows()?;
+        let (rows, nn_stats) = self.compute_rows_and_nn_stats()?;
 
         let mut sources = HashSet::new();
         let tuples: Vec<(u64, u64, f64)> = rows
@@ -243,6 +257,9 @@ impl KnnBuilder {
 
         Ok(KnnStats {
             nodes_compared: sources.len() as u64,
+            ran_iterations: nn_stats.ran_iterations as u64,
+            did_converge: nn_stats.did_converge,
+            node_pairs_considered: nn_stats.node_pairs_considered,
             similarity_pairs: rows.len() as u64,
             similarity_distribution: stats.summary(),
             compute_millis: stats.compute_millis,
@@ -301,5 +318,26 @@ mod tests {
             .err();
 
         assert!(err.is_some());
+    }
+
+    #[test]
+    fn stats_exposes_nn_descent_metadata() {
+        let config = RandomGraphConfig {
+            node_count: 25,
+            seed: Some(7),
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+
+        let max_iterations = 3;
+        let stats = KnnBuilder::new(Arc::clone(&store), "random_score")
+            .k(5)
+            .max_iterations(max_iterations)
+            .stats()
+            .unwrap();
+
+        assert!(stats.ran_iterations <= max_iterations as u64);
+        // Non-negative by construction (u64); ensure it is wired through.
+        let _ = stats.node_pairs_considered;
     }
 }

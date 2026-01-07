@@ -49,10 +49,11 @@ impl ClosenessCentralityComputationRuntime {
             let source_len = (source_offset + OMEGA).min(node_count) - source_offset;
 
             msbfs_state.with(|msbfs| {
-                msbfs.run(
+                msbfs.run_with_termination(
                     source_offset,
                     source_len,
                     false,
+                    Some(termination),
                     |n| (get_neighbors)(n),
                     |node_id, depth, sources_mask| {
                         if depth == 0 {

@@ -53,6 +53,37 @@ impl HarmonicComputationRuntime {
         );
     }
 
+    /// Runs a single MSBFS batch (up to `OMEGA` sources) with termination checks.
+    pub fn run_batch_with_termination(
+        &self,
+        msbfs: &mut AggregatedNeighborProcessingMsBfs,
+        source_offset: usize,
+        source_len: usize,
+        termination: &TerminationFlag,
+        get_neighbors: &(impl Fn(usize) -> Vec<usize> + Send + Sync),
+    ) {
+        if !termination.running() {
+            return;
+        }
+
+        msbfs.run_with_termination(
+            source_offset,
+            source_len,
+            false,
+            Some(termination),
+            |n| (get_neighbors)(n),
+            |node_id, depth, sources_mask| {
+                if depth == 0 {
+                    return;
+                }
+
+                let len = sources_mask.count_ones() as f64;
+                let delta = len * (1.0 / depth as f64);
+                self.inverse_farness.get_and_add(node_id, delta);
+            },
+        );
+    }
+
     /// Finalizes centralities by normalizing with `(node_count - 1)` when applicable.
     pub fn finalize(&self) -> Vec<f64> {
         let mut out = vec![0.0f64; self.node_count];
