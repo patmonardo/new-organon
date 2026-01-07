@@ -3,7 +3,15 @@
 //! Handles JSON requests for ApproxMaxKCut community detection operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::community::approx_max_kcut::{ApproxMaxKCutFacade, ApproxMaxKCutRow};
+use crate::applications::algorithms::community::shared::{err, timings_json};
+use crate::applications::algorithms::machinery::{
+    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
+    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator,
+    RequestScopedDependencies,
+};
+use crate::concurrency::{Concurrency, TerminationFlag};
+use crate::core::loading::CatalogLoader;
+use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -12,7 +20,6 @@ use std::sync::Arc;
 pub fn handle_approx_max_kcut(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     let op = "approxMaxKCut";
 
-    // Parse request parameters
     let graph_name = match request.get("graphName").and_then(|v| v.as_str()) {
         Some(name) => name,
         None => return err(op, "INVALID_REQUEST", "Missing 'graphName' parameter"),
@@ -52,68 +59,154 @@ pub fn handle_approx_max_kcut(request: &Value, catalog: Arc<dyn GraphCatalog>) -
             arr.iter()
                 .filter_map(|v| v.as_u64())
                 .map(|v| v as usize)
-                .collect()
+                .collect::<Vec<_>>()
         })
-        .unwrap_or(vec![0; k as usize]);
+        .unwrap_or_else(|| vec![0; k as usize]);
 
-    // Get graph store
-    let graph_store = match catalog.get(graph_name) {
-        Some(store) => store,
+    let concurrency_value = request
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(1) as usize;
+
+    let concurrency = match Concurrency::new(concurrency_value) {
+        Some(value) => value,
         None => {
             return err(
                 op,
-                "GRAPH_NOT_FOUND",
-                &format!("Graph '{}' not found", graph_name),
+                "INVALID_REQUEST",
+                "concurrency must be greater than zero",
             )
         }
     };
 
-    // Create facade
-    let mut facade = ApproxMaxKCutFacade::new(graph_store)
-        .k(k)
-        .iterations(iterations)
-        .random_seed(random_seed)
-        .minimize(minimize)
-        .relationship_weight_property(relationship_weight_property);
+    let graph_resources = match CatalogLoader::load_or_err(catalog.as_ref(), graph_name) {
+        Ok(resources) => resources,
+        Err(e) => return err(op, "GRAPH_NOT_FOUND", &e.to_string()),
+    };
 
-    if !min_community_sizes.is_empty() {
-        facade = facade.min_community_sizes(min_community_sizes);
-    }
+    let deps = RequestScopedDependencies::new(
+        JobId::new(),
+        TaskRegistryFactories::empty(),
+        TerminationFlag::running_true(),
+    );
+    let creator = ProgressTrackerCreator::new(deps);
+    let template = DefaultAlgorithmProcessingTemplate::new(creator);
+    let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
-    // Execute based on mode
     match mode {
-        "stream" => match facade.stream() {
-            Ok(rows_iter) => {
-                let rows: Vec<ApproxMaxKCutRow> = rows_iter.collect();
-                json!({
-                    "ok": true,
-                    "op": op,
-                    "data": rows
-                })
+        "stream" => {
+            let task = Tasks::leaf("approx_max_kcut::stream".to_string())
+                .base()
+                .clone();
+            let min_sizes = min_community_sizes.clone();
+
+            let compute = move |gr: &crate::core::loading::GraphResources,
+                                _tracker: &mut dyn ProgressTracker,
+                                _termination: &TerminationFlag|
+                  -> Result<Option<Vec<Value>>, String> {
+                let mut builder = gr
+                    .facade()
+                    .approx_max_kcut()
+                    .k(k)
+                    .iterations(iterations)
+                    .random_seed(random_seed)
+                    .minimize(minimize)
+                    .relationship_weight_property(relationship_weight_property);
+
+                if !min_sizes.is_empty() {
+                    builder = builder.min_community_sizes(min_sizes.clone());
+                }
+
+                let iter = builder.stream().map_err(|e| e.to_string())?;
+                let rows = iter
+                    .map(|row| serde_json::to_value(row).map_err(|e| e.to_string()))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Some(rows))
+            };
+
+            let result_builder = FnStreamResultBuilder::new(
+                |_gr: &crate::core::loading::GraphResources, rows: Option<Vec<Value>>| {
+                    rows.unwrap_or_default().into_iter()
+                },
+            );
+
+            match convenience.process_stream(
+                &graph_resources,
+                concurrency,
+                task,
+                compute,
+                result_builder,
+            ) {
+                Ok(stream) => {
+                    let rows: Vec<Value> = stream.collect();
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "stream",
+                        "data": rows,
+                        "timings": json!({
+                            "preProcessingMillis": 0,
+                            "computeMillis": 0,
+                            "sideEffectMillis": 0
+                        })
+                    })
+                }
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("ApproxMaxKCut stream failed: {e}"),
+                ),
             }
-            Err(e) => err(
-                op,
-                "EXECUTION_ERROR",
-                &format!("ApproxMaxKCut execution failed: {:?}", e),
-            ),
-        },
-        "stats" => match facade.stats() {
-            Ok(stats) => json!({
-                "ok": true,
-                "op": op,
-                "data": stats
-            }),
-            Err(e) => err(
-                op,
-                "EXECUTION_ERROR",
-                &format!("ApproxMaxKCut stats failed: {:?}", e),
-            ),
-        },
+        }
+        "stats" => {
+            let task = Tasks::leaf("approx_max_kcut::stats".to_string())
+                .base()
+                .clone();
+            let min_sizes = min_community_sizes.clone();
+
+            let compute = move |gr: &crate::core::loading::GraphResources,
+                                _tracker: &mut dyn ProgressTracker,
+                                _termination: &TerminationFlag|
+                  -> Result<Option<Value>, String> {
+                let mut builder = gr
+                    .facade()
+                    .approx_max_kcut()
+                    .k(k)
+                    .iterations(iterations)
+                    .random_seed(random_seed)
+                    .minimize(minimize)
+                    .relationship_weight_property(relationship_weight_property);
+
+                if !min_sizes.is_empty() {
+                    builder = builder.min_community_sizes(min_sizes.clone());
+                }
+
+                let stats = builder.stats().map_err(|e| e.to_string())?;
+                let stats_value = serde_json::to_value(stats).map_err(|e| e.to_string())?;
+                Ok(Some(stats_value))
+            };
+
+            let builder = FnStatsResultBuilder(
+                |_gr: &crate::core::loading::GraphResources, stats: Option<Value>, timings| {
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "stats",
+                        "data": stats,
+                        "timings": timings_json(timings)
+                    })
+                },
+            );
+
+            match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
+                Ok(response) => response,
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("ApproxMaxKCut stats failed: {e}"),
+                ),
+            }
+        }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
-}
-
-/// Common error response builder
-fn err(op: &str, code: &str, message: &str) -> Value {
-    json!({ "ok": false, "op": op, "error": { "code": code, "message": message } })
 }

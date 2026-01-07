@@ -16,7 +16,8 @@ use super::centrality::{
 
 use super::community::{
     ApproxMaxKCutFacade, ConductanceFacade, K1ColoringFacade, KCoreFacade, KMeansFacade,
-    LabelPropagationFacade, LouvainFacade, ModularityFacade, SccFacade, TriangleFacade, WccFacade,
+    LabelPropagationFacade, LeidenFacade, LouvainFacade, ModularityFacade, SccFacade,
+    TriangleFacade, WccFacade,
 };
 
 use super::embeddings::{
@@ -219,6 +220,11 @@ impl Graph {
     /// K-Means clustering (community detection on feature vectors).
     pub fn kmeans(&self) -> KMeansFacade {
         KMeansFacade::new(Arc::clone(&self.store))
+    }
+
+    /// Leiden community detection (modularity refinement with connected components).
+    pub fn leiden(&self) -> LeidenFacade {
+        LeidenFacade::new(Arc::clone(&self.store))
     }
 
     /// K1-Coloring (greedy graph coloring).

@@ -1,9 +1,18 @@
 //! Modularity algorithm dispatch handler.
 //!
 //! Handles JSON requests for modularity computation operations,
-//! delegating to the facade layer for execution.
+//! delegating stream/stats to the machinery stack and keeping mutate/write/estimate on the facade.
 
-use crate::procedures::community::modularity::{ModularityFacade, ModularityRow};
+use crate::applications::algorithms::community::shared::{err, timings_json};
+use crate::applications::algorithms::machinery::{
+    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
+    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator,
+    RequestScopedDependencies,
+};
+use crate::concurrency::{Concurrency, TerminationFlag};
+use crate::core::loading::CatalogLoader;
+use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
+use crate::procedures::community::modularity::ModularityFacade;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -12,7 +21,6 @@ use std::sync::Arc;
 pub fn handle_modularity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     let op = "modularity";
 
-    // Parse request parameters
     let graph_name = match request.get("graphName").and_then(|v| v.as_str()) {
         Some(name) => name,
         None => return err(op, "INVALID_REQUEST", "Missing 'graphName' parameter"),
@@ -24,7 +32,7 @@ pub fn handle_modularity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
         .unwrap_or("stream");
 
     let community_property = match request.get("communityProperty").and_then(|v| v.as_str()) {
-        Some(prop) => prop,
+        Some(prop) => prop.to_string(),
         None => {
             return err(
                 op,
@@ -34,91 +42,167 @@ pub fn handle_modularity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
         }
     };
 
-    // Get graph store
-    let graph_store = match catalog.get(graph_name) {
-        Some(store) => store,
+    let concurrency_value = request
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(1) as usize;
+
+    let concurrency = match Concurrency::new(concurrency_value) {
+        Some(value) => value,
         None => {
             return err(
                 op,
-                "GRAPH_NOT_FOUND",
-                &format!("Graph '{}' not found", graph_name),
+                "INVALID_REQUEST",
+                "concurrency must be greater than zero",
             )
         }
     };
 
-    // Create facade
-    let facade = ModularityFacade::new(graph_store, community_property.to_string());
+    let graph_resources = match CatalogLoader::load_or_err(catalog.as_ref(), graph_name) {
+        Ok(resources) => resources,
+        Err(e) => return err(op, "GRAPH_NOT_FOUND", &e.to_string()),
+    };
 
-    // Execute based on mode
+    let deps = RequestScopedDependencies::new(
+        JobId::new(),
+        TaskRegistryFactories::empty(),
+        TerminationFlag::running_true(),
+    );
+    let creator = ProgressTrackerCreator::new(deps);
+    let template = DefaultAlgorithmProcessingTemplate::new(creator);
+    let convenience = AlgorithmProcessingTemplateConvenience::new(template);
+
     match mode {
-        "stream" => match facade.stream() {
-            Ok(rows_iter) => {
-                let rows: Vec<ModularityRow> = rows_iter.collect();
-                json!({
-                    "ok": true,
-                    "op": op,
-                    "data": rows
-                })
+        "stream" => {
+            let task = Tasks::leaf("modularity::stream".to_string()).base().clone();
+            let property = community_property.clone();
+
+            let compute = move |gr: &crate::core::loading::GraphResources,
+                                _tracker: &mut dyn ProgressTracker,
+                                _termination: &TerminationFlag|
+                  -> Result<Option<Vec<Value>>, String> {
+                let iter = gr
+                    .facade()
+                    .modularity(property.clone())
+                    .stream()
+                    .map_err(|e| e.to_string())?;
+                let rows = iter
+                    .map(|row| serde_json::to_value(row).map_err(|e| e.to_string()))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Some(rows))
+            };
+
+            let result_builder = FnStreamResultBuilder::new(
+                |_gr: &crate::core::loading::GraphResources, rows: Option<Vec<Value>>| {
+                    rows.unwrap_or_default().into_iter()
+                },
+            );
+
+            match convenience.process_stream(
+                &graph_resources,
+                concurrency,
+                task,
+                compute,
+                result_builder,
+            ) {
+                Ok(stream) => {
+                    let rows: Vec<Value> = stream.collect();
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "stream",
+                        "data": rows,
+                        "timings": json!({
+                            "preProcessingMillis": 0,
+                            "computeMillis": 0,
+                            "sideEffectMillis": 0
+                        })
+                    })
+                }
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Modularity stream failed: {e}"),
+                ),
             }
-            Err(e) => err(
-                op,
-                "EXECUTION_ERROR",
-                &format!("Modularity execution failed: {:?}", e),
-            ),
-        },
-        "stats" => match facade.stats() {
-            Ok(stats) => json!({
-                "ok": true,
-                "op": op,
-                "data": stats
-            }),
-            Err(e) => err(
-                op,
-                "EXECUTION_ERROR",
-                &format!("Modularity stats failed: {:?}", e),
-            ),
-        },
-        "mutate" => match facade.mutate() {
-            Ok(result) => json!({
-                "ok": true,
-                "op": op,
-                "data": result
-            }),
-            Err(e) => err(
-                op,
-                "EXECUTION_ERROR",
-                &format!("Modularity mutate failed: {:?}", e),
-            ),
-        },
-        "write" => match facade.write() {
-            Ok(result) => json!({
-                "ok": true,
-                "op": op,
-                "data": result
-            }),
-            Err(e) => err(
-                op,
-                "EXECUTION_ERROR",
-                &format!("Modularity write failed: {:?}", e),
-            ),
-        },
-        "estimate" => match facade.estimate_memory() {
-            Ok(range) => json!({
-                "ok": true,
-                "op": op,
-                "data": range
-            }),
-            Err(e) => err(
-                op,
-                "EXECUTION_ERROR",
-                &format!("Modularity memory estimation failed: {:?}", e),
-            ),
-        },
+        }
+        "stats" => {
+            let task = Tasks::leaf("modularity::stats".to_string()).base().clone();
+            let property = community_property.clone();
+
+            let compute = move |gr: &crate::core::loading::GraphResources,
+                                _tracker: &mut dyn ProgressTracker,
+                                _termination: &TerminationFlag|
+                  -> Result<Option<Value>, String> {
+                let stats = gr
+                    .facade()
+                    .modularity(property.clone())
+                    .stats()
+                    .map_err(|e| e.to_string())?;
+                let stats_value = serde_json::to_value(stats).map_err(|e| e.to_string())?;
+                Ok(Some(stats_value))
+            };
+
+            let builder = FnStatsResultBuilder(
+                |_gr: &crate::core::loading::GraphResources, stats: Option<Value>, timings| {
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "stats",
+                        "data": stats,
+                        "timings": timings_json(timings)
+                    })
+                },
+            );
+
+            match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
+                Ok(response) => response,
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Modularity stats failed: {e}"),
+                ),
+            }
+        }
+        "mutate" => {
+            let facade = ModularityFacade::new(
+                Arc::clone(graph_resources.store()),
+                community_property.clone(),
+            );
+            match facade.mutate() {
+                Ok(result) => json!({"ok": true, "op": op, "data": result}),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Modularity mutate failed: {:?}", e),
+                ),
+            }
+        }
+        "write" => {
+            let facade = ModularityFacade::new(
+                Arc::clone(graph_resources.store()),
+                community_property.clone(),
+            );
+            match facade.write() {
+                Ok(result) => json!({"ok": true, "op": op, "data": result}),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Modularity write failed: {:?}", e),
+                ),
+            }
+        }
+        "estimate" => {
+            let facade = ModularityFacade::new(Arc::clone(graph_resources.store()), community_property);
+            match facade.estimate_memory() {
+                Ok(range) => json!({"ok": true, "op": op, "data": range}),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Modularity memory estimation failed: {:?}", e),
+                ),
+            }
+        }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
-}
-
-/// Common error response builder
-fn err(op: &str, code: &str, message: &str) -> Value {
-    json!({ "ok": false, "op": op, "error": { "code": code, "message": message } })
 }

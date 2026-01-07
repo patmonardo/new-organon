@@ -3,9 +3,16 @@
 //! Handles JSON requests for Label Propagation community detection operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::community::label_propagation::{
-    LabelPropagationFacade, LabelPropagationRow,
+use crate::applications::algorithms::community::shared::{err, timings_json};
+use crate::applications::algorithms::machinery::{
+    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
+    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator,
+    RequestScopedDependencies,
 };
+use crate::concurrency::{Concurrency, TerminationFlag};
+use crate::core::loading::CatalogLoader;
+use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
+use crate::procedures::community::label_propagation::LabelPropagationFacade;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -14,7 +21,6 @@ use std::sync::Arc;
 pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     let op = "labelPropagation";
 
-    // Parse request parameters
     let graph_name = match request.get("graphName").and_then(|v| v.as_str()) {
         Some(name) => name,
         None => return err(op, "INVALID_REQUEST", "Missing 'graphName' parameter"),
@@ -25,7 +31,7 @@ pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>)
         .and_then(|v| v.as_str())
         .unwrap_or("stream");
 
-    let concurrency = request
+    let concurrency_value = request
         .get("concurrency")
         .and_then(|v| v.as_u64())
         .unwrap_or(1) as usize;
@@ -45,101 +51,215 @@ pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>)
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
 
-    // Get graph store
-    let graph_store = match catalog.get(graph_name) {
-        Some(store) => store,
+    let concurrency = match Concurrency::new(concurrency_value) {
+        Some(value) => value,
         None => {
             return err(
                 op,
-                "GRAPH_NOT_FOUND",
-                &format!("Graph '{}' not found", graph_name),
+                "INVALID_REQUEST",
+                "concurrency must be greater than zero",
             )
         }
     };
 
-    // Create facade
-    let mut facade = LabelPropagationFacade::new(graph_store)
-        .concurrency(concurrency)
-        .max_iterations(max_iterations);
+    let graph_resources = match CatalogLoader::load_or_err(catalog.as_ref(), graph_name) {
+        Ok(resources) => resources,
+        Err(e) => return err(op, "GRAPH_NOT_FOUND", &e.to_string()),
+    };
 
-    if let Some(node_weight) = node_weight_property {
-        facade = facade.node_weight_property(&node_weight);
-    }
+    let deps = RequestScopedDependencies::new(
+        JobId::new(),
+        TaskRegistryFactories::empty(),
+        TerminationFlag::running_true(),
+    );
+    let creator = ProgressTrackerCreator::new(deps);
+    let template = DefaultAlgorithmProcessingTemplate::new(creator);
+    let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
-    if let Some(seed) = seed_property {
-        facade = facade.seed_property(&seed);
-    }
-
-    // Execute based on mode
     match mode {
-        "stream" => match facade.stream() {
-            Ok(rows_iter) => {
-                let rows: Vec<LabelPropagationRow> = rows_iter.collect();
-                json!({
-                    "ok": true,
-                    "op": op,
-                    "data": rows
-                })
+        "stream" => {
+            let task = Tasks::leaf("label_propagation::stream".to_string())
+                .base()
+                .clone();
+            let seed_property = seed_property.clone();
+            let node_weight_property = node_weight_property.clone();
+
+            let compute = move |gr: &crate::core::loading::GraphResources,
+                                _tracker: &mut dyn ProgressTracker,
+                                _termination: &TerminationFlag|
+                  -> Result<Option<Vec<Value>>, String> {
+                let mut builder = gr
+                    .facade()
+                    .label_propagation()
+                    .concurrency(concurrency_value)
+                    .max_iterations(max_iterations);
+
+                if let Some(ref node_weight) = node_weight_property {
+                    builder = builder.node_weight_property(node_weight);
+                }
+
+                if let Some(ref seed) = seed_property {
+                    builder = builder.seed_property(seed);
+                }
+
+                let iter = builder.stream().map_err(|e| e.to_string())?;
+                let rows = iter
+                    .map(|row| serde_json::to_value(row).map_err(|e| e.to_string()))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Some(rows))
+            };
+
+            let result_builder = FnStreamResultBuilder::new(
+                |_gr: &crate::core::loading::GraphResources, rows: Option<Vec<Value>>| {
+                    rows.unwrap_or_default().into_iter()
+                },
+            );
+
+            match convenience.process_stream(
+                &graph_resources,
+                concurrency,
+                task,
+                compute,
+                result_builder,
+            ) {
+                Ok(stream) => {
+                    let rows: Vec<Value> = stream.collect();
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "stream",
+                        "data": rows,
+                        "timings": json!({
+                            "preProcessingMillis": 0,
+                            "computeMillis": 0,
+                            "sideEffectMillis": 0
+                        })
+                    })
+                }
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Label Propagation stream failed: {e}"),
+                ),
             }
-            Err(e) => err(
-                op,
-                "EXECUTION_ERROR",
-                &format!("Label Propagation execution failed: {:?}", e),
-            ),
-        },
-        "stats" => match facade.stats() {
-            Ok(stats) => json!({
-                "ok": true,
-                "op": op,
-                "data": stats
-            }),
-            Err(e) => err(
-                op,
-                "EXECUTION_ERROR",
-                &format!("Label Propagation stats failed: {:?}", e),
-            ),
-        },
-        "mutate" => match facade.mutate() {
-            Ok(result) => json!({
-                "ok": true,
-                "op": op,
-                "data": result
-            }),
-            Err(e) => err(
-                op,
-                "EXECUTION_ERROR",
-                &format!("Label Propagation mutate failed: {:?}", e),
-            ),
-        },
-        "write" => match facade.write() {
-            Ok(result) => json!({
-                "ok": true,
-                "op": op,
-                "data": result
-            }),
-            Err(e) => err(
-                op,
-                "EXECUTION_ERROR",
-                &format!("Label Propagation write failed: {:?}", e),
-            ),
-        },
-        "estimate" => match facade.estimate_memory() {
-            Ok(range) => json!({
-                "ok": true,
-                "op": op,
-                "data": range
-            }),
-            Err(e) => err(
-                op,
-                "EXECUTION_ERROR",
-                &format!("Label Propagation memory estimation failed: {:?}", e),
-            ),
-        },
+        }
+        "stats" => {
+            let task = Tasks::leaf("label_propagation::stats".to_string())
+                .base()
+                .clone();
+            let seed_property = seed_property.clone();
+            let node_weight_property = node_weight_property.clone();
+
+            let compute = move |gr: &crate::core::loading::GraphResources,
+                                _tracker: &mut dyn ProgressTracker,
+                                _termination: &TerminationFlag|
+                  -> Result<Option<Value>, String> {
+                let mut builder = gr
+                    .facade()
+                    .label_propagation()
+                    .concurrency(concurrency_value)
+                    .max_iterations(max_iterations);
+
+                if let Some(ref node_weight) = node_weight_property {
+                    builder = builder.node_weight_property(node_weight);
+                }
+
+                if let Some(ref seed) = seed_property {
+                    builder = builder.seed_property(seed);
+                }
+
+                let stats = builder.stats().map_err(|e| e.to_string())?;
+                let stats_value = serde_json::to_value(stats).map_err(|e| e.to_string())?;
+                Ok(Some(stats_value))
+            };
+
+            let builder = FnStatsResultBuilder(
+                |_gr: &crate::core::loading::GraphResources, stats: Option<Value>, timings| {
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "stats",
+                        "data": stats,
+                        "timings": timings_json(timings)
+                    })
+                },
+            );
+
+            match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
+                Ok(response) => response,
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Label Propagation stats failed: {e}"),
+                ),
+            }
+        }
+        "mutate" => {
+            let mut facade = LabelPropagationFacade::new(Arc::clone(graph_resources.store()))
+                .concurrency(concurrency_value)
+                .max_iterations(max_iterations);
+
+            if let Some(ref node_weight) = node_weight_property {
+                facade = facade.node_weight_property(node_weight);
+            }
+
+            if let Some(ref seed) = seed_property {
+                facade = facade.seed_property(seed);
+            }
+
+            match facade.mutate() {
+                Ok(result) => json!({"ok": true, "op": op, "data": result}),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Label Propagation mutate failed: {:?}", e),
+                ),
+            }
+        }
+        "write" => {
+            let mut facade = LabelPropagationFacade::new(Arc::clone(graph_resources.store()))
+                .concurrency(concurrency_value)
+                .max_iterations(max_iterations);
+
+            if let Some(ref node_weight) = node_weight_property {
+                facade = facade.node_weight_property(node_weight);
+            }
+
+            if let Some(ref seed) = seed_property {
+                facade = facade.seed_property(seed);
+            }
+
+            match facade.write() {
+                Ok(result) => json!({"ok": true, "op": op, "data": result}),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Label Propagation write failed: {:?}", e),
+                ),
+            }
+        }
+        "estimate" => {
+            let mut facade = LabelPropagationFacade::new(Arc::clone(graph_resources.store()))
+                .concurrency(concurrency_value)
+                .max_iterations(max_iterations);
+
+            if let Some(ref node_weight) = node_weight_property {
+                facade = facade.node_weight_property(node_weight);
+            }
+
+            if let Some(ref seed) = seed_property {
+                facade = facade.seed_property(seed);
+            }
+
+            match facade.estimate_memory() {
+                Ok(range) => json!({"ok": true, "op": op, "data": range}),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Label Propagation memory estimation failed: {:?}", e),
+                ),
+            }
+        }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
-}
-
-/// Common error response builder
-fn err(op: &str, code: &str, message: &str) -> Value {
-    json!({ "ok": false, "op": op, "error": { "code": code, "message": message } })
 }

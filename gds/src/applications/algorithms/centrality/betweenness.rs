@@ -104,7 +104,7 @@ pub fn handle_betweenness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
                                 _tracker: &mut dyn ProgressTracker,
                                 _termination: &TerminationFlag|
                   -> Result<Option<Vec<Value>>, String> {
-                let mut builder = gr
+                let builder = gr
                     .facade()
                     .betweenness()
                     .direction(&stream_direction)

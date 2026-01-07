@@ -7,6 +7,7 @@ pub mod index_inverse;
 pub mod indirect_exposure;
 pub mod scale_properties;
 pub mod to_undirected;
+mod shared;
 
 pub use collapse_path::handle_collapse_path;
 pub use index_inverse::handle_index_inverse;

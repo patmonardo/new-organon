@@ -74,7 +74,7 @@ pub fn handle_articulation_points(request: &Value, catalog: Arc<dyn GraphCatalog
                            _tracker: &mut dyn ProgressTracker,
                            _termination: &TerminationFlag|
              -> Result<Option<Vec<Value>>, String> {
-                let mut builder = gr
+                let builder = gr
                     .facade()
                     .articulation_points()
                     .concurrency(concurrency_value);
