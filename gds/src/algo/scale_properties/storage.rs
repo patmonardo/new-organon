@@ -84,7 +84,7 @@ impl ScalePropertiesStorageRuntime {
                     node_count,
                     config.concurrency,
                 )?,
-                ValueType::LongArray | ValueType::FloatArray | ValueType::DoubleArray =>
+                ValueType::LongArray | ValueType::FloatArray | ValueType::DoubleArray => {
                     build_array_scaler(
                         property_name,
                         values.clone(),
@@ -94,7 +94,8 @@ impl ScalePropertiesStorageRuntime {
                         node_count,
                         config.concurrency,
                         &id_map,
-                    )?,
+                    )?
+                }
                 other => {
                     return Err(AlgorithmError::Execution(format!(
                         "Scaling node property `{}` of type `{}` is not supported",
@@ -131,7 +132,10 @@ fn build_scalar_scaler(
             let name = property_name.to_string();
             Arc::new(move |node_id: u64| {
                 pv.long_value(node_id).unwrap_or_else(|e| {
-                    panic!("Failed reading long property `{}` for node {}: {}", name, node_id, e)
+                    panic!(
+                        "Failed reading long property `{}` for node {}: {}",
+                        name, node_id, e
+                    )
                 }) as f64
             })
         }
@@ -140,7 +144,10 @@ fn build_scalar_scaler(
             let name = property_name.to_string();
             Arc::new(move |node_id: u64| {
                 pv.double_value(node_id).unwrap_or_else(|e| {
-                    panic!("Failed reading double property `{}` for node {}: {}", name, node_id, e)
+                    panic!(
+                        "Failed reading double property `{}` for node {}: {}",
+                        name, node_id, e
+                    )
                 })
             })
         }
@@ -216,8 +223,12 @@ fn validate_array_lengths(
     for node_id in 0..node_count {
         let length_result: Result<usize, _> = match value_type {
             ValueType::LongArray => values.long_array_value(node_id as u64).map(|arr| arr.len()),
-            ValueType::FloatArray => values.float_array_value(node_id as u64).map(|arr| arr.len()),
-            ValueType::DoubleArray => values.double_array_value(node_id as u64).map(|arr| arr.len()),
+            ValueType::FloatArray => values
+                .float_array_value(node_id as u64)
+                .map(|arr| arr.len()),
+            ValueType::DoubleArray => values
+                .double_array_value(node_id as u64)
+                .map(|arr| arr.len()),
             _ => Ok(0),
         };
 
@@ -322,9 +333,7 @@ fn create_scaler(
         ScalePropertiesScaler::StdScore => {
             StdScoreScaler::create(node_count as u64, &adapter, concurrency)
         }
-        ScalePropertiesScaler::Mean => {
-            MeanScaler::create(node_count as u64, &adapter, concurrency)
-        }
+        ScalePropertiesScaler::Mean => MeanScaler::create(node_count as u64, &adapter, concurrency),
         ScalePropertiesScaler::Max => MaxScaler::create(node_count as u64, &adapter, concurrency),
         ScalePropertiesScaler::Center => {
             CenterScaler::create(node_count as u64, &adapter, concurrency)

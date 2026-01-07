@@ -6,13 +6,13 @@
 
 use super::computation::YensComputationRuntime;
 use super::storage::YensStorageRuntime;
+use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::codegen::config::validation::ConfigError;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
-use crate::core::utils::progress::Tasks;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 

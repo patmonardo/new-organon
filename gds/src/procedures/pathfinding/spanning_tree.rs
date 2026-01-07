@@ -2,11 +2,11 @@
 //!
 //! Computes a minimum or maximum spanning tree rooted at a start node.
 
+use crate::algo::spanning_tree::SpanningTreeStorageRuntime;
+use crate::algo::SpanningTreeComputationRuntime;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::algo::spanning_tree::SpanningTreeStorageRuntime;
-use crate::algo::SpanningTreeComputationRuntime;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -14,9 +14,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
-};
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 
 /// Per-node spanning tree row.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -226,13 +224,14 @@ impl SpanningTreeBuilder {
         let storage =
             SpanningTreeStorageRuntime::new(start_node_id, self.compute_minimum, self.concurrency);
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume(
-                "spanning_tree".to_string(),
-                graph_view.relationship_count(),
-            ),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume(
+                    "spanning_tree".to_string(),
+                    graph_view.relationship_count(),
+                ),
+                self.concurrency,
+            );
 
         let start = std::time::Instant::now();
 

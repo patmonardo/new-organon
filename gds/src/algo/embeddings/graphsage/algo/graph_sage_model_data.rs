@@ -6,9 +6,6 @@
 //!
 //! This type is the "catalog payload" and can be converted into runtime `ModelData`.
 
-use crate::core::model::ModelData as CatalogModelData;
-use crate::ml::core::functions::Weights;
-use crate::ml::core::tensor::{Matrix, Vector};
 use crate::algo::embeddings::graphsage::activation_function_factory::ActivationFunctionFactory;
 use crate::algo::embeddings::graphsage::activation_function_wrapper::ActivationFunctionWrapper;
 use crate::algo::embeddings::graphsage::layer::Layer;
@@ -18,6 +15,9 @@ use crate::algo::embeddings::graphsage::model_data::ModelData;
 use crate::algo::embeddings::graphsage::multi_label_feature_function::MultiLabelFeatureFunction;
 use crate::algo::embeddings::graphsage::single_label_feature_function::SingleLabelFeatureFunction;
 use crate::algo::embeddings::graphsage::types::ActivationFunctionType;
+use crate::core::model::ModelData as CatalogModelData;
+use crate::ml::core::functions::Weights;
+use crate::ml::core::tensor::{Matrix, Vector};
 use crate::types::schema::NodeLabel;
 use serde::{Deserialize, Serialize};
 use std::any::Any;

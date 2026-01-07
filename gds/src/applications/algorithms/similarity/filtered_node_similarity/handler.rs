@@ -6,10 +6,7 @@ use crate::types::catalog::GraphCatalog;
 use serde_json::Value;
 use std::sync::Arc;
 
-pub fn handle_filtered_node_similarity(
-    request: &Value,
-    catalog: Arc<dyn GraphCatalog>,
-) -> Value {
+pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     let op = "filtered_node_similarity";
 
     let parsed = match FilteredNodeSimilarityRequest::parse(request) {

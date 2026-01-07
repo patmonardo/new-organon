@@ -20,7 +20,9 @@ pub fn run(op: &str, request: &AllShortestPathsRequest, graph_resources: &GraphR
     let template = DefaultAlgorithmProcessingTemplate::new(creator);
     let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
-    let task = Tasks::leaf("AllShortestPaths::stream".to_string()).base().clone();
+    let task = Tasks::leaf("AllShortestPaths::stream".to_string())
+        .base()
+        .clone();
 
     let compute = |gr: &GraphResources,
                    _tracker: &mut dyn ProgressTracker,
@@ -45,9 +47,11 @@ pub fn run(op: &str, request: &AllShortestPathsRequest, graph_resources: &GraphR
         Ok(Some(iter.collect()))
     };
 
-    let builder = FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<AllShortestPathsRow>>| {
-        rows.unwrap_or_default().into_iter()
-    });
+    let builder = FnStreamResultBuilder::new(
+        |_gr: &GraphResources, rows: Option<Vec<AllShortestPathsRow>>| {
+            rows.unwrap_or_default().into_iter()
+        },
+    );
 
     match convenience.process_stream(
         graph_resources,
@@ -70,6 +74,10 @@ pub fn run(op: &str, request: &AllShortestPathsRequest, graph_resources: &GraphR
                 })
             })
         }
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("AllShortestPaths stream failed: {e}")),
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("AllShortestPaths stream failed: {e}"),
+        ),
     }
 }

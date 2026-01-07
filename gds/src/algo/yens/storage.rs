@@ -68,7 +68,6 @@ impl YensStorageRuntime {
         progress_tracker.begin_subtask_with_volume(self.k);
 
         let result = (|| {
-
             // Initialize computation runtime
             computation.initialize(
                 self.source_node,
@@ -96,12 +95,8 @@ impl YensStorageRuntime {
             for i in 1..self.k {
                 if let Some(prev_path) = k_shortest_paths.get(i - 1) {
                     // Generate candidate paths from previous path
-                    let candidates = self.generate_candidates(
-                        prev_path,
-                        &k_shortest_paths,
-                        graph,
-                        direction,
-                    )?;
+                    let candidates =
+                        self.generate_candidates(prev_path, &k_shortest_paths, graph, direction)?;
 
                     for candidate in candidates {
                         candidate_queue.add_path(candidate);
@@ -196,10 +191,11 @@ impl YensStorageRuntime {
         let volume = graph
             .map(|g| g.relationship_count())
             .unwrap_or(UNKNOWN_VOLUME);
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("dijkstra".to_string(), volume),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("dijkstra".to_string(), volume),
+                self.concurrency,
+            );
 
         let result = storage.compute_dijkstra(
             &mut computation,
@@ -350,7 +346,12 @@ mod tests {
         );
 
         let result = storage
-            .compute_yens(&mut computation, Some(graph.as_ref()), 0, &mut progress_tracker)
+            .compute_yens(
+                &mut computation,
+                Some(graph.as_ref()),
+                0,
+                &mut progress_tracker,
+            )
             .unwrap();
 
         assert!(result.path_count <= 3);

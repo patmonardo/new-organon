@@ -5,6 +5,7 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 
+    use crate::algo::kcore::KCoreComputationRuntime;
     use crate::procedures::Graph;
     use crate::projection::RelationshipType;
     use crate::types::graph::{RelationshipTopology, SimpleIdMap};
@@ -12,7 +13,6 @@ mod tests {
         Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
     };
     use crate::types::schema::{Direction, MutableGraphSchema};
-    use crate::algo::kcore::KCoreComputationRuntime;
 
     fn store_from_outgoing(outgoing: Vec<Vec<i64>>) -> DefaultGraphStore {
         let node_count = outgoing.len();

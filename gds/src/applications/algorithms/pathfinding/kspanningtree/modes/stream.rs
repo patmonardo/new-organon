@@ -20,7 +20,9 @@ pub fn run(op: &str, request: &KSpanningTreeRequest, graph_resources: &GraphReso
     let template = DefaultAlgorithmProcessingTemplate::new(creator);
     let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
-    let task = Tasks::leaf("KSpanningTree::stream".to_string()).base().clone();
+    let task = Tasks::leaf("KSpanningTree::stream".to_string())
+        .base()
+        .clone();
 
     let compute = |gr: &GraphResources,
                    _tracker: &mut dyn ProgressTracker,
@@ -41,9 +43,11 @@ pub fn run(op: &str, request: &KSpanningTreeRequest, graph_resources: &GraphReso
         Ok(Some(iter.collect()))
     };
 
-    let builder = FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<KSpanningTreeRow>>| {
-        rows.unwrap_or_default().into_iter()
-    });
+    let builder = FnStreamResultBuilder::new(
+        |_gr: &GraphResources, rows: Option<Vec<KSpanningTreeRow>>| {
+            rows.unwrap_or_default().into_iter()
+        },
+    );
 
     match convenience.process_stream(
         graph_resources,
@@ -66,6 +70,10 @@ pub fn run(op: &str, request: &KSpanningTreeRequest, graph_resources: &GraphReso
                 })
             })
         }
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("KSpanningTree stream failed: {e}")),
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("KSpanningTree stream failed: {e}"),
+        ),
     }
 }

@@ -16,12 +16,13 @@ pub fn run(
 
     match request.common.estimate_submode.as_deref() {
         Some("memory") | None => {
-            let mut builder = FilteredNodeSimilarityBuilder::new(Arc::clone(graph_resources.store()))
-                .metric(request.metric)
-                .similarity_cutoff(request.similarity_cutoff)
-                .top_k(request.top_k)
-                .top_n(request.top_n)
-                .concurrency(request.common.concurrency.value());
+            let mut builder =
+                FilteredNodeSimilarityBuilder::new(Arc::clone(graph_resources.store()))
+                    .metric(request.metric)
+                    .similarity_cutoff(request.similarity_cutoff)
+                    .top_k(request.top_k)
+                    .top_n(request.top_n)
+                    .concurrency(request.common.concurrency.value());
 
             if let Some(ref prop) = request.weight_property {
                 builder = builder.weight_property(prop.clone());

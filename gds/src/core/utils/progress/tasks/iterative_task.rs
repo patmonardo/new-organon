@@ -119,9 +119,7 @@ impl IterativeTask {
             .iter()
             .any(|t| t.status() == Status::Running)
         {
-            panic!(
-                "Cannot move to next subtask, because some subtasks are still running"
-            );
+            panic!("Cannot move to next subtask, because some subtasks are still running");
         }
 
         // First check if there's a pending subtask.

@@ -8,11 +8,11 @@
 //! the computation has been cancelled; callers should convert that panic into an
 //! error using `catch_unwind` if they need a `Result` surface.
 
-use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::ProgressTracker;
-use crate::core::utils::progress::tasks::LogLevel;
-use crate::mem::MemoryRange;
 use crate::concurrency::Concurrency;
+use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::tasks::LogLevel;
+use crate::core::utils::progress::ProgressTracker;
+use crate::mem::MemoryRange;
 
 pub struct TerminationAwareProgressTracker<'a> {
     inner: &'a mut dyn ProgressTracker,
@@ -67,7 +67,8 @@ impl<'a> ProgressTracker for TerminationAwareProgressTracker<'a> {
 
     fn log_progress_with_message(&mut self, value: usize, message_template: &str) {
         self.check();
-        self.inner.log_progress_with_message(value, message_template);
+        self.inner
+            .log_progress_with_message(value, message_template);
     }
 
     fn set_volume(&mut self, volume: usize) {
@@ -107,6 +108,7 @@ impl<'a> ProgressTracker for TerminationAwareProgressTracker<'a> {
 
     fn assert_subtask(&mut self, expected_task_description_substring: &str) {
         self.check();
-        self.inner.assert_subtask(expected_task_description_substring);
+        self.inner
+            .assert_subtask(expected_task_description_substring);
     }
 }

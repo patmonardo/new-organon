@@ -88,7 +88,10 @@ impl PipelineUserCatalog {
         pipeline: Arc<P>,
     ) -> Result<(), String> {
         if !self.pipelines_by_name.contains_key(&pipeline_name) {
-            return Err(format!("Pipeline named `{}` does not exist.", pipeline_name));
+            return Err(format!(
+                "Pipeline named `{}` does not exist.",
+                pipeline_name
+            ));
         }
 
         let entry = PipelineCatalogEntry::new(pipeline_name.clone(), pipeline);

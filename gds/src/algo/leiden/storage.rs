@@ -50,7 +50,8 @@ impl LeidenStorageRuntime {
         let weight_fallback = 1.0;
 
         // Single subtask covering adjacency build + iteration progress (levels).
-        progress_tracker.begin_subtask_with_volume(node_count.saturating_add(config.max_iterations));
+        progress_tracker
+            .begin_subtask_with_volume(node_count.saturating_add(config.max_iterations));
         for node_id in 0..node_count {
             termination_flag.assert_running();
             let stream = self

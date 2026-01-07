@@ -38,7 +38,10 @@ use crate::types::properties::relationship::RelationshipPropertyValues;
 use crate::types::properties::relationship::{
     RelationshipPropertyStore, RelationshipPropertyStoreBuilder,
 };
-use crate::types::schema::{Direction, GraphSchema, MutableGraphSchema, PropertySchemaTrait, RelationshipSchema, RelationshipSchemaEntry};
+use crate::types::schema::{
+    Direction, GraphSchema, MutableGraphSchema, PropertySchemaTrait, RelationshipSchema,
+    RelationshipSchemaEntry,
+};
 use crate::types::PropertyState;
 use crate::types::ValueType;
 use chrono::{DateTime, Utc};
@@ -181,10 +184,8 @@ impl DefaultGraphStore {
                 adj.dedup();
             }
 
-            new_relationship_topologies.insert(
-                rel_type.clone(),
-                RelationshipTopology::new(outgoing, None),
-            );
+            new_relationship_topologies
+                .insert(rel_type.clone(), RelationshipTopology::new(outgoing, None));
         }
 
         // Update schema: mark all relationship types as undirected, preserving properties.
@@ -256,8 +257,7 @@ impl DefaultGraphStore {
                 .unwrap_or(true);
 
             if !should_index {
-                new_relationship_topologies
-                    .insert(rel_type.clone(), Arc::clone(topology));
+                new_relationship_topologies.insert(rel_type.clone(), Arc::clone(topology));
                 continue;
             }
 
@@ -314,8 +314,10 @@ impl DefaultGraphStore {
         }
 
         let mut relationship_topologies = self.relationship_topologies.clone();
-        relationship_topologies
-            .insert(rel_type.clone(), Arc::new(RelationshipTopology::new(outgoing, None)));
+        relationship_topologies.insert(
+            rel_type.clone(),
+            Arc::new(RelationshipTopology::new(outgoing, None)),
+        );
 
         let mut schema = MutableGraphSchema::from_schema(&self.schema);
         schema
@@ -388,8 +390,12 @@ impl DefaultGraphStore {
         let node_count = self.node_count() as u64;
 
         let property_fn: Box<dyn Fn(u64) -> f64 + Send + Sync> = match pv.value_type() {
-            ValueType::Long => Box::new(move |node_id: u64| pv.long_value(node_id).unwrap_or(0) as f64),
-            ValueType::Double => Box::new(move |node_id: u64| pv.double_value(node_id).unwrap_or(0.0)),
+            ValueType::Long => {
+                Box::new(move |node_id: u64| pv.long_value(node_id).unwrap_or(0) as f64)
+            }
+            ValueType::Double => {
+                Box::new(move |node_id: u64| pv.double_value(node_id).unwrap_or(0.0))
+            }
             other => {
                 return Err(GraphStoreError::InvalidOperation(format!(
                     "scaleProperties expects Long/Double node property (got {other:?})"
@@ -403,12 +409,12 @@ impl DefaultGraphStore {
             scaled.push(scaler.scale_property(node_id, property_fn.as_ref()));
         }
 
-        let pv_out: Arc<dyn NodePropertyValues> = Arc::new(
-            DefaultDoubleNodePropertyValues::<VecDouble>::from_collection(
-                VecDouble::from(scaled),
-                node_count as usize,
-            ),
-        );
+        let pv_out: Arc<dyn NodePropertyValues> = Arc::new(DefaultDoubleNodePropertyValues::<
+            VecDouble,
+        >::from_collection(
+            VecDouble::from(scaled),
+            node_count as usize,
+        ));
 
         let mut store = self.clone();
         store.graph_name = graph_name;

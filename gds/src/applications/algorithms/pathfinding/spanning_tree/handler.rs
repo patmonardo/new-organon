@@ -24,7 +24,15 @@ pub fn handle_spanning_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
         Mode::Stream => modes::stream::run(op, &parsed, &graph_resources),
         Mode::Stats => modes::stats::run(op, &parsed, &graph_resources),
         Mode::Estimate => modes::estimate::run(op, &parsed, &graph_resources),
-        Mode::Mutate => err(op, "NOT_IMPLEMENTED", "SpanningTree mutate is not implemented yet"),
-        Mode::Write => err(op, "NOT_IMPLEMENTED", "SpanningTree write is not implemented yet"),
+        Mode::Mutate => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "SpanningTree mutate is not implemented yet",
+        ),
+        Mode::Write => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "SpanningTree write is not implemented yet",
+        ),
     }
 }

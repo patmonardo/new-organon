@@ -34,7 +34,11 @@ pub fn run(op: &str, request: &SteinerTreeRequest, graph_resources: &GraphResour
                         "maxBytes": memory.max()
                     }
                 }),
-                Err(e) => err(op, "EXECUTION_ERROR", &format!("SteinerTree estimate failed: {e}")),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("SteinerTree estimate failed: {e}"),
+                ),
             }
         }
         Some(other) => err(

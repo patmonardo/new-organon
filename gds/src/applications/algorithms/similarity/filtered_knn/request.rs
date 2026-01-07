@@ -76,12 +76,9 @@ impl FilteredKnnRequest {
             }
 
             if let Some(obj) = item.as_object() {
-                let name = obj
-                    .get("name")
-                    .and_then(|v| v.as_str())
-                    .ok_or_else(|| {
-                        "nodeProperties items must be strings or objects with 'name'".to_string()
-                    })?;
+                let name = obj.get("name").and_then(|v| v.as_str()).ok_or_else(|| {
+                    "nodeProperties items must be strings or objects with 'name'".to_string()
+                })?;
 
                 let metric = obj
                     .get("metric")

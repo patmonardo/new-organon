@@ -1,3 +1,4 @@
+use crate::algo::similarity::filtered_knn::FilteredKnnResultRow;
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
@@ -8,7 +9,6 @@ use crate::concurrency::TerminationFlag;
 use crate::core::loading::GraphResources;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
 use crate::procedures::similarity::filtered_knn::FilteredKnnBuilder;
-use crate::algo::similarity::filtered_knn::FilteredKnnResultRow;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -22,7 +22,9 @@ pub fn run(op: &str, request: &FilteredKnnRequest, graph_resources: &GraphResour
     let template = DefaultAlgorithmProcessingTemplate::new(creator);
     let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
-    let task = Tasks::leaf("FilteredKNN::stream".to_string()).base().clone();
+    let task = Tasks::leaf("FilteredKNN::stream".to_string())
+        .base()
+        .clone();
 
     let compute = |gr: &GraphResources,
                    _tracker: &mut dyn ProgressTracker,
@@ -47,17 +49,17 @@ pub fn run(op: &str, request: &FilteredKnnRequest, graph_resources: &GraphResour
         Ok(Some(iter.collect()))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       rows: Option<Vec<FilteredKnnResultRow>>,
-                                       timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stream",
-            "data": rows.unwrap_or_default(),
-            "timings": timings_json(timings)
-        })
-    });
+    let builder = FnStatsResultBuilder(
+        |_gr: &GraphResources, rows: Option<Vec<FilteredKnnResultRow>>, timings| {
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stream",
+                "data": rows.unwrap_or_default(),
+                "timings": timings_json(timings)
+            })
+        },
+    );
 
     match convenience.process_stats(
         graph_resources,
@@ -67,6 +69,10 @@ pub fn run(op: &str, request: &FilteredKnnRequest, graph_resources: &GraphResour
         builder,
     ) {
         Ok(v) => v,
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("FilteredKNN stream failed: {e}")),
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("FilteredKNN stream failed: {e}"),
+        ),
     }
 }

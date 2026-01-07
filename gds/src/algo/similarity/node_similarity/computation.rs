@@ -73,10 +73,7 @@ impl NodeSimilarityComputationRuntime {
                         continue;
                     }
 
-                    let item = Reverse(ScoredNode {
-                        similarity,
-                        target,
-                    });
+                    let item = Reverse(ScoredNode { similarity, target });
 
                     if heap.len() < limit {
                         heap.push(item);
@@ -100,16 +97,17 @@ impl NodeSimilarityComputationRuntime {
                     let target_weights = &weights[target as usize];
                     debug_assert_eq!(target_vec.len(), target_weights.len());
 
-                    let similarity =
-                        metric.compute_weighted_similarity(source_vec, target_vec, source_weights, target_weights);
+                    let similarity = metric.compute_weighted_similarity(
+                        source_vec,
+                        target_vec,
+                        source_weights,
+                        target_weights,
+                    );
                     if similarity.is_nan() {
                         continue;
                     }
 
-                    let item = Reverse(ScoredNode {
-                        similarity,
-                        target,
-                    });
+                    let item = Reverse(ScoredNode { similarity, target });
 
                     if heap.len() < limit {
                         heap.push(item);
@@ -125,11 +123,13 @@ impl NodeSimilarityComputationRuntime {
 
         heap.into_sorted_vec()
             .into_iter()
-            .map(|Reverse(ScoredNode { similarity, target })| NodeSimilarityComputationResult {
-                source,
-                target,
-                similarity,
-            })
+            .map(
+                |Reverse(ScoredNode { similarity, target })| NodeSimilarityComputationResult {
+                    source,
+                    target,
+                    similarity,
+                },
+            )
             .collect()
     }
 
@@ -188,15 +188,17 @@ impl NodeSimilarityComputationRuntime {
 
         heap.into_sorted_vec()
             .into_iter()
-            .map(|Reverse(ScoredPair {
-                similarity,
-                source,
-                target,
-            })| NodeSimilarityComputationResult {
-                source,
-                target,
-                similarity,
-            })
+            .map(
+                |Reverse(ScoredPair {
+                     similarity,
+                     source,
+                     target,
+                 })| NodeSimilarityComputationResult {
+                    source,
+                    target,
+                    similarity,
+                },
+            )
             .collect()
     }
 }

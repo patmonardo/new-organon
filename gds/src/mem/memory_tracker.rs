@@ -111,13 +111,7 @@ impl MemoryTracker {
         Ok(())
     }
 
-    pub fn track(
-        &self,
-        username: &str,
-        task_name: &str,
-        job_id: &JobId,
-        memory_in_bytes: u64,
-    ) {
+    pub fn track(&self, username: &str, task_name: &str, job_id: &JobId, memory_in_bytes: u64) {
         self.try_to_track(username, task_name, job_id, memory_in_bytes)
             .expect("memory reservation exceeded")
     }

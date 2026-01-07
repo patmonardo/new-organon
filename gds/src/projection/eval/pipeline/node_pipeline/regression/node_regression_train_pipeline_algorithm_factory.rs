@@ -1,5 +1,5 @@
-use crate::types::graph_store::DefaultGraphStore;
 use crate::projection::eval::pipeline::Pipeline;
+use crate::types::graph_store::DefaultGraphStore;
 use std::sync::Arc;
 
 use super::{
@@ -108,7 +108,8 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
 
         // Execute node-property-step context validation early (mirrors Java behavior).
         // Training itself is not wired in this module yet.
-        let node_feature_producer = NodeFeatureProducer::create(graph_store.clone(), configuration.clone());
+        let node_feature_producer =
+            NodeFeatureProducer::create(graph_store.clone(), configuration.clone());
         node_feature_producer
             .validate_node_property_steps_context_configs(pipeline.node_property_steps())
             .expect("node property step context config validation failed");

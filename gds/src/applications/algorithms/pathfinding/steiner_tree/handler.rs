@@ -24,7 +24,15 @@ pub fn handle_steiner_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
         Mode::Stream => modes::stream::run(op, &parsed, &graph_resources),
         Mode::Stats => modes::stats::run(op, &parsed, &graph_resources),
         Mode::Estimate => modes::estimate::run(op, &parsed, &graph_resources),
-        Mode::Mutate => err(op, "NOT_IMPLEMENTED", "SteinerTree mutate is not implemented yet"),
-        Mode::Write => err(op, "NOT_IMPLEMENTED", "SteinerTree write is not implemented yet"),
+        Mode::Mutate => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "SteinerTree mutate is not implemented yet",
+        ),
+        Mode::Write => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "SteinerTree write is not implemented yet",
+        ),
     }
 }

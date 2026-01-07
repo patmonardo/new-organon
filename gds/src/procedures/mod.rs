@@ -64,8 +64,8 @@ pub mod operations;
 pub mod traits;
 
 // Procedure-oriented facades (Java-shaped APIs)
-pub mod pipelines;
 pub mod model_catalog;
+pub mod pipelines;
 
 // Facade implementations by algorithm family
 pub mod centrality;

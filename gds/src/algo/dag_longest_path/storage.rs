@@ -39,7 +39,12 @@ impl DagLongestPathStorageRuntime {
         self.distances[node].store(distance.to_bits() as i64, Ordering::SeqCst);
     }
 
-    pub fn compare_and_update_distance(&self, node: usize, new_distance: f64, predecessor: usize) -> bool {
+    pub fn compare_and_update_distance(
+        &self,
+        node: usize,
+        new_distance: f64,
+        predecessor: usize,
+    ) -> bool {
         loop {
             let current_bits = self.distances[node].load(Ordering::SeqCst);
             let current = f64::from_bits(current_bits as u64);

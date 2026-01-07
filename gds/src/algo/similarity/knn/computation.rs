@@ -1,8 +1,8 @@
 use super::metrics::SimilarityComputer;
-use rayon::prelude::*;
 use rand::Rng;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
+use rayon::prelude::*;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -119,11 +119,7 @@ impl NeighborList {
         true
     }
 
-    fn split_old_new(
-        &mut self,
-        sampled_k: usize,
-        rng: &mut ChaCha8Rng,
-    ) -> (Vec<u64>, Vec<u64>) {
+    fn split_old_new(&mut self, sampled_k: usize, rng: &mut ChaCha8Rng) -> (Vec<u64>, Vec<u64>) {
         let mut old = Vec::new();
         let mut new_candidates: Vec<usize> = Vec::new();
 
@@ -233,7 +229,11 @@ impl KnnComputationRuntime {
             let old_new: Vec<(Vec<u64>, Vec<u64>)> = (0..node_count)
                 .into_par_iter()
                 .map(|node| {
-                    let mut rng = ChaCha8Rng::seed_from_u64(cfg.random_seed.wrapping_add(node as u64).wrapping_add((iter as u64) << 32));
+                    let mut rng = ChaCha8Rng::seed_from_u64(
+                        cfg.random_seed
+                            .wrapping_add(node as u64)
+                            .wrapping_add((iter as u64) << 32),
+                    );
                     let mut guard = lists[node].lock().expect("neighbor list lock");
                     guard.split_old_new(sampled_k, &mut rng)
                 })
@@ -267,11 +267,13 @@ impl KnnComputationRuntime {
                     }
 
                     let (ref old, ref new) = old_new[v];
-                    let mut candidates_new: Vec<u64> = Vec::with_capacity(new.len() + reverse_new[v].len());
+                    let mut candidates_new: Vec<u64> =
+                        Vec::with_capacity(new.len() + reverse_new[v].len());
                     candidates_new.extend_from_slice(new);
                     candidates_new.extend_from_slice(&reverse_new[v]);
 
-                    let mut candidates_old: Vec<u64> = Vec::with_capacity(old.len() + reverse_old[v].len());
+                    let mut candidates_old: Vec<u64> =
+                        Vec::with_capacity(old.len() + reverse_old[v].len());
                     candidates_old.extend_from_slice(old);
                     candidates_old.extend_from_slice(&reverse_old[v]);
 
@@ -354,7 +356,10 @@ impl KnnComputationRuntime {
 
                     (updates, considered)
                 })
-                .reduce(|| (0u64, 0u64), |a, b| (a.0.saturating_add(b.0), a.1.saturating_add(b.1)));
+                .reduce(
+                    || (0u64, 0u64),
+                    |a, b| (a.0.saturating_add(b.0), a.1.saturating_add(b.1)),
+                );
 
             // Prune below cutoff and keep top-k per node.
             (0..node_count).into_par_iter().for_each(|node| {

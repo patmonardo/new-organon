@@ -3,10 +3,10 @@
 //! Generates random walks from nodes in the graph using biased sampling.
 //! Supports node2vec-style exploration with configurable return and in-out factors.
 
+use crate::algo::random_walk::computation::RandomWalkComputationRuntime;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::algo::random_walk::computation::RandomWalkComputationRuntime;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -177,10 +177,11 @@ impl RandomWalkBuilder {
             return Ok((Vec::new(), start.elapsed()));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("random_walk".to_string(), node_count),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("random_walk".to_string(), node_count),
+                self.concurrency,
+            );
         progress_tracker.begin_subtask_with_volume(node_count);
 
         let fallback = graph_view.default_property_value();

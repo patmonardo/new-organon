@@ -37,7 +37,8 @@ impl ClosenessCentralityComputationRuntime {
         let component = HugeAtomicLongArray::new(node_count);
 
         let executor = Executor::new(Concurrency::of(concurrency.max(1)));
-        let msbfs_state = WorkerContext::new(move || AggregatedNeighborProcessingMsBfs::new(node_count));
+        let msbfs_state =
+            WorkerContext::new(move || AggregatedNeighborProcessingMsBfs::new(node_count));
 
         let batch_count = (node_count + OMEGA - 1) / OMEGA;
         executor.parallel_for(0, batch_count, termination, |batch_idx| {
@@ -173,23 +174,19 @@ mod tests {
 
         let runtime = ClosenessCentralityComputationRuntime::new();
 
-        let (f1, c1) = runtime.compute_farness_parallel(
-            node_count,
-            2,
-            &termination,
-            noop_sources.clone(),
-            &neighbors,
-        )
-        .unwrap();
+        let (f1, c1) = runtime
+            .compute_farness_parallel(
+                node_count,
+                2,
+                &termination,
+                noop_sources.clone(),
+                &neighbors,
+            )
+            .unwrap();
 
-        let (f2, c2) = runtime.compute_farness_parallel(
-            node_count,
-            4,
-            &termination,
-            noop_sources,
-            &neighbors,
-        )
-        .unwrap();
+        let (f2, c2) = runtime
+            .compute_farness_parallel(node_count, 4, &termination, noop_sources, &neighbors)
+            .unwrap();
 
         assert_eq!(f1, f2);
         assert_eq!(c1, c2);
@@ -208,15 +205,7 @@ mod tests {
             .unwrap();
 
         let s2 = runtime
-            .compute_closeness_parallel(
-                node_count,
-                true,
-                2,
-                &termination,
-                &f1,
-                &c1,
-                noop_nodes,
-            )
+            .compute_closeness_parallel(node_count, true, 2, &termination, &f1, &c1, noop_nodes)
             .unwrap();
 
         // Wasserman-Faust should not exceed base when comp <= node_count.

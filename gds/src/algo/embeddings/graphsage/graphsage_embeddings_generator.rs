@@ -154,8 +154,6 @@ impl GraphSageEmbeddingsGenerator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::collections::backends::vec::VecDouble;
-    use crate::core::utils::progress::{TaskProgressTracker, Tasks};
     use crate::algo::embeddings::graphsage::graphsage_helper;
     use crate::algo::embeddings::graphsage::layer_factory::generate_weights;
     use crate::algo::embeddings::graphsage::layer_factory::LayerFactory;
@@ -164,6 +162,8 @@ mod tests {
     use crate::algo::embeddings::graphsage::types::{
         ActivationFunctionType, AggregatorType, LayerConfig,
     };
+    use crate::collections::backends::vec::VecDouble;
+    use crate::core::utils::progress::{TaskProgressTracker, Tasks};
     use crate::types::graph_store::{DefaultGraphStore, GraphStore};
     use crate::types::properties::node::DefaultDoubleNodePropertyValues;
     use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};

@@ -1,9 +1,9 @@
 //! K-Core Decomposition algorithm specification (executor integration)
 
-use crate::define_algorithm_spec;
-use crate::projection::eval::procedure::*;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
+use crate::define_algorithm_spec;
+use crate::projection::eval::procedure::*;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 

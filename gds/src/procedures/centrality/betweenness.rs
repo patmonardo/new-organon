@@ -28,14 +28,12 @@
 //! println!("Max betweenness: {} (bottleneck identified)", stats.max);
 //! ```
 
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
-};
-use crate::core::utils::progress::ProgressTracker;
-use crate::mem::MemoryRange;
-use crate::algo::betweenness::BetweennessCentralityComputationRuntime;
 use crate::algo::betweenness::storage::BetweennessCentralityStorageRuntime;
+use crate::algo::betweenness::BetweennessCentralityComputationRuntime;
 use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
+use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
 use crate::projection::orientation::Orientation;
@@ -255,18 +253,20 @@ impl BetweennessCentralityFacade {
         let termination = TerminationFlag::running_true();
 
         // Call storage.compute_betweenness - Applications talk only to procedures
-        let result = storage.compute_betweenness(
-            &mut computation,
-            &sources,
-            divisor,
-            self.concurrency,
-            &termination,
-            on_source_done,
-        ).map_err(|e| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "Betweenness terminated: {e}"
-            ))
-        })?;
+        let result = storage
+            .compute_betweenness(
+                &mut computation,
+                &sources,
+                divisor,
+                self.concurrency,
+                &termination,
+                on_source_done,
+            )
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "Betweenness terminated: {e}"
+                ))
+            })?;
 
         progress_tracker.end_subtask();
 

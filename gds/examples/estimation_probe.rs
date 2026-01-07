@@ -13,8 +13,8 @@
 mod enabled {
     use gds::mem::Estimate;
     use gds::mem::MemoryRange;
-    use gds::procedures::centrality::PageRankFacade;
     use gds::procedures::centrality::DegreeCentralityFacade;
+    use gds::procedures::centrality::PageRankFacade;
     use gds::procedures::community::k1coloring::K1ColoringFacade;
     use gds::procedures::community::{LouvainFacade, SccFacade, WccFacade};
     use gds::procedures::pathfinding::{BfsBuilder, DfsBuilder};
@@ -104,7 +104,9 @@ mod enabled {
         print_range("K1Coloring (placeholder today)", k1_mem);
 
         println!("\nNotes:");
-        println!("- These estimates are heuristic and not yet unified under a single executor mode.");
+        println!(
+            "- These estimates are heuristic and not yet unified under a single executor mode."
+        );
         println!("- Some procedures return placeholders (K1Coloring currently does).");
         println!("- Memory guard enforcement is not wired to these estimates yet.");
 
@@ -115,7 +117,11 @@ mod enabled {
         let min = range.min();
         let max = range.max();
         let is_placeholder_1mb = min == 0 && max == 1024 * 1024;
-        let tag = if is_placeholder_1mb { " [placeholder?]" } else { "" };
+        let tag = if is_placeholder_1mb {
+            " [placeholder?]"
+        } else {
+            ""
+        };
         println!(
             "- {:<28}{} min={} ({})  max={} ({})",
             label,

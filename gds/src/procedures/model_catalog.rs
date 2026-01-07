@@ -139,9 +139,7 @@ impl FacadeModelCatalog {
             published: model.is_published(),
         };
 
-        self.meta
-            .write()
-            .insert((username, model_name), meta);
+        self.meta.write().insert((username, model_name), meta);
     }
 
     fn meta_for(&self, username: &str, model_name: &str) -> Option<ModelMeta> {
@@ -219,7 +217,11 @@ impl ModelCatalog for FacadeModelCatalog {
         self.inner.exists(username, model_name)
     }
 
-    fn drop(&self, username: &str, model_name: &str) -> anyhow::Result<Arc<dyn std::any::Any + Send + Sync>> {
+    fn drop(
+        &self,
+        username: &str,
+        model_name: &str,
+    ) -> anyhow::Result<Arc<dyn std::any::Any + Send + Sync>> {
         let dropped = self.inner.drop(username, model_name)?;
         self.drop_meta(username, model_name);
         Ok(dropped)
@@ -314,10 +316,15 @@ impl ModelCatalogProcedureFacade for LocalModelCatalogProcedureFacade {
         let meta = self.exists_impl(model_name);
 
         // Drop from the underlying catalog; metadata is removed by FacadeModelCatalog::drop.
-        <FacadeModelCatalog as ModelCatalog>::drop(self.model_catalog.as_ref(), &self.username, model_name)
-            .unwrap_or_else(|e| panic!("{e}"));
+        <FacadeModelCatalog as ModelCatalog>::drop(
+            self.model_catalog.as_ref(),
+            &self.username,
+            model_name,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
 
-        meta.map(|m| vec![m.to_result(model_name)]).unwrap_or_default()
+        meta.map(|m| vec![m.to_result(model_name)])
+            .unwrap_or_default()
     }
 
     fn exists(&self, model_name: &str) -> Vec<ModelExistsResult> {
@@ -390,8 +397,14 @@ mod tests {
     impl crate::config::BaseConfig for DummyConfig {
         fn parameters(&self) -> AnyMap {
             AnyMap::from([
-                ("modelName".to_string(), Value::String(self.model_name.clone())),
-                ("modelUser".to_string(), Value::String(self.model_user.clone())),
+                (
+                    "modelName".to_string(),
+                    Value::String(self.model_name.clone()),
+                ),
+                (
+                    "modelUser".to_string(),
+                    Value::String(self.model_user.clone()),
+                ),
             ])
         }
     }
@@ -409,7 +422,8 @@ mod tests {
     #[test]
     fn model_catalog_facade_list_exists_drop() {
         let catalog = Arc::new(FacadeModelCatalog::new());
-        let facade = LocalModelCatalogProcedureFacade::new(User::from("alice"), Arc::clone(&catalog));
+        let facade =
+            LocalModelCatalogProcedureFacade::new(User::from("alice"), Arc::clone(&catalog));
 
         // Insert a model via the underlying ModelCatalog API.
         let model = Model::new(
@@ -433,7 +447,8 @@ mod tests {
         assert!(exists[0].exists);
         assert_eq!(exists[0].model_type, "DummyAlgo");
 
-        let listed = facade.list(<LocalModelCatalogProcedureFacade as ModelCatalogProcedureFacade>::NO_VALUE);
+        let listed = facade
+            .list(<LocalModelCatalogProcedureFacade as ModelCatalogProcedureFacade>::NO_VALUE);
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].model_name, "m1");
         assert_eq!(listed[0].model_type, "DummyAlgo");

@@ -66,5 +66,8 @@ pub use task_store_holder::TaskStoreHolder;
 pub use task_store_listener::TaskStoreListener;
 pub use task_store_provider::{SimpleTaskStoreProvider, TaskStoreProvider, TaskStoreProviders};
 pub use task_store_service::TaskStoreService;
-pub use tasks::{LeafTask, NoopProgressTracker, ProgressTracker, Task, TaskProgressLogger, TaskProgressTracker, Tasks, NULL_TRACKER, UNKNOWN_VOLUME};
+pub use tasks::{
+    LeafTask, NoopProgressTracker, ProgressTracker, Task, TaskProgressLogger, TaskProgressTracker,
+    Tasks, NULL_TRACKER, UNKNOWN_VOLUME,
+};
 pub use user_task::UserTask;

@@ -1,3 +1,4 @@
+use crate::algo::similarity::NodeSimilarityResult;
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
@@ -7,7 +8,6 @@ use crate::applications::algorithms::similarity::shared::{err, timings_json};
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::GraphResources;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::algo::similarity::NodeSimilarityResult;
 use crate::procedures::similarity::NodeSimilarityBuilder;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -22,7 +22,9 @@ pub fn run(op: &str, request: &NodeSimilarityRequest, graph_resources: &GraphRes
     let template = DefaultAlgorithmProcessingTemplate::new(creator);
     let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
-    let task = Tasks::leaf("NodeSimilarity::stream".to_string()).base().clone();
+    let task = Tasks::leaf("NodeSimilarity::stream".to_string())
+        .base()
+        .clone();
 
     let compute = |gr: &GraphResources,
                    _tracker: &mut dyn ProgressTracker,
@@ -43,17 +45,17 @@ pub fn run(op: &str, request: &NodeSimilarityRequest, graph_resources: &GraphRes
         Ok(Some(iter.collect()))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       rows: Option<Vec<NodeSimilarityResult>>,
-                                       timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stream",
-            "data": rows.unwrap_or_default(),
-            "timings": timings_json(timings)
-        })
-    });
+    let builder = FnStatsResultBuilder(
+        |_gr: &GraphResources, rows: Option<Vec<NodeSimilarityResult>>, timings| {
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stream",
+                "data": rows.unwrap_or_default(),
+                "timings": timings_json(timings)
+            })
+        },
+    );
 
     match convenience.process_stats(
         graph_resources,
@@ -63,6 +65,10 @@ pub fn run(op: &str, request: &NodeSimilarityRequest, graph_resources: &GraphRes
         builder,
     ) {
         Ok(v) => v,
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("NodeSimilarity stream failed: {e}")),
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("NodeSimilarity stream failed: {e}"),
+        ),
     }
 }

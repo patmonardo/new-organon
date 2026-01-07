@@ -280,7 +280,10 @@ mod tests {
         adj
     }
 
-    fn articulation_points(rt: &mut ArticulationPointsComputationRuntime, adj: &[Vec<usize>]) -> Vec<usize> {
+    fn articulation_points(
+        rt: &mut ArticulationPointsComputationRuntime,
+        adj: &[Vec<usize>],
+    ) -> Vec<usize> {
         let neighbors = |n: usize| adj[n].clone();
         let result = rt.compute(adj.len(), neighbors);
 

@@ -24,5 +24,5 @@ use crate::core::utils::progress::tasks::{LeafTask, Tasks};
 
 /// Progress task used by historical Rust call sites.
 pub fn progress_leaf_task(iterations: usize) -> LeafTask {
-	Tasks::leaf_with_volume("approx_max_kcut".to_string(), iterations)
+    Tasks::leaf_with_volume("approx_max_kcut".to_string(), iterations)
 }

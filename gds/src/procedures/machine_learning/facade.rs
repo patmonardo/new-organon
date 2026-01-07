@@ -6,7 +6,9 @@
 //! Today we only expose KGE predict stream/stats because mutate/write steps are
 //! not implemented in this repo yet.
 
-use crate::procedures::machine_learning::{KgePredictFacade, KgePredictStats, KgeStreamResult, ScoreFunction};
+use crate::procedures::machine_learning::{
+    KgePredictFacade, KgePredictStats, KgeStreamResult, ScoreFunction,
+};
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::catalog::GraphCatalog;
@@ -48,7 +50,11 @@ impl LocalMachineLearningProcedureFacade {
         }
     }
 
-    pub fn kge_stream(&self, graph_name: &str, configuration: AnyMap) -> Result<Vec<KgeStreamResult>> {
+    pub fn kge_stream(
+        &self,
+        graph_name: &str,
+        configuration: AnyMap,
+    ) -> Result<Vec<KgeStreamResult>> {
         let graph_store = self
             .catalog
             .get(graph_name)

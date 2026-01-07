@@ -97,7 +97,8 @@ impl KCoreComputationRuntime {
         });
 
         let rebuild_limit = ((REBUILD_CONSTANT * node_count as f64).ceil() as usize).max(1);
-        let remaining_nodes = AtomicIsize::new((node_count - degree_zero.load(Ordering::Relaxed)) as isize);
+        let remaining_nodes =
+            AtomicIsize::new((node_count - degree_zero.load(Ordering::Relaxed)) as isize);
 
         let node_index = Arc::new(AtomicUsize::new(0));
         let remaining_nodes_arc = Arc::new(remaining_nodes);
@@ -205,7 +206,9 @@ enum KCorePhase {
 
 #[derive(Clone)]
 enum NodeProvider {
-    Full { size: usize },
+    Full {
+        size: usize,
+    },
     Reduced {
         size: usize,
         node_order: Arc<HugeAtomicLongArray>,
@@ -306,7 +309,9 @@ impl KCoreTask {
         self.examination_stack.clear();
 
         loop {
-            let offset = self.node_index.fetch_add(self.chunk_size, Ordering::Relaxed);
+            let offset = self
+                .node_index
+                .fetch_add(self.chunk_size, Ordering::Relaxed);
             if offset >= upper_bound {
                 break;
             }
@@ -320,7 +325,9 @@ impl KCoreTask {
                     if node_degree == self.scanning_degree {
                         self.smallest_active_degree = node_degree;
                         self.examination_stack.push(node_id as i64);
-                    } else if self.smallest_active_degree == -1 || self.smallest_active_degree > node_degree {
+                    } else if self.smallest_active_degree == -1
+                        || self.smallest_active_degree > node_degree
+                    {
                         self.smallest_active_degree = node_degree;
                     }
                 }
@@ -343,7 +350,8 @@ impl KCoreTask {
         }
 
         if nodes_examined > 0 {
-            self.remaining_nodes.fetch_sub(nodes_examined, Ordering::Relaxed);
+            self.remaining_nodes
+                .fetch_sub(nodes_examined, Ordering::Relaxed);
         }
     }
 
@@ -430,7 +438,9 @@ impl RebuildTask {
         }
 
         let local_queue_size = self.local_queue.size();
-        let mut current_index = self.atomic_index.fetch_add(local_queue_size, Ordering::Relaxed);
+        let mut current_index = self
+            .atomic_index
+            .fetch_add(local_queue_size, Ordering::Relaxed);
 
         while !self.local_queue.is_empty() {
             let node_id = self.local_queue.remove();

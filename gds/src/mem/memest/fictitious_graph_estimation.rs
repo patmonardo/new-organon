@@ -130,12 +130,22 @@ fn estimate_memory_tree_simple(dimensions: &dyn GraphDimensions) -> MemoryTree {
 
     let children = vec![
         MemoryTree::leaf("Node Storage".to_string(), MemoryRange::of(node_memory)),
-        MemoryTree::leaf("Relationship Storage".to_string(), MemoryRange::of(rel_memory)),
-        MemoryTree::leaf("Adjacency Lists".to_string(), MemoryRange::of(adjacency_memory)),
+        MemoryTree::leaf(
+            "Relationship Storage".to_string(),
+            MemoryRange::of(rel_memory),
+        ),
+        MemoryTree::leaf(
+            "Adjacency Lists".to_string(),
+            MemoryRange::of(adjacency_memory),
+        ),
         MemoryTree::leaf("Metadata Overhead".to_string(), MemoryRange::of(overhead)),
     ];
 
-    MemoryTree::new("Graph Store".to_string(), MemoryRange::of(total_memory), children)
+    MemoryTree::new(
+        "Graph Store".to_string(),
+        MemoryRange::of(total_memory),
+        children,
+    )
 }
 
 fn estimate_memory_tree_detailed(
@@ -170,7 +180,10 @@ fn estimate_memory_tree_detailed(
     }
 
     let mut children = Vec::new();
-    children.push(MemoryTree::leaf("Node Storage".to_string(), MemoryRange::of(node_memory)));
+    children.push(MemoryTree::leaf(
+        "Node Storage".to_string(),
+        MemoryRange::of(node_memory),
+    ));
     children.push(MemoryTree::leaf(
         "Relationship Storage".to_string(),
         MemoryRange::of(rel_memory),
@@ -215,7 +228,11 @@ fn estimate_memory_tree_detailed(
         MemoryRange::of(overhead_total),
     ));
 
-    MemoryTree::new("Graph Store".to_string(), MemoryRange::of(total_memory), children)
+    MemoryTree::new(
+        "Graph Store".to_string(),
+        MemoryRange::of(total_memory),
+        children,
+    )
 }
 
 impl Default for FictitiousGraphEstimationService {

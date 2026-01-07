@@ -6,8 +6,8 @@
 use crate::concurrency::Concurrency;
 use crate::mem::MemoryRange;
 
-use super::BatchingProgressLogger;
 use super::tasks::{LogLevel, ProgressTracker};
+use super::BatchingProgressLogger;
 
 pub struct BatchingTaskProgressTracker<P: ProgressTracker> {
     delegate: P,

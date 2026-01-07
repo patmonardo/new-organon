@@ -46,7 +46,7 @@ pub fn run(
     let compute = move |gr: &GraphResources,
                         _tracker: &mut dyn ProgressTracker,
                         _termination: &TerminationFlag|
-     -> Result<Option<BfsWriteOutcome>, String> {
+          -> Result<Option<BfsWriteOutcome>, String> {
         let mut builder = gr.facade().bfs().source(request.source);
         if !request.targets.is_empty() {
             builder = builder.targets(request.targets.clone());
@@ -72,17 +72,25 @@ pub fn run(
         Ok(Some(outcome))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources, outcome: Option<BfsWriteOutcome>, timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "write",
-            "data": outcome,
-            "timings": timings_json(timings)
-        })
-    });
+    let builder = FnStatsResultBuilder(
+        |_gr: &GraphResources, outcome: Option<BfsWriteOutcome>, timings| {
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "write",
+                "data": outcome,
+                "timings": timings_json(timings)
+            })
+        },
+    );
 
-    match convenience.process_stats(graph_resources, request.common.concurrency, task, compute, builder) {
+    match convenience.process_stats(
+        graph_resources,
+        request.common.concurrency,
+        task,
+        compute,
+        builder,
+    ) {
         Ok(v) => v,
         Err(e) => err(op, "EXECUTION_ERROR", &format!("BFS write failed: {e}")),
     }

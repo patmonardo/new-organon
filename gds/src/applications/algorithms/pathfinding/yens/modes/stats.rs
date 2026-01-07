@@ -2,8 +2,8 @@ use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
-use crate::applications::algorithms::pathfinding::yens::request::YensRequest;
 use crate::applications::algorithms::pathfinding::shared::{err, timings_json};
+use crate::applications::algorithms::pathfinding::yens::request::YensRequest;
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::GraphResources;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
@@ -44,18 +44,24 @@ pub fn run(op: &str, request: &YensRequest, graph_resources: &GraphResources) ->
         Ok(Some(stats))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<YensStats>, timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stats",
-            "data": stats,
-            "timings": timings_json(timings)
-        })
-    });
+    let builder =
+        FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<YensStats>, timings| {
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stats",
+                "data": stats,
+                "timings": timings_json(timings)
+            })
+        });
 
-    match convenience.process_stats(graph_resources, request.common.concurrency, task, compute, builder)
-    {
+    match convenience.process_stats(
+        graph_resources,
+        request.common.concurrency,
+        task,
+        compute,
+        builder,
+    ) {
         Ok(v) => v,
         Err(e) => err(op, "EXECUTION_ERROR", &format!("Yen's stats failed: {e}")),
     }

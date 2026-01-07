@@ -20,9 +20,15 @@ impl MemoryEstimations {
         Box::new(NullEstimation)
     }
 
-    pub fn of_range(description: impl Into<String>, range: MemoryRange) -> Box<dyn MemoryEstimation> {
+    pub fn of_range(
+        description: impl Into<String>,
+        range: MemoryRange,
+    ) -> Box<dyn MemoryEstimation> {
         let description = description.into();
-        Box::new(LeafEstimation::new(description, move |_dim, _concurrency| range))
+        Box::new(LeafEstimation::new(
+            description,
+            move |_dim, _concurrency| range,
+        ))
     }
 
     pub fn of_resident<F>(description: impl Into<String>, resident: F) -> Box<dyn MemoryEstimation>
@@ -67,8 +73,13 @@ impl MemoryEstimations {
         })
     }
 
-    pub fn per_node(description: impl Into<String>, delegate: Box<dyn MemoryEstimation>) -> Box<dyn MemoryEstimation> {
-        Self::and_then(description, delegate, |range, dim, _conc| range.times(dim.node_count()))
+    pub fn per_node(
+        description: impl Into<String>,
+        delegate: Box<dyn MemoryEstimation>,
+    ) -> Box<dyn MemoryEstimation> {
+        Self::and_then(description, delegate, |range, dim, _conc| {
+            range.times(dim.node_count())
+        })
     }
 
     pub fn per_thread(
@@ -167,22 +178,23 @@ impl Builder {
         description: impl Into<String>,
         estimation: Box<dyn MemoryEstimation>,
     ) -> Self {
-        self.current_mut().components.push(MemoryEstimations::delegate_estimation(
-            estimation,
-            description,
-        ));
+        self.current_mut()
+            .components
+            .push(MemoryEstimations::delegate_estimation(
+                estimation,
+                description,
+            ));
         self
     }
 
     pub fn fixed(self, description: impl Into<String>, bytes: usize) -> Self {
-        self.add(MemoryEstimations::of_range(description, MemoryRange::of(bytes)))
+        self.add(MemoryEstimations::of_range(
+            description,
+            MemoryRange::of(bytes),
+        ))
     }
 
-    pub fn fixed_range(
-        self,
-        description: impl Into<String>,
-        range: MemoryRange,
-    ) -> Self {
+    pub fn fixed_range(self, description: impl Into<String>, range: MemoryRange) -> Self {
         self.add(MemoryEstimations::of_range(description, range))
     }
 
@@ -193,7 +205,11 @@ impl Builder {
         self.add(MemoryEstimations::of_resident(description, f))
     }
 
-    pub fn per_node(self, description: impl Into<String>, estimation: Box<dyn MemoryEstimation>) -> Self {
+    pub fn per_node(
+        self,
+        description: impl Into<String>,
+        estimation: Box<dyn MemoryEstimation>,
+    ) -> Self {
         self.add(MemoryEstimations::per_node(description, estimation))
     }
 
@@ -288,7 +304,11 @@ impl MemoryEstimation for AndThenEstimation {
     fn estimate(&self, dimensions: &dyn GraphDimensions, concurrency: usize) -> MemoryTree {
         let tree = self.delegate.estimate(dimensions, concurrency);
         let new_range = (self.and_then)(*tree.memory_usage(), dimensions, concurrency);
-        MemoryTree::new(self.description.clone(), new_range, tree.components().to_vec())
+        MemoryTree::new(
+            self.description.clone(),
+            new_range,
+            tree.components().to_vec(),
+        )
     }
 }
 
@@ -329,7 +349,11 @@ impl MemoryEstimation for DelegateEstimation {
 
     fn estimate(&self, dimensions: &dyn GraphDimensions, concurrency: usize) -> MemoryTree {
         let tree = self.delegate.estimate(dimensions, concurrency);
-        MemoryTree::new(self.description.clone(), *tree.memory_usage(), tree.components().to_vec())
+        MemoryTree::new(
+            self.description.clone(),
+            *tree.memory_usage(),
+            tree.components().to_vec(),
+        )
     }
 }
 

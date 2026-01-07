@@ -37,8 +37,8 @@
 //!     .unwrap();
 //! ```
 
-use crate::mem::MemoryRange;
 use crate::algo::astar::{AStarComputationRuntime, AStarStorageRuntime};
+use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{PathResult as ProcedurePathResult, Result};
 use crate::projection::orientation::Orientation;
@@ -51,16 +51,11 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
-};
 use crate::algo::common::result_builders::{
-    ExecutionMetadata,
-    PathFindingResult,
-    PathResult as CorePathResult,
-    PathResultBuilder,
+    ExecutionMetadata, PathFindingResult, PathResult as CorePathResult, PathResultBuilder,
     ResultBuilder,
 };
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 
 // ============================================================================
 // Heuristic Types
@@ -403,10 +398,11 @@ impl AStarBuilder {
             // Create a fresh progress tracker per target run.
             // Reusing a single leaf task across multiple runs would attempt to re-start
             // a Finished task and panic.
-            let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("A*".to_string(), relationship_count),
-                self.concurrency,
-            );
+            let mut progress_tracker =
+                crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                    Tasks::leaf_with_volume("A*".to_string(), relationship_count),
+                    self.concurrency,
+                );
 
             let mut storage = match (&lat_values, &lon_values) {
                 (Some(lat), Some(lon)) => AStarStorageRuntime::new_with_values(

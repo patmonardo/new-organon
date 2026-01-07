@@ -346,4 +346,3 @@ fn find_largest_component(node_count: usize, dss: &Arc<HugeAtomicDisjointSetStru
 
     best_root
 }
-

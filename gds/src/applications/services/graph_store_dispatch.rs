@@ -5,7 +5,8 @@ use crate::projection::RelationshipType;
 use crate::types::graph::id_map::SimpleIdMap;
 use crate::types::graph::RelationshipTopology;
 use crate::types::graph_store::{
-    Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName, GraphStore,
+    Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
+    GraphStore,
 };
 use crate::types::properties::node::impls::default_node_property_values::{
     DefaultDoubleNodePropertyValues, DefaultLongNodePropertyValues,
@@ -139,8 +140,10 @@ pub(super) fn handle_graph_store(request: &Value, ctx: &FacadeContext) -> Value 
             }
 
             let mut relationship_topologies = HashMap::new();
-            let mut rel_props_by_type: HashMap<String, HashMap<String, Vec<Vec<serde_json::Value>>>> =
-                HashMap::new();
+            let mut rel_props_by_type: HashMap<
+                String,
+                HashMap<String, Vec<Vec<serde_json::Value>>>,
+            > = HashMap::new();
 
             for (rel_type, edges) in rels_by_type.into_iter() {
                 let mut adjacency: Vec<Vec<i64>> = vec![Vec::new(); original_node_ids.len()];
@@ -293,17 +296,24 @@ pub(super) fn handle_graph_store(request: &Value, ctx: &FacadeContext) -> Value 
                             node_count,
                         ))
                     } else {
-                        Arc::new(DefaultDoubleNodePropertyValues::<VecDouble>::from_collection(
-                            VecDouble::from(all_doubles),
-                            node_count,
-                        ))
+                        Arc::new(
+                            DefaultDoubleNodePropertyValues::<VecDouble>::from_collection(
+                                VecDouble::from(all_doubles),
+                                node_count,
+                            ),
+                        )
                     };
 
-                    let labels = std::collections::HashSet::from([
-                        crate::projection::NodeLabel::all_nodes(),
-                    ]);
+                    let labels =
+                        std::collections::HashSet::from(
+                            [crate::projection::NodeLabel::all_nodes()],
+                        );
                     if let Err(e) = store.add_node_property(labels, key.to_string(), pv) {
-                        return err(op, "ERROR", format!("Failed to add node property '{key}': {e}"));
+                        return err(
+                            op,
+                            "ERROR",
+                            format!("Failed to add node property '{key}': {e}"),
+                        );
                     }
                 }
             }

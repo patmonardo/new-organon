@@ -7,11 +7,11 @@
 //! - Uses ANP MSBFS batching; accumulates into the reached node per BFS depth.
 //! - Normalizes by `(nodeCount - 1)`.
 
+use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use crate::projection::Orientation;
-use crate::core::utils::progress::{ProgressTracker, Tasks};
-use crate::concurrency::TerminationFlag;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 

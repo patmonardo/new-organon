@@ -3,16 +3,18 @@
 //! Responsible for building a graph view from a GraphStore with the correct
 //! orientation and optional relationship weight property.
 
+use crate::concurrency::{TerminatedException, TerminationFlag};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::{Orientation, RelationshipType};
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use crate::types::prelude::GraphStore;
-use crate::concurrency::{TerminatedException, TerminationFlag};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use crate::algo::betweenness::computation::{BetweennessCentralityComputationRuntime, BetweennessCentralityComputationResult};
+use crate::algo::betweenness::computation::{
+    BetweennessCentralityComputationResult, BetweennessCentralityComputationRuntime,
+};
 
 pub struct BetweennessCentralityStorageRuntime<'a, G: GraphStore> {
     graph_store: &'a G,
@@ -114,7 +116,12 @@ impl<'a, G: GraphStore> BetweennessCentralityStorageRuntime<'a, G> {
     ///
     /// - `strategy`: "all" or "random_degree".
     /// - `sampling_size`: number of sources to pick (defaults to all nodes).
-    pub fn select_sources(&self, strategy: &str, sampling_size: Option<usize>, seed: u64) -> Vec<usize> {
+    pub fn select_sources(
+        &self,
+        strategy: &str,
+        sampling_size: Option<usize>,
+        seed: u64,
+    ) -> Vec<usize> {
         use rand::SeedableRng;
         use rand_chacha::ChaCha8Rng;
         use std::cmp::Ordering;

@@ -102,8 +102,8 @@ pub mod betweenness;
 pub mod bfs;
 pub mod bridges;
 pub mod celf;
-pub mod conductance;
 pub mod closeness;
+pub mod conductance;
 pub mod dag_longest_path;
 pub mod degree_centrality;
 pub mod delta_stepping;
@@ -113,6 +113,7 @@ pub mod embeddings;
 pub mod harmonic;
 pub mod hits;
 pub mod index_inverse;
+pub mod indirect_exposure;
 pub mod k1coloring;
 pub mod kcore;
 pub mod kmeans;
@@ -120,7 +121,6 @@ pub mod kspanningtree;
 pub mod label_propagation;
 pub mod leiden;
 pub mod louvain;
-pub mod indirect_exposure;
 pub mod modularity;
 pub mod modularity_optimization;
 pub mod msbfs;
@@ -145,6 +145,9 @@ pub use all_shortest_paths::{
     ALL_SHORTEST_PATHSAlgorithmSpec, AllShortestPathsComputationRuntime, AllShortestPathsConfig,
     AllShortestPathsResult, AllShortestPathsStorageRuntime,
 };
+pub use approx_max_kcut::{
+    ApproxMaxKCutComputationRuntime, ApproxMaxKCutConfig, ApproxMaxKCutResult,
+};
 pub use articulation_points::{
     ArticulationPointsAlgorithmSpec, ArticulationPointsComputationRuntime,
     ArticulationPointsConfig, ArticulationPointsResult, ArticulationPointsStorageRuntime,
@@ -166,6 +169,10 @@ pub use bridges::{
     BridgesStorageRuntime,
 };
 pub use celf::{CELFAlgorithmSpec, CELFComputationRuntime, CELFConfig, CELFResult};
+pub use closeness::{
+    ClosenessCentralityAlgorithmSpec, ClosenessCentralityComputationRuntime,
+    ClosenessCentralityConfig, ClosenessCentralityResult, ClosenessCentralityStorageRuntime,
+};
 pub use degree_centrality::{
     DEGREE_CENTRALITYAlgorithmSpec, DegreeCentralityComputationRuntime, DegreeCentralityConfig,
     DegreeCentralityResult, DegreeCentralityStorageRuntime,
@@ -174,17 +181,10 @@ pub use delta_stepping::{
     DELTA_STEPPINGAlgorithmSpec, DeltaSteppingComputationRuntime, DeltaSteppingConfig,
     DeltaSteppingResult, DeltaSteppingStorageRuntime,
 };
-pub use approx_max_kcut::{
-	ApproxMaxKCutComputationRuntime, ApproxMaxKCutConfig, ApproxMaxKCutResult,
-};
 pub use dfs::{DFSAlgorithmSpec, DfsComputationRuntime, DfsConfig, DfsResult, DfsStorageRuntime};
 pub use dijkstra::{
     AllTargets, DIJKSTRAAlgorithmSpec, DijkstraComputationRuntime, DijkstraConfig, DijkstraResult,
     DijkstraStorageRuntime, ManyTargets, PathFindingResult, SingleTarget, Targets, TraversalState,
-};
-pub use closeness::{
-    ClosenessCentralityAlgorithmSpec, ClosenessCentralityComputationRuntime,
-    ClosenessCentralityConfig, ClosenessCentralityResult, ClosenessCentralityStorageRuntime,
 };
 pub use harmonic::{
     HarmonicAlgorithmSpec, HarmonicComputationRuntime, HarmonicConfig, HarmonicResult,
@@ -198,6 +198,10 @@ pub use index_inverse::{
     IndexInverseAlgorithmSpec, IndexInverseComputationRuntime, IndexInverseConfig,
     IndexInverseResult, IndexInverseStorageRuntime,
 };
+pub use indirect_exposure::{
+    IndirectExposureAlgorithmSpec, IndirectExposureComputationRuntime, IndirectExposureConfig,
+    IndirectExposureResult, IndirectExposureStorageRuntime,
+};
 pub use k1coloring::{
     K1ColoringAlgorithmSpec, K1ColoringComputationRuntime, K1ColoringConfig, K1ColoringResult,
     K1ColoringStorageRuntime,
@@ -210,10 +214,6 @@ pub use kmeans::{KMeansComputationRuntime, KMeansConfig, KMeansResult, KMeansSam
 pub use kspanningtree::{
     KSpanningTreeAlgorithmSpec, KSpanningTreeComputationRuntime, KSpanningTreeConfig,
     KSpanningTreeResult, KSpanningTreeStorageRuntime,
-};
-pub use indirect_exposure::{
-    IndirectExposureAlgorithmSpec, IndirectExposureComputationRuntime, IndirectExposureConfig,
-    IndirectExposureResult, IndirectExposureStorageRuntime,
 };
 pub use label_propagation::{
     LabelPropAlgorithmSpec, LabelPropComputationRuntime, LabelPropConfig, LabelPropResult,

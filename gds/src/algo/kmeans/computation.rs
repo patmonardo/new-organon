@@ -110,22 +110,23 @@ impl KMeansComputationRuntime {
             }
         }
 
-        let (communities, distances, centers, avg_dist, ran_iterations) = best.unwrap_or_else(|| {
-            let mut centers = Vec::with_capacity(k);
-            for i in 0..k {
-                centers.push(points[i].clone());
-            }
-            ensure_center_dims(&mut centers, dims);
-            let (communities, distances, ran_iterations) = kmeans_swaps_loop(
-                points,
-                &mut centers,
-                max_iterations,
-                config.delta_threshold,
-                concurrency,
-            );
-            let avg_dist = average(&distances);
-            (communities, distances, centers, avg_dist, ran_iterations)
-        });
+        let (communities, distances, centers, avg_dist, ran_iterations) =
+            best.unwrap_or_else(|| {
+                let mut centers = Vec::with_capacity(k);
+                for i in 0..k {
+                    centers.push(points[i].clone());
+                }
+                ensure_center_dims(&mut centers, dims);
+                let (communities, distances, ran_iterations) = kmeans_swaps_loop(
+                    points,
+                    &mut centers,
+                    max_iterations,
+                    config.delta_threshold,
+                    concurrency,
+                );
+                let avg_dist = average(&distances);
+                (communities, distances, centers, avg_dist, ran_iterations)
+            });
 
         let (silhouette, avg_sil) = if config.compute_silhouette {
             let s = silhouette_centroid(points, &centers, &communities);

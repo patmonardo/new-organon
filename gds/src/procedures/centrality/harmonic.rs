@@ -10,15 +10,13 @@
 //! - Accumulates into the *reached node* per depth
 //! - Normalizes by `(nodeCount - 1)`
 
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
-};
+use crate::algo::harmonic::{HarmonicComputationRuntime, HarmonicStorageRuntime};
+use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
-use crate::algo::harmonic::{HarmonicComputationRuntime, HarmonicStorageRuntime};
-use crate::concurrency::TerminationFlag;
 use crate::projection::orientation::Orientation;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::{Arc, Mutex};
@@ -144,9 +142,11 @@ impl HarmonicCentralityFacade {
             Ok(scores) => scores,
             Err(e) => {
                 tracker.lock().unwrap().end_subtask_with_failure();
-                return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                    format!("Harmonic terminated: {e}"),
-                ));
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                        "Harmonic terminated: {e}"
+                    )),
+                );
             }
         };
 

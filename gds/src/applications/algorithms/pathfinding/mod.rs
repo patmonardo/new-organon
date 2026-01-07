@@ -7,14 +7,14 @@
 //! - per-mode entrypoints under each algorithm
 //! - explicit step objects for mutate/write.
 
-pub mod astar;
 pub mod all_shortest_paths;
+pub mod astar;
 pub mod bellman_ford;
 pub mod bfs;
 pub mod dag_longest_path;
 pub mod delta_stepping;
-pub mod dijkstra;
 pub mod dfs;
+pub mod dijkstra;
 pub mod kspanningtree;
 pub mod random_walk;
 pub mod shared;
@@ -29,8 +29,8 @@ pub use bellman_ford::handle_bellman_ford;
 pub use bfs::handle_bfs;
 pub use dag_longest_path::handle_dag_longest_path;
 pub use delta_stepping::handle_delta_stepping;
-pub use dijkstra::handle_dijkstra;
 pub use dfs::handle_dfs;
+pub use dijkstra::handle_dijkstra;
 pub use kspanningtree::handle_kspanningtree;
 pub use random_walk::handle_random_walk;
 pub use spanning_tree::handle_spanning_tree;

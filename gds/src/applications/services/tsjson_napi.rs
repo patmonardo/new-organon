@@ -114,7 +114,7 @@ pub fn version() -> String {
 mod tests {
     use super::*;
     use crate::applications::graph_store_catalog::loaders::GraphStoreCatalogService;
-    use crate::applications::services::tsjson_support::{TSJSON_CATALOG_SERVICE, TsjsonUser};
+    use crate::applications::services::tsjson_support::{TsjsonUser, TSJSON_CATALOG_SERVICE};
     use crate::types::catalog::GraphCatalog;
     use crate::types::graph_store::DatabaseId;
     use std::sync::Arc;

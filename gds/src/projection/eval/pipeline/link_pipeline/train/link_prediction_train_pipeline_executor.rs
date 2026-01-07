@@ -306,8 +306,7 @@ pub fn progress_task(
     LeafTask::new(
         format!(
             "{}: {}",
-            task_name,
-            "Pre-Prim 0.0.x - Progress task structure is Bija (seed)!"
+            task_name, "Pre-Prim 0.0.x - Progress task structure is Bija (seed)!"
         ),
         UNKNOWN_VOLUME,
     )

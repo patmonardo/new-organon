@@ -20,7 +20,9 @@ pub fn run(op: &str, request: &KSpanningTreeRequest, graph_resources: &GraphReso
     let template = DefaultAlgorithmProcessingTemplate::new(creator);
     let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
-    let task = Tasks::leaf("KSpanningTree::stats".to_string()).base().clone();
+    let task = Tasks::leaf("KSpanningTree::stats".to_string())
+        .base()
+        .clone();
 
     let compute = |gr: &GraphResources,
                    _tracker: &mut dyn ProgressTracker,
@@ -41,15 +43,17 @@ pub fn run(op: &str, request: &KSpanningTreeRequest, graph_resources: &GraphReso
         Ok(Some(stats))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<KSpanningTreeStats>, timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stats",
-            "data": stats,
-            "timings": timings_json(timings)
-        })
-    });
+    let builder = FnStatsResultBuilder(
+        |_gr: &GraphResources, stats: Option<KSpanningTreeStats>, timings| {
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stats",
+                "data": stats,
+                "timings": timings_json(timings)
+            })
+        },
+    );
 
     match convenience.process_stats(
         graph_resources,
@@ -59,6 +63,10 @@ pub fn run(op: &str, request: &KSpanningTreeRequest, graph_resources: &GraphReso
         builder,
     ) {
         Ok(v) => v,
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("KSpanningTree stats failed: {e}")),
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("KSpanningTree stats failed: {e}"),
+        ),
     }
 }

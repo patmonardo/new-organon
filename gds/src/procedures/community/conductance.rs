@@ -3,14 +3,14 @@
 //! Evaluates community quality by measuring the proportion of edges
 //! that cross community boundaries.
 
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory,
-};
-use crate::mem::MemoryRange;
 use crate::algo::conductance::{
     ConductanceComputationRuntime, ConductanceConfig, ConductanceStorageRuntime,
 };
 use crate::concurrency::Concurrency;
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory,
+};
+use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -86,7 +86,12 @@ impl ConductanceFacade {
             );
         }
         ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
-        ConfigValidator::in_range(self.min_batch_size as f64, 1.0, 1_000_000_000.0, "min_batch_size")?;
+        ConfigValidator::in_range(
+            self.min_batch_size as f64,
+            1.0,
+            1_000_000_000.0,
+            "min_batch_size",
+        )?;
         Ok(())
     }
 

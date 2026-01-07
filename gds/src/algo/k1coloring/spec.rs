@@ -3,8 +3,8 @@
 use crate::algo::k1coloring::storage::K1ColoringStorageRuntime;
 use crate::algo::k1coloring::K1ColoringComputationRuntime;
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::Tasks;
 use crate::core::utils::progress::TaskProgressTracker;
+use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use serde::{Deserialize, Serialize};

@@ -27,7 +27,10 @@ pub fn handle_kge(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         }
     };
 
-    let mode = request.get("mode").and_then(|v| v.as_str()).unwrap_or("stream");
+    let mode = request
+        .get("mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("stream");
 
     let node_embedding_property = request
         .get("nodeEmbeddingProperty")

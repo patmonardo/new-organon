@@ -3,16 +3,16 @@
 //! Bridges are defined on undirected graphs; this storage layer always builds an undirected
 //! graph view from the GraphStore and exposes a neighbor callback.
 
+use crate::concurrency::{TerminatedException, TerminationFlag};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::{Orientation, RelationshipType};
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use crate::types::prelude::GraphStore;
-use crate::concurrency::{TerminatedException, TerminationFlag};
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::computation::{Bridge, BridgesComputationRuntime, BridgesComputationResult};
+use super::computation::{Bridge, BridgesComputationResult, BridgesComputationRuntime};
 
 pub struct BridgesStorageRuntime<'a, G: GraphStore> {
     graph_store: &'a G,
@@ -95,7 +95,9 @@ impl<'a, G: GraphStore> BridgesStorageRuntime<'a, G> {
     ) -> Result<BridgesComputationResult, TerminatedException> {
         let node_count = self.node_count();
         if node_count == 0 {
-            return Ok(BridgesComputationResult { bridges: Vec::new() });
+            return Ok(BridgesComputationResult {
+                bridges: Vec::new(),
+            });
         }
 
         computation.reset(node_count);

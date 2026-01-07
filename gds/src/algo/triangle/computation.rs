@@ -67,7 +67,8 @@ impl TriangleComputationRuntime {
         let mut local = vec![0u64; node_count];
         let mut global = 0u64;
 
-        let mut intersect = GraphIntersect::new(&provider, RelationshipIntersectConfig { max_degree });
+        let mut intersect =
+            GraphIntersect::new(&provider, RelationshipIntersectConfig { max_degree });
         for a in 0..node_count {
             let mut consumer = |c: usize, b: usize, a: usize| {
                 if a < node_count && b < node_count && c < node_count {

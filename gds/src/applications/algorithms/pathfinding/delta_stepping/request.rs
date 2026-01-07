@@ -1,6 +1,4 @@
-use crate::applications::algorithms::pathfinding::shared::{
-    get_str, get_u64, CommonRequest,
-};
+use crate::applications::algorithms::pathfinding::shared::{get_str, get_u64, CommonRequest};
 use serde_json::Value;
 
 #[derive(Debug, Clone)]
@@ -22,10 +20,7 @@ impl DeltaSteppingRequest {
             .or_else(|| get_u64(request, "sourceNode"))
             .ok_or_else(|| "Missing 'source' parameter".to_string())?;
 
-        let delta = request
-            .get("delta")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(1.0);
+        let delta = request.get("delta").and_then(|v| v.as_f64()).unwrap_or(1.0);
 
         let weight_property = get_str(request, "weightProperty")
             .or_else(|| get_str(request, "weight_property"))

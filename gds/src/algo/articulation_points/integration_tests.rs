@@ -13,7 +13,10 @@ mod tests {
     };
     use crate::types::schema::{Direction, MutableGraphSchema};
 
-    fn store_from_undirected_edges(node_count: usize, edges: &[(usize, usize)]) -> DefaultGraphStore {
+    fn store_from_undirected_edges(
+        node_count: usize,
+        edges: &[(usize, usize)],
+    ) -> DefaultGraphStore {
         let mut outgoing: Vec<Vec<i64>> = vec![Vec::new(); node_count];
         let mut incoming: Vec<Vec<i64>> = vec![Vec::new(); node_count];
 

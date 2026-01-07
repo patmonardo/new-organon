@@ -4,11 +4,11 @@
 //! - `org.neo4j.gds.closeness.ClosenessCentrality`
 //! - `org.neo4j.gds.closeness.ClosenessCentralityAlgorithmFactory` (progress task layout)
 
+use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use crate::projection::Orientation;
-use crate::concurrency::TerminationFlag;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 

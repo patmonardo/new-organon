@@ -128,7 +128,8 @@ impl BridgesComputationRuntime {
         bridges: &mut Vec<Bridge>,
     ) {
         self.stack.clear();
-        self.stack.push(StackEvent::upcoming_visit(start_node, None));
+        self.stack
+            .push(StackEvent::upcoming_visit(start_node, None));
 
         while let Some(event) = self.stack.pop() {
             if event.last_visit {

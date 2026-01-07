@@ -25,11 +25,11 @@
 //! graph.degree_centrality().mutate("degree")?;
 //! ```
 
-use crate::mem::MemoryRange;
+pub use crate::algo::degree_centrality::storage::Orientation;
 use crate::algo::degree_centrality::{
     DegreeCentralityComputationRuntime, DegreeCentralityStorageRuntime,
 };
-pub use crate::algo::degree_centrality::storage::Orientation;
+use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -199,9 +199,11 @@ impl DegreeCentralityFacade {
             Ok(scores) => scores,
             Err(e) => {
                 tracker.lock().unwrap().end_subtask_with_failure();
-                return Err(crate::projection::eval::procedure::AlgorithmError::Execution(
-                    format!("Degree centrality terminated: {e}"),
-                ));
+                return Err(
+                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                        "Degree centrality terminated: {e}"
+                    )),
+                );
             }
         };
 
@@ -338,7 +340,11 @@ impl DegreeCentralityFacade {
         let nodes_updated = scores.len() as u64;
 
         let execution_time = start_time.elapsed();
-        Ok(MutationResult::new(nodes_updated, property_name.to_string(), execution_time))
+        Ok(MutationResult::new(
+            nodes_updated,
+            property_name.to_string(),
+            execution_time,
+        ))
     }
 
     /// Write mode: Compute and write results to external storage
@@ -372,7 +378,11 @@ impl DegreeCentralityFacade {
         let nodes_written = scores.len() as u64;
 
         let execution_time = start_time.elapsed();
-        Ok(WriteResult::new(nodes_written, property_name.to_string(), execution_time))
+        Ok(WriteResult::new(
+            nodes_written,
+            property_name.to_string(),
+            execution_time,
+        ))
     }
 
     /// Estimate memory usage for this algorithm execution

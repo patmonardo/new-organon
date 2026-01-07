@@ -12,5 +12,7 @@ pub mod spec;
 pub mod storage;
 
 pub use computation::LabelPropComputationRuntime;
-pub use spec::{LABEL_PROPAGATIONAlgorithmSpec, LabelPropAlgorithmSpec, LabelPropConfig, LabelPropResult};
+pub use spec::{
+    LABEL_PROPAGATIONAlgorithmSpec, LabelPropAlgorithmSpec, LabelPropConfig, LabelPropResult,
+};
 pub use storage::LabelPropStorageRuntime;

@@ -25,12 +25,19 @@ pub fn handle_scale_properties(request: &Value, catalog: Arc<dyn GraphCatalog>) 
         }
     };
 
-    let mode = request.get("mode").and_then(|v| v.as_str()).unwrap_or("stream");
+    let mode = request
+        .get("mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("stream");
 
     let mut node_properties: Vec<String> = request
         .get("nodeProperties")
         .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
         .unwrap_or_default();
 
     if node_properties.is_empty() {
@@ -69,7 +76,11 @@ pub fn handle_scale_properties(request: &Value, catalog: Arc<dyn GraphCatalog>) 
 
     if mode == "estimate" {
         if node_properties.is_empty() {
-            return err(op, "INVALID_REQUEST", "Missing 'nodeProperties' (or 'property') parameter");
+            return err(
+                op,
+                "INVALID_REQUEST",
+                "Missing 'nodeProperties' (or 'property') parameter",
+            );
         }
         let memory = facade.estimate_memory();
         return json!({
@@ -90,13 +101,25 @@ pub fn handle_scale_properties(request: &Value, catalog: Arc<dyn GraphCatalog>) 
                     .collect();
                 json!({ "ok": true, "op": op, "data": rows })
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("scaleProperties failed: {e}")),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("scaleProperties failed: {e}"),
+            ),
         },
         "stats" => match facade.stats() {
             Ok(stats) => json!({ "ok": true, "op": op, "data": stats }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("scaleProperties failed: {e}")),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("scaleProperties failed: {e}"),
+            ),
         },
-        "mutate" | "write" => err(op, "EXECUTION_ERROR", "scaleProperties mutate/write not implemented"),
+        "mutate" | "write" => err(
+            op,
+            "EXECUTION_ERROR",
+            "scaleProperties mutate/write not implemented",
+        ),
         other => err(op, "INVALID_REQUEST", &format!("Invalid mode '{other}'")),
     }
 }

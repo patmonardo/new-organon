@@ -156,10 +156,11 @@ impl FilteredNodeSimilarityBuilder {
                 .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?
         };
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("filtered_node_similarity".to_string(), graph.node_count()),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("filtered_node_similarity".to_string(), graph.node_count()),
+                self.concurrency,
+            );
         progress_tracker.begin_subtask_with_volume(graph.node_count());
 
         let id_map = GraphStore::nodes(self.graph_store.as_ref());
@@ -199,12 +200,13 @@ impl FilteredNodeSimilarityBuilder {
         }
 
         let config = self.build_config();
-        let results = crate::algo::similarity::filtered_node_similarity::compute_filtered_node_similarity(
-            graph.as_ref(),
-            &config,
-            source_nodes.as_ref(),
-            target_nodes.as_ref(),
-        );
+        let results =
+            crate::algo::similarity::filtered_node_similarity::compute_filtered_node_similarity(
+                graph.as_ref(),
+                &config,
+                source_nodes.as_ref(),
+                target_nodes.as_ref(),
+            );
 
         progress_tracker.log_progress(graph.node_count());
         progress_tracker.end_subtask();
@@ -229,10 +231,8 @@ impl FilteredNodeSimilarityBuilder {
             })
             .collect();
 
-        let stats = crate::algo::common::result::similarity::similarity_stats(
-            || tuples.into_iter(),
-            true,
-        );
+        let stats =
+            crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
 
         Ok(FilteredNodeSimilarityStats {
             nodes_compared: sources.len() as u64,
@@ -278,8 +278,7 @@ impl FilteredNodeSimilarityBuilder {
         // Label filtering can require temporary ID sets.
         let label_filter_memory = node_count * 8;
 
-        let total =
-            results_memory + per_node_scratch + weight_memory + label_filter_memory;
+        let total = results_memory + per_node_scratch + weight_memory + label_filter_memory;
         let overhead = total / 5;
         MemoryRange::of_range(total, total + overhead)
     }
@@ -293,8 +292,8 @@ mod tests {
     use crate::types::graph::id_map::IdMap;
     use crate::types::graph::id_map::SimpleIdMap;
     use crate::types::graph::RelationshipTopology;
-    use crate::types::graph_store::{Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation};
     use crate::types::graph_store::GraphName;
+    use crate::types::graph_store::{Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation};
     use crate::types::schema::{Direction, GraphSchema, MutableGraphSchema};
 
     #[test]
@@ -356,6 +355,8 @@ mod tests {
 
         assert!(!results.is_empty());
         assert!(results.iter().all(|r| r.source < 2 && r.target < 2));
-        assert!(results.iter().any(|r| (r.source, r.target) == (0, 1) || (r.source, r.target) == (1, 0)));
+        assert!(results
+            .iter()
+            .any(|r| (r.source, r.target) == (0, 1) || (r.source, r.target) == (1, 0)));
     }
 }

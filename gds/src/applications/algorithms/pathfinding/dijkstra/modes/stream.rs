@@ -27,7 +27,9 @@ pub fn run(op: &str, request: &DijkstraRequest, graph_resources: &GraphResources
                    _termination: &TerminationFlag|
      -> Result<Option<Vec<PathResult>>, String> {
         // Use facade instead of direct algo calls
-        let mut builder = gr.facade().dijkstra()
+        let mut builder = gr
+            .facade()
+            .dijkstra()
             .source(request.source)
             .weight_property(&request.weight_property)
             .direction(&request.direction)
@@ -42,11 +44,18 @@ pub fn run(op: &str, request: &DijkstraRequest, graph_resources: &GraphResources
         Ok(Some(iter.collect()))
     };
 
-    let result_builder = FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<PathResult>>| {
-        rows.unwrap_or_default().into_iter()
-    });
+    let result_builder =
+        FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<PathResult>>| {
+            rows.unwrap_or_default().into_iter()
+        });
 
-    match convenience.process_stream(graph_resources, request.common.concurrency, task, compute, result_builder) {
+    match convenience.process_stream(
+        graph_resources,
+        request.common.concurrency,
+        task,
+        compute,
+        result_builder,
+    ) {
         Ok(stream) => {
             let rows: Vec<PathResult> = stream.collect::<Vec<_>>();
             json!({
@@ -55,7 +64,11 @@ pub fn run(op: &str, request: &DijkstraRequest, graph_resources: &GraphResources
                 "mode": "stream",
                 "data": rows
             })
-        },
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("Dijkstra stream failed: {e}")),
+        }
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("Dijkstra stream failed: {e}"),
+        ),
     }
 }

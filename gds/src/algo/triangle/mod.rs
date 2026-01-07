@@ -1,9 +1,9 @@
 //! Triangle-related utilities.
 
-pub mod intersect;
 pub mod computation;
-pub mod storage;
+pub mod intersect;
 pub mod spec;
+pub mod storage;
 
 #[cfg(test)]
 mod integration_tests;

@@ -23,8 +23,16 @@ pub fn handle_dijkstra(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
     match parsed.common.mode {
         Mode::Stream => modes::stream::run(op, &parsed, &graph_resources),
         Mode::Stats => modes::stats::run(op, &parsed, &graph_resources),
-        Mode::Mutate => err(op, "NOT_IMPLEMENTED", "Dijkstra mutate is not implemented yet"),
-        Mode::Write => err(op, "NOT_IMPLEMENTED", "Dijkstra write is not implemented yet"),
+        Mode::Mutate => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "Dijkstra mutate is not implemented yet",
+        ),
+        Mode::Write => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "Dijkstra write is not implemented yet",
+        ),
         Mode::Estimate => modes::estimate::run(op, &parsed, &graph_resources),
     }
 }

@@ -24,7 +24,15 @@ pub fn handle_topological_sort(request: &Value, catalog: Arc<dyn GraphCatalog>) 
         Mode::Stream => modes::stream::run(op, &parsed, &graph_resources),
         Mode::Stats => modes::stats::run(op, &parsed, &graph_resources),
         Mode::Estimate => modes::estimate::run(op, &parsed, &graph_resources),
-        Mode::Mutate => err(op, "NOT_IMPLEMENTED", "TopologicalSort mutate is not implemented yet"),
-        Mode::Write => err(op, "NOT_IMPLEMENTED", "TopologicalSort write is not implemented yet"),
+        Mode::Mutate => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "TopologicalSort mutate is not implemented yet",
+        ),
+        Mode::Write => err(
+            op,
+            "NOT_IMPLEMENTED",
+            "TopologicalSort write is not implemented yet",
+        ),
     }
 }

@@ -25,11 +25,20 @@ pub fn handle_to_undirected(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
         }
     };
 
-    let mode = request.get("mode").and_then(|v| v.as_str()).unwrap_or("mutate");
+    let mode = request
+        .get("mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("mutate");
 
     let relationship_type = match request.get("relationshipType").and_then(|v| v.as_str()) {
         Some(rel) => rel,
-        None => return err(op, "INVALID_REQUEST", "Missing 'relationshipType' parameter"),
+        None => {
+            return err(
+                op,
+                "INVALID_REQUEST",
+                "Missing 'relationshipType' parameter",
+            )
+        }
     };
 
     let out_name = request

@@ -63,7 +63,9 @@ fn test_spanning_tree_storage_runtime() {
     let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("spanning_tree".to_string()));
 
     // Test minimum spanning tree
-    let result = runtime.compute_spanning_tree_mock(4, &mut progress_tracker).unwrap();
+    let result = runtime
+        .compute_spanning_tree_mock(4, &mut progress_tracker)
+        .unwrap();
 
     assert_eq!(result.head(0), 0);
     assert_eq!(result.effective_node_count(), 4);

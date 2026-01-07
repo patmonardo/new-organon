@@ -68,7 +68,8 @@ impl BfsStorageRuntime {
         computation.initialize(self.source_node, self.max_depth, node_count);
 
         // BFS queue (node, depth)
-        let mut queue: std::collections::VecDeque<(NodeId, u32)> = std::collections::VecDeque::new();
+        let mut queue: std::collections::VecDeque<(NodeId, u32)> =
+            std::collections::VecDeque::new();
         computation.set_visited(self.source_node);
         queue.push_back((self.source_node, 0));
 
@@ -119,8 +120,6 @@ impl BfsStorageRuntime {
         }
     }
 }
-
-
 
 #[cfg(test)]
 mod tests {

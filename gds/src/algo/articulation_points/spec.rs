@@ -1,8 +1,8 @@
 //! Articulation Points Algorithm Specification
 
+use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
-use crate::core::utils::progress::{ProgressTracker, Tasks};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 

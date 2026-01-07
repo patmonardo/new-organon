@@ -1,3 +1,4 @@
+use crate::algo::similarity::NodeSimilarityResult;
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
@@ -7,7 +8,6 @@ use crate::applications::algorithms::similarity::shared::{err, timings_json};
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::GraphResources;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::algo::similarity::NodeSimilarityResult;
 use crate::procedures::similarity::filtered_node_similarity::FilteredNodeSimilarityBuilder;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -55,17 +55,17 @@ pub fn run(
         Ok(Some(iter.collect()))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       rows: Option<Vec<NodeSimilarityResult>>,
-                                       timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stream",
-            "data": rows.unwrap_or_default(),
-            "timings": timings_json(timings)
-        })
-    });
+    let builder = FnStatsResultBuilder(
+        |_gr: &GraphResources, rows: Option<Vec<NodeSimilarityResult>>, timings| {
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stream",
+                "data": rows.unwrap_or_default(),
+                "timings": timings_json(timings)
+            })
+        },
+    );
 
     match convenience.process_stats(
         graph_resources,

@@ -14,7 +14,7 @@
 use gds::concurrency::Concurrency;
 use gds::core::utils::progress::{
     BatchingProgressLogger, BatchingTaskProgressTracker, JobId, PerDatabaseTaskStore,
-    ProgressTracker, TaskRegistryFactories, TaskStore, TaskStoreListener, TaskProgressTracker,
+    ProgressTracker, TaskProgressTracker, TaskRegistryFactories, TaskStore, TaskStoreListener,
     Tasks, UserTask,
 };
 use gds::mem::MemoryRange;
@@ -101,16 +101,11 @@ fn main() {
     // BatchingTaskProgressTracker only needs a volume estimate to size its flush batches;
     // it does not affect correctness (only performance).
     let estimated_total_volume = 3_100_000;
-    let computed_batch_size = BatchingProgressLogger::calculate_batch_size_for_volume(
-        estimated_total_volume as u64,
-        4,
-    );
+    let computed_batch_size =
+        BatchingProgressLogger::calculate_batch_size_for_volume(estimated_total_volume as u64, 4);
 
-    let mut tracker = BatchingTaskProgressTracker::new(
-        base_tracker,
-        estimated_total_volume,
-        Concurrency::of(4),
-    );
+    let mut tracker =
+        BatchingTaskProgressTracker::new(base_tracker, estimated_total_volume, Concurrency::of(4));
 
     tracker.set_estimated_resource_footprint(MemoryRange::of_range(25_000_000, 75_000_000));
     tracker.requested_concurrency(Concurrency::of(4));

@@ -67,8 +67,8 @@ impl TaskStoreProviders {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::utils::progress::{JobId, Task};
     use crate::core::utils::progress::task_store_holder::TaskStoreHolder;
+    use crate::core::utils::progress::{JobId, Task};
 
     #[test]
     fn test_simple_provider_get_store() {

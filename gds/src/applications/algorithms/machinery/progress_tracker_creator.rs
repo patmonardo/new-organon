@@ -37,7 +37,9 @@ impl ProgressTrackerCreator {
             task,
             concurrency,
             self.request_scoped_dependencies.job_id.clone(),
-            self.request_scoped_dependencies.task_registry_factory.as_ref(),
+            self.request_scoped_dependencies
+                .task_registry_factory
+                .as_ref(),
         )
     }
 

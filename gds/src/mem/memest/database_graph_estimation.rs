@@ -35,7 +35,10 @@ impl DatabaseGraphEstimationService {
     }
 
     /// Estimates memory usage for a graph projection.
-    pub fn estimate(&self, graph_project_config: Box<dyn GraphProjectConfig>) -> GraphMemoryEstimation {
+    pub fn estimate(
+        &self,
+        graph_project_config: Box<dyn GraphProjectConfig>,
+    ) -> GraphMemoryEstimation {
         let loader = GraphStoreFromDatabaseLoader::new(
             graph_project_config,
             self.username.clone(),
@@ -48,7 +51,10 @@ impl DatabaseGraphEstimationService {
             dimensions.rel_count_upper_bound(),
         );
 
-        GraphMemoryEstimation::new(concrete_dimensions, loader.estimate_memory_usage_after_loading())
+        GraphMemoryEstimation::new(
+            concrete_dimensions,
+            loader.estimate_memory_usage_after_loading(),
+        )
     }
 }
 

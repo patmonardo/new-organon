@@ -20,7 +20,11 @@ pub struct FnStatsResultBuilder<F>(pub F);
 impl<ResultFromAlgorithm, ResultToCaller, F> StatsResultBuilder<ResultFromAlgorithm, ResultToCaller>
     for FnStatsResultBuilder<F>
 where
-    F: Fn(&GraphResources, Option<ResultFromAlgorithm>, AlgorithmProcessingTimings) -> ResultToCaller
+    F: Fn(
+            &GraphResources,
+            Option<ResultFromAlgorithm>,
+            AlgorithmProcessingTimings,
+        ) -> ResultToCaller
         + Send
         + Sync,
 {

@@ -1,9 +1,9 @@
 use super::computation::{FilteredKnnComputationResult, FilteredKnnComputationRuntime};
+use crate::algo::similarity::knn::computation::KnnNnDescentConfig;
+use crate::algo::similarity::knn::computation::KnnNnDescentStats;
 use crate::algo::similarity::knn::metrics::{
     KnnNodePropertySpec, SimilarityComputer, SimilarityMetric,
 };
-use crate::algo::similarity::knn::computation::KnnNnDescentConfig;
-use crate::algo::similarity::knn::computation::KnnNnDescentStats;
 use crate::algo::similarity::knn::storage::{KnnSamplerType, KnnStorageRuntime};
 use crate::core::utils::progress::ProgressTracker;
 use crate::projection::eval::procedure::AlgorithmError;
@@ -18,9 +18,7 @@ pub struct FilteredKnnStorageRuntime {
 
 impl FilteredKnnStorageRuntime {
     pub fn new(concurrency: usize) -> Self {
-        Self {
-            concurrency,
-        }
+        Self { concurrency }
     }
 
     fn with_thread_pool<T>(&self, f: impl FnOnce() -> T + Send) -> T

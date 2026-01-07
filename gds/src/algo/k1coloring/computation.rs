@@ -155,8 +155,7 @@ impl K1ColoringComputationRuntime {
         nodes: &[usize],
         neighbors: &F,
         termination_flag: &TerminationFlag,
-    )
-    where
+    ) where
         F: Fn(usize) -> Vec<usize> + Sync,
     {
         let concurrency = Concurrency::from_usize(self.concurrency);
@@ -258,16 +257,10 @@ impl MemoryEstimation for K1ColoringMemoryEstimation {
             MemoryRange::of(forbidden_colors).times(concurrency.max(1)),
         )];
 
-        let resident_tree = MemoryTree::new(
-            "residentMemory".into(),
-            sum_ranges(&resident),
-            resident,
-        );
-        let temporary_tree = MemoryTree::new(
-            "temporaryMemory".into(),
-            sum_ranges(&temporary),
-            temporary,
-        );
+        let resident_tree =
+            MemoryTree::new("residentMemory".into(), sum_ranges(&resident), resident);
+        let temporary_tree =
+            MemoryTree::new("temporaryMemory".into(), sum_ranges(&temporary), temporary);
 
         MemoryTree::new(
             "K1Coloring".into(),

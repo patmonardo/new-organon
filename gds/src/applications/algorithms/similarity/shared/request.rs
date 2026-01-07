@@ -39,7 +39,10 @@ impl CommonRequest {
             .ok_or_else(|| "Missing 'graphName' parameter".to_string())?
             .to_string();
 
-        let mode_str = request.get("mode").and_then(|v| v.as_str()).unwrap_or("stream");
+        let mode_str = request
+            .get("mode")
+            .and_then(|v| v.as_str())
+            .unwrap_or("stream");
         let mode = Mode::parse(mode_str).ok_or_else(|| format!("Invalid mode '{mode_str}'"))?;
 
         let concurrency_raw = request

@@ -1,11 +1,11 @@
 //! Java: `GraphSage` (inference / embeddings generation).
 
-use crate::collections::HugeObjectArray;
-use crate::concurrency::{Concurrency, TerminationFlag};
-use crate::core::utils::progress::TaskProgressTracker;
 use crate::algo::embeddings::graphsage::algo::graph_sage_result::GraphSageResult;
 use crate::algo::embeddings::graphsage::graphsage_embeddings_generator::GraphSageEmbeddingsGenerator;
 use crate::algo::embeddings::graphsage::graphsage_helper;
+use crate::collections::HugeObjectArray;
+use crate::concurrency::{Concurrency, TerminationFlag};
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::types::graph::Graph;
 use std::sync::Arc;
 

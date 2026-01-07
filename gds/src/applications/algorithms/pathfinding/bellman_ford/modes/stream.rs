@@ -20,14 +20,18 @@ pub fn run(op: &str, request: &BellmanFordRequest, graph_resources: &GraphResour
     let template = DefaultAlgorithmProcessingTemplate::new(creator);
     let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
-    let task = Tasks::leaf("BellmanFord::stream".to_string()).base().clone();
+    let task = Tasks::leaf("BellmanFord::stream".to_string())
+        .base()
+        .clone();
 
     let compute = |gr: &GraphResources,
                    _tracker: &mut dyn ProgressTracker,
                    _termination: &TerminationFlag|
      -> Result<Option<Vec<PathResult>>, String> {
         // Use facade instead of direct algo calls
-        let mut builder = gr.facade().bellman_ford()
+        let mut builder = gr
+            .facade()
+            .bellman_ford()
             .source(request.source)
             .weight_property(&request.weight_property)
             .direction(&request.direction)
@@ -43,11 +47,18 @@ pub fn run(op: &str, request: &BellmanFordRequest, graph_resources: &GraphResour
         Ok(Some(iter.collect()))
     };
 
-    let result_builder = FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<PathResult>>| {
-        rows.unwrap_or_default().into_iter()
-    });
+    let result_builder =
+        FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<PathResult>>| {
+            rows.unwrap_or_default().into_iter()
+        });
 
-    match convenience.process_stream(graph_resources, request.common.concurrency, task, compute, result_builder) {
+    match convenience.process_stream(
+        graph_resources,
+        request.common.concurrency,
+        task,
+        compute,
+        result_builder,
+    ) {
         Ok(stream) => {
             let rows: Vec<PathResult> = stream.collect::<Vec<_>>();
             json!({
@@ -56,7 +67,11 @@ pub fn run(op: &str, request: &BellmanFordRequest, graph_resources: &GraphResour
                 "mode": "stream",
                 "data": rows
             })
-        },
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("Bellman-Ford stream failed: {e}")),
+        }
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("Bellman-Ford stream failed: {e}"),
+        ),
     }
 }

@@ -31,16 +31,20 @@ use std::sync::Arc;
 
 /// Java parity: progress task hierarchy (see `ConductanceAlgorithmFactory.progressTask`).
 pub fn progress_task(node_count: usize) -> Task {
-	Tasks::task(
-		"Conductance".to_string(),
-		vec![
-			Arc::new(Tasks::leaf_with_volume("count relationships".to_string(), node_count).base().clone()),
-			Arc::new(Tasks::leaf("accumulate counts".to_string()).base().clone()),
-			Arc::new(
-				Tasks::leaf("perform conductance computations".to_string())
-					.base()
-					.clone(),
-			),
-		],
-	)
+    Tasks::task(
+        "Conductance".to_string(),
+        vec![
+            Arc::new(
+                Tasks::leaf_with_volume("count relationships".to_string(), node_count)
+                    .base()
+                    .clone(),
+            ),
+            Arc::new(Tasks::leaf("accumulate counts".to_string()).base().clone()),
+            Arc::new(
+                Tasks::leaf("perform conductance computations".to_string())
+                    .base()
+                    .clone(),
+            ),
+        ],
+    )
 }

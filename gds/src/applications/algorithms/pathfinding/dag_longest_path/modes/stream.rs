@@ -20,7 +20,9 @@ pub fn run(op: &str, request: &DagLongestPathRequest, graph_resources: &GraphRes
     let template = DefaultAlgorithmProcessingTemplate::new(creator);
     let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
-    let task = Tasks::leaf("DagLongestPath::stream".to_string()).base().clone();
+    let task = Tasks::leaf("DagLongestPath::stream".to_string())
+        .base()
+        .clone();
 
     let compute = |gr: &GraphResources,
                    _tracker: &mut dyn ProgressTracker,
@@ -36,7 +38,9 @@ pub fn run(op: &str, request: &DagLongestPathRequest, graph_resources: &GraphRes
     };
 
     let result_builder = FnStreamResultBuilder::new(
-        |_gr: &GraphResources, rows: Option<Vec<DagLongestPathRow>>| rows.unwrap_or_default().into_iter(),
+        |_gr: &GraphResources, rows: Option<Vec<DagLongestPathRow>>| {
+            rows.unwrap_or_default().into_iter()
+        },
     );
 
     match convenience.process_stream(
@@ -59,7 +63,11 @@ pub fn run(op: &str, request: &DagLongestPathRequest, graph_resources: &GraphRes
                     "side_effect_millis": 0
                 })
             })
-        },
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("DagLongestPath stream failed: {e}")),
+        }
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("DagLongestPath stream failed: {e}"),
+        ),
     }
 }

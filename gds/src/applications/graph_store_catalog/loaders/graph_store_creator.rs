@@ -14,4 +14,3 @@ pub trait GraphStoreCreator: GraphStoreLoader {
     /// In Java, this returns MemoryEstimation.
     fn estimate_memory_usage_after_loading(&self) -> Box<dyn MemoryEstimation>;
 }
-

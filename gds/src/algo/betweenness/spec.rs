@@ -1,11 +1,11 @@
 //! Betweenness Centrality specification
 
-use crate::define_algorithm_spec;
-use crate::core::utils::progress::Tasks;
+use crate::algo::betweenness::BetweennessCentralityComputationRuntime;
 use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::Tasks;
+use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use crate::projection::Orientation;
-use crate::algo::betweenness::BetweennessCentralityComputationRuntime;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};

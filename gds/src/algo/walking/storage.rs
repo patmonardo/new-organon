@@ -39,7 +39,9 @@ impl CollapsePathStorageRuntime {
 
         for path in &config.path_templates {
             if path.is_empty() {
-                return Err("Each path template must contain at least one relationship type".to_string());
+                return Err(
+                    "Each path template must contain at least one relationship type".to_string(),
+                );
             }
 
             let mut graphs_for_path: Vec<Arc<dyn Graph>> = Vec::new();
@@ -52,7 +54,9 @@ impl CollapsePathStorageRuntime {
 
                 let graph = graph_store
                     .get_graph_with_types_and_orientation(&rel_set, Orientation::Natural)
-                    .map_err(|e| format!("failed to build graph for relationship type '{rel_name}': {e}"))?;
+                    .map_err(|e| {
+                        format!("failed to build graph for relationship type '{rel_name}': {e}")
+                    })?;
 
                 if let Some(expected) = expected_node_count {
                     if graph.node_count() != expected {
@@ -113,8 +117,8 @@ fn build_outgoing(
         let tgt_usize = tgt as usize;
         if src_usize >= node_count || tgt_usize >= node_count {
             return Err(format!(
-                "edge ({src},{tgt}) is out of bounds for node_count={node_count}")
-            );
+                "edge ({src},{tgt}) is out of bounds for node_count={node_count}"
+            ));
         }
         outgoing[src_usize].push(tgt as MappedNodeId);
     }
@@ -159,7 +163,15 @@ mod tests {
         let mut topologies = HashMap::new();
         topologies.insert(rel, RelationshipTopology::new(outgoing, None));
 
-        DefaultGraphStore::new(cfg, graph_name, db_info, schema, capabilities, id_map, topologies)
+        DefaultGraphStore::new(
+            cfg,
+            graph_name,
+            db_info,
+            schema,
+            capabilities,
+            id_map,
+            topologies,
+        )
     }
 
     #[test]
@@ -179,7 +191,10 @@ mod tests {
         let result = runtime.compute(&store, &config, &mut computation).unwrap();
         assert_eq!(result.graph_name, "g_collapsed");
         assert_eq!(result.mutate_relationship_type, "C");
-        assert_eq!(result.relationship_count, store.relationship_count() as u64 + 1);
+        assert_eq!(
+            result.relationship_count,
+            store.relationship_count() as u64 + 1
+        );
 
         let rel_graph = result
             .graph_store

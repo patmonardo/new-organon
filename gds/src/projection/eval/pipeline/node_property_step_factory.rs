@@ -133,7 +133,10 @@ fn validate_node_property_step_config(
         }
     }
 
-    match procedure_config.get(MUTATE_PROPERTY_KEY).and_then(|v| v.as_str()) {
+    match procedure_config
+        .get(MUTATE_PROPERTY_KEY)
+        .and_then(|v| v.as_str())
+    {
         Some(_) => Ok(()),
         None => Err(NodePropertyStepFactoryError::InvalidConfiguration {
             algorithm_name: algorithm_name.to_string(),

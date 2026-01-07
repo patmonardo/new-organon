@@ -45,7 +45,7 @@ pub fn run(
     let compute = move |gr: &GraphResources,
                         _tracker: &mut dyn ProgressTracker,
                         _termination: &TerminationFlag|
-     -> Result<Option<DfsWriteOutcome>, String> {
+          -> Result<Option<DfsWriteOutcome>, String> {
         let mut builder = gr.facade().dfs().source(request.source);
         if !request.targets.is_empty() {
             builder = builder.targets(request.targets.clone());
@@ -68,17 +68,25 @@ pub fn run(
         Ok(Some(outcome))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources, outcome: Option<DfsWriteOutcome>, timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "write",
-            "data": outcome,
-            "timings": timings_json(timings)
-        })
-    });
+    let builder = FnStatsResultBuilder(
+        |_gr: &GraphResources, outcome: Option<DfsWriteOutcome>, timings| {
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "write",
+                "data": outcome,
+                "timings": timings_json(timings)
+            })
+        },
+    );
 
-    match convenience.process_stats(graph_resources, request.common.concurrency, task, compute, builder) {
+    match convenience.process_stats(
+        graph_resources,
+        request.common.concurrency,
+        task,
+        compute,
+        builder,
+    ) {
         Ok(v) => v,
         Err(e) => err(op, "EXECUTION_ERROR", &format!("DFS write failed: {e}")),
     }

@@ -2,9 +2,9 @@
 //!
 //! Direct 1:1 translation of Java `org.neo4j.gds.ml.pipeline.ExecutableNodePropertyStep`.
 
+use dyn_clone::DynClone;
 use std::collections::HashMap;
 use std::error::Error as StdError;
-use dyn_clone::DynClone;
 
 /// Executable node property step.
 ///

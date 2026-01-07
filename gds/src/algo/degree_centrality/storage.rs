@@ -148,13 +148,7 @@ impl<'a, G: GraphStore> DegreeCentralityStorageRuntime<'a, G> {
                 let start = batch_idx * batch_size;
                 let end = (start + batch_size).min(node_count);
 
-                computation.compute_range(
-                    start,
-                    end,
-                    termination,
-                    &out,
-                    &degree,
-                );
+                computation.compute_range(start, end, termination, &out, &degree);
 
                 (on_nodes_done.as_ref())(end - start);
             })?;
@@ -168,13 +162,7 @@ impl<'a, G: GraphStore> DegreeCentralityStorageRuntime<'a, G> {
                 let start = batch_idx * batch_size;
                 let end = (start + batch_size).min(node_count);
 
-                computation.compute_range(
-                    start,
-                    end,
-                    termination,
-                    &out,
-                    &degree,
-                );
+                computation.compute_range(start, end, termination, &out, &degree);
 
                 (on_nodes_done.as_ref())(end - start);
             })?;

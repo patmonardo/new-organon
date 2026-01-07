@@ -101,8 +101,7 @@ impl BellmanFordStorageRuntime {
                 while let Some(node_id) = frontier.pop_front() {
                     // Relax edges from this node according to direction
                     let neighbors = self.get_neighbors_with_weights(graph, node_id, direction);
-                    scanned_relationships =
-                        scanned_relationships.saturating_add(neighbors.len());
+                    scanned_relationships = scanned_relationships.saturating_add(neighbors.len());
                     if scanned_relationships >= LOG_BATCH {
                         progress_tracker.log_progress(scanned_relationships);
                         scanned_relationships = 0;
@@ -352,7 +351,8 @@ mod tests {
     fn test_bellman_ford_path_computation() {
         let mut storage = BellmanFordStorageRuntime::new(0, true, true, 4);
         let mut computation = BellmanFordComputationRuntime::new(0, true, true, 4);
-        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("bellman_ford".to_string()));
+        let mut progress_tracker =
+            TaskProgressTracker::new(Tasks::leaf("bellman_ford".to_string()));
 
         // Test basic path computation
         let result = storage.compute_bellman_ford(&mut computation, None, 0, &mut progress_tracker);
@@ -366,7 +366,8 @@ mod tests {
     fn test_bellman_ford_path_same_source_target() {
         let mut storage = BellmanFordStorageRuntime::new(0, true, true, 4);
         let mut computation = BellmanFordComputationRuntime::new(0, true, true, 4);
-        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("bellman_ford".to_string()));
+        let mut progress_tracker =
+            TaskProgressTracker::new(Tasks::leaf("bellman_ford".to_string()));
 
         // Test with same source and target
         let result = storage.compute_bellman_ford(&mut computation, None, 0, &mut progress_tracker);

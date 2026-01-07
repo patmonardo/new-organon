@@ -3,12 +3,12 @@
 //! Partitions nodes into k communities to maximize (or minimize) the
 //! weight of edges crossing between communities using GRASP.
 
+use crate::algo::approx_max_kcut::computation::ApproxMaxKCutComputationRuntime;
+use crate::algo::approx_max_kcut::spec::ApproxMaxKCutConfig;
+use crate::algo::approx_max_kcut::storage::ApproxMaxKCutStorageRuntime;
+use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::algo::approx_max_kcut::computation::ApproxMaxKCutComputationRuntime;
-use crate::algo::approx_max_kcut::storage::ApproxMaxKCutStorageRuntime;
-use crate::algo::approx_max_kcut::spec::ApproxMaxKCutConfig;
-use crate::concurrency::TerminationFlag;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -130,13 +130,14 @@ impl ApproxMaxKCutFacade {
             return Ok((Vec::new(), 0.0, 0));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume(
-                "approx_max_kcut".to_string(),
-                node_count.saturating_add(self.iterations),
-            ),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume(
+                    "approx_max_kcut".to_string(),
+                    node_count.saturating_add(self.iterations),
+                ),
+                self.concurrency,
+            );
         let termination_flag = TerminationFlag::default();
 
         let config = ApproxMaxKCutConfig {
@@ -167,15 +168,12 @@ impl ApproxMaxKCutFacade {
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = ApproxMaxKCutRow>>> {
         let (communities, _cost, _node_count) = self.compute()?;
 
-        Ok(Box::new(
-            communities
-                .into_iter()
-                .enumerate()
-                .map(|(node_idx, community)| ApproxMaxKCutRow {
-                    node_id: node_idx as u64,
-                    community,
-                }),
-        ))
+        Ok(Box::new(communities.into_iter().enumerate().map(
+            |(node_idx, community)| ApproxMaxKCutRow {
+                node_id: node_idx as u64,
+                community,
+            },
+        )))
     }
 
     /// Stats mode: returns aggregated statistics

@@ -16,7 +16,7 @@
 use gds::concurrency::Concurrency;
 use gds::core::utils::progress::{
     BatchingProgressLogger, BatchingTaskProgressTracker, JobId, PerDatabaseTaskStore,
-    ProgressTracker, TaskRegistryFactories, TaskStore, TaskStoreListener, TaskProgressTracker,
+    ProgressTracker, TaskProgressTracker, TaskRegistryFactories, TaskStore, TaskStoreListener,
     Tasks, UserTask,
 };
 use gds::mem::MemoryRange;
@@ -80,7 +80,11 @@ fn main() {
     );
 
     // Compute will be the “hot loop” phase; we’ll batch only inside it.
-    let compute = Arc::new(Tasks::leaf_with_volume("Compute".to_string(), 2_000_000).base().clone());
+    let compute = Arc::new(
+        Tasks::leaf_with_volume("Compute".to_string(), 2_000_000)
+            .base()
+            .clone(),
+    );
 
     let write_output = Arc::new(
         Tasks::leaf_with_volume("Write output".to_string(), 100_000)
@@ -118,10 +122,8 @@ fn main() {
     tracker.begin_subtask_with_description("Compute");
 
     let compute_volume = compute.get_progress().volume();
-    let computed_batch_size = BatchingProgressLogger::calculate_batch_size_for_volume(
-        compute_volume as u64,
-        4,
-    );
+    let computed_batch_size =
+        BatchingProgressLogger::calculate_batch_size_for_volume(compute_volume as u64, 4);
     println!(
         "[TASK] compute batching compute_volume={} computed_batch_size={}",
         compute_volume, computed_batch_size

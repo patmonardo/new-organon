@@ -1,6 +1,7 @@
 use super::spec::LouvainResult;
 use crate::algo::modularity_optimization::{
-    ModularityOptimizationComputationRuntime, ModularityOptimizationConfig, ModularityOptimizationInput,
+    ModularityOptimizationComputationRuntime, ModularityOptimizationConfig,
+    ModularityOptimizationInput,
 };
 use std::collections::HashMap;
 
@@ -50,7 +51,11 @@ impl LouvainComputationRuntime {
 
             // Java parity: run modularity optimization for this level.
             let level_result = modopt.compute(&working_graph, &modopt_config);
-            let compressed: Vec<usize> = level_result.communities.iter().map(|&c| c as usize).collect();
+            let compressed: Vec<usize> = level_result
+                .communities
+                .iter()
+                .map(|&c| c as usize)
+                .collect();
             let new_node_count = 1 + compressed.iter().copied().max().unwrap_or(0);
 
             // Update original-node mapping through this level.

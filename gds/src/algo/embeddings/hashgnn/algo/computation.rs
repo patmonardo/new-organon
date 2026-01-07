@@ -53,9 +53,10 @@ impl HashGNNComputationRuntime {
         let algo = super::super::hash_gnn::HashGNN::new(
             graph,
             params,
-            crate::core::utils::progress::TaskProgressTracker::new(
-                Tasks::leaf_with_volume("HashGNN".to_string(), 1),
-            ),
+            crate::core::utils::progress::TaskProgressTracker::new(Tasks::leaf_with_volume(
+                "HashGNN".to_string(),
+                1,
+            )),
             TerminationFlag::default(),
         );
 

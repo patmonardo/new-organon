@@ -13,7 +13,7 @@ pub mod storage;
 pub mod integration_tests;
 
 pub use computation::{Bridge, BridgesComputationResult, BridgesComputationRuntime};
-pub use spec::{BridgesConfig, BridgesResult, BRIDGESAlgorithmSpec};
+pub use spec::{BRIDGESAlgorithmSpec, BridgesConfig, BridgesResult};
 pub use storage::BridgesStorageRuntime;
 
 pub type BridgesAlgorithmSpec = BRIDGESAlgorithmSpec;

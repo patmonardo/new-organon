@@ -20,8 +20,7 @@ pub struct MemoryRange {
 
 impl MemoryRange {
     fn checked_add(a: usize, b: usize) -> usize {
-        a.checked_add(b)
-            .expect("MemoryRange overflow while adding")
+        a.checked_add(b).expect("MemoryRange overflow while adding")
     }
 
     fn checked_mul(a: usize, b: usize) -> usize {

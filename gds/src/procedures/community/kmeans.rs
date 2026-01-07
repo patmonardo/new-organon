@@ -14,12 +14,14 @@
 //! - `seed_centroids`
 //! - `random_seed`
 
+pub use crate::algo::kmeans::KMeansSamplerType;
+use crate::algo::kmeans::{
+    KMeansComputationRuntime, KMeansConfig, KMeansResult, KMeansStorageRuntime,
+};
+use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskRegistry, Tasks};
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits::Result;
-use crate::algo::kmeans::{KMeansComputationRuntime, KMeansConfig, KMeansResult, KMeansStorageRuntime};
-pub use crate::algo::kmeans::KMeansSamplerType;
-use crate::concurrency::TerminationFlag;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -149,10 +151,11 @@ impl KMeansFacade {
         let config = self.config.clone();
         let node_count = self.graph_store.node_count();
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("kmeans".to_string(), node_count),
-            config.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("kmeans".to_string(), node_count),
+                config.concurrency,
+            );
 
         let termination_flag = TerminationFlag::default();
         let storage = KMeansStorageRuntime::new();

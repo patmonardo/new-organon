@@ -10,15 +10,13 @@
 //! - Optional Wasserman–Faust normalization
 
 use crate::algo::closeness::computation::ClosenessCentralityComputationRuntime;
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
-};
+use crate::algo::closeness::ClosenessCentralityStorageRuntime;
+use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
-use crate::algo::closeness::ClosenessCentralityStorageRuntime;
-use crate::concurrency::TerminationFlag;
 use crate::projection::orientation::Orientation;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
@@ -112,7 +110,8 @@ impl ClosenessCentralityFacade {
     fn compute_scores(&self) -> Result<(Vec<f64>, std::time::Duration)> {
         let start = Instant::now();
 
-        let storage = ClosenessCentralityStorageRuntime::new(self.graph_store.as_ref(), self.orientation())?;
+        let storage =
+            ClosenessCentralityStorageRuntime::new(self.graph_store.as_ref(), self.orientation())?;
         let node_count = storage.node_count();
         if node_count == 0 {
             return Ok((Vec::new(), start.elapsed()));
@@ -120,22 +119,15 @@ impl ClosenessCentralityFacade {
 
         let computation = ClosenessCentralityComputationRuntime::new();
 
-        let farness_task = std::sync::Arc::new(
-            crate::core::utils::progress::Task::leaf(
-                "Farness computation".to_string(),
-                node_count,
-            ),
-        );
-        let closeness_task = std::sync::Arc::new(
-            crate::core::utils::progress::Task::leaf(
-                "Closeness computation".to_string(),
-                node_count,
-            ),
-        );
-        let root_task = Tasks::task(
-            "closeness".to_string(),
-            vec![farness_task, closeness_task],
-        );
+        let farness_task = std::sync::Arc::new(crate::core::utils::progress::Task::leaf(
+            "Farness computation".to_string(),
+            node_count,
+        ));
+        let closeness_task = std::sync::Arc::new(crate::core::utils::progress::Task::leaf(
+            "Closeness computation".to_string(),
+            node_count,
+        ));
+        let root_task = Tasks::task("closeness".to_string(), vec![farness_task, closeness_task]);
 
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
             root_task,
@@ -146,10 +138,8 @@ impl ClosenessCentralityFacade {
 
         // Start root then the farness leaf.
         progress_tracker.begin_subtask();
-        progress_tracker.begin_subtask_with_description_and_volume(
-            "Farness computation",
-            node_count,
-        );
+        progress_tracker
+            .begin_subtask_with_description_and_volume("Farness computation", node_count);
 
         let termination = TerminationFlag::running_true();
 
@@ -179,10 +169,8 @@ impl ClosenessCentralityFacade {
         progress_tracker.end_subtask_with_description("Farness computation");
 
         // The runtime computes scores in parallel already; keep a second task for Java parity.
-        progress_tracker.begin_subtask_with_description_and_volume(
-            "Closeness computation",
-            node_count,
-        );
+        progress_tracker
+            .begin_subtask_with_description_and_volume("Closeness computation", node_count);
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask_with_description("Closeness computation");
 

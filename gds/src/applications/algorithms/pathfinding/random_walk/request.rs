@@ -43,7 +43,8 @@ impl RandomWalkRequest {
             .map(|arr| arr.iter().filter_map(|v| v.as_u64()).collect())
             .unwrap_or_default();
 
-        let random_seed = get_u64(request, "randomSeed").or_else(|| get_u64(request, "random_seed"));
+        let random_seed =
+            get_u64(request, "randomSeed").or_else(|| get_u64(request, "random_seed"));
 
         Ok(Self {
             common,

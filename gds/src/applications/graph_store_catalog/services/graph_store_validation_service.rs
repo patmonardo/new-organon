@@ -1,9 +1,9 @@
+use crate::projection::{NodeLabel, RelationshipType};
 /// Service for validating graph store operations.
 ///
 /// Mirrors Java GraphStoreValidationService class.
 /// Contains graph validation methods for various operations.
 use crate::types::graph_store::GraphStore;
-use crate::projection::{NodeLabel, RelationshipType};
 
 pub struct GraphStoreValidationService;
 

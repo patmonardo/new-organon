@@ -3,10 +3,10 @@
 //! Orders nodes in a directed acyclic graph (DAG) such that for every edge (u, v),
 //! u appears before v. Optionally computes longest path distances.
 
+use crate::algo::topological_sort::computation::TopologicalSortComputationRuntime;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::algo::topological_sort::computation::TopologicalSortComputationRuntime;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -16,7 +16,9 @@ use std::sync::Arc;
 use std::time::Instant;
 
 // Import upgraded systems
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
+};
 
 /// Result row for topological sort stream mode
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
@@ -117,10 +119,11 @@ impl TopologicalSortBuilder {
             return Ok((Vec::new(), None, start.elapsed()));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("topological_sort".to_string(), node_count),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("topological_sort".to_string(), node_count),
+                self.concurrency,
+            );
         progress_tracker.begin_subtask_with_volume(node_count);
 
         let fallback = graph_view.default_property_value();
@@ -167,7 +170,9 @@ impl TopologicalSortBuilder {
             .into_iter()
             .map(|node_id| TopologicalSortRow {
                 node_id,
-                max_distance: max_distances.as_ref().and_then(|d| d.get(node_id as usize).copied()),
+                max_distance: max_distances
+                    .as_ref()
+                    .and_then(|d| d.get(node_id as usize).copied()),
             })
             .collect();
 

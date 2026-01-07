@@ -7,11 +7,11 @@
 use super::computation::YensComputationRuntime;
 use super::spec::{YensConfig, YensResult};
 use super::storage::YensStorageRuntime;
+use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::projection::eval::procedure::AlgorithmSpec;
 use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor};
 use crate::types::prelude::DefaultGraphStore;
 use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
-use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use serde_json::json;
 use std::sync::Arc;
 
@@ -95,7 +95,12 @@ mod tests {
         );
 
         let result = storage
-            .compute_yens(&mut computation, Some(graph.as_ref()), 0, &mut progress_tracker)
+            .compute_yens(
+                &mut computation,
+                Some(graph.as_ref()),
+                0,
+                &mut progress_tracker,
+            )
             .unwrap();
 
         assert!(result.path_count <= 3);

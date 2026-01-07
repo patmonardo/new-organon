@@ -29,13 +29,11 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
-};
-use crate::mem::MemoryRange;
 use crate::algo::common::prelude::{PathFindingResult, PathResultBuilder};
 use crate::algo::common::result_builders::{ExecutionMetadata, ResultBuilder};
 use crate::algo::dfs::{DfsComputationRuntime, DfsStorageRuntime};
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
+use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{PathResult, Result};
 use crate::projection::orientation::Orientation;
@@ -184,8 +182,11 @@ impl DfsBuilder {
         let mut computation =
             DfsComputationRuntime::new(source_node, self.track_paths, self.concurrency, node_count);
 
-        let result =
-            storage.compute_dfs(&mut computation, Some(graph_view.as_ref()), &mut progress_tracker)?;
+        let result = storage.compute_dfs(
+            &mut computation,
+            Some(graph_view.as_ref()),
+            &mut progress_tracker,
+        )?;
 
         let max_depth_reached: u64 = 0; // Simplified, no paths
 

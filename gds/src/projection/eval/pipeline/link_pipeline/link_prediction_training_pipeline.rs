@@ -320,10 +320,9 @@ impl Pipeline for LinkPredictionTrainingPipeline {
         _graph_store: &crate::types::graph_store::DefaultGraphStore,
     ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError> {
         // Reuse the link-specific check for "must have at least one feature".
-        self.validate_before_execution()
-            .map_err(|e| crate::projection::eval::pipeline::PipelineValidationError::Other {
-                message: e,
-            })
+        self.validate_before_execution().map_err(|e| {
+            crate::projection::eval::pipeline::PipelineValidationError::Other { message: e }
+        })
     }
 
     fn to_map(&self) -> HashMap<String, serde_json::Value> {
@@ -331,26 +330,27 @@ impl Pipeline for LinkPredictionTrainingPipeline {
 
         // Basic identity
         map.insert("type".to_string(), serde_json::json!(self.pipeline_type()));
-        map.insert("modelType".to_string(), serde_json::json!(self.model_type()));
+        map.insert(
+            "modelType".to_string(),
+            serde_json::json!(self.model_type()),
+        );
 
         // Steps
         map.insert(
             "nodePropertySteps".to_string(),
-            serde_json::json!(
-                self.node_property_steps()
-                    .iter()
-                    .map(|s| s.to_map())
-                    .collect::<Vec<_>>()
-            ),
+            serde_json::json!(self
+                .node_property_steps()
+                .iter()
+                .map(|s| s.to_map())
+                .collect::<Vec<_>>()),
         );
         map.insert(
             "featureSteps".to_string(),
-            serde_json::json!(
-                self.feature_steps()
-                    .iter()
-                    .map(|s| s.to_map())
-                    .collect::<Vec<_>>()
-            ),
+            serde_json::json!(self
+                .feature_steps()
+                .iter()
+                .map(|s| s.to_map())
+                .collect::<Vec<_>>()),
         );
 
         // Training config

@@ -1,10 +1,10 @@
-use crate::mem::MemoryRange;
-use crate::procedures::traits::Result;
-pub use crate::algo::similarity::knn::{KnnNodePropertySpec, SimilarityMetric};
-use crate::algo::similarity::knn::{KnnConfig, KnnResultRow};
 use crate::algo::similarity::knn::storage::KnnSamplerType;
 use crate::algo::similarity::knn::KnnNnDescentStats;
+use crate::algo::similarity::knn::{KnnConfig, KnnResultRow};
+pub use crate::algo::similarity::knn::{KnnNodePropertySpec, SimilarityMetric};
 use crate::core::utils::progress::Tasks;
+use crate::mem::MemoryRange;
+use crate::procedures::traits::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -157,13 +157,13 @@ impl KnnBuilder {
     fn compute_rows_and_nn_stats(self) -> Result<(Vec<KnnResultRow>, KnnNnDescentStats)> {
         let config = self.build_config();
         let computation = crate::algo::similarity::knn::KnnComputationRuntime::new();
-        let storage =
-            crate::algo::similarity::knn::KnnStorageRuntime::new(config.concurrency);
+        let storage = crate::algo::similarity::knn::KnnStorageRuntime::new(config.concurrency);
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("knn".to_string(), self.graph_store.node_count()),
-            config.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("knn".to_string(), self.graph_store.node_count()),
+                config.concurrency,
+            );
 
         let (results, nn_stats) = if config.node_properties.is_empty() {
             storage.compute_single_with_stats(
@@ -188,18 +188,12 @@ impl KnnBuilder {
         } else {
             // Multi-property mode should include the primary property passed to `new(...)`.
             // The `node_properties` list represents additional per-property metric specs.
-            let mut combined: Vec<KnnNodePropertySpec> = Vec::with_capacity(
-                config.node_properties.len() + 1,
-            );
+            let mut combined: Vec<KnnNodePropertySpec> =
+                Vec::with_capacity(config.node_properties.len() + 1);
 
             let primary = config.node_property.trim();
-            if !primary.is_empty()
-                && !config.node_properties.iter().any(|p| p.name == primary)
-            {
-                combined.push(KnnNodePropertySpec::new(
-                    primary,
-                    config.similarity_metric,
-                ));
+            if !primary.is_empty() && !config.node_properties.iter().any(|p| p.name == primary) {
+                combined.push(KnnNodePropertySpec::new(primary, config.similarity_metric));
             }
             combined.extend(config.node_properties.iter().cloned());
 
@@ -250,10 +244,8 @@ impl KnnBuilder {
             })
             .collect();
 
-        let stats = crate::algo::common::result::similarity::similarity_stats(
-            || tuples.into_iter(),
-            true,
-        );
+        let stats =
+            crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
 
         Ok(KnnStats {
             nodes_compared: sources.len() as u64,

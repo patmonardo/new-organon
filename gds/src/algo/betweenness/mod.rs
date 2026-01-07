@@ -12,7 +12,9 @@ pub mod spec;
 pub mod storage;
 
 pub use computation::BetweennessCentralityComputationRuntime;
-pub use spec::{BetweennessCentralityConfig, BetweennessCentralityResult, BETWEENNESSAlgorithmSpec};
+pub use spec::{
+    BETWEENNESSAlgorithmSpec, BetweennessCentralityConfig, BetweennessCentralityResult,
+};
 pub use storage::BetweennessCentralityStorageRuntime;
 
 pub type BetweennessCentralityAlgorithmSpec = BETWEENNESSAlgorithmSpec;

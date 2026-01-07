@@ -7,7 +7,9 @@
 use std::sync::Arc;
 
 use crate::core::utils::progress::JobId;
-use crate::mem::{MemoryReservationExceededException, MemoryTracker, UserEntityMemory, UserMemorySummary};
+use crate::mem::{
+    MemoryReservationExceededException, MemoryTracker, UserEntityMemory, UserMemorySummary,
+};
 use crate::types::user::User;
 
 /// Memory Facade for tracking and managing memory usage

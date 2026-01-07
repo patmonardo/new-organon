@@ -125,7 +125,8 @@ impl Task {
 
             let current = leaf.current_progress.load(Ordering::Relaxed);
             let remaining = volume.saturating_sub(current);
-            leaf.current_progress.fetch_add(remaining, Ordering::Relaxed);
+            leaf.current_progress
+                .fetch_add(remaining, Ordering::Relaxed);
         }
 
         *self.status.lock().unwrap() = Status::Finished;
@@ -311,9 +312,7 @@ impl Task {
     fn next_subtask_after_validation(&self) -> Option<Arc<Task>> {
         // Java parity: fail fast if any subtask is still running.
         if self.sub_tasks.iter().any(|t| t.status() == Status::Running) {
-            panic!(
-                "Cannot move to next subtask, because some subtasks are still running"
-            );
+            panic!("Cannot move to next subtask, because some subtasks are still running");
         }
 
         for sub_task in &self.sub_tasks {

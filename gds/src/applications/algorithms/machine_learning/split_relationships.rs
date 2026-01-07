@@ -28,7 +28,10 @@ pub fn handle_split_relationships(request: &Value, catalog: Arc<dyn GraphCatalog
         );
     }
 
-    let mode = request.get("mode").and_then(|v| v.as_str()).unwrap_or("mutate");
+    let mode = request
+        .get("mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("mutate");
 
     match mode {
         "mutate" | "estimate" => err(

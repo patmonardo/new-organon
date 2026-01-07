@@ -6,9 +6,7 @@
 //! - `concurrency`: reserved for future parallel implementation
 //! - `max_degree`: filter to skip high-degree nodes (performance / approximation)
 
-use crate::algo::triangle::{
-    TriangleComputationRuntime, TriangleConfig, TriangleStorageRuntime,
-};
+use crate::algo::triangle::{TriangleComputationRuntime, TriangleConfig, TriangleStorageRuntime};
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, LeafTask, ProgressTracker, TaskProgressTracker, Tasks,
@@ -81,12 +79,13 @@ impl TriangleFacade {
         let leaf: LeafTask = Tasks::leaf_with_volume("triangle".to_string(), node_count);
         let base_task = leaf.base().clone();
         let registry_factory = EmptyTaskRegistryFactory;
-        let mut progress_tracker: Box<dyn ProgressTracker> = Box::new(TaskProgressTracker::with_registry(
-            base_task,
-            Concurrency::of(self.concurrency.max(1)),
-            JobId::new(),
-            &registry_factory,
-        ));
+        let mut progress_tracker: Box<dyn ProgressTracker> =
+            Box::new(TaskProgressTracker::with_registry(
+                base_task,
+                Concurrency::of(self.concurrency.max(1)),
+                JobId::new(),
+                &registry_factory,
+            ));
 
         progress_tracker.begin_subtask_with_volume(node_count);
 

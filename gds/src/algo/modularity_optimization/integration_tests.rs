@@ -16,10 +16,7 @@ fn modopt_separates_isolated_node() {
     // 0--1 connected, 2 isolated.
     let mut rt = ModularityOptimizationComputationRuntime::new();
     let cfg = ModularityOptimizationConfig::default();
-    let input = ModularityOptimizationInput::new(
-        3,
-        vec![vec![(1, 1.0)], vec![(0, 1.0)], vec![]],
-    );
+    let input = ModularityOptimizationInput::new(3, vec![vec![(1, 1.0)], vec![(0, 1.0)], vec![]]);
     let result = rt.compute(&input, &cfg);
 
     assert_eq!(result.communities.len(), 3);

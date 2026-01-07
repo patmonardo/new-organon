@@ -82,10 +82,8 @@ impl<C: NodePropertyPipelineBaseTrainConfig> NodeFeatureProducer<C> {
             .collect();
         relationship_types.sort();
 
-        let available_relationship_types: HashSet<String> = relationship_types
-            .iter()
-            .cloned()
-            .collect();
+        let available_relationship_types: HashSet<String> =
+            relationship_types.iter().cloned().collect();
 
         let concurrency = std::thread::available_parallelism()
             .map(|n| n.get())

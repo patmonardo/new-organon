@@ -53,5 +53,8 @@ pub fn compute_filtered_node_similarity(
         can_enforce_ordering,
     );
 
-    computed.into_iter().map(NodeSimilarityResult::from).collect()
+    computed
+        .into_iter()
+        .map(NodeSimilarityResult::from)
+        .collect()
 }

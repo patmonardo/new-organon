@@ -27,16 +27,16 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
+use crate::algo::bfs::{BfsComputationRuntime, BfsStorageRuntime};
+use crate::applications::algorithms::pathfinding::shared::TraversalResult;
 use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
-use crate::algo::bfs::{BfsComputationRuntime, BfsStorageRuntime};
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use crate::applications::algorithms::pathfinding::shared::TraversalResult;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -236,10 +236,18 @@ impl BfsBuilder {
         let mut computation =
             BfsComputationRuntime::new(source_node, self.track_paths, self.concurrency, node_count);
 
-        let result = storage.compute_bfs(&mut computation, Some(graph_view.as_ref()), &mut progress_tracker)?;
+        let result = storage.compute_bfs(
+            &mut computation,
+            Some(graph_view.as_ref()),
+            &mut progress_tracker,
+        )?;
 
         // Return raw traversal order as TraversalResult
-        Ok(result.visited_nodes.into_iter().map(|node_id| node_id).collect())
+        Ok(result
+            .visited_nodes
+            .into_iter()
+            .map(|node_id| node_id)
+            .collect())
     }
 
     /// Validate configuration before execution
@@ -304,12 +312,15 @@ impl BfsBuilder {
 
         // Convert traversal order to PathResult items
         // For now, create simple results with traversal order as cost
-        let paths = traversal_order.into_iter().enumerate().map(move |(index, node_id)| PathResult {
-            source: source_u64,
-            target: node_id as u64,
-            path: vec![node_id as u64], // Simple path containing just the target
-            cost: index as f64,
-        });
+        let paths = traversal_order
+            .into_iter()
+            .enumerate()
+            .map(move |(index, node_id)| PathResult {
+                source: source_u64,
+                target: node_id as u64,
+                path: vec![node_id as u64], // Simple path containing just the target
+                cost: index as f64,
+            });
         Ok(Box::new(paths))
     }
 
@@ -333,11 +344,11 @@ impl BfsBuilder {
         // Basic statistics - simplified since we don't have depth/path info anymore
         Ok(BfsStats {
             nodes_visited,
-            max_depth_reached: 0, // Simplified
-            execution_time_ms: 0, // Simplified
-            targets_found: 0, // Simplified
+            max_depth_reached: 0,       // Simplified
+            execution_time_ms: 0,       // Simplified
+            targets_found: 0,           // Simplified
             all_targets_reached: false, // Simplified
-            avg_branching_factor: 0.0, // Simplified
+            avg_branching_factor: 0.0,  // Simplified
         })
     }
 

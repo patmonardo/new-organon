@@ -73,7 +73,8 @@ impl ModularityStorageRuntime {
             })
             .collect::<Result<_, AlgorithmError>>()?;
 
-        let get_community = |node_idx: usize| -> Option<u64> { communities.get(node_idx).copied().flatten() };
+        let get_community =
+            |node_idx: usize| -> Option<u64> { communities.get(node_idx).copied().flatten() };
 
         let get_neighbors = |node_idx: usize| -> Vec<(usize, f64)> {
             termination_flag.assert_running();

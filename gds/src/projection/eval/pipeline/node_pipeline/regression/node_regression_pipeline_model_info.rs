@@ -1,8 +1,8 @@
-use crate::projection::eval::pipeline::TrainingMethod;
 use crate::projection::eval::pipeline::node_pipeline::NodePropertyPredictPipeline;
 use crate::projection::eval::pipeline::Pipeline;
-use std::fmt;
+use crate::projection::eval::pipeline::TrainingMethod;
 use std::collections::HashMap;
+use std::fmt;
 
 // Placeholder types until ml-metrics, ml-training, and pipeline packages are complete
 pub type Metric = ();

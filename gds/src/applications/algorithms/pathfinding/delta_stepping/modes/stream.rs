@@ -20,14 +20,18 @@ pub fn run(op: &str, request: &DeltaSteppingRequest, graph_resources: &GraphReso
     let template = DefaultAlgorithmProcessingTemplate::new(creator);
     let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
-    let task = Tasks::leaf("DeltaStepping::stream".to_string()).base().clone();
+    let task = Tasks::leaf("DeltaStepping::stream".to_string())
+        .base()
+        .clone();
 
     let compute = |gr: &GraphResources,
                    _tracker: &mut dyn ProgressTracker,
                    _termination: &TerminationFlag|
      -> Result<Option<Vec<PathResult>>, String> {
         // Use facade instead of direct algo calls
-        let mut builder = gr.facade().delta_stepping()
+        let mut builder = gr
+            .facade()
+            .delta_stepping()
             .source(request.source)
             .delta(request.delta)
             .weight_property(&request.weight_property)
@@ -43,11 +47,18 @@ pub fn run(op: &str, request: &DeltaSteppingRequest, graph_resources: &GraphReso
         Ok(Some(iter.collect()))
     };
 
-    let result_builder = FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<PathResult>>| {
-        rows.unwrap_or_default().into_iter()
-    });
+    let result_builder =
+        FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<PathResult>>| {
+            rows.unwrap_or_default().into_iter()
+        });
 
-    match convenience.process_stream(graph_resources, request.common.concurrency, task, compute, result_builder) {
+    match convenience.process_stream(
+        graph_resources,
+        request.common.concurrency,
+        task,
+        compute,
+        result_builder,
+    ) {
         Ok(stream) => {
             let rows: Vec<PathResult> = stream.collect::<Vec<_>>();
             json!({
@@ -56,7 +67,11 @@ pub fn run(op: &str, request: &DeltaSteppingRequest, graph_resources: &GraphReso
                 "mode": "stream",
                 "data": rows
             })
-        },
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("Delta-Stepping stream failed: {e}")),
+        }
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("Delta-Stepping stream failed: {e}"),
+        ),
     }
 }

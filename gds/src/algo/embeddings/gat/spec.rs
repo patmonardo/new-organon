@@ -1,6 +1,6 @@
-use crate::define_algorithm_spec;
 use crate::algo::embeddings::GATConfig;
 use crate::algo::embeddings::GATResult;
+use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use serde_json;

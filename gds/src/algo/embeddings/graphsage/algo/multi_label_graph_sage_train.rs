@@ -1,9 +1,5 @@
 //! Java: `MultiLabelGraphSageTrain`.
 
-use crate::concurrency::TerminationFlag;
-use crate::core::model::Model;
-use crate::ml::core::functions::Weights;
-use crate::ml::core::tensor::Tensor;
 use crate::algo::embeddings::graphsage::algo::graph_sage::MODEL_TYPE;
 use crate::algo::embeddings::graphsage::algo::graph_sage_model_data::{
     FeatureFunctionData, GraphSageModelData, MatrixData,
@@ -16,9 +12,11 @@ use crate::algo::embeddings::graphsage::graphsage_model_trainer::{
 use crate::algo::embeddings::graphsage::layer_factory::generate_weights;
 use crate::algo::embeddings::graphsage::multi_label_feature_function::MultiLabelFeatureFunction;
 use crate::algo::embeddings::graphsage::train_config_transformer::TrainConfigTransformer;
-use crate::algo::embeddings::graphsage::types::{
-    GraphSageTrainConfig, GraphSageTrainParameters,
-};
+use crate::algo::embeddings::graphsage::types::{GraphSageTrainConfig, GraphSageTrainParameters};
+use crate::concurrency::TerminationFlag;
+use crate::core::model::Model;
+use crate::ml::core::functions::Weights;
+use crate::ml::core::tensor::Tensor;
 use crate::types::graph::Graph;
 use crate::types::schema::NodeLabel;
 use std::collections::HashMap;

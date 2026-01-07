@@ -17,7 +17,10 @@ pub struct ElementScaler {
 
 impl ElementScaler {
     pub(crate) fn new(property_fn: PropertyFn, scaler: Box<dyn Scaler>) -> Self {
-        Self { property_fn, scaler }
+        Self {
+            property_fn,
+            scaler,
+        }
     }
 }
 
@@ -71,11 +74,7 @@ impl ScalePropertiesComputationRuntime {
     }
 
     pub fn compute(&self, plan: ScalePropertiesPlan) -> ScalePropertiesResult {
-        let total_dimension: usize = plan
-            .property_scalers
-            .iter()
-            .map(|p| p.dimension())
-            .sum();
+        let total_dimension: usize = plan.property_scalers.iter().map(|p| p.dimension()).sum();
 
         let mut scaled_properties = vec![vec![0.0; total_dimension]; plan.node_count];
         let mut scaler_statistics = HashMap::new();
@@ -87,10 +86,7 @@ impl ScalePropertiesComputationRuntime {
             }
             offset += property_scaler.dimension();
 
-            scaler_statistics.insert(
-                property_scaler.name.clone(),
-                property_scaler.statistics(),
-            );
+            scaler_statistics.insert(property_scaler.name.clone(), property_scaler.statistics());
         }
 
         ScalePropertiesResult {

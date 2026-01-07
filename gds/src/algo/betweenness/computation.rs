@@ -57,7 +57,13 @@ impl BetweennessCentralityComputationRuntime {
 
             let source = sources[idx];
             state.with(|st| {
-                st.compute_source(source, divisor, &self.centrality, termination, get_neighbors);
+                st.compute_source(
+                    source,
+                    divisor,
+                    &self.centrality,
+                    termination,
+                    get_neighbors,
+                );
             });
 
             (on_source_done.as_ref())();
@@ -86,7 +92,13 @@ impl BetweennessCentralityComputationRuntime {
 
             let source = sources[idx];
             state.with(|st| {
-                st.compute_source(source, divisor, &self.centrality, termination, get_neighbors_weighted);
+                st.compute_source(
+                    source,
+                    divisor,
+                    &self.centrality,
+                    termination,
+                    get_neighbors_weighted,
+                );
             });
 
             (on_source_done.as_ref())();
@@ -235,7 +247,10 @@ impl PartialOrd for WeightedQueueItem {
 impl Ord for WeightedQueueItem {
     fn cmp(&self, other: &Self) -> Ordering {
         // Reverse ordering for min-heap (lower cost = higher priority)
-        other.cost.partial_cmp(&self.cost).unwrap_or(Ordering::Equal)
+        other
+            .cost
+            .partial_cmp(&self.cost)
+            .unwrap_or(Ordering::Equal)
     }
 }
 
@@ -281,9 +296,16 @@ impl WeightedState {
         self.dist[source] = 0.0;
         self.sigma[source] = 1;
         self.touch(source);
-        self.heap.push(WeightedQueueItem { cost: 0.0, node: source });
+        self.heap.push(WeightedQueueItem {
+            cost: 0.0,
+            node: source,
+        });
 
-        while let Some(WeightedQueueItem { cost: cost_v, node: v }) = self.heap.pop() {
+        while let Some(WeightedQueueItem {
+            cost: cost_v,
+            node: v,
+        }) = self.heap.pop()
+        {
             if !termination.running() {
                 return;
             }
@@ -370,15 +392,9 @@ mod tests {
         let termination = TerminationFlag::running_true();
         let noop = Arc::new(|| {});
         let computation = BetweennessCentralityComputationRuntime::new(node_count);
-        computation.compute_parallel_unweighted(
-            &[0, 1, 2],
-            2.0,
-            2,
-            &termination,
-            noop,
-            &neighbors,
-        )
-        .unwrap();
+        computation
+            .compute_parallel_unweighted(&[0, 1, 2], 2.0, 2, &termination, noop, &neighbors)
+            .unwrap();
         let result = computation.finalize_result();
 
         assert!((result.centralities[1] - 1.0).abs() < 1e-9);
@@ -396,15 +412,9 @@ mod tests {
         let termination = TerminationFlag::running_true();
         let noop = Arc::new(|| {});
         let computation = BetweennessCentralityComputationRuntime::new(node_count);
-        computation.compute_parallel_unweighted(
-            &[0, 1, 2, 3],
-            2.0,
-            2,
-            &termination,
-            noop,
-            &neighbors,
-        )
-        .unwrap();
+        computation
+            .compute_parallel_unweighted(&[0, 1, 2, 3], 2.0, 2, &termination, noop, &neighbors)
+            .unwrap();
         let result = computation.finalize_result();
 
         // In a 4-cycle, each node has the same betweenness.
@@ -431,15 +441,9 @@ mod tests {
         let termination = TerminationFlag::running_true();
         let noop = Arc::new(|| {});
         let computation = BetweennessCentralityComputationRuntime::new(node_count);
-        computation.compute_parallel_weighted(
-            &[0, 1, 2],
-            2.0,
-            2,
-            &termination,
-            noop,
-            &neighbors,
-        )
-        .unwrap();
+        computation
+            .compute_parallel_weighted(&[0, 1, 2], 2.0, 2, &termination, noop, &neighbors)
+            .unwrap();
         let result = computation.finalize_result();
 
         assert!(result.centralities[1] > 0.0);

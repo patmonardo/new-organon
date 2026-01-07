@@ -114,7 +114,8 @@ impl ModularityOptimizationComputationRuntime {
         }
 
         let (compressed, _) = compress_assignment(&assignment);
-        let modularity = modularity_from_assignment(input, &compressed, &degrees, two_m, config.gamma);
+        let modularity =
+            modularity_from_assignment(input, &compressed, &degrees, two_m, config.gamma);
 
         ModularityOptimizationResult {
             communities: compressed.into_iter().map(|c| c as u64).collect(),

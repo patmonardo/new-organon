@@ -54,10 +54,7 @@ impl IndirectExposureStorageRuntime {
         })
     }
 
-    pub fn run(
-        &self,
-        config: &IndirectExposureConfig,
-    ) -> Result<IndirectExposureResult, String> {
+    pub fn run(&self, config: &IndirectExposureConfig) -> Result<IndirectExposureResult, String> {
         let node_count = self.graph.node_count();
         let sanctioned_mask = self.build_sanctioned_mask(config)?;
         let total_transfers = self.build_total_transfers();
@@ -97,7 +94,12 @@ impl IndirectExposureStorageRuntime {
         let props = self
             .graph
             .node_properties(&config.sanctioned_property)
-            .ok_or_else(|| format!("missing sanctionedProperty '{}'", config.sanctioned_property))?;
+            .ok_or_else(|| {
+                format!(
+                    "missing sanctionedProperty '{}'",
+                    config.sanctioned_property
+                )
+            })?;
 
         let node_count = self.graph.node_count();
         let mut mask = vec![false; node_count];
@@ -110,7 +112,8 @@ impl IndirectExposureStorageRuntime {
             }
             ValueType::Double => {
                 for node in 0..node_count {
-                    mask[node] = (props.double_value(node as u64).unwrap_or(0.0)).round() as i64 == 1;
+                    mask[node] =
+                        (props.double_value(node as u64).unwrap_or(0.0)).round() as i64 == 1;
                 }
             }
             _ => {
@@ -136,14 +139,21 @@ impl IndirectExposureStorageRuntime {
                 .map(|c| c.property())
                 .sum::<f64>();
             let degree = self.graph.degree(node as i64) as f64;
-            let total = if self.weight_property.is_some() { sum } else { degree };
+            let total = if self.weight_property.is_some() {
+                sum
+            } else {
+                degree
+            };
             totals[node] = if total <= 0.0 { 1.0 } else { total };
         }
         totals
     }
 }
 
-fn materialize_result(result: &crate::pregel::PregelResult, node_count: usize) -> IndirectExposureResult {
+fn materialize_result(
+    result: &crate::pregel::PregelResult,
+    node_count: usize,
+) -> IndirectExposureResult {
     let mut exposures = Vec::with_capacity(node_count);
     let mut roots = Vec::with_capacity(node_count);
     let mut parents = Vec::with_capacity(node_count);

@@ -1,7 +1,7 @@
 use super::computation::{KnnComputationResult, KnnComputationRuntime};
 use super::metrics::{KnnNodePropertySpec, SimilarityMetric};
-use super::storage::KnnStorageRuntime;
 use super::storage::KnnSamplerType;
+use super::storage::KnnStorageRuntime;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::AlgorithmError;

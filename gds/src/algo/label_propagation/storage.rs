@@ -1,6 +1,8 @@
 //! Label Propagation storage runtime
 
-use super::computation::{LabelPropComputationRuntime, LabelPropResult as LabelPropComputationResult};
+use super::computation::{
+    LabelPropComputationRuntime, LabelPropResult as LabelPropComputationResult,
+};
 use super::spec::LabelPropConfig;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
@@ -79,9 +81,8 @@ impl LabelPropStorageRuntime {
         // - If a seedProperty exists and has a value: use it.
         // - Otherwise: label = maxLabelId + originalNodeId + 1.
         // This avoids collisions with node IDs while keeping determinism.
-        progress_tracker.begin_subtask_with_volume(
-            node_count.saturating_add(config.max_iterations as usize),
-        );
+        progress_tracker
+            .begin_subtask_with_volume(node_count.saturating_add(config.max_iterations as usize));
 
         let seed_pv = config.seed_property.as_ref().and_then(|key| {
             if self.graph.available_node_properties().contains(key) {
@@ -101,10 +102,7 @@ impl LabelPropStorageRuntime {
             termination_flag.assert_running();
 
             let node_id = i as i64;
-            let original = self
-                .graph
-                .to_original_node_id(node_id)
-                .unwrap_or(node_id);
+            let original = self.graph.to_original_node_id(node_id).unwrap_or(node_id);
 
             let label = match seed_pv.as_deref() {
                 Some(pv) if pv.has_value(i as u64) => {

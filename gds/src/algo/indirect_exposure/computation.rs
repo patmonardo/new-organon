@@ -82,17 +82,18 @@ impl IndirectExposureComputationRuntime {
         dyn Fn(
                 &mut ComputeContext<IndirectExposurePregelRuntimeConfig, ReducingMessageIterator>,
                 &mut Messages<ReducingMessageIterator>,
-            )
-                + Send
-                + Sync,
+            ) + Send
+            + Sync,
     > {
         let visited = Arc::clone(&self.visited);
         let total_transfers = Arc::clone(&self.total_transfers);
         let roots = Arc::clone(&self.roots);
 
         Arc::new(
-            move |
-                  context: &mut ComputeContext<IndirectExposurePregelRuntimeConfig, ReducingMessageIterator>,
+            move |context: &mut ComputeContext<
+                IndirectExposurePregelRuntimeConfig,
+                ReducingMessageIterator,
+            >,
                   messages: &mut Messages<ReducingMessageIterator>| {
                 let node_id = context.node_id() as usize;
 
@@ -118,7 +119,11 @@ impl IndirectExposureComputationRuntime {
                 let sender = messages.sender().unwrap_or(context.node_id());
                 let sender_root = roots.get(sender as usize);
 
-                let denom = total_transfers.get(node_id).copied().unwrap_or(1.0).max(1.0);
+                let denom = total_transfers
+                    .get(node_id)
+                    .copied()
+                    .unwrap_or(1.0)
+                    .max(1.0);
                 let new_exposure = parent_exposure / denom;
 
                 context.set_node_value(EXPOSURE_KEY, new_exposure);

@@ -20,7 +20,9 @@ pub fn run(op: &str, request: &AllShortestPathsRequest, graph_resources: &GraphR
     let template = DefaultAlgorithmProcessingTemplate::new(creator);
     let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
-    let task = Tasks::leaf("AllShortestPaths::stats".to_string()).base().clone();
+    let task = Tasks::leaf("AllShortestPaths::stats".to_string())
+        .base()
+        .clone();
 
     let compute = |gr: &GraphResources,
                    _tracker: &mut dyn ProgressTracker,
@@ -45,21 +47,30 @@ pub fn run(op: &str, request: &AllShortestPathsRequest, graph_resources: &GraphR
         Ok(Some(stats))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       stats: Option<AllShortestPathsStats>,
-                                       timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stats",
-            "data": stats,
-            "timings": timings_json(timings)
-        })
-    });
+    let builder = FnStatsResultBuilder(
+        |_gr: &GraphResources, stats: Option<AllShortestPathsStats>, timings| {
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stats",
+                "data": stats,
+                "timings": timings_json(timings)
+            })
+        },
+    );
 
-    match convenience.process_stats(graph_resources, request.common.concurrency, task, compute, builder)
-    {
+    match convenience.process_stats(
+        graph_resources,
+        request.common.concurrency,
+        task,
+        compute,
+        builder,
+    ) {
         Ok(v) => v,
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("AllShortestPaths stats failed: {e}")),
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("AllShortestPaths stats failed: {e}"),
+        ),
     }
 }

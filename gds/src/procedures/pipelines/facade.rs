@@ -7,8 +7,11 @@ use std::sync::{Arc, OnceLock};
 use serde_json::Value;
 
 use crate::mem::MemoryEstimationResult;
+use crate::projection::eval::pipeline::training_pipeline::TrainingPipeline;
 use crate::projection::eval::pipeline::{
-    link_pipeline::{LinkFeatureStepFactory, LinkPredictionSplitConfig, LinkPredictionTrainingPipeline},
+    link_pipeline::{
+        LinkFeatureStepFactory, LinkPredictionSplitConfig, LinkPredictionTrainingPipeline,
+    },
     node_pipeline::classification::node_classification_training_pipeline::NodeClassificationTrainingPipeline,
     node_pipeline::node_feature_step::NodeFeatureStep,
     node_pipeline::node_property_prediction_split_config::NodePropertyPredictionSplitConfig,
@@ -16,7 +19,6 @@ use crate::projection::eval::pipeline::{
     AutoTuningConfig, FeatureStep, Pipeline, PipelineCatalog, PipelineCatalogEntry, TrainingMethod,
 };
 use crate::projection::eval::pipeline::{ExecutableNodePropertyStep, NodePropertyStep};
-use crate::projection::eval::pipeline::training_pipeline::TrainingPipeline;
 use crate::types::user::User;
 
 use super::types::*;
@@ -31,8 +33,11 @@ pub trait LinkPredictionFacade {
         raw_configuration: RawConfig,
     ) -> Vec<PipelineInfoResult>;
 
-    fn add_logistic_regression(&self, pipeline_name: &str, configuration: RawConfig)
-        -> Vec<PipelineInfoResult>;
+    fn add_logistic_regression(
+        &self,
+        pipeline_name: &str,
+        configuration: RawConfig,
+    ) -> Vec<PipelineInfoResult>;
 
     fn add_mlp(&self, pipeline_name: &str, configuration: RawConfig) -> Vec<PipelineInfoResult>;
 
@@ -55,8 +60,11 @@ pub trait LinkPredictionFacade {
         configuration: RawConfig,
     ) -> Vec<PipelineInfoResult>;
 
-    fn configure_split(&self, pipeline_name: &str, configuration: RawConfig)
-        -> Vec<PipelineInfoResult>;
+    fn configure_split(
+        &self,
+        pipeline_name: &str,
+        configuration: RawConfig,
+    ) -> Vec<PipelineInfoResult>;
 
     fn create_pipeline(&self, pipeline_name: &str) -> Vec<PipelineInfoResult>;
 
@@ -86,10 +94,14 @@ pub trait LinkPredictionFacade {
 }
 
 pub trait NodeClassificationFacade {
-    fn add_logistic_regression(&self, pipeline_name: &str, configuration: RawConfig)
-        -> Vec<NodePipelineInfoResult>;
+    fn add_logistic_regression(
+        &self,
+        pipeline_name: &str,
+        configuration: RawConfig,
+    ) -> Vec<NodePipelineInfoResult>;
 
-    fn add_mlp(&self, pipeline_name: &str, configuration: RawConfig) -> Vec<NodePipelineInfoResult>;
+    fn add_mlp(&self, pipeline_name: &str, configuration: RawConfig)
+        -> Vec<NodePipelineInfoResult>;
 
     fn add_node_property(
         &self,
@@ -126,11 +138,17 @@ pub trait NodeClassificationFacade {
         raw_configuration: RawConfig,
     ) -> Vec<MemoryEstimationResult>;
 
-    fn select_features(&self, pipeline_name: &str, node_feature_steps: Value)
-        -> Vec<NodePipelineInfoResult>;
+    fn select_features(
+        &self,
+        pipeline_name: &str,
+        node_feature_steps: Value,
+    ) -> Vec<NodePipelineInfoResult>;
 
-    fn stream(&self, graph_name: &str, configuration: RawConfig)
-        -> Vec<NodeClassificationStreamResult>;
+    fn stream(
+        &self,
+        graph_name: &str,
+        configuration: RawConfig,
+    ) -> Vec<NodeClassificationStreamResult>;
 
     fn stream_estimate(
         &self,
@@ -160,8 +178,11 @@ pub trait NodeClassificationFacade {
 }
 
 pub trait NodeRegressionFacade {
-    fn add_logistic_regression(&self, pipeline_name: &str, configuration: RawConfig)
-        -> Vec<NodePipelineInfoResult>;
+    fn add_logistic_regression(
+        &self,
+        pipeline_name: &str,
+        configuration: RawConfig,
+    ) -> Vec<NodePipelineInfoResult>;
 
     fn add_node_property(
         &self,
@@ -192,10 +213,14 @@ pub trait NodeRegressionFacade {
 
     fn mutate(&self, graph_name: &str, configuration: RawConfig) -> Vec<PredictMutateResult>;
 
-    fn stream(&self, graph_name: &str, configuration: RawConfig) -> Vec<NodeRegressionStreamResult>;
+    fn stream(&self, graph_name: &str, configuration: RawConfig)
+        -> Vec<NodeRegressionStreamResult>;
 
-    fn select_features(&self, pipeline_name: &str, feature_properties: Value)
-        -> Vec<NodePipelineInfoResult>;
+    fn select_features(
+        &self,
+        pipeline_name: &str,
+        feature_properties: Value,
+    ) -> Vec<NodePipelineInfoResult>;
 
     fn train(
         &self,
@@ -298,7 +323,11 @@ impl LocalPipelinesProcedureFacade {
 
 impl PipelinesProcedureFacade for LocalPipelinesProcedureFacade {
     fn drop(&self, pipeline_name: &str, fail_if_missing: bool) -> Vec<PipelineCatalogResult> {
-        match PipelineCatalog::drop(self.pipeline_catalog.as_ref(), self.username(), pipeline_name) {
+        match PipelineCatalog::drop(
+            self.pipeline_catalog.as_ref(),
+            self.username(),
+            pipeline_name,
+        ) {
             Ok(entry) => vec![Self::entry_to_catalog_result(&entry)],
             Err(err) => {
                 if fail_if_missing {
@@ -310,10 +339,7 @@ impl PipelinesProcedureFacade for LocalPipelinesProcedureFacade {
     }
 
     fn exists(&self, pipeline_name: &str) -> Vec<PipelineExistsResult> {
-        if !self
-            .pipeline_catalog
-            .exists(self.username(), pipeline_name)
-        {
+        if !self.pipeline_catalog.exists(self.username(), pipeline_name) {
             return vec![PipelineExistsResult::empty(pipeline_name)];
         }
 
@@ -334,10 +360,7 @@ impl PipelinesProcedureFacade for LocalPipelinesProcedureFacade {
         if pipeline_name == Self::NO_VALUE {
             let mut entries = self.pipeline_catalog.get_all_pipelines(self.username());
             entries.sort_by(|a, b| a.pipeline_name().cmp(b.pipeline_name()));
-            return entries
-                .iter()
-                .map(Self::entry_to_catalog_result)
-                .collect();
+            return entries.iter().map(Self::entry_to_catalog_result).collect();
         }
 
         self.pipeline_catalog
@@ -378,7 +401,10 @@ impl LocalLinkPredictionFacade {
             .get_typed::<LinkPredictionTrainingPipeline>(&self.username, pipeline_name)
             .unwrap_or_else(|e| panic!("{e}"));
 
-        vec![Self::pipeline_info_from_pipeline(pipeline_name, pipeline.as_ref())]
+        vec![Self::pipeline_info_from_pipeline(
+            pipeline_name,
+            pipeline.as_ref(),
+        )]
     }
 
     fn pipeline_info_from_pipeline(
@@ -428,7 +454,10 @@ impl LocalLinkPredictionFacade {
     fn parse_split_config(configuration: &RawConfig) -> LinkPredictionSplitConfig {
         let mut builder = LinkPredictionSplitConfig::builder();
 
-        if let Some(v) = configuration.get("validationFolds").and_then(|v| v.as_u64()) {
+        if let Some(v) = configuration
+            .get("validationFolds")
+            .and_then(|v| v.as_u64())
+        {
             builder = builder.validation_folds(v as u32);
         }
         if let Some(v) = configuration.get("testFraction").and_then(|v| v.as_f64()) {
@@ -496,9 +525,8 @@ impl LinkPredictionFacade for LocalLinkPredictionFacade {
                 panic!("add_feature expects configuration key `nodeProperties`")
             });
 
-            let step =
-                LinkFeatureStepFactory::create_from_config(feature_type, node_props_value)
-                    .unwrap_or_else(|e| panic!("{e}"));
+            let step = LinkFeatureStepFactory::create_from_config(feature_type, node_props_value)
+                .unwrap_or_else(|e| panic!("{e}"));
 
             pipeline.add_feature_step(step);
         })
@@ -585,7 +613,10 @@ impl LinkPredictionFacade for LocalLinkPredictionFacade {
             .set(&self.username, pipeline_name, Arc::clone(&pipeline))
             .unwrap_or_else(|e| panic!("{e}"));
 
-        vec![Self::pipeline_info_from_pipeline(pipeline_name, pipeline.as_ref())]
+        vec![Self::pipeline_info_from_pipeline(
+            pipeline_name,
+            pipeline.as_ref(),
+        )]
     }
 
     fn mutate(&self, _graph_name: &str, _configuration: RawConfig) -> Vec<MutateResult> {
@@ -648,7 +679,10 @@ impl LocalNodeClassificationFacade {
             .get_typed::<NodeClassificationTrainingPipeline>(&self.username, pipeline_name)
             .unwrap_or_else(|e| panic!("{e}"));
 
-        vec![Self::node_pipeline_info_from_pipeline(pipeline_name, pipeline.as_ref())]
+        vec![Self::node_pipeline_info_from_pipeline(
+            pipeline_name,
+            pipeline.as_ref(),
+        )]
     }
 
     fn node_pipeline_info_from_pipeline(
@@ -817,7 +851,10 @@ impl NodeClassificationFacade for LocalNodeClassificationFacade {
             .set(&self.username, pipeline_name, Arc::clone(&pipeline))
             .unwrap_or_else(|e| panic!("{e}"));
 
-        vec![Self::node_pipeline_info_from_pipeline(pipeline_name, pipeline.as_ref())]
+        vec![Self::node_pipeline_info_from_pipeline(
+            pipeline_name,
+            pipeline.as_ref(),
+        )]
     }
 
     fn mutate(&self, _graph_name: &str, _configuration: RawConfig) -> Vec<PredictMutateResult> {
@@ -1000,17 +1037,21 @@ mod node_classification_facade_tests {
         assert!(created[0].node_property_steps.is_empty());
         assert!(created[0].feature_properties.is_empty());
 
-        let configured = facade
-            .node_classification()
-            .configure_split(
-                "p1",
-                AnyMap::from([
-                    ("testFraction".to_string(), Value::from(0.2)),
-                    ("validationFolds".to_string(), Value::from(5)),
-                ]),
-            );
-        assert_eq!(configured[0].split_config.get("testFraction"), Some(&Value::String("0.2".to_string())));
-        assert_eq!(configured[0].split_config.get("validationFolds"), Some(&Value::String("5".to_string())));
+        let configured = facade.node_classification().configure_split(
+            "p1",
+            AnyMap::from([
+                ("testFraction".to_string(), Value::from(0.2)),
+                ("validationFolds".to_string(), Value::from(5)),
+            ]),
+        );
+        assert_eq!(
+            configured[0].split_config.get("testFraction"),
+            Some(&Value::String("0.2".to_string()))
+        );
+        assert_eq!(
+            configured[0].split_config.get("validationFolds"),
+            Some(&Value::String("5".to_string()))
+        );
     }
 
     #[test]
@@ -1042,7 +1083,10 @@ mod node_classification_facade_tests {
             "p1",
             Value::Array(vec![Value::String("pagerank".to_string())]),
         );
-        assert_eq!(with_features[0].feature_properties, vec!["pagerank".to_string()]);
+        assert_eq!(
+            with_features[0].feature_properties,
+            vec!["pagerank".to_string()]
+        );
     }
 }
 
@@ -1087,9 +1131,18 @@ mod link_prediction_facade_tests {
             ]),
         );
 
-        assert_eq!(configured[0].split_config.get("testFraction"), Some(&Value::from(0.2)));
-        assert_eq!(configured[0].split_config.get("trainFraction"), Some(&Value::from(0.3)));
-        assert_eq!(configured[0].split_config.get("validationFolds"), Some(&Value::from(5)));
+        assert_eq!(
+            configured[0].split_config.get("testFraction"),
+            Some(&Value::from(0.2))
+        );
+        assert_eq!(
+            configured[0].split_config.get("trainFraction"),
+            Some(&Value::from(0.3))
+        );
+        assert_eq!(
+            configured[0].split_config.get("validationFolds"),
+            Some(&Value::from(5))
+        );
     }
 
     #[test]

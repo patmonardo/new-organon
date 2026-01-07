@@ -7,6 +7,7 @@
 //! Parameters:
 //! - `concurrency`: accepted for Java GDS alignment; currently unused.
 
+use crate::algo::scc::{SccComputationRuntime, SccResult, SccStorageRuntime};
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory, Tasks,
@@ -14,7 +15,6 @@ use crate::core::utils::progress::{
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::algo::scc::{SccComputationRuntime, SccResult, SccStorageRuntime};
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
 

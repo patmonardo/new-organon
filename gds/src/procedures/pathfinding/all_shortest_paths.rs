@@ -3,8 +3,10 @@
 //! Computes shortest path distances for all (source, target) pairs.
 //! Supports unweighted (BFS) and weighted (Dijkstra) variants.
 
+use crate::algo::all_shortest_paths::{
+    AlgorithmType, AllShortestPathsComputationRuntime, AllShortestPathsStorageRuntime,
+};
 use crate::mem::MemoryRange;
-use crate::algo::all_shortest_paths::{AlgorithmType, AllShortestPathsComputationRuntime, AllShortestPathsStorageRuntime};
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::projection::orientation::Orientation;
@@ -15,9 +17,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
-};
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 
 /// A single all-pairs shortest path distance row.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -238,18 +238,18 @@ impl AllShortestPathsBuilder {
 
         let mut computation = AllShortestPathsComputationRuntime::new();
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("all_shortest_paths".to_string(), graph_view.node_count()),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("all_shortest_paths".to_string(), graph_view.node_count()),
+                self.concurrency,
+            );
 
         let start = std::time::Instant::now();
-        let receiver = storage
-            .compute_all_shortest_paths_streaming(
-                &mut computation,
-                direction_byte,
-                &mut progress_tracker,
-            )?;
+        let receiver = storage.compute_all_shortest_paths_streaming(
+            &mut computation,
+            direction_byte,
+            &mut progress_tracker,
+        )?;
 
         let node_count = graph_view.node_count() as u64;
         let mut rows: Vec<AllShortestPathsRow> = Vec::new();

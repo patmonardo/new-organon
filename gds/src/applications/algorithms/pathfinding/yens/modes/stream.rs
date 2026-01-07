@@ -2,8 +2,8 @@ use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
-use crate::applications::algorithms::pathfinding::yens::request::YensRequest;
 use crate::applications::algorithms::pathfinding::shared::err;
+use crate::applications::algorithms::pathfinding::yens::request::YensRequest;
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::GraphResources;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
@@ -44,12 +44,18 @@ pub fn run(op: &str, request: &YensRequest, graph_resources: &GraphResources) ->
         Ok(Some(iter.collect()))
     };
 
-    let builder = FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<PathResult>>| {
-        rows.unwrap_or_default().into_iter()
-    });
+    let builder =
+        FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<PathResult>>| {
+            rows.unwrap_or_default().into_iter()
+        });
 
-    match convenience.process_stream(graph_resources, request.common.concurrency, task, compute, builder)
-    {
+    match convenience.process_stream(
+        graph_resources,
+        request.common.concurrency,
+        task,
+        compute,
+        builder,
+    ) {
         Ok(stream) => {
             let rows: Vec<PathResult> = stream.collect();
             json!({

@@ -6,15 +6,13 @@
 //! This facade is the "live wiring" layer: it binds the algorithm runtime to a
 //! `DefaultGraphStore` graph view.
 
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
-};
-use crate::core::utils::progress::ProgressTracker;
-use crate::mem::MemoryRange;
 use crate::algo::articulation_points::computation::{
     ArticulationPointsComputationRuntime, STACK_EVENT_SIZE_BYTES,
 };
 use crate::algo::articulation_points::storage::ArticulationPointsStorageRuntime;
+use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
+use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
 use crate::projection::orientation::Orientation;
@@ -117,7 +115,11 @@ impl ArticulationPointsFacade {
         let mut computation = ArticulationPointsComputationRuntime::new(node_count);
 
         // Call storage.compute_articulation_points - Applications talk only to procedures
-        let result = storage.compute_articulation_points(&mut computation, Some(graph_view.as_ref()), &mut progress_tracker)?;
+        let result = storage.compute_articulation_points(
+            &mut computation,
+            Some(graph_view.as_ref()),
+            &mut progress_tracker,
+        )?;
 
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();
@@ -216,11 +218,8 @@ impl ArticulationPointsFacade {
         };
 
         let mut runtime = ArticulationPointsComputationRuntime::new(node_count);
-        let result = runtime.compute_with_relationship_count(
-            node_count,
-            relationship_count,
-            get_neighbors,
-        );
+        let result =
+            runtime.compute_with_relationship_count(node_count, relationship_count, get_neighbors);
 
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();

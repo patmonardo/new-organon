@@ -1,7 +1,7 @@
+use crate::algo::similarity::knn::metrics::SimilarityMetric;
 use crate::applications::algorithms::similarity::shared::{
     get_array, get_f64, get_str, get_u64, CommonRequest,
 };
-use crate::algo::similarity::knn::metrics::SimilarityMetric;
 use serde_json::Value;
 
 #[derive(Debug, Clone)]
@@ -58,10 +58,9 @@ impl KnnRequest {
             }
 
             if let Some(obj) = item.as_object() {
-                let name = obj
-                    .get("name")
-                    .and_then(|v| v.as_str())
-                    .ok_or_else(|| "nodeProperties items must be strings or objects with 'name'".to_string())?;
+                let name = obj.get("name").and_then(|v| v.as_str()).ok_or_else(|| {
+                    "nodeProperties items must be strings or objects with 'name'".to_string()
+                })?;
 
                 let metric = obj
                     .get("metric")

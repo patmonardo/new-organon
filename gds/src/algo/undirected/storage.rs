@@ -44,7 +44,12 @@ impl ToUndirectedStorageRuntime {
 
         let graph = graph_store
             .get_graph_with_types_and_orientation(&rels, Orientation::Natural)
-            .map_err(|e| format!("failed to build graph for relationship type '{}': {e}", config.relationship_type))?;
+            .map_err(|e| {
+                format!(
+                    "failed to build graph for relationship type '{}': {e}",
+                    config.relationship_type
+                )
+            })?;
 
         let edges = computation.compute(graph.as_ref(), &config.mutate_relationship_type);
         let outgoing = build_outgoing(graph_store.node_count(), edges)?;

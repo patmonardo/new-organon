@@ -69,10 +69,10 @@ impl WriteContext {
             export_builders_provider.node_property_exporter_builder(exporter_context);
         let relationship_exporter_builder =
             export_builders_provider.relationship_exporter_builder(exporter_context);
-        let relationship_properties_exporter_builder = export_builders_provider
-            .relationship_properties_exporter_builder(exporter_context);
-        let relationship_stream_exporter_builder = export_builders_provider
-            .relationship_stream_exporter_builder(exporter_context);
+        let relationship_properties_exporter_builder =
+            export_builders_provider.relationship_properties_exporter_builder(exporter_context);
+        let relationship_stream_exporter_builder =
+            export_builders_provider.relationship_stream_exporter_builder(exporter_context);
 
         Self {
             node_label_exporter_builder,
@@ -93,7 +93,8 @@ pub struct WriteContextBuilder {
     node_label_exporter_builder: Option<Box<dyn NodeLabelExporterBuilder>>,
     node_property_exporter_builder: Option<Box<dyn NodePropertyExporterBuilder>>,
     relationship_exporter_builder: Option<Box<dyn RelationshipExporterBuilder>>,
-    relationship_properties_exporter_builder: Option<Box<dyn RelationshipPropertiesExporterBuilder>>,
+    relationship_properties_exporter_builder:
+        Option<Box<dyn RelationshipPropertiesExporterBuilder>>,
     relationship_stream_exporter_builder: Option<Box<dyn RelationshipStreamExporterBuilder>>,
 }
 

@@ -13,7 +13,7 @@ pub mod storage;
 pub mod integration_tests;
 
 pub use computation::HarmonicComputationRuntime;
-pub use spec::{HarmonicConfig, HarmonicDirection, HarmonicResult, HARMONICAlgorithmSpec};
+pub use spec::{HARMONICAlgorithmSpec, HarmonicConfig, HarmonicDirection, HarmonicResult};
 pub use storage::HarmonicStorageRuntime;
 
 pub type HarmonicAlgorithmSpec = HARMONICAlgorithmSpec;

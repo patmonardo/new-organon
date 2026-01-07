@@ -52,7 +52,10 @@ impl Ord for FrontierEntry {
 
 impl PCSTreeStorageRuntime {
     pub fn new(config: PCSTreeConfig, concurrency: usize) -> Self {
-        Self { config, concurrency }
+        Self {
+            config,
+            concurrency,
+        }
     }
 
     pub fn compute_prize_collecting_steiner_tree(
@@ -72,16 +75,10 @@ impl PCSTreeStorageRuntime {
 
         let start = Instant::now();
         let node_count = graph.map(|g| g.node_count()).unwrap_or(0);
-        let neighbor_fn = |node: NodeId| -> Vec<(NodeId, f64)> {
-            self.get_neighbors_with_weights(graph, node)
-        };
+        let neighbor_fn =
+            |node: NodeId| -> Vec<(NodeId, f64)> { self.get_neighbors_with_weights(graph, node) };
 
-        let result = self.compute_core(
-            computation,
-            node_count,
-            &neighbor_fn,
-            progress_tracker,
-        );
+        let result = self.compute_core(computation, node_count, &neighbor_fn, progress_tracker);
 
         match result {
             Ok(ok) => {

@@ -85,76 +85,76 @@ impl DeltaSteppingStorageRuntime {
                 node_count,
             );
 
-        // Initialize frontier with source node
-        let mut frontier = VecDeque::new();
-        frontier.push_back(self.source_node);
+            // Initialize frontier with source node
+            let mut frontier = VecDeque::new();
+            frontier.push_back(self.source_node);
 
-        // Initialize distances
-        computation.set_distance(self.source_node, 0.0);
-        if self.store_predecessors {
-            computation.set_predecessor(self.source_node, None);
-        }
+            // Initialize distances
+            computation.set_distance(self.source_node, 0.0);
+            if self.store_predecessors {
+                computation.set_predecessor(self.source_node, None);
+            }
 
-        // Main Delta Stepping loop
-        let mut current_bin = 0;
-        let max_iterations = node_count; // Safety limit
-        let mut iteration = 0;
+            // Main Delta Stepping loop
+            let mut current_bin = 0;
+            let max_iterations = node_count; // Safety limit
+            let mut iteration = 0;
 
             while !frontier.is_empty() && iteration < max_iterations {
-            // Phase 1: Relax nodes in current bin
-            let mut next_frontier = VecDeque::new();
+                // Phase 1: Relax nodes in current bin
+                let mut next_frontier = VecDeque::new();
 
                 while let Some(node_id) = frontier.pop_front() {
-                // Check if node is in current bin
-                let node_distance = computation.distance(node_id);
-                if node_distance >= self.delta * current_bin as f64 {
-                    // Relax all outgoing edges from this node
-                    let neighbors = self.get_neighbors_with_weights(graph, node_id, direction);
+                    // Check if node is in current bin
+                    let node_distance = computation.distance(node_id);
+                    if node_distance >= self.delta * current_bin as f64 {
+                        // Relax all outgoing edges from this node
+                        let neighbors = self.get_neighbors_with_weights(graph, node_id, direction);
 
-                    scanned_relationships =
-                        scanned_relationships.saturating_add(neighbors.len());
-                    if scanned_relationships >= LOG_BATCH {
-                        progress_tracker.log_progress(scanned_relationships);
-                        scanned_relationships = 0;
-                    }
+                        scanned_relationships =
+                            scanned_relationships.saturating_add(neighbors.len());
+                        if scanned_relationships >= LOG_BATCH {
+                            progress_tracker.log_progress(scanned_relationships);
+                            scanned_relationships = 0;
+                        }
 
-                    for (neighbor, weight) in neighbors {
-                        let current_distance = computation.distance(node_id);
-                        let new_distance = current_distance + weight;
+                        for (neighbor, weight) in neighbors {
+                            let current_distance = computation.distance(node_id);
+                            let new_distance = current_distance + weight;
 
-                        if new_distance < computation.distance(neighbor) {
-                            computation.set_distance(neighbor, new_distance);
-                            if self.store_predecessors {
-                                computation.set_predecessor(neighbor, Some(node_id));
-                            }
+                            if new_distance < computation.distance(neighbor) {
+                                computation.set_distance(neighbor, new_distance);
+                                if self.store_predecessors {
+                                    computation.set_predecessor(neighbor, Some(node_id));
+                                }
 
-                            // Determine which bin this node belongs to
-                            let dest_bin = (new_distance / self.delta) as usize;
-                            if dest_bin == current_bin {
-                                next_frontier.push_back(neighbor);
-                            } else {
-                                // Add to appropriate bin for future processing
-                                computation.add_to_bin(neighbor, dest_bin);
+                                // Determine which bin this node belongs to
+                                let dest_bin = (new_distance / self.delta) as usize;
+                                if dest_bin == current_bin {
+                                    next_frontier.push_back(neighbor);
+                                } else {
+                                    // Add to appropriate bin for future processing
+                                    computation.add_to_bin(neighbor, dest_bin);
+                                }
                             }
                         }
                     }
                 }
+
+                // Phase 2: Sync and find next bin
+                frontier = next_frontier;
+
+                // Find the next non-empty bin
+                current_bin = computation.find_next_non_empty_bin(current_bin);
+                if current_bin == usize::MAX {
+                    break; // No more bins to process
                 }
 
-            // Phase 2: Sync and find next bin
-            frontier = next_frontier;
-
-            // Find the next non-empty bin
-            current_bin = computation.find_next_non_empty_bin(current_bin);
-            if current_bin == usize::MAX {
-                break; // No more bins to process
-            }
-
-            // Move nodes from next bin to frontier
-            let bin_nodes = computation.get_bin_nodes(current_bin);
-            for node_id in bin_nodes {
-                frontier.push_back(node_id);
-            }
+                // Move nodes from next bin to frontier
+                let bin_nodes = computation.get_bin_nodes(current_bin);
+                for node_id in bin_nodes {
+                    frontier.push_back(node_id);
+                }
 
                 iteration += 1;
             }
@@ -303,10 +303,12 @@ mod tests {
     fn test_delta_stepping_path_computation() {
         let mut storage = DeltaSteppingStorageRuntime::new(0, 1.0, 4, true);
         let mut computation = DeltaSteppingComputationRuntime::new(0, 1.0, 4, true);
-        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("delta_stepping".to_string()));
+        let mut progress_tracker =
+            TaskProgressTracker::new(Tasks::leaf("delta_stepping".to_string()));
 
         // Test basic path computation
-        let result = storage.compute_delta_stepping(&mut computation, None, 0, &mut progress_tracker);
+        let result =
+            storage.compute_delta_stepping(&mut computation, None, 0, &mut progress_tracker);
         assert!(result.is_ok());
 
         let _ = result.unwrap();
@@ -316,10 +318,12 @@ mod tests {
     fn test_delta_stepping_path_same_source_target() {
         let mut storage = DeltaSteppingStorageRuntime::new(0, 1.0, 4, true);
         let mut computation = DeltaSteppingComputationRuntime::new(0, 1.0, 4, true);
-        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("delta_stepping".to_string()));
+        let mut progress_tracker =
+            TaskProgressTracker::new(Tasks::leaf("delta_stepping".to_string()));
 
         // Test with same source and target
-        let result = storage.compute_delta_stepping(&mut computation, None, 0, &mut progress_tracker);
+        let result =
+            storage.compute_delta_stepping(&mut computation, None, 0, &mut progress_tracker);
         assert!(result.is_ok());
 
         let _ = result.unwrap();

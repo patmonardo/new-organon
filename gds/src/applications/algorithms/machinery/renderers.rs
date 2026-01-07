@@ -51,8 +51,7 @@ where
 }
 
 /// Java-parity renderer model for MUTATE mode.
-pub struct MutateResultRenderer<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata, B>
-{
+pub struct MutateResultRenderer<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata, B> {
     pub configuration: Configuration,
     pub result_builder: B,
     pub _phantom: std::marker::PhantomData<(ResultFromAlgorithm, ResultToCaller, Metadata)>,
@@ -83,8 +82,13 @@ where
         timings: AlgorithmProcessingTimings,
         metadata: Option<Metadata>,
     ) -> ResultToCaller {
-        self.result_builder
-            .build(graph_resources, &self.configuration, result, timings, metadata)
+        self.result_builder.build(
+            graph_resources,
+            &self.configuration,
+            result,
+            timings,
+            metadata,
+        )
     }
 }
 
@@ -92,8 +96,7 @@ where
 ///
 /// For now this is intentionally a thin shell; we will flesh out database-specific
 /// semantics later, but the control-flow shape is correct.
-pub struct WriteResultRenderer<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata, B>
-{
+pub struct WriteResultRenderer<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata, B> {
     pub configuration: Configuration,
     pub result_builder: B,
     pub _phantom: std::marker::PhantomData<(ResultFromAlgorithm, ResultToCaller, Metadata)>,
@@ -124,7 +127,12 @@ where
         timings: AlgorithmProcessingTimings,
         metadata: Option<Metadata>,
     ) -> ResultToCaller {
-        self.result_builder
-            .build(graph_resources, &self.configuration, result, timings, metadata)
+        self.result_builder.build(
+            graph_resources,
+            &self.configuration,
+            result,
+            timings,
+            metadata,
+        )
     }
 }

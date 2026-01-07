@@ -9,12 +9,14 @@ use crate::types::graph_store::DefaultGraphStore;
 pub struct ExportToDatabaseApplication;
 
 impl ExportToDatabaseApplication {
-	pub fn compute(
-		&self,
-		_graph_store: &DefaultGraphStore,
-		_target_database: &str,
-	) -> Result<ExportResult, String> {
-		Err("export_to_database is not supported yet (no database integration in Rust pass-1)"
-			.to_string())
-	}
+    pub fn compute(
+        &self,
+        _graph_store: &DefaultGraphStore,
+        _target_database: &str,
+    ) -> Result<ExportResult, String> {
+        Err(
+            "export_to_database is not supported yet (no database integration in Rust pass-1)"
+                .to_string(),
+        )
+    }
 }

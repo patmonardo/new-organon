@@ -1,6 +1,5 @@
 use crate::algo::steiner_tree::{
-    SteinerTreeComputationRuntime, SteinerTreeConfig, SteinerTreeStorageRuntime,
-    PRUNED, ROOT_NODE,
+    SteinerTreeComputationRuntime, SteinerTreeConfig, SteinerTreeStorageRuntime, PRUNED, ROOT_NODE,
 };
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::types::graph::id_map::NodeId;
@@ -39,7 +38,12 @@ fn test_steiner_tree_simple_path() {
     let mut computation = SteinerTreeComputationRuntime::new(1.0, 4);
     let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
     let result = storage
-        .compute_steiner_tree_with_neighbors(&mut computation, 4, &get_neighbors, &mut progress_tracker)
+        .compute_steiner_tree_with_neighbors(
+            &mut computation,
+            4,
+            &get_neighbors,
+            &mut progress_tracker,
+        )
         .unwrap();
 
     // Check path: 0 is root, 1->0, 2->1, 3->2
@@ -86,7 +90,12 @@ fn test_steiner_tree_multiple_terminals() {
     let mut computation = SteinerTreeComputationRuntime::new(1.0, 5);
     let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
     let result = storage
-        .compute_steiner_tree_with_neighbors(&mut computation, 5, &get_neighbors, &mut progress_tracker)
+        .compute_steiner_tree_with_neighbors(
+            &mut computation,
+            5,
+            &get_neighbors,
+            &mut progress_tracker,
+        )
         .unwrap();
 
     // All nodes should be in tree
@@ -134,7 +143,12 @@ fn test_steiner_tree_with_pruning() {
     let mut computation = SteinerTreeComputationRuntime::new(1.0, 5);
     let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
     let result = storage
-        .compute_steiner_tree_with_neighbors(&mut computation, 5, &get_neighbors, &mut progress_tracker)
+        .compute_steiner_tree_with_neighbors(
+            &mut computation,
+            5,
+            &get_neighbors,
+            &mut progress_tracker,
+        )
         .unwrap();
 
     // Check tree structure
@@ -181,7 +195,12 @@ fn test_steiner_tree_weighted_edges() {
     let mut computation = SteinerTreeComputationRuntime::new(1.0, 4);
     let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
     let result = storage
-        .compute_steiner_tree_with_neighbors(&mut computation, 4, &get_neighbors, &mut progress_tracker)
+        .compute_steiner_tree_with_neighbors(
+            &mut computation,
+            4,
+            &get_neighbors,
+            &mut progress_tracker,
+        )
         .unwrap();
 
     // Should take cheaper path through node 2
@@ -223,7 +242,12 @@ fn test_steiner_tree_pruning_is_always_applied() {
     let mut computation = SteinerTreeComputationRuntime::new(1.0, 5);
     let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
     let result = storage
-        .compute_steiner_tree_with_neighbors(&mut computation, 5, &get_neighbors, &mut progress_tracker)
+        .compute_steiner_tree_with_neighbors(
+            &mut computation,
+            5,
+            &get_neighbors,
+            &mut progress_tracker,
+        )
         .unwrap();
 
     // Node 3 should be pruned (not on any terminal path)
@@ -265,7 +289,12 @@ fn test_steiner_tree_unreachable_terminal() {
     let mut computation = SteinerTreeComputationRuntime::new(1.0, 3);
     let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("steiner_tree".to_string()));
     let result = storage
-        .compute_steiner_tree_with_neighbors(&mut computation, 3, &get_neighbors, &mut progress_tracker)
+        .compute_steiner_tree_with_neighbors(
+            &mut computation,
+            3,
+            &get_neighbors,
+            &mut progress_tracker,
+        )
         .unwrap();
 
     // Node 1 reachable, node 2 not

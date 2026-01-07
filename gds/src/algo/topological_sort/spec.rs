@@ -2,8 +2,8 @@
 //!
 //! **Translation Source**: `org.neo4j.gds.dag.topologicalsort.TopologicalSortBaseConfig`
 
-use serde::{Deserialize, Serialize};
 use crate::types::graph::id_map::NodeId;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TopologicalSortConfig {

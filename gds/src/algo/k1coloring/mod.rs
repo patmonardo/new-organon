@@ -13,7 +13,7 @@ pub mod storage;
 
 // Re-export main types
 pub use computation::K1ColoringComputationRuntime;
-pub use spec::{K1ColoringConfig, K1ColoringResult, K1COLORINGAlgorithmSpec};
+pub use spec::{K1COLORINGAlgorithmSpec, K1ColoringConfig, K1ColoringResult};
 pub use storage::K1ColoringStorageRuntime;
 
 pub type K1ColoringAlgorithmSpec = K1COLORINGAlgorithmSpec;

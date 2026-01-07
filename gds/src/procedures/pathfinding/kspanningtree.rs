@@ -3,15 +3,15 @@
 //! Computes k spanning trees by first computing an MST using Prim's algorithm,
 //! then progressively pruning to maintain exactly k nodes.
 
-use crate::algo::kspanningtree::storage::KSpanningTreeStorageRuntime;
-use crate::procedures::traits::Result;
 use crate::algo::kspanningtree::computation::KSpanningTreeComputationRuntime;
+use crate::algo::kspanningtree::storage::KSpanningTreeStorageRuntime;
+use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
-use crate::projection::orientation::Orientation;
 use crate::procedures::builder_base::ConfigValidator;
+use crate::procedures::traits::Result;
+use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use crate::core::utils::progress::Tasks;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
@@ -132,11 +132,8 @@ impl KSpanningTreeBuilder {
         );
 
         // Create storage runtime (Gross pole - controller)
-        let storage = KSpanningTreeStorageRuntime::new(
-            source as i64,
-            self.k,
-            self.objective.clone(),
-        );
+        let storage =
+            KSpanningTreeStorageRuntime::new(source as i64, self.k, self.objective.clone());
 
         // Create computation runtime (Subtle pole - state management)
         let mut computation = KSpanningTreeComputationRuntime::new(node_count);

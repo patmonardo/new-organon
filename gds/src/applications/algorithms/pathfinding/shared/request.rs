@@ -39,7 +39,10 @@ impl CommonRequest {
             .ok_or_else(|| "Missing 'graphName' parameter".to_string())?
             .to_string();
 
-        let mode_str = request.get("mode").and_then(|v| v.as_str()).unwrap_or("stream");
+        let mode_str = request
+            .get("mode")
+            .and_then(|v| v.as_str())
+            .unwrap_or("stream");
         let mode = Mode::parse(mode_str).ok_or_else(|| format!("Invalid mode '{mode_str}'"))?;
 
         let concurrency_raw = request
@@ -72,7 +75,10 @@ pub fn get_bool(request: &Value, key: &str) -> Option<bool> {
 }
 
 pub fn get_usize(request: &Value, key: &str) -> Option<usize> {
-    request.get(key).and_then(|v| v.as_u64()).map(|n| n as usize)
+    request
+        .get(key)
+        .and_then(|v| v.as_u64())
+        .map(|n| n as usize)
 }
 
 pub fn get_str<'a>(request: &'a Value, key: &str) -> Option<&'a str> {

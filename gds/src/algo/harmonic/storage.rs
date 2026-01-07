@@ -76,7 +76,8 @@ impl<'a, G: GraphStore> HarmonicStorageRuntime<'a, G> {
         debug_assert_eq!(node_count, computation.node_count());
 
         let executor = Executor::new(Concurrency::of(concurrency.max(1)));
-        let msbfs_state = WorkerContext::new(move || AggregatedNeighborProcessingMsBfs::new(node_count));
+        let msbfs_state =
+            WorkerContext::new(move || AggregatedNeighborProcessingMsBfs::new(node_count));
         let neighbors = |n: usize| self.neighbors(n);
 
         let batch_count = (node_count + OMEGA - 1) / OMEGA;

@@ -1,3 +1,4 @@
+use crate::algo::similarity::knn::KnnResultRow;
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
@@ -8,7 +9,6 @@ use crate::concurrency::TerminationFlag;
 use crate::core::loading::GraphResources;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
 use crate::procedures::similarity::knn::KnnBuilder;
-use crate::algo::similarity::knn::KnnResultRow;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -45,17 +45,17 @@ pub fn run(op: &str, request: &KnnRequest, graph_resources: &GraphResources) -> 
         Ok(Some(iter.collect()))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       rows: Option<Vec<KnnResultRow>>,
-                                       timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stream",
-            "data": rows.unwrap_or_default(),
-            "timings": timings_json(timings)
-        })
-    });
+    let builder = FnStatsResultBuilder(
+        |_gr: &GraphResources, rows: Option<Vec<KnnResultRow>>, timings| {
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stream",
+                "data": rows.unwrap_or_default(),
+                "timings": timings_json(timings)
+            })
+        },
+    );
 
     match convenience.process_stats(
         graph_resources,

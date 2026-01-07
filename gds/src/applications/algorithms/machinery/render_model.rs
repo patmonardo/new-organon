@@ -28,7 +28,9 @@ pub struct StatsRenderModel<ResultFromAlgorithm, ResultToCaller, B>(
     pub std::marker::PhantomData<(ResultFromAlgorithm, ResultToCaller)>,
 );
 
-impl<ResultFromAlgorithm, ResultToCaller, B> StatsRenderModel<ResultFromAlgorithm, ResultToCaller, B> {
+impl<ResultFromAlgorithm, ResultToCaller, B>
+    StatsRenderModel<ResultFromAlgorithm, ResultToCaller, B>
+{
     pub fn new(builder: B) -> Self {
         Self(StatsResultRenderer(builder), std::marker::PhantomData)
     }
@@ -84,15 +86,9 @@ where
     }
 }
 
-pub struct MutateRenderModel<
-    Configuration,
-    ResultFromAlgorithm,
-    ResultToCaller,
-    Metadata,
-    B,
-    S,
-> {
-    pub renderer: MutateResultRenderer<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata, B>,
+pub struct MutateRenderModel<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata, B, S> {
+    pub renderer:
+        MutateResultRenderer<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata, B>,
     pub side_effect: Option<S>,
 }
 
@@ -114,11 +110,7 @@ impl<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata, B, S>
 where
     B: MutateResultBuilder<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata>,
 {
-    pub fn with_side_effect(
-        configuration: Configuration,
-        builder: B,
-        side_effect: S,
-    ) -> Self {
+    pub fn with_side_effect(configuration: Configuration, builder: B, side_effect: S) -> Self {
         Self {
             renderer: MutateResultRenderer::new(configuration, builder),
             side_effect: Some(side_effect),
@@ -147,15 +139,9 @@ where
     }
 }
 
-pub struct WriteRenderModel<
-    Configuration,
-    ResultFromAlgorithm,
-    ResultToCaller,
-    Metadata,
-    B,
-    S,
-> {
-    pub renderer: WriteResultRenderer<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata, B>,
+pub struct WriteRenderModel<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata, B, S> {
+    pub renderer:
+        WriteResultRenderer<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata, B>,
     pub side_effect: Option<S>,
 }
 
@@ -177,11 +163,7 @@ impl<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata, B, S>
 where
     B: WriteResultBuilder<Configuration, ResultFromAlgorithm, ResultToCaller, Metadata>,
 {
-    pub fn with_side_effect(
-        configuration: Configuration,
-        builder: B,
-        side_effect: S,
-    ) -> Self {
+    pub fn with_side_effect(configuration: Configuration, builder: B, side_effect: S) -> Self {
         Self {
             renderer: WriteResultRenderer::new(configuration, builder),
             side_effect: Some(side_effect),
@@ -212,8 +194,4 @@ where
 
 // Keep the import of GraphResources/Timings referenced in this module (also makes the signatures obvious).
 #[allow(dead_code)]
-fn _type_anchor(
-    _gr: &GraphResources,
-    _timings: AlgorithmProcessingTimings,
-) {
-}
+fn _type_anchor(_gr: &GraphResources, _timings: AlgorithmProcessingTimings) {}

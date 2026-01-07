@@ -1,10 +1,10 @@
+use crate::applications::graph_store_catalog::configs::MutateLabelConfig;
 use crate::applications::graph_store_catalog::results::{
     GraphFilterResult, GraphGenerationStats, GraphMemoryUsage, GraphStoreExportResult,
     GraphStreamGraphPropertiesResult, GraphStreamNodePropertiesResult,
     GraphStreamRelationshipPropertiesResult, MemoryEstimateResult, MutateLabelResult,
     RandomWalkSamplingResult, TopologyResult,
 };
-use crate::applications::graph_store_catalog::configs::MutateLabelConfig;
 use crate::core::User;
 use crate::types::graph_store::DatabaseId;
 use crate::types::graph_store::DeletionResult;

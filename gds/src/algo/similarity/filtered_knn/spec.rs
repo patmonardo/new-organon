@@ -1,9 +1,9 @@
 use super::computation::{FilteredKnnComputationResult, FilteredKnnComputationRuntime};
 use super::storage::FilteredKnnStorageRuntime;
-use crate::define_algorithm_spec;
 use crate::algo::similarity::knn::metrics::{KnnNodePropertySpec, SimilarityMetric};
 use crate::algo::similarity::knn::storage::KnnSamplerType;
 use crate::core::utils::progress::Tasks;
+use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::NodeLabel;
 use serde::{Deserialize, Serialize};

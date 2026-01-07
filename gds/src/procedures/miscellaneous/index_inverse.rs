@@ -4,7 +4,7 @@
 //! storage runtime and returns a new graph store.
 
 use crate::algo::index_inverse::{
-	IndexInverseComputationRuntime, IndexInverseConfig, IndexInverseStorageRuntime,
+    IndexInverseComputationRuntime, IndexInverseConfig, IndexInverseStorageRuntime,
 };
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
@@ -13,60 +13,59 @@ use crate::types::prelude::DefaultGraphStore;
 use std::sync::Arc;
 
 pub struct IndexInverseFacade {
-	graph_store: Arc<DefaultGraphStore>,
-	mutate_graph_name: String,
-	concurrency: usize,
-	relationship_types: Vec<String>,
+    graph_store: Arc<DefaultGraphStore>,
+    mutate_graph_name: String,
+    concurrency: usize,
+    relationship_types: Vec<String>,
 }
 
 impl IndexInverseFacade {
-	pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
-		Self {
-			graph_store,
-			mutate_graph_name: "index_inverse".to_string(),
-			concurrency: 4,
-			relationship_types: vec!["*".to_string()],
-		}
-	}
+    pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
+        Self {
+            graph_store,
+            mutate_graph_name: "index_inverse".to_string(),
+            concurrency: 4,
+            relationship_types: vec!["*".to_string()],
+        }
+    }
 
-	pub fn mutate_graph_name(mut self, name: impl Into<String>) -> Self {
-		self.mutate_graph_name = name.into();
-		self
-	}
+    pub fn mutate_graph_name(mut self, name: impl Into<String>) -> Self {
+        self.mutate_graph_name = name.into();
+        self
+    }
 
-	pub fn concurrency(mut self, concurrency: usize) -> Self {
-		self.concurrency = concurrency;
-		self
-	}
+    pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.concurrency = concurrency;
+        self
+    }
 
-	pub fn relationship_types<I, S>(mut self, types: I) -> Self
-	where
-		I: IntoIterator<Item = S>,
-		S: Into<String>,
-	{
-		self.relationship_types = types.into_iter().map(|t| t.into()).collect();
-		self
-	}
+    pub fn relationship_types<I, S>(mut self, types: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<String>,
+    {
+        self.relationship_types = types.into_iter().map(|t| t.into()).collect();
+        self
+    }
 
-	pub fn to_store(&self, graph_name: &str) -> Result<DefaultGraphStore> {
-		let mut computation = IndexInverseComputationRuntime::new();
-		let storage = IndexInverseStorageRuntime::new(self.concurrency);
+    pub fn to_store(&self, graph_name: &str) -> Result<DefaultGraphStore> {
+        let mut computation = IndexInverseComputationRuntime::new();
+        let storage = IndexInverseStorageRuntime::new(self.concurrency);
 
-		let config = IndexInverseConfig {
-			relationship_types: self.relationship_types.clone(),
-			concurrency: self.concurrency,
-			mutate_graph_name: graph_name.to_string(),
-		};
+        let config = IndexInverseConfig {
+            relationship_types: self.relationship_types.clone(),
+            concurrency: self.concurrency,
+            mutate_graph_name: graph_name.to_string(),
+        };
 
-		let result = storage
-			.compute(self.graph_store.as_ref(), &config, &mut computation)
-			.map_err(|e| AlgorithmError::Execution(e))?;
+        let result = storage
+            .compute(self.graph_store.as_ref(), &config, &mut computation)
+            .map_err(|e| AlgorithmError::Execution(e))?;
 
-		Ok(result.graph_store)
-	}
+        Ok(result.graph_store)
+    }
 
-	pub fn graph_name(&self) -> GraphName {
-		GraphName::new(&self.mutate_graph_name)
-	}
+    pub fn graph_name(&self) -> GraphName {
+        GraphName::new(&self.mutate_graph_name)
+    }
 }
-

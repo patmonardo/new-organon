@@ -1,6 +1,4 @@
-use crate::applications::algorithms::pathfinding::shared::{
-    get_str, get_u64, CommonRequest,
-};
+use crate::applications::algorithms::pathfinding::shared::{get_str, get_u64, CommonRequest};
 use crate::procedures::pathfinding::Heuristic;
 use serde_json::Value;
 

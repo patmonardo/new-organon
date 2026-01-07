@@ -1,9 +1,9 @@
 //! Java: `GraphSageModelResolver`.
 
-use crate::core::model::{Model, ModelCatalog};
 use crate::algo::embeddings::graphsage::algo::graph_sage_model_data::GraphSageModelData;
 use crate::algo::embeddings::graphsage::graphsage_model_trainer::GraphSageTrainMetrics;
 use crate::algo::embeddings::graphsage::types::GraphSageTrainConfig;
+use crate::core::model::{Model, ModelCatalog};
 use anyhow::Result;
 use std::sync::Arc;
 

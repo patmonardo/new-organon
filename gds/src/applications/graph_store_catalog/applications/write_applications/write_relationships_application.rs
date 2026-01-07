@@ -10,37 +10,37 @@ use crate::types::graph_store::GraphStore as _;
 /// Rust pass-1: compute *what would be written* from the current GraphStore.
 #[derive(Clone, Debug)]
 pub struct WriteRelationshipsApplication {
-	#[allow(dead_code)]
-	log: Log,
+    #[allow(dead_code)]
+    log: Log,
 }
 
 impl WriteRelationshipsApplication {
-	pub fn new(log: Log) -> Self {
-		Self { log }
-	}
+    pub fn new(log: Log) -> Self {
+        Self { log }
+    }
 
-	pub fn compute(
-		&self,
-		graph_store: &DefaultGraphStore,
-		relationship_type: &str,
-	) -> Result<WriteResult, String> {
-		let t = relationship_type.trim();
-		if t.is_empty() {
-			return Err("relationship_type must not be empty".to_string());
-		}
+    pub fn compute(
+        &self,
+        graph_store: &DefaultGraphStore,
+        relationship_type: &str,
+    ) -> Result<WriteResult, String> {
+        let t = relationship_type.trim();
+        if t.is_empty() {
+            return Err("relationship_type must not be empty".to_string());
+        }
 
-		let rel_type = RelationshipType::of(t);
-		if !graph_store.has_relationship_type(&rel_type) {
-			return Err(format!("Unknown relationship type '{t}'"));
-		}
+        let rel_type = RelationshipType::of(t);
+        if !graph_store.has_relationship_type(&rel_type) {
+            return Err(format!("Unknown relationship type '{t}'"));
+        }
 
-		let relationships_written = graph_store.relationship_count_for_type(&rel_type) as u64;
-		Ok(WriteResult::new(0, relationships_written, 0))
-	}
+        let relationships_written = graph_store.relationship_count_for_type(&rel_type) as u64;
+        Ok(WriteResult::new(0, relationships_written, 0))
+    }
 }
 
 impl Default for WriteRelationshipsApplication {
-	fn default() -> Self {
-		Self::new(Log::default())
-	}
+    fn default() -> Self {
+        Self::new(Log::default())
+    }
 }

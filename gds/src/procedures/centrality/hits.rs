@@ -1,15 +1,10 @@
 //! HITS Facade - Bidirectional Pregel implementation
 
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
-};
+use crate::algo::hits::{computation::HitsComputationRuntime, HitsStorageRuntime};
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
-use crate::algo::hits::{
-    computation::HitsComputationRuntime,
-    HitsStorageRuntime,
-};
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
 use std::time::Instant;

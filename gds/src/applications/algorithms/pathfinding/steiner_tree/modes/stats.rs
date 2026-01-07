@@ -1,6 +1,6 @@
 use crate::applications::algorithms::machinery::{
-    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate, FnStatsResultBuilder,
-    ProgressTrackerCreator, RequestScopedDependencies,
+    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
+    FnStatsResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::applications::algorithms::pathfinding::shared::{err, timings_json};
 use crate::applications::algorithms::pathfinding::steiner_tree::request::SteinerTreeRequest;
@@ -43,17 +43,17 @@ pub fn run(op: &str, request: &SteinerTreeRequest, graph_resources: &GraphResour
         Ok(Some(stats))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       stats: Option<SteinerTreeStats>,
-                                       timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stats",
-            "data": stats,
-            "timings": timings_json(timings)
-        })
-    });
+    let builder = FnStatsResultBuilder(
+        |_gr: &GraphResources, stats: Option<SteinerTreeStats>, timings| {
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stats",
+                "data": stats,
+                "timings": timings_json(timings)
+            })
+        },
+    );
 
     match convenience.process_stats(
         graph_resources,
@@ -63,6 +63,10 @@ pub fn run(op: &str, request: &SteinerTreeRequest, graph_resources: &GraphResour
         builder,
     ) {
         Ok(v) => v,
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("SteinerTree stats failed: {e}")),
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("SteinerTree stats failed: {e}"),
+        ),
     }
 }

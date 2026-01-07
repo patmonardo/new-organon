@@ -33,11 +33,11 @@
 //! # Ok::<(), gds::projection::eval::procedure::AlgorithmError>(())
 //! ```
 
-use crate::prints::{PrintEnvelope, PrintKind, PrintProvenance};
 use crate::algo::embeddings::node2vec::{
     EmbeddingInitializerConfig, Node2VecComputationRuntime, Node2VecConfig, Node2VecResult,
     Node2VecStorageRuntime,
 };
+use crate::prints::{PrintEnvelope, PrintKind, PrintProvenance};
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;

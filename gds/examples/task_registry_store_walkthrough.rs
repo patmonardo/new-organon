@@ -11,8 +11,8 @@
 
 use gds::concurrency::Concurrency;
 use gds::core::utils::progress::{
-    JobId, ProgressTracker, TaskRegistryFactories, TaskStore, TaskStoreListener,
-    TaskStoreService, TaskProgressTracker, Tasks, UserTask,
+    JobId, ProgressTracker, TaskProgressTracker, TaskRegistryFactories, TaskStore,
+    TaskStoreListener, TaskStoreService, Tasks, UserTask,
 };
 use std::sync::{Arc, Mutex};
 
@@ -89,7 +89,10 @@ fn main() {
     store_db1.add_listener(Box::new(PrintingListener::new("db1")));
     store_db2.add_listener(Box::new(PrintingListener::new("db2")));
 
-    println!("[SERVICE] enabled databases={:?}", service_enabled.database_names());
+    println!(
+        "[SERVICE] enabled databases={:?}",
+        service_enabled.database_names()
+    );
     describe_store(&store_db1, db1);
     describe_store(&store_db2, db2);
 
@@ -111,14 +114,18 @@ fn main() {
     // Task registration happens on the first `begin_subtask()`.
     println!(
         "[QUERY] before begin: {:?}",
-        store_db1.query(&username, &job_id).map(|ut| ut.task.description().to_string())
+        store_db1
+            .query(&username, &job_id)
+            .map(|ut| ut.task.description().to_string())
     );
 
     tracker.begin_subtask_with_description("Registry demo task");
 
     println!(
         "[QUERY] after begin: {:?}",
-        store_db1.query(&username, &job_id).map(|ut| ut.task.description().to_string())
+        store_db1
+            .query(&username, &job_id)
+            .map(|ut| ut.task.description().to_string())
     );
 
     tracker.log_progress(1);
@@ -128,7 +135,9 @@ fn main() {
 
     println!(
         "[QUERY] after end: {:?}",
-        store_db1.query(&username, &job_id).map(|ut| ut.task.description().to_string())
+        store_db1
+            .query(&username, &job_id)
+            .map(|ut| ut.task.description().to_string())
     );
 
     // Per-db isolation: db2 should still have nothing.

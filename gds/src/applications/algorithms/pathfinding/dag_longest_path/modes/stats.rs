@@ -19,32 +19,37 @@ pub fn run(op: &str, request: &DagLongestPathRequest, graph_resources: &GraphRes
     let template = DefaultAlgorithmProcessingTemplate::new(creator);
     let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
-    let task = Tasks::leaf("DagLongestPath::stats".to_string()).base().clone();
+    let task = Tasks::leaf("DagLongestPath::stats".to_string())
+        .base()
+        .clone();
 
-    let compute = |gr: &GraphResources,
-                   _tracker: &mut dyn ProgressTracker,
-                   _termination: &TerminationFlag|
-     -> Result<Option<crate::procedures::pathfinding::DagLongestPathStats>, String> {
-        let stats = gr
-            .facade()
-            .dag_longest_path()
-            .concurrency(request.common.concurrency.value())
-            .stats()
-            .map_err(|e| e.to_string())?;
-        Ok(Some(stats))
-    };
+    let compute =
+        |gr: &GraphResources,
+         _tracker: &mut dyn ProgressTracker,
+         _termination: &TerminationFlag|
+         -> Result<Option<crate::procedures::pathfinding::DagLongestPathStats>, String> {
+            let stats = gr
+                .facade()
+                .dag_longest_path()
+                .concurrency(request.common.concurrency.value())
+                .stats()
+                .map_err(|e| e.to_string())?;
+            Ok(Some(stats))
+        };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       stats: Option<crate::procedures::pathfinding::DagLongestPathStats>,
-                                       timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stats",
-            "data": stats,
-            "timings": timings_json(timings)
-        })
-    });
+    let builder = FnStatsResultBuilder(
+        |_gr: &GraphResources,
+         stats: Option<crate::procedures::pathfinding::DagLongestPathStats>,
+         timings| {
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stats",
+                "data": stats,
+                "timings": timings_json(timings)
+            })
+        },
+    );
 
     match convenience.process_stats(
         graph_resources,
@@ -54,6 +59,10 @@ pub fn run(op: &str, request: &DagLongestPathRequest, graph_resources: &GraphRes
         builder,
     ) {
         Ok(v) => v,
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("DagLongestPath stats failed: {e}")),
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("DagLongestPath stats failed: {e}"),
+        ),
     }
 }

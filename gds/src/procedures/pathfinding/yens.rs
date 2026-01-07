@@ -4,13 +4,13 @@
 //!
 //! This facade runs the translated Yen's runtime against a live `DefaultGraphStore`.
 
-use crate::core::utils::progress::Tasks;
-use crate::mem::MemoryRange;
 use crate::algo::common::prelude::{PathFindingResult, PathResultBuilder};
 use crate::algo::common::result_builders::ResultBuilder;
+use crate::algo::yens::{YensComputationRuntime, YensStorageRuntime};
+use crate::core::utils::progress::Tasks;
+use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{PathResult, Result};
-use crate::algo::yens::{YensComputationRuntime, YensStorageRuntime};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -218,10 +218,11 @@ impl YensBuilder {
             self.concurrency,
         );
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("yens".to_string(), self.k),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("yens".to_string(), self.k),
+                self.concurrency,
+            );
 
         let start = std::time::Instant::now();
         let result = storage.compute_yens(

@@ -65,7 +65,11 @@ impl KSpanningTreeStorageRuntime {
 
         // Step 2: Initialize computation runtime with MST data
         computation.initialize_from_mst(
-            &mst_result.parent.iter().map(|&x| x as i64).collect::<Vec<_>>(),
+            &mst_result
+                .parent
+                .iter()
+                .map(|&x| x as i64)
+                .collect::<Vec<_>>(),
             &mst_result.cost_to_parent,
             mst_result.total_weight,
             self.source_node as usize,
@@ -84,11 +88,9 @@ impl KSpanningTreeStorageRuntime {
         }
 
         // Step 4: Apply k-limiting logic
-        computation.apply_k_limiting(
-            self.k as usize,
-            is_min,
-            |node_id| self.get_neighbors_from_graph(graph, node_id),
-        );
+        computation.apply_k_limiting(self.k as usize, is_min, |node_id| {
+            self.get_neighbors_from_graph(graph, node_id)
+        });
 
         Ok(KSpanningTreeResult {
             parent: computation.get_parent().iter().map(|&x| x as i64).collect(),
@@ -106,7 +108,9 @@ impl KSpanningTreeStorageRuntime {
         is_min: bool,
         progress_tracker: &mut dyn ProgressTracker,
     ) -> Result<super::super::spanning_tree::SpanningTree, AlgorithmError> {
-        use crate::algo::spanning_tree::{SpanningTreeStorageRuntime, SpanningTreeComputationRuntime};
+        use crate::algo::spanning_tree::{
+            SpanningTreeComputationRuntime, SpanningTreeStorageRuntime,
+        };
 
         // Create spanning tree runtimes
         let spanning_tree_storage = SpanningTreeStorageRuntime::new(

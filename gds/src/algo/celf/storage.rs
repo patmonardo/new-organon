@@ -5,16 +5,16 @@
 use super::computation::CELFComputationRuntime;
 use crate::collections::BitSet;
 use crate::collections::HugeDoubleArray;
+use crate::concurrency::{TerminatedException, TerminationFlag};
 use crate::core::utils::paged::HugeLongArrayStack;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::{Orientation, RelationshipType};
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use crate::types::prelude::GraphStore;
-use crate::concurrency::{TerminationFlag, TerminatedException};
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 /// Priority queue for node spreads with custom ordering
 /// (higher spread = higher priority; ties broken by smaller node ID)
@@ -201,7 +201,10 @@ impl<'a, G: GraphStore> CELFStorageRuntime<'a, G> {
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
             .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
-        Ok(Self { graph, _marker: PhantomData })
+        Ok(Self {
+            graph,
+            _marker: PhantomData,
+        })
     }
 
     pub fn node_count(&self) -> usize {

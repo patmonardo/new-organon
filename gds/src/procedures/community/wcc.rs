@@ -5,6 +5,7 @@
 //! Parameters (Java GDS aligned):
 //! - `concurrency`: accepted for parity; current runtime is single-threaded.
 
+use crate::algo::wcc::{WccComputationRuntime, WccStorageRuntime};
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory, Tasks,
@@ -12,7 +13,6 @@ use crate::core::utils::progress::{
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::algo::wcc::{WccComputationRuntime, WccStorageRuntime};
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
 use std::time::Instant;
@@ -128,7 +128,8 @@ impl WccFacade {
         let storage = WccStorageRuntime::new(self.concurrency);
         let mut computation = WccComputationRuntime::new().concurrency(self.concurrency);
 
-        let leaf = Tasks::leaf_with_volume("wcc".to_string(), self.graph_store.relationship_count());
+        let leaf =
+            Tasks::leaf_with_volume("wcc".to_string(), self.graph_store.relationship_count());
         let base_task = leaf.base().clone();
         let registry_factory = self.registry_factory();
         let mut progress_tracker = TaskProgressTracker::with_registry(

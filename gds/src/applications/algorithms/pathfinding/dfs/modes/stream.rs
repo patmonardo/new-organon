@@ -27,7 +27,9 @@ pub fn run(op: &str, request: &DfsRequest, graph_resources: &GraphResources) -> 
                    _termination: &TerminationFlag|
      -> Result<Option<Vec<PathResult>>, String> {
         // Use facade instead of direct algo calls
-        let mut builder = gr.facade().dfs()
+        let mut builder = gr
+            .facade()
+            .dfs()
             .source(request.source)
             .track_paths(request.track_paths)
             .concurrency(request.common.concurrency.value());
@@ -40,11 +42,18 @@ pub fn run(op: &str, request: &DfsRequest, graph_resources: &GraphResources) -> 
         Ok(Some(iter.collect()))
     };
 
-    let result_builder = FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<PathResult>>| {
-        rows.unwrap_or_default().into_iter()
-    });
+    let result_builder =
+        FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<PathResult>>| {
+            rows.unwrap_or_default().into_iter()
+        });
 
-    match convenience.process_stream(graph_resources, request.common.concurrency, task, compute, result_builder) {
+    match convenience.process_stream(
+        graph_resources,
+        request.common.concurrency,
+        task,
+        compute,
+        result_builder,
+    ) {
         Ok(stream) => {
             let rows: Vec<PathResult> = stream.collect::<Vec<_>>();
             json!({
@@ -53,7 +62,7 @@ pub fn run(op: &str, request: &DfsRequest, graph_resources: &GraphResources) -> 
                 "mode": "stream",
                 "data": rows
             })
-        },
+        }
         Err(e) => err(op, "EXECUTION_ERROR", &format!("DFS stream failed: {e}")),
     }
 }

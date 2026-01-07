@@ -10,8 +10,7 @@
 //! pattern. Stubs can be added later when needed for Form Pipeline extensibility.
 
 use crate::algo::pagerank::{
-    computation::PageRankComputationRuntime,
-    storage::PageRankStorageRuntime,
+    computation::PageRankComputationRuntime, storage::PageRankStorageRuntime,
 };
 use crate::collections::backends::vec::VecDouble;
 use crate::config::PageRankConfig;
@@ -20,8 +19,8 @@ use crate::projection::eval::pipeline::{
     ExecutableNodePropertyStep, NodePropertyStepContextConfig,
 };
 use crate::projection::NodeLabel;
-use crate::projection::RelationshipType;
 use crate::projection::Orientation;
+use crate::projection::RelationshipType;
 use crate::types::graph_store::GraphStore;
 use crate::types::properties::node::DefaultDoubleNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;

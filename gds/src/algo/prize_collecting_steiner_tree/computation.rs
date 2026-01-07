@@ -49,17 +49,11 @@ impl PCSTreeComputationRuntime {
     }
 
     pub fn is_in_tree(&self, node: NodeId) -> bool {
-        self.in_tree
-            .get(node as usize)
-            .copied()
-            .unwrap_or(false)
+        self.in_tree.get(node as usize).copied().unwrap_or(false)
     }
 
     pub fn prize(&self, node: NodeId) -> f64 {
-        self.prizes
-            .get(node as usize)
-            .copied()
-            .unwrap_or(0.0)
+        self.prizes.get(node as usize).copied().unwrap_or(0.0)
     }
 
     pub fn max_prize_node(&self) -> Option<NodeId> {

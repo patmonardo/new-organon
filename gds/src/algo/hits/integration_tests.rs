@@ -9,10 +9,15 @@ mod tests {
     use crate::algo::hits::HitsStorageRuntime;
     use crate::config::GraphStoreConfig;
     use crate::core::utils::progress::tasks::NoopProgressTracker;
-    use crate::types::graph::RelationshipTopology;
     use crate::types::graph::id_map::SimpleIdMap;
-    use crate::types::graph_store::{Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName, GraphStore};
-    use crate::types::schema::{Direction, GraphSchema, MutableGraphSchema, NodeLabel, RelationshipType};
+    use crate::types::graph::RelationshipTopology;
+    use crate::types::graph_store::{
+        Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
+        GraphStore,
+    };
+    use crate::types::schema::{
+        Direction, GraphSchema, MutableGraphSchema, NodeLabel, RelationshipType,
+    };
 
     #[test]
     fn test_hits_algorithm_spec_contract_basics() {
@@ -49,11 +54,19 @@ mod tests {
         let mut topologies = std::collections::HashMap::new();
         topologies.insert(rel_type, topo);
 
-        let store = DefaultGraphStore::new(cfg, graph_name, db_info, schema, capabilities, id_map, topologies);
+        let store = DefaultGraphStore::new(
+            cfg,
+            graph_name,
+            db_info,
+            schema,
+            capabilities,
+            id_map,
+            topologies,
+        );
         assert_eq!(GraphStore::node_count(&store), 4);
 
-        let storage = HitsStorageRuntime::with_default_projection(&store)
-            .expect("hits storage projection");
+        let storage =
+            HitsStorageRuntime::with_default_projection(&store).expect("hits storage projection");
         let computation = HitsComputationRuntime::new(1e-8);
 
         let mut tracker = NoopProgressTracker;

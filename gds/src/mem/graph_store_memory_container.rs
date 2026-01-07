@@ -272,7 +272,8 @@ mod tests {
 
         assert_eq!(container.graph_store_reserved_memory(), 1000);
 
-        let remove_event = GraphStoreRemovedEvent::new("alice".to_string(), "graph1".to_string(), 1000);
+        let remove_event =
+            GraphStoreRemovedEvent::new("alice".to_string(), "graph1".to_string(), 1000);
         container.remove_graph_event(&remove_event);
 
         assert_eq!(container.graph_store_reserved_memory(), 0);

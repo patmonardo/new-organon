@@ -45,17 +45,17 @@ pub fn run(op: &str, request: &RandomWalkRequest, graph_resources: &GraphResourc
         Ok(Some(stats))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       stats: Option<RandomWalkStats>,
-                                       timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stats",
-            "data": stats,
-            "timings": timings_json(timings)
-        })
-    });
+    let builder = FnStatsResultBuilder(
+        |_gr: &GraphResources, stats: Option<RandomWalkStats>, timings| {
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stats",
+                "data": stats,
+                "timings": timings_json(timings)
+            })
+        },
+    );
 
     match convenience.process_stats(
         graph_resources,
@@ -65,6 +65,10 @@ pub fn run(op: &str, request: &RandomWalkRequest, graph_resources: &GraphResourc
         builder,
     ) {
         Ok(v) => v,
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("RandomWalk stats failed: {e}")),
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("RandomWalk stats failed: {e}"),
+        ),
     }
 }

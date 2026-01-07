@@ -79,7 +79,8 @@ pub trait MemoryGuard {
         estimation_factory: impl FnOnce(
             &GraphResources,
             &CONFIGURATION,
-        ) -> Result<MemoryTreeWithDimensions, MemoryEstimationError>,
+        )
+            -> Result<MemoryTreeWithDimensions, MemoryEstimationError>,
         graph_resources: &GraphResources,
         configuration: &CONFIGURATION,
         label: &dyn Label,
@@ -102,7 +103,8 @@ impl MemoryGuard for DisabledMemoryGuard {
         _estimation_factory: impl FnOnce(
             &GraphResources,
             &CONFIGURATION,
-        ) -> Result<MemoryTreeWithDimensions, MemoryEstimationError>,
+        )
+            -> Result<MemoryTreeWithDimensions, MemoryEstimationError>,
         _graph_resources: &GraphResources,
         _configuration: &CONFIGURATION,
         _label: &dyn Label,
@@ -122,7 +124,11 @@ pub struct DefaultMemoryGuard {
 }
 
 impl DefaultMemoryGuard {
-    pub fn create(log: Log, use_max_memory_estimation: bool, memory_tracker: Arc<MemoryTracker>) -> Self {
+    pub fn create(
+        log: Log,
+        use_max_memory_estimation: bool,
+        memory_tracker: Arc<MemoryTracker>,
+    ) -> Self {
         Self {
             log,
             use_max_memory_estimation,
@@ -146,7 +152,8 @@ impl MemoryGuard for DefaultMemoryGuard {
         estimation_factory: impl FnOnce(
             &GraphResources,
             &CONFIGURATION,
-        ) -> Result<MemoryTreeWithDimensions, MemoryEstimationError>,
+        )
+            -> Result<MemoryTreeWithDimensions, MemoryEstimationError>,
         graph_resources: &GraphResources,
         configuration: &CONFIGURATION,
         label: &dyn Label,
@@ -158,8 +165,10 @@ impl MemoryGuard for DefaultMemoryGuard {
         let estimate = match estimation_factory(graph_resources, configuration) {
             Ok(est) => est,
             Err(MemoryEstimationError::NotImplemented) => {
-                self.log
-                    .info(&format!("Memory usage estimate not available for {}, skipping guard", label.as_string()));
+                self.log.info(&format!(
+                    "Memory usage estimate not available for {}, skipping guard",
+                    label.as_string()
+                ));
                 return Ok(());
             }
         };
@@ -170,22 +179,27 @@ impl MemoryGuard for DefaultMemoryGuard {
 
         if configuration.sudo() {
             // Java parity: sudo bypasses guard. We best-effort reserve; if it fails, we still allow.
-            if let Err(_e) = self
-                .memory_tracker
-                .try_to_track(username, label.as_string(), configuration.job_id(), bytes_to_reserve)
-            {
+            if let Err(_e) = self.memory_tracker.try_to_track(
+                username,
+                label.as_string(),
+                configuration.job_id(),
+                bytes_to_reserve,
+            ) {
                 self.log.warn(&format!(
                     "Sudo enabled: not enough memory to reserve for {} ({}b), allowing anyway",
-                    label.as_string(), bytes_to_reserve
+                    label.as_string(),
+                    bytes_to_reserve
                 ));
             }
             return Ok(());
         }
 
-        match self
-            .memory_tracker
-            .try_to_track(username, label.as_string(), configuration.job_id(), bytes_to_reserve)
-        {
+        match self.memory_tracker.try_to_track(
+            username,
+            label.as_string(),
+            configuration.job_id(),
+            bytes_to_reserve,
+        ) {
             Ok(()) => Ok(()),
             Err(e) => Err(MemoryGuardError::InsufficientMemory {
                 label: label.as_string().to_string(),

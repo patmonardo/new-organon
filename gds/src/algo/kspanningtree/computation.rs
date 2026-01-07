@@ -56,8 +56,8 @@ pub struct KSpanningTreeComputationRuntime {
     cost_to_parent: Vec<f64>,
     total_cost: f64,
     // Additional state for k-limiting algorithm
-    exterior: Vec<bool>, // BitSet equivalent - tracks exterior nodes
-    included: Vec<bool>, // BitSet equivalent - tracks included nodes
+    exterior: Vec<bool>,  // BitSet equivalent - tracks exterior nodes
+    included: Vec<bool>,  // BitSet equivalent - tracks included nodes
     out_degree: Vec<u64>, // Out-degree tracking
     priority_queue: BinaryHeap<QueueElement>, // Main priority queue
     trim_queue: BinaryHeap<QueueElement>, // Queue for trimming
@@ -277,10 +277,7 @@ impl KSpanningTreeComputationRuntime {
 
     /// Find the root node (node with parent == -1)
     fn find_root(&self) -> usize {
-        self.parent
-            .iter()
-            .position(|&p| p == -1)
-            .unwrap_or(0)
+        self.parent.iter().position(|&p| p == -1).unwrap_or(0)
     }
 
     /// Find next valid leaf to trim
@@ -334,7 +331,8 @@ impl KSpanningTreeComputationRuntime {
         get_neighbors: &impl Fn(usize) -> Vec<(usize, f64)>,
     ) {
         for (neighbor, _weight) in get_neighbors(node_id) {
-            if self.parent.get(neighbor).copied() == Some(node_id as i64) && self.included[neighbor] {
+            if self.parent.get(neighbor).copied() == Some(node_id as i64) && self.included[neighbor]
+            {
                 // This neighbor is a child - update out-degree
                 self.out_degree[node_id] += 1;
             }

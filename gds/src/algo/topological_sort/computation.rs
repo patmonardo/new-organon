@@ -6,10 +6,10 @@
 
 use super::spec::TopologicalSortResult;
 use super::storage::TopologicalSortStorageRuntime;
+use crate::types::graph::id_map::NodeId;
+use crate::types::graph::Graph;
 use std::collections::VecDeque;
 use std::sync::atomic::Ordering;
-use crate::types::graph::Graph;
-use crate::types::graph::id_map::NodeId;
 
 pub struct TopologicalSortComputationRuntime {
     storage: TopologicalSortStorageRuntime,
@@ -87,7 +87,8 @@ impl TopologicalSortComputationRuntime {
                 }
 
                 // Decrement in-degree
-                let prev_in_degree = self.storage.in_degrees[target as usize].fetch_sub(1, Ordering::SeqCst);
+                let prev_in_degree =
+                    self.storage.in_degrees[target as usize].fetch_sub(1, Ordering::SeqCst);
 
                 // If in-degree becomes 0, add to queue
                 if prev_in_degree == 1 {

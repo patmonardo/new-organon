@@ -4,7 +4,9 @@
 /// Contains memory validation logic for graph operations.
 use crate::applications::services::logging::Log;
 use crate::core::utils::progress::JobId;
-use crate::mem::{MemoryRange, MemoryReservationExceededException, MemoryTracker, MemoryTreeWithDimensions};
+use crate::mem::{
+    MemoryRange, MemoryReservationExceededException, MemoryTracker, MemoryTreeWithDimensions,
+};
 
 pub struct MemoryUsageValidator {
     log: Log,
@@ -76,10 +78,7 @@ impl MemoryUsageValidator {
             let err = MemoryReservationExceededException::new(required_bytes, available_bytes);
             let error_message = format!(
                 "Insufficient memory for {} (jobId={}): required {} but only {} available",
-                task_name,
-                job_id,
-                required_bytes,
-                available_bytes
+                task_name, job_id, required_bytes, available_bytes
             );
             log.error(&error_message);
             return Err(err);
@@ -93,9 +92,7 @@ impl MemoryUsageValidator {
         &self,
         memory_tree_with_dimensions: &MemoryTreeWithDimensions,
     ) -> MemoryRange {
-        *memory_tree_with_dimensions
-            .memory_tree()
-            .memory_usage()
+        *memory_tree_with_dimensions.memory_tree().memory_usage()
     }
 }
 

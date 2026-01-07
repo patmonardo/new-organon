@@ -3,7 +3,9 @@
 //! These builders transform raw algorithm results (like Vec<NodeId> traversal order)
 //! into procedure-friendly results, matching Java GDS ResultBuilder pattern.
 
-use crate::applications::algorithms::machinery::{AlgorithmProcessingTimings, MutateResultBuilder, StreamResultBuilder, StatsResultBuilder};
+use crate::applications::algorithms::machinery::{
+    AlgorithmProcessingTimings, MutateResultBuilder, StatsResultBuilder, StreamResultBuilder,
+};
 use crate::core::loading::GraphResources;
 use crate::procedures::traits::PathResult;
 use serde_json::Value;

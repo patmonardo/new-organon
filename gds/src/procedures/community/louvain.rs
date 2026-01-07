@@ -10,14 +10,14 @@
 //! Parameters:
 //! - `concurrency`
 
-use crate::core::utils::progress::{TaskRegistry, TaskProgressTracker, Tasks};
-use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::Result;
 use crate::algo::louvain::{
     LouvainComputationRuntime, LouvainConfig, LouvainResult, LouvainStorageRuntime,
 };
 use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
+use crate::mem::MemoryRange;
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::traits::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
 use std::time::Instant;
@@ -144,7 +144,8 @@ impl LouvainFacade {
         self.validate()?;
         let start = Instant::now();
 
-        let storage = LouvainStorageRuntime::new(self.graph_store.as_ref(), self.config.concurrency)?;
+        let storage =
+            LouvainStorageRuntime::new(self.graph_store.as_ref(), self.config.concurrency)?;
         let mut computation = LouvainComputationRuntime::new();
         let termination_flag = TerminationFlag::default();
 
@@ -153,7 +154,8 @@ impl LouvainFacade {
             self.config.concurrency,
         );
 
-        let result = storage.compute_louvain(&mut computation, &mut progress_tracker, &termination_flag)?;
+        let result =
+            storage.compute_louvain(&mut computation, &mut progress_tracker, &termination_flag)?;
         Ok((result, start.elapsed().as_millis() as u64))
     }
 

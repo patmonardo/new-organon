@@ -1,10 +1,8 @@
+use crate::algo::similarity::{NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult};
+use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::mem::MemoryRange;
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits::Result;
-use crate::mem::MemoryRange;
-use crate::algo::similarity::{
-    NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult,
-};
-use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -108,7 +106,8 @@ impl NodeSimilarityBuilder {
         // Assuming Orientation::Natural for Similarity.
         // Empty set = all relationship types in the default graph view.
 
-        let rel_types: HashSet<crate::projection::RelationshipType> = self.graph_store.relationship_types();
+        let rel_types: HashSet<crate::projection::RelationshipType> =
+            self.graph_store.relationship_types();
 
         let graph = if let Some(prop) = self.weight_property.as_ref() {
             // Provide an explicit selector for every relationship type so DefaultGraph
@@ -133,10 +132,11 @@ impl NodeSimilarityBuilder {
         };
 
         let node_count = graph.node_count();
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("node_similarity".to_string(), node_count),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("node_similarity".to_string(), node_count),
+                self.concurrency,
+            );
         progress_tracker.begin_subtask_with_volume(node_count);
 
         let config = self.build_config();
@@ -173,10 +173,8 @@ impl NodeSimilarityBuilder {
             })
             .collect();
 
-        let stats = crate::algo::common::result::similarity::similarity_stats(
-            || tuples.into_iter(),
-            true,
-        );
+        let stats =
+            crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
 
         Ok(NodeSimilarityStats {
             nodes_compared: sources.len() as u64,

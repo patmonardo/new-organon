@@ -103,10 +103,12 @@ impl PropertyValues for LongIfChangedNodePropertyValues {
 
 impl NodePropertyValues for LongIfChangedNodePropertyValues {
     fn double_value(&self, _node_id: u64) -> PropertyValuesResult<f64> {
-        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
-            actual: ValueType::Long,
-            expected: ValueType::Double,
-        })
+        Err(
+            crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::Double,
+            },
+        )
     }
 
     fn long_value(&self, node_id: u64) -> PropertyValuesResult<i64> {
@@ -129,31 +131,39 @@ impl NodePropertyValues for LongIfChangedNodePropertyValues {
     }
 
     fn double_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<f64>> {
-        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
-            actual: ValueType::Long,
-            expected: ValueType::DoubleArray,
-        })
+        Err(
+            crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::DoubleArray,
+            },
+        )
     }
 
     fn float_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<f32>> {
-        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
-            actual: ValueType::Long,
-            expected: ValueType::FloatArray,
-        })
+        Err(
+            crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::FloatArray,
+            },
+        )
     }
 
     fn long_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<i64>> {
-        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
-            actual: ValueType::Long,
-            expected: ValueType::LongArray,
-        })
+        Err(
+            crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::LongArray,
+            },
+        )
     }
 
     fn get_object(&self, _node_id: u64) -> PropertyValuesResult<Box<dyn std::any::Any>> {
-        Err(crate::types::properties::PropertyValuesError::UnsupportedType {
-            actual: ValueType::Long,
-            expected: ValueType::Unknown,
-        })
+        Err(
+            crate::types::properties::PropertyValuesError::UnsupportedType {
+                actual: ValueType::Long,
+                expected: ValueType::Unknown,
+            },
+        )
     }
 
     fn dimension(&self) -> Option<usize> {
@@ -229,10 +239,12 @@ mod tests {
 
     impl NodePropertyValues for TestLongProperty {
         fn double_value(&self, _node_id: u64) -> PropertyValuesResult<f64> {
-            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
-                actual: ValueType::Long,
-                expected: ValueType::Double,
-            })
+            Err(
+                crate::types::properties::PropertyValuesError::UnsupportedType {
+                    actual: ValueType::Long,
+                    expected: ValueType::Double,
+                },
+            )
         }
 
         fn long_value(&self, node_id: u64) -> PropertyValuesResult<i64> {
@@ -240,31 +252,39 @@ mod tests {
         }
 
         fn double_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<f64>> {
-            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
-                actual: ValueType::Long,
-                expected: ValueType::DoubleArray,
-            })
+            Err(
+                crate::types::properties::PropertyValuesError::UnsupportedType {
+                    actual: ValueType::Long,
+                    expected: ValueType::DoubleArray,
+                },
+            )
         }
 
         fn float_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<f32>> {
-            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
-                actual: ValueType::Long,
-                expected: ValueType::FloatArray,
-            })
+            Err(
+                crate::types::properties::PropertyValuesError::UnsupportedType {
+                    actual: ValueType::Long,
+                    expected: ValueType::FloatArray,
+                },
+            )
         }
 
         fn long_array_value(&self, _node_id: u64) -> PropertyValuesResult<Vec<i64>> {
-            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
-                actual: ValueType::Long,
-                expected: ValueType::LongArray,
-            })
+            Err(
+                crate::types::properties::PropertyValuesError::UnsupportedType {
+                    actual: ValueType::Long,
+                    expected: ValueType::LongArray,
+                },
+            )
         }
 
         fn get_object(&self, _node_id: u64) -> PropertyValuesResult<Box<dyn std::any::Any>> {
-            Err(crate::types::properties::PropertyValuesError::UnsupportedType {
-                actual: ValueType::Long,
-                expected: ValueType::Unknown,
-            })
+            Err(
+                crate::types::properties::PropertyValuesError::UnsupportedType {
+                    actual: ValueType::Long,
+                    expected: ValueType::Unknown,
+                },
+            )
         }
 
         fn dimension(&self) -> Option<usize> {

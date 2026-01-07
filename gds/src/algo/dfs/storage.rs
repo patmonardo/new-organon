@@ -84,7 +84,9 @@ impl DfsStorageRuntime {
         let mut result = Vec::new();
 
         // Main DFS loop
-        while let (Some(node), Some(_source), Some(weight)) = (nodes.pop_back(), sources.pop_back(), weights.pop_back()) {
+        while let (Some(node), Some(_source), Some(weight)) =
+            (nodes.pop_back(), sources.pop_back(), weights.pop_back())
+        {
             result.push(node);
 
             // Progress is tracked in terms of relationships examined.
@@ -95,15 +97,15 @@ impl DfsStorageRuntime {
             // Check max depth
             if computation.check_max_depth(weight) {
                 if let Some(g) = graph {
-                for relationship in g.stream_relationships(node, 1.0) {
-                    let t = relationship.target_id();
-                    if !computation.is_visited(t) {
-                        computation.set_visited(t);
-                        sources.push_back(node);
-                        nodes.push_back(t);
-                        weights.push_back(weight + 1.0);
+                    for relationship in g.stream_relationships(node, 1.0) {
+                        let t = relationship.target_id();
+                        if !computation.is_visited(t) {
+                            computation.set_visited(t);
+                            sources.push_back(node);
+                            nodes.push_back(t);
+                            weights.push_back(weight + 1.0);
+                        }
                     }
-                }
                 }
             }
         }
@@ -117,7 +119,6 @@ impl DfsStorageRuntime {
             computation_time_ms: computation_time,
         })
     }
-
 }
 
 #[cfg(test)]

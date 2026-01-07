@@ -1,3 +1,5 @@
+pub mod shared;
+
 pub mod approx_max_kcut;
 pub mod conductance;
 pub mod k1coloring;

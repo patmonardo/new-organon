@@ -15,7 +15,8 @@ pub struct TaskProgressLogger {
 impl TaskProgressLogger {
     pub fn new(base_task: Task, concurrency: usize) -> Self {
         let volume = base_task.get_progress().volume();
-        let logger = BatchingProgressLogger::new(base_task.description().to_string(), volume, concurrency);
+        let logger =
+            BatchingProgressLogger::new(base_task.description().to_string(), volume, concurrency);
 
         Self { base_task, logger }
     }

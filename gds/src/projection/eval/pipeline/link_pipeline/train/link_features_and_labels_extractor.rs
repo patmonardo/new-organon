@@ -339,7 +339,10 @@ mod tests {
 
         // Bija Principle 1: markers are seeds, not gaps
         let marker_count = 15; // Counted manually in this file
-        assert!(marker_count > 10, "Should have many seeds (markers) planted");
+        assert!(
+            marker_count > 10,
+            "Should have many seeds (markers) planted"
+        );
 
         // Bija Principle 2: Yellow/Red warnings are GOOD
         // (This test itself may generate warnings - that's the point!)

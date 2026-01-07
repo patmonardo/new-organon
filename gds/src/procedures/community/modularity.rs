@@ -3,14 +3,14 @@
 //! Measures community quality by comparing actual edges within communities
 //! to expected edges if the network were random.
 
-use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
-use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{MutationResult, WriteResult};
-use crate::procedures::traits::Result;
 use crate::algo::modularity::{
     ModularityComputationRuntime, ModularityResult, ModularityStorageRuntime,
 };
 use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
+use crate::mem::MemoryRange;
+use crate::procedures::builder_base::{MutationResult, WriteResult};
+use crate::procedures::traits::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
 

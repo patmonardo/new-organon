@@ -16,31 +16,11 @@ const AUTH_PREV_KEY: &str = "authority_prev";
 
 fn hits_schema() -> PregelSchema {
     PregelSchemaBuilder::new()
-        .add_with_default(
-            HUB_KEY,
-            DefaultValue::Double(1.0),
-            Visibility::Public,
-        )
-        .add_with_default(
-            AUTH_KEY,
-            DefaultValue::Double(1.0),
-            Visibility::Public,
-        )
-        .add_with_default(
-            HUB_TMP_KEY,
-            DefaultValue::Double(0.0),
-            Visibility::Private,
-        )
-        .add_with_default(
-            AUTH_TMP_KEY,
-            DefaultValue::Double(0.0),
-            Visibility::Private,
-        )
-        .add_with_default(
-            HUB_PREV_KEY,
-            DefaultValue::Double(1.0),
-            Visibility::Private,
-        )
+        .add_with_default(HUB_KEY, DefaultValue::Double(1.0), Visibility::Public)
+        .add_with_default(AUTH_KEY, DefaultValue::Double(1.0), Visibility::Public)
+        .add_with_default(HUB_TMP_KEY, DefaultValue::Double(0.0), Visibility::Private)
+        .add_with_default(AUTH_TMP_KEY, DefaultValue::Double(0.0), Visibility::Private)
+        .add_with_default(HUB_PREV_KEY, DefaultValue::Double(1.0), Visibility::Private)
         .add_with_default(
             AUTH_PREV_KEY,
             DefaultValue::Double(1.0),
@@ -86,8 +66,10 @@ impl HitsComputationRuntime {
     pub fn compute_fn(
         &self,
     ) -> Arc<
-        dyn Fn(&mut ComputeContext<HitsPregelRuntimeConfig, SyncQueueMessageIterator>, &mut Messages<SyncQueueMessageIterator>)
-            + Send
+        dyn Fn(
+                &mut ComputeContext<HitsPregelRuntimeConfig, SyncQueueMessageIterator>,
+                &mut Messages<SyncQueueMessageIterator>,
+            ) + Send
             + Sync,
     > {
         Arc::new(
@@ -136,7 +118,8 @@ impl HitsComputationRuntime {
 
     pub fn master_compute_fn(
         &self,
-    ) -> impl Fn(&mut MasterComputeContext<HitsPregelRuntimeConfig>) -> bool + Send + Sync + 'static {
+    ) -> impl Fn(&mut MasterComputeContext<HitsPregelRuntimeConfig>) -> bool + Send + Sync + 'static
+    {
         let tolerance = self.tolerance;
 
         move |context: &mut MasterComputeContext<HitsPregelRuntimeConfig>| {

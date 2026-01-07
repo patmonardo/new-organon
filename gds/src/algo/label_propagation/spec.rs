@@ -1,10 +1,10 @@
 //! Label Propagation algorithm specification (executor integration)
 
+use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use crate::projection::Orientation;
 use crate::projection::RelationshipType;
-use crate::core::utils::progress::{ProgressTracker, Tasks, TaskProgressTracker};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::time::{Duration, Instant};

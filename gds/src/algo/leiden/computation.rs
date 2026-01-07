@@ -86,7 +86,8 @@ impl LeidenComputationRuntime {
 
         // Working graph + assignments at current level.
         let mut working_graph = graph.clone();
-        let mut working_communities: Vec<u64> = renumber_communities(starting_communities(n, config));
+        let mut working_communities: Vec<u64> =
+            renumber_communities(starting_communities(n, config));
 
         // Output communities over original nodes; updated after each level.
         let mut output_communities = working_communities.clone();
@@ -364,10 +365,7 @@ fn refinement_phase(
 fn aggregate_graph(graph: &AdjacencyGraph, communities: &[u64]) -> (AdjacencyGraph, Vec<usize>) {
     let n = graph.node_count;
     if n == 0 {
-        return (
-            AdjacencyGraph::new(0, Vec::new()),
-            Vec::new(),
-        );
+        return (AdjacencyGraph::new(0, Vec::new()), Vec::new());
     }
 
     // Map community ids to compact [0..k) ids.

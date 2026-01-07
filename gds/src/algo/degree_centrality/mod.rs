@@ -13,7 +13,7 @@ pub mod storage;
 pub mod integration_tests;
 
 pub use computation::DegreeCentralityComputationRuntime;
-pub use spec::{DegreeCentralityConfig, DegreeCentralityResult, DEGREE_CENTRALITYAlgorithmSpec};
+pub use spec::{DEGREE_CENTRALITYAlgorithmSpec, DegreeCentralityConfig, DegreeCentralityResult};
 pub use storage::{DegreeCentralityStorageRuntime, Orientation};
 
 pub type DegreeCentralityAlgorithmSpec = DEGREE_CENTRALITYAlgorithmSpec;

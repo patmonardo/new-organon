@@ -4,8 +4,8 @@ use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
-use crate::types::properties::node::NodePropertyValues;
 use crate::types::prelude::GraphStore;
+use crate::types::properties::node::NodePropertyValues;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -43,16 +43,19 @@ impl ConductanceStorageRuntime {
 
         let community_props: Arc<dyn NodePropertyValues> = graph
             .node_properties(&config.community_property)
-            .ok_or_else(|| format!("Community property '{}' not found", config.community_property))?;
+            .ok_or_else(|| {
+                format!(
+                    "Community property '{}' not found",
+                    config.community_property
+                )
+            })?;
 
         // Root task ("Conductance") and its Java-parity subtasks are driven here.
         progress_tracker.begin_subtask_with_description("Conductance");
 
         // 1) Count relationships
-        progress_tracker.begin_subtask_with_description_and_volume(
-            "count relationships",
-            node_count,
-        );
+        progress_tracker
+            .begin_subtask_with_description_and_volume("count relationships", node_count);
         let locals = computation.count_relationships(
             Arc::clone(&graph),
             Arc::clone(&community_props),

@@ -168,7 +168,11 @@ mod tests {
         container.reserve("alice", "pagerank", &job1, 1000);
         container.reserve("alice", "louvain", &job2, 2000);
 
-        let task = UserTask::new("alice".to_string(), job1.clone(), crate::core::utils::progress::Task::new("t".to_string(), vec![]));
+        let task = UserTask::new(
+            "alice".to_string(),
+            job1.clone(),
+            crate::core::utils::progress::Task::new("t".to_string(), vec![]),
+        );
         let total = container.remove_task(&task);
 
         assert_eq!(total, 2000);

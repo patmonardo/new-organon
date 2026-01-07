@@ -3,14 +3,14 @@
 //! Live wiring for Cost-Effective Lazy Forward influence maximization.
 
 use crate::algo::celf::computation::CELFComputationRuntime;
-use crate::algo::celf::storage::CELFStorageRuntime;
 use crate::algo::celf::spec::CELFConfig;
+use crate::algo::celf::storage::CELFStorageRuntime;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
+use crate::graph_store::GraphStore;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{MutationResult, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
-use crate::graph_store::GraphStore;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::DefaultGraphStore;
 use std::collections::HashMap;
@@ -100,7 +100,8 @@ impl CELFFacade {
             return Ok((HashMap::new(), start.elapsed()));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
                 Tasks::leaf_with_volume("celf".to_string(), self.config.seed_set_size),
                 self.concurrency,
             );

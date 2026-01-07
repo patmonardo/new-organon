@@ -1,17 +1,23 @@
 #[cfg(test)]
 mod tests {
-    use crate::types::graph_store::{DefaultGraphStore, GraphStore};
-    use crate::types::graph_store::{Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, GraphName};
-    use crate::types::schema::{GraphSchema, MutableGraphSchema, NodeLabel, RelationshipType, Direction};
+    use crate::config::GraphStoreConfig;
     use crate::types::graph::id_map::SimpleIdMap;
     use crate::types::graph::RelationshipTopology;
-    use crate::config::GraphStoreConfig;
+    use crate::types::graph_store::{
+        Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, GraphName,
+    };
+    use crate::types::graph_store::{DefaultGraphStore, GraphStore};
     use crate::types::random::{RandomGraphConfig, Randomizable};
+    use crate::types::schema::{
+        Direction, GraphSchema, MutableGraphSchema, NodeLabel, RelationshipType,
+    };
     use rand::rngs::StdRng;
     use rand::SeedableRng;
 
     use crate::types::graph::degrees::Degrees;
-    use crate::types::properties::relationship::traits::{RelationshipIterator, RelationshipPredicate};
+    use crate::types::properties::relationship::traits::{
+        RelationshipIterator, RelationshipPredicate,
+    };
 
     #[test]
     fn to_undirected_makes_edges_symmetric() {

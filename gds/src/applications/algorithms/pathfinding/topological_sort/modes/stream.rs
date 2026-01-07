@@ -20,7 +20,9 @@ pub fn run(op: &str, request: &TopologicalSortRequest, graph_resources: &GraphRe
     let template = DefaultAlgorithmProcessingTemplate::new(creator);
     let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
-    let task = Tasks::leaf("TopologicalSort::stream".to_string()).base().clone();
+    let task = Tasks::leaf("TopologicalSort::stream".to_string())
+        .base()
+        .clone();
 
     let compute = |gr: &GraphResources,
                    _tracker: &mut dyn ProgressTracker,
@@ -36,12 +38,19 @@ pub fn run(op: &str, request: &TopologicalSortRequest, graph_resources: &GraphRe
         Ok(Some(iter.collect()))
     };
 
-    let builder = FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<TopologicalSortRow>>| {
-        rows.unwrap_or_default().into_iter()
-    });
+    let builder = FnStreamResultBuilder::new(
+        |_gr: &GraphResources, rows: Option<Vec<TopologicalSortRow>>| {
+            rows.unwrap_or_default().into_iter()
+        },
+    );
 
-    match convenience.process_stream(graph_resources, request.common.concurrency, task, compute, builder)
-    {
+    match convenience.process_stream(
+        graph_resources,
+        request.common.concurrency,
+        task,
+        compute,
+        builder,
+    ) {
         Ok(stream) => {
             let rows: Vec<TopologicalSortRow> = stream.collect();
             json!({
@@ -56,6 +65,10 @@ pub fn run(op: &str, request: &TopologicalSortRequest, graph_resources: &GraphRe
                 })
             })
         }
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("TopologicalSort stream failed: {e}")),
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("TopologicalSort stream failed: {e}"),
+        ),
     }
 }

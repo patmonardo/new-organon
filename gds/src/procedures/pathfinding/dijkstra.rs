@@ -27,9 +27,9 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
-use crate::mem::MemoryRange;
 use crate::algo::dijkstra::targets::create_targets;
 use crate::algo::dijkstra::{DijkstraComputationRuntime, DijkstraStorageRuntime};
+use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{PathResult, Result};
 use crate::projection::orientation::Orientation;
@@ -41,11 +41,9 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
-};
 use crate::algo::common::prelude::{PathFindingResult, PathResultBuilder};
 use crate::algo::common::result_builders::{ExecutionMetadata, ResultBuilder};
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 
 // ============================================================================
 // Statistics Type
@@ -206,10 +204,11 @@ impl DijkstraBuilder {
                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
             })?;
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("dijkstra".to_string(), graph_view.relationship_count()),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("dijkstra".to_string(), graph_view.relationship_count()),
+                self.concurrency,
+            );
 
         let result = storage.compute_dijkstra(
             &mut computation,

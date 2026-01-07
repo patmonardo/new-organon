@@ -1,7 +1,5 @@
 //! Java: `SingleLabelGraphSageTrain`.
 
-use crate::concurrency::TerminationFlag;
-use crate::core::model::Model;
 use crate::algo::embeddings::graphsage::algo::graph_sage::MODEL_TYPE;
 use crate::algo::embeddings::graphsage::algo::graph_sage_model_data::{
     FeatureFunctionData, GraphSageModelData, LayerData, MatrixData, VectorData,
@@ -16,6 +14,8 @@ use crate::algo::embeddings::graphsage::train_config_transformer::TrainConfigTra
 use crate::algo::embeddings::graphsage::types::{
     AggregatorType, GraphSageTrainConfig, GraphSageTrainParameters,
 };
+use crate::concurrency::TerminationFlag;
+use crate::core::model::Model;
 use crate::types::graph::Graph;
 use std::sync::Arc;
 

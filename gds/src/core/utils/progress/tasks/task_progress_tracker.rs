@@ -39,8 +39,7 @@ impl TaskProgressTracker {
         task_registry_factory: &dyn TaskRegistryFactory,
     ) -> Self {
         let task_registry = task_registry_factory.new_instance(job_id);
-        let task_progress_logger =
-            TaskProgressLogger::new(base_task.clone(), concurrency.value());
+        let task_progress_logger = TaskProgressLogger::new(base_task.clone(), concurrency.value());
 
         Self {
             inner: Arc::new(Mutex::new(Inner {
@@ -317,9 +316,9 @@ impl ProgressTracker for TaskProgressTracker {
         let mut inner = self.inner.lock().unwrap();
         if steps == 0 {
             if !inner.did_log_error {
-                inner.task_progress_logger.log_warning(
-                    ":: Total steps for task must be at least 1 but was 0",
-                );
+                inner
+                    .task_progress_logger
+                    .log_warning(":: Total steps for task must be at least 1 but was 0");
                 inner.did_log_error = true;
             }
             return;
@@ -346,7 +345,8 @@ impl ProgressTracker for TaskProgressTracker {
             if inner.current_total_steps == UNKNOWN_STEPS {
                 let should_warn = !inner.did_log_error;
                 if should_warn {
-                    inner.task_progress_logger
+                    inner
+                        .task_progress_logger
                         .log_warning(":: Tried to log steps without setting total steps");
                     inner.did_log_error = true;
                 }

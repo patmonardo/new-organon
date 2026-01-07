@@ -7,14 +7,14 @@
 //! - `max_iterations`: maximum number of coloring/validation iterations (must be >= 1).
 //! - `batch_size`: accepted for parity; currently unused.
 
-use crate::core::utils::progress::{TaskRegistry, Tasks};
-use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::Result;
 use crate::algo::k1coloring::{
     K1ColoringComputationRuntime, K1ColoringConfig, K1ColoringResult, K1ColoringStorageRuntime,
 };
 use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::{TaskRegistry, Tasks};
+use crate::mem::MemoryRange;
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::traits::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -112,11 +112,13 @@ impl K1ColoringFacade {
             ));
         }
 
-        let base_task = Tasks::leaf_with_volume("k1coloring".to_string(), self.max_iterations as usize);
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            base_task,
-            self.concurrency,
-        );
+        let base_task =
+            Tasks::leaf_with_volume("k1coloring".to_string(), self.max_iterations as usize);
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                base_task,
+                self.concurrency,
+            );
 
         let termination_flag = TerminationFlag::default();
 

@@ -1,3 +1,5 @@
+pub mod shared;
+
 pub mod articulation_points;
 pub mod betweenness;
 pub mod bridges;

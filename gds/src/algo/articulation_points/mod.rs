@@ -12,10 +12,10 @@ pub mod storage;
 #[cfg(test)]
 pub mod integration_tests;
 
-pub use computation::{
-    ArticulationPointsComputationResult, ArticulationPointsComputationRuntime,
+pub use computation::{ArticulationPointsComputationResult, ArticulationPointsComputationRuntime};
+pub use spec::{
+    ARTICULATION_POINTSAlgorithmSpec, ArticulationPointsConfig, ArticulationPointsResult,
 };
-pub use spec::{ArticulationPointsConfig, ArticulationPointsResult, ARTICULATION_POINTSAlgorithmSpec};
 pub use storage::ArticulationPointsStorageRuntime;
 
 pub type ArticulationPointsAlgorithmSpec = ARTICULATION_POINTSAlgorithmSpec;

@@ -10,12 +10,14 @@
 //! - `max_iterations`: Maximum iterations (default: 10)
 //! - `random_seed`: Random seed for reproducibility (default: 42)
 
+use crate::algo::leiden::{
+    LeidenComputationRuntime, LeidenConfig, LeidenResult, LeidenStorageRuntime,
+};
+use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
-use crate::algo::leiden::{LeidenComputationRuntime, LeidenConfig, LeidenResult, LeidenStorageRuntime};
-use crate::concurrency::TerminationFlag;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
 use std::time::Instant;
@@ -127,7 +129,8 @@ impl LeidenFacade {
             "leiden".to_string(),
             node_count.saturating_add(self.config.max_iterations),
         );
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(base_task);
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::new(base_task);
 
         let termination_flag = TerminationFlag::default();
 

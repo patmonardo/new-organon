@@ -22,8 +22,8 @@ impl DfsRequest {
             .or_else(|| get_u64(request, "sourceNode"))
             .ok_or_else(|| "Missing 'source' parameter".to_string())?;
 
-        let targets: Vec<u64> = if let Some(t) = get_u64(request, "target")
-            .or_else(|| get_u64(request, "targetNode"))
+        let targets: Vec<u64> = if let Some(t) =
+            get_u64(request, "target").or_else(|| get_u64(request, "targetNode"))
         {
             vec![t]
         } else if let Some(arr) = request.get("targets").and_then(|v| v.as_array()) {

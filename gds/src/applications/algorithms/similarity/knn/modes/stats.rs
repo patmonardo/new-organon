@@ -44,9 +44,7 @@ pub fn run(op: &str, request: &KnnRequest, graph_resources: &GraphResources) -> 
         Ok(Some(stats))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       stats: Option<KnnStats>,
-                                       timings| {
+    let builder = FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<KnnStats>, timings| {
         json!({
             "ok": true,
             "op": op,

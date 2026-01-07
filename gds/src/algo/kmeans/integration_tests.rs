@@ -38,7 +38,12 @@ fn kmeans_two_clusters_converges() {
 
 #[test]
 fn kmeans_seeded_centroids_respected() {
-    let points = vec![vec![0.0, 0.0], vec![0.1, 0.0], vec![10.0, 10.0], vec![10.1, 10.0]];
+    let points = vec![
+        vec![0.0, 0.0],
+        vec![0.1, 0.0],
+        vec![10.0, 10.0],
+        vec![10.1, 10.0],
+    ];
 
     let config = KMeansConfig {
         k: 2,

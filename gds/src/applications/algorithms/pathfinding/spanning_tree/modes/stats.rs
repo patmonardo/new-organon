@@ -20,14 +20,18 @@ pub fn run(op: &str, request: &SpanningTreeRequest, graph_resources: &GraphResou
     let template = DefaultAlgorithmProcessingTemplate::new(creator);
     let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
-    let task = Tasks::leaf("SpanningTree::stats".to_string()).base().clone();
+    let task = Tasks::leaf("SpanningTree::stats".to_string())
+        .base()
+        .clone();
 
     let compute = |gr: &GraphResources,
                    _tracker: &mut dyn ProgressTracker,
                    _termination: &TerminationFlag|
      -> Result<Option<SpanningTreeStats>, String> {
         // Use facade instead of direct algo calls
-        let mut builder = gr.facade().spanning_tree()
+        let mut builder = gr
+            .facade()
+            .spanning_tree()
             .start_node(request.start_node)
             .compute_minimum(request.compute_minimum)
             .weight_property(&request.weight_property)
@@ -42,23 +46,25 @@ pub fn run(op: &str, request: &SpanningTreeRequest, graph_resources: &GraphResou
         Ok(Some(stats))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       stats: Option<SpanningTreeStats>,
-                                       timings: crate::applications::algorithms::machinery::AlgorithmProcessingTimings| {
-        let stats = stats.unwrap_or(SpanningTreeStats {
-            effective_node_count: 0,
-            total_weight: 0.0,
-            computation_time_ms: timings.compute_millis as u64,
-        });
+    let builder = FnStatsResultBuilder(
+        |_gr: &GraphResources,
+         stats: Option<SpanningTreeStats>,
+         timings: crate::applications::algorithms::machinery::AlgorithmProcessingTimings| {
+            let stats = stats.unwrap_or(SpanningTreeStats {
+                effective_node_count: 0,
+                total_weight: 0.0,
+                computation_time_ms: timings.compute_millis as u64,
+            });
 
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stats",
-            "data": stats,
-            "timings": timings_json(timings)
-        })
-    });
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stats",
+                "data": stats,
+                "timings": timings_json(timings)
+            })
+        },
+    );
 
     match convenience.process_stats(
         graph_resources,
@@ -68,6 +74,10 @@ pub fn run(op: &str, request: &SpanningTreeRequest, graph_resources: &GraphResou
         builder,
     ) {
         Ok(v) => v,
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("SpanningTree stats failed: {e}")),
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("SpanningTree stats failed: {e}"),
+        ),
     }
 }

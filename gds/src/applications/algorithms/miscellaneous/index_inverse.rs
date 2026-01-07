@@ -25,7 +25,10 @@ pub fn handle_index_inverse(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
         }
     };
 
-    let mode = request.get("mode").and_then(|v| v.as_str()).unwrap_or("mutate");
+    let mode = request
+        .get("mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("mutate");
 
     let out_name = request
         .get("mutateGraphName")

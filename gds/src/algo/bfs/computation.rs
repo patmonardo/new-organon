@@ -25,7 +25,12 @@ pub struct BfsComputationRuntime {
 
 impl BfsComputationRuntime {
     /// Create new BFS computation runtime
-    pub fn new(source_node: NodeId, track_paths: bool, concurrency: usize, node_count: usize) -> Self {
+    pub fn new(
+        source_node: NodeId,
+        track_paths: bool,
+        concurrency: usize,
+        node_count: usize,
+    ) -> Self {
         Self {
             source_node,
             track_paths,

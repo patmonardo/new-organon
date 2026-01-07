@@ -14,11 +14,11 @@ pub fn handle_dfs(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         Err(message) => return err(op, "INVALID_REQUEST", &message),
     };
 
-    let graph_resources = match CatalogLoader::load_or_err(catalog.as_ref(), &parsed.common.graph_name)
-    {
-        Ok(r) => r,
-        Err(e) => return err(op, "GRAPH_NOT_FOUND", &e.to_string()),
-    };
+    let graph_resources =
+        match CatalogLoader::load_or_err(catalog.as_ref(), &parsed.common.graph_name) {
+            Ok(r) => r,
+            Err(e) => return err(op, "GRAPH_NOT_FOUND", &e.to_string()),
+        };
 
     match parsed.common.mode {
         Mode::Stream => modes::stream::run(op, &parsed, &graph_resources),

@@ -6,10 +6,10 @@
 use super::computation::IndexInverseComputationRuntime;
 use super::spec::{IndexInverseConfig, IndexInverseResult};
 use crate::projection::Orientation;
+use crate::types::graph::RelationshipTopology;
 use crate::types::graph_store::{GraphName, GraphStore};
 use crate::types::prelude::DefaultGraphStore;
 use crate::types::schema::RelationshipType;
-use crate::types::graph::RelationshipTopology;
 use std::collections::HashSet;
 
 pub struct IndexInverseStorageRuntime {
@@ -33,23 +33,27 @@ impl IndexInverseStorageRuntime {
     ) -> Result<IndexInverseResult, String> {
         let graph_name = GraphName::new(&config.mutate_graph_name);
 
-        let selected_types: Option<HashSet<RelationshipType>> = if config.relationship_types.is_empty()
-            || config.relationship_types.iter().any(|t| t == "*")
-        {
-            None
-        } else {
-            Some(
-                config
-                    .relationship_types
-                    .iter()
-                    .map(|t| RelationshipType::of(t))
-                    .collect(),
-            )
-        };
+        let selected_types: Option<HashSet<RelationshipType>> =
+            if config.relationship_types.is_empty()
+                || config.relationship_types.iter().any(|t| t == "*")
+            {
+                None
+            } else {
+                Some(
+                    config
+                        .relationship_types
+                        .iter()
+                        .map(|t| RelationshipType::of(t))
+                        .collect(),
+                )
+            };
 
         let all_rel_types = graph_store.relationship_types();
         let target_types: Vec<RelationshipType> = match selected_types.as_ref() {
-            Some(set) => all_rel_types.into_iter().filter(|t| set.contains(t)).collect(),
+            Some(set) => all_rel_types
+                .into_iter()
+                .filter(|t| set.contains(t))
+                .collect(),
             None => all_rel_types.into_iter().collect(),
         };
 
@@ -88,11 +92,13 @@ impl IndexInverseStorageRuntime {
 mod tests {
     use super::*;
     use crate::config::GraphStoreConfig;
+    use crate::types::graph::degrees::Degrees;
     use crate::types::graph::id_map::SimpleIdMap;
     use crate::types::graph::RelationshipTopology;
     use crate::types::graph_store::{Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation};
-    use crate::types::schema::{Direction, GraphSchema, MutableGraphSchema, NodeLabel, RelationshipType};
-    use crate::types::graph::degrees::Degrees;
+    use crate::types::schema::{
+        Direction, GraphSchema, MutableGraphSchema, NodeLabel, RelationshipType,
+    };
     use std::collections::HashMap;
 
     fn build_store() -> DefaultGraphStore {

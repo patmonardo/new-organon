@@ -45,9 +45,10 @@ pub fn run(op: &str, request: &RandomWalkRequest, graph_resources: &GraphResourc
         Ok(Some(iter.collect()))
     };
 
-    let builder = FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<RandomWalkRow>>| {
-        rows.unwrap_or_default().into_iter()
-    });
+    let builder =
+        FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<RandomWalkRow>>| {
+            rows.unwrap_or_default().into_iter()
+        });
 
     match convenience.process_stream(
         graph_resources,
@@ -70,6 +71,10 @@ pub fn run(op: &str, request: &RandomWalkRequest, graph_resources: &GraphResourc
                 })
             })
         }
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("RandomWalk stream failed: {e}")),
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("RandomWalk stream failed: {e}"),
+        ),
     }
 }

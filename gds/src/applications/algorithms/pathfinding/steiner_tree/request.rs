@@ -1,4 +1,6 @@
-use crate::applications::algorithms::pathfinding::shared::{get_bool, get_str, get_u64, CommonRequest};
+use crate::applications::algorithms::pathfinding::shared::{
+    get_bool, get_str, get_u64, CommonRequest,
+};
 use serde_json::Value;
 
 #[derive(Debug, Clone)]

@@ -44,10 +44,8 @@ mod tests {
         let schema = schema_builder.build();
 
         let mut relationship_topologies = HashMap::new();
-        relationship_topologies.insert(
-            rel_type,
-            RelationshipTopology::new(out_ids, Some(incoming)),
-        );
+        relationship_topologies
+            .insert(rel_type, RelationshipTopology::new(out_ids, Some(incoming)));
 
         let original_ids: Vec<i64> = (0..node_count as i64).collect();
         let id_map = SimpleIdMap::from_original_ids(original_ids);
@@ -93,11 +91,7 @@ mod tests {
     fn label_propagation_tie_breaks_to_smallest_label() {
         // Star: 0 connected to 1 and 2 (symmetric).
         // With identity init labels, node 0 sees labels {1,2} equal weight -> picks 1.
-        let outgoing = vec![
-            vec![(1, 1.0), (2, 1.0)],
-            vec![(0, 1.0)],
-            vec![(0, 1.0)],
-        ];
+        let outgoing = vec![vec![(1, 1.0), (2, 1.0)], vec![(0, 1.0)], vec![(0, 1.0)]];
         let store = store_from_outgoing(outgoing);
         let graph = Graph::new(Arc::new(store));
 

@@ -2,13 +2,11 @@
 //!
 //! Live wiring for bridge edge detection in undirected graphs.
 
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
-};
-use crate::core::utils::progress::ProgressTracker;
-use crate::mem::MemoryRange;
-use crate::algo::bridges::storage::BridgesStorageRuntime;
 use crate::algo::bridges::computation::{Bridge, BridgesComputationRuntime};
+use crate::algo::bridges::storage::BridgesStorageRuntime;
+use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
+use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -108,7 +106,8 @@ impl BridgesFacade {
         });
 
         // Call storage.compute_bridges() - Applications talk only to procedures
-        let result = storage.compute_bridges(&mut computation, &termination, on_node_scanned)
+        let result = storage
+            .compute_bridges(&mut computation, &termination, on_node_scanned)
             .map_err(|e| {
                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
                     "Bridges terminated: {e}"
@@ -268,7 +267,8 @@ impl BridgesFacade {
         });
 
         // Call storage.compute_bridges() - Applications talk only to procedures
-        let result = storage.compute_bridges(&mut computation, &termination, on_node_scanned)
+        let result = storage
+            .compute_bridges(&mut computation, &termination, on_node_scanned)
             .map_err(|e| {
                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
                     "Bridges terminated: {e}"

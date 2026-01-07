@@ -134,26 +134,24 @@ impl YensComputationRuntime {
 
         // Create a dummy progress tracker
         // In a real implementation, this would be passed in
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            crate::core::utils::progress::Tasks::leaf("yens".to_string()),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                crate::core::utils::progress::Tasks::leaf("yens".to_string()),
+                self.concurrency,
+            );
 
         // Run the algorithm
-        storage.compute_yens(
-            self,
-            Some(graph),
-            direction_byte,
-            &mut progress_tracker,
-        ).unwrap_or_else(|_e| {
-            // For now, return empty result on error
-            // In production, this should be handled properly
-            YensResult {
-                paths: vec![],
-                path_count: 0,
-                computation_time_ms: 0,
-            }
-        })
+        storage
+            .compute_yens(self, Some(graph), direction_byte, &mut progress_tracker)
+            .unwrap_or_else(|_e| {
+                // For now, return empty result on error
+                // In production, this should be handled properly
+                YensResult {
+                    paths: vec![],
+                    path_count: 0,
+                    computation_time_ms: 0,
+                }
+            })
     }
 }
 

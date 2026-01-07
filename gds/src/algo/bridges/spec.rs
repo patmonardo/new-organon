@@ -2,10 +2,10 @@
 //!
 //! Java parity reference: `org.neo4j.gds.bridges.Bridges`.
 
+use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
-use crate::core::utils::progress::{ProgressTracker, Tasks};
-use crate::concurrency::TerminationFlag;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 

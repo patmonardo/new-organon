@@ -30,7 +30,9 @@ pub trait WriteConfigLike {
 
     fn resolve_result_store<'a>(
         &self,
-        result_store: Option<&'a dyn crate::applications::graph_store_catalog::loaders::ResultStore>,
+        result_store: Option<
+            &'a dyn crate::applications::graph_store_catalog::loaders::ResultStore,
+        >,
     ) -> Option<&'a dyn crate::applications::graph_store_catalog::loaders::ResultStore> {
         result_store
     }
@@ -91,8 +93,11 @@ impl WriteToDatabase {
             write_property_configuration.write_property(),
             node_property_values,
         );
-        self.graph_store_service
-            .add_node_properties(graph_store, labels_to_update, &[node_property])
+        self.graph_store_service.add_node_properties(
+            graph_store,
+            labels_to_update,
+            &[node_property],
+        )
     }
 
     /// Java parity entry point (multiple properties).
@@ -119,7 +124,10 @@ impl WriteToDatabase {
             .into_iter()
             .map(|(key, values)| NodeProperty::new(key, values))
             .collect();
-        self.graph_store_service
-            .add_node_properties(graph_store, labels_to_update, &node_properties)
+        self.graph_store_service.add_node_properties(
+            graph_store,
+            labels_to_update,
+            &node_properties,
+        )
     }
 }

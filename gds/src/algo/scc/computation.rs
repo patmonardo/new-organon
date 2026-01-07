@@ -170,7 +170,9 @@ impl SccComputationRuntime {
         for i in 0..node_count {
             let c = component.get(i);
             if c < 0 {
-                return Err(format!("internal error: node {i} was not assigned to a component"));
+                return Err(format!(
+                    "internal error: node {i} was not assigned to a component"
+                ));
             }
             components[i] = c as u64;
         }

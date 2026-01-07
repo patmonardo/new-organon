@@ -27,25 +27,22 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
+use crate::algo::pagerank::{
+    computation::PageRankComputationRuntime, storage::PageRankStorageRuntime,
+};
 use crate::config::base_types::AlgoBaseConfig;
 use crate::config::PageRankConfig;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
-use crate::algo::pagerank::{
-    computation::PageRankComputationRuntime,
-    storage::PageRankStorageRuntime,
-};
 use crate::projection::orientation::Orientation;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
 use std::time::Instant;
 
 // Import upgraded systems
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
-};
 use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 
 // ============================================================================
 // Statistics Type
@@ -273,11 +270,7 @@ impl PageRankFacade {
         );
         progress_tracker.begin_subtask_with_volume(self.iterations as usize);
 
-        let run = storage.run(
-            &computation,
-            self.concurrency,
-            &mut progress_tracker,
-        );
+        let run = storage.run(&computation, self.concurrency, &mut progress_tracker);
 
         progress_tracker.log_progress(self.iterations as usize);
         progress_tracker.end_subtask();
@@ -405,7 +398,11 @@ impl PageRankFacade {
         let nodes_updated = scores.len() as u64;
 
         let execution_time = start_time.elapsed();
-        Ok(MutationResult::new(nodes_updated, property_name.to_string(), execution_time))
+        Ok(MutationResult::new(
+            nodes_updated,
+            property_name.to_string(),
+            execution_time,
+        ))
     }
 
     /// Write mode: Compute and write results to external storage
@@ -439,7 +436,11 @@ impl PageRankFacade {
         let nodes_written = scores.len() as u64;
 
         let execution_time = start_time.elapsed();
-        Ok(WriteResult::new(nodes_written, property_name.to_string(), execution_time))
+        Ok(WriteResult::new(
+            nodes_written,
+            property_name.to_string(),
+            execution_time,
+        ))
     }
 
     /// Estimate memory usage for this algorithm execution

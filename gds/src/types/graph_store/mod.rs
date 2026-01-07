@@ -10,9 +10,9 @@ mod database_info;
 mod default_graph_store;
 mod deletion_result;
 mod graph_name;
+mod graph_store;
 #[cfg(test)]
 mod miscellaneous_tests;
-mod graph_store;
 
 pub use capabilities::*;
 pub use database_id::*;

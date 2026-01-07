@@ -307,9 +307,8 @@ mod tests {
     #[test]
     fn test_storage_runtime_minimum_spanning_tree() {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
-            let mut progress_tracker = TaskProgressTracker::new(
-            Tasks::leaf_with_volume("spanning_tree".to_string(), 0),
-        );
+        let mut progress_tracker =
+            TaskProgressTracker::new(Tasks::leaf_with_volume("spanning_tree".to_string(), 0));
         let result = runtime
             .compute_spanning_tree_mock(4, &mut progress_tracker)
             .unwrap();
@@ -329,9 +328,8 @@ mod tests {
     #[test]
     fn test_storage_runtime_maximum_spanning_tree() {
         let runtime = SpanningTreeStorageRuntime::new(0, false, 1);
-            let mut progress_tracker = TaskProgressTracker::new(
-            Tasks::leaf_with_volume("spanning_tree".to_string(), 0),
-        );
+        let mut progress_tracker =
+            TaskProgressTracker::new(Tasks::leaf_with_volume("spanning_tree".to_string(), 0));
         let result = runtime
             .compute_spanning_tree_mock(4, &mut progress_tracker)
             .unwrap();
@@ -353,18 +351,16 @@ mod tests {
         let runtime1 = SpanningTreeStorageRuntime::new(0, true, 1);
         let runtime2 = SpanningTreeStorageRuntime::new(1, true, 1);
 
-        let mut progress_tracker1 = TaskProgressTracker::new(
-            Tasks::leaf_with_volume("spanning_tree".to_string(), 0),
-        );
-        let mut progress_tracker2 = TaskProgressTracker::new(
-            Tasks::leaf_with_volume("spanning_tree".to_string(), 0),
-        );
-            let result1 = runtime1
-                .compute_spanning_tree_mock(4, &mut progress_tracker1)
-                .unwrap();
-            let result2 = runtime2
-                .compute_spanning_tree_mock(4, &mut progress_tracker2)
-                .unwrap();
+        let mut progress_tracker1 =
+            TaskProgressTracker::new(Tasks::leaf_with_volume("spanning_tree".to_string(), 0));
+        let mut progress_tracker2 =
+            TaskProgressTracker::new(Tasks::leaf_with_volume("spanning_tree".to_string(), 0));
+        let result1 = runtime1
+            .compute_spanning_tree_mock(4, &mut progress_tracker1)
+            .unwrap();
+        let result2 = runtime2
+            .compute_spanning_tree_mock(4, &mut progress_tracker2)
+            .unwrap();
 
         // Both should produce valid spanning trees
         assert_eq!(result1.effective_node_count(), 4);
@@ -378,9 +374,8 @@ mod tests {
     #[test]
     fn test_storage_runtime_edge_iteration() {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
-            let mut progress_tracker = TaskProgressTracker::new(
-            Tasks::leaf_with_volume("spanning_tree".to_string(), 0),
-        );
+        let mut progress_tracker =
+            TaskProgressTracker::new(Tasks::leaf_with_volume("spanning_tree".to_string(), 0));
         let result = runtime
             .compute_spanning_tree_mock(4, &mut progress_tracker)
             .unwrap();
@@ -405,9 +400,8 @@ mod tests {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
 
         // Mock empty graph
-            let mut progress_tracker = TaskProgressTracker::new(
-            Tasks::leaf_with_volume("spanning_tree".to_string(), 0),
-        );
+        let mut progress_tracker =
+            TaskProgressTracker::new(Tasks::leaf_with_volume("spanning_tree".to_string(), 0));
         let result = runtime
             .compute_spanning_tree_mock(0, &mut progress_tracker)
             .unwrap();
@@ -421,9 +415,8 @@ mod tests {
         let runtime = SpanningTreeStorageRuntime::new(0, true, 1);
 
         // Mock single node graph
-            let mut progress_tracker = TaskProgressTracker::new(
-            Tasks::leaf_with_volume("spanning_tree".to_string(), 0),
-        );
+        let mut progress_tracker =
+            TaskProgressTracker::new(Tasks::leaf_with_volume("spanning_tree".to_string(), 0));
         let result = runtime
             .compute_spanning_tree_mock(1, &mut progress_tracker)
             .unwrap();

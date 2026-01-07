@@ -7,14 +7,14 @@ use std::sync::Arc;
 
 use crate::applications::graph_store_catalog::applications::{
     DropGraphApplication, DropGraphPropertyApplication, DropNodePropertiesApplication,
-    DropRelationshipsApplication, ExportToCsvApplication, ExportToCsvEstimateApplication,
-    ExportToDatabaseApplication, GenerateGraphApplication, GenericProjectApplication,
-    GraphMemoryUsageApplication, GraphSamplingApplication, ListGraphApplication,
-    NativeProjectApplication, NodeLabelMutatorApplication, StreamGraphPropertiesApplication,
-    StreamNodePropertiesApplication, StreamRelationshipPropertiesApplication,
-    StreamRelationshipsApplication, SubGraphProjectApplication,
-    EstimateCommonNeighbourAwareRandomWalkApplication, WriteNodeLabelApplication,
-    WriteNodePropertiesApplication, WriteRelationshipPropertiesApplication, WriteRelationshipsApplication,
+    DropRelationshipsApplication, EstimateCommonNeighbourAwareRandomWalkApplication,
+    ExportToCsvApplication, ExportToCsvEstimateApplication, ExportToDatabaseApplication,
+    GenerateGraphApplication, GenericProjectApplication, GraphMemoryUsageApplication,
+    GraphSamplingApplication, ListGraphApplication, NativeProjectApplication,
+    NodeLabelMutatorApplication, StreamGraphPropertiesApplication, StreamNodePropertiesApplication,
+    StreamRelationshipPropertiesApplication, StreamRelationshipsApplication,
+    SubGraphProjectApplication, WriteNodeLabelApplication, WriteNodePropertiesApplication,
+    WriteRelationshipPropertiesApplication, WriteRelationshipsApplication,
 };
 use crate::applications::graph_store_catalog::loaders::GraphStoreCatalogService;
 use crate::applications::graph_store_catalog::results::GraphMemoryUsage;
@@ -103,8 +103,8 @@ impl DefaultGraphCatalogApplications {
             generate_graph_application: builder.generate_graph_application,
             graph_sampling_application: builder.graph_sampling_application,
             sub_graph_project_application: builder.sub_graph_project_application,
-            estimate_common_neighbour_aware_random_walk_application:
-                builder.estimate_common_neighbour_aware_random_walk_application,
+            estimate_common_neighbour_aware_random_walk_application: builder
+                .estimate_common_neighbour_aware_random_walk_application,
             task_registry_factory: builder.task_registry_factory,
             user_log_registry_factory: builder.user_log_registry_factory,
         }
@@ -532,23 +532,24 @@ impl GraphCatalogApplications for DefaultGraphCatalogApplications {
     {
         // Pass-1 estimate: derive from either source graph size or a small fictitious default.
         let (n, r) = if let Some(source) = projection_config.source_graph_name.as_deref() {
-            let store = self
-                .graph_store_catalog_service
-                .get_graph_store(user, database_id, source)?;
+            let store =
+                self.graph_store_catalog_service
+                    .get_graph_store(user, database_id, source)?;
             (store.node_count() as u64, store.relationship_count() as u64)
         } else if projection_config.fictitious_loading {
             (16u64, 0u64)
         } else {
-            return Err("estimate_project_native requires sourceGraphName or fictitiousLoading".to_string());
+            return Err(
+                "estimate_project_native requires sourceGraphName or fictitiousLoading".to_string(),
+            );
         };
 
         // Simple model: base + per-node + per-relationship, scaled slightly by selected props.
         let base = 500_000u64;
         let per_node = 96u64;
         let per_rel = 64u64;
-        let property_factor =
-            (projection_config.node_properties.len() + projection_config.relationship_properties.len())
-                as u64;
+        let property_factor = (projection_config.node_properties.len()
+            + projection_config.relationship_properties.len()) as u64;
 
         let bytes = base + (n * per_node) + (r * per_rel) + (property_factor * 1_024);
         let mut details: HashMap<String, Value> = HashMap::new();
@@ -559,9 +560,11 @@ impl GraphCatalogApplications for DefaultGraphCatalogApplications {
             serde_json::json!(projection_config.graph_name),
         );
 
-        Ok(crate::applications::graph_store_catalog::results::MemoryEstimateResult::new(
-            bytes, details,
-        ))
+        Ok(
+            crate::applications::graph_store_catalog::results::MemoryEstimateResult::new(
+                bytes, details,
+            ),
+        )
     }
 
     fn project_generic(
@@ -686,9 +689,11 @@ impl GraphCatalogApplications for DefaultGraphCatalogApplications {
         );
         details.insert("configuration".to_string(), configuration.clone());
 
-        Ok(crate::applications::graph_store_catalog::results::MemoryEstimateResult::new(
-            bytes, details,
-        ))
+        Ok(
+            crate::applications::graph_store_catalog::results::MemoryEstimateResult::new(
+                bytes, details,
+            ),
+        )
     }
 
     fn generate_graph(
@@ -757,13 +762,14 @@ impl GraphCatalogApplications for DefaultGraphCatalogApplications {
             .generate_graph_application
             .compute(user, database_id, &gen_cfg)?;
 
-        let mut stats = crate::applications::graph_store_catalog::results::GraphGenerationStats::new(
-            gen.graph_name().to_string(),
-            average_degree as f64,
-            relationship_distribution,
-            relationship_property_map,
-            relationship_seed,
-        );
+        let mut stats =
+            crate::applications::graph_store_catalog::results::GraphGenerationStats::new(
+                gen.graph_name().to_string(),
+                average_degree as f64,
+                relationship_distribution,
+                relationship_property_map,
+                relationship_seed,
+            );
         stats.nodes = gen.nodes_generated();
         stats.relationships = gen.relationships_generated();
         stats.generate_millis = gen.generation_time_ms();
@@ -790,15 +796,12 @@ impl GraphCatalogApplications for DefaultGraphCatalogApplications {
         node_filter: &str,
         relationship_filter: &str,
         configuration: &Value,
-    ) -> Result<crate::applications::graph_store_catalog::results::GraphFilterResult, String>
-    {
+    ) -> Result<crate::applications::graph_store_catalog::results::GraphFilterResult, String> {
         let sample_node_count = configuration
             .get("sampleNodeCount")
             .and_then(|v| v.as_u64())
             .map(|v| v as usize);
-        let sample_ratio = configuration
-            .get("sampleRatio")
-            .and_then(|v| v.as_f64());
+        let sample_ratio = configuration.get("sampleRatio").and_then(|v| v.as_f64());
         let seed = configuration.get("seed").and_then(|v| v.as_u64());
 
         self.sub_graph_project_application.compute(
@@ -828,9 +831,7 @@ impl GraphCatalogApplications for DefaultGraphCatalogApplications {
             .get("sampleNodeCount")
             .and_then(|v| v.as_u64())
             .map(|v| v as usize);
-        let sample_ratio = configuration
-            .get("sampleRatio")
-            .and_then(|v| v.as_f64());
+        let sample_ratio = configuration.get("sampleRatio").and_then(|v| v.as_f64());
         let seed = configuration.get("seed").and_then(|v| v.as_u64());
 
         let sampling_config = SamplingConfig {
@@ -840,18 +841,23 @@ impl GraphCatalogApplications for DefaultGraphCatalogApplications {
             seed,
         };
 
-        let s = self
-            .graph_sampling_application
-            .compute(user, database_id, origin_graph_name, &sampling_config)?;
+        let s = self.graph_sampling_application.compute(
+            user,
+            database_id,
+            origin_graph_name,
+            &sampling_config,
+        )?;
 
-        Ok(crate::applications::graph_store_catalog::results::RandomWalkSamplingResult::new(
-            graph_name.to_string(),
-            origin_graph_name.to_string(),
-            s.sampled_nodes(),
-            s.sampled_relationships(),
-            s.sampled_nodes(),
-            started.elapsed().as_millis() as u64,
-        ))
+        Ok(
+            crate::applications::graph_store_catalog::results::RandomWalkSamplingResult::new(
+                graph_name.to_string(),
+                origin_graph_name.to_string(),
+                s.sampled_nodes(),
+                s.sampled_relationships(),
+                s.sampled_nodes(),
+                started.elapsed().as_millis() as u64,
+            ),
+        )
     }
 
     fn sample_common_neighbour_aware_random_walk(
@@ -881,9 +887,9 @@ impl GraphCatalogApplications for DefaultGraphCatalogApplications {
         configuration: &Value,
     ) -> Result<crate::applications::graph_store_catalog::results::MemoryEstimateResult, String>
     {
-        let graph_store = self
-            .graph_store_catalog_service
-            .get_graph_store(user, database_id, graph_name)?;
+        let graph_store =
+            self.graph_store_catalog_service
+                .get_graph_store(user, database_id, graph_name)?;
         Ok(self
             .estimate_common_neighbour_aware_random_walk_application
             .compute(graph_store.as_ref(), configuration))

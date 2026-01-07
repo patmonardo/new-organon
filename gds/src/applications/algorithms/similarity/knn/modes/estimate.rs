@@ -13,11 +13,12 @@ pub fn run(op: &str, request: &KnnRequest, graph_resources: &GraphResources) -> 
     match request.common.estimate_submode.as_deref() {
         Some("memory") | None => {
             let primary = &request.node_properties[0];
-            let mut builder = KnnBuilder::new(Arc::clone(graph_resources.store()), primary.name.clone())
-                .k(request.top_k)
-                .similarity_cutoff(request.similarity_cutoff)
-                .metric(primary.metric)
-                .concurrency(request.common.concurrency.value());
+            let mut builder =
+                KnnBuilder::new(Arc::clone(graph_resources.store()), primary.name.clone())
+                    .k(request.top_k)
+                    .similarity_cutoff(request.similarity_cutoff)
+                    .metric(primary.metric)
+                    .concurrency(request.common.concurrency.value());
 
             if request.node_properties.len() > 1 {
                 for prop in request.node_properties.iter().skip(1) {

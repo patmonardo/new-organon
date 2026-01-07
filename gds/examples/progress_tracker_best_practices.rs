@@ -12,8 +12,8 @@
 
 use gds::concurrency::Concurrency;
 use gds::core::utils::progress::{
-    JobId, PerDatabaseTaskStore, ProgressTracker, TaskRegistryFactories, TaskStoreListener,
-    TaskProgressTracker, TaskStore, Tasks, UserTask,
+    JobId, PerDatabaseTaskStore, ProgressTracker, TaskProgressTracker, TaskRegistryFactories,
+    TaskStore, TaskStoreListener, Tasks, UserTask,
 };
 use gds::mem::MemoryRange;
 use std::sync::{Arc, Mutex};
@@ -140,6 +140,8 @@ fn main() {
     println!("[TASK] final store task_count={}", store.task_count());
     println!(
         "[TASK] store query after completion: {:?}",
-        store.query(&username, &job_id).map(|ut| ut.task.description().to_string())
+        store
+            .query(&username, &job_id)
+            .map(|ut| ut.task.description().to_string())
     );
 }

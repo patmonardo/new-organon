@@ -1,5 +1,3 @@
-use crate::mem::MemoryRange;
-use crate::procedures::traits::Result;
 use crate::algo::similarity::filtered_knn::{
     FilteredKnnComputationRuntime, FilteredKnnConfig, FilteredKnnResultRow,
     FilteredKnnStorageRuntime,
@@ -8,6 +6,8 @@ use crate::algo::similarity::knn::metrics::{KnnNodePropertySpec, SimilarityMetri
 use crate::algo::similarity::knn::storage::KnnSamplerType;
 use crate::algo::similarity::knn::KnnNnDescentStats;
 use crate::core::utils::progress::Tasks;
+use crate::mem::MemoryRange;
+use crate::procedures::traits::Result;
 use crate::projection::NodeLabel;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde::{Deserialize, Serialize};
@@ -179,10 +179,11 @@ impl FilteredKnnBuilder {
         let computation = FilteredKnnComputationRuntime::new();
         let storage = FilteredKnnStorageRuntime::new(config.concurrency);
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("filteredknn".to_string(), self.graph_store.node_count()),
-            config.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("filteredknn".to_string(), self.graph_store.node_count()),
+                config.concurrency,
+            );
 
         let (results, nn_stats) = if config.node_properties.is_empty() {
             storage.compute_single_with_stats(
@@ -208,18 +209,12 @@ impl FilteredKnnBuilder {
             )?
         } else {
             // Multi-property mode should include the primary property passed to `new(...)`.
-            let mut combined: Vec<KnnNodePropertySpec> = Vec::with_capacity(
-                config.node_properties.len() + 1,
-            );
+            let mut combined: Vec<KnnNodePropertySpec> =
+                Vec::with_capacity(config.node_properties.len() + 1);
 
             let primary = config.node_property.trim();
-            if !primary.is_empty()
-                && !config.node_properties.iter().any(|p| p.name == primary)
-            {
-                combined.push(KnnNodePropertySpec::new(
-                    primary,
-                    config.similarity_metric,
-                ));
+            if !primary.is_empty() && !config.node_properties.iter().any(|p| p.name == primary) {
+                combined.push(KnnNodePropertySpec::new(primary, config.similarity_metric));
             }
             combined.extend(config.node_properties.iter().cloned());
 
@@ -275,10 +270,8 @@ impl FilteredKnnBuilder {
             })
             .collect();
 
-        let stats = crate::algo::common::result::similarity::similarity_stats(
-            || tuples.into_iter(),
-            true,
-        );
+        let stats =
+            crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
 
         Ok(FilteredKnnStats {
             nodes_compared: sources.len() as u64,
@@ -312,10 +305,7 @@ impl FilteredKnnBuilder {
         let label_filter_memory =
             (self.source_node_labels.len() + self.target_node_labels.len()) * 64;
 
-        let total = results_memory
-            + per_node_scratch
-            + per_property_scratch
-            + label_filter_memory;
+        let total = results_memory + per_node_scratch + per_property_scratch + label_filter_memory;
         let overhead = total / 5;
         MemoryRange::of_range(total, total + overhead)
     }

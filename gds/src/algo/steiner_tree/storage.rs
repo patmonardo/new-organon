@@ -19,7 +19,10 @@ pub struct SteinerTreeStorageRuntime {
 
 impl SteinerTreeStorageRuntime {
     pub fn new(config: SteinerTreeConfig, concurrency: usize) -> Self {
-        Self { config, concurrency }
+        Self {
+            config,
+            concurrency,
+        }
     }
 
     pub fn compute_steiner_tree(
@@ -40,16 +43,10 @@ impl SteinerTreeStorageRuntime {
         let start = Instant::now();
 
         let node_count = graph.map(|g| g.node_count()).unwrap_or(0);
-        let neighbor_fn = |node: NodeId| -> Vec<(NodeId, f64)> {
-            self.get_neighbors_with_weights(graph, node)
-        };
+        let neighbor_fn =
+            |node: NodeId| -> Vec<(NodeId, f64)> { self.get_neighbors_with_weights(graph, node) };
 
-        let result = self.compute_core(
-            computation,
-            node_count,
-            &neighbor_fn,
-            progress_tracker,
-        );
+        let result = self.compute_core(computation, node_count, &neighbor_fn, progress_tracker);
 
         match result {
             Ok(ok) => {
@@ -113,7 +110,9 @@ impl SteinerTreeStorageRuntime {
         }
 
         if self.config.delta <= 0.0 {
-            return Err(AlgorithmError::InvalidGraph("delta must be > 0".to_string()));
+            return Err(AlgorithmError::InvalidGraph(
+                "delta must be > 0".to_string(),
+            ));
         }
 
         let source = self.config.source_node;
@@ -151,10 +150,7 @@ impl SteinerTreeStorageRuntime {
         let mut merged_to_source = vec![false; node_count];
         merged_to_source[source as usize] = true;
 
-        let mut remaining: Vec<NodeId> = terminals
-            .into_iter()
-            .filter(|&t| t != source)
-            .collect();
+        let mut remaining: Vec<NodeId> = terminals.into_iter().filter(|&t| t != source).collect();
 
         while !remaining.is_empty() {
             self.run_multi_source_delta_stepping(

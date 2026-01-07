@@ -1,11 +1,11 @@
 // Phase 5.2: LinkPredictionTrain - Training orchestration for link prediction
 
 use super::{FeaturesAndLabels, LinkPredictionTrainConfig, LinkPredictionTrainResult};
+use crate::core::utils::progress::{LeafTask, Tasks};
+use crate::mem::{MemoryRange, MemoryTree};
 use crate::projection::eval::pipeline::link_pipeline::{
     LinkPredictionSplitConfig, LinkPredictionTrainingPipeline,
 };
-use crate::core::utils::progress::{LeafTask, Tasks};
-use crate::mem::{MemoryRange, MemoryTree};
 use std::marker::PhantomData;
 
 /// Link prediction training orchestrator.
@@ -319,7 +319,7 @@ impl LinkPredictionTrain {
     fn train_model(
         &self,
         _features_and_labels: &FeaturesAndLabels,
-        _train_set: PhantomData<()>,      // Note: placeholder for ReadOnlyHugeLongArray.
+        _train_set: PhantomData<()>, // Note: placeholder for ReadOnlyHugeLongArray.
         _trainer_config: PhantomData<()>, // Note: placeholder for TrainerConfig.
     ) -> PhantomData<()> {
         // Deferred: implement model training.

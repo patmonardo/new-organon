@@ -24,7 +24,10 @@ pub fn handle_indirect_exposure(request: &Value, catalog: Arc<dyn GraphCatalog>)
         }
     };
 
-    let mode = request.get("mode").and_then(|v| v.as_str()).unwrap_or("stats");
+    let mode = request
+        .get("mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("stats");
 
     let sanctioned_property = request
         .get("sanctionedProperty")
@@ -70,7 +73,11 @@ pub fn handle_indirect_exposure(request: &Value, catalog: Arc<dyn GraphCatalog>)
                     "didConverge": result.did_converge,
                 }
             }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("indirectExposure failed: {e}")),
+            Err(e) => err(
+                op,
+                "EXECUTION_ERROR",
+                &format!("indirectExposure failed: {e}"),
+            ),
         },
         other => err(op, "INVALID_REQUEST", &format!("Invalid mode '{other}'")),
     }

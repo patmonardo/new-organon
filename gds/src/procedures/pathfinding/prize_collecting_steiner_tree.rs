@@ -1,14 +1,14 @@
-use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{MutationResult, WriteResult};
-use crate::procedures::traits::Result;
 use crate::algo::prize_collecting_steiner_tree::{
     PCSTreeComputationRuntime, PCSTreeConfig, PCSTreeStorageRuntime,
 };
+use crate::mem::MemoryRange;
+use crate::procedures::builder_base::{MutationResult, WriteResult};
+use crate::procedures::traits::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 // Import upgraded systems
@@ -167,10 +167,11 @@ impl PCSTreeBuilder {
             );
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("prize_collecting_steiner_tree".to_string(), node_count),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("prize_collecting_steiner_tree".to_string(), node_count),
+                self.concurrency,
+            );
 
         // Build config + runtimes.
         // Storage runtime owns graph access and drives the algorithm.

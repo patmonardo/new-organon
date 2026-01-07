@@ -5,10 +5,8 @@
 //! This facade runs the translated Delta Stepping runtime against a live
 //! `DefaultGraphStore`.
 
+use crate::algo::delta_stepping::{DeltaSteppingComputationRuntime, DeltaSteppingStorageRuntime};
 use crate::mem::MemoryRange;
-use crate::algo::delta_stepping::{
-    DeltaSteppingComputationRuntime, DeltaSteppingStorageRuntime,
-};
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{PathResult as ProcedurePathResult, Result};
 use crate::projection::orientation::Orientation;
@@ -19,16 +17,11 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks,
-};
 use crate::algo::common::result_builders::{
-    ExecutionMetadata,
-    PathFindingResult,
-    PathResult as CorePathResult,
-    PathResultBuilder,
+    ExecutionMetadata, PathFindingResult, PathResult as CorePathResult, PathResultBuilder,
     ResultBuilder,
 };
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 
 /// Statistics about Delta Stepping execution
 #[derive(Debug, Clone, serde::Serialize)]
@@ -242,13 +235,14 @@ impl DeltaSteppingBuilder {
             self.store_predecessors,
         );
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume(
-                "delta_stepping".to_string(),
-                graph_view.relationship_count(),
-            ),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume(
+                    "delta_stepping".to_string(),
+                    graph_view.relationship_count(),
+                ),
+                self.concurrency,
+            );
 
         let start = std::time::Instant::now();
         let result = storage.compute_delta_stepping(

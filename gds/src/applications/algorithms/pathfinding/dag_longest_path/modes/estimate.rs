@@ -28,7 +28,11 @@ pub fn run(op: &str, request: &DagLongestPathRequest, graph_resources: &GraphRes
                         "maxBytes": memory.max()
                     }
                 }),
-                Err(e) => err(op, "EXECUTION_ERROR", &format!("DagLongestPath estimate failed: {e}")),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("DagLongestPath estimate failed: {e}"),
+                ),
             }
         }
         Some(other) => err(

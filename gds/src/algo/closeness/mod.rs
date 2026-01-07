@@ -13,7 +13,7 @@ pub mod storage;
 pub mod integration_tests;
 
 pub use computation::ClosenessCentralityComputationRuntime;
-pub use spec::{ClosenessCentralityConfig, ClosenessCentralityResult, CLOSENESSAlgorithmSpec};
+pub use spec::{CLOSENESSAlgorithmSpec, ClosenessCentralityConfig, ClosenessCentralityResult};
 pub use storage::ClosenessCentralityStorageRuntime;
 
 pub type ClosenessCentralityAlgorithmSpec = CLOSENESSAlgorithmSpec;

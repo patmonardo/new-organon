@@ -60,7 +60,11 @@ mod enabled {
         // 2) Inspect a couple of properties the generator adds.
         // - node property: `random_score` (Double)
         // - graph property: `edge_density` (Double)
-        println!("Property keys: node={:?} graph={:?}", store.node_property_keys(), store.graph_property_keys());
+        println!(
+            "Property keys: node={:?} graph={:?}",
+            store.node_property_keys(),
+            store.graph_property_keys()
+        );
 
         let density = store
             .graph_property_values("edge_density")?
@@ -213,7 +217,10 @@ mod enabled {
             }
 
             if best.path.len() >= 2 {
-                println!("Total of edge weights: {:.4} (Dijkstra reported: {:.4})", sum, best.cost);
+                println!(
+                    "Total of edge weights: {:.4} (Dijkstra reported: {:.4})",
+                    sum, best.cost
+                );
             }
 
             // 5) Final exposition: BFS vs Dijkstra (same target, different objective).

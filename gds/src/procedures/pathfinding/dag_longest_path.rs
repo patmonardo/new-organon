@@ -3,8 +3,8 @@
 //! Finds longest paths in a directed acyclic graph using topological ordering
 //! and dynamic programming.
 
-use crate::mem::MemoryRange;
 use crate::algo::dag_longest_path::computation::DagLongestPathComputationRuntime;
+use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::projection::orientation::Orientation;
@@ -107,10 +107,11 @@ impl DagLongestPathBuilder {
             return Ok((Vec::new(), start.elapsed()));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("dag_longest_path".to_string(), node_count),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("dag_longest_path".to_string(), node_count),
+                self.concurrency,
+            );
         progress_tracker.begin_subtask_with_volume(node_count);
 
         let fallback = graph_view.default_property_value();

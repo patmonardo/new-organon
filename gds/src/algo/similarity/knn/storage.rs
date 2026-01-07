@@ -1,6 +1,5 @@
 use super::computation::{
-    KnnComputationResult, KnnComputationRuntime, KnnNnDescentConfig,
-    KnnNnDescentStats,
+    KnnComputationResult, KnnComputationRuntime, KnnNnDescentConfig, KnnNnDescentStats,
 };
 use super::metrics::{KnnNodePropertySpec, SimilarityComputer, SimilarityMetric};
 use crate::core::utils::progress::ProgressTracker;
@@ -26,9 +25,7 @@ pub struct KnnStorageRuntime {
 
 impl KnnStorageRuntime {
     pub fn new(concurrency: usize) -> Self {
-        Self {
-            concurrency,
-        }
+        Self { concurrency }
     }
 
     fn with_thread_pool<T>(&self, f: impl FnOnce() -> T + Send) -> T

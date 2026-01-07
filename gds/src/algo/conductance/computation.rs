@@ -69,7 +69,8 @@ impl ConductanceComputationRuntime {
                             break;
                         }
 
-                        let Ok(source_community_raw) = community_properties.long_value(node as u64) else {
+                        let Ok(source_community_raw) = community_properties.long_value(node as u64)
+                        else {
                             continue;
                         };
                         if source_community_raw < 0 {
@@ -138,10 +139,7 @@ impl ConductanceComputationRuntime {
         Ok(out)
     }
 
-    pub fn accumulate_counts(
-        &mut self,
-        locals: Vec<LocalCounts>,
-    ) -> RelationshipCounts {
+    pub fn accumulate_counts(&mut self, locals: Vec<LocalCounts>) -> RelationshipCounts {
         let mut internal_counts: HashMap<u64, f64> = HashMap::new();
         let mut external_counts: HashMap<u64, f64> = HashMap::new();
 

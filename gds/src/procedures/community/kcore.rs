@@ -5,14 +5,14 @@
 //! Parameters (Java GDS aligned):
 //! - `concurrency`: accepted for parity; currently unused.
 
-use crate::core::utils::progress::{TaskRegistry, Tasks};
-use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::Result;
 use crate::algo::kcore::{
     KCoreComputationResult, KCoreComputationRuntime, KCoreConfig, KCoreStorageRuntime,
 };
 use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::{TaskRegistry, Tasks};
+use crate::mem::MemoryRange;
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::traits::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
 use std::time::Instant;
@@ -84,10 +84,11 @@ impl KCoreFacade {
         }
 
         let base_task = Tasks::leaf_with_volume("kcore".to_string(), node_count);
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            base_task,
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                base_task,
+                self.concurrency,
+            );
 
         let termination_flag = TerminationFlag::default();
 

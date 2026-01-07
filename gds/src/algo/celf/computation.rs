@@ -28,11 +28,7 @@ impl CELFComputationRuntime {
     /// Structure follows Java GDS:
     /// 1) Greedy init: compute spread for all nodes and pick best.
     /// 2) Lazy forward: iteratively update marginal gains for top candidates in batches.
-    pub fn compute<F>(
-        &self,
-        get_neighbors: F,
-        termination: &TerminationFlag,
-    ) -> HashMap<u64, f64>
+    pub fn compute<F>(&self, get_neighbors: F, termination: &TerminationFlag) -> HashMap<u64, f64>
     where
         F: Fn(usize) -> Vec<usize> + Send + Sync,
     {
@@ -95,8 +91,7 @@ impl CELFComputationRuntime {
         // Ignore termination errors for now (we always use running_true in this runtime).
         let _ = executor.parallel_for(0, self.node_count, termination, |node_id| {
             storage.with(|s| {
-                let spread =
-                    s.compute_single_node_spread(node_id, get_neighbors, p, mc, base_seed);
+                let spread = s.compute_single_node_spread(node_id, get_neighbors, p, mc, base_seed);
                 single_spread.set(node_id, spread);
             });
         });
@@ -171,14 +166,11 @@ impl CELFComputationRuntime {
                 let chunk = (sim_count + concurrency - 1) / concurrency;
                 let task_count = (sim_count + chunk - 1) / chunk;
 
-                let partials: std::sync::Arc<Vec<std::sync::Mutex<Vec<f64>>>> =
-                    std::sync::Arc::new(
-                        (0..task_count)
-                            .map(|_| {
-                                std::sync::Mutex::new(vec![0.0f64; candidates_snapshot.len()])
-                            })
-                            .collect(),
-                    );
+                let partials: std::sync::Arc<Vec<std::sync::Mutex<Vec<f64>>>> = std::sync::Arc::new(
+                    (0..task_count)
+                        .map(|_| std::sync::Mutex::new(vec![0.0f64; candidates_snapshot.len()]))
+                        .collect(),
+                );
 
                 let _ = executor.parallel_for(0, task_count, termination, |task_idx| {
                     let start = task_idx * chunk;
@@ -358,7 +350,8 @@ impl ICLazyForwardStorage {
             self.stack.push(candidate as i64);
 
             // Use a deterministic but different stream for candidate traversal.
-            let mut cand_rng = StdRng::seed_from_u64(base_seed.wrapping_add(sim).wrapping_add(0x9E3779B97F4A7C15));
+            let mut cand_rng =
+                StdRng::seed_from_u64(base_seed.wrapping_add(sim).wrapping_add(0x9E3779B97F4A7C15));
             while !self.stack.is_empty() {
                 let node = self.stack.pop() as usize;
                 for neighbor in (get_neighbors)(node) {

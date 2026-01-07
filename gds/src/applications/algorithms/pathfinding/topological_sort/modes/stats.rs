@@ -4,7 +4,8 @@ use crate::core::loading::GraphResources;
 use serde_json::{json, Value};
 
 pub fn run(op: &str, request: &TopologicalSortRequest, graph_resources: &GraphResources) -> Value {
-    let result = graph_resources.facade()
+    let result = graph_resources
+        .facade()
         .topological_sort()
         .compute_max_distance(request.compute_max_distance)
         .stats();
@@ -21,6 +22,10 @@ pub fn run(op: &str, request: &TopologicalSortRequest, graph_resources: &GraphRe
                 "side_effect_millis": 0
             })
         }),
-        Err(e) => err(op, "EXECUTION_ERROR", &format!("TopologicalSort stats failed: {e}")),
+        Err(e) => err(
+            op,
+            "EXECUTION_ERROR",
+            &format!("TopologicalSort stats failed: {e}"),
+        ),
     }
 }

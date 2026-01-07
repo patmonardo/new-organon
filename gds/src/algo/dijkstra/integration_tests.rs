@@ -209,7 +209,8 @@ fn test_dijkstra_storage_computation_integration() {
     );
 
     // Test integration between storage and computation
-    let result = storage.compute_dijkstra(&mut computation, targets, None, 0, &mut progress_tracker);
+    let result =
+        storage.compute_dijkstra(&mut computation, targets, None, 0, &mut progress_tracker);
     assert!(result.is_ok());
 
     let _ = result.unwrap();

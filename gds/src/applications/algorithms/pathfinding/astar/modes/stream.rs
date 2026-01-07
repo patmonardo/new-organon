@@ -28,7 +28,9 @@ pub fn run(op: &str, request: &AStarRequest, graph_resources: &GraphResources) -
      -> Result<Option<Vec<PathResult>>, String> {
         // Use facade instead of direct algo calls
         use crate::procedures::pathfinding::Heuristic;
-        let mut builder = gr.facade().astar()
+        let mut builder = gr
+            .facade()
+            .astar()
             .source(request.source)
             .target(request.target)
             .weight_property(&request.weight_property)
@@ -44,11 +46,18 @@ pub fn run(op: &str, request: &AStarRequest, graph_resources: &GraphResources) -
         Ok(Some(iter.collect()))
     };
 
-    let result_builder = FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<PathResult>>| {
-        rows.unwrap_or_default().into_iter()
-    });
+    let result_builder =
+        FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<PathResult>>| {
+            rows.unwrap_or_default().into_iter()
+        });
 
-    match convenience.process_stream(graph_resources, request.common.concurrency, task, compute, result_builder) {
+    match convenience.process_stream(
+        graph_resources,
+        request.common.concurrency,
+        task,
+        compute,
+        result_builder,
+    ) {
         Ok(stream) => {
             let rows: Vec<PathResult> = stream.collect::<Vec<_>>();
             json!({
@@ -57,7 +66,7 @@ pub fn run(op: &str, request: &AStarRequest, graph_resources: &GraphResources) -
                 "mode": "stream",
                 "data": rows
             })
-        },
+        }
         Err(e) => err(op, "EXECUTION_ERROR", &format!("A* stream failed: {e}")),
     }
 }

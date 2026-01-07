@@ -6,10 +6,10 @@
 
 use super::spec::{DagLongestPathResult, PathRow};
 use super::storage::DagLongestPathStorageRuntime;
+use crate::types::graph::id_map::NodeId;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::thread;
-use crate::types::graph::id_map::NodeId;
 
 /// Parallel task for longest path computation
 struct LongestPathTask {
@@ -40,7 +40,8 @@ impl LongestPathTask {
             self.longest_path_traverse(self.source_id, target, weight);
 
             // Decrement in-degree
-            let prev_degree = self.storage.in_degrees[target as usize].fetch_sub(1, Ordering::SeqCst);
+            let prev_degree =
+                self.storage.in_degrees[target as usize].fetch_sub(1, Ordering::SeqCst);
 
             // If this was the last incoming edge, fork a new task
             if prev_degree == 1 {
@@ -48,7 +49,8 @@ impl LongestPathTask {
 
                 let new_task = LongestPathTask::new(
                     target,
-                    Arc::clone(&self.get_neighbors) as Arc<dyn Fn(NodeId) -> Vec<(NodeId, f64)> + Send + Sync>,
+                    Arc::clone(&self.get_neighbors)
+                        as Arc<dyn Fn(NodeId) -> Vec<(NodeId, f64)> + Send + Sync>,
                     Arc::clone(&self.storage),
                     Arc::clone(&self.pending_tasks),
                 );
@@ -67,7 +69,11 @@ impl LongestPathTask {
         let potential_distance = source_distance + weight;
 
         // Try to update the target distance if we found a longer path
-        self.storage.compare_and_update_distance(target as usize, potential_distance, source as usize);
+        self.storage.compare_and_update_distance(
+            target as usize,
+            potential_distance,
+            source as usize,
+        );
     }
 }
 
@@ -105,13 +111,15 @@ impl DagLongestPathComputationRuntime {
             if self.storage.in_degrees[node_id as usize].load(Ordering::SeqCst) == 0 {
                 // Initialize source node distance
                 self.storage.set_distance(node_id as usize, 0.0);
-                self.storage.set_predecessor(node_id as usize, node_id as usize);
+                self.storage
+                    .set_predecessor(node_id as usize, node_id as usize);
 
                 // Create and spawn task
                 pending_tasks.fetch_add(1, Ordering::SeqCst);
                 let task = LongestPathTask::new(
                     node_id,
-                    Arc::clone(&get_neighbors) as Arc<dyn Fn(NodeId) -> Vec<(NodeId, f64)> + Send + Sync>,
+                    Arc::clone(&get_neighbors)
+                        as Arc<dyn Fn(NodeId) -> Vec<(NodeId, f64)> + Send + Sync>,
                     Arc::clone(&self.storage),
                     Arc::clone(&pending_tasks),
                 );

@@ -132,23 +132,21 @@ impl LinkPredictionModelInfo {
         // Back-compat fields (mirrors Java shape).
         map.insert(
             "nodePropertySteps".to_string(),
-            serde_json::json!(
-                self.pipeline
-                    .to_map()
-                    .get("nodePropertySteps")
-                    .cloned()
-                    .unwrap_or_default()
-            ),
+            serde_json::json!(self
+                .pipeline
+                .to_map()
+                .get("nodePropertySteps")
+                .cloned()
+                .unwrap_or_default()),
         );
         map.insert(
             "featureSteps".to_string(),
-            serde_json::json!(
-                self.pipeline
-                    .to_map()
-                    .get("featureSteps")
-                    .cloned()
-                    .unwrap_or_default()
-            ),
+            serde_json::json!(self
+                .pipeline
+                .to_map()
+                .get("featureSteps")
+                .cloned()
+                .unwrap_or_default()),
         );
 
         map
@@ -202,7 +200,11 @@ mod tests {
 
     #[test]
     fn test_accessors() {
-        let info = LinkPredictionModelInfo::new((), HashMap::new(), LinkPredictionPredictPipeline::empty());
+        let info = LinkPredictionModelInfo::new(
+            (),
+            HashMap::new(),
+            LinkPredictionPredictPipeline::empty(),
+        );
 
         let _params = info.best_parameters();
         let _metrics = info.metrics();
@@ -211,7 +213,11 @@ mod tests {
 
     #[test]
     fn test_to_map() {
-        let info = LinkPredictionModelInfo::new((), HashMap::new(), LinkPredictionPredictPipeline::empty());
+        let info = LinkPredictionModelInfo::new(
+            (),
+            HashMap::new(),
+            LinkPredictionPredictPipeline::empty(),
+        );
 
         let map = info.to_map();
 
@@ -224,14 +230,22 @@ mod tests {
 
     #[test]
     fn test_optional_trainer_method() {
-        let info = LinkPredictionModelInfo::new((), HashMap::new(), LinkPredictionPredictPipeline::empty());
+        let info = LinkPredictionModelInfo::new(
+            (),
+            HashMap::new(),
+            LinkPredictionPredictPipeline::empty(),
+        );
 
         assert!(info.optional_trainer_method().is_none()); // Placeholder
     }
 
     #[test]
     fn test_clone() {
-        let info1 = LinkPredictionModelInfo::new((), HashMap::new(), LinkPredictionPredictPipeline::empty());
+        let info1 = LinkPredictionModelInfo::new(
+            (),
+            HashMap::new(),
+            LinkPredictionPredictPipeline::empty(),
+        );
         let info2 = info1.clone();
 
         assert_eq!(info1.metrics().len(), info2.metrics().len());

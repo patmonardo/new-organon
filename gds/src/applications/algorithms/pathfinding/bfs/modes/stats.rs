@@ -25,7 +25,8 @@ pub fn run(op: &str, request: &BfsRequest, graph_resources: &GraphResources) -> 
                    _tracker: &mut dyn ProgressTracker,
                    _termination: &TerminationFlag|
      -> Result<Option<crate::procedures::pathfinding::BfsStats>, String> {
-        let mut builder = gr.facade()
+        let mut builder = gr
+            .facade()
             .bfs()
             .source(request.source)
             .track_paths(request.track_paths)
@@ -39,17 +40,17 @@ pub fn run(op: &str, request: &BfsRequest, graph_resources: &GraphResources) -> 
         Ok(Some(stats))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       stats: Option<crate::procedures::pathfinding::BfsStats>,
-                                       timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stats",
-            "data": stats,
-            "timings": timings_json(timings)
-        })
-    });
+    let builder = FnStatsResultBuilder(
+        |_gr: &GraphResources, stats: Option<crate::procedures::pathfinding::BfsStats>, timings| {
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stats",
+                "data": stats,
+                "timings": timings_json(timings)
+            })
+        },
+    );
 
     match convenience.process_stats(
         graph_resources,

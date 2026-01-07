@@ -437,7 +437,13 @@ mod tests {
     struct TestCosineAppender;
 
     impl LinkFeatureAppender for TestCosineAppender {
-        fn append_features(&self, _source: u64, _target: u64, _features: &mut [f64], _offset: usize) {
+        fn append_features(
+            &self,
+            _source: u64,
+            _target: u64,
+            _features: &mut [f64],
+            _offset: usize,
+        ) {
             // Test-only stub.
         }
 

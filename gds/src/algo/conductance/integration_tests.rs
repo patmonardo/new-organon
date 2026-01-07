@@ -1,17 +1,17 @@
 use super::computation::ConductanceComputationRuntime;
 use super::spec::ConductanceConfig;
 use super::storage::ConductanceStorageRuntime;
-use crate::concurrency::TerminationFlag;
-use crate::concurrency::Concurrency;
-use crate::core::utils::progress::TaskProgressTracker;
 use crate::algo::conductance::progress_task;
+use crate::concurrency::Concurrency;
+use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::projection::RelationshipType;
 use crate::types::graph::RelationshipTopology;
+use crate::types::graph_store::Capabilities;
 use crate::types::graph_store::{DatabaseId, DatabaseInfo, DatabaseLocation, GraphName};
 use crate::types::prelude::DefaultGraphStore;
-use crate::types::graph_store::Capabilities;
-use crate::types::schema::GraphSchema;
 use crate::types::prelude::GraphStore;
+use crate::types::schema::GraphSchema;
 use std::collections::HashMap;
 
 fn make_store(outgoing: Vec<Vec<i64>>) -> DefaultGraphStore {

@@ -3,18 +3,18 @@
 //! Computes minimum Steiner trees connecting source nodes to terminal nodes.
 //! Uses approximation algorithms with delta-stepping and rerouting optimizations.
 
-use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::Result;
 use crate::algo::steiner_tree::{
     SteinerTreeComputationRuntime, SteinerTreeConfig, SteinerTreeStorageRuntime,
 };
+use crate::mem::MemoryRange;
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::traits::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 // Import upgraded systems
@@ -185,24 +185,26 @@ impl SteinerTreeBuilder {
             ));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("steiner_tree".to_string(), node_count),
-            self.concurrency,
-        );
+        let mut progress_tracker =
+            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("steiner_tree".to_string(), node_count),
+                self.concurrency,
+            );
 
         let source_node: NodeId = NodeId::try_from(self.source_node).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                format!("source_node must fit into i64 (got {})", self.source_node),
-            )
+            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                "source_node must fit into i64 (got {})",
+                self.source_node
+            ))
         })?;
         let target_nodes: Vec<NodeId> = self
             .target_nodes
             .iter()
             .map(|&t| {
                 NodeId::try_from(t).map_err(|_| {
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        format!("target_nodes must fit into i64 (got {t})"),
-                    )
+                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                        "target_nodes must fit into i64 (got {t})"
+                    ))
                 })
             })
             .collect::<Result<Vec<_>>>()?;

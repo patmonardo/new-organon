@@ -13,9 +13,9 @@ use crate::errors::MemoryEstimationError;
 use crate::mem::MemoryTreeWithDimensions;
 
 use super::{
-    AlgorithmMachinery, AlgorithmProcessingTimings, AlgorithmProcessingTimingsBuilder,
-    AlgoBaseConfigLike, DimensionTransformer, Label, MemoryGuard, ProgressTrackerCreator,
-    ResultRenderer, SideEffect,
+    AlgoBaseConfigLike, AlgorithmMachinery, AlgorithmProcessingTimings,
+    AlgorithmProcessingTimingsBuilder, DimensionTransformer, Label, MemoryGuard,
+    ProgressTrackerCreator, ResultRenderer, SideEffect,
 };
 
 pub trait AlgorithmProcessingTemplate {
@@ -58,7 +58,8 @@ pub trait AlgorithmProcessingTemplate {
         estimation_factory: impl FnOnce(
             &GraphResources,
             &Configuration,
-        ) -> Result<MemoryTreeWithDimensions, MemoryEstimationError>,
+        )
+            -> Result<MemoryTreeWithDimensions, MemoryEstimationError>,
         dimension_transformer: &dyn DimensionTransformer,
         concurrency: Concurrency,
         task: Task,
@@ -153,7 +154,8 @@ impl AlgorithmProcessingTemplate for DefaultAlgorithmProcessingTemplate {
                 timings_builder.with_compute_millis(start_compute.elapsed().as_millis() as i64);
 
                 let start_side_effect = std::time::Instant::now();
-                let metadata = side_effect.and_then(|se| se.process(graph_resources, computed.as_ref()));
+                let metadata =
+                    side_effect.and_then(|se| se.process(graph_resources, computed.as_ref()));
                 timings_builder
                     .with_side_effect_millis(start_side_effect.elapsed().as_millis() as i64);
 

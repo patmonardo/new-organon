@@ -10,7 +10,9 @@ use crate::core::loading::GraphResources;
 use crate::errors::MemoryEstimationError;
 use crate::mem::MemoryTreeWithDimensions;
 
-use super::{AlgoBaseConfigLike, Computation, DimensionTransformer, Label, MemoryGuard, MemoryGuardError};
+use super::{
+    AlgoBaseConfigLike, Computation, DimensionTransformer, Label, MemoryGuard, MemoryGuardError,
+};
 
 pub struct ComputationService<G> {
     pub username: String,
@@ -38,7 +40,8 @@ where
         estimation_supplier: impl FnOnce(
             &GraphResources,
             &Configuration,
-        ) -> Result<MemoryTreeWithDimensions, MemoryEstimationError>,
+        )
+            -> Result<MemoryTreeWithDimensions, MemoryEstimationError>,
         computation: &dyn Computation<ResultFromAlgorithm>,
         dimension_transformer: &dyn DimensionTransformer,
     ) -> Result<ResultFromAlgorithm, MemoryGuardError>
