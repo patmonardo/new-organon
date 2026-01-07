@@ -94,6 +94,7 @@ impl FilteredNodeSimilarityBuilder {
     fn validate(&self) -> Result<()> {
         ConfigValidator::in_range(self.similarity_cutoff, 0.0, 1.0, "similarity_cutoff")?;
         ConfigValidator::in_range(self.top_k as f64, 1.0, 1_000_000.0, "top_k")?;
+        ConfigValidator::in_range(self.top_n as f64, 0.0, 1_000_000.0, "top_n")?;
         ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
         if let Some(prop) = &self.weight_property {
             ConfigValidator::non_empty_string(prop, "weight_property")?;
@@ -134,11 +135,26 @@ impl FilteredNodeSimilarityBuilder {
     fn compute_results(&self) -> Result<Vec<NodeSimilarityResult>> {
         self.validate()?;
 
-        let rel_types = HashSet::<RelationshipType>::new();
-        let graph = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
+        let rel_types: HashSet<RelationshipType> = self.graph_store.relationship_types();
+
+        let graph = if let Some(prop) = self.weight_property.as_ref() {
+            let selectors = rel_types
+                .iter()
+                .cloned()
+                .map(|t| (t, prop.clone()))
+                .collect::<HashMap<_, _>>();
+            self.graph_store
+                .get_graph_with_types_selectors_and_orientation(
+                    &rel_types,
+                    &selectors,
+                    Orientation::Natural,
+                )
+                .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?
+        } else {
+            self.graph_store
+                .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
+                .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?
+        };
 
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("filtered_node_similarity".to_string(), graph.node_count()),
@@ -183,7 +199,7 @@ impl FilteredNodeSimilarityBuilder {
         }
 
         let config = self.build_config();
-        let results = crate::algo::similarity::filterednodesim::compute_filtered_node_similarity(
+        let results = crate::algo::similarity::filtered_node_similarity::compute_filtered_node_similarity(
             graph.as_ref(),
             &config,
             source_nodes.as_ref(),

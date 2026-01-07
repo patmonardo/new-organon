@@ -2,6 +2,8 @@ use super::computation::{FilteredKnnComputationResult, FilteredKnnComputationRun
 use crate::algo::similarity::knn::metrics::{
     KnnNodePropertySpec, SimilarityComputer, SimilarityMetric,
 };
+use crate::algo::similarity::knn::computation::KnnNnDescentConfig;
+use crate::algo::similarity::knn::storage::{KnnSamplerType, KnnStorageRuntime};
 use crate::core::utils::progress::ProgressTracker;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::NodeLabel;
@@ -10,13 +12,28 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 pub struct FilteredKnnStorageRuntime {
-    _concurrency: usize,
+    concurrency: usize,
 }
 
 impl FilteredKnnStorageRuntime {
     pub fn new(concurrency: usize) -> Self {
         Self {
-            _concurrency: concurrency,
+            concurrency,
+        }
+    }
+
+    fn with_thread_pool<T>(&self, f: impl FnOnce() -> T + Send) -> T
+    where
+        T: Send,
+    {
+        let thread_count = self.concurrency.max(1);
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(thread_count)
+            .build();
+
+        match pool {
+            Ok(pool) => pool.install(f),
+            Err(_) => f(),
         }
     }
 
@@ -27,8 +44,15 @@ impl FilteredKnnStorageRuntime {
         graph_store: &impl GraphStore,
         node_property: &str,
         k: usize,
+        sampled_k: usize,
+        max_iterations: usize,
         similarity_cutoff: f64,
         metric: SimilarityMetric,
+        perturbation_rate: f64,
+        random_joins: usize,
+        update_threshold: u64,
+        random_seed: Option<u64>,
+        initial_sampler: KnnSamplerType,
         source_node_labels: &[NodeLabel],
         target_node_labels: &[NodeLabel],
         progress_tracker: &mut dyn ProgressTracker,
@@ -48,14 +72,40 @@ impl FilteredKnnStorageRuntime {
             let (source_allowed, target_allowed) =
                 Self::build_filters(graph_store, source_node_labels, target_node_labels)?;
 
-            Ok(computation.compute(
+            let source_allowed = source_allowed.map(Arc::new);
+            let target_allowed = target_allowed.map(Arc::new);
+
+            let initial_neighbors = KnnStorageRuntime::build_initial_neighbors(
+                graph_store,
                 node_count,
                 k,
+                initial_sampler,
+                random_seed.unwrap_or(0),
+                source_allowed.clone(),
+                target_allowed.clone(),
+            );
+
+            let cfg = KnnNnDescentConfig {
+                k,
+                sampled_k,
+                max_iterations,
                 similarity_cutoff,
-                similarity,
-                source_allowed.as_deref(),
-                target_allowed.as_deref(),
-            ))
+                perturbation_rate,
+                random_joins,
+                update_threshold,
+                random_seed: random_seed.unwrap_or(0),
+            };
+
+            Ok(self.with_thread_pool(|| {
+                computation.compute_nn_descent(
+                    node_count,
+                    initial_neighbors,
+                    cfg,
+                    similarity,
+                    source_allowed,
+                    target_allowed,
+                )
+            }))
         })();
 
         match result {
@@ -78,7 +128,14 @@ impl FilteredKnnStorageRuntime {
         graph_store: &impl GraphStore,
         node_properties: &[KnnNodePropertySpec],
         k: usize,
+        sampled_k: usize,
+        max_iterations: usize,
         similarity_cutoff: f64,
+        perturbation_rate: f64,
+        random_joins: usize,
+        update_threshold: u64,
+        random_seed: Option<u64>,
+        initial_sampler: KnnSamplerType,
         source_node_labels: &[NodeLabel],
         target_node_labels: &[NodeLabel],
         progress_tracker: &mut dyn ProgressTracker,
@@ -118,14 +175,40 @@ impl FilteredKnnStorageRuntime {
             let (source_allowed, target_allowed) =
                 Self::build_filters(graph_store, source_node_labels, target_node_labels)?;
 
-            Ok(computation.compute(
+            let source_allowed = source_allowed.map(Arc::new);
+            let target_allowed = target_allowed.map(Arc::new);
+
+            let initial_neighbors = KnnStorageRuntime::build_initial_neighbors(
+                graph_store,
                 node_count,
                 k,
+                initial_sampler,
+                random_seed.unwrap_or(0),
+                source_allowed.clone(),
+                target_allowed.clone(),
+            );
+
+            let cfg = KnnNnDescentConfig {
+                k,
+                sampled_k,
+                max_iterations,
                 similarity_cutoff,
-                similarity,
-                source_allowed.as_deref(),
-                target_allowed.as_deref(),
-            ))
+                perturbation_rate,
+                random_joins,
+                update_threshold,
+                random_seed: random_seed.unwrap_or(0),
+            };
+
+            Ok(self.with_thread_pool(|| {
+                computation.compute_nn_descent(
+                    node_count,
+                    initial_neighbors,
+                    cfg,
+                    similarity,
+                    source_allowed,
+                    target_allowed,
+                )
+            }))
         })();
 
         match result {
@@ -238,8 +321,15 @@ mod tests {
                 &store,
                 "random_score",
                 3,
+                2,
+                2,
                 0.0,
                 SimilarityMetric::Default,
+                0.0,
+                0,
+                0,
+                Some(7),
+                KnnSamplerType::Uniform,
                 &[a.clone()],
                 &[b.clone()],
                 &mut progress_tracker,

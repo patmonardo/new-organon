@@ -187,8 +187,8 @@ impl Graph {
     }
 
     /// Node Similarity (Jaccard, Cosine, Overlap).
-    pub fn node_similarity(&self) -> crate::procedures::similarity::SimilarityBuilder {
-        crate::procedures::similarity::SimilarityBuilder::new(Arc::clone(&self.store))
+    pub fn node_similarity(&self) -> crate::procedures::similarity::NodeSimilarityBuilder {
+        crate::procedures::similarity::NodeSimilarityBuilder::new(Arc::clone(&self.store))
     }
 
     /// Triangle Count (per-node triangles + global triangle count).

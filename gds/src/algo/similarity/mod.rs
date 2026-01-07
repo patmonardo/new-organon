@@ -1,13 +1,13 @@
-pub mod filteredknn;
-pub mod filterednodesim;
+pub mod filtered_knn;
+pub mod filtered_node_similarity;
 pub mod knn;
-pub mod nodesim;
+pub mod node_similarity;
 
 // Preserve the existing public surface by re-exporting NodeSim types at the
 // similarity root.
-pub use nodesim::{
+pub use node_similarity::{
     NodeSimilarityAlgorithmSpec, NodeSimilarityComputationRuntime, NodeSimilarityConfig,
     NodeSimilarityMetric, NodeSimilarityResult, NodeSimilarityStorageRuntime,
 };
 
-pub use filteredknn::{FilteredKnnAlgorithmSpec, FilteredKnnConfig};
+pub use filtered_knn::{FilteredKnnAlgorithmSpec, FilteredKnnConfig};

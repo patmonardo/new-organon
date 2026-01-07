@@ -6,6 +6,8 @@ use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeSimilarityConfig {
@@ -79,7 +81,7 @@ define_algorithm_spec! {
 
         // Create runtimes
         let storage = NodeSimilarityStorageRuntime::new(parsed_config.concurrency);
-        let mut computation = NodeSimilarityComputationRuntime::new();
+        let computation = NodeSimilarityComputationRuntime::new();
 
         // For NodeSimilarity, we usually process all relationships to build vectors,
         // or specific types if configured.
@@ -87,12 +89,34 @@ define_algorithm_spec! {
         // Standard GDS config usually has `relationshipTypes`.
         // Let's assume default view (all types, natural orientation).
 
-        let rel_types: std::collections::HashSet<RelationshipType> = std::collections::HashSet::new();
-        let graph_view = graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to obtain graph view: {}", e)))?;
+        // Note: for selector-based graph views, passing an empty relationship set can mean
+        // different things across GraphStore implementations. Expand to all types explicitly.
+        let rel_types: HashSet<RelationshipType> = graph_store.relationship_types();
 
-        let results = storage.compute(&mut computation, graph_view.as_ref(), &parsed_config);
+        let graph_view = if let Some(prop) = parsed_config.weight_property.as_ref() {
+            let selectors: HashMap<RelationshipType, String> = rel_types
+                .iter()
+                .cloned()
+                .map(|t| (t, prop.clone()))
+                .collect();
+            graph_store
+                .get_graph_with_types_selectors_and_orientation(
+                    &rel_types,
+                    &selectors,
+                    Orientation::Natural,
+                )
+                .map_err(|e| {
+                    AlgorithmError::InvalidGraph(format!("Failed to obtain graph view: {}", e))
+                })?
+        } else {
+            graph_store
+                .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
+                .map_err(|e| {
+                    AlgorithmError::InvalidGraph(format!("Failed to obtain graph view: {}", e))
+                })?
+        };
+
+        let results = storage.compute(&computation, graph_view.as_ref(), &parsed_config);
 
         // Convert to result type
         let mapped_results: Vec<NodeSimilarityResult> = results.into_iter().map(NodeSimilarityResult::from).collect();

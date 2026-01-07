@@ -26,7 +26,7 @@ pub struct NodeSimilarityStats {
     pub success: bool,
 }
 
-pub struct SimilarityBuilder {
+pub struct NodeSimilarityBuilder {
     graph_store: Arc<DefaultGraphStore>,
     metric: NodeSimilarityMetric,
     similarity_cutoff: f64,
@@ -36,7 +36,7 @@ pub struct SimilarityBuilder {
     weight_property: Option<String>,
 }
 
-impl SimilarityBuilder {
+impl NodeSimilarityBuilder {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
@@ -82,6 +82,7 @@ impl SimilarityBuilder {
     fn validate(&self) -> Result<()> {
         ConfigValidator::in_range(self.similarity_cutoff, 0.0, 1.0, "similarity_cutoff")?;
         ConfigValidator::in_range(self.top_k as f64, 1.0, 1_000_000.0, "top_k")?;
+        ConfigValidator::in_range(self.top_n as f64, 0.0, 1_000_000.0, "top_n")?;
         ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
         if let Some(prop) = &self.weight_property {
             ConfigValidator::non_empty_string(prop, "weight_property")?;
@@ -107,12 +108,29 @@ impl SimilarityBuilder {
         // Assuming Orientation::Natural for Similarity.
         // Empty set = all relationship types in the default graph view.
 
-        let rel_types = HashSet::new();
+        let rel_types: HashSet<crate::projection::RelationshipType> = self.graph_store.relationship_types();
 
-        let graph = self
-            .graph_store
-            .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?;
+        let graph = if let Some(prop) = self.weight_property.as_ref() {
+            // Provide an explicit selector for every relationship type so DefaultGraph
+            // will NOT auto-select unrelated properties when the requested key is missing.
+            let selectors = rel_types
+                .iter()
+                .cloned()
+                .map(|t| (t, prop.clone()))
+                .collect::<HashMap<_, _>>();
+
+            self.graph_store
+                .get_graph_with_types_selectors_and_orientation(
+                    &rel_types,
+                    &selectors,
+                    Orientation::Natural,
+                )
+                .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?
+        } else {
+            self.graph_store
+                .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
+                .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?
+        };
 
         let node_count = graph.node_count();
         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
@@ -124,10 +142,9 @@ impl SimilarityBuilder {
         let config = self.build_config();
         let storage =
             crate::algo::similarity::NodeSimilarityStorageRuntime::new(config.concurrency);
-        let mut computation =
-            crate::algo::similarity::NodeSimilarityComputationRuntime::new();
+        let computation = crate::algo::similarity::NodeSimilarityComputationRuntime::new();
 
-        let results = storage.compute(&mut computation, graph.as_ref(), &config);
+        let results = storage.compute(&computation, graph.as_ref(), &config);
 
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();

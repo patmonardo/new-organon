@@ -116,7 +116,7 @@ This document inventories the execution **modes** exposed by the Rust `gds` *pro
 | gds/src/procedures/similarity/filtered_knn.rs | ok | ok | — | — | — | — |
 | gds/src/procedures/similarity/filtered_node_similarity.rs | ok | ok | — | stub | stub | — |
 | gds/src/procedures/similarity/knn.rs | ok | ok | — | — | — | — |
-| gds/src/procedures/similarity/similarity.rs | ok | ok | — | stub | stub | — |
+| gds/src/procedures/similarity/node_similarity.rs | ok | ok | — | stub | stub | — |
 
 ## Mutate/Write TODO inventory (action-oriented)
 
@@ -238,11 +238,11 @@ This section is intentionally redundant with the tables above, but grouped by th
 
 **Stubbed `mutate(...)` (explicit “not implemented”)**
 - gds/src/procedures/similarity/filtered_node_similarity.rs
-- gds/src/procedures/similarity/similarity.rs
+- gds/src/procedures/similarity/node_similarity.rs
 
 **Stubbed `write(...)` (explicit “not implemented”)**
 - gds/src/procedures/similarity/filtered_node_similarity.rs
-- gds/src/procedures/similarity/similarity.rs
+- gds/src/procedures/similarity/node_similarity.rs
 
 ## Notes for “owning” the control logic
 

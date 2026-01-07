@@ -8,7 +8,7 @@ use crate::concurrency::TerminationFlag;
 use crate::core::loading::GraphResources;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
 use crate::procedures::similarity::filtered_knn::FilteredKnnBuilder;
-use crate::algo::similarity::filteredknn::FilteredKnnResultRow;
+use crate::algo::similarity::filtered_knn::FilteredKnnResultRow;
 use serde_json::{json, Value};
 use std::sync::Arc;
 

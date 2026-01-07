@@ -1,7 +1,7 @@
 use crate::applications::algorithms::similarity::node_similarity::request::NodeSimilarityRequest;
 use crate::applications::algorithms::similarity::shared::{err, Mode};
 use crate::core::loading::GraphResources;
-use crate::procedures::similarity::SimilarityBuilder;
+use crate::procedures::similarity::NodeSimilarityBuilder;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -12,7 +12,7 @@ pub fn run(op: &str, request: &NodeSimilarityRequest, graph_resources: &GraphRes
 
     match request.common.estimate_submode.as_deref() {
         Some("memory") | None => {
-            let mut builder = SimilarityBuilder::new(Arc::clone(graph_resources.store()))
+            let mut builder = NodeSimilarityBuilder::new(Arc::clone(graph_resources.store()))
                 .metric(request.metric)
                 .similarity_cutoff(request.similarity_cutoff)
                 .top_k(request.top_k)

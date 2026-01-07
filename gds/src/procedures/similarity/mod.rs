@@ -1,6 +1,5 @@
-#[allow(clippy::module_inception)]
-pub mod similarity;
-pub use similarity::SimilarityBuilder;
+pub mod node_similarity;
+pub use node_similarity::{NodeSimilarityBuilder, NodeSimilarityStats};
 
 pub mod knn;
 pub use knn::KnnBuilder;

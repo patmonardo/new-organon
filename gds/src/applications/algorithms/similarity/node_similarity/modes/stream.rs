@@ -8,7 +8,7 @@ use crate::concurrency::TerminationFlag;
 use crate::core::loading::GraphResources;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
 use crate::algo::similarity::NodeSimilarityResult;
-use crate::procedures::similarity::SimilarityBuilder;
+use crate::procedures::similarity::NodeSimilarityBuilder;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -28,7 +28,7 @@ pub fn run(op: &str, request: &NodeSimilarityRequest, graph_resources: &GraphRes
                    _tracker: &mut dyn ProgressTracker,
                    _termination: &TerminationFlag|
      -> Result<Option<Vec<NodeSimilarityResult>>, String> {
-        let mut builder = SimilarityBuilder::new(Arc::clone(gr.store()))
+        let mut builder = NodeSimilarityBuilder::new(Arc::clone(gr.store()))
             .metric(request.metric)
             .similarity_cutoff(request.similarity_cutoff)
             .top_k(request.top_k)

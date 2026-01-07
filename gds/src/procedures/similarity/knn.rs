@@ -2,6 +2,7 @@ use crate::mem::MemoryRange;
 use crate::procedures::traits::Result;
 pub use crate::algo::similarity::knn::{KnnNodePropertySpec, SimilarityMetric};
 use crate::algo::similarity::knn::{KnnConfig, KnnResultRow};
+use crate::algo::similarity::knn::storage::KnnSamplerType;
 use crate::core::utils::progress::Tasks;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde::{Deserialize, Serialize};
@@ -29,6 +30,13 @@ pub struct KnnBuilder {
     metric: SimilarityMetric,
     similarity_cutoff: f64,
     concurrency: usize,
+    sampled_k: Option<usize>,
+    max_iterations: usize,
+    initial_sampler: KnnSamplerType,
+    random_seed: Option<u64>,
+    perturbation_rate: f64,
+    random_joins: usize,
+    update_threshold: u64,
 }
 
 impl KnnBuilder {
@@ -41,6 +49,13 @@ impl KnnBuilder {
             metric: SimilarityMetric::Default,
             similarity_cutoff: 0.0,
             concurrency: 4,
+            sampled_k: None,
+            max_iterations: 10,
+            initial_sampler: KnnSamplerType::default(),
+            random_seed: None,
+            perturbation_rate: 0.0,
+            random_joins: 0,
+            update_threshold: 0,
         }
     }
 
@@ -79,11 +94,53 @@ impl KnnBuilder {
         self
     }
 
+    pub fn sampled_k(mut self, sampled_k: usize) -> Self {
+        self.sampled_k = Some(sampled_k);
+        self
+    }
+
+    pub fn max_iterations(mut self, max_iterations: usize) -> Self {
+        self.max_iterations = max_iterations;
+        self
+    }
+
+    pub fn initial_sampler(mut self, sampler: KnnSamplerType) -> Self {
+        self.initial_sampler = sampler;
+        self
+    }
+
+    pub fn random_seed(mut self, seed: Option<u64>) -> Self {
+        self.random_seed = seed;
+        self
+    }
+
+    pub fn perturbation_rate(mut self, rate: f64) -> Self {
+        self.perturbation_rate = rate;
+        self
+    }
+
+    pub fn random_joins(mut self, random_joins: usize) -> Self {
+        self.random_joins = random_joins;
+        self
+    }
+
+    pub fn update_threshold(mut self, update_threshold: u64) -> Self {
+        self.update_threshold = update_threshold;
+        self
+    }
+
     fn build_config(&self) -> KnnConfig {
         KnnConfig {
             node_property: self.node_property.clone(),
             node_properties: self.node_properties.clone(),
             k: self.k,
+            sampled_k: self.sampled_k,
+            max_iterations: self.max_iterations,
+            initial_sampler: self.initial_sampler,
+            random_seed: self.random_seed,
+            perturbation_rate: self.perturbation_rate,
+            random_joins: self.random_joins,
+            update_threshold: self.update_threshold,
             similarity_metric: self.metric,
             similarity_cutoff: self.similarity_cutoff,
             concurrency: self.concurrency,
@@ -107,8 +164,18 @@ impl KnnBuilder {
                 self.graph_store.as_ref(),
                 &config.node_property,
                 config.k,
+                config
+                    .sampled_k
+                    .unwrap_or_else(|| (config.k + 1) / 2)
+                    .min(config.k),
+                config.max_iterations,
                 config.similarity_cutoff,
                 config.similarity_metric,
+                config.perturbation_rate,
+                config.random_joins,
+                config.update_threshold,
+                config.random_seed,
+                config.initial_sampler,
                 &mut progress_tracker,
             )?
         } else {
@@ -134,7 +201,17 @@ impl KnnBuilder {
                 self.graph_store.as_ref(),
                 &combined,
                 config.k,
+                config
+                    .sampled_k
+                    .unwrap_or_else(|| (config.k + 1) / 2)
+                    .min(config.k),
+                config.max_iterations,
                 config.similarity_cutoff,
+                config.perturbation_rate,
+                config.random_joins,
+                config.update_threshold,
+                config.random_seed,
+                config.initial_sampler,
                 &mut progress_tracker,
             )?
         };

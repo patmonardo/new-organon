@@ -2,6 +2,7 @@ use super::computation::{FilteredKnnComputationResult, FilteredKnnComputationRun
 use super::storage::FilteredKnnStorageRuntime;
 use crate::define_algorithm_spec;
 use crate::algo::similarity::knn::metrics::{KnnNodePropertySpec, SimilarityMetric};
+use crate::algo::similarity::knn::storage::KnnSamplerType;
 use crate::core::utils::progress::Tasks;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::NodeLabel;
@@ -18,6 +19,27 @@ pub struct FilteredKnnConfig {
 
     #[serde(default = "default_k")]
     pub k: usize,
+
+    #[serde(default)]
+    pub sampled_k: Option<usize>,
+
+    #[serde(default = "default_max_iterations")]
+    pub max_iterations: usize,
+
+    #[serde(default)]
+    pub initial_sampler: KnnSamplerType,
+
+    #[serde(default)]
+    pub random_seed: Option<u64>,
+
+    #[serde(default = "default_perturbation_rate")]
+    pub perturbation_rate: f64,
+
+    #[serde(default = "default_random_joins")]
+    pub random_joins: usize,
+
+    #[serde(default = "default_update_threshold")]
+    pub update_threshold: u64,
 
     #[serde(default)]
     pub similarity_metric: SimilarityMetric,
@@ -40,6 +62,18 @@ pub struct FilteredKnnConfig {
 fn default_k() -> usize {
     10
 }
+fn default_max_iterations() -> usize {
+    10
+}
+fn default_perturbation_rate() -> f64 {
+    0.0
+}
+fn default_random_joins() -> usize {
+    0
+}
+fn default_update_threshold() -> u64 {
+    0
+}
 fn default_cutoff() -> f64 {
     0.0
 }
@@ -53,6 +87,13 @@ impl Default for FilteredKnnConfig {
             node_property: String::new(),
             node_properties: Vec::new(),
             k: default_k(),
+            sampled_k: None,
+            max_iterations: default_max_iterations(),
+            initial_sampler: KnnSamplerType::default(),
+            random_seed: None,
+            perturbation_rate: default_perturbation_rate(),
+            random_joins: default_random_joins(),
+            update_threshold: default_update_threshold(),
             similarity_metric: SimilarityMetric::Default,
             similarity_cutoff: default_cutoff(),
             concurrency: default_concurrency(),
@@ -64,6 +105,14 @@ impl Default for FilteredKnnConfig {
 
 impl FilteredKnnConfig {
     fn validate(&self) -> Result<(), AlgorithmError> {
+        if self.k == 0 {
+            return Err(AlgorithmError::InvalidGraph("`k` must be > 0".to_string()));
+        }
+        if !(0.0..=1.0).contains(&self.perturbation_rate) {
+            return Err(AlgorithmError::InvalidGraph(
+                "`perturbation_rate` must be within [0.0, 1.0]".to_string(),
+            ));
+        }
         if self.node_properties.is_empty() {
             if self.node_property.is_empty() {
                 return Err(AlgorithmError::InvalidGraph(
@@ -137,8 +186,18 @@ define_algorithm_spec! {
                 graph_store,
                 &parsed.node_property,
                 parsed.k,
+                parsed
+                    .sampled_k
+                    .unwrap_or_else(|| (parsed.k + 1) / 2)
+                    .min(parsed.k),
+                parsed.max_iterations,
                 parsed.similarity_cutoff,
                 parsed.similarity_metric,
+                parsed.perturbation_rate,
+                parsed.random_joins,
+                parsed.update_threshold,
+                parsed.random_seed,
+                parsed.initial_sampler,
                 &parsed.source_node_labels,
                 &parsed.target_node_labels,
                 &mut progress_tracker,
@@ -149,7 +208,17 @@ define_algorithm_spec! {
                 graph_store,
                 &parsed.node_properties,
                 parsed.k,
+                parsed
+                    .sampled_k
+                    .unwrap_or_else(|| (parsed.k + 1) / 2)
+                    .min(parsed.k),
+                parsed.max_iterations,
                 parsed.similarity_cutoff,
+                parsed.perturbation_rate,
+                parsed.random_joins,
+                parsed.update_threshold,
+                parsed.random_seed,
+                parsed.initial_sampler,
                 &parsed.source_node_labels,
                 &parsed.target_node_labels,
                 &mut progress_tracker,
