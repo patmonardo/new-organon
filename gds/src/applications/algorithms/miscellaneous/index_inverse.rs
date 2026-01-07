@@ -1,6 +1,8 @@
 //! IndexInverse dispatch handler.
 
-use crate::procedures::miscellaneous::IndexInverseFacade;
+use crate::applications::algorithms::miscellaneous::shared::err;
+use crate::concurrency::Concurrency;
+use crate::core::loading::CatalogLoader;
 use crate::types::catalog::GraphCatalog;
 use crate::types::prelude::GraphStore;
 use serde_json::{json, Value};
@@ -14,17 +16,6 @@ pub fn handle_index_inverse(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
         None => return err(op, "INVALID_REQUEST", "Missing 'graphName' parameter"),
     };
 
-    let graph_store = match catalog.get(graph_name) {
-        Some(store) => store,
-        None => {
-            return err(
-                op,
-                "GRAPH_NOT_FOUND",
-                &format!("Graph '{}' not found", graph_name),
-            )
-        }
-    };
-
     let mode = request
         .get("mode")
         .and_then(|v| v.as_str())
@@ -36,13 +27,23 @@ pub fn handle_index_inverse(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
         .or_else(|| request.get("targetGraphName"))
         .or_else(|| request.get("outputGraphName"))
         .and_then(|v| v.as_str())
-        .unwrap_or("index_inverse");
+        .unwrap_or("index_inverse")
+        .to_string();
 
-    let concurrency = request
+    let concurrency_value = request
         .get("concurrency")
         .and_then(|v| v.as_u64())
         .and_then(|v| usize::try_from(v).ok())
+        .filter(|v| *v > 0)
         .unwrap_or(4);
+
+    if Concurrency::new(concurrency_value).is_none() {
+        return err(
+            op,
+            "INVALID_REQUEST",
+            "concurrency must be greater than zero",
+        );
+    }
 
     let relationship_types: Vec<String> = match request.get("relationshipTypes") {
         Some(Value::Array(arr)) => arr
@@ -53,36 +54,38 @@ pub fn handle_index_inverse(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
         _ => vec!["*".to_string()],
     };
 
-    let facade = IndexInverseFacade::new(graph_store)
-        .concurrency(concurrency)
-        .relationship_types(relationship_types);
+    let graph_resources = match CatalogLoader::load_or_err(catalog.as_ref(), graph_name) {
+        Ok(resources) => resources,
+        Err(e) => return err(op, "GRAPH_NOT_FOUND", &e.to_string()),
+    };
 
     match mode {
-        "mutate" | "write" => match facade.to_store(out_name) {
-            Ok(store) => {
-                let node_count = GraphStore::node_count(&store) as u64;
-                let relationship_count = GraphStore::relationship_count(&store) as u64;
-                catalog.set(out_name, Arc::new(store));
-                json!({
-                    "ok": true,
-                    "op": op,
-                    "data": {
-                        "graphName": out_name,
-                        "nodeCount": node_count,
-                        "relationshipCount": relationship_count
-                    }
-                })
+        "mutate" | "write" => {
+            let facade = graph_resources
+                .facade()
+                .index_inverse()
+                .concurrency(concurrency_value)
+                .relationship_types(relationship_types.clone());
+
+            match facade.to_store(&out_name) {
+                Ok(store) => {
+                    let node_count = GraphStore::node_count(&store) as u64;
+                    let relationship_count = GraphStore::relationship_count(&store) as u64;
+                    catalog.set(&out_name, Arc::new(store));
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": mode,
+                        "data": {
+                            "graphName": out_name,
+                            "nodeCount": node_count,
+                            "relationshipCount": relationship_count,
+                        }
+                    })
+                }
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("indexInverse failed: {e}")),
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("indexInverse failed: {e}")),
-        },
+        }
         other => err(op, "INVALID_REQUEST", &format!("Invalid mode '{other}'")),
     }
-}
-
-fn err(op: &str, code: &str, message: &str) -> Value {
-    json!({
-        "ok": false,
-        "op": op,
-        "error": { "code": code, "message": message }
-    })
 }

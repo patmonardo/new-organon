@@ -6,8 +6,7 @@
 use crate::applications::algorithms::community::shared::{err, timings_json};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
-    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator,
-    RequestScopedDependencies,
+    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::CatalogLoader;
@@ -118,11 +117,7 @@ pub fn handle_wcc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                         })
                     })
                 }
-                Err(e) => err(
-                    op,
-                    "EXECUTION_ERROR",
-                    &format!("WCC stream failed: {e}"),
-                ),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("WCC stream failed: {e}")),
             }
         }
         "stats" => {
@@ -156,11 +151,7 @@ pub fn handle_wcc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 
             match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
                 Ok(response) => response,
-                Err(e) => err(
-                    op,
-                    "EXECUTION_ERROR",
-                    &format!("WCC stats failed: {e}"),
-                ),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("WCC stats failed: {e}")),
             }
         }
         "mutate" => {
@@ -175,8 +166,8 @@ pub fn handle_wcc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 }
             };
 
-            let facade = WccFacade::new(Arc::clone(graph_resources.store()))
-                .concurrency(concurrency_value);
+            let facade =
+                WccFacade::new(Arc::clone(graph_resources.store())).concurrency(concurrency_value);
             match facade.mutate(&property_name) {
                 Ok(result) => json!({"ok": true, "op": op, "data": result}),
                 Err(e) => err(
@@ -198,20 +189,16 @@ pub fn handle_wcc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 }
             };
 
-            let facade = WccFacade::new(Arc::clone(graph_resources.store()))
-                .concurrency(concurrency_value);
+            let facade =
+                WccFacade::new(Arc::clone(graph_resources.store())).concurrency(concurrency_value);
             match facade.write(&property_name) {
                 Ok(result) => json!({"ok": true, "op": op, "data": result}),
-                Err(e) => err(
-                    op,
-                    "EXECUTION_ERROR",
-                    &format!("WCC write failed: {:?}", e),
-                ),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("WCC write failed: {:?}", e)),
             }
         }
         "estimate" => {
-            let facade = WccFacade::new(Arc::clone(graph_resources.store()))
-                .concurrency(concurrency_value);
+            let facade =
+                WccFacade::new(Arc::clone(graph_resources.store())).concurrency(concurrency_value);
             let memory = facade.estimate_memory();
             json!({
                 "ok": true,

@@ -6,8 +6,7 @@
 use crate::applications::algorithms::community::shared::{err, timings_json};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
-    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator,
-    RequestScopedDependencies,
+    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::CatalogLoader;
@@ -129,9 +128,7 @@ pub fn handle_conductance(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
             }
         }
         "stats" => {
-            let task = Tasks::leaf("conductance::stats".to_string())
-                .base()
-                .clone();
+            let task = Tasks::leaf("conductance::stats".to_string()).base().clone();
             let property = community_property.clone();
 
             let compute = move |gr: &crate::core::loading::GraphResources,

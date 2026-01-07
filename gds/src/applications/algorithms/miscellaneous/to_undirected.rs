@@ -1,5 +1,13 @@
 //! ToUndirected dispatch handler.
 
+use crate::applications::algorithms::machinery::{
+    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
+    FnStatsResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
+};
+use crate::applications::algorithms::miscellaneous::shared::{err, timings_json};
+use crate::concurrency::{Concurrency, TerminationFlag};
+use crate::core::loading::{CatalogLoader, GraphResources};
+use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
 use crate::procedures::miscellaneous::ToUndirectedFacade;
 use crate::types::catalog::GraphCatalog;
 use crate::types::prelude::GraphStore;
@@ -14,24 +22,13 @@ pub fn handle_to_undirected(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
         None => return err(op, "INVALID_REQUEST", "Missing 'graphName' parameter"),
     };
 
-    let graph_store = match catalog.get(graph_name) {
-        Some(store) => store,
-        None => {
-            return err(
-                op,
-                "GRAPH_NOT_FOUND",
-                &format!("Graph '{}' not found", graph_name),
-            )
-        }
-    };
-
     let mode = request
         .get("mode")
         .and_then(|v| v.as_str())
         .unwrap_or("mutate");
 
     let relationship_type = match request.get("relationshipType").and_then(|v| v.as_str()) {
-        Some(rel) => rel,
+        Some(rel) => rel.to_string(),
         None => {
             return err(
                 op,
@@ -47,56 +44,119 @@ pub fn handle_to_undirected(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
         .or_else(|| request.get("targetGraphName"))
         .or_else(|| request.get("outputGraphName"))
         .and_then(|v| v.as_str())
-        .unwrap_or("to_undirected");
+        .unwrap_or("to_undirected")
+        .to_string();
 
     let mutate_relationship_type = request
         .get("mutateRelationshipType")
         .and_then(|v| v.as_str())
-        .unwrap_or("undirected");
+        .unwrap_or("undirected")
+        .to_string();
 
-    let concurrency = request
+    let concurrency_value = request
         .get("concurrency")
         .and_then(|v| v.as_u64())
         .and_then(|v| usize::try_from(v).ok())
         .filter(|v| *v > 0)
         .unwrap_or(4);
 
-    let facade = ToUndirectedFacade::new(graph_store)
-        .relationship_type(relationship_type)
-        .mutate_relationship_type(mutate_relationship_type)
-        .mutate_graph_name(out_name)
-        .concurrency(concurrency);
+    if Concurrency::new(concurrency_value).is_none() {
+        return err(
+            op,
+            "INVALID_REQUEST",
+            "concurrency must be greater than zero",
+        );
+    }
+
+    let concurrency = Concurrency::new(concurrency_value).unwrap();
+
+    let graph_resources = match CatalogLoader::load_or_err(catalog.as_ref(), graph_name) {
+        Ok(resources) => resources,
+        Err(e) => return err(op, "GRAPH_NOT_FOUND", &e.to_string()),
+    };
+
+    let deps = RequestScopedDependencies::new(
+        JobId::new(),
+        TaskRegistryFactories::empty(),
+        TerminationFlag::running_true(),
+    );
+    let creator = ProgressTrackerCreator::new(deps);
+    let template = DefaultAlgorithmProcessingTemplate::new(creator);
+    let convenience = AlgorithmProcessingTemplateConvenience::new(template);
 
     match mode {
-        "stats" => match facade.stats() {
-            Ok(stats) => json!({ "ok": true, "op": op, "data": stats }),
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("toUndirected failed: {e}")),
-        },
-        "mutate" | "write" => match facade.to_store(out_name) {
-            Ok(store) => {
-                let node_count = GraphStore::node_count(&store) as u64;
-                let relationship_count = GraphStore::relationship_count(&store) as u64;
-                catalog.set(out_name, Arc::new(store));
-                json!({
-                    "ok": true,
-                    "op": op,
-                    "data": {
-                        "graphName": out_name,
-                        "nodeCount": node_count,
-                        "relationshipCount": relationship_count
-                    }
-                })
+        "stats" => {
+            let task = Tasks::leaf("to_undirected::stats".to_string())
+                .base()
+                .clone();
+            let relationship_type = relationship_type.clone();
+            let mutate_relationship_type = mutate_relationship_type.clone();
+            let target = out_name.clone();
+
+            let compute = move |gr: &GraphResources,
+                                _tracker: &mut dyn ProgressTracker,
+                                _termination: &TerminationFlag|
+                  -> Result<Option<Value>, String> {
+                let stats = gr
+                    .facade()
+                    .to_undirected()
+                    .relationship_type(relationship_type.clone())
+                    .mutate_relationship_type(mutate_relationship_type.clone())
+                    .mutate_graph_name(target.clone())
+                    .concurrency(concurrency_value)
+                    .stats()
+                    .map_err(|e| e.to_string())?;
+                serde_json::to_value(stats)
+                    .map(Some)
+                    .map_err(|e| e.to_string())
+            };
+
+            let builder =
+                FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<Value>, timings| {
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "stats",
+                        "data": stats,
+                        "timings": timings_json(timings),
+                    })
+                });
+
+            match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
+                Ok(response) => response,
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("toUndirected stats failed: {e}"),
+                ),
             }
-            Err(e) => err(op, "EXECUTION_ERROR", &format!("toUndirected failed: {e}")),
-        },
+        }
+        "mutate" | "write" => {
+            let facade = ToUndirectedFacade::new(Arc::clone(graph_resources.store()))
+                .relationship_type(relationship_type.clone())
+                .mutate_relationship_type(mutate_relationship_type.clone())
+                .mutate_graph_name(out_name.clone())
+                .concurrency(concurrency_value);
+
+            match facade.to_store(&out_name) {
+                Ok(store) => {
+                    let node_count = GraphStore::node_count(&store) as u64;
+                    let relationship_count = GraphStore::relationship_count(&store) as u64;
+                    catalog.set(&out_name, Arc::new(store));
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": mode,
+                        "data": {
+                            "graphName": out_name,
+                            "nodeCount": node_count,
+                            "relationshipCount": relationship_count,
+                        }
+                    })
+                }
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("toUndirected failed: {e}")),
+            }
+        }
         other => err(op, "INVALID_REQUEST", &format!("Invalid mode '{other}'")),
     }
-}
-
-fn err(op: &str, code: &str, message: &str) -> Value {
-    json!({
-        "ok": false,
-        "op": op,
-        "error": { "code": code, "message": message }
-    })
 }

@@ -6,8 +6,7 @@
 use crate::applications::algorithms::community::shared::{err, timings_json};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
-    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator,
-    RequestScopedDependencies,
+    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::CatalogLoader;
@@ -63,9 +62,7 @@ pub fn handle_k1coloring(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
 
     match mode {
         "stream" => {
-            let task = Tasks::leaf("k1coloring::stream".to_string())
-                .base()
-                .clone();
+            let task = Tasks::leaf("k1coloring::stream".to_string()).base().clone();
             let compute = move |gr: &crate::core::loading::GraphResources,
                                 _tracker: &mut dyn ProgressTracker,
                                 _termination: &TerminationFlag|
@@ -117,9 +114,7 @@ pub fn handle_k1coloring(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
             }
         }
         "stats" => {
-            let task = Tasks::leaf("k1coloring::stats".to_string())
-                .base()
-                .clone();
+            let task = Tasks::leaf("k1coloring::stats".to_string()).base().clone();
             let compute = move |gr: &crate::core::loading::GraphResources,
                                 _tracker: &mut dyn ProgressTracker,
                                 _termination: &TerminationFlag|

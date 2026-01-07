@@ -6,8 +6,7 @@
 use crate::applications::algorithms::community::shared::{err, timings_json};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
-    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator,
-    RequestScopedDependencies,
+    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::CatalogLoader;
@@ -108,11 +107,7 @@ pub fn handle_scc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                         })
                     })
                 }
-                Err(e) => err(
-                    op,
-                    "EXECUTION_ERROR",
-                    &format!("SCC stream failed: {e}"),
-                ),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("SCC stream failed: {e}")),
             }
         }
         "stats" => {
@@ -146,16 +141,12 @@ pub fn handle_scc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 
             match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
                 Ok(response) => response,
-                Err(e) => err(
-                    op,
-                    "EXECUTION_ERROR",
-                    &format!("SCC stats failed: {e}"),
-                ),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("SCC stats failed: {e}")),
             }
         }
         "mutate" => {
-            let facade = SccFacade::new(Arc::clone(graph_resources.store()))
-                .concurrency(concurrency_value);
+            let facade =
+                SccFacade::new(Arc::clone(graph_resources.store())).concurrency(concurrency_value);
             match facade.mutate() {
                 Ok(result) => json!({"ok": true, "op": op, "data": result}),
                 Err(e) => err(
@@ -166,20 +157,16 @@ pub fn handle_scc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
             }
         }
         "write" => {
-            let facade = SccFacade::new(Arc::clone(graph_resources.store()))
-                .concurrency(concurrency_value);
+            let facade =
+                SccFacade::new(Arc::clone(graph_resources.store())).concurrency(concurrency_value);
             match facade.write() {
                 Ok(result) => json!({"ok": true, "op": op, "data": result}),
-                Err(e) => err(
-                    op,
-                    "EXECUTION_ERROR",
-                    &format!("SCC write failed: {:?}", e),
-                ),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("SCC write failed: {:?}", e)),
             }
         }
         "estimate" => {
-            let facade = SccFacade::new(Arc::clone(graph_resources.store()))
-                .concurrency(concurrency_value);
+            let facade =
+                SccFacade::new(Arc::clone(graph_resources.store())).concurrency(concurrency_value);
             match facade.estimate_memory() {
                 Ok(range) => json!({"ok": true, "op": op, "data": range}),
                 Err(e) => err(

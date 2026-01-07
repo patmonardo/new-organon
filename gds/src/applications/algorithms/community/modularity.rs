@@ -6,8 +6,7 @@
 use crate::applications::algorithms::community::shared::{err, timings_json};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
-    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator,
-    RequestScopedDependencies,
+    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::CatalogLoader;
@@ -193,7 +192,8 @@ pub fn handle_modularity(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
             }
         }
         "estimate" => {
-            let facade = ModularityFacade::new(Arc::clone(graph_resources.store()), community_property);
+            let facade =
+                ModularityFacade::new(Arc::clone(graph_resources.store()), community_property);
             match facade.estimate_memory() {
                 Ok(range) => json!({"ok": true, "op": op, "data": range}),
                 Err(e) => err(

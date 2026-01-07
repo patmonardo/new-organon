@@ -6,8 +6,7 @@
 use crate::applications::algorithms::community::shared::{err, timings_json};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
-    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator,
-    RequestScopedDependencies,
+    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::CatalogLoader;
@@ -110,9 +109,7 @@ pub fn handle_kmeans(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 
     match mode {
         "stream" => {
-            let task = Tasks::leaf("kmeans::stream".to_string())
-                .base()
-                .clone();
+            let task = Tasks::leaf("kmeans::stream".to_string()).base().clone();
             let property = node_property.clone();
             let seeds = seed_centroids.clone();
             let sampler_type = sampler;
@@ -170,17 +167,11 @@ pub fn handle_kmeans(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                         })
                     })
                 }
-                Err(e) => err(
-                    op,
-                    "EXECUTION_ERROR",
-                    &format!("KMeans stream failed: {e}"),
-                ),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("KMeans stream failed: {e}")),
             }
         }
         "stats" => {
-            let task = Tasks::leaf("kmeans::stats".to_string())
-                .base()
-                .clone();
+            let task = Tasks::leaf("kmeans::stats".to_string()).base().clone();
             let property = node_property;
             let seeds = seed_centroids;
             let sampler_type = sampler;
@@ -223,11 +214,7 @@ pub fn handle_kmeans(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
 
             match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
                 Ok(response) => response,
-                Err(e) => err(
-                    op,
-                    "EXECUTION_ERROR",
-                    &format!("KMeans stats failed: {e}"),
-                ),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("KMeans stats failed: {e}")),
             }
         }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),

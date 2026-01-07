@@ -6,8 +6,7 @@
 use crate::applications::algorithms::community::shared::{err, timings_json};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
-    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator,
-    RequestScopedDependencies,
+    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::CatalogLoader;
@@ -156,11 +155,7 @@ pub fn handle_louvain(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
 
             match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
                 Ok(response) => response,
-                Err(e) => err(
-                    op,
-                    "EXECUTION_ERROR",
-                    &format!("Louvain stats failed: {e}"),
-                ),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("Louvain stats failed: {e}")),
             }
         }
         "mutate" => {

@@ -5,8 +5,7 @@
 use crate::applications::algorithms::community::shared::{err, timings_json};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
-    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator,
-    RequestScopedDependencies,
+    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::CatalogLoader;
@@ -70,16 +69,11 @@ pub fn handle_triangle(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
                                 _tracker: &mut dyn ProgressTracker,
                                 _termination: &TerminationFlag|
                   -> Result<Option<Vec<Value>>, String> {
-                let mut builder = gr
-                    .facade()
-                    .triangle()
-                    .concurrency(concurrency_value);
+                let mut builder = gr.facade().triangle().concurrency(concurrency_value);
                 if let Some(max_deg) = max_degree {
                     builder = builder.max_degree(max_deg);
                 }
-                let iter = builder
-                    .stream()
-                    .map_err(|e| e.to_string())?;
+                let iter = builder.stream().map_err(|e| e.to_string())?;
                 let rows = iter
                     .map(|row| serde_json::to_value(row).map_err(|e| e.to_string()))
                     .collect::<Result<Vec<_>, _>>()?;
@@ -127,16 +121,11 @@ pub fn handle_triangle(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
                                 _tracker: &mut dyn ProgressTracker,
                                 _termination: &TerminationFlag|
                   -> Result<Option<Value>, String> {
-                let mut builder = gr
-                    .facade()
-                    .triangle()
-                    .concurrency(concurrency_value);
+                let mut builder = gr.facade().triangle().concurrency(concurrency_value);
                 if let Some(max_deg) = max_degree {
                     builder = builder.max_degree(max_deg);
                 }
-                let stats = builder
-                    .stats()
-                    .map_err(|e| e.to_string())?;
+                let stats = builder.stats().map_err(|e| e.to_string())?;
                 let stats_value = serde_json::to_value(stats).map_err(|e| e.to_string())?;
                 Ok(Some(stats_value))
             };

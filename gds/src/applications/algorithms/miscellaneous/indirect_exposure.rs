@@ -107,15 +107,13 @@ pub fn handle_indirect_exposure(request: &Value, catalog: Arc<dyn GraphCatalog>)
 
             let builder = IndirectExposureStatsBuilder;
 
-            match convenience.process_stats(
-                &graph_resources,
-                concurrency,
-                task,
-                compute,
-                builder,
-            ) {
+            match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
                 Ok(response) => response,
-                Err(e) => err(op, "EXECUTION_ERROR", &format!("indirectExposure failed: {e}")),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("indirectExposure failed: {e}"),
+                ),
             }
         }
         other => err(op, "INVALID_REQUEST", &format!("Invalid mode '{other}'")),
