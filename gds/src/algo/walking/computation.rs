@@ -5,7 +5,6 @@
 //! This implementation is a straightforward, sequential traversal that follows
 //! each path template depth by depth and records the resulting collapsed edges.
 
-use super::spec::CollapsePathResult;
 use crate::types::graph::Graph;
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -21,21 +20,14 @@ impl CollapsePathComputationRuntime {
     }
 
     /// Compute collapsed edges for all provided path templates.
-    pub fn compute(
-        &self,
-        path_templates: &[Vec<Arc<dyn Graph>>],
-        mutate_relationship_type: &str,
-    ) -> CollapsePathResult {
+    pub fn compute(&self, path_templates: &[Vec<Arc<dyn Graph>>]) -> Vec<(u64, u64)> {
         let mut edges: BTreeSet<(u64, u64)> = BTreeSet::new();
 
         for path in path_templates {
             process_template(path, self.allow_self_loops, &mut edges);
         }
 
-        CollapsePathResult {
-            mutate_relationship_type: mutate_relationship_type.to_string(),
-            edges: edges.into_iter().collect(),
-        }
+        edges.into_iter().collect()
     }
 }
 

@@ -5,7 +5,6 @@
 //! Symmetrizes a single relationship type by adding reverse edges for every
 //! observed edge, producing a deduplicated edge set.
 
-use super::spec::ToUndirectedResult;
 use crate::types::graph::Graph;
 use std::collections::BTreeSet;
 
@@ -18,7 +17,7 @@ impl ToUndirectedComputationRuntime {
 
     /// Symmetrize the given graph view, returning unique directed edges that
     /// collectively represent an undirected projection.
-    pub fn compute(&self, graph: &dyn Graph, mutate_relationship_type: &str) -> ToUndirectedResult {
+    pub fn compute(&self, graph: &dyn Graph, _mutate_relationship_type: &str) -> Vec<(u64, u64)> {
         let node_count = graph.node_count();
         let fallback = graph.default_property_value();
 
@@ -37,9 +36,6 @@ impl ToUndirectedComputationRuntime {
             }
         }
 
-        ToUndirectedResult {
-            mutate_relationship_type: mutate_relationship_type.to_string(),
-            edges: edges.into_iter().collect(),
-        }
+        edges.into_iter().collect()
     }
 }

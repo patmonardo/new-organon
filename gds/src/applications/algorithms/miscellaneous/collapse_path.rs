@@ -2,7 +2,7 @@
 
 use crate::procedures::miscellaneous::CollapsePathFacade;
 use crate::types::catalog::GraphCatalog;
-use crate::types::prelude::GraphStore;
+use crate::types::graph_store::GraphStore;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -27,8 +27,6 @@ pub fn handle_collapse_path(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
 
     let mode = request.get("mode").and_then(|v| v.as_str()).unwrap_or("mutate");
 
-    let max_hops = request.get("maxHops").and_then(|v| v.as_u64()).map(|v| v as usize);
-
     let out_name = request
         .get("mutateGraphName")
         .or_else(|| request.get("writeGraphName"))
@@ -37,16 +35,51 @@ pub fn handle_collapse_path(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
         .and_then(|v| v.as_str())
         .unwrap_or("collapse_path");
 
-    let mut facade = CollapsePathFacade::new(graph_store);
-    if let Some(m) = max_hops {
-        facade = facade.max_hops(m);
-    }
+    let path_templates: Vec<Vec<String>> = match request.get("pathTemplates") {
+        Some(Value::Array(paths)) => paths
+            .iter()
+            .filter_map(|p| match p {
+                Value::Array(inner) => Some(
+                    inner
+                        .iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect::<Vec<_>>(),
+                ),
+                _ => None,
+            })
+            .collect(),
+        _ => Vec::new(),
+    };
+
+    let mutate_relationship_type = request
+        .get("mutateRelationshipType")
+        .and_then(|v| v.as_str())
+        .unwrap_or("collapsed")
+        .to_string();
+
+    let allow_self_loops = request
+        .get("allowSelfLoops")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+
+    let concurrency = request
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .and_then(|v| usize::try_from(v).ok())
+        .unwrap_or(4);
+
+    let facade = CollapsePathFacade::new(graph_store)
+        .path_templates(path_templates)
+        .mutate_relationship_type(mutate_relationship_type)
+        .mutate_graph_name(out_name)
+        .allow_self_loops(allow_self_loops)
+        .concurrency(concurrency);
 
     match mode {
         "mutate" | "write" => match facade.to_store(out_name) {
             Ok(store) => {
-                let node_count = GraphStore::node_count(&store) as u64;
-                let relationship_count = GraphStore::relationship_count(&store) as u64;
+                let node_count = store.node_count() as u64;
+                let relationship_count = store.relationship_count() as u64;
                 catalog.set(out_name, Arc::new(store));
                 json!({
                     "ok": true,
@@ -54,7 +87,7 @@ pub fn handle_collapse_path(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
                     "data": {
                         "graphName": out_name,
                         "nodeCount": node_count,
-                        "relationshipCount": relationship_count
+                        "relationshipCount": relationship_count,
                     }
                 })
             }

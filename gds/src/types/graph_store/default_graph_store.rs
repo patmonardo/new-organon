@@ -38,7 +38,7 @@ use crate::types::properties::relationship::RelationshipPropertyValues;
 use crate::types::properties::relationship::{
     RelationshipPropertyStore, RelationshipPropertyStoreBuilder,
 };
-use crate::types::schema::{Direction, GraphSchema, PropertySchemaTrait, RelationshipSchema, RelationshipSchemaEntry};
+use crate::types::schema::{Direction, GraphSchema, MutableGraphSchema, PropertySchemaTrait, RelationshipSchema, RelationshipSchemaEntry};
 use crate::types::PropertyState;
 use crate::types::ValueType;
 use chrono::{DateTime, Utc};
@@ -230,12 +230,37 @@ impl DefaultGraphStore {
         &self,
         graph_name: GraphName,
     ) -> GraphStoreResult<DefaultGraphStore> {
+        self.with_inverse_indices_filtered(graph_name, None)
+    }
+
+    /// Creates a version of this store where a subset of relationship types have inverse indices.
+    ///
+    /// When `relationship_types` is `None`, all types are indexed (same as `with_inverse_indices`).
+    /// When provided, only those types are re-built with incoming adjacency; other types are kept
+    /// unchanged.
+    pub fn with_inverse_indices_filtered(
+        &self,
+        graph_name: GraphName,
+        relationship_types: Option<&HashSet<RelationshipType>>,
+    ) -> GraphStoreResult<DefaultGraphStore> {
         let node_count = self.node_count();
 
         let mut new_relationship_topologies: HashMap<RelationshipType, Arc<RelationshipTopology>> =
             HashMap::new();
+        let selected = relationship_types.cloned();
 
         for (rel_type, topology) in &self.relationship_topologies {
+            let should_index = selected
+                .as_ref()
+                .map(|set| set.contains(rel_type))
+                .unwrap_or(true);
+
+            if !should_index {
+                new_relationship_topologies
+                    .insert(rel_type.clone(), Arc::clone(topology));
+                continue;
+            }
+
             let outgoing = topology.outgoing_lists().to_vec();
             let mut incoming: Vec<Vec<MappedNodeId>> = vec![Vec::new(); node_count];
 
@@ -268,6 +293,66 @@ impl DefaultGraphStore {
         store.graph_name = graph_name;
         store.relationship_topologies = new_relationship_topologies;
 
+        store.rebuild_relationship_metadata();
+        store.refresh_relationship_property_state();
+        Ok(store)
+    }
+
+    pub(crate) fn with_added_relationship_type(
+        &self,
+        graph_name: GraphName,
+        rel_type: RelationshipType,
+        outgoing: Vec<Vec<MappedNodeId>>,
+        direction: Direction,
+    ) -> GraphStoreResult<DefaultGraphStore> {
+        let node_count = self.node_count();
+        if outgoing.len() != node_count {
+            return Err(GraphStoreError::InvalidOperation(format!(
+                "outgoing adjacency length {} does not match node_count {node_count}",
+                outgoing.len()
+            )));
+        }
+
+        let mut relationship_topologies = self.relationship_topologies.clone();
+        relationship_topologies
+            .insert(rel_type.clone(), Arc::new(RelationshipTopology::new(outgoing, None)));
+
+        let mut schema = MutableGraphSchema::from_schema(&self.schema);
+        schema
+            .relationship_schema_mut()
+            .add_relationship_type(rel_type.clone(), direction);
+        let schema = Arc::new(schema.build());
+
+        let mut store = self.clone();
+        store.graph_name = graph_name;
+        store.schema = schema;
+        store.relationship_topologies = relationship_topologies;
+        store.rebuild_relationship_metadata();
+        store.refresh_relationship_property_state();
+        Ok(store)
+    }
+
+    pub(crate) fn with_rebuilt_relationship_topologies(
+        &self,
+        graph_name: GraphName,
+        relationship_topologies: HashMap<RelationshipType, RelationshipTopology>,
+    ) -> GraphStoreResult<DefaultGraphStore> {
+        let node_count = self.node_count();
+        for topology in relationship_topologies.values() {
+            if topology.node_capacity() != node_count {
+                return Err(GraphStoreError::InvalidOperation(format!(
+                    "relationship topology capacity {} does not match node_count {node_count}",
+                    topology.node_capacity()
+                )));
+            }
+        }
+
+        let mut store = self.clone();
+        store.graph_name = graph_name;
+        store.relationship_topologies = relationship_topologies
+            .into_iter()
+            .map(|(t, topo)| (t, Arc::new(topo)))
+            .collect();
         store.rebuild_relationship_metadata();
         store.refresh_relationship_property_state();
         Ok(store)

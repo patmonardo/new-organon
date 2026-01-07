@@ -5,10 +5,11 @@
 //! core scaler implementations and returns scaled values plus per-property
 //! statistics.
 
-use super::computation::ScalePropertiesComputationRuntime;
-use super::spec::{
-    ScalePropertiesConfig, ScalePropertiesResult, ScalePropertiesScaler,
+use super::computation::{
+    ElementScaler, PropertyFn, PropertyScaler, ScalePropertiesComputationRuntime,
+    ScalePropertiesPlan,
 };
+use super::spec::{ScalePropertiesConfig, ScalePropertiesResult, ScalePropertiesScaler};
 use crate::algo::common::scaling::{
     CenterScaler, LogScaler, MaxScaler, MeanScaler, MinMaxScaler, NoneScaler, Scaler,
     StdScoreScaler,
@@ -18,7 +19,6 @@ use crate::types::graph::id_map::IdMap;
 use crate::types::prelude::GraphStore;
 use crate::types::properties::node::NodePropertyValues;
 use crate::types::ValueType;
-use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Storage runtime: orchestrates scaler preparation and execution.
@@ -35,7 +35,7 @@ impl ScalePropertiesStorageRuntime {
         &self,
         graph_store: &impl GraphStore,
         config: &ScalePropertiesConfig,
-        _computation: &mut ScalePropertiesComputationRuntime,
+        computation: &mut ScalePropertiesComputationRuntime,
     ) -> Result<ScalePropertiesResult, AlgorithmError> {
         if config.node_properties.is_empty() {
             return Err(AlgorithmError::Execution(
@@ -107,76 +107,12 @@ impl ScalePropertiesStorageRuntime {
             property_scalers.push(property_scaler);
         }
 
-        let total_dimension: usize = property_scalers.iter().map(|p| p.dimension()).sum();
-        let mut scaled_properties = vec![vec![0.0; total_dimension]; node_count];
+        let plan = ScalePropertiesPlan {
+            node_count,
+            property_scalers,
+        };
 
-        let mut offset = 0;
-        for property_scaler in &property_scalers {
-            for (node_idx, row) in scaled_properties.iter_mut().enumerate() {
-                property_scaler.scale_into(node_idx as u64, row, offset);
-            }
-            offset += property_scaler.dimension();
-        }
-
-        let mut scaler_statistics = HashMap::new();
-        for property_scaler in property_scalers {
-            scaler_statistics.insert(
-                property_scaler.name.clone(),
-                property_scaler.statistics(),
-            );
-        }
-
-        Ok(ScalePropertiesResult {
-            scaled_properties,
-            scaler_statistics,
-        })
-    }
-}
-
-type PropertyFn = Arc<dyn Fn(u64) -> f64 + Send + Sync>;
-
-struct ElementScaler {
-    property_fn: PropertyFn,
-    scaler: Box<dyn Scaler>,
-}
-
-impl ElementScaler {
-    fn new(property_fn: PropertyFn, scaler: Box<dyn Scaler>) -> Self {
-        Self { property_fn, scaler }
-    }
-}
-
-struct PropertyScaler {
-    name: String,
-    elements: Vec<ElementScaler>,
-}
-
-impl PropertyScaler {
-    fn new(name: String, elements: Vec<ElementScaler>) -> Self {
-        Self { name, elements }
-    }
-
-    fn dimension(&self) -> usize {
-        self.elements.len()
-    }
-
-    fn scale_into(&self, node_id: u64, target: &mut [f64], offset: usize) {
-        for (idx, element) in self.elements.iter().enumerate() {
-            target[offset + idx] = element.scaler.scale_property(node_id, element.property_fn.as_ref());
-        }
-    }
-
-    fn statistics(&self) -> HashMap<String, Vec<f64>> {
-        let mut stats: HashMap<String, Vec<f64>> = HashMap::new();
-        for element in &self.elements {
-            for (name, values) in element.scaler.statistics().as_map() {
-                stats
-                    .entry(name.clone())
-                    .or_insert_with(Vec::new)
-                    .extend(values.iter().copied());
-            }
-        }
-        stats
+        Ok(computation.compute(plan))
     }
 }
 

@@ -27,6 +27,11 @@ pub fn handle_to_undirected(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
 
     let mode = request.get("mode").and_then(|v| v.as_str()).unwrap_or("mutate");
 
+    let relationship_type = match request.get("relationshipType").and_then(|v| v.as_str()) {
+        Some(rel) => rel,
+        None => return err(op, "INVALID_REQUEST", "Missing 'relationshipType' parameter"),
+    };
+
     let out_name = request
         .get("mutateGraphName")
         .or_else(|| request.get("writeGraphName"))
@@ -35,7 +40,23 @@ pub fn handle_to_undirected(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
         .and_then(|v| v.as_str())
         .unwrap_or("to_undirected");
 
-    let facade = ToUndirectedFacade::new(graph_store);
+    let mutate_relationship_type = request
+        .get("mutateRelationshipType")
+        .and_then(|v| v.as_str())
+        .unwrap_or("undirected");
+
+    let concurrency = request
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .and_then(|v| usize::try_from(v).ok())
+        .filter(|v| *v > 0)
+        .unwrap_or(4);
+
+    let facade = ToUndirectedFacade::new(graph_store)
+        .relationship_type(relationship_type)
+        .mutate_relationship_type(mutate_relationship_type)
+        .mutate_graph_name(out_name)
+        .concurrency(concurrency);
 
     match mode {
         "stats" => match facade.stats() {

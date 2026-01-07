@@ -35,7 +35,24 @@ pub fn handle_index_inverse(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
         .and_then(|v| v.as_str())
         .unwrap_or("index_inverse");
 
-    let facade = IndexInverseFacade::new(graph_store);
+    let concurrency = request
+        .get("concurrency")
+        .and_then(|v| v.as_u64())
+        .and_then(|v| usize::try_from(v).ok())
+        .unwrap_or(4);
+
+    let relationship_types: Vec<String> = match request.get("relationshipTypes") {
+        Some(Value::Array(arr)) => arr
+            .iter()
+            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+            .collect(),
+        Some(Value::String(s)) => vec![s.to_string()],
+        _ => vec!["*".to_string()],
+    };
+
+    let facade = IndexInverseFacade::new(graph_store)
+        .concurrency(concurrency)
+        .relationship_types(relationship_types);
 
     match mode {
         "mutate" | "write" => match facade.to_store(out_name) {

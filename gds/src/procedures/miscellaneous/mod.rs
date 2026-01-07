@@ -8,9 +8,11 @@
 pub mod collapse_path;
 pub mod index_inverse;
 pub mod scale_properties;
+pub mod indirect_exposure;
 pub mod to_undirected;
 
 pub use collapse_path::CollapsePathFacade;
 pub use index_inverse::IndexInverseFacade;
 pub use scale_properties::{ScalePropertiesFacade, ScalePropertiesStats, ScalePropertiesStreamRow};
+pub use indirect_exposure::IndirectExposureFacade;
 pub use to_undirected::{ToUndirectedFacade, ToUndirectedStats};

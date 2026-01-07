@@ -16,6 +16,7 @@ pub struct IndexInverseFacade {
 	graph_store: Arc<DefaultGraphStore>,
 	mutate_graph_name: String,
 	concurrency: usize,
+	relationship_types: Vec<String>,
 }
 
 impl IndexInverseFacade {
@@ -24,6 +25,7 @@ impl IndexInverseFacade {
 			graph_store,
 			mutate_graph_name: "index_inverse".to_string(),
 			concurrency: 4,
+			relationship_types: vec!["*".to_string()],
 		}
 	}
 
@@ -37,12 +39,21 @@ impl IndexInverseFacade {
 		self
 	}
 
+	pub fn relationship_types<I, S>(mut self, types: I) -> Self
+	where
+		I: IntoIterator<Item = S>,
+		S: Into<String>,
+	{
+		self.relationship_types = types.into_iter().map(|t| t.into()).collect();
+		self
+	}
+
 	pub fn to_store(&self, graph_name: &str) -> Result<DefaultGraphStore> {
 		let mut computation = IndexInverseComputationRuntime::new();
 		let storage = IndexInverseStorageRuntime::new(self.concurrency);
 
 		let config = IndexInverseConfig {
-			relationship_types: vec!["*".to_string()],
+			relationship_types: self.relationship_types.clone(),
 			concurrency: self.concurrency,
 			mutate_graph_name: graph_name.to_string(),
 		};

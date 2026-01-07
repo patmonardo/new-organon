@@ -1,9 +1,8 @@
 //! ScaleProperties dispatch handler.
 
+use crate::algo::scale_properties::ScalePropertiesScaler;
 use crate::procedures::miscellaneous::ScalePropertiesFacade;
 use crate::types::catalog::GraphCatalog;
-use crate::types::graph_store::GraphName;
-use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -28,12 +27,35 @@ pub fn handle_scale_properties(request: &Value, catalog: Arc<dyn GraphCatalog>) 
 
     let mode = request.get("mode").and_then(|v| v.as_str()).unwrap_or("stream");
 
-    let source_property = request
-        .get("sourceProperty")
-        .or_else(|| request.get("property"))
+    let mut node_properties: Vec<String> = request
+        .get("nodeProperties")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+        .unwrap_or_default();
+
+    if node_properties.is_empty() {
+        if let Some(prop) = request
+            .get("sourceProperty")
+            .or_else(|| request.get("property"))
+            .and_then(|v| v.as_str())
+        {
+            node_properties.push(prop.to_string());
+        }
+    }
+
+    let scaler = match request
+        .get("scaler")
+        .or_else(|| request.get("variant"))
         .and_then(|v| v.as_str())
-        .unwrap_or("")
-        .to_string();
+    {
+        Some("stdScore") => ScalePropertiesScaler::StdScore,
+        Some("mean") => ScalePropertiesScaler::Mean,
+        Some("max") => ScalePropertiesScaler::Max,
+        Some("center") => ScalePropertiesScaler::Center,
+        Some("log") => ScalePropertiesScaler::Log,
+        Some("none") => ScalePropertiesScaler::None,
+        _ => ScalePropertiesScaler::MinMax,
+    };
 
     let concurrency = request
         .get("concurrency")
@@ -41,16 +63,13 @@ pub fn handle_scale_properties(request: &Value, catalog: Arc<dyn GraphCatalog>) 
         .unwrap_or(1) as usize;
 
     let facade = ScalePropertiesFacade::new(graph_store)
-        .source_property(source_property.clone())
+        .node_properties(node_properties.clone())
+        .scaler(scaler.clone())
         .concurrency(concurrency);
 
     if mode == "estimate" {
-        if source_property.is_empty() {
-            return err(
-                op,
-                "INVALID_REQUEST",
-                "Missing 'sourceProperty' (or 'property') parameter",
-            );
+        if node_properties.is_empty() {
+            return err(op, "INVALID_REQUEST", "Missing 'nodeProperties' (or 'property') parameter");
         }
         let memory = facade.estimate_memory();
         return json!({
@@ -67,7 +86,7 @@ pub fn handle_scale_properties(request: &Value, catalog: Arc<dyn GraphCatalog>) 
         "stream" => match facade.stream() {
             Ok(rows_iter) => {
                 let rows: Vec<Value> = rows_iter
-                    .map(|row| json!({ "nodeId": row.node_id, "value": row.value }))
+                    .map(|row| json!({ "nodeId": row.node_id, "values": row.values }))
                     .collect();
                 json!({ "ok": true, "op": op, "data": rows })
             }
@@ -77,61 +96,7 @@ pub fn handle_scale_properties(request: &Value, catalog: Arc<dyn GraphCatalog>) 
             Ok(stats) => json!({ "ok": true, "op": op, "data": stats }),
             Err(e) => err(op, "EXECUTION_ERROR", &format!("scaleProperties failed: {e}")),
         },
-        "mutate" | "write" => {
-            let target_property = request
-                .get("mutateProperty")
-                .or_else(|| request.get("targetProperty"))
-                .or_else(|| request.get("writeProperty"))
-                .and_then(|v| v.as_str());
-
-            let Some(target_property) = target_property else {
-                return err(op, "INVALID_REQUEST", "Missing mutateProperty/targetProperty");
-            };
-
-            let out_name = request
-                .get("mutateGraphName")
-                .or_else(|| request.get("writeGraphName"))
-                .or_else(|| request.get("targetGraphName"))
-                .or_else(|| request.get("outputGraphName"))
-                .and_then(|v| v.as_str())
-                .unwrap_or("scale_properties");
-
-            // Use store-level utility so we keep the stable applications+procedures boundary.
-            let store: DefaultGraphStore = match catalog.get(graph_name) {
-                Some(store) => store.as_ref().clone(),
-                None => {
-                    return err(
-                        op,
-                        "GRAPH_NOT_FOUND",
-                        &format!("Graph '{}' not found", graph_name),
-                    )
-                }
-            };
-
-            match store.with_scaled_node_property_minmax(
-                GraphName::new(out_name),
-                &source_property,
-                target_property,
-                concurrency,
-            ) {
-                Ok(new_store) => {
-                    let node_count = GraphStore::node_count(&new_store) as u64;
-                    let relationship_count = GraphStore::relationship_count(&new_store) as u64;
-                    catalog.set(out_name, Arc::new(new_store));
-                    json!({
-                        "ok": true,
-                        "op": op,
-                        "data": {
-                            "graphName": out_name,
-                            "nodeCount": node_count,
-                            "relationshipCount": relationship_count,
-                            "property": target_property
-                        }
-                    })
-                }
-                Err(e) => err(op, "EXECUTION_ERROR", &format!("scaleProperties failed: {e}")),
-            }
-        }
+        "mutate" | "write" => err(op, "EXECUTION_ERROR", "scaleProperties mutate/write not implemented"),
         other => err(op, "INVALID_REQUEST", &format!("Invalid mode '{other}'")),
     }
 }
