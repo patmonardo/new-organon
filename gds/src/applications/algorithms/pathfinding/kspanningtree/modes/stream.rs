@@ -1,9 +1,9 @@
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
-    FnStatsResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
+    FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::applications::algorithms::pathfinding::kspanningtree::request::KSpanningTreeRequest;
-use crate::applications::algorithms::pathfinding::shared::{err, timings_json};
+use crate::applications::algorithms::pathfinding::shared::err;
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::GraphResources;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
@@ -41,26 +41,31 @@ pub fn run(op: &str, request: &KSpanningTreeRequest, graph_resources: &GraphReso
         Ok(Some(iter.collect()))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       rows: Option<Vec<KSpanningTreeRow>>,
-                                       timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stream",
-            "data": rows.unwrap_or_default(),
-            "timings": timings_json(timings)
-        })
+    let builder = FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<KSpanningTreeRow>>| {
+        rows.unwrap_or_default().into_iter()
     });
 
-    match convenience.process_stats(
+    match convenience.process_stream(
         graph_resources,
         request.common.concurrency,
         task,
         compute,
         builder,
     ) {
-        Ok(v) => v,
+        Ok(stream) => {
+            let rows: Vec<KSpanningTreeRow> = stream.collect();
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stream",
+                "data": rows,
+                "timings": json!({
+                    "pre_processing_millis": 0,
+                    "compute_millis": 0,
+                    "side_effect_millis": 0
+                })
+            })
+        }
         Err(e) => err(op, "EXECUTION_ERROR", &format!("KSpanningTree stream failed: {e}")),
     }
 }

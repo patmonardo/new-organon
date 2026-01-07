@@ -1,9 +1,9 @@
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
-    FnStatsResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
+    FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::applications::algorithms::pathfinding::all_shortest_paths::request::AllShortestPathsRequest;
-use crate::applications::algorithms::pathfinding::shared::{err, timings_json};
+use crate::applications::algorithms::pathfinding::shared::err;
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::GraphResources;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
@@ -45,21 +45,31 @@ pub fn run(op: &str, request: &AllShortestPathsRequest, graph_resources: &GraphR
         Ok(Some(iter.collect()))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       rows: Option<Vec<AllShortestPathsRow>>,
-                                       timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stream",
-            "data": rows.unwrap_or_default(),
-            "timings": timings_json(timings)
-        })
+    let builder = FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<AllShortestPathsRow>>| {
+        rows.unwrap_or_default().into_iter()
     });
 
-    match convenience.process_stats(graph_resources, request.common.concurrency, task, compute, builder)
-    {
-        Ok(v) => v,
+    match convenience.process_stream(
+        graph_resources,
+        request.common.concurrency,
+        task,
+        compute,
+        builder,
+    ) {
+        Ok(stream) => {
+            let rows: Vec<AllShortestPathsRow> = stream.collect();
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stream",
+                "data": rows,
+                "timings": json!({
+                    "pre_processing_millis": 0,
+                    "compute_millis": 0,
+                    "side_effect_millis": 0
+                })
+            })
+        }
         Err(e) => err(op, "EXECUTION_ERROR", &format!("AllShortestPaths stream failed: {e}")),
     }
 }

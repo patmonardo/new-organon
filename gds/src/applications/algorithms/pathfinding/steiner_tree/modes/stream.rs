@@ -1,8 +1,8 @@
 use crate::applications::algorithms::machinery::{
-    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate, FnStatsResultBuilder,
-    ProgressTrackerCreator, RequestScopedDependencies,
+    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
+    FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
-use crate::applications::algorithms::pathfinding::shared::{err, timings_json};
+use crate::applications::algorithms::pathfinding::shared::err;
 use crate::applications::algorithms::pathfinding::steiner_tree::request::SteinerTreeRequest;
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::GraphResources;
@@ -43,26 +43,31 @@ pub fn run(op: &str, request: &SteinerTreeRequest, graph_resources: &GraphResour
         Ok(Some(iter.collect()))
     };
 
-    let builder = FnStatsResultBuilder(|_gr: &GraphResources,
-                                       rows: Option<Vec<SteinerTreeRow>>,
-                                       timings| {
-        json!({
-            "ok": true,
-            "op": op,
-            "mode": "stream",
-            "data": rows.unwrap_or_default(),
-            "timings": timings_json(timings)
-        })
+    let builder = FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<SteinerTreeRow>>| {
+        rows.unwrap_or_default().into_iter()
     });
 
-    match convenience.process_stats(
+    match convenience.process_stream(
         graph_resources,
         request.common.concurrency,
         task,
         compute,
         builder,
     ) {
-        Ok(v) => v,
+        Ok(stream) => {
+            let rows: Vec<SteinerTreeRow> = stream.collect();
+            json!({
+                "ok": true,
+                "op": op,
+                "mode": "stream",
+                "data": rows,
+                "timings": json!({
+                    "pre_processing_millis": 0,
+                    "compute_millis": 0,
+                    "side_effect_millis": 0
+                })
+            })
+        }
         Err(e) => err(op, "EXECUTION_ERROR", &format!("SteinerTree stream failed: {e}")),
     }
 }
