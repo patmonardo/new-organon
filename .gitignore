@@ -52,3 +52,4 @@ doc/api
 .nojekyll
 old
 *java
+pathfinding copy
