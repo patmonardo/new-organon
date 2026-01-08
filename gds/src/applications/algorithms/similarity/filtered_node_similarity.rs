@@ -91,10 +91,122 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
             Err(e) => return err(op, "GRAPH_NOT_FOUND", &e.to_string()),
         };
 
+    let deps = RequestScopedDependencies::new(
+        JobId::new(),
+        TaskRegistryFactories::empty(),
+        TerminationFlag::running_true(),
+    );
+    let creator = ProgressTrackerCreator::new(deps);
+    let template = DefaultAlgorithmProcessingTemplate::new(creator);
+    let convenience = AlgorithmProcessingTemplateConvenience::new(template);
+
     match parsed.common.mode {
-        Mode::Stream => run_stream(op, &parsed, &graph_resources),
-        Mode::Stats => run_stats(op, &parsed, &graph_resources),
-        Mode::Estimate => run_estimate(op, &parsed, &graph_resources),
+        Mode::Stream => {
+            let task = Tasks::leaf("filtered_node_similarity::stream".to_string())
+                .base()
+                .clone();
+
+            let request = parsed.clone();
+            let compute = move |gr: &GraphResources,
+                                _tracker: &mut dyn ProgressTracker,
+                                _termination: &TerminationFlag|
+                  -> Result<Option<Vec<NodeSimilarityResult>>, String> {
+                let builder = configure_builder(gr, &request);
+                let iter = builder.stream().map_err(|e| e.to_string())?;
+                Ok(Some(iter.collect()))
+            };
+
+            let builder = FnStatsResultBuilder(
+                |_gr: &GraphResources, rows: Option<Vec<NodeSimilarityResult>>, timings| {
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "stream",
+                        "data": rows.unwrap_or_default(),
+                        "timings": timings_json(timings)
+                    })
+                },
+            );
+
+            match convenience.process_stats(
+                &graph_resources,
+                parsed.common.concurrency,
+                task,
+                compute,
+                builder,
+            ) {
+                Ok(v) => v,
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("FilteredNodeSimilarity stream failed: {e}"),
+                ),
+            }
+        }
+        Mode::Stats => {
+            let task = Tasks::leaf("filtered_node_similarity::stats".to_string())
+                .base()
+                .clone();
+
+            let request = parsed.clone();
+            let compute = move |gr: &GraphResources,
+                                _tracker: &mut dyn ProgressTracker,
+                                _termination: &TerminationFlag|
+                  -> Result<Option<FilteredNodeSimilarityStats>, String> {
+                let builder = configure_builder(gr, &request);
+                let stats = builder.stats().map_err(|e| e.to_string())?;
+                Ok(Some(stats))
+            };
+
+            let builder = FnStatsResultBuilder(
+                |_gr: &GraphResources, stats: Option<FilteredNodeSimilarityStats>, timings| {
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "stats",
+                        "data": stats,
+                        "timings": timings_json(timings)
+                    })
+                },
+            );
+
+            match convenience.process_stats(
+                &graph_resources,
+                parsed.common.concurrency,
+                task,
+                compute,
+                builder,
+            ) {
+                Ok(v) => v,
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("FilteredNodeSimilarity stats failed: {e}"),
+                ),
+            }
+        }
+        Mode::Estimate => match parsed.common.estimate_submode.as_deref() {
+            Some("memory") | None => {
+                let builder = configure_builder(&graph_resources, &parsed);
+                let memory = builder.estimate_memory();
+
+                json!({
+                    "ok": true,
+                    "op": op,
+                    "mode": "estimate",
+                    "submode": "memory",
+                    "data": {
+                        "minBytes": memory.min(),
+                        "maxBytes": memory.max()
+                    }
+                })
+            }
+            Some(other) => err(
+                op,
+                "INVALID_REQUEST",
+                &format!("Invalid estimate submode '{other}'. Use 'memory'"),
+            ),
+        },
         Mode::Mutate => err(
             op,
             "NOT_IMPLEMENTED",
@@ -104,149 +216,6 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
             op,
             "NOT_IMPLEMENTED",
             "FilteredNodeSimilarity write is not implemented yet",
-        ),
-    }
-}
-
-fn run_stream(
-    op: &str,
-    request: &FilteredNodeSimilarityRequest,
-    graph_resources: &GraphResources,
-) -> Value {
-    let deps = RequestScopedDependencies::new(
-        JobId::new(),
-        TaskRegistryFactories::empty(),
-        TerminationFlag::running_true(),
-    );
-    let creator = ProgressTrackerCreator::new(deps);
-    let template = DefaultAlgorithmProcessingTemplate::new(creator);
-    let convenience = AlgorithmProcessingTemplateConvenience::new(template);
-
-    let task = Tasks::leaf("FilteredNodeSimilarity::stream".to_string())
-        .base()
-        .clone();
-
-    let compute = |gr: &GraphResources,
-                   _tracker: &mut dyn ProgressTracker,
-                   _termination: &TerminationFlag|
-     -> Result<Option<Vec<NodeSimilarityResult>>, String> {
-        let builder = configure_builder(gr, request);
-        let iter = builder.stream().map_err(|e| e.to_string())?;
-        Ok(Some(iter.collect()))
-    };
-
-    let builder = FnStatsResultBuilder(
-        |_gr: &GraphResources, rows: Option<Vec<NodeSimilarityResult>>, timings| {
-            json!({
-                "ok": true,
-                "op": op,
-                "mode": "stream",
-                "data": rows.unwrap_or_default(),
-                "timings": timings_json(timings)
-            })
-        },
-    );
-
-    match convenience.process_stats(
-        graph_resources,
-        request.common.concurrency,
-        task,
-        compute,
-        builder,
-    ) {
-        Ok(v) => v,
-        Err(e) => err(
-            op,
-            "EXECUTION_ERROR",
-            &format!("FilteredNodeSimilarity stream failed: {e}"),
-        ),
-    }
-}
-
-fn run_stats(
-    op: &str,
-    request: &FilteredNodeSimilarityRequest,
-    graph_resources: &GraphResources,
-) -> Value {
-    let deps = RequestScopedDependencies::new(
-        JobId::new(),
-        TaskRegistryFactories::empty(),
-        TerminationFlag::running_true(),
-    );
-    let creator = ProgressTrackerCreator::new(deps);
-    let template = DefaultAlgorithmProcessingTemplate::new(creator);
-    let convenience = AlgorithmProcessingTemplateConvenience::new(template);
-
-    let task = Tasks::leaf("FilteredNodeSimilarity::stats".to_string())
-        .base()
-        .clone();
-
-    let compute = |gr: &GraphResources,
-                   _tracker: &mut dyn ProgressTracker,
-                   _termination: &TerminationFlag|
-     -> Result<Option<FilteredNodeSimilarityStats>, String> {
-        let builder = configure_builder(gr, request);
-        let stats = builder.stats().map_err(|e| e.to_string())?;
-        Ok(Some(stats))
-    };
-
-    let builder = FnStatsResultBuilder(
-        |_gr: &GraphResources, stats: Option<FilteredNodeSimilarityStats>, timings| {
-            json!({
-                "ok": true,
-                "op": op,
-                "mode": "stats",
-                "data": stats,
-                "timings": timings_json(timings)
-            })
-        },
-    );
-
-    match convenience.process_stats(
-        graph_resources,
-        request.common.concurrency,
-        task,
-        compute,
-        builder,
-    ) {
-        Ok(v) => v,
-        Err(e) => err(
-            op,
-            "EXECUTION_ERROR",
-            &format!("FilteredNodeSimilarity stats failed: {e}"),
-        ),
-    }
-}
-
-fn run_estimate(
-    op: &str,
-    request: &FilteredNodeSimilarityRequest,
-    graph_resources: &GraphResources,
-) -> Value {
-    if request.common.mode != Mode::Estimate {
-        return err(op, "INVALID_REQUEST", "Invalid mode");
-    }
-
-    match request.common.estimate_submode.as_deref() {
-        Some("memory") | None => {
-            let builder = configure_builder(graph_resources, request);
-            let memory = builder.estimate_memory();
-
-            json!({
-                "ok": true,
-                "op": op,
-                "mode": "estimate",
-                "submode": "memory",
-                "data": {
-                    "minBytes": memory.min(),
-                    "maxBytes": memory.max()
-                }
-            })
-        }
-        Some(other) => err(
-            op,
-            "INVALID_REQUEST",
-            &format!("Invalid estimate submode '{other}'. Use 'memory'"),
         ),
     }
 }
