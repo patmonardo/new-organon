@@ -94,6 +94,10 @@ impl DagLongestPathComputationRuntime {
         node_count: usize,
         get_neighbors: impl Fn(NodeId) -> Vec<(NodeId, f64)> + Send + Sync + 'static,
     ) -> DagLongestPathResult {
+        // Reset storage each run so repeated invocations on the same runtime do not carry
+        // over in-degree, distance, or predecessor state from prior graphs.
+        self.storage = Arc::new(DagLongestPathStorageRuntime::new(node_count));
+
         let get_neighbors = Arc::new(get_neighbors);
 
         // Phase 1: Initialize in-degrees
