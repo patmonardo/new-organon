@@ -179,18 +179,22 @@ impl GraphStoreValidationService {
     }
 
     // Helper methods for checking graph store state
+    #[allow(dead_code)]
     fn has_node_property<G: GraphStore>(&self, _graph_store: &G, _property: &str) -> bool {
         _graph_store.has_node_property(_property)
     }
 
+    #[allow(dead_code)]
     fn has_relationship_type<G: GraphStore>(&self, _graph_store: &G, _rel_type: &str) -> bool {
         _graph_store.has_relationship_type(&RelationshipType::of(_rel_type))
     }
 
+    #[allow(dead_code)]
     fn has_graph_property<G: GraphStore>(&self, _graph_store: &G, _property: &str) -> bool {
         _graph_store.has_graph_property(_property)
     }
 
+    #[allow(dead_code)]
     fn has_node_property_for_label<G: GraphStore>(
         &self,
         _graph_store: &G,
@@ -200,6 +204,7 @@ impl GraphStoreValidationService {
         _graph_store.has_node_property_for_label(&NodeLabel::of(_label), _property)
     }
 
+    #[allow(dead_code)]
     fn has_relationship_property_for_type<G: GraphStore>(
         &self,
         _graph_store: &G,

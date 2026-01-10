@@ -1,7 +1,5 @@
 use crate::applications::services::graph_store_dispatch;
-use crate::applications::services::tsjson_support::{
-    err, ok, parse_facade_context, TSJSON_CATALOG_SERVICE,
-};
+use crate::applications::services::tsjson_support::{err, ok, parse_facade_context};
 
 fn handle_graph_store(request: &serde_json::Value) -> serde_json::Value {
     let ctx = match parse_facade_context(request) {

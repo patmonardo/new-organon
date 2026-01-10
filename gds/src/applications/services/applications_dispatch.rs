@@ -97,6 +97,5 @@ pub fn handle_graph_store_catalog(
     db: &DatabaseId,
     catalog: Arc<dyn GraphCatalog>,
 ) -> Value {
-    let op = request.get("op").and_then(|v| v.as_str()).unwrap_or("");
     graph_store_catalog_dispatch::handle_graph_store_catalog(request, user, db, catalog)
 }

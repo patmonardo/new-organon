@@ -12,6 +12,10 @@ use crate::applications::graph_store_catalog::applications::stream_applications:
     StreamGraphPropertiesApplication, StreamNodePropertiesApplication,
     StreamRelationshipPropertiesApplication, StreamRelationshipsApplication,
 };
+use crate::applications::graph_store_catalog::applications::write_applications::{
+    WriteNodeLabelApplication, WriteNodePropertiesApplication,
+    WriteRelationshipPropertiesApplication, WriteRelationshipsApplication,
+};
 use crate::applications::graph_store_catalog::configs::{
     GraphGenerationConfig, GraphGenerationRelationshipConfig, NativeProjectionConfig,
     SamplingConfig,
@@ -122,6 +126,12 @@ pub fn handle_graph_store_catalog(
         "dropRelationships" => handle_drop_relationships(operation, request, user, db),
         "dropGraphProperty" => handle_drop_graph_property(operation, request, user, db),
         "mutateLabel" => handle_mutate_label(operation, request, user, db),
+        "writeNodeProperties" => handle_write_node_properties(operation, request, user, db),
+        "writeRelationshipProperties" => {
+            handle_write_relationship_properties(operation, request, user, db)
+        }
+        "writeRelationships" => handle_write_relationships(operation, request, user, db),
+        "writeNodeLabel" => handle_write_node_label(operation, request, user, db),
         "streamGraphProperty" => handle_stream_graph_property(operation, request, user, db),
         "streamNodeProperties" => handle_stream_node_properties(operation, request, user, db),
         "streamRelationshipProperties" => {
@@ -172,7 +182,7 @@ fn handle_graph_exists(op: &str, request: &Value, catalog: &Arc<dyn GraphCatalog
     ok(op, json!({ "graphName": graph_name, "exists": exists }))
 }
 
-fn handle_list_graphs(op: &str, request: &Value, user: &dyn User, db: &DatabaseId) -> Value {
+fn handle_list_graphs(_op: &str, request: &Value, user: &dyn User, db: &DatabaseId) -> Value {
     let filter = request
         .get("graphName")
         .and_then(|v| v.as_str())
@@ -439,6 +449,125 @@ fn handle_mutate_label(op: &str, request: &Value, user: &dyn User, db: &Database
     match serde_json::to_value(result) {
         Ok(v) => ok(op, v),
         Err(e) => err(op, "SERIALIZATION_ERROR", e.to_string()),
+    }
+}
+
+fn handle_write_node_properties(
+    op: &str,
+    request: &Value,
+    user: &dyn User,
+    db: &DatabaseId,
+) -> Value {
+    let graph_name = match require_str(op, request, "graphName") {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+    let node_properties = match require_string_vec(op, request, "nodeProperties") {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+    let node_labels = optional_string_vec(request, "nodeLabels")
+        .into_iter()
+        .map(|s| NodeLabel::of(s.as_str()))
+        .collect::<Vec<_>>();
+
+    let store = match resolve_graph_store(op, user, db, graph_name) {
+        Ok(s) => s,
+        Err(e) => return e,
+    };
+
+    let app = WriteNodePropertiesApplication::new(Log::default());
+    match app.compute(store.as_ref(), &node_properties, &node_labels) {
+        Ok(result) => match serde_json::to_value(result) {
+            Ok(v) => ok(op, v),
+            Err(e) => err(op, "SERIALIZATION_ERROR", e.to_string()),
+        },
+        Err(e) => err(op, "CATALOG_ERROR", e),
+    }
+}
+
+fn handle_write_relationship_properties(
+    op: &str,
+    request: &Value,
+    user: &dyn User,
+    db: &DatabaseId,
+) -> Value {
+    let graph_name = match require_str(op, request, "graphName") {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+    let relationship_properties = match require_string_vec(op, request, "relationshipProperties") {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+
+    let store = match resolve_graph_store(op, user, db, graph_name) {
+        Ok(s) => s,
+        Err(e) => return e,
+    };
+
+    let app = WriteRelationshipPropertiesApplication::new(Log::default());
+    match app.compute(store.as_ref(), &relationship_properties) {
+        Ok(result) => match serde_json::to_value(result) {
+            Ok(v) => ok(op, v),
+            Err(e) => err(op, "SERIALIZATION_ERROR", e.to_string()),
+        },
+        Err(e) => err(op, "CATALOG_ERROR", e),
+    }
+}
+
+fn handle_write_relationships(
+    op: &str,
+    request: &Value,
+    user: &dyn User,
+    db: &DatabaseId,
+) -> Value {
+    let graph_name = match require_str(op, request, "graphName") {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+    let relationship_type = match require_str(op, request, "relationshipType") {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+
+    let store = match resolve_graph_store(op, user, db, graph_name) {
+        Ok(s) => s,
+        Err(e) => return e,
+    };
+
+    let app = WriteRelationshipsApplication::new(Log::default());
+    match app.compute(store.as_ref(), relationship_type) {
+        Ok(result) => match serde_json::to_value(result) {
+            Ok(v) => ok(op, v),
+            Err(e) => err(op, "SERIALIZATION_ERROR", e.to_string()),
+        },
+        Err(e) => err(op, "CATALOG_ERROR", e),
+    }
+}
+
+fn handle_write_node_label(op: &str, request: &Value, user: &dyn User, db: &DatabaseId) -> Value {
+    let graph_name = match require_str(op, request, "graphName") {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+    let node_labels = match require_string_vec(op, request, "nodeLabels") {
+        Ok(v) => v,
+        Err(e) => return e,
+    };
+
+    let store = match resolve_graph_store(op, user, db, graph_name) {
+        Ok(s) => s,
+        Err(e) => return e,
+    };
+
+    let app = WriteNodeLabelApplication::new(Log::default());
+    match app.compute(store.as_ref(), &node_labels) {
+        Ok(result) => match serde_json::to_value(result) {
+            Ok(v) => ok(op, v),
+            Err(e) => err(op, "SERIALIZATION_ERROR", e.to_string()),
+        },
+        Err(e) => err(op, "CATALOG_ERROR", e),
     }
 }
 

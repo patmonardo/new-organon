@@ -5,8 +5,6 @@
 //!
 //! This facade focuses on procedure-specific behaviors and delegates to business logic.
 
-use std::sync::Arc;
-
 use crate::types::graph_store::DatabaseId;
 use crate::types::user::User;
 
