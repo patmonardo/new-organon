@@ -1,12 +1,14 @@
 pub mod algorithms_dispatch;
 pub mod applications_dispatch;
 pub mod graph_store_catalog_dispatch;
-mod graph_store_dispatch;
 pub mod logging;
-mod tsjson_support;
+
+pub mod graph_store_dispatch;
+pub mod tsjson_support;
 
 // TS-JSON is a JSON-in / JSON-out protocol used at the kernel boundary.
-// The core implementation is Rust-only (no N-API dependency).
+// The core implementation is Rust-only (no N-API dependency) and is the single
+// supported boundary for external callers.
 #[path = "tsjson_napi.rs"]
 pub mod tsjson;
 

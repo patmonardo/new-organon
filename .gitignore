@@ -52,4 +52,7 @@ doc/api
 .nojekyll
 old
 *java
-pathfinding copy
+.venv/
+pyg_service/
+graphstore-jsx-prototype/
+gdl-to-pdf/

@@ -7,7 +7,6 @@
 
 use std::sync::Arc;
 
-use crate::applications::graph_store_catalog::facade::GraphCatalogApplications;
 use crate::types::graph_store::DatabaseId;
 use crate::types::user::User;
 
@@ -38,17 +37,12 @@ impl RequestScopedDependencies {
 /// Local implementation of GraphProcedureFacade
 pub struct LocalGraphProcedureFacade {
     _request_scoped_dependencies: RequestScopedDependencies,
-    _catalog: Arc<dyn GraphCatalogApplications>,
 }
 
 impl LocalGraphProcedureFacade {
-    pub fn new(
-        request_scoped_dependencies: RequestScopedDependencies,
-        catalog: Arc<dyn GraphCatalogApplications>,
-    ) -> Self {
+    pub fn new(request_scoped_dependencies: RequestScopedDependencies) -> Self {
         Self {
             _request_scoped_dependencies: request_scoped_dependencies,
-            _catalog: catalog,
         }
     }
 }

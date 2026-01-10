@@ -6,5 +6,13 @@
     "next.config.js": "postcss.config.js, tailwind.config.js, prisma.config.ts, tailwind.config.ts, vercel.json",
     ".editorconfig": ".prettierrc, .eslintrc*, .gitignore, *.code-snippets",
   },
-  "vitest.disableWorkspaceWarning": true
+  "vitest.disableWorkspaceWarning": true,
+  "editor.formatOnSave": true,
+  "files.trimTrailingWhitespace": true,
+  "editor.rulers": [
+    80
+  ],
+  "[rust]": {
+    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+  }
 }

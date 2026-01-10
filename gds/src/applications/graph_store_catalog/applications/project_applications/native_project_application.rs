@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use crate::applications::graph_store_catalog::facade::{NativeProjectionConfig, ProjectionResult};
+use crate::applications::graph_store_catalog::configs::NativeProjectionConfig;
+use crate::applications::graph_store_catalog::results::ProjectionResult;
 use crate::applications::graph_store_catalog::loaders::GraphStoreCatalogService;
 use crate::core::User;
 use crate::projection::{NodeLabel, RelationshipType};

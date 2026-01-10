@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
-use crate::applications::graph_store_catalog::facade::{GenerationResult, GraphGenerationConfig};
+use crate::applications::graph_store_catalog::configs::GraphGenerationConfig;
 use crate::applications::graph_store_catalog::loaders::GraphStoreCatalogService;
+use crate::applications::graph_store_catalog::results::GenerationResult;
 use crate::applications::services::logging::Log;
 use crate::core::User;
 use crate::types::graph_store::{DatabaseId, DefaultGraphStore};
@@ -68,7 +69,7 @@ impl GenerateGraphApplication {
         let config = RandomGraphConfig {
             graph_name: graph_name.clone(),
             database_name: database_id.to_string(),
-            node_count,
+            node_count: node_count as usize,
             node_labels,
             relationships,
             directed: cfg.directed.unwrap_or(true),

@@ -1,4 +1,4 @@
-use crate::applications::graph_store_catalog::facade::ExportResult;
+use crate::applications::graph_store_catalog::results::ExportResult;
 use crate::types::graph_store::DefaultGraphStore;
 
 /// ExportToDatabaseApplication

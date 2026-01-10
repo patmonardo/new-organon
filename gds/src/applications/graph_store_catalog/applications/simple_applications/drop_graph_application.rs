@@ -1,7 +1,6 @@
-use super::super::super::facade::GraphStoreCatalogEntry;
 use super::super::super::loaders::GraphStoreCatalogService;
 use crate::core::User;
-use crate::types::catalog::GraphCatalog;
+use crate::types::catalog::{Dropped, GraphCatalog};
 use crate::types::graph_store::DatabaseId;
 use std::sync::Arc;
 
@@ -32,7 +31,7 @@ impl DropGraphApplication {
         database_id: &DatabaseId,
         operator: &dyn User,
         username_override: Option<&str>,
-    ) -> Result<Vec<GraphStoreCatalogEntry>, String> {
+    ) -> Result<Vec<Dropped>, String> {
         let _username_override = username_override;
 
         let catalog = self
@@ -43,9 +42,6 @@ impl DropGraphApplication {
         let dropped = GraphCatalog::drop(catalog.as_ref(), &refs, should_fail_if_missing)
             .map_err(|e| e.to_string())?;
 
-        Ok(dropped
-            .into_iter()
-            .map(|d| GraphStoreCatalogEntry::new(d.name, d.node_count, d.relationship_count, None))
-            .collect())
+        Ok(dropped)
     }
 }

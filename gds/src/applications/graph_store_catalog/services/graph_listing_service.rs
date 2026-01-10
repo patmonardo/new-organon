@@ -1,7 +1,6 @@
-use crate::applications::graph_store_catalog::facade::GraphStoreCatalogEntry;
 use crate::applications::graph_store_catalog::loaders::GraphStoreCatalogService;
 use crate::core::User;
-use crate::types::catalog::GraphCatalog;
+use crate::types::catalog::{GraphCatalog, ListEntry};
 use crate::types::graph_store::DatabaseId;
 use std::sync::Arc;
 
@@ -30,30 +29,16 @@ impl GraphListingService {
         database_id: &DatabaseId,
         graph_name: Option<&str>,
         include_degree_distribution: bool,
-    ) -> Vec<GraphStoreCatalogEntry> {
+    ) -> Vec<ListEntry> {
         let catalog = self
             .graph_store_catalog_service
             .graph_catalog(user, database_id);
         GraphCatalog::list(catalog.as_ref(), graph_name, include_degree_distribution)
-            .into_iter()
-            .map(|e| {
-                GraphStoreCatalogEntry::new(
-                    e.name,
-                    e.node_count,
-                    e.relationship_count,
-                    e.degree_distribution,
-                )
-            })
-            .collect()
     }
 
     /// Lists graphs for a specific user.
     /// In Java, this filters by user permissions.
-    pub fn list_for_user(
-        &self,
-        user: &dyn User,
-        database_id: &DatabaseId,
-    ) -> Vec<GraphStoreCatalogEntry> {
+    pub fn list_for_user(&self, user: &dyn User, database_id: &DatabaseId) -> Vec<ListEntry> {
         // Placeholder policy: no additional filtering yet.
         self.list_graphs(user, database_id, None, false)
     }

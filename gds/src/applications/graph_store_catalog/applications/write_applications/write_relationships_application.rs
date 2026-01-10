@@ -1,4 +1,4 @@
-use crate::applications::graph_store_catalog::facade::WriteResult;
+use crate::applications::graph_store_catalog::results::WriteResult;
 use crate::applications::services::logging::Log;
 use crate::projection::RelationshipType;
 use crate::types::graph_store::DefaultGraphStore;

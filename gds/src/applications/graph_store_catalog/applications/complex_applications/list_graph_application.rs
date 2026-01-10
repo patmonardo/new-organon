@@ -40,13 +40,10 @@ impl ListGraphApplication {
             .iter()
             .map(|e| {
                 let mut obj = serde_json::Map::new();
-                obj.insert("name".to_string(), json!(e.graph_name()));
-                obj.insert("nodeCount".to_string(), json!(e.node_count()));
-                obj.insert(
-                    "relationshipCount".to_string(),
-                    json!(e.relationship_count()),
-                );
-                if let Some(dd) = e.degree_distribution() {
+                obj.insert("name".to_string(), json!(e.name));
+                obj.insert("nodeCount".to_string(), json!(e.node_count));
+                obj.insert("relationshipCount".to_string(), json!(e.relationship_count));
+                if let Some(dd) = &e.degree_distribution {
                     let map: serde_json::Map<String, Value> =
                         dd.iter().map(|(k, v)| (k.to_string(), json!(v))).collect();
                     obj.insert("degreeDistribution".to_string(), Value::Object(map));

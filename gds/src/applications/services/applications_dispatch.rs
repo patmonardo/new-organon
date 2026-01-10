@@ -1,4 +1,3 @@
-use crate::applications::graph_store_catalog::facade::GraphCatalogApplications;
 use crate::applications::services::algorithms_dispatch;
 use crate::applications::services::graph_store_catalog_dispatch;
 use crate::core::User;
@@ -94,16 +93,10 @@ pub fn handle_algorithms(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Val
 /// Routing is delegated to the graph-store-catalog dispatcher.
 pub fn handle_graph_store_catalog(
     request: &Value,
-    catalog_apps: &dyn GraphCatalogApplications,
     user: &dyn User,
     db: &DatabaseId,
     catalog: Arc<dyn GraphCatalog>,
 ) -> Value {
-    graph_store_catalog_dispatch::handle_graph_store_catalog_dispatch(
-        request,
-        catalog_apps,
-        user,
-        db,
-        catalog,
-    )
+    let op = request.get("op").and_then(|v| v.as_str()).unwrap_or("");
+    graph_store_catalog_dispatch::handle_graph_store_catalog(request, user, db, catalog)
 }

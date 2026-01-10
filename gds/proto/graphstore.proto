@@ -1,0 +1,53 @@
+syntax = "proto3";
+package organon.gds.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Black-box PyG service proto (control + streaming transfer chunks)
+
+message CreateProjectionRequest {
+  string graph_id = 1;
+  string name = 2;
+  string manifest_uri = 3; // optional manifest or spec stored in object store
+}
+
+message JobResponse {
+  string job_id = 1;
+  google.protobuf.Timestamp created_at = 2;
+  string status = 3;
+}
+
+message RunTransformRequest {
+  string job_id = 1;
+  string dataset_uri = 2; // object-store URI or local path
+}
+
+message ModelArtifactResponse {
+  string artifact_uri = 1;
+  string format = 2; // e.g. onnx, torchscript
+}
+
+message ExplainRequest {
+  string job_id = 1;
+  string input_uri = 2;
+}
+
+message ExplainResponse {
+  string explanation_uri = 1;
+}
+
+message TransferChunk {
+  int64 seq_no = 1;
+  string format = 2; // e.g. arrow, npz, parquet
+  bytes data = 3; // inline chunk (use for small payloads)
+  map<string, string> stats = 4;
+  string storage_uri = 5; // optional object-store URI when chunk uploaded
+}
+
+service GraphStore {
+  rpc CreateProjection(CreateProjectionRequest) returns (JobResponse);
+  rpc RunTransform(RunTransformRequest) returns (stream TransferChunk);
+  rpc TrainModel(CreateProjectionRequest) returns (ModelArtifactResponse);
+  rpc ExportModel(CreateProjectionRequest) returns (ModelArtifactResponse);
+  rpc ExplainModel(ExplainRequest) returns (ExplainResponse);
+}

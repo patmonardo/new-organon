@@ -36,6 +36,29 @@ impl GraphStoreExportResult {
     }
 }
 
+/// Lightweight export summary used by CSV/database export stubs.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportResult {
+    pub nodes_exported: u64,
+    pub relationships_exported: u64,
+    pub export_path: Option<String>,
+}
+
+impl ExportResult {
+    pub fn new(
+        nodes_exported: u64,
+        relationships_exported: u64,
+        export_path: Option<String>,
+    ) -> Self {
+        Self {
+            nodes_exported,
+            relationships_exported,
+            export_path,
+        }
+    }
+}
+
 /// Result for database export operations.
 /// Mirrors Java DatabaseExportResult class.
 #[derive(Clone, Debug)]

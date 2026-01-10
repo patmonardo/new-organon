@@ -4,7 +4,7 @@ use crate::types::graph::IdMap as _;
 use crate::types::graph_store::DefaultGraphStore;
 use crate::types::graph_store::GraphStore as _;
 
-use crate::applications::graph_store_catalog::facade::WriteResult;
+use crate::applications::graph_store_catalog::results::WriteResult;
 
 /// WriteNodePropertiesApplication
 ///

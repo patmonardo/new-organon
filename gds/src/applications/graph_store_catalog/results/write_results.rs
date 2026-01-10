@@ -3,6 +3,25 @@
 use serde_json::Value;
 use std::collections::HashMap;
 
+/// Summary for write operations (node/relationship/property counts).
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WriteResult {
+    pub nodes_written: u64,
+    pub relationships_written: u64,
+    pub properties_written: u64,
+}
+
+impl WriteResult {
+    pub fn new(nodes_written: u64, relationships_written: u64, properties_written: u64) -> Self {
+        Self {
+            nodes_written,
+            relationships_written,
+            properties_written,
+        }
+    }
+}
+
 /// Result for writing node properties.
 /// Mirrors Java NodePropertiesWriteResult class.
 #[derive(Clone, Debug)]

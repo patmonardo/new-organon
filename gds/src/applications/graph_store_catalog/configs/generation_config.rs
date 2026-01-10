@@ -1,0 +1,22 @@
+use serde::{Deserialize, Serialize};
+
+/// Configuration for synthetic graph generation.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphGenerationRelationshipConfig {
+    pub relationship_type: String,
+    pub probability: f64,
+}
+
+/// Configuration for GenerateGraphApplication.
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GraphGenerationConfig {
+    pub graph_name: Option<String>,
+    pub node_count: Option<u64>,
+    pub node_labels: Vec<String>,
+    pub relationships: Vec<GraphGenerationRelationshipConfig>,
+    pub directed: Option<bool>,
+    pub inverse_indexed: Option<bool>,
+    pub seed: Option<u64>,
+}

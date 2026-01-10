@@ -3,14 +3,12 @@
 
 pub mod applications;
 pub mod configs;
-pub mod facade;
 pub mod loaders;
 pub mod results;
 pub mod services;
 
 pub use applications::*;
 pub use configs::*;
-pub use facade::*;
 pub use loaders::*;
 pub use results::*;
 pub use services::*;

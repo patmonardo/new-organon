@@ -1,4 +1,4 @@
-use crate::applications::graph_store_catalog::facade::ExportResult;
+use crate::applications::graph_store_catalog::results::ExportResult;
 use crate::projection::RelationshipType;
 use crate::types::graph::Graph as _;
 use crate::types::graph::IdMap as _;

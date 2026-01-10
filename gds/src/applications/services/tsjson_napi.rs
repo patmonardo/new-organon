@@ -1,7 +1,4 @@
-use crate::applications::graph_store_catalog::facade::ApplicationsFacade;
-use crate::applications::graph_store_catalog::facade::DefaultGraphCatalogApplicationsBuilder;
 use crate::applications::services::graph_store_dispatch;
-use crate::applications::services::logging::Log;
 use crate::applications::services::tsjson_support::{
     err, ok, parse_facade_context, TSJSON_CATALOG_SERVICE,
 };
@@ -14,26 +11,14 @@ fn handle_graph_store(request: &serde_json::Value) -> serde_json::Value {
     graph_store_dispatch::handle_graph_store(request, &ctx)
 }
 
-fn build_graph_store_catalog_facade() -> ApplicationsFacade {
-    let service = TSJSON_CATALOG_SERVICE.clone();
-    let apps = DefaultGraphCatalogApplicationsBuilder::new(Log::new())
-        .with_graph_store_catalog_service(service)
-        .build();
-    ApplicationsFacade::with_graph_store_catalog_applications(Box::new(apps))
-}
-
 fn handle_graph_store_catalog(request: &serde_json::Value) -> serde_json::Value {
-    use super::applications_dispatch;
-
     let ctx = match parse_facade_context(request) {
         Ok(v) => v,
         Err(e) => return e,
     };
 
-    let apps_facade = build_graph_store_catalog_facade();
-    applications_dispatch::handle_graph_store_catalog(
+    super::applications_dispatch::handle_graph_store_catalog(
         request,
-        apps_facade.graph_store_catalog(),
         &ctx.user,
         &ctx.db,
         ctx.catalog,

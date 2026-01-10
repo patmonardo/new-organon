@@ -1,4 +1,4 @@
-use crate::applications::graph_store_catalog::facade::WriteResult;
+use crate::applications::graph_store_catalog::results::WriteResult;
 use crate::applications::services::logging::Log;
 use crate::projection::NodeLabel;
 use crate::types::graph::IdMap as _;

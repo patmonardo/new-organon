@@ -35,6 +35,87 @@ impl GraphMemoryUsage {
     }
 }
 
+/// Result for graph generation operations.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GenerationResult {
+    pub graph_name: String,
+    pub nodes_generated: u64,
+    pub relationships_generated: u64,
+    pub generate_millis: u64,
+}
+
+impl GenerationResult {
+    pub fn new(
+        graph_name: String,
+        nodes_generated: u64,
+        relationships_generated: u64,
+        generate_millis: u64,
+    ) -> Self {
+        Self {
+            graph_name,
+            nodes_generated,
+            relationships_generated,
+            generate_millis,
+        }
+    }
+}
+
+/// Result for graph sampling operations.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SamplingResult {
+    pub graph_name: String,
+    pub origin_node_count: u64,
+    pub sampled_node_count: u64,
+    pub origin_relationship_count: u64,
+    pub sampled_relationship_count: u64,
+}
+
+impl SamplingResult {
+    pub fn new(
+        graph_name: String,
+        origin_node_count: u64,
+        sampled_node_count: u64,
+        origin_relationship_count: u64,
+        sampled_relationship_count: u64,
+    ) -> Self {
+        Self {
+            graph_name,
+            origin_node_count,
+            sampled_node_count,
+            origin_relationship_count,
+            sampled_relationship_count,
+        }
+    }
+}
+
+/// Result for projection operations.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectionResult {
+    pub graph_name: String,
+    pub node_count: u64,
+    pub relationship_count: u64,
+    pub project_millis: u64,
+}
+
+impl ProjectionResult {
+    pub fn new(
+        graph_name: String,
+        node_count: u64,
+        relationship_count: u64,
+        project_millis: u64,
+    ) -> Self {
+        Self {
+            graph_name,
+            node_count,
+            relationship_count,
+            project_millis,
+        }
+    }
+}
+
 /// Result for mutating node labels.
 /// Mirrors Java MutateLabelResult class.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
