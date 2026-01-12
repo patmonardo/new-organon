@@ -10,29 +10,11 @@
 
 /// <reference types="node" />
 
-import { execFileSync } from 'node:child_process';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-import { GdsTsjsonResponseSchema } from '@schema';
-
-function repoRoot(): string {
-  // gdsl/examples → repo root
-  const here = dirname(fileURLToPath(import.meta.url));
-  return resolve(here, '../..');
-}
+import { tsjsonInvoke } from './_tsjson';
 
 export function pingGdsKernel(): void {
   const req = { op: 'ping', nonce: `n-${Date.now()}` };
-  const requestJson = JSON.stringify(req);
-
-  const out = execFileSync(
-    'cargo',
-    ['run', '-p', 'gds', '--bin', 'tsjson_cli', '--', requestJson],
-    { cwd: repoRoot(), encoding: 'utf8' },
-  );
-
-  const parsed = GdsTsjsonResponseSchema.parse(JSON.parse(out));
+  const parsed = tsjsonInvoke(req);
   // eslint-disable-next-line no-console
   console.log('request:', req);
   // eslint-disable-next-line no-console
