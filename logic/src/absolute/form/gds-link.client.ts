@@ -1,14 +1,6 @@
 import { z } from 'zod';
 
-import type { KernelPort } from '@organon/gdsl';
-import {
-  invokeGdsApplicationCall,
-  type GdsFormEvalEvaluateData,
-  GdsFormEvalEvaluateDataSchema,
-  type GdsApplicationCall,
-  type GdsDatabaseId,
-  type GdsUser,
-} from '@organon/gdsl';
+import type { KernelPort } from './kernel-port';
 
 /**
  * Absolute / Form (Logic)
@@ -21,9 +13,25 @@ import {
  */
 
 export type AbsoluteFormSession = {
-  user: GdsUser;
-  databaseId: GdsDatabaseId;
+  user: { username: string; isAdmin?: boolean };
+  databaseId: string;
 };
+
+type ApplicationCall = { facade: string; op: string } & Record<string, unknown>;
+
+async function invokeApplicationCall(
+  port: KernelPort,
+  call: ApplicationCall,
+): Promise<unknown> {
+  const modelId = `gds.${call.facade}.${call.op}`;
+  const result = await port.run({ model: { id: modelId }, input: call });
+  if (result.ok) return result.output;
+  throw new Error(
+    typeof (result as any)?.error?.message === 'string'
+      ? (result as any).error.message
+      : 'GDS call failed',
+  );
+}
 
 // --- Response schemas (typed “Given” / Intuition payloads) ---
 
@@ -32,9 +40,13 @@ export const GraphStoreCatalogEntrySchema = z.object({
   nodeCount: z.number().int().nonnegative(),
   relationshipCount: z.number().int().nonnegative(),
   // JSON object where keys are degrees (stringified ints) and values are counts.
-  degreeDistribution: z.record(z.string(), z.number().int().nonnegative()).optional(),
+  degreeDistribution: z
+    .record(z.string(), z.number().int().nonnegative())
+    .optional(),
 });
-export type GraphStoreCatalogEntry = z.infer<typeof GraphStoreCatalogEntrySchema>;
+export type GraphStoreCatalogEntry = z.infer<
+  typeof GraphStoreCatalogEntrySchema
+>;
 
 export const ListGraphsDataSchema = z.object({
   entries: z.array(GraphStoreCatalogEntrySchema),
@@ -70,7 +82,9 @@ export const StreamRelationshipsDataSchema = z.object({
     }),
   ),
 });
-export type StreamRelationshipsData = z.infer<typeof StreamRelationshipsDataSchema>;
+export type StreamRelationshipsData = z.infer<
+  typeof StreamRelationshipsDataSchema
+>;
 
 export const StreamNodePropertiesDataSchema = z.object({
   graphName: z.string().min(1),
@@ -83,7 +97,9 @@ export const StreamNodePropertiesDataSchema = z.object({
     }),
   ),
 });
-export type StreamNodePropertiesData = z.infer<typeof StreamNodePropertiesDataSchema>;
+export type StreamNodePropertiesData = z.infer<
+  typeof StreamNodePropertiesDataSchema
+>;
 
 export const StreamRelationshipPropertiesDataSchema = z.object({
   graphName: z.string().min(1),
@@ -97,7 +113,9 @@ export const StreamRelationshipPropertiesDataSchema = z.object({
     }),
   ),
 });
-export type StreamRelationshipPropertiesData = z.infer<typeof StreamRelationshipPropertiesDataSchema>;
+export type StreamRelationshipPropertiesData = z.infer<
+  typeof StreamRelationshipPropertiesDataSchema
+>;
 
 export const GraphStorePutDataSchema = z.object({
   graphName: z.string().min(1),
@@ -105,6 +123,22 @@ export const GraphStorePutDataSchema = z.object({
   relationshipCount: z.number().int().nonnegative(),
 });
 export type GraphStorePutData = z.infer<typeof GraphStorePutDataSchema>;
+
+export const GdsFormEvalEvaluateDataSchema = z
+  .object({
+    graphName: z.string().min(1),
+    outputGraphName: z.string().min(1).nullable().optional(),
+    persistedOutputGraph: z.boolean().optional(),
+    operator: z.string().min(1),
+    execution_time_ms: z.number().nonnegative().optional(),
+    nodeCount: z.number().int().nonnegative().optional(),
+    relationshipCount: z.number().int().nonnegative().optional(),
+    proof: z.unknown(),
+  })
+  .passthrough();
+export type GdsFormEvalEvaluateData = z.infer<
+  typeof GdsFormEvalEvaluateDataSchema
+>;
 
 function baseForm(session: AbsoluteFormSession) {
   return {
@@ -114,11 +148,14 @@ function baseForm(session: AbsoluteFormSession) {
   };
 }
 
-export function createAbsoluteFormClient(port: KernelPort, session: AbsoluteFormSession) {
+export function createAbsoluteFormClient(
+  port: KernelPort,
+  session: AbsoluteFormSession,
+) {
   const base = baseForm(session);
 
-  async function call(call: GdsApplicationCall): Promise<unknown> {
-    return await invokeGdsApplicationCall(port, call);
+  async function call(call: ApplicationCall): Promise<unknown> {
+    return await invokeApplicationCall(port, call);
   }
 
   return {
@@ -127,7 +164,12 @@ export function createAbsoluteFormClient(port: KernelPort, session: AbsoluteForm
 
     graphStoreCatalog: {
       graphExists: async (graphName: string): Promise<GraphExistsData> => {
-        const data = await call({ ...base, facade: 'graph_store_catalog', op: 'graph_exists', graphName } as any);
+        const data = await call({
+          ...base,
+          facade: 'graph_store_catalog',
+          op: 'graph_exists',
+          graphName,
+        } as any);
         return GraphExistsDataSchema.parse(data);
       },
 
@@ -145,12 +187,22 @@ export function createAbsoluteFormClient(port: KernelPort, session: AbsoluteForm
         return ListGraphsDataSchema.parse(data);
       },
 
-      graphMemoryUsage: async (graphName: string): Promise<GraphMemoryUsageData> => {
-        const data = await call({ ...base, facade: 'graph_store_catalog', op: 'graph_memory_usage', graphName } as any);
+      graphMemoryUsage: async (
+        graphName: string,
+      ): Promise<GraphMemoryUsageData> => {
+        const data = await call({
+          ...base,
+          facade: 'graph_store_catalog',
+          op: 'graph_memory_usage',
+          graphName,
+        } as any);
         return GraphMemoryUsageDataSchema.parse(data);
       },
 
-      dropGraph: async (graphName: string, opts?: { failIfMissing?: boolean }): Promise<DropGraphsData> => {
+      dropGraph: async (
+        graphName: string,
+        opts?: { failIfMissing?: boolean },
+      ): Promise<DropGraphsData> => {
         const data = await call({
           ...base,
           facade: 'graph_store_catalog',
@@ -161,7 +213,10 @@ export function createAbsoluteFormClient(port: KernelPort, session: AbsoluteForm
         return DropGraphsDataSchema.parse(data);
       },
 
-      dropGraphs: async (graphNames: string[], opts?: { failIfMissing?: boolean }): Promise<DropGraphsData> => {
+      dropGraphs: async (
+        graphNames: string[],
+        opts?: { failIfMissing?: boolean },
+      ): Promise<DropGraphsData> => {
         const data = await call({
           ...base,
           facade: 'graph_store_catalog',
@@ -172,7 +227,10 @@ export function createAbsoluteFormClient(port: KernelPort, session: AbsoluteForm
         return DropGraphsDataSchema.parse(data);
       },
 
-      streamRelationships: async (graphName: string, opts?: { relationshipTypes?: string[] }): Promise<StreamRelationshipsData> => {
+      streamRelationships: async (
+        graphName: string,
+        opts?: { relationshipTypes?: string[] },
+      ): Promise<StreamRelationshipsData> => {
         const data = await call({
           ...base,
           facade: 'graph_store_catalog',
@@ -183,11 +241,14 @@ export function createAbsoluteFormClient(port: KernelPort, session: AbsoluteForm
         return StreamRelationshipsDataSchema.parse(data);
       },
 
-      streamNodeProperties: async (graphName: string, opts?: {
-        nodeProperties?: string[];
-        nodeLabels?: string[];
-        listNodeLabels?: boolean;
-      }): Promise<StreamNodePropertiesData> => {
+      streamNodeProperties: async (
+        graphName: string,
+        opts?: {
+          nodeProperties?: string[];
+          nodeLabels?: string[];
+          listNodeLabels?: boolean;
+        },
+      ): Promise<StreamNodePropertiesData> => {
         const data = await call({
           ...base,
           facade: 'graph_store_catalog',
@@ -200,10 +261,13 @@ export function createAbsoluteFormClient(port: KernelPort, session: AbsoluteForm
         return StreamNodePropertiesDataSchema.parse(data);
       },
 
-      streamRelationshipProperties: async (graphName: string, opts?: {
-        relationshipProperties?: string[];
-        relationshipTypes?: string[];
-      }): Promise<StreamRelationshipPropertiesData> => {
+      streamRelationshipProperties: async (
+        graphName: string,
+        opts?: {
+          relationshipProperties?: string[];
+          relationshipTypes?: string[];
+        },
+      ): Promise<StreamRelationshipPropertiesData> => {
         const data = await call({
           ...base,
           facade: 'graph_store_catalog',
@@ -217,8 +281,17 @@ export function createAbsoluteFormClient(port: KernelPort, session: AbsoluteForm
     },
 
     graphStore: {
-      put: async (graphName: string, snapshot: unknown): Promise<GraphStorePutData> => {
-        const data = await call({ ...base, facade: 'graph_store', op: 'put', graphName, snapshot } as any);
+      put: async (
+        graphName: string,
+        snapshot: unknown,
+      ): Promise<GraphStorePutData> => {
+        const data = await call({
+          ...base,
+          facade: 'graph_store',
+          op: 'put',
+          graphName,
+          snapshot,
+        } as any);
         return GraphStorePutDataSchema.parse(data);
       },
     },
@@ -244,5 +317,3 @@ export function createAbsoluteFormClient(port: KernelPort, session: AbsoluteForm
     },
   };
 }
-
-

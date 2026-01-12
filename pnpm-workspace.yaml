@@ -1,7 +1,7 @@
 packages:
-  - gdsl
   - logic
   - model
+#  - model/examples/dashboard
   - task
 
 ignoredBuiltDependencies:

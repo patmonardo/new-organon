@@ -14,10 +14,7 @@ export {
 } from './polars-engine';
 
 // SQL execution engine
-export {
-  SqlEngine,
-  type SqlQuery,
-} from './sql-engine';
+export { SqlEngine, type SqlQuery } from './sql-engine';
 
 // Semantic hydrator (bridges execution results to forms)
 export {
@@ -32,19 +29,3 @@ export {
   type CollectionBinding,
   type MetricBinding,
 } from './semantic-hydrator';
-
-// ML algorithm dispatchers
-export {
-  MLDispatcher,
-  SimilarityDispatcher,
-  NodeEmbeddingsDispatcher,
-  type SimilarityConfig,
-  type NodeSimilarityConfig,
-  type EmbeddingConfig,
-  type GraphSageConfig,
-  type Node2VecConfig,
-  type FastRPConfig,
-  type HashGNNConfig,
-  type GATConfig,
-} from './ml-dispatcher';
-

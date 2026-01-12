@@ -1,12 +1,13 @@
-import type { KernelPort, KernelRunResult } from '@organon/gdsl';
-import type { GdsFormProgram } from '@organon/gdsl/schema';
+import type { KernelPort, KernelRunResult } from '@absolute/form/kernel-port';
+import type { KernelFormProgram } from '@schema/formshape-kernel';
 
-import { createLogicApi, type FormEvalCall } from '../../../api';
+import { createLogicApi, type FormEvalCall } from '@absolute/form/api';
 import {
-	ContextPhenomenologySchema,
-	type ContextPhenomenology,
+  ContextPhenomenologySchema,
+  type ContextPhenomenology,
 } from '../context/phenomenology';
 
+import { GdsFormProgram } from '@schema';
 /**
  * Container → Contained (seed)
  *
@@ -22,61 +23,63 @@ import {
  */
 
 export type ReflectionContainerProgramSeed = {
-	/** Optional Essence envelope for the kernel program. */
-	shape?: GdsFormProgram['shape'];
+  id?: string;
+  /** Optional Essence envelope for the kernel program. */
+  shape?: KernelFormProgram['shape'];
 
-	/** Optional Determination-of-Essence / Reflection envelope. */
-	context?: GdsFormProgram['context'];
+  /** Optional Determination-of-Essence / Reflection envelope. */
+  context?: KernelFormProgram['context'];
 
-	/**
-	 * Optional phenomenology payload (Identity/Difference/Contradiction + Foundation/Judgment).
-	 *
-	 * This is **discursive** TS data only. The kernel may ignore it, but it is safe to pass
-	 * through because the GDSL program context is `.passthrough()`.
-	 */
-	phenomenology?: Partial<ContextPhenomenology>;
+  /**
+   * Optional phenomenology payload (Identity/Difference/Contradiction + Foundation/Judgment).
+   *
+   * This is **discursive** TS data only. The kernel may ignore it, but it is safe to pass
+   * through because the GDSL program context is `.passthrough()`.
+   */
+  phenomenology?: Partial<ContextPhenomenology>;
 
-	/** Optional operator chain override (Active Ground). */
-	patterns?: string[];
+  /** Optional operator chain override (Active Ground). */
+  patterns?: string[];
 };
 
 export function seedReflectionFormProgram(
-	seed: ReflectionContainerProgramSeed = {},
-): GdsFormProgram {
-	const patterns = seed.patterns ?? ['essence', 'shine', 'reflection'];
+  seed: ReflectionContainerProgramSeed = {},
+): KernelFormProgram {
+  const patterns = seed.patterns ?? ['essence', 'shine', 'reflection'];
 
-	const program: Record<string, unknown> = {
-		morph: { patterns },
-	};
+  const program: Record<string, unknown> = {
+    id: seed.id ?? 'formshape:container-seed',
+    morph: { patterns },
+  };
 
-	if (seed.shape) program.shape = seed.shape;
+  if (seed.shape) program.shape = seed.shape;
 
-	if (seed.context || seed.phenomenology) {
-		const base = (seed.context ?? {}) as Record<string, unknown>;
-		const phen = seed.phenomenology
-			? ContextPhenomenologySchema.partial().parse(seed.phenomenology)
-			: undefined;
-		program.context = {
-			...base,
-			...(phen ? { phenomenology: phen } : {}),
-		};
-	}
+  if (seed.context || seed.phenomenology) {
+    const base = (seed.context ?? {}) as Record<string, unknown>;
+    const phen = seed.phenomenology
+      ? ContextPhenomenologySchema.partial().parse(seed.phenomenology)
+      : undefined;
+    program.context = {
+      ...base,
+      ...(phen ? { phenomenology: phen } : {}),
+    };
+  }
 
-	return program as GdsFormProgram;
+  return program as KernelFormProgram;
 }
 
 export type ContainedSeed = {
-	/** Seed for discursive Entity emergence (schema fields + basic constraints). */
-	entity: {
-		fields: string[];
-		typeConstraints: Record<string, string>;
-	};
+  /** Seed for discursive Entity emergence (schema fields + basic constraints). */
+  entity: {
+    fields: string[];
+    typeConstraints: Record<string, string>;
+  };
 
-	/** Seed for discursive Property emergence (invariants/conditions). */
-	property: {
-		validationRules: Record<string, string>;
-		conditions: string[];
-	};
+  /** Seed for discursive Property emergence (invariants/conditions). */
+  property: {
+    validationRules: Record<string, string>;
+    conditions: string[];
+  };
 };
 
 /**
@@ -85,41 +88,45 @@ export type ContainedSeed = {
  * This intentionally does NOT try to fully materialize Entities/Properties.
  * It just makes the dependency direction explicit and machine-checkable.
  */
-export function seedContainedFromProgram(program: GdsFormProgram): ContainedSeed {
-	const shape = (program.shape ?? {}) as NonNullable<GdsFormProgram['shape']>;
-	const ctx = (program.context ?? {}) as NonNullable<GdsFormProgram['context']>;
+export function seedContainedFromProgram(
+  program: KernelFormProgram,
+): ContainedSeed {
+  const shape = (program.shape ?? {}) as NonNullable<GdsFormProgram['shape']>;
+  const ctx = (program.context ?? {}) as NonNullable<GdsFormProgram['context']>;
 
-	const required = Array.isArray((shape as any).required_fields)
-		? ((shape as any).required_fields as string[])
-		: [];
-	const optional = Array.isArray((shape as any).optional_fields)
-		? ((shape as any).optional_fields as string[])
-		: [];
+  const required = Array.isArray((shape as any).required_fields)
+    ? ((shape as any).required_fields as string[])
+    : [];
+  const optional = Array.isArray((shape as any).optional_fields)
+    ? ((shape as any).optional_fields as string[])
+    : [];
 
-	const typeConstraints =
-		(shape as any).type_constraints && typeof (shape as any).type_constraints === 'object'
-			? ((shape as any).type_constraints as Record<string, string>)
-			: {};
+  const typeConstraints =
+    (shape as any).type_constraints &&
+    typeof (shape as any).type_constraints === 'object'
+      ? ((shape as any).type_constraints as Record<string, string>)
+      : {};
 
-	const validationRules =
-		(shape as any).validation_rules && typeof (shape as any).validation_rules === 'object'
-			? ((shape as any).validation_rules as Record<string, string>)
-			: {};
+  const validationRules =
+    (shape as any).validation_rules &&
+    typeof (shape as any).validation_rules === 'object'
+      ? ((shape as any).validation_rules as Record<string, string>)
+      : {};
 
-	const conditions = Array.isArray((ctx as any).conditions)
-		? ((ctx as any).conditions as string[])
-		: [];
+  const conditions = Array.isArray((ctx as any).conditions)
+    ? ((ctx as any).conditions as string[])
+    : [];
 
-	return {
-		entity: {
-			fields: [...required, ...optional],
-			typeConstraints,
-		},
-		property: {
-			validationRules,
-			conditions,
-		},
-	};
+  return {
+    entity: {
+      fields: [...required, ...optional],
+      typeConstraints,
+    },
+    property: {
+      validationRules,
+      conditions,
+    },
+  };
 }
 
 /**
@@ -129,30 +136,30 @@ export function seedContainedFromProgram(program: GdsFormProgram): ContainedSeed
  * via the GDSL boundary.
  */
 export function seedFormEvalCallFromProgram(input: {
-	user: FormEvalCall['user'];
-	databaseId: string;
-	graphName: string;
-	outputGraphName?: string;
-	program: GdsFormProgram;
-	artifacts?: Record<string, unknown>;
+  user: FormEvalCall['user'];
+  databaseId: string;
+  graphName: string;
+  outputGraphName?: string;
+  program: KernelFormProgram;
+  artifacts?: Record<string, unknown>;
 }): FormEvalCall {
-	return {
-		facade: 'form_eval',
-		op: 'evaluate',
-		user: input.user,
-		databaseId: input.databaseId,
-		graphName: input.graphName,
-		outputGraphName: input.outputGraphName,
-		program: input.program as any,
-		artifacts: input.artifacts ?? {},
-	};
+  return {
+    facade: 'form_eval',
+    op: 'evaluate',
+    user: input.user,
+    databaseId: input.databaseId,
+    graphName: input.graphName,
+    outputGraphName: input.outputGraphName,
+    program: input.program as any,
+    artifacts: input.artifacts ?? {},
+  };
 }
 
 export type RunReflectionContainerResult = {
-	program: GdsFormProgram;
-	call: FormEvalCall;
-	kernelResult: KernelRunResult;
-	contained: ContainedSeed;
+  program: GdsFormProgram;
+  call: FormEvalCall;
+  kernelResult: KernelRunResult;
+  contained: ContainedSeed;
 };
 
 /**
@@ -164,27 +171,27 @@ export type RunReflectionContainerResult = {
  * - TS derives the Contained seed (entity/property) from the same container
  */
 export async function runReflectionContainerOnKernel(input: {
-	kernel: KernelPort;
-	user: FormEvalCall['user'];
-	databaseId: string;
-	graphName: string;
-	outputGraphName?: string;
-	seed?: ReflectionContainerProgramSeed;
-	artifacts?: Record<string, unknown>;
+  kernel: KernelPort;
+  user: FormEvalCall['user'];
+  databaseId: string;
+  graphName: string;
+  outputGraphName?: string;
+  seed?: ReflectionContainerProgramSeed;
+  artifacts?: Record<string, unknown>;
 }): Promise<RunReflectionContainerResult> {
-	const program = seedReflectionFormProgram(input.seed);
-	const call = seedFormEvalCallFromProgram({
-		user: input.user,
-		databaseId: input.databaseId,
-		graphName: input.graphName,
-		outputGraphName: input.outputGraphName,
-		program,
-		artifacts: input.artifacts,
-	});
+  const program = seedReflectionFormProgram(input.seed);
+  const call = seedFormEvalCallFromProgram({
+    user: input.user,
+    databaseId: input.databaseId,
+    graphName: input.graphName,
+    outputGraphName: input.outputGraphName,
+    program,
+    artifacts: input.artifacts,
+  });
 
-	const api = createLogicApi(input.kernel);
-	const kernelResult = await api.form.evaluate(call);
-	const contained = seedContainedFromProgram(program);
+  const api = createLogicApi(input.kernel);
+  const kernelResult = await api.form.evaluate(call);
+  const contained = seedContainedFromProgram(program);
 
-	return { program, call, kernelResult, contained };
+  return { program, call, kernelResult, contained };
 }

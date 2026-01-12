@@ -14,6 +14,12 @@
       "@schema": [
         "src/schema/index"
       ],
+      "@sdk/*": [
+        "src/sdk/*"
+      ],
+      "@sdk": [
+        "src/sdk/index"
+      ],
       "@schema/*": [
         "src/schema/*"
       ],
@@ -47,25 +53,5 @@
     "src/relative/essence/**/*",
     "src/relative/being/**/*",
     "src/relative/types.ts",
-    // Exclude speculative Absolute modules, keep only Engine Bus core
-    "src/absolute/concept/**/*",
-    "src/absolute/essence/**/*",
-    "src/absolute/being/**/*",
-    // Exclude legacy absolute/form shims (moved to Rust)
-    "src/absolute/form/project.ts",
-    "src/absolute/form/projection.aspect.ts",
-    "src/absolute/form/projection.conflict.ts",
-    // Exclude speculative core files, keep only: message.ts, bus.ts, trace.ts
-    "src/absolute/core/kriya.ts",
-    "src/absolute/core/qualquant.ts",
-    "src/absolute/core/knowledge.ts",
-    "src/absolute/core/action.ts",
-    "src/absolute/core/contracts.ts",
-    "src/absolute/core/dialectic.ts",
-    "src/absolute/core/driver.ts",
-    "src/absolute/core/protocol.ts",
-    "src/absolute/core/orchestrator.ts",
-    "src/absolute/core/jnana.ts",
-    "src/absolute/core/derive.ts"
   ]
 }

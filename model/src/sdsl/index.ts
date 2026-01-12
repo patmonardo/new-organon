@@ -58,11 +58,6 @@ export * from './essence-to-agent';
 export * from './agent-bus';
 export * from './agent-runtime';
 
-// Model → TAW bridges
-export * from './agent-to-taw';
-
-
-
 // RealityPipe primitives (internal middleware)
 export * from './reality-pipe';
 
