@@ -2,11 +2,11 @@ import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { GdsTsjsonResponseSchema } from '@schema';
+import { GdsTsjsonResponseSchema } from '../src/schema';
 
 // Resolve workspace root from src/examples to repo root (../../..)
 const WORKSPACE_ROOT = resolve(
-  fileURLToPath(new URL('../../..', import.meta.url)),
+  fileURLToPath(new URL('../..', import.meta.url)),
 );
 
 /**

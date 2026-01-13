@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
 import type { KernelPort } from './kernel-port';
+import {
+  GdsFormEvalEvaluateDataSchema,
+  GdsFormEvalEvaluateData,
+} from '../../schema/program';
 
 /**
  * Absolute / Form (Logic)
@@ -124,21 +128,7 @@ export const GraphStorePutDataSchema = z.object({
 });
 export type GraphStorePutData = z.infer<typeof GraphStorePutDataSchema>;
 
-export const GdsFormEvalEvaluateDataSchema = z
-  .object({
-    graphName: z.string().min(1),
-    outputGraphName: z.string().min(1).nullable().optional(),
-    persistedOutputGraph: z.boolean().optional(),
-    operator: z.string().min(1),
-    execution_time_ms: z.number().nonnegative().optional(),
-    nodeCount: z.number().int().nonnegative().optional(),
-    relationshipCount: z.number().int().nonnegative().optional(),
-    proof: z.unknown(),
-  })
-  .passthrough();
-export type GdsFormEvalEvaluateData = z.infer<
-  typeof GdsFormEvalEvaluateDataSchema
->;
+// Reuse the canonical schema defined in `schema/program.ts`.
 
 function baseForm(session: AbsoluteFormSession) {
   return {
