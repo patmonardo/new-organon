@@ -41,15 +41,13 @@ export * from './facet';
 export * from './dialectic';
 
 // Kernel-facing wire schemas (FormShape + ApplicationForm)
-export * from './base';
-export * from './formshape-kernel';
+export * from './kernel';
+export * from './program';
 export * from './application';
 export * from './algorithms';
 export * from './graph-store';
 export * from './graph-store-catalog';
 export * from './tsjson';
-export * from './program';
 export * from './common';
 export * from './handles';
-
 export * from './graph';

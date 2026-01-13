@@ -1,7 +1,7 @@
 import type { KernelPort, KernelRunResult } from '@absolute/form/kernel-port';
-import type { KernelFormProgram } from '@schema/formshape-kernel';
+import type { KernelFormProgram } from '@schema/kernel';
 
-import { createLogicApi, type FormEvalCall } from '@absolute/form/api';
+import { createLogicApi, type FormEvalCall } from '@absolute/form';
 import {
   ContextPhenomenologySchema,
   type ContextPhenomenology,

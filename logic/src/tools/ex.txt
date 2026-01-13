@@ -1,0 +1,929 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.10s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"astar-1768267316153","snapshot":{"nodes":[0,1,2,3,4,5],"relationships":[{"type":"ROAD","source":0,"target":1,"properties":{"weight":1}},{"type":"ROAD","source":1,"target":2,"properties":{"weight":1}},{"type":"ROAD","source":0,"target":3,"properties":{"weight":2}},{"type":"ROAD","source":1,"target":4,"properties":{"weight":2}},{"type":"ROAD","source":2,"target":5,"properties":{"weight":2}},{"type":"ROAD","source":3,"target":4,"properties":{"weight":1}},{"type":"ROAD","source":4,"target":5,"properties":{"weight":1}}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"astar","mode":"stream","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"astar-1768267316153","sourceNode":0,"targetNode":5,"weightProperty":"weight","heuristic":"manhattan","direction":"outgoing","concurrency":1}]'`
+[INFO] astar::stream - Start
+[INFO] A* - Start
+[PROGRESS] 57% - A*
+[PROGRESS] 100% - A*
+[INFO] A* - Finished
+[PROGRESS] 100% - astar::stream
+[INFO] astar::stream - Finished
+batch.response: [
+  {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'astar-1768267316153',
+      nodeCount: 6,
+      relationshipCount: 7
+    }
+  },
+  { ok: true, op: 'astar', data: [ [Object] ] }
+]
+[ { cost: 4, path: [ 0, 3, 4, 5 ], source: 0, target: 5 } ]
+Bellman-Ford Estimate Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "bellman_ford",
+  "mode": "estimate",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "bellman-ford-estimate-1768267316864",
+  "sourceNode": 0,
+  "weightProperty": "weight",
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"bellman-ford-estimate-1768267316864","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"CONNECTS","source":0,"target":1,"properties":{"weight":1}},{"type":"CONNECTS","source":1,"target":2,"properties":{"weight":2}},{"type":"CONNECTS","source":2,"target":3,"properties":{"weight":1}},{"type":"CONNECTS","source":1,"target":3,"properties":{"weight":4}},{"type":"CONNECTS","source":3,"target":4,"properties":{"weight":2}},{"type":"CONNECTS","source":0,"target":4,"properties":{"weight":5}}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"bellman_ford","mode":"estimate","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"bellman-ford-estimate-1768267316864","sourceNode":0,"weightProperty":"weight","concurrency":1}]'`
+
+Bellman-Ford Estimate Response:
+{
+  "maxBytes": 1104,
+  "minBytes": 920
+}
+Bellman-Ford Stats Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "bellman_ford",
+  "mode": "stats",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "bellman-ford-stats-1768267317576",
+  "sourceNode": 0,
+  "weightProperty": "weight",
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"bellman-ford-stats-1768267317576","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"CONNECTS","source":0,"target":1,"properties":{"weight":1}},{"type":"CONNECTS","source":1,"target":2,"properties":{"weight":2}},{"type":"CONNECTS","source":2,"target":3,"properties":{"weight":1}},{"type":"CONNECTS","source":1,"target":3,"properties":{"weight":4}},{"type":"CONNECTS","source":3,"target":4,"properties":{"weight":2}},{"type":"CONNECTS","source":0,"target":4,"properties":{"weight":5}}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"bellman_ford","mode":"stats","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"bellman-ford-stats-1768267317576","sourceNode":0,"weightProperty":"weight","concurrency":1}]'`
+[INFO] bellman_ford::stats - Start
+[INFO] bellman_ford - Start
+[PROGRESS] 116% - bellman_ford
+[PROGRESS] 100% - bellman_ford
+[INFO] bellman_ford - Finished
+[PROGRESS] 100% - bellman_ford::stats
+[INFO] bellman_ford::stats - Finished
+
+Bellman-Ford Stats Response:
+{
+  "contains_negative_cycle": false,
+  "execution_time_ms": 0,
+  "negative_cycles_found": 0,
+  "paths_found": 4
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"bellman-ford-1768267318285","snapshot":{"nodes":[0,1,2,3],"relationships":[{"type":"ROAD","source":0,"target":1,"properties":{"weight":1}},{"type":"ROAD","source":1,"target":2,"properties":{"weight":-2}},{"type":"ROAD","source":2,"target":3,"properties":{"weight":1}}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"bellman_ford","mode":"stream","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"bellman-ford-1768267318285","sourceNode":0,"weightProperty":"weight","direction":"outgoing","trackNegativeCycles":true,"trackPaths":true,"concurrency":1}]'`
+[INFO] bellman_ford::stream - Start
+[INFO] bellman_ford - Start
+[PROGRESS] 100% - bellman_ford
+[PROGRESS] 100% - bellman_ford
+[INFO] bellman_ford - Finished
+[PROGRESS] 100% - bellman_ford::stream
+[INFO] bellman_ford::stream - Finished
+batch.response: [
+  {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'bellman-ford-1768267318285',
+      nodeCount: 4,
+      relationshipCount: 3
+    }
+  },
+  {
+    ok: true,
+    op: 'bellman_ford',
+    data: [ [Object], [Object], [Object] ]
+  }
+]
+[
+  { cost: 1, path: [ 0, 1 ], source: 0, target: 1 },
+  { cost: -1, path: [ 0, 1, 2 ], source: 0, target: 2 },
+  { cost: 0, path: [ 0, 1, 2, 3 ], source: 0, target: 3 }
+]
+Betweenness Centrality Estimate Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "betweenness",
+  "mode": "estimate",
+  "estimateSubmode": "memory",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "betweenness-estimate-1768267318975",
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"betweenness-estimate-1768267318975","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"CONNECTS","source":0,"target":1},{"type":"CONNECTS","source":1,"target":2},{"type":"CONNECTS","source":2,"target":3},{"type":"CONNECTS","source":1,"target":3},{"type":"CONNECTS","source":3,"target":4},{"type":"CONNECTS","source":0,"target":4}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"betweenness","mode":"estimate","estimateSubmode":"memory","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"betweenness-estimate-1768267318975","concurrency":1}]'`
+
+Betweenness Centrality Estimate Response:
+Error: {
+  code: 'INVALID_REQUEST',
+  message: "Missing 'submode' parameter for estimate mode"
+}
+Betweenness Centrality Stats Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "betweenness",
+  "mode": "stats",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "betweenness-stats-1768267319683",
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"betweenness-stats-1768267319683","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"CONNECTS","source":0,"target":1},{"type":"CONNECTS","source":1,"target":2},{"type":"CONNECTS","source":2,"target":3},{"type":"CONNECTS","source":1,"target":3},{"type":"CONNECTS","source":3,"target":4},{"type":"CONNECTS","source":0,"target":4}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"betweenness","mode":"stats","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"betweenness-stats-1768267319683","concurrency":1}]'`
+[INFO] betweenness::stats - Start
+[INFO] betweenness - Start
+[PROGRESS] 20% - betweenness
+[PROGRESS] 40% - betweenness
+[PROGRESS] 60% - betweenness
+[PROGRESS] 80% - betweenness
+[PROGRESS] 100% - betweenness
+[PROGRESS] 100% - betweenness
+[INFO] betweenness - Finished
+[PROGRESS] 100% - betweenness::stats
+[INFO] betweenness::stats - Finished
+
+Betweenness Centrality Stats Response:
+{
+  "bridge_nodes": 2,
+  "execution_time_ms": 0,
+  "max": 1,
+  "mean": 0.4,
+  "min": 0,
+  "p50": 0,
+  "p90": 1,
+  "p99": 1,
+  "stddev": 0.48989794855663565
+}
+BFS Estimate Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "bfs",
+  "mode": "estimate",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "bfs-estimate-1768267320396",
+  "sourceNode": 0,
+  "targetNodes": [
+    3
+  ],
+  "maxDepth": 10,
+  "trackPaths": true,
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"bfs-estimate-1768267320396","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"REL","source":0,"target":1},{"type":"REL","source":1,"target":2},{"type":"REL","source":2,"target":3},{"type":"REL","source":1,"target":4}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"bfs","mode":"estimate","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"bfs-estimate-1768267320396","sourceNode":0,"targetNodes":[3],"maxDepth":10,"trackPaths":true,"concurrency":1}]'`
+
+BFS Estimate Response:
+{
+  "maxBytes": 1062,
+  "minBytes": 885
+}
+BFS Stats Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "bfs",
+  "mode": "stats",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "bfs-stats-1768267321113",
+  "sourceNode": 0,
+  "targetNodes": [
+    3
+  ],
+  "maxDepth": 10,
+  "trackPaths": true,
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.10s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"bfs-stats-1768267321113","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"REL","source":0,"target":1},{"type":"REL","source":1,"target":2},{"type":"REL","source":2,"target":3},{"type":"REL","source":1,"target":4}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"bfs","mode":"stats","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"bfs-stats-1768267321113","sourceNode":0,"targetNodes":[3],"maxDepth":10,"trackPaths":true,"concurrency":1}]'`
+[INFO] bfs::stats - Start
+[INFO] BFS - Start
+[PROGRESS] 25% - BFS
+[PROGRESS] 75% - BFS
+[PROGRESS] 100% - BFS
+[PROGRESS] 100% - BFS
+[INFO] BFS - Finished
+[PROGRESS] 100% - bfs::stats
+[INFO] bfs::stats - Finished
+
+BFS Stats Response:
+{
+  "all_targets_reached": false,
+  "avg_branching_factor": 0,
+  "execution_time_ms": 0,
+  "max_depth_reached": 0,
+  "nodes_visited": 5,
+  "targets_found": 0
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"bfs-1768267321810","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"REL","source":0,"target":1},{"type":"REL","source":1,"target":2},{"type":"REL","source":2,"target":3},{"type":"REL","source":1,"target":4}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"bfs","mode":"stream","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"bfs-1768267321810","sourceNode":0,"targetNodes":[3],"maxDepth":10,"trackPaths":true,"concurrency":1,"delta":64}]'`
+[INFO] bfs::stream - Start
+[INFO] BFS - Start
+[PROGRESS] 25% - BFS
+[PROGRESS] 75% - BFS
+[PROGRESS] 100% - BFS
+[PROGRESS] 100% - BFS
+[INFO] BFS - Finished
+[PROGRESS] 100% - bfs::stream
+[INFO] bfs::stream - Finished
+batch.response: [
+  {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'bfs-1768267321810',
+      nodeCount: 5,
+      relationshipCount: 4
+    }
+  },
+  {
+    ok: true,
+    op: 'bfs',
+    data: [ [Object], [Object], [Object], [Object], [Object] ]
+  }
+]
+{ graphName: 'bfs-1768267321810', rows: [] }
+Closeness Centrality Estimate Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "closeness",
+  "mode": "estimate",
+  "estimateSubmode": "memory",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "closeness-estimate-1768267322505",
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"closeness-estimate-1768267322505","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"CONNECTS","source":0,"target":1},{"type":"CONNECTS","source":1,"target":2},{"type":"CONNECTS","source":2,"target":3},{"type":"CONNECTS","source":1,"target":3},{"type":"CONNECTS","source":3,"target":4},{"type":"CONNECTS","source":0,"target":4}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"closeness","mode":"estimate","estimateSubmode":"memory","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"closeness-estimate-1768267322505","concurrency":1}]'`
+
+Closeness Centrality Estimate Response:
+Error: {
+  code: 'INVALID_REQUEST',
+  message: "Missing 'submode' parameter for estimate mode"
+}
+Closeness Centrality Stats Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "closeness",
+  "mode": "stats",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "closeness-stats-1768267323195",
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"closeness-stats-1768267323195","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"CONNECTS","source":0,"target":1},{"type":"CONNECTS","source":1,"target":2},{"type":"CONNECTS","source":2,"target":3},{"type":"CONNECTS","source":1,"target":3},{"type":"CONNECTS","source":3,"target":4},{"type":"CONNECTS","source":0,"target":4}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"closeness","mode":"stats","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"closeness-stats-1768267323195","concurrency":1}]'`
+[INFO] closeness::stats - Start
+[INFO] closeness - Start
+[INFO] closeness - Farness computation :: Start
+[PROGRESS] 100% - closeness
+[PROGRESS] 100% - closeness
+[INFO] closeness - Finished
+[INFO] closeness - Closeness computation :: Start
+[PROGRESS] 100% - closeness
+[PROGRESS] 100% - closeness
+[INFO] closeness - Finished
+[INFO] closeness - Finished
+[PROGRESS] 100% - closeness::stats
+[INFO] closeness::stats - Finished
+
+Closeness Centrality Stats Response:
+{
+  "execution_time_ms": 0,
+  "isolated_nodes": 1,
+  "max": 1,
+  "mean": 0.6166666666666666,
+  "min": 0,
+  "p50": 0.6666666666666666,
+  "p90": 1,
+  "p99": 1,
+  "stddev": 0.33166247903554
+}
+Degree Centrality Estimate Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "degree_centrality",
+  "mode": "estimate",
+  "submode": "memory",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "degree-estimate-1768267323891",
+  "orientation": "undirected",
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"degree-estimate-1768267323891","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"CONNECTS","source":0,"target":1},{"type":"CONNECTS","source":1,"target":2},{"type":"CONNECTS","source":2,"target":3},{"type":"CONNECTS","source":1,"target":3},{"type":"CONNECTS","source":3,"target":4},{"type":"CONNECTS","source":0,"target":4}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"degree_centrality","mode":"estimate","submode":"memory","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"degree-estimate-1768267323891","orientation":"undirected","concurrency":1}]'`
+
+Degree Centrality Estimate Response:
+{
+  "max_bytes": 1258339,
+  "min_bytes": 1048616
+}
+Degree Centrality Mutate Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "degree_centrality",
+  "mode": "mutate",
+  "mutateProperty": "degree_score",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "degree-mutate-1768267324591",
+  "orientation": "undirected",
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"degree-mutate-1768267324591","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"CONNECTS","source":0,"target":1},{"type":"CONNECTS","source":1,"target":2},{"type":"CONNECTS","source":2,"target":3},{"type":"CONNECTS","source":1,"target":3},{"type":"CONNECTS","source":3,"target":4},{"type":"CONNECTS","source":0,"target":4}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"degree_centrality","mode":"mutate","mutateProperty":"degree_score","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"degree-mutate-1768267324591","orientation":"undirected","concurrency":1}]'`
+[INFO] degree_centrality - Start
+[PROGRESS] 20% - degree_centrality
+[PROGRESS] 40% - degree_centrality
+[PROGRESS] 60% - degree_centrality
+[PROGRESS] 80% - degree_centrality
+[PROGRESS] 100% - degree_centrality
+[PROGRESS] 100% - degree_centrality
+[INFO] degree_centrality - Finished
+
+Degree Centrality Mutate Response:
+{
+  "execution_time_ms": 0,
+  "nodes_updated": 5,
+  "property_name": "degree_score"
+}
+Degree Centrality Stats Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "degree_centrality",
+  "mode": "stats",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "degree-stats-1768267325297",
+  "orientation": "undirected",
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.10s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"degree-stats-1768267325297","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"CONNECTS","source":0,"target":1},{"type":"CONNECTS","source":1,"target":2},{"type":"CONNECTS","source":2,"target":3},{"type":"CONNECTS","source":1,"target":3},{"type":"CONNECTS","source":3,"target":4},{"type":"CONNECTS","source":0,"target":4}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"degree_centrality","mode":"stats","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"degree-stats-1768267325297","orientation":"undirected","concurrency":1}]'`
+[INFO] degree_centrality::stats - Start
+[INFO] degree_centrality - Start
+[PROGRESS] 20% - degree_centrality
+[PROGRESS] 40% - degree_centrality
+[PROGRESS] 60% - degree_centrality
+[PROGRESS] 80% - degree_centrality
+[PROGRESS] 100% - degree_centrality
+[PROGRESS] 100% - degree_centrality
+[INFO] degree_centrality - Finished
+[PROGRESS] 100% - degree_centrality::stats
+[INFO] degree_centrality::stats - Finished
+
+Degree Centrality Stats Response:
+{
+  "execution_time_ms": 0,
+  "isolated_nodes": 1,
+  "max": 2,
+  "mean": 1.2,
+  "min": 0,
+  "p50": 1,
+  "p90": 2,
+  "p99": 2,
+  "stddev": 0.7483314773547883
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"dfs-1768267325991","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"REL","source":0,"target":1},{"type":"REL","source":1,"target":2},{"type":"REL","source":2,"target":3},{"type":"REL","source":1,"target":4}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"dfs","mode":"stream","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"dfs-1768267325991","sourceNode":0,"targetNodes":[3],"maxDepth":10,"trackPaths":true,"concurrency":1}]'`
+[INFO] dfs::stream - Start
+[INFO] DFS - Start
+[PROGRESS] 25% - DFS
+[PROGRESS] 75% - DFS
+[PROGRESS] 100% - DFS
+[PROGRESS] 100% - DFS
+[INFO] DFS - Finished
+[PROGRESS] 100% - dfs::stream
+[INFO] dfs::stream - Finished
+batch.response: [
+  {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'dfs-1768267325991',
+      nodeCount: 5,
+      relationshipCount: 4
+    }
+  },
+  {
+    ok: true,
+    op: 'dfs',
+    data: [ [Object], [Object], [Object], [Object], [Object] ]
+  }
+]
+{ graphName: 'dfs-1768267325991', rows: [] }
+Dijkstra Estimate Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "dijkstra",
+  "mode": "estimate",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "dijkstra-estimate-1768267326704",
+  "sourceNode": 0,
+  "weightProperty": "weight",
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"dijkstra-estimate-1768267326704","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"CONNECTS","source":0,"target":1,"properties":{"weight":1}},{"type":"CONNECTS","source":1,"target":2,"properties":{"weight":2}},{"type":"CONNECTS","source":2,"target":3,"properties":{"weight":1}},{"type":"CONNECTS","source":1,"target":3,"properties":{"weight":4}},{"type":"CONNECTS","source":3,"target":4,"properties":{"weight":2}},{"type":"CONNECTS","source":0,"target":4,"properties":{"weight":5}}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"dijkstra","mode":"estimate","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"dijkstra-estimate-1768267326704","sourceNode":0,"weightProperty":"weight","concurrency":1}]'`
+
+Dijkstra Estimate Response:
+{
+  "maxBytes": 1200,
+  "minBytes": 1000
+}
+Dijkstra Stats Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "dijkstra",
+  "mode": "stats",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "dijkstra-stats-1768267327406",
+  "sourceNode": 0,
+  "weightProperty": "weight",
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"dijkstra-stats-1768267327406","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"CONNECTS","source":0,"target":1,"properties":{"weight":1}},{"type":"CONNECTS","source":1,"target":2,"properties":{"weight":2}},{"type":"CONNECTS","source":2,"target":3,"properties":{"weight":1}},{"type":"CONNECTS","source":1,"target":3,"properties":{"weight":4}},{"type":"CONNECTS","source":3,"target":4,"properties":{"weight":2}},{"type":"CONNECTS","source":0,"target":4,"properties":{"weight":5}}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"dijkstra","mode":"stats","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"dijkstra-stats-1768267327406","sourceNode":0,"weightProperty":"weight","concurrency":1}]'`
+[INFO] dijkstra::stats - Start
+[INFO] dijkstra - Start
+[PROGRESS] 33% - dijkstra
+[PROGRESS] 66% - dijkstra
+[PROGRESS] 83% - dijkstra
+[PROGRESS] 100% - dijkstra
+[PROGRESS] 116% - dijkstra
+[PROGRESS] 100% - dijkstra
+[INFO] dijkstra - Finished
+[PROGRESS] 100% - dijkstra::stats
+[INFO] dijkstra::stats - Finished
+
+Dijkstra Stats Response:
+{
+  "edges_considered": 0,
+  "execution_time_ms": 0,
+  "max_queue_size": 0,
+  "nodes_expanded": 0,
+  "paths_found": 6,
+  "target_reached": false
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"dijkstra-1768267328110","snapshot":{"nodes":[0,1,2,3,4],"relationships":[{"type":"ROAD","source":0,"target":1,"properties":{"weight":1}},{"type":"ROAD","source":1,"target":3,"properties":{"weight":2}},{"type":"ROAD","source":0,"target":2,"properties":{"weight":5}},{"type":"ROAD","source":1,"target":4,"properties":{"weight":1}},{"type":"ROAD","source":2,"target":4,"properties":{"weight":1}}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"dijkstra","mode":"stream","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"dijkstra-1768267328110","sourceNode":0,"targetNode":3,"weightProperty":"weight","direction":"outgoing","concurrency":1}]'`
+[INFO] dijkstra::stream - Start
+[INFO] dijkstra - Start
+[PROGRESS] 40% - dijkstra
+[PROGRESS] 80% - dijkstra
+[PROGRESS] 100% - dijkstra
+[INFO] dijkstra - Finished
+[PROGRESS] 100% - dijkstra::stream
+[INFO] dijkstra::stream - Finished
+batch.response: [
+  {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'dijkstra-1768267328110',
+      nodeCount: 5,
+      relationshipCount: 5
+    }
+  },
+  { ok: true, op: 'dijkstra', data: [ [Object] ] }
+]
+[ { cost: 3, path: [ 0, 1, 3 ], source: 0, target: 3 } ]
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store_catalog","op":"graphExists","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"exists-1768267328835"},{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"exists-1768267328835","snapshot":{"nodes":[0,1],"relationships":[{"type":"KNOWS","source":0,"target":1}]}},{"kind":"ApplicationForm","facade":"graph_store_catalog","op":"graphExists","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"exists-1768267328835"}]'`
+{
+  before: {
+    ok: true,
+    op: 'graphExists',
+    data: { exists: false, graphName: 'exists-1768267328835' }
+  },
+  put: {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'exists-1768267328835',
+      nodeCount: 2,
+      relationshipCount: 1
+    }
+  },
+  after: {
+    ok: true,
+    op: 'graphExists',
+    data: { exists: true, graphName: 'exists-1768267328835' }
+  }
+}
+batch.request: [
+  {
+    kind: 'ApplicationForm',
+    facade: 'graph_store',
+    op: 'put',
+    user: { username: 'alice', isAdmin: false },
+    databaseId: 'db1',
+    graphName: 'alice-1768267329551',
+    snapshot: { nodes: [Array], relationships: [Array] }
+  },
+  {
+    kind: 'ApplicationForm',
+    facade: 'graph_store',
+    op: 'put',
+    user: { username: 'bob', isAdmin: false },
+    databaseId: 'db1',
+    graphName: 'bob-1768267329551',
+    snapshot: { nodes: [Array], relationships: [Array] }
+  },
+  {
+    kind: 'ApplicationForm',
+    facade: 'graph_store_catalog',
+    op: 'listGraphs',
+    user: { username: 'alice', isAdmin: false },
+    databaseId: 'db1'
+  },
+  {
+    kind: 'ApplicationForm',
+    facade: 'graph_store_catalog',
+    op: 'listGraphs',
+    user: { username: 'bob', isAdmin: false },
+    databaseId: 'db1'
+  },
+  {
+    kind: 'ApplicationForm',
+    facade: 'graph_store_catalog',
+    op: 'listGraphs',
+    user: { username: 'root', isAdmin: true },
+    databaseId: 'db1'
+  }
+]
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":false},"databaseId":"db1","graphName":"alice-1768267329551","snapshot":{"nodes":[0,1],"relationships":[{"type":"KNOWS","source":0,"target":1}]}},{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"bob","isAdmin":false},"databaseId":"db1","graphName":"bob-1768267329551","snapshot":{"nodes":[0,1,2],"relationships":[{"type":"KNOWS","source":0,"target":1}]}},{"kind":"ApplicationForm","facade":"graph_store_catalog","op":"listGraphs","user":{"username":"alice","isAdmin":false},"databaseId":"db1"},{"kind":"ApplicationForm","facade":"graph_store_catalog","op":"listGraphs","user":{"username":"bob","isAdmin":false},"databaseId":"db1"},{"kind":"ApplicationForm","facade":"graph_store_catalog","op":"listGraphs","user":{"username":"root","isAdmin":true},"databaseId":"db1"}]'`
+batch.response: [
+  {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'alice-1768267329551',
+      nodeCount: 2,
+      relationshipCount: 1
+    }
+  },
+  {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'bob-1768267329551',
+      nodeCount: 3,
+      relationshipCount: 1
+    }
+  },
+  { ok: true, op: 'listGraphs', data: { entries: [Array] } },
+  { ok: true, op: 'listGraphs', data: { entries: [Array] } },
+  { ok: true, op: 'listGraphs', data: { entries: [Array] } }
+]
+{
+  aliceEntries: [ 'alice-1768267329551' ],
+  bobEntries: [ 'bob-1768267329551' ],
+  adminEntries: [ 'bob-1768267329551', 'alice-1768267329551' ]
+}
+batch.request: [
+  {
+    kind: 'ApplicationForm',
+    facade: 'graph_store',
+    op: 'put',
+    user: { username: 'alice', isAdmin: true },
+    databaseId: 'db1',
+    graphName: 'demo-1768267330282',
+    snapshot: { nodes: [Array], relationships: [Array] }
+  },
+  {
+    kind: 'ApplicationForm',
+    facade: 'graph_store_catalog',
+    op: 'listGraphs',
+    user: { username: 'alice', isAdmin: true },
+    databaseId: 'db1',
+    graphName: 'demo-1768267330282',
+    includeDegreeDistribution: true
+  }
+]
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"demo-1768267330282","snapshot":{"nodes":[0,1,2],"relationships":[{"type":"KNOWS","source":0,"target":1},{"type":"KNOWS","source":1,"target":2}]}},{"kind":"ApplicationForm","facade":"graph_store_catalog","op":"listGraphs","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"demo-1768267330282","includeDegreeDistribution":true}]'`
+batch.response: [
+  {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'demo-1768267330282',
+      nodeCount: 3,
+      relationshipCount: 2
+    }
+  },
+  { ok: true, op: 'listGraphs', data: { entries: [Array] } }
+]
+{
+  entries: [
+    {
+      degreeDistribution: { '0': 1, '1': 2 },
+      name: 'demo-1768267330282',
+      nodeCount: 3,
+      relationshipCount: 2
+    }
+  ]
+}
+PageRank Estimate Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "pagerank",
+  "mode": "estimate",
+  "estimateSubmode": "memory",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "pagerank-estimate-1768267331005",
+  "maxIterations": 20,
+  "dampingFactor": 0.85,
+  "tolerance": 0.0001,
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"pagerank-estimate-1768267331005","snapshot":{"nodes":[0,1,2,3],"relationships":[{"type":"FOLLOWS","source":0,"target":1},{"type":"FOLLOWS","source":1,"target":2},{"type":"FOLLOWS","source":2,"target":0},{"type":"FOLLOWS","source":1,"target":3},{"type":"FOLLOWS","source":3,"target":2}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"pagerank","mode":"estimate","estimateSubmode":"memory","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"pagerank-estimate-1768267331005","maxIterations":20,"dampingFactor":0.85,"tolerance":0.0001,"concurrency":1}]'`
+
+PageRank Estimate Response:
+Error: {
+  code: 'INVALID_REQUEST',
+  message: "Missing 'submode' parameter for estimate mode"
+}
+PageRank Stats Request:
+{
+  "kind": "ApplicationForm",
+  "facade": "algorithms",
+  "op": "pagerank",
+  "mode": "stats",
+  "user": {
+    "username": "alice",
+    "isAdmin": true
+  },
+  "databaseId": "db1",
+  "graphName": "pagerank-stats-1768267331708",
+  "maxIterations": 20,
+  "dampingFactor": 0.85,
+  "tolerance": 0.0001,
+  "concurrency": 1
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"pagerank-stats-1768267331708","snapshot":{"nodes":[0,1,2,3],"relationships":[{"type":"FOLLOWS","source":0,"target":1},{"type":"FOLLOWS","source":1,"target":2},{"type":"FOLLOWS","source":2,"target":0},{"type":"FOLLOWS","source":1,"target":3},{"type":"FOLLOWS","source":3,"target":2}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"pagerank","mode":"stats","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"pagerank-stats-1768267331708","maxIterations":20,"dampingFactor":0.85,"tolerance":0.0001,"concurrency":1}]'`
+[INFO] pagerank::stats - Start
+[INFO] pagerank - Start
+[PROGRESS] 100% - pagerank
+[PROGRESS] 200% - pagerank
+[PROGRESS] 100% - pagerank
+[INFO] pagerank - Finished
+[PROGRESS] 100% - pagerank::stats
+[INFO] pagerank::stats - Finished
+
+PageRank Stats Response:
+{
+  "converged": false,
+  "execution_time_ms": 0,
+  "iterations_ran": 20,
+  "max": 0.28674978395736894,
+  "mean": 0.25,
+  "min": 0.15493031902800802,
+  "p50": 0.28155905075264875,
+  "p90": 0.28674978395736894,
+  "p99": 0.28674978395736894,
+  "stddev": 0.05500206232064147
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"pr-1768267332411","snapshot":{"nodes":[1,2,3],"relationships":[{"type":"KNOWS","source":1,"target":2,"properties":{"weight":1}},{"type":"KNOWS","source":2,"target":3,"properties":{"weight":1}},{"type":"KNOWS","source":3,"target":1,"properties":{"weight":1}}]}},{"kind":"ApplicationForm","facade":"algorithms","op":"pagerank","mode":"stream","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"pr-1768267332411","relationshipTypes":["KNOWS"],"weightProperty":"weight","config":{"maxIterations":20,"dampingFactor":0.85,"tolerance":1e-9}}]'`
+[INFO] pagerank::stream - Start
+[INFO] pagerank - Start
+[PROGRESS] 100% - pagerank
+[PROGRESS] 200% - pagerank
+[PROGRESS] 100% - pagerank
+[INFO] pagerank - Finished
+[PROGRESS] 100% - pagerank::stream
+[INFO] pagerank::stream - Finished
+batch.response: [
+  {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'pr-1768267332411',
+      nodeCount: 3,
+      relationshipCount: 3
+    }
+  },
+  { ok: true, op: 'pagerank', data: [ [Object], [Object], [Object] ] }
+]
+{ graphName: 'pr-1768267332411', rows: [] }
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '{"op":"ping","nonce":"n-1768267333123"}'`
+request: { op: 'ping', nonce: 'n-1768267333123' }
+response: { ok: true, op: 'ping', data: { nonce: 'n-1768267333123' } }
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.10s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"srcprops-1768267333825","snapshot":{"nodes":[10,11,12],"relationships":[{"type":"KNOWS","source":10,"target":11,"properties":{"weight":1.5,"hops":1}},{"type":"KNOWS","source":11,"target":12,"properties":{"weight":2.25,"hops":2}}],"nodeProperties":{"score":[1,2,3],"weight":[0.1,0.2,0.3]}}},{"kind":"ApplicationForm","facade":"graph_store_catalog","op":"subGraphProject","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"projprops-1768267333825","originGraphName":"srcprops-1768267333825","nodeFilter":"*","relationshipFilter":"KNOWS","configuration":{}},{"kind":"ApplicationForm","facade":"graph_store_catalog","op":"streamNodeProperties","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"projprops-1768267333825","nodeProperties":["score","weight"],"listNodeLabels":false,"nodeLabels":["*"]},{"kind":"ApplicationForm","facade":"graph_store_catalog","op":"streamRelationshipProperties","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"projprops-1768267333825","relationshipTypes":["KNOWS"],"relationshipProperties":["weight","hops"]}]'`
+batch.response: [
+  {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'srcprops-1768267333825',
+      nodeCount: 3,
+      relationshipCount: 2
+    }
+  },
+  {
+    ok: true,
+    op: 'subGraphProject',
+    data: {
+      filterMillis: 0,
+      fromGraphName: 'srcprops-1768267333825',
+      graphName: 'projprops-1768267333825',
+      nodeCount: 3,
+      nodeFilter: '*',
+      relationshipCount: 2,
+      relationshipFilter: 'KNOWS'
+    }
+  },
+  {
+    ok: true,
+    op: 'streamNodeProperties',
+    data: { graphName: 'projprops-1768267333825', results: [Array] }
+  },
+  {
+    ok: true,
+    op: 'streamRelationshipProperties',
+    data: { graphName: 'projprops-1768267333825', results: [Array] }
+  }
+]
+{
+  sourceGraphName: 'srcprops-1768267333825',
+  projectedGraphName: 'projprops-1768267333825',
+  nodeRows: [],
+  relRows: []
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"src-1768267334527","snapshot":{"nodes":[1,2,3],"relationships":[{"type":"KNOWS","source":1,"target":2},{"type":"LIKES","source":2,"target":3}]}},{"kind":"ApplicationForm","facade":"graph_store_catalog","op":"subGraphProject","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"proj-1768267334527","originGraphName":"src-1768267334527","nodeFilter":"*","relationshipFilter":"KNOWS","configuration":{}},{"kind":"ApplicationForm","facade":"graph_store_catalog","op":"list_graphs","user":{"username":"alice","isAdmin":true},"databaseId":"db1","includeDegreeDistribution":false}]'`
+batch.response: [
+  {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'src-1768267334527',
+      nodeCount: 3,
+      relationshipCount: 2
+    }
+  },
+  {
+    ok: true,
+    op: 'subGraphProject',
+    data: {
+      filterMillis: 0,
+      fromGraphName: 'src-1768267334527',
+      graphName: 'proj-1768267334527',
+      nodeCount: 3,
+      nodeFilter: '*',
+      relationshipCount: 2,
+      relationshipFilter: 'KNOWS'
+    }
+  },
+  {
+    ok: false,
+    op: 'list_graphs',
+    error: {
+      code: 'UNSUPPORTED_OP',
+      message: 'Unsupported graph_store_catalog operation.'
+    }
+  }
+]
+{
+  sourceGraphName: 'src-1768267334527',
+  projectedGraphName: 'proj-1768267334527',
+  project: {
+    filterMillis: 0,
+    fromGraphName: 'src-1768267334527',
+    graphName: 'proj-1768267334527',
+    nodeCount: 3,
+    nodeFilter: '*',
+    relationshipCount: 2,
+    relationshipFilter: 'KNOWS'
+  },
+  entries: []
+}
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"nodeprops-1768267335267","snapshot":{"nodes":[100,101,102],"relationships":[{"type":"KNOWS","source":100,"target":101}],"nodeProperties":{"score":[1,2,3],"weight":[0.1,0.2,0.3]}}},{"kind":"ApplicationForm","facade":"graph_store_catalog","op":"streamNodeProperties","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"nodeprops-1768267335267","nodeProperties":["score","weight"]}]'`
+batch.response: [
+  {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'nodeprops-1768267335267',
+      nodeCount: 3,
+      relationshipCount: 1
+    }
+  },
+  {
+    ok: true,
+    op: 'streamNodeProperties',
+    data: { graphName: 'nodeprops-1768267335267', results: [Array] }
+  }
+]
+{ graphName: 'nodeprops-1768267335267', rows: [] }
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"relprops-1768267335975","snapshot":{"nodes":[0,1,2],"relationships":[{"type":"KNOWS","source":0,"target":1,"properties":{"weight":1.5,"hops":1}},{"type":"KNOWS","source":1,"target":2,"properties":{"weight":2.25,"hops":2}},{"type":"LIKES","source":0,"target":2,"properties":{"weight":0.5,"hops":1}}]}},{"kind":"ApplicationForm","facade":"graph_store_catalog","op":"streamRelationshipProperties","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"relprops-1768267335975","relationshipTypes":["KNOWS"],"relationshipProperties":["weight","hops"]}]'`
+batch.response: [
+  {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'relprops-1768267335975',
+      nodeCount: 3,
+      relationshipCount: 3
+    }
+  },
+  {
+    ok: true,
+    op: 'streamRelationshipProperties',
+    data: { graphName: 'relprops-1768267335975', results: [Array] }
+  }
+]
+{ graphName: 'relprops-1768267335975', rows: [] }
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"stream-1768267336668","snapshot":{"nodes":[10,11,12],"relationships":[{"type":"KNOWS","source":10,"target":11},{"type":"KNOWS","source":11,"target":12},{"type":"LIKES","source":10,"target":12}]}},{"kind":"ApplicationForm","facade":"graph_store_catalog","op":"streamRelationships","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"stream-1768267336668","relationshipTypes":["KNOWS"]}]'`
+batch.response: [
+  {
+    ok: true,
+    op: 'put',
+    data: {
+      graphName: 'stream-1768267336668',
+      nodeCount: 3,
+      relationshipCount: 3
+    }
+  },
+  {
+    ok: true,
+    op: 'streamRelationships',
+    data: { graphName: 'stream-1768267336668', results: [Array] }
+  }
+]
+{ graphName: 'stream-1768267336668', rows: [] }
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `target/debug/tsjson_cli '{"op":"version"}'`
+request: { op: 'version' }
+response: { ok: true, op: 'version', data: { crate: 'gds', version: '0.1.0' } }

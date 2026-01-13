@@ -14,12 +14,6 @@
       "@schema": [
         "src/schema/index"
       ],
-      "@sdk/*": [
-        "src/sdk/*"
-      ],
-      "@sdk": [
-        "src/sdk/index"
-      ],
       "@schema/*": [
         "src/schema/*"
       ],

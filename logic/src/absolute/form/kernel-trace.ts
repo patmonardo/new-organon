@@ -1,4 +1,4 @@
-import type { KernelRunRequest, KernelRunResult } from './kernel-api';
+import type { KernelRunRequest, KernelRunResult } from './kernel-port';
 import type { EventMeta, FactStoreInfo, TraceEvent } from './trace';
 
 export const KERNEL_TRACE_KINDS = {
@@ -18,8 +18,8 @@ function mergeFactStore(
       override?.ids !== undefined
         ? override.ids
         : base?.ids !== undefined
-          ? base.ids
-          : undefined,
+        ? base.ids
+        : undefined,
   };
 }
 
@@ -63,7 +63,9 @@ export function kernelRunResultToTraceEvent(
     meta?: EventMeta;
     factStore?: Partial<FactStoreInfo>;
   },
-): TraceEvent<KernelRunResult | { request: KernelRunRequest; result: KernelRunResult }> {
+): TraceEvent<
+  KernelRunResult | { request: KernelRunRequest; result: KernelRunResult }
+> {
   const meta: EventMeta | undefined =
     opts?.meta || opts?.runId || opts?.factStore
       ? {

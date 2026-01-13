@@ -1,4 +1,4 @@
-import type { KernelFormProgram } from '../../../schema/formshape-kernel';
+import type { KernelFormProgram } from '@schema/kernel';
 import type { JudgmentArtifact } from './artifacts';
 
 /**
