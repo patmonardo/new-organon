@@ -1,9 +1,7 @@
 import { InMemoryEventBus, type EventBus } from '@absolute';
-import { makeInMemoryRepository } from '@repository';
-import { AspectSchema, type Aspect } from '@schema';
-import { AspectEngine } from './aspect-engine';
-import type { Repository } from '@repository';
 import type { Event } from '@absolute';
+import { AspectEngine, type AspectStore } from './aspect-engine';
+import { AspectSchema, type AspectShapeRepo } from '@schema/aspect';
 
 export type AspectId = string;
 
@@ -23,17 +21,45 @@ export interface AspectDescribeResult {
   facetsKeys?: string[];
 }
 
+class InMemoryAspectStore implements AspectStore {
+  private store = new Map<string, AspectShapeRepo>();
+
+  async getAspectById(id: string): Promise<AspectShapeRepo | null> {
+    return this.store.get(id) ?? null;
+  }
+
+  async saveAspect(data: Partial<AspectShapeRepo>): Promise<AspectShapeRepo> {
+    const existing = data.id ? this.store.get(data.id) : undefined;
+    const now = Date.now();
+    const next: AspectShapeRepo = {
+      id: data.id ?? `aspect:${now}:${Math.random().toString(36).slice(2, 10)}`,
+      type: data.type ?? existing?.type ?? 'aspect.unknown',
+      name: data.name ?? existing?.name,
+      state: data.state ?? existing?.state ?? {},
+      signature: data.signature ?? existing?.signature,
+      facets: data.facets ?? existing?.facets ?? {},
+      status: data.status ?? existing?.status,
+      tags: data.tags ?? existing?.tags,
+      meta: data.meta ?? existing?.meta,
+      createdAt: existing?.createdAt ?? data.createdAt ?? now,
+      updatedAt: now,
+    };
+    this.store.set(next.id, next);
+    return next;
+  }
+
+  async deleteAspect(id: string): Promise<boolean> {
+    return this.store.delete(id);
+  }
+}
+
 export class AspectService {
   private readonly engine: AspectEngine;
   private readonly bus: EventBus;
 
-  constructor(repo?: Repository<Aspect>, bus?: EventBus) {
+  constructor(repo?: AspectStore, bus?: EventBus) {
     this.bus = bus ?? new InMemoryEventBus();
-    const defaultRepo =
-      repo ??
-      (makeInMemoryRepository(
-        AspectSchema as any,
-      ) as unknown as Repository<Aspect>);
+    const defaultRepo = repo ?? new InMemoryAspectStore();
     this.engine = new AspectEngine(defaultRepo, this.bus);
   }
 
@@ -92,9 +118,10 @@ export class AspectService {
     return this.extractId(events, 'aspect.created');
   }
 
-  async get(id: AspectId): Promise<Aspect | undefined> {
+  async get(id: AspectId): Promise<AspectShapeRepo | undefined> {
     const formAspect = await this.engine.getAspect(id);
-    return formAspect?.toSchema();
+    const doc = formAspect?.toSchema();
+    return doc ? AspectSchema.parse(doc) : undefined;
   }
 
   async describe(id: AspectId): Promise<AspectDescribeResult> {

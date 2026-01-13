@@ -1,114 +1,136 @@
-import {
-  createEntity,
-  updateEntity,
-  type Entity,
-} from '@schema';
-import type { Repository } from '@repository';
+import type { Event, EventBus } from '@absolute';
+import { InMemoryEventBus } from '@absolute';
+import { EntityEngine } from './entity-engine';
+import type { EntityShapeRepo } from '@schema/entity';
 
-type EventHandler = (evt: { kind: string; payload?: any; meta?: any }) => void;
+export type EntityId = string;
 
 export class EntityService {
-  private readonly repo?: Repository<any>;
-  private readonly store = new Map<string, Entity>();
-  private readonly listeners = new Map<string, EventHandler[]>();
+  private readonly engine: EntityEngine;
+  private readonly bus: EventBus;
 
-  constructor(repo?: Repository<any>) {
-    this.repo = repo;
+  constructor(private readonly repo?: any, bus?: EventBus) {
+    this.bus = bus ?? new InMemoryEventBus();
+    this.engine = new EntityEngine(this.repo, this.bus);
   }
 
-  on(event: string, handler: EventHandler) {
-    const list = this.listeners.get(event) ?? [];
-    list.push(handler);
-    this.listeners.set(event, list);
+  on(kind: string, handler: (e: Event) => void) {
+    return this.bus.subscribe(kind, handler);
   }
 
-  private emit(kind: string, payload?: any, meta?: any) {
-    const handlers = this.listeners.get(kind) ?? [];
-    const evt = { kind, payload, meta };
-    for (const h of handlers) h(evt);
+  async send(cmd: {
+    kind: string;
+    payload?: any;
+    meta?: Record<string, unknown>;
+  }) {
+    return this.engine.handle(cmd as any);
   }
 
-  private async persist(doc: Entity) {
-    if (!this.repo) return;
-    const id = doc.shape.core.id;
-    const existing = await this.repo.get(id);
-    if (existing) {
-      await this.repo.update(id, doc);
-    } else {
-      await this.repo.create(doc);
-    }
-  }
-
-  async create(input: Parameters<typeof createEntity>[0]): Promise<string> {
-    // Forward payload directly so shape.core.type is set by createEntity
-    const doc = createEntity(input as any);
-    const id = doc.shape.core.id;
-    this.store.set(id, doc);
-    await this.persist(doc);
-    this.emit('entity.create', {
-      id,
-      type: doc.shape.core.type,
-      name: doc.shape.core.name,
-    });
-    return id;
-  }
-
-  async get(id: string): Promise<Entity | undefined> {
+  async get(id: EntityId): Promise<EntityShapeRepo | undefined> {
     if (this.repo) {
+      if (this.repo.getEntityById) {
+        return await this.repo.getEntityById(id);
+      }
       const doc = await this.repo.get(id);
-      return doc ?? undefined;
+      return doc ? doc : undefined;
     }
-    return this.store.get(id);
+    const entity = await this.engine.getEntity(id);
+    return entity ? entity.toSchema() : undefined;
   }
 
-  async describe(id: string) {
-    const doc = await this.get(id);
-    if (!doc) throw new Error(`entity not found: ${id}`);
-    this.emit('entity.describe', { id });
-    return {
-      id,
-      type: doc.shape.core.type,
-      name: doc.shape.core.name,
-      state: doc.shape.state,
-      signatureKeys: Object.keys((doc.shape as any).signature ?? {}),
-      facetsKeys: Object.keys((doc.shape as any).facets ?? {}),
+  async create(input: {
+    type: string;
+    formId: string;
+    name?: string;
+    description?: string;
+  }) {
+    const [e] = await this.engine.handle({
+      kind: 'entity.create',
+      payload: input,
+    } as any);
+
+    const payload = (e?.payload ?? {}) as any;
+    const id = payload?.id;
+    if (!id) throw new Error('missing id in entity.create event payload');
+    return String(id);
+  }
+
+  async delete(id: EntityId) {
+    await this.engine.handle({ kind: 'entity.delete', payload: { id } } as any);
+  }
+
+  async describe(id: EntityId) {
+    const [e] = await this.engine.handle({
+      kind: 'entity.describe',
+      payload: { id },
+    } as any);
+    return e?.payload as {
+      id: string;
+      type: string;
+      name: string | null;
+      state?: unknown;
+      signatureKeys?: string[];
+      facetsKeys?: string[];
     };
   }
 
-  async setCore(id: string, core: { name?: string; type?: string }) {
-    const doc = (await this.get(id)) as Entity | undefined;
-    if (!doc) throw new Error(`entity not found: ${id}`);
-    const next = updateEntity(doc, { core } as any);
-    this.store.set(id, next);
-    await this.persist(next);
-    this.emit('entity.setCore', {
-      id,
-      name: next.shape.core.name,
-      type: next.shape.core.type,
-    });
+  async setCore(id: EntityId, core: { name?: string; type?: string }) {
+    await this.engine.handle({
+      kind: 'entity.setCore',
+      payload: { id, ...core },
+    } as any);
   }
 
-  async setState(id: string, state: any) {
-    const doc = (await this.get(id)) as Entity | undefined;
-    if (!doc) throw new Error(`entity not found: ${id}`);
-    const next = updateEntity(doc, { state } as any);
-    this.store.set(id, next);
-    await this.persist(next);
-    this.emit('entity.setState', { id });
+  async setState(id: EntityId, state: Record<string, unknown>) {
+    await this.engine.handle({
+      kind: 'entity.setState',
+      payload: { id, state },
+    } as any);
   }
 
-  async patchState(id: string, patch: any) {
-    const doc = (await this.get(id)) as Entity | undefined;
-    if (!doc) throw new Error(`entity not found: ${id}`);
-    const next = updateEntity(doc, { state: patch } as any);
-    this.store.set(id, next);
-    await this.persist(next);
-    this.emit('entity.patchState', { id });
+  async patchState(id: EntityId, patch: Record<string, unknown>) {
+    await this.engine.handle({
+      kind: 'entity.patchState',
+      payload: { id, patch },
+    } as any);
   }
 
-  async delete(id: string) {
-    const existed = this.store.delete(id);
-    if (this.repo) await this.repo.delete(id);
-    this.emit('entity.delete', { id, ok: existed ? true : false });
+  async setFacets(id: EntityId, facets: Record<string, unknown>) {
+    await this.engine.handle({
+      kind: 'entity.setFacets',
+      payload: { id, facets },
+    } as any);
+  }
+
+  async mergeFacets(id: EntityId, patch: Record<string, unknown>) {
+    await this.engine.handle({
+      kind: 'entity.mergeFacets',
+      payload: { id, patch },
+    } as any);
+  }
+
+  async setSignature(id: EntityId, signature?: Record<string, unknown>) {
+    await this.engine.handle({
+      kind: 'entity.setSignature',
+      payload: { id, signature },
+    } as any);
+  }
+
+  async mergeSignature(id: EntityId, patch: Record<string, unknown>) {
+    await this.engine.handle({
+      kind: 'entity.mergeSignature',
+      payload: { id, patch },
+    } as any);
+  }
+
+  async createAndDescribe(input: {
+    type: string;
+    formId: string;
+    name?: string;
+    description?: string;
+  }) {
+    const id = await this.create(input);
+    const info = await this.describe(id);
+    return { id, info };
   }
 }

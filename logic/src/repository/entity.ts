@@ -1,12 +1,12 @@
-import { Neo4jConnection } from "./neo4j-client";
-import { EntityShape, EntityShapeSchema } from "../schema/entity";
+import { Neo4jConnection } from './neo4j-client';
+import { EntityShapeSchema, type EntityShapeRepo } from '../schema/entity';
 import {
   ManagedTransaction,
   QueryResult,
   RecordShape,
   ResultSummary,
-} from "neo4j-driver";
-import { v4 as uuidv4 } from "uuid"; // Use uuid library
+} from 'neo4j-driver';
+import { v4 as uuidv4 } from 'uuid'; // Use uuid library
 
 /**
  * EntityShapeRepository
@@ -28,7 +28,9 @@ export class EntityShapeRepository {
    *
    * @param entityData The entity instance data with formId and values
    */
-  async saveEntity(entityData: Partial<EntityShape>): Promise<EntityShape> {
+  async saveEntity(
+    entityData: Partial<EntityShapeRepo>,
+  ): Promise<EntityShapeRepo> {
     // 1. Prepare entity object
     const now = Date.now();
 
@@ -42,12 +44,12 @@ export class EntityShapeRepository {
 
     // Validate formId is provided (Entity must reference its Form Principle)
     if (!entityData.formId) {
-      throw new Error("Entity must have formId reference to Form Principle");
+      throw new Error('Entity must have formId reference to Form Principle');
     }
 
-    const entity: EntityShape = {
+    const entity: EntityShapeRepo = {
       id: entityData.id || uuidv4(),
-      type: entityData.type || "entity.unknown",
+      type: entityData.type || 'entity.unknown',
       formId: entityData.formId, // Reference to Form Principle
       name: entityData.name,
       description: entityData.description,
@@ -77,7 +79,7 @@ export class EntityShapeRepository {
       updatedAt: entity.updatedAt,
     };
 
-    const session = this.connection.getSession({ defaultAccessMode: "WRITE" });
+    const session = this.connection.getSession({ defaultAccessMode: 'WRITE' });
     try {
       const entityTypeLabel = this.getSafeLabel(entity.type);
 
@@ -91,21 +93,21 @@ export class EntityShapeRepository {
           ON MATCH SET es += $props
           RETURN es.id as id
           `,
-            { props }
+            { props },
           );
-          const nodeId = mergeResult.records[0]?.get("id");
+          const nodeId = mergeResult.records[0]?.get('id');
 
           if (!nodeId) {
-            throw new Error("Failed to merge entity node.");
+            throw new Error('Failed to merge entity node.');
           }
 
           await this.syncTags(txc, nodeId, entity.tags);
 
           return nodeId;
-        }
+        },
       );
 
-      return entity;
+      return EntityShapeSchema.parse(entity);
     } catch (error) {
       console.error(`Error saving entity shape to Neo4j: ${error}`);
       throw error;
@@ -114,8 +116,8 @@ export class EntityShapeRepository {
     }
   }
 
-  async getEntityById(id: string): Promise<EntityShape | null> {
-    const session = this.connection.getSession({ defaultAccessMode: "READ" });
+  async getEntityById(id: string): Promise<EntityShapeRepo | null> {
+    const session = this.connection.getSession({ defaultAccessMode: 'READ' });
     try {
       const result = await session.executeRead(
         async (txc: ManagedTransaction) => {
@@ -125,27 +127,29 @@ export class EntityShapeRepository {
           OPTIONAL MATCH (n)-[:HAS_TAG]->(t:Tag)
           RETURN properties(n) as props, collect(t.name) as tags
           `,
-            { id }
+            { id },
           );
-        }
+        },
       );
 
       if (result.records.length === 0) {
         return null;
       }
 
-      const rawProps = result.records[0].get("props");
-      const tags = result.records[0].get("tags") || [];
+      const rawProps = result.records[0].get('props');
+      const tags = result.records[0].get('tags') || [];
 
       // Parse JSON fields
-      const entity: EntityShape = {
+      const entity: EntityShapeRepo = {
         id: rawProps.id,
         type: rawProps.type,
         formId: rawProps.formId, // Form Principle reference
         name: rawProps.name || undefined,
         description: rawProps.description || undefined,
         values: {}, // Do not rehydrate empirical values from FormDB
-        signature: rawProps.signature ? JSON.parse(rawProps.signature) : undefined,
+        signature: rawProps.signature
+          ? JSON.parse(rawProps.signature)
+          : undefined,
         facets: rawProps.facets ? JSON.parse(rawProps.facets) : undefined,
         status: rawProps.status || undefined,
         tags: tags,
@@ -154,7 +158,7 @@ export class EntityShapeRepository {
         updatedAt: rawProps.updatedAt,
       };
 
-      return entity;
+      return EntityShapeSchema.parse(entity);
     } catch (error) {
       console.error(`Error getting entity shape by ID (${id}): ${error}`);
       throw error;
@@ -167,11 +171,13 @@ export class EntityShapeRepository {
    * Finds entity instances based on criteria.
    * Supports filtering by type and tags.
    */
-  async findEntities(criteria: {
-    type?: string;
-    tags?: string[];
-  } = {}): Promise<EntityShape[]> {
-    const session = this.connection.getSession({ defaultAccessMode: "READ" });
+  async findEntities(
+    criteria: {
+      type?: string;
+      tags?: string[];
+    } = {},
+  ): Promise<EntityShapeRepo[]> {
+    const session = this.connection.getSession({ defaultAccessMode: 'READ' });
     try {
       const params: Record<string, any> = {};
       let matchClause = `MATCH (n:Entity)`;
@@ -189,7 +195,7 @@ export class EntityShapeRepository {
           const paramName = `tag${index}`;
           params[paramName] = tag;
           whereClauses.push(
-            `EXISTS { MATCH (n)-[:HAS_TAG]->(:Tag {name: $${paramName}}) }`
+            `EXISTS { MATCH (n)-[:HAS_TAG]->(:Tag {name: $${paramName}}) }`,
           );
         });
       }
@@ -197,30 +203,34 @@ export class EntityShapeRepository {
       // Construct query
       let cypher = matchClause;
       if (whereClauses.length > 0) {
-        cypher += `\nWHERE ${whereClauses.join(" AND ")}`;
+        cypher += `\nWHERE ${whereClauses.join(' AND ')}`;
       }
       cypher += `
         OPTIONAL MATCH (n)-[:HAS_TAG]->(t:Tag)
         RETURN properties(n) as props, collect(t.name) as tags`;
 
-      const result = await session.executeRead(async (txc: ManagedTransaction) => {
-        return await txc.run(cypher, params);
-      });
+      const result = await session.executeRead(
+        async (txc: ManagedTransaction) => {
+          return await txc.run(cypher, params);
+        },
+      );
 
       // Reconstruct entities
-      const entities: EntityShape[] = [];
+      const entities: EntityShapeRepo[] = [];
       for (const record of result.records) {
-        const rawProps = record.get("props");
-        const tags = record.get("tags") || [];
+        const rawProps = record.get('props');
+        const tags = record.get('tags') || [];
 
-        const entity: EntityShape = {
+        const entity: EntityShapeRepo = {
           id: rawProps.id,
           type: rawProps.type,
           formId: rawProps.formId, // Form Principle reference
           name: rawProps.name || undefined,
           description: rawProps.description || undefined,
           values: {}, // Do not rehydrate empirical values from FormDB
-          signature: rawProps.signature ? JSON.parse(rawProps.signature) : undefined,
+          signature: rawProps.signature
+            ? JSON.parse(rawProps.signature)
+            : undefined,
           facets: rawProps.facets ? JSON.parse(rawProps.facets) : undefined,
           status: rawProps.status || undefined,
           tags: tags,
@@ -229,7 +239,7 @@ export class EntityShapeRepository {
           updatedAt: rawProps.updatedAt,
         };
 
-        entities.push(entity);
+        entities.push(EntityShapeSchema.parse(entity));
       }
 
       return entities;
@@ -249,7 +259,7 @@ export class EntityShapeRepository {
    * @returns True if the entity was deleted, false if it was not found.
    */
   async deleteEntity(id: string): Promise<boolean> {
-    const session = this.connection.getSession({ defaultAccessMode: "WRITE" });
+    const session = this.connection.getSession({ defaultAccessMode: 'WRITE' });
     try {
       const summary: ResultSummary = await session.executeWrite(
         async (txc: ManagedTransaction) => {
@@ -260,11 +270,11 @@ export class EntityShapeRepository {
           MATCH (n:Entity {id: $id})
           DETACH DELETE n
           `,
-            { id }
+            { id },
           );
           // Return the summary which contains counters
           return result.summary;
-        }
+        },
       );
 
       // Check if any nodes were actually deleted
@@ -272,7 +282,7 @@ export class EntityShapeRepository {
       return nodesDeleted > 0;
     } catch (error) {
       console.error(
-        `Error deleting entity shape with ID (${id}) from Neo4j: ${error}`
+        `Error deleting entity shape with ID (${id}) from Neo4j: ${error}`,
       );
       throw error; // Re-throw error after logging
     } finally {
@@ -284,7 +294,7 @@ export class EntityShapeRepository {
   private async syncTags(
     txc: ManagedTransaction,
     entityId: string,
-    tags: string[] | undefined
+    tags: string[] | undefined,
   ) {
     await txc.run(`MATCH (e {id: $id})-[r:HAS_TAG]->() DELETE r`, {
       id: entityId,
@@ -297,18 +307,18 @@ export class EntityShapeRepository {
         MERGE (t:Tag {name: tagName})
         MERGE (e)-[:HAS_TAG]->(t)
       `,
-        { id: entityId, tags: tags }
+        { id: entityId, tags: tags },
       );
     }
   }
 
   // --- getSafeLabel method ---
   private getSafeLabel(name: string | undefined): string {
-    if (!name) return "Unknown";
-    let safeName = name.replace(/[^a-zA-Z0-9_]/g, "_");
+    if (!name) return 'Unknown';
+    let safeName = name.replace(/[^a-zA-Z0-9_]/g, '_');
     if (!safeName || !/^[a-zA-Z_]/.test(safeName)) {
-      safeName = "_" + safeName;
+      safeName = '_' + safeName;
     }
-    return safeName || "Unknown";
+    return safeName || 'Unknown';
   }
 }

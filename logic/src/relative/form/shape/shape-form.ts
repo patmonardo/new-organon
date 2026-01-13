@@ -1,16 +1,16 @@
-import { FormShapeSchema, type FormShape as RepoFormShape } from '@schema/form';
+import { FormShapeSchema, type FormShapeRepo } from '@schema/form';
 import type { DialecticState, Moment } from '@schema';
 
 /**
  * FormShape — Principle of Shape of Forms.
- * 
+ *
  * Works directly with FormShapeSchema (repository form structure).
  * Dialectical data (signature, facets) is stored in the form's data/metadata.
  */
 export class FormShape {
-  private _doc: RepoFormShape;
+  private _doc: FormShapeRepo;
 
-  private constructor(doc: RepoFormShape) {
+  private constructor(doc: FormShapeRepo) {
     // Validate on construction to keep invariants tight
     this._doc = FormShapeSchema.parse(doc);
   }
@@ -25,7 +25,7 @@ export class FormShape {
     facets?: Record<string, unknown>;
   }): FormShape {
     const now = Date.now();
-    const doc: RepoFormShape = {
+    const doc: FormShapeRepo = {
       id: input.id || `form:${now}:${Math.random().toString(36).slice(2, 10)}`,
       name: input.name || '',
       fields: [],
@@ -45,9 +45,14 @@ export class FormShape {
     return new FormShape(doc);
   }
 
-  // Factory: wrap an existing FormShape doc (validates)
-  static from(doc: RepoFormShape): FormShape {
-    return new FormShape(doc);
+  // Factory: wrap an existing FormShape record (validates)
+  static fromRecord(doc: FormShapeRepo): FormShape {
+    return new FormShape(FormShapeSchema.parse(doc));
+  }
+
+  // Compatibility shim; prefer fromRecord
+  static from(doc: FormShapeRepo): FormShape {
+    return FormShape.fromRecord(doc);
   }
 
   // Accessors
@@ -93,8 +98,12 @@ export class FormShape {
     }));
   }
 
-  toSchema(): RepoFormShape {
+  toRecord(): FormShapeRepo {
     return this._doc;
+  }
+
+  toSchema(): FormShapeRepo {
+    return this.toRecord();
   }
 
   toJSON(): any {
@@ -183,7 +192,10 @@ export class FormShape {
       ...this._doc,
       data: {
         ...(this._doc.data as any),
-        dialectical: { ...dialectical, facets: { ...currentFacets, ...facets } },
+        dialectical: {
+          ...dialectical,
+          facets: { ...currentFacets, ...facets },
+        },
       },
       updatedAt: Date.now(),
     };
@@ -210,7 +222,10 @@ export class FormShape {
       ...this._doc,
       data: {
         ...(this._doc.data as any),
-        dialectical: { ...dialectical, signature: { ...currentSignature, ...partial } },
+        dialectical: {
+          ...dialectical,
+          signature: { ...currentSignature, ...partial },
+        },
       },
       updatedAt: Date.now(),
     };

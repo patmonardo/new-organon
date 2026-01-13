@@ -1,4 +1,4 @@
-import { Neo4jConnection } from "./neo4j-client";
+import { Neo4jConnection } from './neo4j-client';
 import {
   FormOption,
   FormTag,
@@ -6,12 +6,14 @@ import {
   FormSection,
   FormAction,
   FormLayout,
-  FormShape,
-} from "../schema/form";
-import { FormShapeSchema } from "../schema/form";
-import { ManagedTransaction, Session } from "neo4j-driver"; // Removed unused Transaction import
-import neo4j, { Integer } from "neo4j-driver";
-import { v4 as uuidv4 } from "uuid"; // Import uuid
+} from '../schema/form';
+import { FormShapeSchema } from '../schema/form';
+import type { FormShapeRepo } from '../schema/form';
+import { ManagedTransaction, Session } from 'neo4j-driver'; // Removed unused Transaction import
+import neo4j, { Integer } from 'neo4j-driver';
+import { v4 as uuidv4 } from 'uuid'; // Import uuid
+
+type FormShape = FormShapeRepo;
 
 /**
  * FormShapeRepository
@@ -50,7 +52,8 @@ export class FormShapeRepository {
 
       // Extract props to avoid 'apoc.map.removeKeys' in Cypher
       // FormShape now stores only Rational structure (no state/meta)
-      const { data, isValid, name, title, description, tags, ..._fsRest } = validatedShape;
+      const { data, isValid, name, title, description, tags, ..._fsRest } =
+        validatedShape;
 
       const props = {
         id: shapeId,
@@ -73,20 +76,20 @@ export class FormShapeRepository {
         const { options, validation, meta, ...simpleFieldProps } = field;
 
         // Prepare the options list for this field
-        const optionsList = (options || []).map(opt => ({
-             ...opt,
-             // Ensure options have props we might want
+        const optionsList = (options || []).map((opt) => ({
+          ...opt,
+          // Ensure options have props we might want
         }));
 
         return {
           props: {
-             ...simpleFieldProps,
-             validation: validation ? JSON.stringify(validation) : null,
-             meta: meta ? JSON.stringify(meta) : null,
-             createdAt: fieldCreatedAt,
-             updatedAt: fieldUpdatedAt,
+            ...simpleFieldProps,
+            validation: validation ? JSON.stringify(validation) : null,
+            meta: meta ? JSON.stringify(meta) : null,
+            createdAt: fieldCreatedAt,
+            updatedAt: fieldUpdatedAt,
           },
-          options: optionsList // Options kept separate for UNWIND
+          options: optionsList, // Options kept separate for UNWIND
         };
       });
 
@@ -95,54 +98,53 @@ export class FormShapeRepository {
       // If layout is null, we pass an empty list for the FOREACH trick, otherwise a list with 1 element
       const layoutList = validatedShape.layout ? [validatedShape.layout] : [];
 
-      const layoutDataPrepared = layoutList.map(layout => {
-           const lCreatedAt = layout.createdAt ?? now;
-           const lUpdatedAt = now;
-           // Destructure known complex props to handle separately
-           const { sections, actions, responsive, ...layoutSimple } = layout;
+      const layoutDataPrepared = layoutList.map((layout) => {
+        const lCreatedAt = layout.createdAt ?? now;
+        const lUpdatedAt = now;
+        // Destructure known complex props to handle separately
+        const { sections, actions, responsive, ...layoutSimple } = layout;
 
-           const sectionsList = (sections || []).map(section => {
-               const sCreatedAt = section.createdAt ?? now;
-               const sUpdatedAt = now;
-               // Section does NOT have meta, so don't destructure it
-               const { fields: fieldIds, ...sectionSimple } = section;
-               return {
-                   props: {
-                       ...sectionSimple,
-                       id: section.id ?? uuidv4(),
-                       createdAt: sCreatedAt,
-                       updatedAt: sUpdatedAt,
-                   },
-                   fieldIds: fieldIds || []
-               };
-           });
+        const sectionsList = (sections || []).map((section) => {
+          const sCreatedAt = section.createdAt ?? now;
+          const sUpdatedAt = now;
+          // Section does NOT have meta, so don't destructure it
+          const { fields: fieldIds, ...sectionSimple } = section;
+          return {
+            props: {
+              ...sectionSimple,
+              id: section.id ?? uuidv4(),
+              createdAt: sCreatedAt,
+              updatedAt: sUpdatedAt,
+            },
+            fieldIds: fieldIds || [],
+          };
+        });
 
-           const actionsList = (actions || []).map(action => {
-               const aCreatedAt = action.createdAt ?? now;
-               const aUpdatedAt = now;
-               return {
-                   props: {
-                       ...action,
-                       id: action.id ?? uuidv4(),
-                       createdAt: aCreatedAt,
-                       updatedAt: aUpdatedAt,
-                   }
-               };
-           });
+        const actionsList = (actions || []).map((action) => {
+          const aCreatedAt = action.createdAt ?? now;
+          const aUpdatedAt = now;
+          return {
+            props: {
+              ...action,
+              id: action.id ?? uuidv4(),
+              createdAt: aCreatedAt,
+              updatedAt: aUpdatedAt,
+            },
+          };
+        });
 
-           return {
-               props: {
-                   ...layoutSimple,
-                   id: layout.id ?? uuidv4(),
-                   responsive: responsive ? JSON.stringify(responsive) : null,
-                   createdAt: lCreatedAt,
-                   updatedAt: lUpdatedAt
-               },
-               sections: sectionsList,
-               actions: actionsList
-           }
+        return {
+          props: {
+            ...layoutSimple,
+            id: layout.id ?? uuidv4(),
+            responsive: responsive ? JSON.stringify(responsive) : null,
+            createdAt: lCreatedAt,
+            updatedAt: lUpdatedAt,
+          },
+          sections: sectionsList,
+          actions: actionsList,
+        };
       });
-
 
       // 4. Define the Cypher query
       const cypher = `
@@ -231,31 +233,35 @@ export class FormShapeRepository {
       });
 
       // 6. Construct the final saved shape object to return (Spread First approach)
-        // Helper to extract clean layout from prepared data
+      // Helper to extract clean layout from prepared data
       let reconstructedLayout = undefined;
       if (layoutDataPrepared.length > 0) {
-          const lData = layoutDataPrepared[0];
-          reconstructedLayout = {
-            ...validatedShape.layout!, // safe assert as we have prepared data
-            id: lData.props.id,
-            createdAt: lData.props.createdAt,
-            updatedAt: lData.props.updatedAt,
-             sections: lData.sections.map(sData => {
-                 const originalSection = validatedShape.layout?.sections?.find(s => s.id === sData.props.id);
-                 return {
-                     ...originalSection, // spread original
-                     ...sData.props, // overwrite with props (includes ID and timestamps)
-                     fields: sData.fieldIds,
-                 } as FormSection;
-            }),
-            actions: lData.actions.map(aData => {
-                 const originalAction = validatedShape.layout?.actions?.find(a => a.id === aData.props.id);
-                 return {
-                     ...originalAction,
-                     ...aData.props
-                 } as FormAction;
-            })
-          } as FormLayout;
+        const lData = layoutDataPrepared[0];
+        reconstructedLayout = {
+          ...validatedShape.layout!, // safe assert as we have prepared data
+          id: lData.props.id,
+          createdAt: lData.props.createdAt,
+          updatedAt: lData.props.updatedAt,
+          sections: lData.sections.map((sData) => {
+            const originalSection = validatedShape.layout?.sections?.find(
+              (s) => s.id === sData.props.id,
+            );
+            return {
+              ...originalSection, // spread original
+              ...sData.props, // overwrite with props (includes ID and timestamps)
+              fields: sData.fieldIds,
+            } as FormSection;
+          }),
+          actions: lData.actions.map((aData) => {
+            const originalAction = validatedShape.layout?.actions?.find(
+              (a) => a.id === aData.props.id,
+            );
+            return {
+              ...originalAction,
+              ...aData.props,
+            } as FormAction;
+          }),
+        } as FormLayout;
       }
 
       const savedShape: FormShape = {
@@ -268,7 +274,7 @@ export class FormShapeRepository {
         // Reconstruct fields
         fields: fieldsData.map((fieldData) => {
           const originalField = validatedShape.fields?.find(
-            (f) => f.id === fieldData.props.id
+            (f) => f.id === fieldData.props.id,
           );
 
           return {
@@ -295,11 +301,11 @@ export class FormShapeRepository {
       }
       if (error instanceof Error) {
         throw new Error(
-          `Failed to save FormShape ${shape.id}: ${error.message}`
+          `Failed to save FormShape ${shape.id}: ${error.message}`,
         );
       } else {
         throw new Error(
-          `An unknown error occurred while saving FormShape ${shape.id}`
+          `An unknown error occurred while saving FormShape ${shape.id}`,
         );
       }
     } finally {
@@ -381,7 +387,7 @@ export class FormShapeRepository {
           sectionsData,    // Will be list, potentially empty
           actionsData      // Will be list, potentially empty
         `,
-        { id }
+        { id },
       );
 
       if (result.records.length === 0) {
@@ -389,13 +395,13 @@ export class FormShapeRepository {
       }
 
       const record = result.records[0];
-      const formShapeProps = record.get("fs");
-      const tagsResult = record.get("tags");
-      const fieldsDataResult = record.get("fieldsData");
+      const formShapeProps = record.get('fs');
+      const tagsResult = record.get('tags');
+      const fieldsDataResult = record.get('fieldsData');
       // Get the potentially null layout node and the collected lists
-      const layoutNode = record.get("layoutNode");
-      const sectionsDataResult = record.get("sectionsData");
-      const actionsDataResult = record.get("actionsData");
+      const layoutNode = record.get('layoutNode');
+      const sectionsDataResult = record.get('sectionsData');
+      const actionsDataResult = record.get('actionsData');
 
       // Reconstruct Tags
       const tags: FormTag[] = (tagsResult || [])
@@ -419,53 +425,58 @@ export class FormShapeRepository {
               createdAt: this.toNumber(opt.properties.createdAt),
               updatedAt: this.toNumber(opt.properties.updatedAt),
             }));
-            return {
-              ...fieldProps,
-              validation: this.nullToUndefined(this.safeJsonParse(fieldProps.validation)),
-              meta: this.nullToUndefined(this.safeJsonParse(fieldProps.meta)),
-              options: options.length > 0 ? options : undefined,
-              createdAt: this.toNumber(fieldProps.createdAt) ?? Date.now(),
-              updatedAt: this.toNumber(fieldProps.updatedAt) ?? Date.now(),
-            };
+          return {
+            ...fieldProps,
+            validation: this.nullToUndefined(
+              this.safeJsonParse(fieldProps.validation),
+            ),
+            meta: this.nullToUndefined(this.safeJsonParse(fieldProps.meta)),
+            options: options.length > 0 ? options : undefined,
+            createdAt: this.toNumber(fieldProps.createdAt) ?? Date.now(),
+            updatedAt: this.toNumber(fieldProps.updatedAt) ?? Date.now(),
+          };
         });
 
       // Reconstruct Layout (conditionally)
       let layout: FormLayout | undefined = undefined;
-      if (layoutNode) { // Check if layout node exists
-          const layoutProps = layoutNode.properties;
-          // Reconstruct sections from sectionsDataResult
-          const sections: FormSection[] = (sectionsDataResult || [])
-              .filter((sd: any) => sd && sd.section) // Filter out null sections if OPTIONAL MATCH yielded nothing
-              .map((sd: any) => {
-                  const sectionProps = sd.section.properties;
-                  return {
-                      ...sectionProps,
-                      fields: sd.fieldIds || [], // Use collected field IDs
-                      createdAt: this.toNumber(sectionProps.createdAt),
-                      updatedAt: this.toNumber(sectionProps.updatedAt),
-                  };
-              });
+      if (layoutNode) {
+        // Check if layout node exists
+        const layoutProps = layoutNode.properties;
+        // Reconstruct sections from sectionsDataResult
+        const sections: FormSection[] = (sectionsDataResult || [])
+          .filter((sd: any) => sd && sd.section) // Filter out null sections if OPTIONAL MATCH yielded nothing
+          .map((sd: any) => {
+            const sectionProps = sd.section.properties;
+            return {
+              ...sectionProps,
+              fields: sd.fieldIds || [], // Use collected field IDs
+              createdAt: this.toNumber(sectionProps.createdAt),
+              updatedAt: this.toNumber(sectionProps.updatedAt),
+            };
+          });
 
-          // Reconstruct actions from actionsDataResult
-          const actions: FormAction[] = (actionsDataResult || [])
-              .filter((act: any) => act) // Filter out null actions
-              .map((act: any) => {
-                  const actionProps = act.properties;
-                  return {
-                      ...actionProps,
-                      createdAt: this.toNumber(actionProps.createdAt),
-                      updatedAt: this.toNumber(actionProps.updatedAt),
-                  };
-              });
+        // Reconstruct actions from actionsDataResult
+        const actions: FormAction[] = (actionsDataResult || [])
+          .filter((act: any) => act) // Filter out null actions
+          .map((act: any) => {
+            const actionProps = act.properties;
+            return {
+              ...actionProps,
+              createdAt: this.toNumber(actionProps.createdAt),
+              updatedAt: this.toNumber(actionProps.updatedAt),
+            };
+          });
 
-          layout = {
-              ...layoutProps,
-              responsive: this.nullToUndefined(this.safeJsonParse(layoutProps.responsive)),
-              createdAt: this.toNumber(layoutProps.createdAt) ?? Date.now(),
-              updatedAt: this.toNumber(layoutProps.updatedAt) ?? Date.now(),
-              sections: sections.length > 0 ? sections : undefined,
-              actions: actions.length > 0 ? actions : undefined,
-          };
+        layout = {
+          ...layoutProps,
+          responsive: this.nullToUndefined(
+            this.safeJsonParse(layoutProps.responsive),
+          ),
+          createdAt: this.toNumber(layoutProps.createdAt) ?? Date.now(),
+          updatedAt: this.toNumber(layoutProps.updatedAt) ?? Date.now(),
+          sections: sections.length > 0 ? sections : undefined,
+          actions: actions.length > 0 ? actions : undefined,
+        };
       }
 
       // Construct final FormShape
@@ -484,7 +495,6 @@ export class FormShapeRepository {
 
       // Validate final shape before returning
       return formShape; //FormShapeSchema.parse(formShape);
-
     } catch (error) {
       console.error(`Error getting FormShape by id ${id}:`, error);
       if (error instanceof neo4j.Neo4jError) {
@@ -492,7 +502,11 @@ export class FormShapeRepository {
         console.error(`Neo4j Error Message: ${error.message}`);
       }
       // Throw a more specific error or handle as needed
-      throw new Error(`Failed to retrieve FormShape ${id}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to retrieve FormShape ${id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     } finally {
       await session.close();
     }
@@ -503,7 +517,7 @@ export class FormShapeRepository {
       name?: string;
       schemaId?: string; // Assuming FormShape relates to FormDefinition
       tags?: string[];
-    } = {}
+    } = {},
   ): Promise<FormShape[]> {
     const session: Session = this.connection.getSession({
       defaultAccessMode: neo4j.session.READ,
@@ -518,7 +532,7 @@ export class FormShapeRepository {
       // Add criteria to MATCH or WHERE clauses
       if (criteria.name) {
         whereClauses.push(
-          `(toLower(fs.name) CONTAINS toLower($name) OR toLower(fs.title) CONTAINS toLower($name))`
+          `(toLower(fs.name) CONTAINS toLower($name) OR toLower(fs.title) CONTAINS toLower($name))`,
         );
         params.name = criteria.name;
       }
@@ -528,14 +542,14 @@ export class FormShapeRepository {
       }
       if (criteria.tags && criteria.tags.length > 0) {
         whereClauses.push(
-          `ALL(tagValue IN $tags WHERE (fs)-[:HAS_TAG]->(:FormTag {value: tagValue}))`
+          `ALL(tagValue IN $tags WHERE (fs)-[:HAS_TAG]->(:FormTag {value: tagValue}))`,
         );
         params.tags = criteria.tags;
       }
 
       const query = `
         ${matchClause}
-        ${whereClauses.length > 0 ? "WHERE " + whereClauses.join(" AND ") : ""}
+        ${whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : ''}
 
         // Collect Tags for each matching fs
         CALL {
@@ -603,10 +617,10 @@ export class FormShapeRepository {
       // Reconstruct each FormShape from the results
       for (const record of result.records) {
         // Start loop for each record (FormShape)
-        const formShapeProps = record.get("fs");
-        const tagsResult = record.get("tags");
-        const fieldsDataResult = record.get("fieldsData");
-        const layoutDataResult = record.get("layoutData");
+        const formShapeProps = record.get('fs');
+        const tagsResult = record.get('tags');
+        const fieldsDataResult = record.get('fieldsData');
+        const layoutDataResult = record.get('layoutData');
 
         // Reconstruct Tags (Correctly placed within the loop)
         const tags: FormTag[] = (tagsResult || [])
@@ -635,14 +649,22 @@ export class FormShapeRepository {
             // *** Added missing return statement for the field object ***
             return {
               ...fieldProps,
-              validation: this.nullToUndefined(this.safeJsonParse(fieldProps.validation)),
+              validation: this.nullToUndefined(
+                this.safeJsonParse(fieldProps.validation),
+              ),
               meta: this.nullToUndefined(this.safeJsonParse(fieldProps.meta)),
               options: options.length > 0 ? options : undefined,
               createdAt: this.toNumber(fieldProps.createdAt) ?? Date.now(),
               updatedAt: this.toNumber(fieldProps.updatedAt) ?? Date.now(),
-              required: this.nullToUndefined(this.toBoolean(fieldProps.required)),
-              disabled: this.nullToUndefined(this.toBoolean(fieldProps.disabled)),
-              readOnly: this.nullToUndefined(this.toBoolean(fieldProps.readOnly)),
+              required: this.nullToUndefined(
+                this.toBoolean(fieldProps.required),
+              ),
+              disabled: this.nullToUndefined(
+                this.toBoolean(fieldProps.disabled),
+              ),
+              readOnly: this.nullToUndefined(
+                this.toBoolean(fieldProps.readOnly),
+              ),
               visible: this.nullToUndefined(this.toBoolean(fieldProps.visible)),
             };
           }); // *** End map callback for fields ***
@@ -689,7 +711,9 @@ export class FormShapeRepository {
 
           layout = {
             ...layoutProps,
-            responsive: this.nullToUndefined(this.safeJsonParse(layoutProps.responsive)),
+            responsive: this.nullToUndefined(
+              this.safeJsonParse(layoutProps.responsive),
+            ),
             sections: sections.length > 0 ? sections : undefined,
             actions: actions.length > 0 ? actions : undefined,
             columns: this.toNumber(layoutProps.columns) ?? 1,
@@ -713,11 +737,11 @@ export class FormShapeRepository {
 
         // Validate and push the fully reconstructed shape (Correctly placed within the loop)
         try {
-          forms.push(formShape) // (FormShapeSchema.parse(formShape));
+          forms.push(formShape); // (FormShapeSchema.parse(formShape));
         } catch (validationError) {
           console.error(
             `Validation Error for FormShape ${formShape.id}:`,
-            (validationError as any).errors
+            (validationError as any).errors,
           );
           // Decide whether to skip invalid forms or throw
         }
@@ -733,7 +757,7 @@ export class FormShapeRepository {
       throw new Error(
         `Failed to find FormShapes: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       );
     } finally {
       await session.close();
@@ -768,21 +792,21 @@ export class FormShapeRepository {
 
             RETURN count(fs) as deletedCount // Return count of deleted FormShape nodes
             `,
-            { id }
+            { id },
           );
 
           // Check if the query returned a result and if the count is greater than 0
           if (queryResult.records.length > 0) {
             const deletedCountValue =
-              queryResult.records[0].get("deletedCount");
+              queryResult.records[0].get('deletedCount');
             // Use the toNumber helper to safely convert the count
             const count = this.toNumber(deletedCountValue);
             // Return true if the count is a number and greater than 0
-            return typeof count === "number" && count > 0;
+            return typeof count === 'number' && count > 0;
           }
           // If no records were returned, the node wasn't found/deleted
           return false;
-        }
+        },
       );
       // executeWrite returns the value returned by the inner function
       return result ?? false; // Ensure boolean return even if inner function somehow returns undefined/null
@@ -796,7 +820,7 @@ export class FormShapeRepository {
       throw new Error(
         `Failed to delete FormShape ${id}: ${
           error instanceof Error ? error.message : String(error)
-        }`
+        }`,
       );
       // return false; // Alternatively, return false on error
     } finally {
@@ -812,14 +836,14 @@ export class FormShapeRepository {
   async cloneForm(
     sourceId: string,
     newId: string,
-    newName?: string
+    newName?: string,
   ): Promise<FormShape | null> {
     // Get the source form using the reliable getFormById
     const sourceForm = await this.getFormById(sourceId);
 
     if (!sourceForm) {
       console.warn(
-        `Clone failed: Source FormShape with id ${sourceId} not found.`
+        `Clone failed: Source FormShape with id ${sourceId} not found.`,
       );
       return null;
     }
@@ -832,8 +856,8 @@ export class FormShapeRepository {
       clonedData = structuredClone(sourceForm);
     } catch (cloneError) {
       console.error(
-        "Error during structuredClone, falling back to JSON parse/stringify:",
-        cloneError
+        'Error during structuredClone, falling back to JSON parse/stringify:',
+        cloneError,
       );
       // Fallback: Less robust, loses non-JSON types like Dates if not handled
       clonedData = JSON.parse(JSON.stringify(sourceForm));
@@ -891,9 +915,9 @@ export class FormShapeRepository {
             // Update field references within the section using the map
             fields:
               section.fields?.map(
-                (oldFieldId) => fieldIdMap.get(oldFieldId) ?? oldFieldId
+                (oldFieldId) => fieldIdMap.get(oldFieldId) ?? oldFieldId,
               ) ?? [],
-          })
+          }),
         );
       }
 
@@ -918,7 +942,7 @@ export class FormShapeRepository {
     } catch (saveError) {
       console.error(
         `Error saving cloned FormShape with new id ${newId}:`,
-        saveError
+        saveError,
       );
       // Depending on requirements, you might want to throw, return null, or attempt cleanup
       return null;
@@ -935,18 +959,20 @@ export class FormShapeRepository {
 
   private safeJsonParse(
     jsonString: string | null | undefined,
-    defaultValue: any = undefined
+    defaultValue: any = undefined,
   ): any {
     if (!jsonString) return defaultValue;
     try {
       return JSON.parse(jsonString);
     } catch (e) {
-      console.error("Error parsing JSON property:", e, "String:", jsonString);
+      console.error('Error parsing JSON property:', e, 'String:', jsonString);
       return defaultValue;
     }
   }
 
-  private toNumber(value: Integer | number | null | undefined): number | undefined {
+  private toNumber(
+    value: Integer | number | null | undefined,
+  ): number | undefined {
     if (value === null || value === undefined) return undefined;
     if (neo4j.isInt(value)) {
       return value.toNumber();

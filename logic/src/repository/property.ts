@@ -1,6 +1,7 @@
-import { Neo4jConnection } from "./neo4j-client";
-import { PropertyShape } from "../schema/property";
-import { v4 as uuidv4 } from "uuid";
+import { Neo4jConnection } from './neo4j-client';
+import { PropertyShapeSchema, type PropertyShapeRepo } from '@schema/property';
+import { v4 as uuidv4 } from 'uuid';
+import neo4j from 'neo4j-driver';
 
 /**
  * PropertyShapeRepository
@@ -16,38 +17,51 @@ export class PropertyShapeRepository {
     this.connection = connection;
   }
 
+  private parseJson<T>(value: unknown): T | undefined {
+    if (value === null || value === undefined) return undefined;
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value) as T;
+      } catch {
+        return undefined;
+      }
+    }
+    return value as T;
+  }
+
+  private sanitize(input: Partial<PropertyShapeRepo>): PropertyShapeRepo {
+    const now = Date.now();
+    const withDefaults = {
+      id: input.id ?? uuidv4(),
+      createdAt: input.createdAt ?? now,
+      updatedAt: now,
+      ...input,
+    } as Partial<PropertyShapeRepo>;
+    return PropertyShapeSchema.parse(withDefaults);
+  }
+
   /**
    * Save a property to Neo4j
    */
-  async saveProperty(propertyData: Partial<PropertyShape>): Promise<PropertyShape> {
-    const now = Date.now();
-    const property: PropertyShape = {
-      id: propertyData.id || uuidv4(),
-      type: propertyData.type || "property.unknown",
-      name: propertyData.name,
-      signature: propertyData.signature,
-      facets: propertyData.facets,
-      status: propertyData.status,
-      tags: propertyData.tags || [],
-      meta: propertyData.meta || {},
-      createdAt: propertyData.createdAt || now,
-      updatedAt: now,
-    };
+  async saveProperty(
+    propertyData: Partial<PropertyShapeRepo>,
+  ): Promise<PropertyShapeRepo> {
+    const property = this.sanitize(propertyData);
 
-    // Prepare properties for Neo4j
     const props = {
       id: property.id,
       type: property.type,
-      name: property.name || null,
+      name: property.name ?? null,
+      state: property.state ? JSON.stringify(property.state) : null,
       signature: property.signature ? JSON.stringify(property.signature) : null,
       facets: property.facets ? JSON.stringify(property.facets) : null,
-      status: property.status || null,
+      status: property.status ?? null,
       meta: property.meta ? JSON.stringify(property.meta) : null,
       createdAt: property.createdAt,
       updatedAt: property.updatedAt,
     };
 
-    const session = this.connection.getSession({ defaultAccessMode: "WRITE" });
+    const session = this.connection.getSession({ defaultAccessMode: 'WRITE' });
     try {
       await session.executeWrite(async (txc) => {
         await txc.run(
@@ -57,14 +71,13 @@ export class PropertyShapeRepository {
           ON MATCH SET p += $props
           RETURN p.id as id
           `,
-          { props }
+          { props },
         );
 
         // Sync tags
-        await txc.run(
-          `MATCH (p:Property {id: $id})-[r:HAS_TAG]->() DELETE r`,
-          { id: property.id }
-        );
+        await txc.run(`MATCH (p:Property {id: $id})-[r:HAS_TAG]->() DELETE r`, {
+          id: property.id,
+        });
 
         if (property.tags && property.tags.length > 0) {
           await txc.run(
@@ -74,7 +87,7 @@ export class PropertyShapeRepository {
             MERGE (t:Tag {name: tagName})
             MERGE (p)-[:HAS_TAG]->(t)
             `,
-            { id: property.id, tags: property.tags }
+            { id: property.id, tags: property.tags },
           );
         }
       });
@@ -91,8 +104,8 @@ export class PropertyShapeRepository {
   /**
    * Get a property by ID
    */
-  async getPropertyById(id: string): Promise<PropertyShape | null> {
-    const session = this.connection.getSession({ defaultAccessMode: "READ" });
+  async getPropertyById(id: string): Promise<PropertyShapeRepo | null> {
+    const session = this.connection.getSession({ defaultAccessMode: 'READ' });
     try {
       const result = await session.executeRead(async (txc) => {
         return await txc.run<{ props: Record<string, any>; tags: string[] }>(
@@ -101,7 +114,7 @@ export class PropertyShapeRepository {
           OPTIONAL MATCH (p)-[:HAS_TAG]->(t:Tag)
           RETURN properties(p) as props, collect(t.name) as tags
           `,
-          { id }
+          { id },
         );
       });
 
@@ -109,21 +122,26 @@ export class PropertyShapeRepository {
         return null;
       }
 
-      const rawProps = result.records[0].get("props");
-      const tags = result.records[0].get("tags") || [];
+      const rawProps = result.records[0].get('props');
+      const tags = result.records[0].get('tags') || [];
 
-      const property: PropertyShape = {
+      const property = PropertyShapeSchema.parse({
         id: rawProps.id,
         type: rawProps.type,
-        name: rawProps.name || undefined,
-        signature: rawProps.signature ? JSON.parse(rawProps.signature) : undefined,
-        facets: rawProps.facets ? JSON.parse(rawProps.facets) : undefined,
-        status: rawProps.status || undefined,
-        tags: tags,
-        meta: rawProps.meta ? JSON.parse(rawProps.meta) : undefined,
-        createdAt: rawProps.createdAt,
-        updatedAt: rawProps.updatedAt,
-      };
+        name: rawProps.name ?? undefined,
+        state: this.parseJson(rawProps.state) ?? {},
+        signature: this.parseJson(rawProps.signature),
+        facets: this.parseJson(rawProps.facets) ?? {},
+        status: rawProps.status ?? undefined,
+        tags,
+        meta: this.parseJson(rawProps.meta),
+        createdAt: neo4j.isInt(rawProps.createdAt)
+          ? rawProps.createdAt.toNumber()
+          : rawProps.createdAt,
+        updatedAt: neo4j.isInt(rawProps.updatedAt)
+          ? rawProps.updatedAt.toNumber()
+          : rawProps.updatedAt,
+      });
 
       return property;
     } catch (error) {
@@ -137,11 +155,13 @@ export class PropertyShapeRepository {
   /**
    * Find properties by criteria
    */
-  async findProperties(criteria: {
-    type?: string;
-    tags?: string[];
-  } = {}): Promise<PropertyShape[]> {
-    const session = this.connection.getSession({ defaultAccessMode: "READ" });
+  async findProperties(
+    criteria: {
+      type?: string;
+      tags?: string[];
+    } = {},
+  ): Promise<PropertyShapeRepo[]> {
+    const session = this.connection.getSession({ defaultAccessMode: 'READ' });
     try {
       const params: Record<string, any> = {};
       let matchClause = `MATCH (p:Property)`;
@@ -157,14 +177,14 @@ export class PropertyShapeRepository {
           const paramName = `tag${index}`;
           params[paramName] = tag;
           whereClauses.push(
-            `EXISTS { MATCH (p)-[:HAS_TAG]->(:Tag {name: $${paramName}}) }`
+            `EXISTS { MATCH (p)-[:HAS_TAG]->(:Tag {name: $${paramName}}) }`,
           );
         });
       }
 
       let cypher = matchClause;
       if (whereClauses.length > 0) {
-        cypher += `\nWHERE ${whereClauses.join(" AND ")}`;
+        cypher += `\nWHERE ${whereClauses.join(' AND ')}`;
       }
       cypher += `
         OPTIONAL MATCH (p)-[:HAS_TAG]->(t:Tag)
@@ -174,23 +194,28 @@ export class PropertyShapeRepository {
         return await txc.run(cypher, params);
       });
 
-      const properties: PropertyShape[] = [];
+      const properties: PropertyShapeRepo[] = [];
       for (const record of result.records) {
-        const rawProps = record.get("props");
-        const tags = record.get("tags") || [];
+        const rawProps = record.get('props');
+        const tags = record.get('tags') || [];
 
-        const property: PropertyShape = {
+        const property = PropertyShapeSchema.parse({
           id: rawProps.id,
           type: rawProps.type,
-          name: rawProps.name || undefined,
-          signature: rawProps.signature ? JSON.parse(rawProps.signature) : undefined,
-          facets: rawProps.facets ? JSON.parse(rawProps.facets) : undefined,
-          status: rawProps.status || undefined,
-          tags: tags,
-          meta: rawProps.meta ? JSON.parse(rawProps.meta) : undefined,
-          createdAt: rawProps.createdAt,
-          updatedAt: rawProps.updatedAt,
-        };
+          name: rawProps.name ?? undefined,
+          state: this.parseJson(rawProps.state) ?? {},
+          signature: this.parseJson(rawProps.signature),
+          facets: this.parseJson(rawProps.facets) ?? {},
+          status: rawProps.status ?? undefined,
+          tags,
+          meta: this.parseJson(rawProps.meta),
+          createdAt: neo4j.isInt(rawProps.createdAt)
+            ? rawProps.createdAt.toNumber()
+            : rawProps.createdAt,
+          updatedAt: neo4j.isInt(rawProps.updatedAt)
+            ? rawProps.updatedAt.toNumber()
+            : rawProps.updatedAt,
+        });
 
         properties.push(property);
       }
@@ -208,7 +233,7 @@ export class PropertyShapeRepository {
    * Delete a property by ID
    */
   async deleteProperty(id: string): Promise<boolean> {
-    const session = this.connection.getSession({ defaultAccessMode: "WRITE" });
+    const session = this.connection.getSession({ defaultAccessMode: 'WRITE' });
     try {
       const summary = await session.executeWrite(async (txc) => {
         const result = await txc.run(
@@ -216,7 +241,7 @@ export class PropertyShapeRepository {
           MATCH (p:Property {id: $id})
           DETACH DELETE p
           `,
-          { id }
+          { id },
         );
         return result.summary;
       });

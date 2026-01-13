@@ -1,6 +1,6 @@
 import type { Event, EventBus } from '@absolute';
 import { InMemoryEventBus } from '@absolute';
-import type { FormShape as RepoFormShape } from '@schema/form';
+import type { FormShapeRepo } from '@schema/form';
 import { ShapeEngine } from './shape-engine';
 
 export type ShapeId = string;
@@ -29,7 +29,7 @@ export class ShapeService {
   }
 
   // Reads
-  async get(id: ShapeId): Promise<RepoFormShape | undefined> {
+  async get(id: ShapeId): Promise<FormShapeRepo | undefined> {
     // Prefer repo (Sthiti), fall back to in-memory engine (session)
     if (this.repo) {
       // If it's FormShapeRepository, use it directly

@@ -1,9 +1,7 @@
 import { InMemoryEventBus, type EventBus } from '@absolute';
-import { makeInMemoryRepository } from '@repository';
-import { MorphSchema, type Morph } from '@schema';
-import { MorphEngine } from './morph-engine';
-import type { Repository } from '@repository';
 import type { Event } from '@absolute';
+import { MorphEngine, type MorphStore } from './morph-engine';
+import { MorphSchema, type MorphShapeRepo } from '@schema/morph';
 
 export type MorphId = string;
 
@@ -23,17 +21,54 @@ export interface MorphDescribeResult {
   facetsKeys?: string[];
 }
 
+class InMemoryMorphStore implements MorphStore {
+  private store = new Map<string, MorphShapeRepo>();
+
+  async getMorphById(id: string): Promise<MorphShapeRepo | null> {
+    return this.store.get(id) ?? null;
+  }
+
+  async saveMorph(data: Partial<MorphShapeRepo>): Promise<MorphShapeRepo> {
+    const existing = data.id ? this.store.get(data.id) : undefined;
+    const now = Date.now();
+    const next = MorphSchema.parse({
+      id:
+        data.id ??
+        `morph:${now.toString(36)}:${Math.random().toString(36).slice(2, 8)}`,
+      type: data.type ?? existing?.type ?? 'morph.unknown',
+      name: data.name ?? existing?.name,
+      description: data.description ?? existing?.description,
+      inputType: data.inputType ?? existing?.inputType ?? 'FormShape',
+      outputType: data.outputType ?? existing?.outputType ?? 'FormShape',
+      transformFn: data.transformFn ?? existing?.transformFn,
+      state: data.state ?? existing?.state ?? {},
+      signature: data.signature ?? existing?.signature,
+      facets: data.facets ?? existing?.facets ?? {},
+      composition: data.composition ??
+        existing?.composition ?? { kind: 'single', steps: [] },
+      config: data.config ?? existing?.config ?? {},
+      status: data.status ?? existing?.status,
+      tags: data.tags ?? existing?.tags,
+      meta: data.meta ?? existing?.meta,
+      createdAt: existing?.createdAt ?? data.createdAt ?? now,
+      updatedAt: now,
+    });
+    this.store.set(next.id, next);
+    return next;
+  }
+
+  async deleteMorph(id: string): Promise<boolean> {
+    return this.store.delete(id);
+  }
+}
+
 export class MorphService {
   private readonly engine: MorphEngine;
   private readonly bus: EventBus;
 
-  constructor(repo?: Repository<Morph>, bus?: EventBus) {
+  constructor(repo?: MorphStore, bus?: EventBus) {
     this.bus = bus ?? new InMemoryEventBus();
-    const defaultRepo =
-      repo ??
-      (makeInMemoryRepository(
-        MorphSchema as any,
-      ) as unknown as Repository<Morph>);
+    const defaultRepo = repo ?? new InMemoryMorphStore();
     this.engine = new MorphEngine(defaultRepo, this.bus);
   }
 
@@ -97,7 +132,7 @@ export class MorphService {
     return this.extractId(events, 'morph.create');
   }
 
-  async get(id: MorphId): Promise<Morph | undefined> {
+  async get(id: MorphId): Promise<MorphShapeRepo | undefined> {
     const formMorph = await this.engine.getMorph(id);
     return formMorph?.toSchema();
   }

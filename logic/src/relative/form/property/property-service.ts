@@ -1,9 +1,7 @@
 import { InMemoryEventBus, type EventBus } from '@absolute';
-import { makeInMemoryRepository } from '@repository';
-import { PropertySchema, type Property } from '@schema';
-import { PropertyEngine } from './property-engine';
-import type { Repository } from '@repository';
 import type { Event } from '@absolute';
+import { PropertyEngine, type PropertyStore } from './property-engine';
+import type { PropertyShapeRepo } from '@schema/property';
 
 export type PropertyId = string;
 
@@ -25,17 +23,48 @@ export interface PropertyDescribeResult {
   facetsKeys: string[];
 }
 
+class InMemoryPropertyStore {
+  private store = new Map<string, PropertyShapeRepo>();
+
+  async getPropertyById(id: string): Promise<PropertyShapeRepo | null> {
+    return this.store.get(id) ?? null;
+  }
+
+  async saveProperty(
+    data: Partial<PropertyShapeRepo>,
+  ): Promise<PropertyShapeRepo> {
+    const existing = data.id ? this.store.get(data.id) : undefined;
+    const now = Date.now();
+    const next: PropertyShapeRepo = {
+      id:
+        data.id ?? `property:${now}:${Math.random().toString(36).slice(2, 10)}`,
+      type: data.type ?? existing?.type ?? 'property.unknown',
+      name: data.name ?? existing?.name,
+      state: data.state ?? existing?.state ?? {},
+      signature: data.signature ?? existing?.signature,
+      facets: data.facets ?? existing?.facets ?? {},
+      status: data.status ?? existing?.status,
+      tags: data.tags ?? existing?.tags,
+      meta: data.meta ?? existing?.meta,
+      createdAt: existing?.createdAt ?? data.createdAt ?? now,
+      updatedAt: now,
+    };
+    this.store.set(next.id, next);
+    return next;
+  }
+
+  async deleteProperty(id: string): Promise<boolean> {
+    return this.store.delete(id);
+  }
+}
+
 export class PropertyService {
   private readonly engine: PropertyEngine;
   private readonly bus: EventBus;
 
-  constructor(repo?: Repository<Property>, bus?: EventBus) {
+  constructor(repo?: PropertyStore, bus?: EventBus) {
     this.bus = bus ?? new InMemoryEventBus();
-    const defaultRepo =
-      repo ??
-      (makeInMemoryRepository(
-        PropertySchema as any,
-      ) as unknown as Repository<Property>);
+    const defaultRepo = repo ?? new InMemoryPropertyStore();
     this.engine = new PropertyEngine(defaultRepo, this.bus);
   }
 
@@ -110,9 +139,9 @@ export class PropertyService {
     return this.extractId(events, 'property.create');
   }
 
-  async get(id: PropertyId): Promise<Property | undefined> {
+  async get(id: PropertyId): Promise<PropertyShapeRepo | undefined> {
     const formProperty = await this.engine.getProperty(id);
-    return formProperty?.toSchema();
+    return formProperty?.toRecord();
   }
 
   async describe(id: PropertyId): Promise<PropertyDescribeResult> {

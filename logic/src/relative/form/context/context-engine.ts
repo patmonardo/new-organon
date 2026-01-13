@@ -1,27 +1,19 @@
+import { z } from 'zod';
 import type { Command, Event } from '@absolute';
 import type { EventBus } from '@absolute';
 import { InMemoryEventBus } from '@absolute';
 import { startTrace, childSpan } from '@absolute';
-import type { Repository } from '@repository';
-import {
-  type Context,
-  ContextSchema,
-  createContext,
-  updateContext,
-} from '@schema';
 import * as active from '@schema';
-import type {
-  DialecticEvaluateCmd,
-  DialecticCommand,
-} from '@schema';
-import { toDialecticalInfo, type DiscursiveRuleTag } from '@schema';
+import type { DialecticEvaluateCmd, DialecticCommand } from '@schema';
+import { toDialecticalInfo, type DiscursiveRuleTag, BaseState } from '@schema';
+import { ContextShapeSchema, type ContextShapeRepo } from '@schema/context';
 import { FormContext } from './context-form';
 
-type BaseState = Context['shape']['state'];
+type BaseStateShape = z.infer<typeof BaseState>;
 
 type ContextCreateCmd = {
   kind: 'context.create';
-  payload: Parameters<typeof createContext>[0];
+  payload: Parameters<typeof FormContext.create>[0];
   meta?: Record<string, unknown>;
 };
 type ContextDeleteCmd = {
@@ -36,12 +28,12 @@ type ContextSetCoreCmd = {
 };
 type ContextSetStateCmd = {
   kind: 'context.setState';
-  payload: { id: string; state: BaseState };
+  payload: { id: string; state: BaseStateShape };
   meta?: Record<string, unknown>;
 };
 type ContextPatchStateCmd = {
   kind: 'context.patchState';
-  payload: { id: string; patch: Partial<BaseState> };
+  payload: { id: string; patch: Partial<BaseStateShape> };
   meta?: Record<string, unknown>;
 };
 type ContextDescribeCmd = {
@@ -59,43 +51,17 @@ export type ContextCommand =
   | ContextDescribeCmd
   | DialecticCommand;
 
-class MemContext {
-  constructor(public doc: Context) {}
-  get id() {
-    return this.doc.shape.core.id;
-  }
-  get type() {
-    return this.doc.shape.core.type;
-  }
-  get name() {
-    return this.doc.shape.core.name ?? null;
-  }
-  setCore(core: { name?: string; type?: string }) {
-    this.doc = ContextSchema.parse(
-      updateContext(this.doc, {
-        core: {
-          ...(core.name !== undefined ? { name: core.name } : {}),
-          ...(core.type !== undefined ? { type: core.type } : {}),
-        },
-      } as any),
-    );
-  }
-  setState(state: BaseState) {
-    this.doc = ContextSchema.parse(updateContext(this.doc, { state } as any));
-  }
-  patchState(patch: Partial<BaseState>) {
-    this.doc = ContextSchema.parse(updateContext(this.doc, { state: patch } as any));
-  }
-  toSchema() {
-    return this.doc;
-  }
-}
+type ContextStore = {
+  getContextById(id: string): Promise<ContextShapeRepo | null>;
+  saveContext(data: Partial<ContextShapeRepo>): Promise<ContextShapeRepo>;
+  deleteContext?(id: string): Promise<boolean>;
+};
 
 export class ContextEngine {
-  private readonly contexts = new Map<string, MemContext>();
+  private readonly contexts = new Map<string, FormContext>();
 
   constructor(
-    private readonly repo?: Repository<Context>,
+    private readonly repo?: ContextStore,
     private readonly bus: EventBus = new InMemoryEventBus(),
     private readonly scope: string = 'context',
   ) {}
@@ -104,8 +70,20 @@ export class ContextEngine {
     return this.bus;
   }
 
-  getContext(id: string): MemContext | undefined {
-    return this.contexts.get(id);
+  async getContext(id: string): Promise<FormContext | undefined> {
+    const cached = this.contexts.get(id);
+    if (cached) return cached;
+    if (!this.repo) return undefined;
+
+    const doc = await this.repo.getContextById(id);
+    if (!doc) return undefined;
+    const ctx = this.repoRecordToFormContext(doc);
+    this.contexts.set(ctx.id, ctx);
+    return ctx;
+  }
+
+  private repoRecordToFormContext(repoContext: ContextShapeRepo): FormContext {
+    return FormContext.fromRecord(ContextShapeSchema.parse(repoContext));
   }
 
   private emit(base: any, kind: Event['kind'], payload: Event['payload']) {
@@ -134,22 +112,17 @@ export class ContextEngine {
 
     const tags: DiscursiveRuleTag[] = [];
     const add = (t: DiscursiveRuleTag) => {
-      if (!tags.some((x) => x.layer === t.layer && x.rule === t.rule)) tags.push(t);
+      if (!tags.some((x) => x.layer === t.layer && x.rule === t.rule))
+        tags.push(t);
     };
 
-    // Minimal explicit mapping by engine verb
     if (kind === 'context.create') add({ layer: 'context', rule: 'identity' });
-    if (kind === 'context.setCore') add({ layer: 'context', rule: 'difference' });
-    if (kind === 'context.setState') add({ layer: 'context', rule: 'contradiction' });
+    if (kind === 'context.setCore')
+      add({ layer: 'context', rule: 'difference' });
+    if (kind === 'context.setState')
+      add({ layer: 'context', rule: 'contradiction' });
 
-    // Objective projection: Context as World
-    if (
-      kind === 'context.create' ||
-      kind === 'context.setCore' ||
-      kind === 'context.setState'
-    ) {
-      add({ layer: 'context', rule: 'world' } as any);
-    }
+    add({ layer: 'context', rule: 'world' } as any);
 
     return {
       factStore: {
@@ -163,19 +136,15 @@ export class ContextEngine {
     };
   }
 
-  private mustGet(id: string): MemContext {
-    const c = this.getContext(id);
+  private async mustGet(id: string): Promise<FormContext> {
+    const c = await this.getContext(id);
     if (!c) throw new Error(`Context not found: ${id}`);
     return c;
   }
 
-  private async persist(c: MemContext) {
+  private async persist(ctx: FormContext) {
     if (!this.repo) return;
-    const id = c.id;
-    const doc = ContextSchema.parse(c.toSchema());
-    const current = await this.repo.get(id);
-    if (current) await this.repo.update(id, () => doc);
-    else await this.repo.create(doc);
+    await this.repo.saveContext(ctx.toRecord());
   }
 
   async handle(cmd: ContextCommand | Command): Promise<Event[]> {
@@ -188,15 +157,14 @@ export class ContextEngine {
     switch (cmd.kind) {
       case 'context.create': {
         const { payload } = cmd as ContextCreateCmd;
-        const created = ContextSchema.parse(createContext(payload as any));
-        const ctx = new MemContext(created);
+        const ctx = FormContext.create(payload);
         this.contexts.set(ctx.id, ctx);
         await this.persist(ctx);
         return [
           this.emit(base, 'context.create', {
             id: ctx.id,
             type: ctx.type,
-            name: ctx.name,
+            name: ctx.name ?? null,
           }),
         ];
       }
@@ -204,19 +172,19 @@ export class ContextEngine {
       case 'context.delete': {
         const { id } = (cmd as ContextDeleteCmd).payload;
         const existed = this.contexts.delete(id);
-        if (this.repo) await this.repo.delete(id);
+        if (this.repo?.deleteContext) await this.repo.deleteContext(id);
         return [this.emit(base, 'context.delete', { id, ok: existed })];
       }
 
       case 'context.setCore': {
         const { id, name, type } = (cmd as ContextSetCoreCmd).payload;
-        const c = this.mustGet(id);
+        const c = await this.mustGet(id);
         c.setCore({ name, type });
         await this.persist(c);
         return [
           this.emit(base, 'context.setCore', {
             id,
-            name: c.name,
+            name: c.name ?? null,
             type: c.type,
           }),
         ];
@@ -224,7 +192,7 @@ export class ContextEngine {
 
       case 'context.setState': {
         const { id, state } = (cmd as ContextSetStateCmd).payload;
-        const c = this.mustGet(id);
+        const c = await this.mustGet(id);
         c.setState(state);
         await this.persist(c);
         return [this.emit(base, 'context.setState', { id })];
@@ -232,7 +200,7 @@ export class ContextEngine {
 
       case 'context.patchState': {
         const { id, patch } = (cmd as ContextPatchStateCmd).payload;
-        const c = this.mustGet(id);
+        const c = await this.mustGet(id);
         c.patchState(patch);
         await this.persist(c);
         return [this.emit(base, 'context.patchState', { id })];
@@ -240,30 +208,29 @@ export class ContextEngine {
 
       case 'context.describe': {
         const { id } = (cmd as ContextDescribeCmd).payload;
-        const c = this.mustGet(id);
-        const doc = c.toSchema();
+        const c = await this.mustGet(id);
+        const doc = c.toRecord();
         return [
           this.emit(base, 'context.describe', {
             id,
             type: c.type,
-            name: c.name,
-            state: doc.shape.state,
+            name: c.name ?? null,
+            state: doc.state,
             signatureKeys: Object.keys(
-              (doc.shape as any).signature ?? ({} as Record<string, unknown>),
+              (doc.signature ?? {}) as Record<string, unknown>,
             ),
-            facetsKeys: Object.keys((doc.shape as any).facets ?? {}),
+            facetsKeys: Object.keys(
+              (doc.facets ?? {}) as Record<string, unknown>,
+            ),
           }),
         ];
       }
 
-      // --- Dialectic EVAL: Context as Foundation ---
-      // Context is the SCOPE of validity - what makes evaluation situated.
-      // Foundation (Hegel) = the grounding that conditions all marks.
-      // Context extracts: presuppositions, scope boundaries, conditioning relations.
       case 'dialectic.evaluate': {
-        const { dialecticState, context: evalContext } = (cmd as DialecticEvaluateCmd).payload;
+        const { dialecticState, context: evalContext } = (
+          cmd as DialecticEvaluateCmd
+        ).payload;
 
-        // Create a Context to represent this dialectic scope
         const ctx = FormContext.create({
           id: dialecticState.id,
           type: dialecticState.concept,
@@ -271,35 +238,35 @@ export class ContextEngine {
           description: dialecticState.description,
         });
 
-        // Extract PRESUPPOSITIONS from moments
-        // Moments that are 'determination' or 'quality' become presupposed conditions
         const presuppositions = dialecticState.moments
-          .filter(m => m.type === 'determination' || m.type === 'quality')
-          .map(m => ({
+          .filter((m) => m.type === 'determination' || m.type === 'quality')
+          .map((m) => ({
             name: m.name,
             definition: m.definition,
             posited: true,
           }));
 
-        // Extract SCOPE from phase and invariants
-        // The phase determines the modal scope (quality=actual, quantity=possible, etc.)
-        const scopeModal = dialecticState.phase === 'quality' ? 'actual'
-          : dialecticState.phase === 'quantity' ? 'possible'
-          : dialecticState.phase === 'reflection' ? 'necessary'
-          : 'actual';
+        const scopeModal =
+          dialecticState.phase === 'quality'
+            ? 'actual'
+            : dialecticState.phase === 'quantity'
+            ? 'possible'
+            : dialecticState.phase === 'reflection'
+            ? 'necessary'
+            : 'actual';
 
-        // Domain = all concepts referenced in moments
-        const domain = [...new Set(dialecticState.moments.map(m => m.relatedTo).filter(Boolean))] as string[];
+        const domain = [
+          ...new Set(
+            dialecticState.moments.map((m) => m.relatedTo).filter(Boolean),
+          ),
+        ] as string[];
 
-        // Extract CONDITIONS from invariants
-        // Invariants become the conditioning constraints for this context
-        const conditions = dialecticState.invariants.map(inv => ({
+        const conditions = dialecticState.invariants.map((inv) => ({
           id: inv.id,
           constraint: inv.constraint,
           predicate: inv.predicate,
         }));
 
-        // Store in state: the Foundation structure
         ctx.setState({
           status: 'active',
           meta: {
@@ -314,10 +281,8 @@ export class ContextEngine {
           },
         } as any);
 
-        // Wrap and persist
-        const memCtx = new MemContext(ctx.toSchema());
-        this.contexts.set(memCtx.id, memCtx);
-        await this.persist(memCtx);
+        this.contexts.set(ctx.id, ctx);
+        await this.persist(ctx);
 
         return [
           this.emit(base, 'dialectic.evaluated', {
@@ -370,7 +335,8 @@ export class ContextEngine {
         events.push(evt);
       } else if (a.type === 'context.upsert') {
         const id = a.id as string;
-        if (!this.getContext(id)) {
+        const existing = await this.getContext(id);
+        if (!existing) {
           const [evt] = await this.handle({
             kind: 'context.create',
             payload: { id, type: a.kind, name: a.name },

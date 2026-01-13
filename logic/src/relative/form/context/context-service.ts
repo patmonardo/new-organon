@@ -1,8 +1,7 @@
 import type { Event, EventBus } from '@absolute';
 import { InMemoryEventBus } from '@absolute';
-import type { Repository } from '@repository';
-import { ContextSchema, type Context } from '@schema';
 import { ContextEngine } from './context-engine';
+import type { ContextShapeRepo } from '@schema/context';
 
 export type ContextId = string;
 
@@ -10,9 +9,9 @@ export class ContextService {
   private readonly engine: ContextEngine;
   private readonly bus: EventBus;
 
-  constructor(private readonly repo?: Repository<Context>, bus?: EventBus) {
+  constructor(private readonly repo?: any, bus?: EventBus) {
     this.bus = bus ?? new InMemoryEventBus();
-    this.engine = new ContextEngine(this.repo as any, this.bus);
+    this.engine = new ContextEngine(this.repo, this.bus);
   }
 
   // Event API (noun.verb only)
@@ -30,15 +29,9 @@ export class ContextService {
   }
 
   // Reads
-  async get(id: ContextId): Promise<Context | undefined> {
-    if (this.repo) {
-      const doc = await this.repo.get(id);
-      return doc ? ContextSchema.parse(doc) : undefined;
-    }
-    const ctx = (this.engine as any).getContext
-      ? (this.engine as any).getContext(id)
-      : undefined;
-    return ctx ? ContextSchema.parse((ctx as any).toSchema()) : undefined;
+  async get(id: ContextId): Promise<ContextShapeRepo | undefined> {
+    const ctx = await this.engine.getContext(id);
+    return ctx ? ctx.toRecord() : undefined;
   }
 
   // SDK verbs (delegate to engine)
@@ -50,11 +43,7 @@ export class ContextService {
     } as any);
 
     const payload = (e?.payload ?? {}) as any;
-    const id =
-      payload?.id ??
-      payload?.shape?.core?.id ??
-      payload?.shape?.id ??
-      payload?.core?.id;
+    const id = payload?.id;
     if (!id) throw new Error('missing id in context.create event payload');
     return String(id) as ContextId;
   }

@@ -4,32 +4,27 @@ import { InMemoryEventBus } from '@absolute';
 import { startTrace, childSpan } from '@absolute';
 import { InMemoryRepository } from '@repository';
 import { EntityShapeRepository } from '@repository';
-import {
-  type Entity,
-  EntitySchema,
-  createEntity,
-  type EntityShape,
-  EntityShapeSchema,
-} from '@schema';
-import {
-  toDialecticalInfo,
-  type DiscursiveRuleTag,
-} from '@schema';
+import { toDialecticalInfo, type DiscursiveRuleTag } from '@schema';
+import { EntityShapeSchema, type EntityShapeRepo } from '@schema/entity';
 import * as active from '@schema';
 import { FormEntity } from './entity-form';
 import type {
   DialecticEvaluateCmd,
   DialecticInvariantCheckCmd,
-  DialecticCommand
+  DialecticCommand,
 } from '@schema';
 
-type BaseState = Entity['shape']['state'];
-type Signature = NonNullable<Entity['shape']['signature']>;
-type Facets = Entity['shape']['facets'];
+type BaseState = {
+  status?: string;
+  tags?: string[];
+  meta?: Record<string, unknown>;
+};
+type Signature = Record<string, unknown>;
+type Facets = Record<string, unknown>;
 
 type EntityCreateCmd = {
   kind: 'entity.create';
-  payload: Parameters<typeof createEntity>[0];
+  payload: Parameters<typeof FormEntity.create>[0];
   meta?: Record<string, unknown>;
 };
 type EntityDeleteCmd = {
@@ -92,13 +87,15 @@ export type EntityCommand =
   | DialecticCommand;
 
 // Direct wiring: accept EntityShapeRepository (Neo4j) or InMemoryRepository<EntityShape> (testing)
-type EntityShapeRepo = EntityShapeRepository | InMemoryRepository<typeof EntityShapeSchema>;
+type EntityStore =
+  | EntityShapeRepository
+  | InMemoryRepository<typeof EntityShapeSchema>;
 
 export class EntityEngine {
   private readonly entities = new Map<string, FormEntity>();
 
   constructor(
-    private readonly repo?: EntityShapeRepo,
+    private readonly repo?: EntityStore,
     private readonly bus: EventBus = new InMemoryEventBus(),
     private readonly scope: string = 'entity',
   ) {}
@@ -112,51 +109,27 @@ export class EntityEngine {
     if (cached) return cached;
     if (!this.repo) return undefined;
 
-    // Check if it's EntityShapeRepository (Neo4j)
     if (this.repo instanceof EntityShapeRepository) {
       const entityShape = await this.repo.getEntityById(id);
       if (!entityShape) return undefined;
-      // Convert repository EntityShape to dialectical FormEntity
-      return this.entityShapeToFormEntity(entityShape);
+      const ent = this.repoRecordToFormEntity(entityShape as EntityShapeRepo);
+      this.entities.set(ent.id, ent);
+      return ent;
     }
 
-    // Otherwise it's InMemoryRepository
     if (this.repo instanceof InMemoryRepository) {
       const doc = await this.repo.get(id);
       if (!doc) return undefined;
-      // InMemoryRepository stores EntityShape schema type
-      return this.entityShapeToFormEntity(doc as EntityShape);
+      const ent = this.repoRecordToFormEntity(doc as EntityShapeRepo);
+      this.entities.set(ent.id, ent);
+      return ent;
     }
 
     return undefined;
   }
 
-  private entityShapeToFormEntity(entityShape: EntityShape): FormEntity {
-    // Convert repository EntityShape to dialectical Entity (FormEntity wraps Entity)
-    const entity: Entity = {
-      shape: {
-        core: {
-          id: entityShape.id,
-          type: entityShape.type,
-          name: entityShape.name,
-          description: entityShape.description,
-          createdAt: new Date(entityShape.createdAt || Date.now()).toISOString(),
-          updatedAt: new Date(entityShape.updatedAt || Date.now()).toISOString(),
-        },
-        state: {
-          status: entityShape.status,
-          tags: entityShape.tags,
-          meta: entityShape.meta,
-        },
-        signature: entityShape.signature,
-        facets: entityShape.facets || {},
-        // Embed EntityShape in shape.entity for round-trip
-        entity: entityShape,
-      },
-      revision: 0,
-      ext: {}, // Required by EntitySchema
-    };
-    return FormEntity.fromSchema(EntitySchema.parse(entity));
+  private repoRecordToFormEntity(repoEntity: EntityShapeRepo): FormEntity {
+    return FormEntity.fromRecord(EntityShapeSchema.parse(repoEntity));
   }
 
   private emit(base: any, kind: Event['kind'], payload: Event['payload']) {
@@ -207,7 +180,10 @@ export class EntityEngine {
     return cur;
   }
 
-  private evalInvariantPredicate(entity: Entity, predicate: string | undefined): { ok: boolean; reason?: string } {
+  private evalInvariantPredicate(
+    entity: FormEntity,
+    predicate: string | undefined,
+  ): { ok: boolean; reason?: string } {
     if (!predicate) {
       // Seed behavior: if no formal predicate, treat as satisfied (caller can still log constraint text).
       return { ok: true };
@@ -220,7 +196,7 @@ export class EntityEngine {
 
     if (trimmed.startsWith('exists:')) {
       const path = trimmed.slice('exists:'.length).trim();
-      const v = this.readPath(entity, path);
+      const v = this.readPath(entity.toRecord(), path);
       const ok = v !== undefined && v !== null;
       return ok ? { ok } : { ok, reason: `missing value at ${path}` };
     }
@@ -228,7 +204,11 @@ export class EntityEngine {
     if (trimmed.startsWith('eq:')) {
       const rest = trimmed.slice('eq:'.length);
       const idx = rest.indexOf(':');
-      if (idx <= 0) return { ok: false, reason: 'invalid eq predicate (expected eq:<path>:<value>)' };
+      if (idx <= 0)
+        return {
+          ok: false,
+          reason: 'invalid eq predicate (expected eq:<path>:<value>)',
+        };
       const path = rest.slice(0, idx).trim();
       const raw = rest.slice(idx + 1).trim();
       let expected: any = raw;
@@ -237,9 +217,16 @@ export class EntityEngine {
       } catch {
         // keep as string
       }
-      const actual = this.readPath(entity, path);
+      const actual = this.readPath(entity.toRecord(), path);
       const ok = actual === expected;
-      return ok ? { ok } : { ok, reason: `expected ${path} === ${JSON.stringify(expected)}; got ${JSON.stringify(actual)}` };
+      return ok
+        ? { ok }
+        : {
+            ok,
+            reason: `expected ${path} === ${JSON.stringify(
+              expected,
+            )}; got ${JSON.stringify(actual)}`,
+          };
     }
 
     // Unknown predicate form: seed treats as not evaluable => violated.
@@ -255,8 +242,7 @@ export class EntityEngine {
   private async persist(e: FormEntity) {
     if (!this.repo) return;
 
-    // Convert dialectical FormEntity to repository EntityShape
-    const entityShape = this.formEntityToEntityShape(e);
+    const entityShape = this.formEntityToRepoRecord(e);
 
     // Check if it's EntityShapeRepository (Neo4j)
     if (this.repo instanceof EntityShapeRepository) {
@@ -276,35 +262,8 @@ export class EntityEngine {
     }
   }
 
-  private formEntityToEntityShape(formEntity: FormEntity): EntityShape {
-    // Convert dialectical FormEntity to repository EntityShape
-    const entity = formEntity.toSchema();
-    const core = entity.shape.core;
-    const state = entity.shape.state;
-
-    // Extract formId from embedded entity shape if present
-    const embeddedEntityShape = entity.shape.entity;
-    const formId = embeddedEntityShape?.formId;
-
-    if (!formId) {
-      throw new Error('Entity must have formId reference to Form Principle. Provide formId when creating entity.');
-    }
-
-    return EntityShapeSchema.parse({
-      id: core.id,
-      type: core.type,
-      name: core.name,
-      description: core.description,
-      formId: formId,
-      values: embeddedEntityShape?.values || {},
-      signature: entity.shape.signature,
-      facets: entity.shape.facets,
-      status: state.status,
-      tags: state.tags,
-      meta: state.meta,
-      createdAt: new Date(core.createdAt).getTime(),
-      updatedAt: new Date(core.updatedAt).getTime(),
-    });
+  private formEntityToRepoRecord(formEntity: FormEntity): EntityShapeRepo {
+    return formEntity.toRecord();
   }
 
   async handle(cmd: EntityCommand | Command): Promise<Event[]> {
@@ -317,8 +276,7 @@ export class EntityEngine {
     switch (cmd.kind) {
       case 'entity.create': {
         const { payload } = cmd as EntityCreateCmd;
-        const created = EntitySchema.parse(createEntity(payload as any));
-        const ent = FormEntity.from(created);
+        const ent = FormEntity.create(payload as any);
         this.entities.set(ent.id, ent);
         await this.persist(ent);
         return [
@@ -421,29 +379,32 @@ export class EntityEngine {
           return [this.emit(base, 'entity.describe', { id })];
         }
 
-        const entity = e.toSchema();
         return [
           this.emit(base, 'entity.describe', {
             id,
             type: e.type,
             name: e.name ?? null,
-            state: entity.shape.state,
+            state: {
+              status: e.status,
+              tags: e.tags,
+              meta: e.meta,
+            },
             signatureKeys: Object.keys(
-              (entity.shape.signature ?? {}) as Record<string, unknown>,
+              (e.signature ?? {}) as Record<string, unknown>,
             ),
-            facetsKeys: Object.keys(entity.shape.facets ?? {}),
+            facetsKeys: Object.keys(e.facets ?? {}),
           }),
         ];
       }
 
       case 'dialectic.invariant.check': {
-        const { stateId, invariants } = (cmd as DialecticInvariantCheckCmd).payload;
+        const { stateId, invariants } = (cmd as DialecticInvariantCheckCmd)
+          .payload;
         const e = await this.mustGet(stateId);
-        const entity = e.toSchema();
 
         const violations: Event[] = [];
         for (const inv of invariants) {
-          const res = this.evalInvariantPredicate(entity, (inv as any)?.predicate);
+          const res = this.evalInvariantPredicate(e, (inv as any)?.predicate);
           if (!res.ok) {
             violations.push(
               this.emit(base, 'dialectic.invariant.violated', {
@@ -466,7 +427,8 @@ export class EntityEngine {
       }
 
       case 'dialectic.evaluate': {
-        const { dialecticState, context } = (cmd as DialecticEvaluateCmd).payload;
+        const { dialecticState, context } = (cmd as DialecticEvaluateCmd)
+          .payload;
 
         // Create entity from dialectic state
         // We use the dialectic state ID as the entity ID, or generate a new one?
@@ -481,7 +443,9 @@ export class EntityEngine {
         // For now, throw if not provided in context
         const formId = (context as any)?.formId;
         if (!formId) {
-          throw new Error('Entity creation from dialectic state requires formId in context');
+          throw new Error(
+            'Entity creation from dialectic state requires formId in context',
+          );
         }
 
         const entity = FormEntity.create({

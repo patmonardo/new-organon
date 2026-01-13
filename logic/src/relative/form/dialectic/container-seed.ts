@@ -2,10 +2,6 @@ import type { KernelPort, KernelRunResult } from '@absolute/form/kernel-port';
 import type { KernelFormProgram } from '@schema/kernel';
 
 import { createLogicApi, type FormEvalCall } from '@absolute/form';
-import {
-  ContextPhenomenologySchema,
-  type ContextPhenomenology,
-} from '../context/phenomenology';
 
 import { GdsFormProgram } from '@schema';
 /**
@@ -30,14 +26,6 @@ export type ReflectionContainerProgramSeed = {
   /** Optional Determination-of-Essence / Reflection envelope. */
   context?: KernelFormProgram['context'];
 
-  /**
-   * Optional phenomenology payload (Identity/Difference/Contradiction + Foundation/Judgment).
-   *
-   * This is **discursive** TS data only. The kernel may ignore it, but it is safe to pass
-   * through because the GDSL program context is `.passthrough()`.
-   */
-  phenomenology?: Partial<ContextPhenomenology>;
-
   /** Optional operator chain override (Active Ground). */
   patterns?: string[];
 };
@@ -54,15 +42,8 @@ export function seedReflectionFormProgram(
 
   if (seed.shape) program.shape = seed.shape;
 
-  if (seed.context || seed.phenomenology) {
-    const base = (seed.context ?? {}) as Record<string, unknown>;
-    const phen = seed.phenomenology
-      ? ContextPhenomenologySchema.partial().parse(seed.phenomenology)
-      : undefined;
-    program.context = {
-      ...base,
-      ...(phen ? { phenomenology: phen } : {}),
-    };
+  if (seed.context) {
+    program.context = seed.context as Record<string, unknown>;
   }
 
   return program as KernelFormProgram;

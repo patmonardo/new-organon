@@ -2,26 +2,17 @@ import type { Command, Event } from '@absolute';
 import type { EventBus } from '@absolute';
 import { InMemoryEventBus } from '@absolute';
 import { startTrace, childSpan } from '@absolute';
-import type { Repository } from '@repository';
-import {
-  type Morph,
-  MorphSchema,
-  createMorph,
-  updateMorph,
-} from '@schema';
 import { FormMorph } from './morph-form';
-import * as active from '@schema';
+import { MorphSchema, type MorphShapeRepo } from '@schema/morph';
 import { toDialecticalInfo, type DiscursiveRuleTag } from '@schema';
-import type {
-  DialecticEvaluateCmd,
-  DialecticCommand,
-} from '@schema';
+import * as active from '@schema';
+import type { DialecticEvaluateCmd, DialecticCommand } from '@schema';
 
-type BaseState = Morph['shape']['state'];
+type MorphStateShape = MorphShapeRepo['state'];
 
 type MorphCreateCmd = {
   kind: 'morph.create';
-  payload: Parameters<typeof createMorph>[0];
+  payload: Parameters<typeof FormMorph.create>[0];
   meta?: Record<string, unknown>;
 };
 type MorphDeleteCmd = {
@@ -41,12 +32,12 @@ type MorphSetCoreCmd = {
 };
 type MorphSetStateCmd = {
   kind: 'morph.setState';
-  payload: { id: string; state: BaseState };
+  payload: { id: string; state: MorphStateShape };
   meta?: Record<string, unknown>;
 };
 type MorphPatchStateCmd = {
   kind: 'morph.patchState';
-  payload: { id: string; patch: Partial<BaseState> };
+  payload: { id: string; patch: Partial<MorphStateShape> };
   meta?: Record<string, unknown>;
 };
 
@@ -59,9 +50,15 @@ export type MorphCommand =
   | MorphPatchStateCmd
   | DialecticCommand;
 
+export type MorphStore = {
+  getMorphById(id: string): Promise<MorphShapeRepo | null>;
+  saveMorph(data: Partial<MorphShapeRepo>): Promise<MorphShapeRepo>;
+  deleteMorph?(id: string): Promise<boolean>;
+};
+
 export class MorphEngine {
   constructor(
-    private readonly repo: Repository<Morph>,
+    private readonly repo: MorphStore,
     private readonly bus: EventBus = new InMemoryEventBus(),
     private readonly scope: string = 'morph',
   ) {}
@@ -71,8 +68,8 @@ export class MorphEngine {
   }
 
   async getMorph(id: string): Promise<FormMorph | undefined> {
-    const doc = await this.repo.get(id);
-    return doc ? FormMorph.fromSchema(doc) : undefined;
+    const doc = await this.repo.getMorphById(id);
+    return doc ? FormMorph.fromSchema(MorphSchema.parse(doc)) : undefined;
   }
 
   private emit(base: any, kind: Event['kind'], payload: Event['payload']) {
@@ -101,7 +98,8 @@ export class MorphEngine {
 
     const tags: DiscursiveRuleTag[] = [];
     const add = (t: DiscursiveRuleTag) => {
-      if (!tags.some((x) => x.layer === t.layer && x.rule === t.rule)) tags.push(t);
+      if (!tags.some((x) => x.layer === t.layer && x.rule === t.rule))
+        tags.push(t);
     };
 
     // Minimal explicit mapping by engine verb
@@ -128,14 +126,7 @@ export class MorphEngine {
   }
 
   private async persist(m: FormMorph) {
-    const id = m.id;
-    const doc = MorphSchema.parse(m.toSchema());
-    const current = await this.repo.get(id);
-    if (current) {
-      await this.repo.update(id, doc as any);
-    } else {
-      await this.repo.create(doc);
-    }
+    await this.repo.saveMorph(MorphSchema.parse(m.toSchema()));
   }
 
   async handle(cmd: MorphCommand | Command): Promise<Event[]> {
@@ -148,8 +139,7 @@ export class MorphEngine {
     switch (cmd.kind) {
       case 'morph.create': {
         const { payload } = cmd as MorphCreateCmd;
-        const created = MorphSchema.parse(createMorph(payload as any));
-        const m = FormMorph.fromSchema(created);
+        const m = FormMorph.create(payload as any);
         await this.persist(m);
         return [
           this.emit(base, 'morph.create', {
@@ -162,9 +152,9 @@ export class MorphEngine {
 
       case 'morph.delete': {
         const { id } = (cmd as MorphDeleteCmd).payload;
-        const existed = await this.repo.get(id);
-        if (existed) {
-          await this.repo.delete(id);
+        const existed = await this.repo.getMorphById(id);
+        if (existed && this.repo.deleteMorph) {
+          await this.repo.deleteMorph(id);
         }
         return [this.emit(base, 'morph.delete', { id, ok: !!existed })];
       }
@@ -204,22 +194,22 @@ export class MorphEngine {
 
       case 'morph.describe': {
         const { id } = (cmd as MorphDescribeCmd).payload;
-        const doc = await this.repo.get(id);
+        const doc = await this.repo.getMorphById(id);
         if (!doc) {
           return [this.emit(base, 'morph.describe', { id })];
         }
 
-        const m = FormMorph.fromSchema(doc);
+        const m = FormMorph.fromSchema(MorphSchema.parse(doc));
         return [
           this.emit(base, 'morph.describe', {
             id,
             type: m.type,
             name: m.name ?? null,
-            state: doc.shape.state,
+            state: doc.state,
             signatureKeys: Object.keys(
-              (doc.shape.signature ?? {}) as Record<string, unknown>,
+              (doc.signature ?? {}) as Record<string, unknown>,
             ),
-            facetsKeys: Object.keys(doc.shape.facets ?? {}),
+            facetsKeys: Object.keys(doc.facets ?? {}),
           }),
         ];
       }
@@ -230,7 +220,9 @@ export class MorphEngine {
       // Morph is the PRINCIPLE that enables transformation - the Active Container.
       // It holds the conditions under which Aspects can appear.
       case 'dialectic.evaluate': {
-        const { dialecticState, context: evalContext } = (cmd as DialecticEvaluateCmd).payload;
+        const { dialecticState, context: evalContext } = (
+          cmd as DialecticEvaluateCmd
+        ).payload;
 
         // Create a Morph to represent this dialectic ground
         const morph = FormMorph.create({
@@ -241,7 +233,7 @@ export class MorphEngine {
 
         // Extract TRANSFORMATION PRINCIPLE from transitions
         // Transitions show the "reason" - why one state becomes another
-        const transformations = (dialecticState.transitions ?? []).map(t => ({
+        const transformations = (dialecticState.transitions ?? []).map((t) => ({
           id: t.id,
           from: t.from,
           to: t.to,
@@ -253,12 +245,16 @@ export class MorphEngine {
         // Extract CONTAINER STRUCTURE from moments
         // The Ground "contains" moments - it's the active unity that holds them
         // 'sublation' and 'mediation' moments show the containing structure
-        const containingMoments = dialecticState.moments
-          .filter(m => m.type === 'sublation' || m.type === 'mediation' || m.relation === 'contains');
+        const containingMoments = dialecticState.moments.filter(
+          (m) =>
+            m.type === 'sublation' ||
+            m.type === 'mediation' ||
+            m.relation === 'contains',
+        );
 
         const container = {
-          holds: dialecticState.moments.map(m => m.name),
-          activeUnity: containingMoments.map(m => ({
+          holds: dialecticState.moments.map((m) => m.name),
+          activeUnity: containingMoments.map((m) => ({
             name: m.name,
             definition: m.definition,
             contains: m.relatedTo,
@@ -267,7 +263,7 @@ export class MorphEngine {
 
         // Extract GROUNDING CONDITIONS from forces
         // Forces show what "grounds" the dialectic movement
-        const groundingForces = (dialecticState.forces ?? []).map(f => ({
+        const groundingForces = (dialecticState.forces ?? []).map((f) => ({
           id: f.id,
           type: f.type,
           trigger: f.trigger,
@@ -277,11 +273,12 @@ export class MorphEngine {
 
         // The Ground as the synthesis of Shape (form) + Context (scope)
         const ground = {
-          form: dialecticState.concept,           // from Shape
-          scope: dialecticState.phase,            // from Context
-          principle: transformations.length > 0   // the reason
-            ? transformations[0].mechanism
-            : 'immanent',
+          form: dialecticState.concept, // from Shape
+          scope: dialecticState.phase, // from Context
+          principle:
+            transformations.length > 0 // the reason
+              ? transformations[0].mechanism
+              : 'immanent',
         };
 
         // Store in signature: the moments as the ground's structure
@@ -393,26 +390,30 @@ export class MorphEngine {
               id,
               type: a.morphType,
               name: a.name,
-              state: a.morph ? { transform: a.morph.transform, active: a.morph.active } : {},
+              state: a.morph
+                ? { transform: a.morph.transform, active: a.morph.active }
+                : {},
             },
           } as any);
           events.push(evt);
         } else {
           // For existing morphs, emit morph.update (not setCore like other engines)
-          const updatedDoc = updateMorph(existing.toSchema(), {
-            core: {
-              ...(a.name !== undefined ? { name: a.name } : {}),
-              ...(a.morphType !== undefined ? { type: a.morphType } : {}),
-            },
-            state: a.morph ? { transform: a.morph.transform, active: a.morph.active } : {},
-          } as any);
-          const updated = FormMorph.fromSchema(MorphSchema.parse(updatedDoc));
-          await this.persist(updated);
+          const target = FormMorph.fromSchema(existing.toSchema());
+          if (a.name !== undefined || a.morphType !== undefined) {
+            target.setCore({ name: a.name, type: a.morphType });
+          }
+          if (a.morph) {
+            target.setState({
+              transform: a.morph.transform,
+              active: a.morph.active,
+            } as any);
+          }
+          await this.persist(target);
 
           const evt = this.emit({ correlationId: 'commit' }, 'morph.update', {
             id,
-            type: updated.type,
-            name: updated.name ?? null,
+            type: target.type,
+            name: target.name ?? null,
           });
           events.push(evt);
         }

@@ -3,7 +3,7 @@ import { BaseCore, BaseSchema, BaseState, Type, Label } from './base';
 import { FormDialecticSchema } from './rules';
 
 // ==========================================
-// FORM SHAPE DEFINITIONS (Migrated from form-shape.ts)
+// FORM SHAPE DEFINITIONS
 // ==========================================
 
 export const FormDataSchema = z
@@ -11,12 +11,12 @@ export const FormDataSchema = z
     source: z
       .object({
         type: z.enum([
-          "entity",
-          "context",
-          "api",
-          "function",
-          "localStorage",
-          "composite",
+          'entity',
+          'context',
+          'api',
+          'function',
+          'localStorage',
+          'composite',
         ]),
         entityRef: z
           .object({
@@ -36,7 +36,7 @@ export const FormDataSchema = z
         apiConfig: z
           .object({
             endpoint: z.string(),
-            method: z.enum(["GET", "POST", "PUT", "DELETE", "PATCH"]),
+            method: z.enum(['GET', 'POST', 'PUT', 'DELETE', 'PATCH']),
             headers: z.record(z.string(), z.string()).optional(),
             params: z.record(z.string(), z.any()).optional(),
           })
@@ -80,7 +80,7 @@ export const FormDataSchema = z
       .optional(),
     schema: z
       .object({
-        type: z.enum(["zod", "json-schema", "typescript", "custom"]).optional(),
+        type: z.enum(['zod', 'json-schema', 'typescript', 'custom']).optional(),
         definition: z.any().optional(),
       })
       .optional(),
@@ -107,12 +107,12 @@ export const FormDataSchema = z
   .optional();
 
 export const FormModeSchema = z
-  .enum(["create", "edit", "view"])
-  .default("create");
+  .enum(['create', 'edit', 'view'])
+  .default('create');
 
 export const FormContentSchema = z
-  .enum(["jsx", "html", "json", "xml"])
-  .default("jsx");
+  .enum(['jsx', 'html', 'json', 'xml'])
+  .default('jsx');
 
 export const FormTagSchema = z.object({
   value: z.any(),
@@ -222,14 +222,14 @@ export const FormHandlerSchema = z.object({
 
 export const FormActionSchema = z.object({
   id: z.string(),
-  type: z.enum(["submit", "reset", "button"]).optional(),
+  type: z.enum(['submit', 'reset', 'button']).optional(),
   label: z.string().optional(),
   primary: z.boolean().optional().default(false).optional(),
   disabled: z.boolean().optional().default(false).optional(),
   position: z
-    .enum(["top", "bottom", "both"])
+    .enum(['top', 'bottom', 'both'])
     .optional()
-    .default("bottom")
+    .default('bottom')
     .optional(),
   createdAt: z
     .number()
@@ -248,16 +248,16 @@ export const FormLayoutSchema = z.object({
   name: z.string().optional(),
   title: z.string().optional(),
   description: z.string().optional(),
-  columns: z.enum(["single", "double"]).optional(),
+  columns: z.enum(['single', 'double']).optional(),
   sections: z.array(FormSectionSchema).optional(),
   actions: z.array(FormActionSchema).optional(),
   responsive: z
     .object({
       sectionBreakpoints: z
-        .record(z.string(), z.enum(["stack", "grid", "tabs"]))
+        .record(z.string(), z.enum(['stack', 'grid', 'tabs']))
         .optional(),
       fieldArrangement: z
-        .enum(["natural", "importance", "groupRelated"])
+        .enum(['natural', 'importance', 'groupRelated'])
         .optional(),
     })
     .optional(),
@@ -274,7 +274,7 @@ export const FormLayoutSchema = z.object({
 });
 
 export const FormStateSchema = z.object({
-  status: z.enum(["idle", "submitting", "success", "error"]),
+  status: z.enum(['idle', 'submitting', 'success', 'error']),
   errors: z.record(z.string(), z.array(z.string())).optional(),
   message: z.string().optional(),
 });
@@ -361,100 +361,6 @@ export const FormSchema = BaseSchema.extend({
 });
 export type Form = z.infer<typeof FormSchema>;
 
-// Helpers
-function genId() {
-  return `form:${Date.now().toString(36)}:${Math.floor(Math.random() * 1e6)
-    .toString(36)
-    .padStart(4, '0')}`;
-}
-
-// Accept UI-ish states but normalize to BaseState's enum
-const VALID_BASE_STATUSES = new Set(['active', 'archived', 'deleted']);
-function sanitizeState(input?: unknown): z.input<typeof BaseState> {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) return {};
-  const i = input as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
-
-  // Keep only valid enum; drop unknowns like 'idle' so BaseState default applies.
-  if (typeof i.status === 'string' && VALID_BASE_STATUSES.has(i.status)) {
-    out.status = i.status;
-  }
-
-  if (Array.isArray(i.tags)) {
-    out.tags = i.tags.filter((t) => typeof t === 'string');
-  }
-  if (i.meta && typeof i.meta === 'object' && !Array.isArray(i.meta)) {
-    out.meta = i.meta;
-  }
-  return out as z.input<typeof BaseState>;
-}
-
-type CreateFormInput = {
-  id?: string;
-  type: string;
-  name?: string;
-  fields?: unknown[];
-  state?: z.input<typeof BaseState>;
-  form?: FormShape;
-};
-
-// Create a Form doc with sane defaults
-export function createForm(input: CreateFormInput): Form {
-  const id = input.id ?? genId();
-  const draft = {
-    shape: {
-      core: { id, type: input.type, name: input.name },
-      state: sanitizeState(input.state),
-      fields: input.fields ?? [],
-      form: input.form,
-    },
-  };
-  return FormSchema.parse(draft);
-}
-
-type FormCoreOut = z.output<typeof FormCore>;
-type BaseStateOut = z.output<typeof BaseState>;
-
-type UpdateFormPatch = Partial<{
-  core: Partial<FormCoreOut>;
-  state: Partial<BaseStateOut>;
-  fields: unknown[];
-  form: FormShape;
-}>;
-
-// Update with shallow merges where appropriate; increments revision
-export function updateForm(doc: Form, patch: UpdateFormPatch): Form {
-  const prevCore = doc.shape.core as FormCoreOut;
-  const prevState = doc.shape.state as BaseStateOut;
-
-  // Merge then sanitize state so invalid statuses (e.g., 'idle') are dropped,
-  // allowing BaseState defaults to apply during parsing.
-  const mergedState = { ...prevState, ...(patch.state ?? {}) };
-  const cleanedState = sanitizeState(mergedState);
-
-  const next = {
-    ...doc,
-    shape: {
-      ...doc.shape,
-      core: { ...prevCore, ...(patch.core ?? {}) },
-      state: cleanedState,
-      fields: patch.fields ?? doc.shape.fields,
-      form: patch.form ?? doc.shape.form,
-    },
-    revision: (doc.revision ?? 0) + 1,
-  };
-  return FormSchema.parse(next);
-}
-
-// Ergonomics for embedded realized shape
-export function getFormShape(doc: Form): FormShape | undefined {
-  return doc.shape.form;
-}
-
-export function setFormShape(doc: Form, form: FormShape): Form {
-  return updateForm(doc, { form });
-}
-
 // Type exports
 export type FormData = z.infer<typeof FormDataSchema>;
 export type FormMode = z.infer<typeof FormModeSchema>;
@@ -470,4 +376,4 @@ export type FormSection = z.infer<typeof FormSectionSchema>;
 export type FormLayout = z.infer<typeof FormLayoutSchema>;
 export type FormState = z.infer<typeof FormStateSchema>;
 export type FormMeta = z.infer<typeof FormMetaSchema>;
-export type FormShape = z.infer<typeof FormShapeSchema>;
+export type FormShapeRepo = z.infer<typeof FormShapeSchema>;

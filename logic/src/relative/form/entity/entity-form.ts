@@ -1,209 +1,240 @@
-import { z } from "zod";
-import {
-  EntitySchema,
-  EntityState as EntityStateSchema,
-  createEntity as createEntityDoc,
-  updateEntity as updateEntityDoc,
-  createEntityRef,
-  formatEntityKey,
-  type Entity,
-  type EntityRef,
-  type EntityState,
-  type DialecticState,
-  type Moment,
-} from '@schema';
+import { EntityShapeSchema, type EntityShapeRepo } from '@schema/entity';
+import type { DialecticState, Moment } from '@schema';
 
 export type FormEntityId = string;
 
+// FormEntity — nexus between the EntityShape record (repo) and runtime behavior
 export class FormEntity {
-  private doc: Entity;
+  private _doc: EntityShapeRepo;
 
-  private constructor(doc: Entity) {
-    this.doc = EntitySchema.parse(doc);
+  private constructor(doc: EntityShapeRepo) {
+    this._doc = EntityShapeSchema.parse(doc);
   }
 
-  // Factory: create from params (schema defaults/validation applied)
+  // Factory: create from params (validated)
   static create(input: {
     type: string;
+    formId: string;
     id?: string;
     name?: string;
     description?: string;
-    formId?: string;
     values?: Record<string, unknown>;
-    state?: z.infer<typeof EntityStateSchema>;
-    version?: string;
-    ext?: Record<string, unknown>;
+    signature?: Record<string, unknown>;
+    facets?: Record<string, unknown>;
+    status?: string;
+    tags?: string[];
+    meta?: Record<string, unknown>;
   }): FormEntity {
-    const doc = createEntityDoc(input as any);
+    const now = Date.now();
+    const doc: EntityShapeRepo = {
+      id:
+        input.id ?? `entity:${now}:${Math.random().toString(36).slice(2, 10)}`,
+      type: input.type,
+      name: input.name,
+      description: input.description,
+      formId: input.formId,
+      values: input.values ?? {},
+      signature: input.signature,
+      facets: input.facets ?? {},
+      status: input.status,
+      tags: input.tags,
+      meta: input.meta,
+      createdAt: now,
+      updatedAt: now,
+    };
     return new FormEntity(doc);
   }
 
-  // Factory: wrap an existing schema doc (or input parsed to one)
-  static from(input: Entity | z.infer<typeof EntitySchema>): FormEntity {
-    const doc = EntitySchema.parse(input as any);
-    return new FormEntity(doc);
+  // Factory: wrap an existing repo record (validates)
+  static fromRecord(doc: EntityShapeRepo): FormEntity {
+    return new FormEntity(EntityShapeSchema.parse(doc));
   }
 
-  // alias used by engines
-  static fromSchema(doc: Entity): FormEntity {
-    return new FormEntity(doc);
+  // Compatibility alias
+  static from(doc: EntityShapeRepo): FormEntity {
+    return FormEntity.fromRecord(doc);
   }
 
-  // Serialization
-  toSchema(): Entity {
-    return this.doc;
+  toRecord(): EntityShapeRepo {
+    return this._doc;
   }
-  toJSON(): Entity {
-    return this.doc;
+
+  toSchema(): EntityShapeRepo {
+    return this.toRecord();
+  }
+
+  toJSON(): EntityShapeRepo {
+    return this._doc;
   }
 
   // Core getters
   get id(): string {
-    return this.doc.shape.core.id;
+    return this._doc.id;
   }
   get type(): string {
-    return this.doc.shape.core.type;
+    return this._doc.type;
   }
   get name(): string | undefined {
-    return this.doc.shape.core.name;
+    return this._doc.name;
   }
   get description(): string | undefined {
-    return this.doc.shape.core.description;
+    return this._doc.description;
   }
-
-  // timestamps / metadata (present via BaseCore)
-  get createdAt(): string {
-    return this.doc.shape.core.createdAt;
+  get formId(): string {
+    return this._doc.formId;
   }
-  get updatedAt(): string {
-    return this.doc.shape.core.updatedAt;
+  get values(): Record<string, unknown> {
+    return this._doc.values ?? {};
   }
-
-  // State accessors
-  get state(): EntityState {
-    return this.doc.shape.state;
+  get signature(): Record<string, unknown> | undefined {
+    return this._doc.signature as Record<string, unknown> | undefined;
   }
-
-  get revision(): number {
-    return this.doc.revision ?? 0;
+  get facets(): Record<string, unknown> | undefined {
+    return this._doc.facets as Record<string, unknown> | undefined;
   }
-  get version(): string | undefined {
-    return this.doc.version;
+  get status(): string | undefined {
+    return this._doc.status;
+  }
+  get tags(): string[] | undefined {
+    return this._doc.tags;
+  }
+  get meta(): Record<string, unknown> | undefined {
+    return this._doc.meta as Record<string, unknown> | undefined;
+  }
+  get createdAt(): number | undefined {
+    return this._doc.createdAt;
+  }
+  get updatedAt(): number | undefined {
+    return this._doc.updatedAt;
   }
 
   // Dialectic Helpers
   getDialecticState(): DialecticState | undefined {
-    const facets = this.doc.shape.facets as any;
-    return facets?.dialecticState as DialecticState | undefined;
+    return (this._doc.facets as any)?.dialecticState as
+      | DialecticState
+      | undefined;
   }
 
   getMoments(): Moment[] {
-    const sig = this.doc.shape.signature;
+    const sig = this.signature;
     if (!sig) return [];
-
     return Object.entries(sig).map(([name, def]: [string, any]) => ({
       name,
-      definition: def.definition,
-      type: def.type,
-      relation: def.relation,
-      relatedTo: def.relatedTo,
+      definition: def?.definition,
+      type: def?.type,
+      relation: def?.relation,
+      relatedTo: def?.relatedTo,
     }));
   }
 
-  // Reference/key helpers
-  toRef(): EntityRef {
-    return createEntityRef(this.doc);
-  }
-  get key(): string {
-    return formatEntityKey(this.toRef());
-  }
-
-  // Core mutators (schema-safe via updateEntityDoc)
+  // Mutators
   setCore(core: { name?: string; type?: string }): this {
-    const patch: any = { core: {} };
-    if (core.name !== undefined) patch.core.name = core.name;
-    if (core.type !== undefined) patch.core.type = core.type;
-    this.doc = updateEntityDoc(this.doc, patch);
-    return this;
-  }
-  setState(state: EntityState): this {
-    this.doc = updateEntityDoc(this.doc, { state } as any);
-    return this;
-  }
-  patchState(patch: Partial<EntityState>): this {
-    this.doc = updateEntityDoc(this.doc, { state: patch } as any);
+    this._doc = {
+      ...this._doc,
+      name: core.name !== undefined ? core.name : this._doc.name,
+      type: core.type !== undefined ? core.type : this._doc.type,
+      updatedAt: Date.now(),
+    };
     return this;
   }
 
-  // Signature / facets (skeletal extension helpers)
-  setSignature(signature?: Record<string, unknown> | null): this {
-    // undefined -> preserve (no-op); null -> clear; object -> replace
-    if (signature === undefined) return this;
-    if (signature === null) {
-      this.doc = updateEntityDoc(this.doc, { signature: null } as any); // clear
-      return this;
-    }
-    this.doc = updateEntityDoc(this.doc, { signature } as any); // replace
+  setState(state: {
+    status?: string;
+    tags?: string[];
+    meta?: Record<string, unknown>;
+  }): this {
+    this._doc = {
+      ...this._doc,
+      status: state.status,
+      tags: state.tags,
+      meta: state.meta,
+      updatedAt: Date.now(),
+    };
     return this;
   }
 
-  mergeSignature(patch: Record<string, unknown> | null | undefined): this {
-    if (!patch || Object.keys(patch).length === 0) return this;
-    const current = (this.doc.shape.signature ?? {}) as Record<string, unknown>;
-    this.doc = updateEntityDoc(this.doc, { signature: { ...current, ...patch } } as any);
-    return this;
-  }
-  setFacets(facets: Record<string, unknown>): this {
-    this.doc = updateEntityDoc(this.doc, { facets } as any);
-    return this;
-  }
-  mergeFacets(patch: Record<string, unknown>): this {
-    const all = (this.doc.shape.facets ?? {}) as Record<string, unknown>;
-    this.doc = updateEntityDoc(this.doc, { facets: { ...all, ...patch } } as any);
-    return this;
-  }
-  mergeFacet(
-    ns: string,
-    patch: Record<string, unknown> | null | undefined,
+  patchState(
+    patch: Partial<{
+      status?: string;
+      tags?: string[];
+      meta?: Record<string, unknown>;
+    }>,
   ): this {
-    if (!ns || !patch || Object.keys(patch).length === 0) return this;
-    const all = (this.doc.shape.facets ?? {}) as Record<string, unknown>;
-    const prev = (all[ns] as Record<string, unknown>) ?? {};
-    const nextNs = { ...prev, ...patch };
-    const nextAll = { ...all, [ns]: nextNs };
-    this.doc = updateEntityDoc(this.doc, { facets: nextAll } as any);
+    this._doc = {
+      ...this._doc,
+      status: patch.status !== undefined ? patch.status : this._doc.status,
+      tags: patch.tags !== undefined ? patch.tags : this._doc.tags,
+      meta:
+        patch.meta !== undefined
+          ? { ...(this._doc.meta ?? {}), ...patch.meta }
+          : this._doc.meta,
+      updatedAt: Date.now(),
+    };
     return this;
   }
 
-  // Convenience mutators used by tests
+  setValues(values: Record<string, unknown>): this {
+    this._doc = { ...this._doc, values: values ?? {}, updatedAt: Date.now() };
+    return this;
+  }
+
+  setSignature(signature?: Record<string, unknown>): this {
+    this._doc = { ...this._doc, signature, updatedAt: Date.now() };
+    return this;
+  }
+
+  mergeSignature(patch: Record<string, unknown>): this {
+    const current = (this._doc.signature ?? {}) as Record<string, unknown>;
+    this._doc = {
+      ...this._doc,
+      signature: { ...current, ...patch },
+      updatedAt: Date.now(),
+    };
+    return this;
+  }
+
+  setFacets(facets: Record<string, unknown>): this {
+    this._doc = { ...this._doc, facets, updatedAt: Date.now() };
+    return this;
+  }
+
+  mergeFacets(patch: Record<string, unknown>): this {
+    const current = (this._doc.facets ?? {}) as Record<string, unknown>;
+    this._doc = {
+      ...this._doc,
+      facets: { ...current, ...patch },
+      updatedAt: Date.now(),
+    };
+    return this;
+  }
+
   setName(name?: string): this {
-    this.doc = updateEntityDoc(this.doc, { core: { name } } as any);
-    return this;
+    return this.setCore({ name });
   }
+
   setDescription(description?: string): this {
-    this.doc = updateEntityDoc(this.doc, { core: { description } } as any);
+    this._doc = { ...this._doc, description, updatedAt: Date.now() };
     return this;
   }
+
   addTag(tag: string): this {
-    const tags = Array.isArray(this.doc.shape.state.tags)
-      ? [...this.doc.shape.state.tags]
-      : [];
-    if (!tags.includes(tag)) {
-      tags.push(tag);
-      this.doc = updateEntityDoc(this.doc, { state: { tags } } as any);
-    }
+    const tags = Array.isArray(this._doc.tags) ? [...this._doc.tags] : [];
+    if (!tags.includes(tag)) tags.push(tag);
+    this._doc = { ...this._doc, tags, updatedAt: Date.now() };
     return this;
   }
+
   removeTag(tag: string): this {
-    const tags = Array.isArray(this.doc.shape.state.tags)
-      ? this.doc.shape.state.tags.filter((t) => t !== tag)
+    const tags = Array.isArray(this._doc.tags)
+      ? this._doc.tags.filter((t) => t !== tag)
       : [];
-    this.doc = updateEntityDoc(this.doc, { state: { tags } } as any);
+    this._doc = { ...this._doc, tags, updatedAt: Date.now() };
     return this;
   }
+
   patchMeta(patch: Record<string, unknown>): this {
-    const next = { ...(this.doc.shape.state.meta ?? {}), ...patch };
-    this.doc = updateEntityDoc(this.doc, { state: { meta: next } } as any);
+    const next = { ...(this._doc.meta ?? {}), ...patch };
+    this._doc = { ...this._doc, meta: next, updatedAt: Date.now() };
     return this;
   }
 }

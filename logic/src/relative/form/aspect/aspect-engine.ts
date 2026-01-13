@@ -2,24 +2,18 @@ import type { Command, Event } from '@absolute';
 import type { EventBus } from '@absolute';
 import { InMemoryEventBus } from '@absolute';
 import { startTrace, childSpan } from '@absolute';
-import type { Repository } from '@repository';
-import {
-  type Aspect,
-  AspectSchema,
-  createAspect,
-} from '@schema';
+import { z } from 'zod';
 import { FormAspect } from './aspect-form';
+import { BaseState } from '@schema';
 import * as active from '@schema';
-import type {
-  DialecticEvaluateCmd,
-  DialecticCommand,
-} from '@schema';
+import type { DialecticEvaluateCmd, DialecticCommand } from '@schema';
+import { AspectSchema, type AspectShapeRepo } from '@schema/aspect';
 
-type BaseState = Aspect['shape']['state'];
+type BaseStateShape = z.infer<typeof BaseState>;
 
 type AspectCreateCmd = {
   kind: 'aspect.create';
-  payload: Parameters<typeof createAspect>[0];
+  payload: Parameters<typeof FormAspect.create>[0];
   meta?: Record<string, unknown>;
 };
 type AspectDeleteCmd = {
@@ -39,12 +33,12 @@ type AspectSetCoreCmd = {
 };
 type AspectSetStateCmd = {
   kind: 'aspect.setState';
-  payload: { id: string; state: BaseState };
+  payload: { id: string; state: BaseStateShape };
   meta?: Record<string, unknown>;
 };
 type AspectPatchStateCmd = {
   kind: 'aspect.patchState';
-  payload: { id: string; patch: Partial<BaseState> };
+  payload: { id: string; patch: Partial<BaseStateShape> };
   meta?: Record<string, unknown>;
 };
 
@@ -57,9 +51,15 @@ export type AspectCommand =
   | AspectPatchStateCmd
   | DialecticCommand;
 
+export type AspectStore = {
+  getAspectById(id: string): Promise<AspectShapeRepo | null>;
+  saveAspect(data: Partial<AspectShapeRepo>): Promise<AspectShapeRepo>;
+  deleteAspect?(id: string): Promise<boolean>;
+};
+
 export class AspectEngine {
   constructor(
-    private readonly repo: Repository<Aspect>,
+    private readonly repo: AspectStore,
     private readonly bus: EventBus = new InMemoryEventBus(),
     private readonly scope: string = 'aspect',
   ) {}
@@ -69,8 +69,8 @@ export class AspectEngine {
   }
 
   async getAspect(id: string): Promise<FormAspect | undefined> {
-    const doc = await this.repo.get(id);
-    return doc ? FormAspect.fromSchema(doc) : undefined;
+    const doc = await this.repo.getAspectById(id);
+    return doc ? FormAspect.fromRecord(AspectSchema.parse(doc)) : undefined;
   }
 
   private emit(base: any, kind: Event['kind'], payload: Event['payload']) {
@@ -87,14 +87,7 @@ export class AspectEngine {
   }
 
   private async persist(a: FormAspect) {
-    const id = a.id;
-    const doc = AspectSchema.parse(a.toSchema());
-    const current = await this.repo.get(id);
-    if (current) {
-      await this.repo.update(id, doc as any);
-    } else {
-      await this.repo.create(doc);
-    }
+    await this.repo.saveAspect(AspectSchema.parse(a.toSchema()));
   }
 
   async handle(cmd: AspectCommand | Command): Promise<Event[]> {
@@ -107,8 +100,7 @@ export class AspectEngine {
     switch (cmd.kind) {
       case 'aspect.create': {
         const { payload } = cmd as AspectCreateCmd;
-        const created = AspectSchema.parse(createAspect(payload as any));
-        const a = FormAspect.fromSchema(created);
+        const a = FormAspect.create(payload as any);
         await this.persist(a);
         return [
           this.emit(base, 'aspect.created', {
@@ -121,9 +113,9 @@ export class AspectEngine {
 
       case 'aspect.delete': {
         const { id } = (cmd as AspectDeleteCmd).payload;
-        const existed = await this.repo.get(id);
-        if (existed) {
-          await this.repo.delete(id);
+        const existed = await this.repo.getAspectById(id);
+        if (existed && this.repo.deleteAspect) {
+          await this.repo.deleteAspect(id);
         }
         return [this.emit(base, 'aspect.deleted', { id, ok: !!existed })];
       }
@@ -160,22 +152,22 @@ export class AspectEngine {
 
       case 'aspect.describe': {
         const { id } = (cmd as AspectDescribeCmd).payload;
-        const doc = await this.repo.get(id);
+        const doc = await this.repo.getAspectById(id);
         if (!doc) {
           return [this.emit(base, 'aspect.describe', { id })];
         }
 
-        const a = FormAspect.fromSchema(doc);
+        const a = FormAspect.fromRecord(AspectSchema.parse(doc));
         return [
           this.emit(base, 'aspect.describe', {
             id,
             type: a.type,
             name: a.name ?? null,
-            state: doc.shape.state,
+            state: doc.state,
             signatureKeys: Object.keys(
-              (doc.shape.signature ?? {}) as Record<string, unknown>,
+              (doc.signature ?? {}) as Record<string, unknown>,
             ),
-            facetsKeys: Object.keys(doc.shape.facets ?? {}),
+            facetsKeys: Object.keys(doc.facets ?? {}),
           }),
         ];
       }
@@ -187,7 +179,9 @@ export class AspectEngine {
       // It connects Entity <-> Property through the lens of Ground (Morph).
       // This is the appearing of relations - Fichtean Science's essential structure.
       case 'dialectic.evaluate': {
-        const { dialecticState, context: evalContext } = (cmd as DialecticEvaluateCmd).payload;
+        const { dialecticState, context: evalContext } = (
+          cmd as DialecticEvaluateCmd
+        ).payload;
 
         // Create an Aspect to represent this dialectic relation
         const aspect = FormAspect.create({
@@ -198,10 +192,11 @@ export class AspectEngine {
 
         // Extract RELATIONAL STRUCTURE from moments
         // 'opposite', 'mediates', 'transforms', 'negates' show the essential relations
-        const relationalMoments = dialecticState.moments
-          .filter(m => m.relation !== undefined);
+        const relationalMoments = dialecticState.moments.filter(
+          (m) => m.relation !== undefined,
+        );
 
-        const relations = relationalMoments.map(m => ({
+        const relations = relationalMoments.map((m) => ({
           from: m.name,
           to: m.relatedTo,
           relation: m.relation,
@@ -210,30 +205,34 @@ export class AspectEngine {
 
         // Extract SPECTRAL POLES from polarities
         // Polarities are the "spectrum" - the range of appearing
-        const polarities = dialecticState.moments
-          .filter(m => m.type === 'polarity' || m.type === 'negation');
+        const polarities = dialecticState.moments.filter(
+          (m) => m.type === 'polarity' || m.type === 'negation',
+        );
 
         const spectrum = {
-          poles: polarities.map(p => ({
+          poles: polarities.map((p) => ({
             name: p.name,
             definition: p.definition,
             oppositeTo: p.relatedTo,
           })),
           range: polarities.length,
-          dialectical: polarities.some(p => p.relation === 'opposite'),
+          dialectical: polarities.some((p) => p.relation === 'opposite'),
         };
 
         // Extract APPEARING STRUCTURE from forces
         // Forces show how the relation "appears" - steps into existence
-        const appearingForces = (dialecticState.forces ?? [])
-          .filter(f => f.type === 'externality' || f.type === 'reflection' || f.type === 'passover');
+        const appearingForces = (dialecticState.forces ?? []).filter(
+          (f) =>
+            f.type === 'externality' ||
+            f.type === 'reflection' ||
+            f.type === 'passover',
+        );
 
         const appearing = {
-          mode: appearingForces.length > 0
-            ? appearingForces[0].type
-            : 'immanent',
-          triggers: appearingForces.map(f => f.trigger),
-          effects: appearingForces.map(f => f.effect),
+          mode:
+            appearingForces.length > 0 ? appearingForces[0].type : 'immanent',
+          triggers: appearingForces.map((f) => f.trigger),
+          effects: appearingForces.map((f) => f.effect),
         };
 
         // The Essential Relation connects Entity (Thing) <-> Property (Law)
@@ -246,7 +245,8 @@ export class AspectEngine {
           // How it appears
           appearing,
           // Grounded in (reference to Morph/Ground)
-          groundedIn: evalContext?.groundId ?? dialecticState.previousStates?.[0],
+          groundedIn:
+            evalContext?.groundId ?? dialecticState.previousStates?.[0],
         };
 
         // Store in signature: the relational moments
@@ -276,7 +276,7 @@ export class AspectEngine {
           // Appearing mode
           appearing,
           // Invariants as constraints on the relation
-          constraints: dialecticState.invariants.map(inv => ({
+          constraints: dialecticState.invariants.map((inv) => ({
             id: inv.id,
             constraint: inv.constraint,
             predicate: inv.predicate,

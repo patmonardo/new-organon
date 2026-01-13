@@ -6,9 +6,9 @@
 
 - **Reflection** is the container-side triad of the form engine: **Shape / Context / Morph**.
 - **Shape** is the moment of **Active Consciousness**.
-- **Context** is the moment of **Active Determination-of-Reflection** (a determination *within* Reflection; not “Reflection itself”).
+- **Context** is the moment of **Active Determination-of-Reflection** (a determination _within_ Reflection; not “Reflection itself”).
 - **Morph** is the moment of **Active Ground**.
-  - “Morph” here means *grounding transformation / grounding movement*.
+  - “Morph” here means _grounding transformation / grounding movement_.
   - It is **not** intended to imply a mathematical morphism.
 
 ## Kernel boundary (Pure Form presupposed)
@@ -46,6 +46,12 @@ Our target is **beyond RDF** in the sense that we treat graph form as a vehicle 
 - **Absolute Form** (Procedure/ML/Form in GDS) therefore operates by representing and transforming these triadic datasets **as graphs**.
 
 RelativeForm does not decide what counts as “Scientific”; it produces determinate reflective acts (judgments, traces, projections) that the kernel can accept/reject/transform into scientific form.
+
+## Naming note: Repo ≡ Representation Record
+
+- `*Repo` means the **representation record**: the schema-validated live shape that engines, nexus classes, and repos exchange. It is intentionally named “Repo” (not “Type”) to emphasize it is the persistence- and transport-ready record, not a runtime behavior container.
+- “Record” and “Repo” are synonymous here; “Repo” avoids conflating with runtime state in the engine.
+- Nexus classes (`FormShape`, `FormEntity`, etc.) wrap the `*Repo` record, add behavior/mutators, and expose `fromRecord`/`toRecord` to bridge schema ↔ runtime ↔ persistence.
 
 ## Method: nearest principle
 
@@ -168,8 +174,8 @@ In Kant’s terms: the Universal Pure Reason branch of our knowledge (Concept) i
 
 We distinguish two stores (even if they converge in the long run):
 
-- **FactStore (Reflection-side)**: the store of *facts* in the Kant–Hegel sense — discursive, aspectual determinations (what can be said, traced, revised). This is the natural persistence target for RelativeForm engines.
-- **KnowledgeStore (Science/Universal-side)**: the store of *promoted* determinations — relations/truth-steps that are worthy of inclusion in a Universal “encyclopedia” surface.
+- **FactStore (Reflection-side)**: the store of _facts_ in the Kant–Hegel sense — discursive, aspectual determinations (what can be said, traced, revised). This is the natural persistence target for RelativeForm engines.
+- **KnowledgeStore (Science/Universal-side)**: the store of _promoted_ determinations — relations/truth-steps that are worthy of inclusion in a Universal “encyclopedia” surface.
 
 Narratively, “KnowledgeStore” is often the better name than “Encyclopedia” (less grandiose, more operational), but they point at the same destination: a universal body of promoted knowledge.
 

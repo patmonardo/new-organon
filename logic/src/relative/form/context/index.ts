@@ -1,4 +1,3 @@
-export * from "./context-form";
-export * from "./context-engine";
-export * from "./context-service";
-export * from './phenomenology';
+export * from './context-form';
+export * from './context-engine';
+export * from './context-service';

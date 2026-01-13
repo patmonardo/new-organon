@@ -4,7 +4,7 @@ import { InMemoryEventBus } from '@absolute';
 import { startTrace, childSpan } from '@absolute';
 import { InMemoryRepository } from '@repository';
 import { FormShapeRepository } from '@repository';
-import type { FormShape as RepoFormShape } from '@schema/form';
+import type { FormShapeRepo } from '@schema/form';
 import { FormShapeSchema } from '@schema/form';
 import { FormShape } from './shape-form';
 import { ActiveShape } from '@schema';
@@ -20,7 +20,7 @@ import type {
   DialecticForceApplyCmd,
   DialecticInvariantCheckCmd,
   DialecticEvaluateCmd,
-  DialecticCommand
+  DialecticCommand,
 } from '@schema';
 
 type BaseState = Record<string, unknown>;
@@ -92,13 +92,15 @@ export type ShapeCommand =
   | DialecticCommand;
 
 // Direct wiring: accept FormShapeRepository (Neo4j) or InMemoryRepository<FormShape> (testing)
-type FormShapeRepo = FormShapeRepository | InMemoryRepository<typeof FormShapeSchema>;
+type FormShapeStore =
+  | FormShapeRepository
+  | InMemoryRepository<typeof FormShapeSchema>;
 
 export class ShapeEngine {
   private readonly shapes = new Map<string, FormShape>();
 
   constructor(
-    private readonly repo?: FormShapeRepo,
+    private readonly repo?: FormShapeStore,
     private readonly bus: EventBus = new InMemoryEventBus(),
     private readonly scope: string = 'shape',
   ) {}
@@ -132,7 +134,7 @@ export class ShapeEngine {
       const repoShape = await this.repo.getFormById(id);
       if (!repoShape) return undefined;
       // Convert repository FormShape to dialectical FormShape class
-      return this.repoFormShapeToFormShape(repoShape);
+      return this.repoRecordToFormShape(repoShape as FormShapeRepo);
     }
 
     // Otherwise it's InMemoryRepository
@@ -140,16 +142,16 @@ export class ShapeEngine {
       const doc = await this.repo.get(id);
       if (!doc) return undefined;
       // InMemoryRepository stores FormShape schema type
-      return this.repoFormShapeToFormShape(doc as RepoFormShape);
+      return this.repoRecordToFormShape(doc as FormShapeRepo);
     }
 
     return undefined;
   }
 
-  private repoFormShapeToFormShape(repoShape: RepoFormShape): FormShape {
+  private repoRecordToFormShape(repoShape: FormShapeRepo): FormShape {
     // Convert repository FormShape to dialectical FormShape class
     // FormShape class now works directly with FormShapeSchema
-    return FormShape.from(repoShape);
+    return FormShape.fromRecord(repoShape);
   }
 
   private emit(base: any, kind: Event['kind'], payload: Event['payload']) {
@@ -178,7 +180,8 @@ export class ShapeEngine {
 
     const tags: DiscursiveRuleTag[] = [];
     const add = (t: DiscursiveRuleTag) => {
-      if (!tags.some((x) => x.layer === t.layer && x.rule === t.rule)) tags.push(t);
+      if (!tags.some((x) => x.layer === t.layer && x.rule === t.rule))
+        tags.push(t);
     };
 
     // Minimal explicit mapping by engine verb
@@ -188,7 +191,7 @@ export class ShapeEngine {
 
     // Heuristic lift from the underlying CRUD-ish shape structure (fields/layout/name)
     const s = this.shapes.get(id);
-    const inferred = inferReflectionRulesFromCrudFormShape(s?.toSchema());
+    const inferred = inferReflectionRulesFromCrudFormShape(s?.toRecord());
     for (const r of inferred) add({ layer: 'shape', rule: r });
 
     return {
@@ -213,7 +216,7 @@ export class ShapeEngine {
     if (!this.repo) return;
 
     // Convert dialectical FormShape to repository FormShape
-    const repoShape = this.formShapeToRepoFormShape(s);
+    const repoShape = this.formShapeToRepoRecord(s);
 
     // Check if it's FormShapeRepository (Neo4j)
     if (this.repo instanceof FormShapeRepository) {
@@ -233,10 +236,10 @@ export class ShapeEngine {
     }
   }
 
-  private formShapeToRepoFormShape(formShape: FormShape): RepoFormShape {
+  private formShapeToRepoRecord(formShape: FormShape): FormShapeRepo {
     // Convert dialectical FormShape class to repository FormShape type
     // FormShape class now works directly with FormShapeSchema, so just return it
-    return formShape.toSchema();
+    return formShape.toRecord();
   }
 
   async handle(cmd: ShapeCommand | Command): Promise<Event[]> {
@@ -361,18 +364,22 @@ export class ShapeEngine {
       // --- Dialectic IR Handlers ---
 
       case 'dialectic.state.transition': {
-        const { fromStateId, toStateId, dialecticState } = (cmd as DialecticStateTransitionCmd).payload;
+        const { fromStateId, toStateId, dialecticState } = (
+          cmd as DialecticStateTransitionCmd
+        ).payload;
 
         // Get the current shape (represents fromState)
         const fromShape = await this.mustGet(fromStateId);
         const fromDialecticState = fromShape.getDialecticState();
 
         if (!fromDialecticState) {
-             throw new Error(`Source shape ${fromStateId} has no dialectic state`);
+          throw new Error(`Source shape ${fromStateId} has no dialectic state`);
         }
 
         // Apply transition logic
-        const transition = fromDialecticState.transitions?.find(t => t.to === toStateId);
+        const transition = fromDialecticState.transitions?.find(
+          (t) => t.to === toStateId,
+        );
         if (!transition) {
           throw new Error(`No transition from ${fromStateId} to ${toStateId}`);
         }
@@ -384,7 +391,6 @@ export class ShapeEngine {
         // If dialecticState is the TARGET state, we shouldn't merge it into FROM shape.
 
         // Let's fix that too. We should only update TO shape with the new state.
-
 
         // Create or update target shape
         let toShape = await this.getShape(toStateId);
@@ -484,7 +490,8 @@ export class ShapeEngine {
       }
 
       case 'dialectic.invariant.check': {
-        const { stateId, invariants } = (cmd as DialecticInvariantCheckCmd).payload;
+        const { stateId, invariants } = (cmd as DialecticInvariantCheckCmd)
+          .payload;
         const shape = await this.mustGet(stateId);
 
         const violations: Event[] = [];
@@ -500,7 +507,7 @@ export class ShapeEngine {
                 stateId,
                 invariant: inv.id,
                 reason: 'Constraint not satisfied',
-              })
+              }),
             );
           }
         }
@@ -518,7 +525,8 @@ export class ShapeEngine {
       }
 
       case 'dialectic.evaluate': {
-        const { dialecticState, context } = (cmd as DialecticEvaluateCmd).payload;
+        const { dialecticState, context } = (cmd as DialecticEvaluateCmd)
+          .payload;
 
         // Create a shape to represent this dialectic state
         const shape = FormShape.create({

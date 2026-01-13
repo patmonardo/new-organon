@@ -1,27 +1,20 @@
+import { z } from 'zod';
 import type { Command, Event } from '@absolute';
 import type { EventBus } from '@absolute';
 import { InMemoryEventBus } from '@absolute';
 import { startTrace, childSpan } from '@absolute';
-import type { Repository } from '@repository';
 import { FormProperty } from './property-form';
 
-import {
-  type Property,
-  PropertySchema,
-  createProperty,
-} from '@schema';
-import { toDialecticalInfo, type DiscursiveRuleTag } from '@schema';
+import { toDialecticalInfo, type DiscursiveRuleTag, BaseState } from '@schema';
 import * as active from '@schema';
-import type {
-  DialecticEvaluateCmd,
-  DialecticCommand,
-} from '@schema';
+import type { DialecticEvaluateCmd, DialecticCommand } from '@schema';
+import { PropertyShapeSchema, type PropertyShapeRepo } from '@schema/property';
 
-type BaseState = Property['shape']['state'];
+type BaseStateShape = z.infer<typeof BaseState>;
 
 export type PropertyCreateCmd = {
   kind: 'property.create';
-  payload: Parameters<typeof createProperty>[0];
+  payload: Parameters<typeof FormProperty.create>[0];
   meta?: Record<string, unknown>;
 };
 export type PropertyDeleteCmd = {
@@ -41,12 +34,12 @@ export type PropertySetCoreCmd = {
 };
 export type PropertySetStateCmd = {
   kind: 'property.setState';
-  payload: { id: string; state: BaseState };
+  payload: { id: string; state: BaseStateShape };
   meta?: Record<string, unknown>;
 };
 export type PropertyPatchStateCmd = {
   kind: 'property.patchState';
-  payload: { id: string; patch: Partial<BaseState> };
+  payload: { id: string; patch: Partial<BaseStateShape> };
   meta?: Record<string, unknown>;
 };
 
@@ -59,9 +52,15 @@ export type PropertyCommand =
   | PropertyPatchStateCmd
   | DialecticCommand;
 
+export type PropertyStore = {
+  getPropertyById(id: string): Promise<PropertyShapeRepo | null>;
+  saveProperty(data: Partial<PropertyShapeRepo>): Promise<PropertyShapeRepo>;
+  deleteProperty?(id: string): Promise<boolean>;
+};
+
 export class PropertyEngine {
   constructor(
-    private readonly repo: Repository<Property>,
+    private readonly repo: PropertyStore,
     private readonly bus: EventBus = new InMemoryEventBus(),
     private readonly scope: string = 'property',
   ) {}
@@ -71,8 +70,10 @@ export class PropertyEngine {
   }
 
   async getProperty(id: string): Promise<FormProperty | undefined> {
-    const doc = await this.repo.get(id);
-    return doc ? FormProperty.fromSchema(doc) : undefined;
+    const doc = await this.repo.getPropertyById(id);
+    return doc
+      ? FormProperty.fromRecord(PropertyShapeSchema.parse(doc))
+      : undefined;
   }
 
   private emit(base: any, kind: Event['kind'], payload: Event['payload']) {
@@ -120,14 +121,7 @@ export class PropertyEngine {
   }
 
   private async persist(p: FormProperty) {
-    const id = p.id;
-    const doc = PropertySchema.parse(p.toSchema());
-    const current = await this.repo.get(id);
-    if (current) {
-      await this.repo.update(id, doc as any);
-    } else {
-      await this.repo.create(doc);
-    }
+    await this.repo.saveProperty(p.toRecord());
   }
 
   async handle(cmd: PropertyCommand | Command): Promise<Event[]> {
@@ -140,8 +134,7 @@ export class PropertyEngine {
     switch (cmd.kind) {
       case 'property.create': {
         const { payload } = cmd as PropertyCreateCmd;
-        const created = PropertySchema.parse(createProperty(payload as any));
-        const p = FormProperty.fromSchema(created);
+        const p = FormProperty.create(payload as any);
         await this.persist(p);
         return [
           this.emit(base, 'property.create', {
@@ -154,9 +147,9 @@ export class PropertyEngine {
 
       case 'property.delete': {
         const { id } = (cmd as PropertyDeleteCmd).payload;
-        const existed = await this.repo.get(id);
-        if (existed) {
-          await this.repo.delete(id);
+        const existed = await this.repo.getPropertyById(id);
+        if (existed && this.repo.deleteProperty) {
+          await this.repo.deleteProperty(id);
         }
         return [this.emit(base, 'property.delete', { id, ok: !!existed })];
       }
@@ -193,22 +186,24 @@ export class PropertyEngine {
 
       case 'property.describe': {
         const { id } = (cmd as PropertyDescribeCmd).payload;
-        const doc = await this.repo.get(id);
+        const doc = await this.repo.getPropertyById(id);
         if (!doc) {
           return [this.emit(base, 'property.describe', { id })];
         }
 
-        const p = FormProperty.fromSchema(doc);
+        const p = FormProperty.fromRecord(PropertyShapeSchema.parse(doc));
         return [
           this.emit(base, 'property.describe', {
             id,
             type: p.type,
             name: p.name,
-            state: doc.shape.state,
+            state: doc.state,
             signatureKeys: Object.keys(
-              (doc.shape.signature ?? {}) as Record<string, unknown>,
+              (doc.signature ?? {}) as Record<string, unknown>,
             ),
-            facetsKeys: Object.keys(doc.shape.facets ?? {}),
+            facetsKeys: Object.keys(
+              (doc.facets ?? {}) as Record<string, unknown>,
+            ),
           }),
         ];
       }
@@ -219,7 +214,9 @@ export class PropertyEngine {
       // Property extracts: invariants, facticity grounds, mediating relations.
       // This is the living FactStore - marks of impure Dharmas.
       case 'dialectic.evaluate': {
-        const { dialecticState, context: evalContext } = (cmd as DialecticEvaluateCmd).payload;
+        const { dialecticState, context: evalContext } = (
+          cmd as DialecticEvaluateCmd
+        ).payload;
 
         // Create a Property to represent this dialectic invariant
         const prop = FormProperty.create({
@@ -230,23 +227,32 @@ export class PropertyEngine {
 
         // Extract INVARIANTS from the dialectic state
         // Each invariant becomes a scientific law - what must hold
-        const invariants = dialecticState.invariants.map(inv => ({
+        const invariants = dialecticState.invariants.map((inv) => ({
           id: inv.id,
           constraint: inv.constraint,
           predicate: inv.predicate,
-          universality: inv.conditions && inv.conditions.length > 0 ? 'conditional' : 'necessary',
+          universality:
+            inv.conditions && inv.conditions.length > 0
+              ? 'conditional'
+              : 'necessary',
         }));
 
         // Extract FACTICITY from moments
         // Moments that ground the property - the evidence/witnesses
         // 'polarity' and 'negation' moments are the dialectical grounds
-        const groundingMoments = dialecticState.moments
-          .filter(m => m.type === 'polarity' || m.type === 'negation' || m.type === 'mediation');
+        const groundingMoments = dialecticState.moments.filter(
+          (m) =>
+            m.type === 'polarity' ||
+            m.type === 'negation' ||
+            m.type === 'mediation',
+        );
 
         const facticity = {
-          grounds: groundingMoments.map(m => m.name),
-          conditions: dialecticState.invariants.flatMap(inv => inv.conditions ?? []),
-          evidence: groundingMoments.map(m => ({
+          grounds: groundingMoments.map((m) => m.name),
+          conditions: dialecticState.invariants.flatMap(
+            (inv) => inv.conditions ?? [],
+          ),
+          evidence: groundingMoments.map((m) => ({
             name: m.name,
             definition: m.definition,
             type: m.type,
@@ -256,12 +262,15 @@ export class PropertyEngine {
         // Extract MEDIATION structure
         // Property mediates Entity↔Aspect (Thing↔Relation)
         // 'mediates' and 'transforms' relations show this structure
-        const mediatingMoments = dialecticState.moments
-          .filter(m => m.relation === 'mediates' || m.relation === 'transforms');
+        const mediatingMoments = dialecticState.moments.filter(
+          (m) => m.relation === 'mediates' || m.relation === 'transforms',
+        );
 
         const mediates = {
-          fromEntities: mediatingMoments.map(m => m.name),
-          toAspects: mediatingMoments.map(m => m.relatedTo).filter(Boolean) as string[],
+          fromEntities: mediatingMoments.map((m) => m.name),
+          toAspects: mediatingMoments
+            .map((m) => m.relatedTo)
+            .filter(Boolean) as string[],
         };
 
         // Store in signature: the moments as the invariant's structure
@@ -284,7 +293,11 @@ export class PropertyEngine {
           // The Law as scientific invariant
           law: {
             invariants,
-            universality: invariants.every(i => i.universality === 'necessary') ? 'necessary' : 'conditional',
+            universality: invariants.every(
+              (i) => i.universality === 'necessary',
+            )
+              ? 'necessary'
+              : 'conditional',
           },
           // Facticity - the living FactStore
           facticity,
@@ -304,7 +317,11 @@ export class PropertyEngine {
             kind: 'property',
             invariantCount: invariants.length,
             groundCount: facticity.grounds.length,
-            universality: invariants.every(i => i.universality === 'necessary') ? 'necessary' : 'conditional',
+            universality: invariants.every(
+              (i) => i.universality === 'necessary',
+            )
+              ? 'necessary'
+              : 'conditional',
           }),
         ];
       }

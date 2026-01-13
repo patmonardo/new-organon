@@ -9,9 +9,10 @@ import { PropertyShapeRepository } from '../../src/repository/property';
 const neo4jOk = await defaultConnection.verifyConnectivity();
 
 describe.skipIf(!neo4jOk)('Integration Tests with Seeded Data', () => {
-  const { shapeEngine, entityEngine, formShapeRepo, entityShapeRepo } = createFormDb({
-    connection: defaultConnection,
-  });
+  const { shapeEngine, entityEngine, formShapeRepo, entityShapeRepo } =
+    createFormDb({
+      connection: defaultConnection,
+    });
 
   const formRepo = formShapeRepo;
   const entityRepo = entityShapeRepo;
@@ -47,7 +48,7 @@ describe.skipIf(!neo4jOk)('Integration Tests with Seeded Data', () => {
     it('should find all forms via repository', async () => {
       const forms = await formRepo.findForms({});
       expect(forms.length).toBeGreaterThanOrEqual(3);
-      const formIds = forms.map(f => f.id);
+      const formIds = forms.map((f) => f.id);
       expect(formIds).toContain('invoice-form');
       expect(formIds).toContain('customer-form');
       expect(formIds).toContain('product-form');
@@ -56,7 +57,7 @@ describe.skipIf(!neo4jOk)('Integration Tests with Seeded Data', () => {
     it('should find forms by tags', async () => {
       const billingForms = await formRepo.findForms({ tags: ['billing'] });
       expect(billingForms.length).toBeGreaterThan(0);
-      expect(billingForms.some(f => f.id === 'invoice-form')).toBe(true);
+      expect(billingForms.some((f) => f.id === 'invoice-form')).toBe(true);
     });
   });
 
@@ -86,8 +87,12 @@ describe.skipIf(!neo4jOk)('Integration Tests with Seeded Data', () => {
     });
 
     it('should find entities by formId', async () => {
-      const customers = await entityRepo.findEntities({ type: 'system.Entity' });
-      const customerEntities = customers.filter(e => e.formId === 'customer-form');
+      const customers = await entityRepo.findEntities({
+        type: 'system.Entity',
+      });
+      const customerEntities = customers.filter(
+        (e) => e.formId === 'customer-form',
+      );
       expect(customerEntities.length).toBeGreaterThanOrEqual(3);
     });
 
@@ -120,7 +125,7 @@ describe.skipIf(!neo4jOk)('Integration Tests with Seeded Data', () => {
           RETURN inv.id as invoiceId
           ORDER BY invoiceId
         `);
-        const invoiceIds = result.records.map(r => r.get('invoiceId'));
+        const invoiceIds = result.records.map((r) => r.get('invoiceId'));
         expect(invoiceIds.length).toBeGreaterThanOrEqual(2);
         expect(invoiceIds).toContain('invoice-1');
         expect(invoiceIds).toContain('invoice-2');
@@ -165,25 +170,31 @@ describe.skipIf(!neo4jOk)('Integration Tests with Seeded Data', () => {
 
   describe('Context & Property (Seeded - Optional)', () => {
     it('should load invoice management context if seeded', async () => {
-      const context = await contextRepo.getContextById('context-invoice-management');
+      const context = await contextRepo.getContextById(
+        'context-invoice-management',
+      );
       if (context) {
-        expect(context.core.id).toBe('context-invoice-management');
-        expect(context.core.name).toBe('Invoice Management Context');
-        expect(context.entities.length).toBeGreaterThan(0);
+        expect(context.id).toBe('context-invoice-management');
+        expect(context.name).toBe('Invoice Management Context');
+        expect((context.entities ?? []).length).toBeGreaterThan(0);
       } else {
         console.log('⚠️  Context not seeded - run pnpm seed:reflective first');
       }
     });
 
     it('should load product catalog context if seeded', async () => {
-      const context = await contextRepo.getContextById('context-product-catalog');
+      const context = await contextRepo.getContextById(
+        'context-product-catalog',
+      );
       if (context) {
-        expect(context.core.name).toBe('Product Catalog Context');
+        expect(context.name).toBe('Product Catalog Context');
       }
     });
 
     it('should load invoice-customer relationship property if seeded', async () => {
-      const property = await propertyRepo.getPropertyById('property-invoice-customer-law');
+      const property = await propertyRepo.getPropertyById(
+        'property-invoice-customer-law',
+      );
       if (property) {
         expect(property.id).toBe('property-invoice-customer-law');
         expect(property.facets?.law).toBeDefined();
@@ -192,9 +203,13 @@ describe.skipIf(!neo4jOk)('Integration Tests with Seeded Data', () => {
     });
 
     it('should verify property reflects on context if seeded', async () => {
-      const property = await propertyRepo.getPropertyById('property-invoice-customer-law');
+      const property = await propertyRepo.getPropertyById(
+        'property-invoice-customer-law',
+      );
       if (property) {
-        expect(property.facets?.context?.contextId).toBe('context-invoice-management');
+        expect(property.facets?.context?.contextId).toBe(
+          'context-invoice-management',
+        );
       }
     });
   });
@@ -225,22 +240,29 @@ describe.skipIf(!neo4jOk)('Integration Tests with Seeded Data', () => {
       expect(entity?.formId).toBe(form?.id);
 
       // 3. Load Context (Reflection on Form/Entity) - optional
-      const context = await contextRepo.getContextById('context-invoice-management');
+      const context = await contextRepo.getContextById(
+        'context-invoice-management',
+      );
       if (context) {
-        expect(context.entities.some(e => e.id === entity?.id)).toBe(true);
+        expect((context.entities ?? []).some((e) => e.id === entity?.id)).toBe(
+          true,
+        );
 
         // 4. Load Property (Grounding laws) - optional
-        const property = await propertyRepo.getPropertyById('property-invoice-customer-law');
+        const property = await propertyRepo.getPropertyById(
+          'property-invoice-customer-law',
+        );
         if (property) {
-          expect(property.facets?.context?.contextId).toBe(context.core.id);
+          expect(property.facets?.context?.contextId).toBe(context.id);
 
           // This demonstrates the full Organic Unity:
           // Form (Rational) → Entity (Empirical) → Context (Reflection) → Property (Grounding)
         }
       } else {
-        console.log('⚠️  Reflective system not seeded - run pnpm seed:reflective to test full flow');
+        console.log(
+          '⚠️  Reflective system not seeded - run pnpm seed:reflective to test full flow',
+        );
       }
     });
   });
 });
-

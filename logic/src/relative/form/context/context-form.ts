@@ -1,198 +1,237 @@
-import { z } from "zod";
-import {
-  ContextSchema,
-  type Context,
-  ContextCore,
-  ContextState,
-  createContext as createContextDoc,
-  updateContext as updateContextDoc,
-} from '@schema';
-import { EntityRef } from '@schema';
-import { Id } from '@schema';
+import { z } from 'zod';
+import { BaseState, EntityRef, Id, Type } from '@schema';
+import { ContextShapeSchema, type ContextShapeRepo } from '@schema/context';
 
-type BaseState = Context["shape"]["state"];
+type BaseStateShape = z.infer<typeof BaseState>;
 
 export class FormContext {
-  private doc: Context;
+  private _doc: ContextShapeRepo;
 
-  private constructor(doc: Context) {
-    this.doc = ContextSchema.parse(doc);
+  private constructor(doc: ContextShapeRepo) {
+    this._doc = ContextShapeSchema.parse(doc);
   }
 
-  // Factory: create a new Context (schema defaults/validation applied)
+  // Factory: create from inputs (validated)
   static create(input: {
-    type: z.input<typeof ContextCore.shape.type>;
+    type: z.input<typeof Type>;
     id?: string;
-    name?: z.input<typeof ContextCore.shape.name>;
-    description?: z.input<typeof ContextCore.shape.description>;
-    state?: z.input<typeof ContextState>;
-    entities?: z.input<typeof EntityRef>[];
-    relations?: z.input<typeof Id>[];
-    version?: string;
-    ext?: Record<string, unknown>;
+    name?: string;
+    description?: string;
+    state?: z.input<typeof BaseState>;
+    entities?: Array<z.input<typeof EntityRef>>;
+    relations?: Array<z.input<typeof Id>>;
+    signature?: Record<string, unknown>;
+    facets?: Record<string, unknown>;
   }): FormContext {
-    const doc = createContextDoc(input as any);
+    const now = Date.now();
+    const doc: ContextShapeRepo = {
+      id:
+        input.id ?? `context:${now}:${Math.random().toString(36).slice(2, 10)}`,
+      type: Type.parse(input.type),
+      name: input.name,
+      description: input.description,
+      state: BaseState.parse(input.state ?? {}),
+      entities: (input.entities ?? []).map((e) => EntityRef.parse(e)),
+      relations: (input.relations ?? []).map((r) => Id.parse(r)),
+      signature: input.signature,
+      facets: input.facets ?? {},
+      createdAt: now,
+      updatedAt: now,
+    };
     return new FormContext(doc);
   }
 
-  // Factory: wrap an existing schema doc (or input parsed to one)
-  static from(input: z.input<typeof ContextSchema> | Context): FormContext {
-    const doc = ContextSchema.parse(input as any);
-    return new FormContext(doc);
-  }
-  static fromSchema(doc: Context): FormContext {
-    return new FormContext(doc);
+  // Factory: wrap an existing repo record (validates)
+  static fromRecord(doc: ContextShapeRepo): FormContext {
+    return new FormContext(ContextShapeSchema.parse(doc));
   }
 
-  // Access underlying schema doc
-  toSchema(): Context {
-    return this.doc;
-  }
-  toJSON(): Context {
-    return this.doc;
+  // Compatibility alias
+  static from(doc: ContextShapeRepo): FormContext {
+    return FormContext.fromRecord(doc);
   }
 
-  // Basic getters
-  get id(): string { return this.doc.shape.core.id; }
-  get type(): string { return this.doc.shape.core.type as string; }
-  get name(): string | undefined { return this.doc.shape.core.name; }
-  get description(): string | undefined { return this.doc.shape.core.description; }
-  get createdAt(): string { return this.doc.shape.core.createdAt; }
-  get updatedAt(): string { return this.doc.shape.core.updatedAt; }
-  get revision(): number { return this.doc.revision; }
-  get version(): string | undefined { return this.doc.version; }
+  toRecord(): ContextShapeRepo {
+    return this._doc;
+  }
 
-  // State (open map via BaseState)
-  get state(): BaseState { return this.doc.shape.state; }
+  toSchema(): ContextShapeRepo {
+    return this.toRecord();
+  }
 
-  // Core/state mutators (schema-safe)
+  toJSON(): ContextShapeRepo {
+    return this._doc;
+  }
+
+  // Getters
+  get id(): string {
+    return this._doc.id;
+  }
+  get type(): string {
+    return this._doc.type;
+  }
+  get name(): string | undefined {
+    return this._doc.name;
+  }
+  get description(): string | undefined {
+    return this._doc.description;
+  }
+  get state(): BaseStateShape {
+    return (this._doc.state ?? {}) as BaseStateShape;
+  }
+  get entities() {
+    return this._doc.entities ?? [];
+  }
+  get relations() {
+    return this._doc.relations ?? [];
+  }
+  get signature(): Record<string, unknown> | undefined {
+    return this._doc.signature as Record<string, unknown> | undefined;
+  }
+  get facets(): Record<string, unknown> | undefined {
+    return this._doc.facets as Record<string, unknown> | undefined;
+  }
+  get createdAt(): number | undefined {
+    return this._doc.createdAt;
+  }
+  get updatedAt(): number | undefined {
+    return this._doc.updatedAt;
+  }
+
+  // Mutators
   setCore(core: { name?: string; type?: string }): this {
-    this.doc = updateContextDoc(this.doc, {
-      core: {
-        ...(core.name !== undefined ? { name: core.name } : {}),
-        ...(core.type !== undefined ? { type: core.type } : {}),
-      },
-    });
-    return this;
-  }
-  setName(name?: string): this {
-    this.doc = updateContextDoc(this.doc, { core: { name } });
-    return this;
-  }
-  setDescription(description?: string): this {
-    this.doc = updateContextDoc(this.doc, { core: { description } });
-    return this;
-  }
-  setState(state: BaseState): this {
-    this.doc = updateContextDoc(this.doc, { state } as any);
-    return this;
-  }
-  patchState(patch: Partial<BaseState>): this {
-    this.doc = updateContextDoc(this.doc, { state: patch } as any);
+    this._doc = {
+      ...this._doc,
+      name: core.name !== undefined ? core.name : this._doc.name,
+      type: core.type !== undefined ? core.type : this._doc.type,
+      updatedAt: Date.now(),
+    };
     return this;
   }
 
-  // Membership: entities
+  setState(state: BaseStateShape): this {
+    this._doc = {
+      ...this._doc,
+      state: BaseState.parse(state ?? {}),
+      updatedAt: Date.now(),
+    };
+    return this;
+  }
+
+  patchState(patch: Partial<BaseStateShape>): this {
+    const current = (this._doc.state ?? {}) as BaseStateShape;
+    this._doc = {
+      ...this._doc,
+      state: BaseState.parse({ ...current, ...patch }),
+      updatedAt: Date.now(),
+    };
+    return this;
+  }
+
   addEntity(ref: z.input<typeof EntityRef>): this {
     const parsed = EntityRef.parse(ref);
     const key = `${parsed.type}:${parsed.id}`;
-    const exists = new Set(this.doc.shape.entities.map(e => `${e.type}:${e.id}`));
-    if (!exists.has(key)) {
-      this.doc = updateContextDoc(this.doc, { entities: [...this.doc.shape.entities, parsed] });
+    const existing = new Set(
+      (this._doc.entities ?? []).map((e) => `${e.type}:${e.id}`),
+    );
+    if (!existing.has(key)) {
+      this._doc = {
+        ...this._doc,
+        entities: [...(this._doc.entities ?? []), parsed],
+        updatedAt: Date.now(),
+      };
     }
     return this;
   }
-  addEntities(refs: z.input<typeof EntityRef>[]): this {
-    const exists = new Set(this.doc.shape.entities.map(e => `${e.type}:${e.id}`));
-    const toAdd = (refs ?? []).map(r => EntityRef.parse(r)).filter(r => !exists.has(`${r.type}:${r.id}`));
-    if (toAdd.length > 0) {
-      this.doc = updateContextDoc(this.doc, { entities: [...this.doc.shape.entities, ...toAdd] });
+
+  addEntities(refs: Array<z.input<typeof EntityRef>>): this {
+    const existing = new Set(
+      (this._doc.entities ?? []).map((e) => `${e.type}:${e.id}`),
+    );
+    const toAdd = (refs ?? [])
+      .map((r) => EntityRef.parse(r))
+      .filter((r) => !existing.has(`${r.type}:${r.id}`));
+    if (toAdd.length) {
+      this._doc = {
+        ...this._doc,
+        entities: [...(this._doc.entities ?? []), ...toAdd],
+        updatedAt: Date.now(),
+      };
     }
     return this;
   }
+
   removeEntity(ref: z.input<typeof EntityRef>): this {
     const parsed = EntityRef.parse(ref);
-    const next = this.doc.shape.entities.filter(e => !(e.id === parsed.id && e.type === parsed.type));
-    if (next.length !== this.doc.shape.entities.length) {
-      this.doc = updateContextDoc(this.doc, { entities: next });
-    }
+    const next = (this._doc.entities ?? []).filter(
+      (e) => !(e.id === parsed.id && e.type === parsed.type),
+    );
+    this._doc = { ...this._doc, entities: next, updatedAt: Date.now() };
     return this;
   }
-  clearEntities(): this {
-    if (this.doc.shape.entities.length) {
-      this.doc = updateContextDoc(this.doc, { entities: [] });
+
+  addRelation(rel: z.input<typeof Id>): this {
+    const parsed = Id.parse(rel);
+    const relations = this._doc.relations ?? [];
+    if (!relations.includes(parsed)) {
+      this._doc = {
+        ...this._doc,
+        relations: [...relations, parsed],
+        updatedAt: Date.now(),
+      };
     }
     return this;
   }
 
-  // Membership: relations (by id)
-  addRelation(id: z.input<typeof Id>): this {
-    if (!this.doc.shape.relations.includes(id)) {
-      this.doc = updateContextDoc(this.doc, { relations: [...this.doc.shape.relations, id] });
-    }
-    return this;
-  }
-  addRelations(ids: z.input<typeof Id>[]): this {
-    const set = new Set(this.doc.shape.relations);
-    const toAdd = (ids ?? []).filter(id => !set.has(id));
-    if (toAdd.length > 0) {
-      this.doc = updateContextDoc(this.doc, { relations: [...this.doc.shape.relations, ...toAdd] });
-    }
-    return this;
-  }
-  removeRelation(id: z.input<typeof Id>): this {
-    if (this.doc.shape.relations.includes(id)) {
-      const next = this.doc.shape.relations.filter(r => r !== id);
-      this.doc = updateContextDoc(this.doc, { relations: next });
-    }
-    return this;
-  }
-  clearRelations(): this {
-    if (this.doc.shape.relations.length) {
-      this.doc = updateContextDoc(this.doc, { relations: [] });
+  addRelations(rels: Array<z.input<typeof Id>>): this {
+    const existing = new Set(this._doc.relations ?? []);
+    const toAdd = (rels ?? [])
+      .map((r) => Id.parse(r))
+      .filter((r) => !existing.has(r));
+    if (toAdd.length) {
+      this._doc = {
+        ...this._doc,
+        relations: [...(this._doc.relations ?? []), ...toAdd],
+        updatedAt: Date.now(),
+      };
     }
     return this;
   }
 
-  // Signature / facets
-  setSignature(signature?: Record<string, unknown> | null): this {
-    // undefined -> preserve; null -> clear; object -> replace
-    if (signature === undefined) return this;
-    if (signature === null) {
-      this.doc = updateContextDoc(this.doc, { signature: null } as any);
-      return this;
-    }
-    this.doc = updateContextDoc(this.doc, { signature } as any);
+  removeRelation(rel: z.input<typeof Id>): this {
+    const parsed = Id.parse(rel);
+    const next = (this._doc.relations ?? []).filter((r) => r !== parsed);
+    this._doc = { ...this._doc, relations: next, updatedAt: Date.now() };
     return this;
   }
-  mergeSignature(patch: Record<string, unknown> | null | undefined): this {
-    if (!patch || Object.keys(patch).length === 0) return this;
-    const current = (this.doc.shape.signature ?? {}) as Record<string, unknown>;
-    this.doc = updateContextDoc(this.doc, { signature: { ...current, ...patch } } as any);
+
+  setSignature(signature?: Record<string, unknown>): this {
+    this._doc = { ...this._doc, signature, updatedAt: Date.now() };
     return this;
   }
-  setFacets(facets?: Record<string, unknown> | null): this {
-    // undefined -> preserve; null -> clear to {}; object -> replace
-    if (facets === undefined) return this;
-    if (facets === null) {
-      this.doc = updateContextDoc(this.doc, { facets: {} } as any);
-      return this;
-    }
-    this.doc = updateContextDoc(this.doc, { facets } as any);
+
+  mergeSignature(patch: Record<string, unknown>): this {
+    const current = (this._doc.signature ?? {}) as Record<string, unknown>;
+    this._doc = {
+      ...this._doc,
+      signature: { ...current, ...patch },
+      updatedAt: Date.now(),
+    };
     return this;
   }
-  mergeFacets(patch: Record<string, unknown> | null | undefined): this {
-    if (!patch || Object.keys(patch).length === 0) return this;
-    const current = (this.doc.shape.facets ?? {}) as Record<string, unknown>;
-    this.doc = updateContextDoc(this.doc, { facets: { ...current, ...patch } } as any);
+
+  setFacets(facets?: Record<string, unknown>): this {
+    this._doc = { ...this._doc, facets, updatedAt: Date.now() };
     return this;
   }
-  mergeFacet(ns: string, patch: Record<string, unknown> | null | undefined): this {
-    if (!ns || !patch || Object.keys(patch).length === 0) return this;
-    const all = (this.doc.shape.facets ?? {}) as Record<string, unknown>;
-    const prev = (all[ns] as Record<string, unknown>) ?? {};
-    const next = { ...prev, ...patch };
-    this.doc = updateContextDoc(this.doc, { facets: { ...all, [ns]: next } } as any);
+
+  mergeFacets(patch: Record<string, unknown>): this {
+    const current = (this._doc.facets ?? {}) as Record<string, unknown>;
+    this._doc = {
+      ...this._doc,
+      facets: { ...current, ...patch },
+      updatedAt: Date.now(),
+    };
     return this;
   }
 }
