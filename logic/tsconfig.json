@@ -37,7 +37,7 @@
   "exclude": [
     "src/**/*.test.ts",
     "src/**/*.spec.ts",
-    "src/relative/index.ts",
+    // "src/relative/index.ts",
     // "src/relative/form/**/*",
     "src/relative/form/morph/core",
     "src/relative/form/morph/form",
