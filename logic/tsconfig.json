@@ -46,6 +46,6 @@
     "src/relative/concept/**/*",
     "src/relative/essence/**/*",
     "src/relative/being/**/*",
-    "src/relative/types.ts",
+    "src/relative/types.ts"
   ]
 }

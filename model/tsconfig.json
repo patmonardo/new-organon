@@ -1,7 +1,7 @@
 {
   "extends": "../tsconfig.src.json",
   "compilerOptions": {
-    "rootDir": ".",
+    "rootDir": "src",
     "outDir": "dist",
     "baseUrl": ".",
     "jsx": "react-jsx",
@@ -9,7 +9,6 @@
       "node"
     ],
     "lib": [
-      "ES2022",
       "DOM",
       "DOM.Iterable"
     ],
@@ -54,12 +53,7 @@
   },
   "include": [
     "src/**/*.ts",
-    "src/**/*.tsx",
-    "prisma.config.ts",
-    "test/link.test.ts",
-    "test/list.test.ts"
+    "src/**/*.tsx"
   ],
-  "exclude": [
-    "examples/**/*"
-  ]
+  "exclude": []
 }

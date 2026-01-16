@@ -3,7 +3,11 @@
   "compilerOptions": {
     "baseUrl": ".",
     "jsx": "react-jsx",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "paths": {
       "@organon/gdsl": [
         "../../gdsl/dist/index"

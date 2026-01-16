@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
+    "target": "ESNext",
+    "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": [
-      "ES2022"
+      "ESNext"
     ],
     "strict": true,
     "forceConsistentCasingInFileNames": true,
@@ -17,7 +17,7 @@
     "composite": true,
     "incremental": true,
     "outDir": "dist",
-    "rootDir": ".",
+    "rootDir": "."
   },
   "include": [
     "**/*.test.ts",
