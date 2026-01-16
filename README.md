@@ -1,10 +1,12 @@
 # Organon
 
-Organon is a TypeScript-first monorepo exploring a practical stack for:
+Organon centers on the **GDS Kernel** (Rust) as the execution substrate, with TypeScript packages providing schemas, planning tools, and application-facing models that integrate with kernel outputs.
 
-- Encoding and validating a canonical knowledge graph (BEC)
-- Building application-facing models and data workflows (MVC)
-- Defining task/agent/workflow schemas for orchestration (TAW)
+The stack inverts a typical “TS-first” framing:
+
+- **GDS Kernel (Rust)** executes procedures, pipelines, and form processing.
+- **TypeScript workspace** defines schemas, planning/orchestration, and application-facing models.
+- **Eval → Print** is the boundary where kernel execution is rendered into IR/JSON/events/traces in TS space.
 
 License: GPL-3.0-only (GNU GPLv3). See [LICENSE](LICENSE).
 
@@ -19,36 +21,37 @@ The dialectical language (BEC/MVC/TAW) is used here as an architectural naming s
 - **Projection**: a graph context boundary (graph views, filters, materialized properties) used for execution.
 - **Projection Planning**: planning at the projection boundary (context-aware program assembly). Historically referred to as “ProjectEval”.
 
-- **Sublingual Kernel (GDS)**: Rust `gds/` as a non-discursive model of “absolute knowing” (lawful activity/constraint/compute), not a linguistic thinker.
-- **Discursive Understanding (TS)**: TypeScript user space (`gdsl/`, `logic/`, `model/`, `task/`) as the narration/judgment layer for humans.
-- **Eval → Print**: the boundary where sublingual execution is rendered into discursive artifacts (IR/JSON/events/traces) in TS space.
+- **Sublingual Kernel (GDS)**: Rust `gds/` as the execution engine and constraint layer.
+- **Discursive Understanding (TS)**: TypeScript user space (`gdsl/`, `logic/`, `model/`, `task/`) as schemas, planning, and application-facing models.
+- **Eval → Print**: the boundary where kernel execution is rendered into discursive artifacts (IR/JSON/events/traces) in TS space.
 
 Terminology policy: prefer “Planning/Execution” and avoid Lisp-style “Eval/Apply” in docs and design discussions.
 
 ## Repo layout (what lives where)
 
-### TypeScript / PNPM workspace (actively built)
-
-- `gdsl/` — **@organon/gdsl**: shared IR protocol and schema types (Zod)
-- `logic/` — **@organon/logic**: canonical graph encodings + validation/seed tooling
-- `task/` — **@organon/task**: Task/Agent/Workflow schemas (runtime is intentionally minimal)
-- `model/` — **@organon/model**: application-facing schemas + Prisma tooling
-- `model/examples/dashboard/` — `dashboard-v4`: Next.js example app wired with its own Prisma schema
-
-### Rust / Cargo workspace (separate from PNPM build)
+### GDS Kernel (Rust / Cargo workspace)
 
 - `gds/`, `reality/` — performance-oriented kernel crates and experiments
 
 Rust crates are not part of `pnpm -r build` right now (no stable JS binding). Build/test them with Cargo directly.
 
+### TypeScript / PNPM workspace (actively built)
+
+- `logic/` — **@organon/logic**: canonical graph encodings + validation/seed tooling
+- `model/` — **@organon/model**: application-facing schemas + Prisma tooling
+- `task/` — **@organon/task**: Task/Agent/Workflow schemas (runtime is intentionally minimal)
+- `model/examples/dashboard/` — `dashboard-v4`: Next.js example app wired with its own Prisma schema
+
 ## Architecture (current intent)
+
+**Execution lives in the GDS Kernel; planning/orchestration and app-facing models live in TypeScript.**
 
 Planning vs Execution split (high-level):
 
+- Rust `gds/` is execution-focused (procedures, pipelines, form processing kernels).
 - `logic/` is primarily the Planning substrate (schemas, invariants, validation, agent-facing reasoning tools).
 - `task/` is Planning orchestration shapes (Task/Agent/Workflow schemas).
 - `model/` is application-facing state + integration surface (schemas, Prisma workflows, example app).
-- Rust `gds/` is execution-focused (procedures, pipelines, form processing kernels).
 
 ### BEC — Logic layer (`logic/`)
 
@@ -68,7 +71,7 @@ The “MVC” layer is where knowledge becomes something you can ship:
 
 ### TAW — Orchestration schema layer (`task/`)
 
-The “TAW” layer defines the *shape* of work (not a full runtime yet):
+The “TAW” layer defines the _shape_ of work (not a full runtime yet):
 
 - Task — the unit of work
 - Agent — an executor with capabilities/health/assignment shape
@@ -116,10 +119,6 @@ pnpm --filter @organon/task test
 # model
 pnpm --filter @organon/model build
 pnpm --filter @organon/model test
-
-# gdsl (TS)
-pnpm --filter @organon/gdsl build
-pnpm --filter @organon/gdsl test
 ```
 
 ### Dashboard example (Next.js)

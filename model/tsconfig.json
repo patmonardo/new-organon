@@ -5,13 +5,15 @@
     "outDir": "dist",
     "baseUrl": ".",
     "jsx": "react-jsx",
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "lib": [
       "ES2022",
       "DOM",
       "DOM.Iterable"
     ],
-     "paths": {
+    "paths": {
       "@organon/logic": [
         "../logic/dist/index"
       ],
