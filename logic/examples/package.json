@@ -1,0 +1,24 @@
+{
+  "name": "@organon/logic-examples",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "prebuild": "pnpm -w --filter @organon/logic run codegen:dialectic || true",
+    "build": "tsc -b",
+    "clean": "rm -rf dist node_modules tsconfig.tsbuildinfo",
+    "dev": "tsc --watch",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest --watch",
+    "lint": "eslint . --cache || true",
+    "format": "prettier --write \"**/*.{ts,js,md,json,yml,yaml}\" --ignore-path .gitignore",
+    "doc:api": "typedoc --options typedoc.json"
+  },
+  "dependencies": {
+    "@organon/logic": "workspace:^"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.2",
+    "tsx": "^4.20.4"
+  }
+}

@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { GdsTsjsonResponseSchema } from '../src/schema';
+import { GdsTsjsonResponseSchema } from '@schema';
 
 // Resolve workspace root from src/examples to repo root (../../..)
 const WORKSPACE_ROOT = resolve(
