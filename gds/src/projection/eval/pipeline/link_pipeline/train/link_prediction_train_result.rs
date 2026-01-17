@@ -1,10 +1,7 @@
 // Phase 1.5: LinkPredictionTrainResult - Training output for link prediction
 
-use std::marker::PhantomData;
-
-// Note: placeholder types until the real training stack is wired in.
-pub type Classifier = PhantomData<()>;
-pub type TrainingStatistics = PhantomData<()>;
+use crate::ml::models::Classifier;
+use crate::ml::training::statistics::TrainingStatistics;
 
 /// Result of link prediction model training.
 ///
@@ -31,10 +28,10 @@ pub type TrainingStatistics = PhantomData<()>;
 /// 3. Track statistics → TrainingStatistics
 /// 4. Return → LinkPredictionTrainResult
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct LinkPredictionTrainResult {
     /// Trained binary classifier
-    classifier: Classifier,
+    classifier: Box<dyn Classifier>,
 
     /// Training metrics and convergence history
     training_statistics: TrainingStatistics,
@@ -47,7 +44,7 @@ impl LinkPredictionTrainResult {
     ///
     /// * `classifier` - Trained binary classification model
     /// * `training_statistics` - Training metrics and history
-    pub fn new(classifier: Classifier, training_statistics: TrainingStatistics) -> Self {
+    pub fn new(classifier: Box<dyn Classifier>, training_statistics: TrainingStatistics) -> Self {
         Self {
             classifier,
             training_statistics,
@@ -55,8 +52,12 @@ impl LinkPredictionTrainResult {
     }
 
     /// Returns the trained classifier.
-    pub fn classifier(&self) -> &Classifier {
-        &self.classifier
+    pub fn classifier(&self) -> &dyn Classifier {
+        &*self.classifier
+    }
+
+    pub fn into_classifier(self) -> Box<dyn Classifier> {
+        self.classifier
     }
 
     /// Returns the training statistics.
@@ -68,11 +69,59 @@ impl LinkPredictionTrainResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ml::metrics::classification::GlobalAccuracy;
+    use crate::ml::models::base::{BaseModelData, ClassifierData};
+    use crate::ml::models::training_method::TrainingMethod;
+    use std::any::Any;
 
     #[test]
     fn test_train_result_creation() {
-        let classifier = PhantomData;
-        let stats = PhantomData;
+        #[derive(Debug)]
+        struct TestClassifierData;
+
+        impl BaseModelData for TestClassifierData {
+            fn trainer_method(&self) -> TrainingMethod {
+                TrainingMethod::LogisticRegression
+            }
+
+            fn feature_dimension(&self) -> usize {
+                1
+            }
+
+            fn as_any(&self) -> &dyn Any {
+                self
+            }
+        }
+
+        impl ClassifierData for TestClassifierData {
+            fn number_of_classes(&self) -> usize {
+                2
+            }
+        }
+
+        #[derive(Debug)]
+        struct TestClassifier;
+
+        impl Classifier for TestClassifier {
+            fn data(&self) -> &dyn ClassifierData {
+                &TestClassifierData
+            }
+
+            fn predict_probabilities(&self, _features: &[f64]) -> Vec<f64> {
+                vec![0.5, 0.5]
+            }
+
+            fn predict_probabilities_batch(
+                &self,
+                batch: &[usize],
+                _features: &dyn crate::ml::models::Features,
+            ) -> crate::ml::core::tensor::Matrix {
+                crate::ml::core::tensor::Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
+            }
+        }
+
+        let classifier = Box::new(TestClassifier);
+        let stats = TrainingStatistics::new(vec![Box::new(GlobalAccuracy::new())]);
         let result = LinkPredictionTrainResult::new(classifier, stats);
 
         let _classifier = result.classifier();
@@ -81,27 +130,113 @@ mod tests {
 
     #[test]
     fn test_accessors() {
-        let result = LinkPredictionTrainResult::new(PhantomData, PhantomData);
+        #[derive(Debug)]
+        struct TestClassifierData;
+
+        impl BaseModelData for TestClassifierData {
+            fn trainer_method(&self) -> TrainingMethod {
+                TrainingMethod::LogisticRegression
+            }
+
+            fn feature_dimension(&self) -> usize {
+                1
+            }
+
+            fn as_any(&self) -> &dyn Any {
+                self
+            }
+        }
+
+        impl ClassifierData for TestClassifierData {
+            fn number_of_classes(&self) -> usize {
+                2
+            }
+        }
+
+        #[derive(Debug)]
+        struct TestClassifier;
+
+        impl Classifier for TestClassifier {
+            fn data(&self) -> &dyn ClassifierData {
+                &TestClassifierData
+            }
+
+            fn predict_probabilities(&self, _features: &[f64]) -> Vec<f64> {
+                vec![0.5, 0.5]
+            }
+
+            fn predict_probabilities_batch(
+                &self,
+                batch: &[usize],
+                _features: &dyn crate::ml::models::Features,
+            ) -> crate::ml::core::tensor::Matrix {
+                crate::ml::core::tensor::Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
+            }
+        }
+
+        let result = LinkPredictionTrainResult::new(
+            Box::new(TestClassifier),
+            TrainingStatistics::new(vec![Box::new(GlobalAccuracy::new())]),
+        );
 
         let _ = result.classifier();
         let _ = result.training_statistics();
     }
 
     #[test]
-    fn test_clone() {
-        let result1 = LinkPredictionTrainResult::new(PhantomData, PhantomData);
-        let result2 = result1.clone();
-
-        // Both accessible after clone
-        let _c1 = result1.classifier();
-        let _c2 = result2.classifier();
-    }
-
-    #[test]
     fn test_multiple_results() {
         // Simulating multiple training runs (e.g., hyperparameter search)
+        #[derive(Debug)]
+        struct TestClassifierData;
+
+        impl BaseModelData for TestClassifierData {
+            fn trainer_method(&self) -> TrainingMethod {
+                TrainingMethod::LogisticRegression
+            }
+
+            fn feature_dimension(&self) -> usize {
+                1
+            }
+
+            fn as_any(&self) -> &dyn Any {
+                self
+            }
+        }
+
+        impl ClassifierData for TestClassifierData {
+            fn number_of_classes(&self) -> usize {
+                2
+            }
+        }
+
+        #[derive(Debug)]
+        struct TestClassifier;
+
+        impl Classifier for TestClassifier {
+            fn data(&self) -> &dyn ClassifierData {
+                &TestClassifierData
+            }
+
+            fn predict_probabilities(&self, _features: &[f64]) -> Vec<f64> {
+                vec![0.5, 0.5]
+            }
+
+            fn predict_probabilities_batch(
+                &self,
+                batch: &[usize],
+                _features: &dyn crate::ml::models::Features,
+            ) -> crate::ml::core::tensor::Matrix {
+                crate::ml::core::tensor::Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
+            }
+        }
+
         let results: Vec<LinkPredictionTrainResult> = (0..5)
-            .map(|_| LinkPredictionTrainResult::new(PhantomData, PhantomData))
+            .map(|_| {
+                LinkPredictionTrainResult::new(
+                    Box::new(TestClassifier),
+                    TrainingStatistics::new(vec![Box::new(GlobalAccuracy::new())]),
+                )
+            })
             .collect();
 
         assert_eq!(results.len(), 5);

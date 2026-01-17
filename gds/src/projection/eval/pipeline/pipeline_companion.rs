@@ -189,6 +189,20 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_main_metric_error_message() {
+        let methods = vec![
+            "LogisticRegression".to_string(),
+            "RandomForestClassification".to_string(),
+        ];
+
+        let err = validate_main_metric(OUT_OF_BAG_ERROR, &methods).unwrap_err();
+        let msg = err.to_string();
+
+        assert!(msg.starts_with("If OUT_OF_BAG_ERROR is used as the main metric"));
+        assert!(msg.contains("Incompatible training methods used are: LogisticRegression."));
+    }
+
+    #[test]
     fn test_validate_main_metric_other_metric() {
         let methods = vec!["LogisticRegression".to_string()];
         let result = validate_main_metric("ACCURACY", &methods);

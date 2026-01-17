@@ -238,6 +238,7 @@ pub trait TrainingPipeline: Pipeline {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::projection::eval::FeatureStep;
 
     #[test]
     fn test_training_method_display() {
@@ -319,5 +320,219 @@ mod tests {
 
         let map = config.to_map();
         assert_eq!(map.len(), 2);
+    }
+
+    #[test]
+    fn test_parameter_space_to_map() {
+        let mut training_parameter_space: HashMap<
+            TrainingMethod,
+            Vec<Box<dyn TunableTrainerConfig>>,
+        > = HashMap::new();
+
+        training_parameter_space.insert(
+            TrainingMethod::LogisticRegression,
+            vec![Box::new(MockTrainerConfig {
+                method: TrainingMethod::LogisticRegression,
+                concrete: true,
+            })],
+        );
+
+        let pipeline = MockTrainingPipeline {
+            node_property_steps: vec![],
+            feature_steps: vec![],
+            training_parameter_space,
+            auto_tuning_config: AutoTuningConfig::default(),
+        };
+
+        let map = pipeline.parameter_space_to_map();
+        assert!(map.contains_key("LogisticRegression"));
+        assert_eq!(map["LogisticRegression"].len(), 1);
+    }
+
+    #[derive(Clone, Debug)]
+    struct MockStep {
+        name: String,
+        mutate: String,
+    }
+
+    impl ExecutableNodePropertyStep for MockStep {
+        fn execute(
+            &self,
+            _graph_store: &mut crate::types::graph_store::DefaultGraphStore,
+            _node_labels: &[String],
+            _relationship_types: &[String],
+            _concurrency: usize,
+        ) -> Result<(), Box<dyn StdError>> {
+            Ok(())
+        }
+
+        fn config(&self) -> &HashMap<String, serde_json::Value> {
+            static EMPTY: std::sync::OnceLock<HashMap<String, serde_json::Value>> =
+                std::sync::OnceLock::new();
+            EMPTY.get_or_init(HashMap::new)
+        }
+
+        fn proc_name(&self) -> &str {
+            &self.name
+        }
+
+        fn mutate_node_property(&self) -> &str {
+            &self.mutate
+        }
+    }
+
+    #[derive(Clone, Debug)]
+    struct MockFeatureStep {
+        input: Vec<String>,
+        name: String,
+    }
+
+    impl FeatureStep for MockFeatureStep {
+        fn input_node_properties(&self) -> &[String] {
+            &self.input
+        }
+
+        fn name(&self) -> &str {
+            &self.name
+        }
+
+        fn configuration(&self) -> &HashMap<String, serde_json::Value> {
+            static EMPTY: std::sync::OnceLock<HashMap<String, serde_json::Value>> =
+                std::sync::OnceLock::new();
+            EMPTY.get_or_init(HashMap::new)
+        }
+
+        fn to_map(&self) -> HashMap<String, serde_json::Value> {
+            HashMap::new()
+        }
+    }
+
+    struct MockTrainingPipeline {
+        node_property_steps: Vec<Box<dyn ExecutableNodePropertyStep>>,
+        feature_steps: Vec<MockFeatureStep>,
+        training_parameter_space: HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>>,
+        auto_tuning_config: AutoTuningConfig,
+    }
+
+    impl Pipeline for MockTrainingPipeline {
+        type FeatureStep = MockFeatureStep;
+
+        fn node_property_steps(&self) -> &[Box<dyn ExecutableNodePropertyStep>] {
+            &self.node_property_steps
+        }
+
+        fn feature_steps(&self) -> &[Self::FeatureStep] {
+            &self.feature_steps
+        }
+
+        fn specific_validate_before_execution(
+            &self,
+            _graph_store: &crate::types::graph_store::DefaultGraphStore,
+        ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError> {
+            Ok(())
+        }
+
+        fn to_map(&self) -> HashMap<String, serde_json::Value> {
+            HashMap::new()
+        }
+    }
+
+    impl TrainingPipeline for MockTrainingPipeline {
+        fn pipeline_type(&self) -> &str {
+            "mock-training-pipeline"
+        }
+
+        fn training_parameter_space(
+            &self,
+        ) -> &HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>> {
+            &self.training_parameter_space
+        }
+
+        fn training_parameter_space_mut(
+            &mut self,
+        ) -> &mut HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>> {
+            &mut self.training_parameter_space
+        }
+
+        fn auto_tuning_config(&self) -> &AutoTuningConfig {
+            &self.auto_tuning_config
+        }
+
+        fn set_auto_tuning_config(&mut self, config: AutoTuningConfig) {
+            self.auto_tuning_config = config;
+        }
+    }
+
+    #[test]
+    fn test_number_of_model_selection_trials_mixed_configs() {
+        let mut training_parameter_space: HashMap<
+            TrainingMethod,
+            Vec<Box<dyn TunableTrainerConfig>>,
+        > = HashMap::new();
+
+        training_parameter_space.insert(
+            TrainingMethod::LogisticRegression,
+            vec![
+                Box::new(MockTrainerConfig {
+                    method: TrainingMethod::LogisticRegression,
+                    concrete: true,
+                }),
+                Box::new(MockTrainerConfig {
+                    method: TrainingMethod::LogisticRegression,
+                    concrete: false,
+                }),
+            ],
+        );
+
+        let pipeline = MockTrainingPipeline {
+            node_property_steps: vec![],
+            feature_steps: vec![],
+            training_parameter_space,
+            auto_tuning_config: AutoTuningConfig::new(5).unwrap(),
+        };
+
+        // One concrete + AutoML trials
+        assert_eq!(pipeline.number_of_model_selection_trials(), 1 + 5);
+    }
+
+    #[test]
+    fn test_validate_training_parameter_space_requires_candidates() {
+        let pipeline = MockTrainingPipeline {
+            node_property_steps: vec![],
+            feature_steps: vec![],
+            training_parameter_space: HashMap::new(),
+            auto_tuning_config: AutoTuningConfig::default(),
+        };
+
+        let result = pipeline.validate_training_parameter_space();
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Need at least one model candidate"));
+    }
+
+    #[test]
+    fn test_validate_unique_mutate_property() {
+        let pipeline = MockTrainingPipeline {
+            node_property_steps: vec![Box::new(MockStep {
+                name: "gds.step.a".to_string(),
+                mutate: "dup".to_string(),
+            })],
+            feature_steps: vec![],
+            training_parameter_space: HashMap::new(),
+            auto_tuning_config: AutoTuningConfig::default(),
+        };
+
+        let duplicate_step = MockStep {
+            name: "gds.step.b".to_string(),
+            mutate: "dup".to_string(),
+        };
+
+        let err = pipeline
+            .validate_unique_mutate_property(&duplicate_step)
+            .unwrap_err();
+
+        assert!(err.to_string().contains("mutateProperty"));
     }
 }

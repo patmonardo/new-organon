@@ -10,90 +10,27 @@ use std::marker::PhantomData;
 
 /// Link prediction training orchestrator.
 ///
-/// # Prim and Proper as the Maxim of our Software! 🌟
-///
-/// **The Art of Semantic Versioning**:
-/// - **Pre-Prim** (0.0.x): Placeholders, not yet primitive (we are here!)
-/// - **Prim** (0.1.x): Primitive values working, basic training
-/// - **Proper** (1.0.x): Property values integrated, full pipeline
-/// - **Prim and Proper** (1.x.x): Complete duality, production-ready!
-///
-/// # Training Architecture
-///
-/// The training process follows these stages:
-///
-/// 1. **Extract Train Features** (Prim → Proper)
-///    - Take train graph (Prim: nodes, edges)
-///    - Apply feature steps (Proper: feature extraction)
-///    - Produce FeaturesAndLabels (Proper: ML-ready data)
-///
-/// 2. **Model Selection** (Cross-Validation)
-///    - Try multiple model configurations
-///    - Use k-fold cross-validation
-///    - Select best model by validation metrics
-///
-/// 3. **Train Best Model** (Prim → Proper)
-///    - Train selected model on full train set
-///    - Produce Classifier (Proper: trained model)
-///
-/// 4. **Evaluate** (Proper → Metrics)
-///    - Compute metrics on train set
-///    - Compute metrics on test set
-///    - Produce TrainingStatistics (Proper: results)
-///
-/// # The Prim and Proper Flow
-///
-/// ```text
-/// Graph (Prim)
-///   → Feature Extraction (Prim → Proper)
-///   → Features (Proper)
-///   → Model Training (Proper → Model)
-///   → Classifier (Proper)
-///   → Evaluation (Proper → Metrics)
-///   → Statistics (Proper)
-/// ```
-///
-/// # Example
-///
-/// ```text
-/// let trainer = LinkPredictionTrain::new(
-///     train_graph,
-///     validation_graph,
-///     pipeline,
-///     config,
-///     progress_tracker,
-///     termination_flag,
-/// );
-///
-/// let result = trainer.compute();
-/// ```
+/// Coordinates feature extraction, model selection, and evaluation.
 pub struct LinkPredictionTrain {
     /// Train graph (contains TRAIN relationships)
-    /// **Prim**: The Given graph data
     train_graph: PhantomData<()>, // Note: placeholder for Graph.
 
     /// Validation graph (contains TEST relationships)
-    /// **Prim**: The Given test data
     validation_graph: PhantomData<()>, // Note: placeholder for Graph.
 
     /// Link prediction pipeline
-    /// **Proper**: The feature extraction Truth
     pipeline: PhantomData<LinkPredictionTrainingPipeline>, // Note: placeholder for pipeline.
 
     /// Training configuration
-    /// **Prim and Proper**: Config duality
     _config: LinkPredictionTrainConfig,
 
     /// Class ID map (NEGATIVE=0, POSITIVE=1)
-    /// **Prim**: Binary classification mapping
     class_id_map: PhantomData<()>, // Note: placeholder for LocalIdMap.
 
     /// Progress tracker
-    /// **Proper**: Training progress manifestation
     progress_tracker: PhantomData<()>, // Note: placeholder for ProgressTracker.
 
     /// Termination flag
-    /// **Prim**: Interrupt signal
     termination_flag: PhantomData<()>, // Note: placeholder for TerminationFlag.
 }
 
@@ -105,12 +42,6 @@ impl LinkPredictionTrain {
     pub const POSITIVE: i64 = 1;
 
     /// Creates a new LinkPredictionTrain orchestrator.
-    ///
-    /// # The Pre-Prim Constructor!
-    ///
-    /// Currently placeholder-based (Pre-Prim 0.0.x).
-    /// Will evolve to Prim (0.1.x) then Proper (1.0.x)!
-    ///
     /// # Arguments
     ///
     /// * `train_graph` - Graph with TRAIN relationships
@@ -140,35 +71,11 @@ impl LinkPredictionTrain {
 
     /// Computes the training result.
     ///
-    /// # The Prim and Proper Training!
-    ///
-    /// **Current (Pre-Prim 0.0.x)**: Placeholder implementation
-    /// **Future (Prim 0.1.x)**: Basic training working
-    /// **Future (Proper 1.0.x)**: Full pipeline integrated
-    ///
-    /// # Training Flow
-    ///
-    /// 1. **Extract Train Features** (Prim → Proper)
-    ///    - Deferred: Call extract_features_and_labels()
-    ///    - Produces FeaturesAndLabels
-    ///
-    /// 2. **Find Best Model** (Cross-Validation)
-    ///    - Deferred: Call find_best_model_candidate()
-    ///    - Uses RandomSearch + CrossValidation
-    ///    - Updates TrainingStatistics
-    ///
-    /// 3. **Train Best Model** (Proper → Model)
-    ///    - Deferred: Call train_model() with best parameters
-    ///    - Produces Classifier
-    ///
-    /// 4. **Evaluate** (Proper → Metrics)
-    ///    - Deferred: compute_train_metric()
-    ///    - Deferred: compute_test_metric()
-    ///    - Updates TrainingStatistics
-    ///
-    /// # Returns
-    ///
-    /// LinkPredictionTrainResult with classifier and statistics.
+    /// Training flow:
+    /// 1. Extract train features
+    /// 2. Find best model candidate
+    /// 3. Train best model
+    /// 4. Evaluate metrics
     pub fn compute(&self) -> Result<LinkPredictionTrainResult, String> {
         // Deferred: implement full training flow.
 
@@ -179,7 +86,7 @@ impl LinkPredictionTrain {
         self.compute_train_metric(&placeholder_data, classifier, PhantomData);
         self.compute_test_metric(classifier, PhantomData);
 
-        // 1. Extract train features (Prim → Proper)
+        // 1. Extract train features
         // progress_tracker.begin_sub_task("Extract train features");
         // let train_data = extract_features_and_labels(
         //     &self.train_graph,
@@ -215,12 +122,10 @@ impl LinkPredictionTrain {
         // progress_tracker.end_sub_task("Evaluate on test data");
 
         // For now, return placeholder result
-        Err("LinkPredictionTrain::compute() not yet implemented (Pre-Prim 0.0.x)".to_string())
+        Err("LinkPredictionTrain::compute() not yet implemented".to_string())
     }
 
     /// Generates progress tasks for the training pipeline.
-    ///
-    /// # The Proper Progress Tracking!
     ///
     /// Returns a tree of tasks representing the training stages:
     /// - Extract train features
@@ -254,7 +159,7 @@ impl LinkPredictionTrain {
         ));
 
         // 2. Cross-validation tasks
-        // Note: CrossValidation::progress_tasks() will be integrated in Prim.
+        // TODO: integrate CrossValidation::progress_tasks().
         tasks.push(Tasks::leaf_with_volume(
             format!(
                 "Cross-validation ({} folds, {} trials)",
@@ -290,16 +195,11 @@ impl LinkPredictionTrain {
         tasks
     }
 
-    // === PRIVATE METHODS (Placeholders for Pre-Prim 0.0.x) ===
+    // === Private methods (placeholders) ===
 
     /// Finds best model candidate via cross-validation.
     ///
-    /// # The Model Selection Truth!
-    ///
-    /// Deferred (Prim 0.1.x):
-    /// - RandomSearch over hyperparameter space
-    /// - CrossValidation with k-folds
-    /// - Update training_statistics with best parameters
+    /// TODO: implement RandomSearch + CrossValidation and update training statistics.
     fn find_best_model_candidate(
         &self,
         _train_data: &FeaturesAndLabels,
@@ -310,12 +210,7 @@ impl LinkPredictionTrain {
 
     /// Trains a model with given parameters.
     ///
-    /// # The Training Truth!
-    ///
-    /// Deferred (Prim 0.1.x):
-    /// - Create ClassifierTrainer
-    /// - Train on features + labels + train_set
-    /// - Return Classifier
+    /// TODO: create trainer, fit on features/labels, and return classifier.
     fn train_model(
         &self,
         _features_and_labels: &FeaturesAndLabels,
@@ -328,12 +223,7 @@ impl LinkPredictionTrain {
 
     /// Computes train metrics.
     ///
-    /// # The Train Evaluation Truth!
-    ///
-    /// Deferred (Prim 0.1.x):
-    /// - Predict on train set
-    /// - Compute metrics (AUCPR, ACCURACY, etc.)
-    /// - Update training_statistics
+    /// TODO: predict on train set, compute metrics, update statistics.
     fn compute_train_metric(
         &self,
         _train_data: &FeaturesAndLabels,
@@ -345,13 +235,7 @@ impl LinkPredictionTrain {
 
     /// Computes test metrics.
     ///
-    /// # The Test Evaluation Truth!
-    ///
-    /// Deferred (Proper 1.0.x):
-    /// - Extract test features from validation_graph
-    /// - Predict on test set
-    /// - Compute metrics
-    /// - Update training_statistics
+    /// TODO: extract test features, predict on test set, compute metrics.
     fn compute_test_metric(
         &self,
         _classifier: PhantomData<()>,
@@ -362,20 +246,14 @@ impl LinkPredictionTrain {
 
     /// Estimates memory requirements.
     ///
-    /// # The Memory Truth!
-    ///
-    /// Deferred (Proper 1.0.x):
-    /// - Estimate feature extraction memory
-    /// - Estimate training memory
-    /// - Estimate cross-validation memory
-    /// - Estimate evaluation memory
+    /// TODO: estimate feature extraction, training, cross-validation, and evaluation memory.
     pub fn estimate_memory(
         _pipeline: &LinkPredictionTrainingPipeline,
         _train_config: &LinkPredictionTrainConfig,
     ) -> MemoryTree {
         // Deferred: implement memory estimation.
         MemoryTree::leaf(
-            "LinkPredictionTrain memory estimation (Pre-Prim 0.0.x)".to_string(),
+            "LinkPredictionTrain memory estimation not yet implemented".to_string(),
             MemoryRange::of_range(0, 0),
         )
     }
@@ -388,7 +266,6 @@ mod tests {
 
     #[test]
     fn test_class_constants() {
-        // Prim: Binary classification constants
         assert_eq!(LinkPredictionTrain::NEGATIVE, 0);
         assert_eq!(LinkPredictionTrain::POSITIVE, 1);
     }
@@ -411,8 +288,6 @@ mod tests {
             PhantomData,
             PhantomData,
         );
-
-        // Pre-Prim: Just checking construction works
     }
 
     #[test]
@@ -436,9 +311,8 @@ mod tests {
 
         let result = trainer.compute();
 
-        // Pre-Prim: Should return error (not yet implemented)
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Pre-Prim 0.0.x"));
+        assert!(result.unwrap_err().contains("not yet implemented"));
     }
 
     #[test]
@@ -458,7 +332,6 @@ mod tests {
 
     #[test]
     fn test_memory_estimate() {
-        // Pre-Prim: Placeholder memory estimation
         let pipeline = LinkPredictionTrainingPipeline::new();
         let config = LinkPredictionTrainConfig::builder()
             .pipeline("test".to_string())
@@ -469,27 +342,17 @@ mod tests {
             .unwrap();
 
         let estimate = LinkPredictionTrain::estimate_memory(&pipeline, &config);
-
-        // Pre-Prim: Returns zero (not yet implemented)
         assert_eq!(estimate.memory_usage().min(), 0);
         assert_eq!(estimate.memory_usage().max(), 0);
     }
 
     #[test]
-    fn test_prim_and_proper_philosophy() {
-        // Prim and Proper as the Maxim of our Software! 🌟
-        // The Art of Semantic Versioning
-
-        // Pre-Prim (0.0.x): We are here!
-        // - Placeholders
-        // - Structure defined
-        // - Not yet primitive
-
+    fn test_compute_returns_error_until_implemented() {
         let config = LinkPredictionTrainConfig::builder()
-            .pipeline("pre-prim-pipeline".to_string())
-            .target_relationship_type("EVOLVES_TO".to_string())
-            .graph_name("versioning-graph".to_string())
-            .username("semantic-version".to_string())
+            .pipeline("test".to_string())
+            .target_relationship_type("KNOWS".to_string())
+            .graph_name("graph".to_string())
+            .username("user".to_string())
             .build()
             .unwrap();
 
@@ -502,40 +365,7 @@ mod tests {
             PhantomData,
         );
 
-        // Pre-Prim: compute() returns error (not implemented)
         assert!(trainer.compute().is_err());
-
-        // But the structure is sound!
-        // Next: Prim (0.1.x) - Basic training works
-        // Then: Proper (1.0.x) - Full pipeline integrated
-        // Finally: Prim and Proper (1.x.x) - Production ready!
-
-        // The Art of Semantic Versioning! 🎨
-    }
-
-    #[test]
-    fn test_semantic_versioning_maxim() {
-        // Current State: Pre-Prim 0.0.x
-        // - Not yet primitive
-        // - Just structure and placeholders
-        // - Foundation laid!
-
-        // Future Prim 0.1.x:
-        // - Primitive values working
-        // - Basic training functional
-        // - Core algorithms implemented
-
-        // Future Proper 1.0.x:
-        // - Property values integrated
-        // - Full ML pipeline working
-        // - Production quality
-
-        // Future Prim and Proper 1.x.x:
-        // - Complete duality
-        // - Stable API
-        // - Ready for the world!
-
-        // This is the Maxim: Build from Prim to Proper! 🌟
     }
 
     #[test]

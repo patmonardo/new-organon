@@ -7,36 +7,8 @@ use std::marker::PhantomData;
 
 /// Prediction pipeline for link prediction.
 ///
-/// # The Given Form! 🌟
-///
-/// This is the **Given** (materialized) pipeline used during **prediction** (not training).
-/// It contains the **frozen** steps from training.
-///
-/// **CAR:CDR at Pipeline Level**:
-/// - **CAR (Given)**: LinkPredictionPredictPipeline - frozen, immutable steps
-/// - **CDR (Process)**: Training created this Given form
-/// - **Science**: Training Pipeline (Pure) → Predict Pipeline (Given)
-///
-/// # The Immutable Container
-///
-/// Unlike TrainingPipeline (which mutates), this is **immutable**:
-/// - No add_feature_step()
-/// - No split config (training-only)
-/// - No parameter space
-/// - Just: nodePropertySteps + featureSteps (frozen!)
-///
-/// # Example
-///
-/// ```text
-/// // From a training pipeline
-/// let predict_pipeline = LinkPredictionPredictPipeline::from_pipeline(&training_pipeline);
-///
-/// // Or from steps directly
-/// let predict_pipeline = LinkPredictionPredictPipeline::from_steps(
-///     vec![/* node property steps */],
-///     vec![/* feature steps */]
-/// );
-/// ```
+/// Immutable snapshot of a training pipeline, containing the frozen node
+/// property steps and link feature steps used for prediction.
 pub struct LinkPredictionPredictPipeline {
     /// Node property steps (preprocessing) - frozen from training
     /// Note: This will become a concrete list of steps once link training execution is wired.
@@ -48,10 +20,6 @@ pub struct LinkPredictionPredictPipeline {
 
 impl LinkPredictionPredictPipeline {
     /// Creates an empty predict pipeline.
-    ///
-    /// # The Empty Given!
-    ///
-    /// This is the **minimal Given** - no steps, ready to be filled.
     pub fn empty() -> Self {
         Self {
             node_property_steps: PhantomData,
@@ -60,10 +28,6 @@ impl LinkPredictionPredictPipeline {
     }
 
     /// Creates a new LinkPredictionPredictPipeline from steps.
-    ///
-    /// # The Given Constructor!
-    ///
-    /// This creates the **Given** (frozen) pipeline from steps.
     ///
     /// # Arguments
     ///
@@ -81,16 +45,7 @@ impl LinkPredictionPredictPipeline {
 
     /// Creates a LinkPredictionPredictPipeline from a training pipeline.
     ///
-    /// # The CAR→CDR Transformation!
-    ///
-    /// This **freezes** the training pipeline into a prediction pipeline:
-    /// - Training Pipeline (Pure, mutable) → Predict Pipeline (Given, immutable)
-    /// - Copies steps (makes them immutable)
-    /// - Drops training-only config (split, parameter space)
-    ///
-    /// # Arguments
-    ///
-    /// * `training_pipeline` - The training pipeline to freeze
+    /// Copies feature steps and drops training-only configuration.
     pub fn from_training_pipeline(
         training_pipeline: &super::LinkPredictionTrainingPipeline,
     ) -> Self {
@@ -104,15 +59,6 @@ impl LinkPredictionPredictPipeline {
     }
 
     /// Creates a LinkPredictionPredictPipeline from iterators.
-    ///
-    /// # The Stream Constructor!
-    ///
-    /// Useful for functional-style pipeline construction.
-    ///
-    /// # Arguments
-    ///
-    /// * `node_property_steps` - Iterator of node property steps
-    /// * `feature_steps` - Iterator of link feature steps
     pub fn from_iterators(
         _node_property_steps: impl Iterator<Item = PhantomData<Box<dyn ExecutableNodePropertyStep>>>,
         feature_steps: impl Iterator<Item = Box<dyn LinkFeatureStep>>,
@@ -134,10 +80,6 @@ impl LinkPredictionPredictPipeline {
     }
 
     /// Converts the pipeline to a map (for serialization).
-    ///
-    /// # The Given Representation!
-    ///
-    /// Maps the **Given** (frozen) pipeline to JSON-compatible structure.
     pub fn to_map(&self) -> HashMap<String, Vec<HashMap<String, serde_json::Value>>> {
         let mut map = HashMap::new();
 
@@ -159,10 +101,7 @@ impl LinkPredictionPredictPipeline {
 
     /// Validates the pipeline before execution.
     ///
-    /// # The Given Validation!
-    ///
     /// For predict pipelines, validation is minimal (no training-specific checks).
-    /// The pipeline is already **Given** (frozen), so it should be valid.
     pub fn validate_before_execution(&self, _graph_store: PhantomData<()>) -> Result<(), String> {
         // Predict pipelines don't have training-specific validation
         // The steps were already validated during training
@@ -271,11 +210,7 @@ mod tests {
     }
 
     #[test]
-    fn test_given_immutability() {
-        // The Given is immutable!
-        // LinkPredictionPredictPipeline has no add_feature_step() method
-        // Once created, it's frozen
-
+    fn test_pipeline_is_immutable_by_api() {
         let feature_steps = vec![
             Box::new(HadamardFeatureStep::new(vec!["embedding".to_string()]))
                 as Box<dyn LinkFeatureStep>,
@@ -283,18 +218,11 @@ mod tests {
 
         let pipeline = LinkPredictionPredictPipeline::from_steps(PhantomData, feature_steps);
 
-        // Can only read, not mutate!
         assert_eq!(pipeline.feature_steps().len(), 1);
-
-        // No pipeline.add_feature_step() exists!
-        // This is the Given (frozen) nature!
     }
 
     #[test]
-    fn test_car_cdr_pipeline_transformation() {
-        // CAR:CDR at Pipeline Level!
-        // Training Pipeline (Pure/Process) → Predict Pipeline (Given/Frozen)
-
+    fn test_pipeline_from_steps_preserves_feature_steps() {
         let feature_steps = vec![
             Box::new(HadamardFeatureStep::new(vec!["embedding".to_string()]))
                 as Box<dyn LinkFeatureStep>,
@@ -302,17 +230,9 @@ mod tests {
                 as Box<dyn LinkFeatureStep>,
         ];
 
-        // Create the Given (frozen) pipeline
         let predict_pipeline =
             LinkPredictionPredictPipeline::from_steps(PhantomData, feature_steps);
 
-        // The Given is immutable
         assert_eq!(predict_pipeline.feature_steps().len(), 2);
-
-        // CAR: The atomic Given structure
-        // CDR: Created from training process
-        // Science: Training (Process) → Prediction (Given)
-
-        // The Predict Pipeline is the Given Result of Training! 🌟
     }
 }

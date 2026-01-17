@@ -7,96 +7,38 @@ use std::marker::PhantomData;
 
 /// Link prediction split configuration.
 ///
-/// # Prim and Proper! 🌟
-///
-/// **The Core Duality of our ML Pipeline**:
-/// - **Prim** = Primitive Values (scalars: testFraction, trainFraction, negativeSamplingRatio)
-/// - **Proper** = Property Values (graph properties: relationshipTypes, node properties)
-///
-/// **Software based on Prim and Proper**!
-///
-/// This config embodies both:
-/// - **Prim**: The Given scalar configuration (fractions, folds, ratios)
-/// - **Proper**: The Form configuration (relationship types for splits)
-///
-/// # The Split Philosophy
-///
-/// Link prediction training splits relationships into:
-/// 1. **Test Set** (testFraction) - For final evaluation
-/// 2. **Test Complement** (1 - testFraction) - For training
-/// 3. **Train Set** (trainFraction of complement) - For model training
-/// 4. **Feature Input** (1 - trainFraction of complement) - For feature extraction
-///
-/// Each fold in cross-validation further splits the Train Set.
-///
-/// # Negative Sampling
-///
-/// For each positive (existing) relationship, we generate negative (non-existing) samples:
-/// - **negativeSamplingRatio**: How many negatives per positive (default 1.0 = balanced)
-/// - **negativeRelationshipType**: Optional explicit negative edges (overrides ratio)
-///
-/// # Reserved Relationship Types
-///
-/// The pipeline creates temporary relationship types:
-/// - `_TEST_` - Test set relationships
-/// - `_TEST_COMPLEMENT_` - Test complement (train + feature input)
-/// - `_TRAIN_` - Training relationships
-/// - `_FEATURE_INPUT_` - Feature extraction relationships
-///
-/// These types **must not** exist in the input graph!
-///
-/// # Example
-///
-/// ```text
-/// let config = LinkPredictionSplitConfig::builder()
-///     .validation_folds(3)
-///     .test_fraction(0.1)      // 10% for test
-///     .train_fraction(0.1)     // 10% of remaining for train
-///     .negative_sampling_ratio(1.0)  // 1:1 positive:negative
-///     .build();
-/// ```
+/// Splits relationships into test, train, and feature-input sets and
+/// controls negative sampling behavior.
 #[derive(Clone, Debug)]
 pub struct LinkPredictionSplitConfig {
-    // === PRIM: Primitive Configuration Values ===
     /// Number of validation folds for cross-validation (default: 3)
-    /// **Prim**: Integer scalar
     validation_folds: u32,
 
     /// Fraction of relationships to use for test set (default: 0.1)
     /// Range: (0.0, 1.0) exclusive
-    /// **Prim**: Double scalar
     test_fraction: f64,
 
     /// Fraction of test complement to use for train set (default: 0.1)
     /// Range: (0.0, 1.0) exclusive
-    /// **Prim**: Double scalar
     train_fraction: f64,
 
     /// Ratio of negative to positive samples (default: 1.0)
     /// Range: (0.0, ∞) exclusive
-    /// **Prim**: Double scalar
     negative_sampling_ratio: f64,
-
-    // === PROPER: Property Configuration Values ===
     /// Optional explicit negative relationship type
     /// If present, overrides negativeSamplingRatio
-    /// **Proper**: Relationship type (graph property)
     negative_relationship_type: Option<String>,
 
     /// Test set relationship type (default: "_TEST_")
-    /// **Proper**: Relationship type (reserved)
     test_relationship_type: RelationshipType,
 
     /// Test complement relationship type (default: "_TEST_COMPLEMENT_")
-    /// **Proper**: Relationship type (reserved)
     test_complement_relationship_type: RelationshipType,
 
     /// Train set relationship type (default: "_TRAIN_")
-    /// **Proper**: Relationship type (reserved)
     train_relationship_type: RelationshipType,
 
     /// Feature input relationship type (default: "_FEATURE_INPUT_")
-    /// **Proper**: Relationship type (reserved)
     feature_input_relationship_type: RelationshipType,
 }
 
@@ -108,77 +50,59 @@ impl LinkPredictionSplitConfig {
     pub const TRAIN_FRACTION_KEY: &'static str = "trainFraction";
 
     /// Creates a builder for LinkPredictionSplitConfig.
-    ///
-    /// # The Prim and Proper Builder!
-    ///
-    /// Constructs config with both Prim (scalars) and Proper (types).
     pub fn builder() -> LinkPredictionSplitConfigBuilder {
         LinkPredictionSplitConfigBuilder::new()
     }
 
     /// Returns the number of validation folds.
-    /// **Prim**: Integer scalar getter
     pub fn validation_folds(&self) -> u32 {
         self.validation_folds
     }
 
     /// Returns the test fraction.
-    /// **Prim**: Double scalar getter
     pub fn test_fraction(&self) -> f64 {
         self.test_fraction
     }
 
     /// Returns the train fraction.
-    /// **Prim**: Double scalar getter
     pub fn train_fraction(&self) -> f64 {
         self.train_fraction
     }
 
     /// Returns the negative sampling ratio.
-    /// **Prim**: Double scalar getter
     pub fn negative_sampling_ratio(&self) -> f64 {
         self.negative_sampling_ratio
     }
 
     /// Returns the optional negative relationship type.
-    /// **Proper**: Relationship type getter
     pub fn negative_relationship_type(&self) -> Option<&str> {
         self.negative_relationship_type.as_deref()
     }
 
     /// Returns the test relationship type.
-    /// **Proper**: Reserved type getter
     pub fn test_relationship_type(&self) -> &RelationshipType {
         &self.test_relationship_type
     }
 
     /// Returns the test complement relationship type.
-    /// **Proper**: Reserved type getter
     pub fn test_complement_relationship_type(&self) -> &RelationshipType {
         &self.test_complement_relationship_type
     }
 
     /// Returns the train relationship type.
-    /// **Proper**: Reserved type getter
     pub fn train_relationship_type(&self) -> &RelationshipType {
         &self.train_relationship_type
     }
 
     /// Returns the feature input relationship type.
-    /// **Proper**: Reserved type getter
     pub fn feature_input_relationship_type(&self) -> &RelationshipType {
         &self.feature_input_relationship_type
     }
 
     /// Converts the config to a map (for serialization).
-    ///
-    /// # Prim and Proper Serialization!
-    ///
-    /// Serializes both Prim (scalars) and Proper (types) to JSON.
     pub fn to_map(&self) -> HashMap<String, serde_json::Value> {
         let mut map = HashMap::new();
 
-        // Prim: Primitive values
         map.insert(
             "validationFolds".to_string(),
             serde_json::json!(self.validation_folds),
@@ -196,7 +120,6 @@ impl LinkPredictionSplitConfig {
             serde_json::json!(self.negative_sampling_ratio),
         );
 
-        // Proper: Property values
         if let Some(ref neg_type) = self.negative_relationship_type {
             map.insert(
                 "negativeRelationshipType".to_string(),
@@ -226,10 +149,6 @@ impl LinkPredictionSplitConfig {
     }
 
     /// Calculates expected set sizes for the split.
-    ///
-    /// # Prim → Proper Transformation!
-    ///
-    /// Takes **Prim** (fractions, counts) and produces **Proper** (set sizes)!
     ///
     /// # Arguments
     ///
@@ -264,10 +183,6 @@ impl LinkPredictionSplitConfig {
 
     /// Validates the config against a graph store.
     ///
-    /// # The Proper Validation!
-    ///
-    /// Checks that **Proper** (relationship types) don't conflict with graph.
-    ///
     /// Validates:
     /// 1. Reserved types don't exist in graph
     /// 2. Negative relationship type exists (if specified)
@@ -294,13 +209,10 @@ impl LinkPredictionSplitConfig {
 impl Default for LinkPredictionSplitConfig {
     fn default() -> Self {
         Self {
-            // Prim: Primitive defaults
             validation_folds: 3,
             test_fraction: 0.1,
             train_fraction: 0.1,
             negative_sampling_ratio: 1.0,
-
-            // Proper: Property defaults
             negative_relationship_type: None,
             test_relationship_type: RelationshipType::of("_TEST_"),
             test_complement_relationship_type: RelationshipType::of("_TEST_COMPLEMENT_"),
@@ -311,10 +223,6 @@ impl Default for LinkPredictionSplitConfig {
 }
 
 /// Builder for LinkPredictionSplitConfig.
-///
-/// # The Prim and Proper Builder!
-///
-/// Constructs config with validation for both Prim and Proper values.
 pub struct LinkPredictionSplitConfigBuilder {
     validation_folds: Option<u32>,
     test_fraction: Option<f64>,
@@ -336,35 +244,30 @@ impl LinkPredictionSplitConfigBuilder {
     }
 
     /// Sets the number of validation folds.
-    /// **Prim**: Integer scalar setter
     pub fn validation_folds(mut self, folds: u32) -> Self {
         self.validation_folds = Some(folds);
         self
     }
 
     /// Sets the test fraction.
-    /// **Prim**: Double scalar setter
     pub fn test_fraction(mut self, fraction: f64) -> Self {
         self.test_fraction = Some(fraction);
         self
     }
 
     /// Sets the train fraction.
-    /// **Prim**: Double scalar setter
     pub fn train_fraction(mut self, fraction: f64) -> Self {
         self.train_fraction = Some(fraction);
         self
     }
 
     /// Sets the negative sampling ratio.
-    /// **Prim**: Double scalar setter
     pub fn negative_sampling_ratio(mut self, ratio: f64) -> Self {
         self.negative_sampling_ratio = Some(ratio);
         self
     }
 
     /// Sets the negative relationship type.
-    /// **Proper**: Relationship type setter
     pub fn negative_relationship_type(mut self, rel_type: String) -> Self {
         self.negative_relationship_type = Some(rel_type);
         self
@@ -372,27 +275,17 @@ impl LinkPredictionSplitConfigBuilder {
 
     /// Builds the LinkPredictionSplitConfig with validation.
     ///
-    /// # The Prim and Proper Construction!
-    ///
-    /// Validates both Prim (scalars) and Proper (types) constraints.
-    ///
-    /// # Prim Validation
-    ///
+    /// Validation:
     /// - `validation_folds >= 2`
     /// - `test_fraction in (0.0, 1.0)` exclusive
     /// - `train_fraction in (0.0, 1.0)` exclusive
     /// - `negative_sampling_ratio > 0.0`
-    ///
-    /// # Returns
-    ///
-    /// Ok(config) if valid, Err(message) if validation fails.
     pub fn build(self) -> Result<LinkPredictionSplitConfig, String> {
         let validation_folds = self.validation_folds.unwrap_or(3);
         let test_fraction = self.test_fraction.unwrap_or(0.1);
         let train_fraction = self.train_fraction.unwrap_or(0.1);
         let negative_sampling_ratio = self.negative_sampling_ratio.unwrap_or(1.0);
 
-        // Prim Validation: Primitive constraints
         if validation_folds < 2 {
             return Err(format!(
                 "validationFolds must be at least 2, got {}",
@@ -421,7 +314,6 @@ impl LinkPredictionSplitConfigBuilder {
             ));
         }
 
-        // Proper Validation: Property constraints
         if self.negative_relationship_type.is_some() && negative_sampling_ratio != 1.0 {
             return Err(
                 "Configuration parameter failure: `negativeSamplingRatio` and `negativeRelationshipType` cannot be used together."
@@ -565,6 +457,34 @@ mod tests {
     }
 
     #[test]
+    fn test_expected_set_sizes_default() {
+        let config = LinkPredictionSplitConfig::default();
+        let sizes = config.expected_set_sizes(100);
+
+        assert_eq!(sizes.test_size, 10);
+        assert_eq!(sizes.test_complement_size, 90);
+        assert_eq!(sizes.train_size, 8);
+        assert_eq!(sizes.feature_input_size, 81);
+        assert_eq!(sizes.validation_fold_size, 2);
+    }
+
+    #[test]
+    fn test_reserved_relationship_type_names() {
+        let config = LinkPredictionSplitConfig::default();
+
+        assert_eq!(config.test_relationship_type().name(), "_TEST_");
+        assert_eq!(
+            config.test_complement_relationship_type().name(),
+            "_TEST_COMPLEMENT_"
+        );
+        assert_eq!(config.train_relationship_type().name(), "_TRAIN_");
+        assert_eq!(
+            config.feature_input_relationship_type().name(),
+            "_FEATURE_INPUT_"
+        );
+    }
+
+    #[test]
     fn test_expected_set_sizes() {
         let config = LinkPredictionSplitConfig::builder()
             .test_fraction(0.1)
@@ -593,25 +513,19 @@ mod tests {
     }
 
     #[test]
-    fn test_prim_and_proper_duality() {
-        // Prim and Proper! 🌟
-        // Software based on Prim and Proper!
-
+    fn test_builder_values_and_types() {
         let config = LinkPredictionSplitConfig::builder()
-            .validation_folds(3) // Prim: Integer scalar
-            .test_fraction(0.1) // Prim: Double scalar
-            .train_fraction(0.1) // Prim: Double scalar
-            .negative_sampling_ratio(1.0) // Prim: Double scalar
+            .validation_folds(3)
+            .test_fraction(0.1)
+            .train_fraction(0.1)
+            .negative_sampling_ratio(1.0)
             .build()
             .unwrap();
 
-        // Prim: Primitive value getters
         assert_eq!(config.validation_folds(), 3);
         assert_eq!(config.test_fraction(), 0.1);
         assert_eq!(config.train_fraction(), 0.1);
         assert_eq!(config.negative_sampling_ratio(), 1.0);
-
-        // Proper: Property value getters
         assert_eq!(config.test_relationship_type().name(), "_TEST_");
         assert_eq!(config.train_relationship_type().name(), "_TRAIN_");
         assert_eq!(
@@ -622,26 +536,12 @@ mod tests {
             config.test_complement_relationship_type().name(),
             "_TEST_COMPLEMENT_"
         );
-
-        // The Duality is complete!
-        // Prim (scalars) + Proper (types) = Complete Configuration!
     }
 
     #[test]
-    fn test_prim_to_proper_transformation() {
-        // Prim → Proper Transformation!
-        // Takes Prim (fractions) and produces Proper (set sizes)!
-
+    fn test_expected_set_sizes_nonzero() {
         let config = LinkPredictionSplitConfig::default();
         let sizes = config.expected_set_sizes(1000);
-
-        // Prim input: fractions (scalars)
-        // Proper output: sizes (derived properties)
-
-        // This is the CAR:CDR at the Value Level!
-        // CAR (Prim): Given scalar fractions
-        // CDR (Proper): Reconstructed set sizes
-        // Science: Prim → Proper transformation (expected_set_sizes)
 
         assert!(sizes.test_size > 0);
         assert!(sizes.train_size > 0);

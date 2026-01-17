@@ -9,28 +9,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Hadamard product (element-wise multiplication) link feature.
-///
-/// For node property vectors v1 and v2, computes:
-/// ```text
-/// hadamard(v1, v2) = [v1[0]*v2[0], v1[1]*v2[1], ..., v1[n]*v2[n]]
-/// ```
-///
-/// # Use Case
-///
-/// Hadamard captures **feature interaction** - which dimensions correlate between nodes?
-/// Most common link feature in practice. Works with:
-/// - Scalar properties (long, double)
-/// - Array properties (long[], float[], double[])
-///
-/// # Example
-///
-/// ```text
-/// Node A: embedding = [0.5, 0.8, 0.2]
-/// Node B: embedding = [0.3, 0.9, 0.1]
-/// Hadamard: [0.15, 0.72, 0.02]
-/// ```
-///
-/// High values in Hadamard indicate dimensions where both nodes have high values.
 #[derive(Debug, Clone)]
 pub struct HadamardFeatureStep {
     /// Node properties to compute Hadamard product on

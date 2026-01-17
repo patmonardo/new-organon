@@ -5,35 +5,7 @@ use std::collections::HashMap;
 
 /// Configuration interface for link feature steps.
 ///
-/// All link feature steps (Hadamard, Cosine, L2, SameCategory) share
-/// this common configuration structure: a list of node properties.
-///
-/// # The Pure Container (Being qua Being)
-///
-/// This represents the **Pure Container** in the four-fold Hegelian structure:
-///
-/// 1. **Pure Container**: This trait itself - abstract form of configuration
-/// 2. **Given Container**: Concrete impls (HadamardConfig, CosineConfig, etc.)
-/// 3. **Given Contained**: Validation logic (fromObject conversion) - empirical
-/// 4. **Pure Contained**: The ideal validation produced genetically (deferred)
-///
-/// # Genetic Method
-///
-/// **Speculative Seeding** (now): Lay down the Given Container (interface)
-/// that **represents** the Pure/Ideal within it.
-///
-/// **Determinative Reason** (later): Genetically construct the Given as
-/// **produced from Pure** - derive validation from pure concepts.
-///
-/// # Validation (Given Contained)
-///
-/// The `fromObject()` converter validates:
-/// - Must be a List
-/// - List must be non-empty
-/// - All elements must be non-blank Strings
-///
-/// This is **empirical validation** (Given) awaiting genetic derivation from
-/// Pure concepts of "property", "name", "list", "emptiness".
+/// All link feature steps share a list of node properties.
 pub trait LinkFeatureStepConfiguration {
     /// Returns the list of node properties this feature step operates on.
     ///
@@ -42,27 +14,10 @@ pub trait LinkFeatureStepConfiguration {
 
     /// Converts a raw object (typically from JSON/config) to validated property list.
     ///
-    /// # Validation Rules (Given/Empirical)
-    ///
-    /// - Must be a List/Array
+    /// Validation rules:
+    /// - Must be a list/array
     /// - Must be non-empty
-    /// - All elements must be Strings
-    /// - Strings must not be blank (whitespace-only)
-    ///
-    /// # Genetic Construction (Pure/Ideal - Deferred)
-    ///
-    /// The validation rules are **empirical** (Given Contained).
-    /// The **Pure Contained** would derive these from:
-    /// - Pure concept of Property (requires name)
-    /// - Pure concept of Name (requires non-emptiness)
-    /// - Pure concept of List (requires elements)
-    /// - Pure concept of Configuration (requires validity)
-    ///
-    /// This is **Determinative Reason** - the Given produced from Pure!
-    ///
-    /// # Returns
-    ///
-    /// Validated list of property names, or Error.
+    /// - All elements must be non-blank strings
     fn from_object(node_properties: &Value) -> Result<Vec<String>, String> {
         // Validate it's an array
         let properties_array = node_properties.as_array().ok_or_else(|| {
@@ -212,27 +167,14 @@ mod tests {
     }
 
     #[test]
-    fn test_genetic_method_four_fold() {
-        // Pure Container: LinkFeatureStepConfiguration trait (abstract form)
-        // Given Container: TestConfig struct (concrete impl)
-        // Given Contained: from_object validation (empirical rules)
-        // Pure Contained: (deferred) genetic derivation from pure concepts
-
+    fn test_validation_round_trip() {
         let config = TestConfig {
             properties: vec!["embedding".to_string()],
         };
 
-        // Given Container materialized
         assert_eq!(config.node_properties().len(), 1);
 
-        // Given Contained validation works
         let valid = TestConfig::from_object(&json!(["prop"]));
         assert!(valid.is_ok());
-
-        // Pure Contained awaits genetic construction from:
-        // - Pure concept of Property → requires Name
-        // - Pure concept of Name → requires non-emptiness
-        // - Pure concept of List → requires elements
-        // This is DETERMINATIVE REASON - Given produced from Pure!
     }
 }

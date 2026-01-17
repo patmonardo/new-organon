@@ -28,6 +28,8 @@ import { BaseCore, BaseSchema, BaseState, Type, Label } from './base';
 export const EntityRef = z.object({
   id: z.string().min(1),
   type: Type,
+  // Optional dialectical role for tracing (e.g. preserved, negated, sublated)
+  role: z.string().optional(),
 });
 export type EntityRef = z.infer<typeof EntityRef>;
 
@@ -88,6 +90,11 @@ export const EntityShapeSchema = z.object({
 
   // Reference to Form Principle (Form:Entity relationship)
   formId: z.string(), // Required - every Entity has a Form
+
+  // Particulars: sublated particulars linked to this Entity
+  // These are condensed, contextualized instances that have been
+  // preserved/negated/elevated in the process of sublation.
+  particulars: z.array(EntityRef).optional(),
 
   // Actual field values (Data from Model system)
   values: z.record(z.string(), z.any()).optional().default({}),

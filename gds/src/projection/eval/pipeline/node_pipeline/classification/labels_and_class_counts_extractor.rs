@@ -1,12 +1,6 @@
 use crate::collections::{long_multiset::LongMultiSet, HugeIntArray};
 use crate::ml::core::subgraph::LocalIdMap;
 use crate::types::properties::node::NodePropertyValues;
-use std::collections::HashMap;
-
-// Placeholder types until property values and huge arrays are translated
-pub type NodePropertyValuesOld = ();
-pub type HugeIntArrayOld = Vec<i32>;
-pub type LongMultiSetOld = HashMap<i64, usize>;
 
 /// Result of extracting labels and class counts from target node property.
 #[derive(Debug, Clone)]

@@ -8,50 +8,7 @@ use std::sync::Arc;
 
 /// SameCategory link feature - binary indicator of categorical equality.
 ///
-/// Returns 1.0 if two nodes have the same value for a property, 0.0 otherwise:
-/// ```text
-/// SameCategory(node1, node2, property) = {
-///     1.0  if node1.property == node2.property
-///     0.0  otherwise
-/// }
-/// ```
-///
-/// # Use Case
-///
-/// Categorical features for link prediction - do two nodes share attributes?
-/// - Community membership: same community = stronger link likelihood
-/// - Type/Class: same type = homophily signal
-/// - Label: same label = clustering evidence
-///
-/// # Multiple Properties
-///
-/// Returns **one binary feature per property** (not combined).
-/// With 3 properties, dimension = 3 (one indicator each).
-///
-/// # Example
-///
-/// ```text
-/// Node A: { department: "Engineering", country: "USA", role: "Dev" }
-/// Node B: { department: "Engineering", country: "UK",  role: "Dev" }
-///
-/// SameCategory([department, country, role]) = [1.0, 0.0, 1.0]
-///                                               ↑    ↑    ↑
-///                                              same diff same
-/// ```
-///
-/// # Empirical Concept (Given)
-///
-/// The **Given Form** is this empirical concept:
-/// - **Representation**: The categorical equality check (==)
-/// - **Second Representation**: The predicate captures "sameness" itself
-/// - **Consciousness**: We represent equality as binary feature (1/0)
-///
-/// The **Pure Form** (Ideal) deferred:
-/// - Type-specific equality predicates (Long, Double, String, etc.)
-/// - Property value extraction from Graph
-/// - Validation of numeric-only constraint
-///
-/// This is **Speculative Seeding** - the Given articulates the Pure within!
+/// Returns one binary feature per property.
 #[derive(Debug, Clone)]
 pub struct SameCategoryStep {
     /// Node properties to check for categorical equality
@@ -96,7 +53,6 @@ impl LinkFeatureStep for SameCategoryStep {
             appenders.push(appender);
         }
 
-        // Use UnionLinkFeatureAppender to combine all property appenders
         Box::new(
             super::union_link_feature_appender::UnionLinkFeatureAppender::new(
                 appenders,
@@ -112,7 +68,6 @@ impl LinkFeatureStep for SameCategoryStep {
 
     fn configuration(&self) -> HashMap<String, serde_json::Value> {
         let mut config = HashMap::new();
-        // Note: Java uses "nodeProperty" (singular) but stores list
         config.insert(
             "nodeProperty".to_string(),
             serde_json::json!(self.node_properties),
@@ -244,26 +199,8 @@ mod tests {
     }
 
     #[test]
-    fn test_semantic_meaning() {
-        // SameCategory checks categorical equality
-        // 1.0 = same category (homophily)
-        // 0.0 = different category
+    fn test_binary_feature_semantics() {
         let step = SameCategoryStep::new(vec!["community".to_string()]);
         assert_eq!(step.name(), "SAME_CATEGORY");
-    }
-
-    #[test]
-    fn test_empirical_concept_representation() {
-        // The Given Form: categorical equality as binary indicator
-        // The Pure Form: type-specific equality predicates (deferred)
-        // This is SPECULATIVE SEEDING - articulating the Pure within Given!
-        let step = SameCategoryStep::new(vec!["department".to_string(), "role".to_string()]);
-
-        // Container (Given): API surface articulated
-        assert_eq!(step.name(), "SAME_CATEGORY");
-        assert_eq!(step.input_node_properties().len(), 2);
-
-        // Contained (Pure): Equality predicates deferred
-        // Second Representation: The concept of "sameness" itself!
     }
 }

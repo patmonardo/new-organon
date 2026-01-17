@@ -1,17 +1,19 @@
-use crate::projection::eval::pipeline::Pipeline;
+use crate::core::utils::progress::tasks::progress_tracker::NoopProgressTracker;
+use crate::core::utils::progress::tasks::progress_tracker::ProgressTracker;
+use crate::core::utils::progress::tasks::Task;
+use crate::mem::MemoryEstimation;
+use crate::projection::eval::pipeline::node_pipeline::node_property_pipeline_base_train_config::NodePropertyPipelineBaseTrainConfig;
+use crate::projection::eval::pipeline::node_pipeline::NodeFeatureProducer;
+use crate::projection::eval::pipeline::pipeline_trait::Pipeline;
+use crate::projection::eval::pipeline::PipelineCatalog;
+use crate::projection::eval::procedure::ExecutionContext;
 use crate::types::graph_store::DefaultGraphStore;
 use std::sync::Arc;
 
 use super::{
-    NodeRegressionPipelineTrainConfig, NodeRegressionTrainAlgorithm, NodeRegressionTrainingPipeline,
+    NodeRegressionPipelineTrainConfig, NodeRegressionTrain, NodeRegressionTrainAlgorithm,
+    NodeRegressionTrainingPipeline,
 };
-
-use crate::projection::eval::pipeline::node_pipeline::NodeFeatureProducer;
-
-// Placeholder types until full framework is available
-pub type ExecutionContext = ();
-pub type ProgressTracker = ();
-pub type Task = ();
 
 /// Factory for creating node regression training algorithm instances.
 ///
@@ -22,9 +24,10 @@ pub type Task = ();
 /// - Progress task construction
 ///
 /// Java source: `NodeRegressionTrainPipelineAlgorithmFactory.java`
-#[derive(Debug, Clone)]
 pub struct NodeRegressionTrainPipelineAlgorithmFactory {
-    _execution_context: ExecutionContext,
+    execution_context: ExecutionContext,
+    gds_version: String,
+    pipeline_catalog: Arc<PipelineCatalog>,
 }
 
 impl NodeRegressionTrainPipelineAlgorithmFactory {
@@ -36,10 +39,24 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
     ///     this.executionContext = executionContext;
     /// }
     /// ```
-    pub fn new(execution_context: ExecutionContext) -> Self {
+    pub fn new(
+        execution_context: ExecutionContext,
+        gds_version: String,
+        pipeline_catalog: Arc<PipelineCatalog>,
+    ) -> Self {
         Self {
-            _execution_context: execution_context,
+            execution_context,
+            gds_version,
+            pipeline_catalog,
         }
+    }
+
+    pub fn execution_context(&self) -> &ExecutionContext {
+        &self.execution_context
+    }
+
+    pub fn gds_version(&self) -> &str {
+        &self.gds_version
     }
 
     /// Builds a training algorithm by retrieving the pipeline from the catalog.
@@ -63,12 +80,19 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
         &self,
         graph_store: Arc<DefaultGraphStore>,
         configuration: NodeRegressionPipelineTrainConfig,
-        progress_tracker: ProgressTracker,
+        progress_tracker: Box<dyn ProgressTracker>,
     ) -> NodeRegressionTrainAlgorithm {
-        // Direct integration: catalog lookup isn't wired yet, so this overload uses a
-        // default in-memory pipeline instance.
-        let pipeline = NodeRegressionTrainingPipeline::new();
-        self.build_with_pipeline(graph_store, configuration, pipeline, progress_tracker)
+        let pipeline = self
+            .pipeline_catalog
+            .get_typed::<NodeRegressionTrainingPipeline>("", configuration.pipeline())
+            .unwrap_or_else(|_| Arc::new(NodeRegressionTrainingPipeline::new()));
+
+        self.build_with_pipeline(
+            graph_store,
+            configuration,
+            (*pipeline).clone(),
+            progress_tracker,
+        )
     }
 
     /// Builds a training algorithm with an explicitly provided pipeline.
@@ -102,7 +126,7 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
         graph_store: Arc<DefaultGraphStore>,
         configuration: NodeRegressionPipelineTrainConfig,
         pipeline: NodeRegressionTrainingPipeline,
-        progress_tracker: ProgressTracker,
+        progress_tracker: Box<dyn ProgressTracker>,
     ) -> NodeRegressionTrainAlgorithm {
         Self::validate_main_metric(&pipeline, configuration.metrics().first());
 
@@ -114,12 +138,22 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
             .validate_node_property_steps_context_configs(pipeline.node_property_steps())
             .expect("node property step context config validation failed");
 
+        let trainer = Box::new(NodeRegressionTrain::create(
+            graph_store.clone(),
+            pipeline.clone(),
+            configuration.clone(),
+            node_feature_producer,
+            progress_tracker,
+        ));
+
+        let algorithm_progress = Box::new(NoopProgressTracker);
+
         NodeRegressionTrainAlgorithm::new(
-            std::marker::PhantomData, // pipeline_trainer (placeholder)
+            trainer,
             pipeline,
             graph_store,
             configuration,
-            progress_tracker,
+            algorithm_progress,
         )
     }
 
@@ -128,6 +162,15 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
     /// Java source: `taskName()`
     pub fn task_name(&self) -> &str {
         "Node Regression Train Pipeline"
+    }
+
+    /// Estimate memory requirements for training.
+    pub fn memory_estimation(
+        &self,
+        _configuration: &NodeRegressionPipelineTrainConfig,
+    ) -> Box<dyn MemoryEstimation> {
+        // Placeholder until memory estimations are translated.
+        crate::mem::MemoryEstimations::empty()
     }
 
     /// Creates a progress task for pipeline training.
@@ -139,6 +182,7 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
         _config: &NodeRegressionPipelineTrainConfig,
     ) -> Task {
         // Task/progress plumbing is not wired yet in direct integration.
+        Task::new("Node Regression Train Pipeline".to_string(), vec![])
     }
 
     /// Creates a progress task for a specific pipeline.
@@ -154,6 +198,7 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
         _node_count: u64,
     ) -> Task {
         // Task/progress plumbing is not wired yet in direct integration.
+        Task::new("Node Regression Train Pipeline".to_string(), vec![])
     }
 
     /// Validates that the main metric is supported by the pipeline.
@@ -181,24 +226,35 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::random::RandomGraphConfig;
 
     #[test]
     fn test_factory_new() {
-        let _factory = NodeRegressionTrainPipelineAlgorithmFactory::new(());
+        let _factory = NodeRegressionTrainPipelineAlgorithmFactory::new(
+            ExecutionContext::empty(),
+            "2.5.0".to_string(),
+            Arc::new(PipelineCatalog::new()),
+        );
     }
 
     #[test]
     fn test_task_name() {
-        let factory = NodeRegressionTrainPipelineAlgorithmFactory::new(());
+        let factory = NodeRegressionTrainPipelineAlgorithmFactory::new(
+            ExecutionContext::empty(),
+            "2.5.0".to_string(),
+            Arc::new(PipelineCatalog::new()),
+        );
         assert_eq!(factory.task_name(), "Node Regression Train Pipeline");
     }
 
     #[test]
+    #[should_panic(expected = "Missing target node property for regression")]
     fn test_build_with_pipeline() {
-        use crate::types::graph_store::DefaultGraphStore;
-        use crate::types::random::random_graph::RandomGraphConfig;
-
-        let factory = NodeRegressionTrainPipelineAlgorithmFactory::new(());
+        let factory = NodeRegressionTrainPipelineAlgorithmFactory::new(
+            ExecutionContext::empty(),
+            "2.5.0".to_string(),
+            Arc::new(PipelineCatalog::new()),
+        );
         let pipeline = NodeRegressionTrainingPipeline::new();
         let config = NodeRegressionPipelineTrainConfig::default();
         let random_config = RandomGraphConfig {
@@ -213,7 +269,7 @@ mod tests {
             graph_store,
             config,
             pipeline,
-            (), // progress_tracker
+            Box::new(NoopProgressTracker),
         );
     }
 

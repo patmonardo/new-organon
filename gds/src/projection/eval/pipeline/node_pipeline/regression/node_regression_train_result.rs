@@ -1,10 +1,7 @@
 use super::node_regression_pipeline_model_info::NodeRegressionPipelineModelInfo;
 use super::NodeRegressionPipelineTrainConfig;
-use crate::ml::models::base::{Regressor, RegressorData};
+use crate::ml::models::base::Regressor;
 use crate::ml::training::statistics::TrainingStatistics;
-
-// Placeholder types until model catalog is implemented
-pub type CatalogModelContainer = ();
 
 /// Result of training a node regression pipeline.
 ///
@@ -31,6 +28,10 @@ impl NodeRegressionTrainResult {
         &*self.regressor
     }
 
+    pub fn into_regressor(self) -> Box<dyn Regressor> {
+        self.regressor
+    }
+
     /// Returns training statistics (CV scores, best params, etc.).
     pub fn training_statistics(&self) -> &TrainingStatistics {
         &self.training_statistics
@@ -51,8 +52,7 @@ impl NodeRegressionTrainResult {
 /// - `INFO`: NodeRegressionPipelineModelInfo - custom metadata (feature importance, splits)
 #[derive(Debug)]
 pub struct NodeRegressionTrainPipelineResult {
-    // Model catalog fields (from CatalogModelContainer)
-    regressor_data: Box<dyn RegressorData>,
+    regressor: Box<dyn Regressor>,
     train_config: NodeRegressionPipelineTrainConfig,
     model_info: NodeRegressionPipelineModelInfo,
 
@@ -62,22 +62,22 @@ pub struct NodeRegressionTrainPipelineResult {
 
 impl NodeRegressionTrainPipelineResult {
     pub fn new(
-        regressor_data: Box<dyn RegressorData>,
+        regressor: Box<dyn Regressor>,
         train_config: NodeRegressionPipelineTrainConfig,
         model_info: NodeRegressionPipelineModelInfo,
         training_statistics: TrainingStatistics,
     ) -> Self {
         Self {
-            regressor_data,
+            regressor,
             train_config,
             model_info,
             training_statistics,
         }
     }
 
-    /// Returns the serialized regressor model data.
-    pub fn regressor_data(&self) -> &dyn RegressorData {
-        &*self.regressor_data
+    /// Returns the trained regressor model.
+    pub fn regressor(&self) -> &dyn Regressor {
+        &*self.regressor
     }
 
     /// Returns the training configuration used.
@@ -103,6 +103,7 @@ mod tests {
     use crate::ml::models::training_method::TrainingMethod;
     use crate::projection::eval::pipeline::node_pipeline::NodePropertyPipelineBaseTrainConfig;
     use crate::projection::eval::pipeline::node_pipeline::NodePropertyPredictPipeline;
+    use serde_json::json;
     use std::any::Any;
     use std::collections::HashMap;
 
@@ -154,42 +155,35 @@ mod tests {
     #[test]
     fn test_pipeline_result_new() {
         let config = NodeRegressionPipelineTrainConfig::default();
-        let regressor_data = Box::new(TestRegressorData);
         let model_info = NodeRegressionPipelineModelInfo::new(
+            json!({}),
             HashMap::new(),
-            HashMap::new(),
-            (), // best_candidate
             NodePropertyPredictPipeline::empty(),
         );
         let training_stats = TrainingStatistics::new(vec![]);
 
         let result = NodeRegressionTrainPipelineResult::new(
-            regressor_data,
+            Box::new(TestRegressor),
             config,
             model_info,
             training_stats,
         );
 
-        assert!(std::ptr::eq(
-            result.regressor_data().as_any(),
-            &TestRegressorData as &dyn Any
-        ));
+        assert!(std::ptr::eq(result.regressor().data(), &TestRegressorData));
     }
 
     #[test]
     fn test_pipeline_result_config_access() {
         let config = NodeRegressionPipelineTrainConfig::default();
-        let regressor_data = Box::new(TestRegressorData);
         let model_info = NodeRegressionPipelineModelInfo::new(
+            json!({}),
             HashMap::new(),
-            HashMap::new(),
-            (), // best_candidate
             NodePropertyPredictPipeline::empty(),
         );
         let training_stats = TrainingStatistics::new(vec![]);
 
         let result = NodeRegressionTrainPipelineResult::new(
-            regressor_data,
+            Box::new(TestRegressor),
             config.clone(),
             model_info,
             training_stats,

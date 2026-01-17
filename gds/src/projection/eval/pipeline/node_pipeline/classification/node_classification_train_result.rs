@@ -1,16 +1,14 @@
-// Placeholder types until ml-models and ml-training packages are translated
-pub type Classifier = ();
-pub type TrainingStatistics = ();
-pub type LongMultiSet = std::collections::HashMap<i64, usize>;
-
+use crate::collections::long_multiset::LongMultiSet;
 use crate::ml::core::subgraph::LocalIdMap;
+use crate::ml::models::Classifier;
+use crate::ml::training::statistics::TrainingStatistics;
 
 /// Result of training a node classification model.
 ///
 /// Contains the trained classifier, training statistics, class ID mappings, and class counts.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct NodeClassificationTrainResult {
-    classifier: Classifier,
+    classifier: Box<dyn Classifier>,
     training_statistics: TrainingStatistics,
     class_id_map: LocalIdMap,
     class_counts: LongMultiSet,
@@ -18,7 +16,7 @@ pub struct NodeClassificationTrainResult {
 
 impl NodeClassificationTrainResult {
     pub fn new(
-        classifier: Classifier,
+        classifier: Box<dyn Classifier>,
         training_statistics: TrainingStatistics,
         class_id_map: LocalIdMap,
         class_counts: LongMultiSet,
@@ -31,8 +29,12 @@ impl NodeClassificationTrainResult {
         }
     }
 
-    pub fn classifier(&self) -> &Classifier {
-        &self.classifier
+    pub fn classifier(&self) -> &dyn Classifier {
+        &*self.classifier
+    }
+
+    pub fn into_classifier(self) -> Box<dyn Classifier> {
+        self.classifier
     }
 
     pub fn training_statistics(&self) -> &TrainingStatistics {
@@ -51,11 +53,59 @@ impl NodeClassificationTrainResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ml::metrics::classification::GlobalAccuracy;
+    use crate::ml::models::base::{BaseModelData, ClassifierData};
+    use crate::ml::models::training_method::TrainingMethod;
+    use std::any::Any;
+
+    #[derive(Debug)]
+    struct TestClassifierData;
+
+    impl BaseModelData for TestClassifierData {
+        fn trainer_method(&self) -> TrainingMethod {
+            TrainingMethod::LogisticRegression
+        }
+
+        fn feature_dimension(&self) -> usize {
+            1
+        }
+
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+    }
+
+    impl ClassifierData for TestClassifierData {
+        fn number_of_classes(&self) -> usize {
+            2
+        }
+    }
+
+    #[derive(Debug)]
+    struct TestClassifier;
+
+    impl crate::ml::models::Classifier for TestClassifier {
+        fn data(&self) -> &dyn ClassifierData {
+            &TestClassifierData
+        }
+
+        fn predict_probabilities(&self, _features: &[f64]) -> Vec<f64> {
+            vec![0.5, 0.5]
+        }
+
+        fn predict_probabilities_batch(
+            &self,
+            batch: &[usize],
+            _features: &dyn crate::ml::models::Features,
+        ) -> crate::ml::core::tensor::Matrix {
+            crate::ml::core::tensor::Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
+        }
+    }
 
     #[test]
     fn test_new_train_result() {
-        let classifier = ();
-        let training_statistics = ();
+        let classifier = Box::new(TestClassifier) as Box<dyn crate::ml::models::Classifier>;
+        let training_statistics = TrainingStatistics::new(vec![Box::new(GlobalAccuracy::new())]);
         let class_id_map = LocalIdMap::of(&[0, 1, 2]);
         let class_counts = LongMultiSet::new();
 
@@ -71,8 +121,8 @@ mod tests {
 
     #[test]
     fn test_accessors() {
-        let classifier = ();
-        let training_statistics = ();
+        let classifier = Box::new(TestClassifier) as Box<dyn crate::ml::models::Classifier>;
+        let training_statistics = TrainingStatistics::new(vec![Box::new(GlobalAccuracy::new())]);
         let class_id_map = LocalIdMap::of(&[10, 20, 30]);
         let class_counts = LongMultiSet::new();
 

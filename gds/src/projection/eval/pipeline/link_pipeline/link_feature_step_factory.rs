@@ -252,20 +252,12 @@ mod tests {
     }
 
     #[test]
-    fn test_car_cdr_science() {
-        // CAR:CDR - Science is Given and Reconstruction of Given!
+    fn test_parse_and_create() {
+        let factory = LinkFeatureStepFactory::parse("COSINE").unwrap();
+        assert_eq!(factory, LinkFeatureStepFactory::Cosine);
 
-        // CAR - The Given (atomic factory type)
-        let car = LinkFeatureStepFactory::parse("COSINE").unwrap();
-        assert_eq!(car, LinkFeatureStepFactory::Cosine);
-
-        // CDR - The Reconstruction (create instance)
-        let cdr = car.create(vec!["embedding".to_string()]);
-        assert_eq!(cdr.name(), "COSINE");
-
-        // Science = CAR + CDR (unity of Given and Reconstruction)
-        // The factory (CAR) reconstructs (CDR) the full step instance!
-        // This is the COMPLETE SCIENCE! 🎯
+        let step = factory.create(vec!["embedding".to_string()]);
+        assert_eq!(step.name(), "COSINE");
     }
 
     #[test]

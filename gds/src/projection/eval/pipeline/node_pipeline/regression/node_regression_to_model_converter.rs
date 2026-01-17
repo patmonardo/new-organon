@@ -2,35 +2,9 @@ use super::{
     NodeRegressionPipelineModelInfo, NodeRegressionPipelineTrainConfig,
     NodeRegressionTrainPipelineResult, NodeRegressionTrainResult, NodeRegressionTrainingPipeline,
 };
-use crate::ml::metrics::regression::RegressionMetric;
-use crate::ml::models::base::{BaseModelData, RegressorData};
-use crate::ml::models::training_method::TrainingMethod;
-use crate::ml::training::statistics::TrainingStatistics;
 use crate::projection::eval::pipeline::node_pipeline::NodePropertyPredictPipeline;
-use std::any::Any;
-use std::collections::HashMap;
-
-// Placeholder type until model catalog integration is implemented
-pub type GraphSchema = ();
-
-// Placeholder implementations for model converter
-#[derive(Debug)]
-struct PlaceholderRegressorData;
-
-impl BaseModelData for PlaceholderRegressorData {
-    fn trainer_method(&self) -> TrainingMethod {
-        TrainingMethod::LinearRegression
-    }
-
-    fn feature_dimension(&self) -> usize {
-        0
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}
-impl RegressorData for PlaceholderRegressorData {}
+use crate::projection::eval::pipeline::ResultToModelConverter;
+use crate::types::schema::GraphSchema;
 
 /// Converts node regression training results to catalog models.
 ///
@@ -88,47 +62,34 @@ impl NodeRegressionToModelConverter {
     /// ```
     pub fn to_model(
         &self,
-        _train_result: NodeRegressionTrainResult,
-        _original_schema: GraphSchema,
+        train_result: NodeRegressionTrainResult,
+        _original_schema: &GraphSchema,
     ) -> NodeRegressionTrainPipelineResult {
-        // Catalog model creation is not wired yet; return a minimal container that preserves
-        // config + shape for downstream plumbing/tests.
+        let training_statistics = train_result.training_statistics().clone();
+        let model_info = NodeRegressionPipelineModelInfo::of(
+            training_statistics.winning_model_test_metrics(),
+            training_statistics.winning_model_outer_train_metrics(),
+            training_statistics.best_candidate(),
+            NodePropertyPredictPipeline::from_pipeline(&self._pipeline),
+        );
+
         NodeRegressionTrainPipelineResult::new(
-            Box::new(PlaceholderRegressorData), // regressor_data
+            train_result.into_regressor(),
             self.config.clone(),
-            NodeRegressionPipelineModelInfo::new(
-                HashMap::new(), // test_metrics
-                HashMap::new(), // outer_train_metrics
-                (),             // best_candidate (placeholder)
-                NodePropertyPredictPipeline::empty(),
-            ),
-            TrainingStatistics::new(vec![Box::new(RegressionMetric::MSE)]), // training_statistics
+            model_info,
+            training_statistics,
         )
     }
 }
-
-/// Trait for converting training results to catalog models.
-///
-/// Java source: `ResultToModelConverter<MODEL, RESULT>`
-///
-/// This is the generic converter pattern used across all pipeline types:
-/// - NodeClassificationToModelConverter
-/// - NodeRegressionToModelConverter
-/// - LinkPredictionToModelConverter
-pub trait ResultToModelConverterTrait<MODEL, RESULT> {
-    /// Convert training result to catalog model.
-    fn to_model(&self, train_result: RESULT, original_schema: GraphSchema) -> MODEL;
-}
-
-impl ResultToModelConverterTrait<NodeRegressionTrainPipelineResult, NodeRegressionTrainResult>
+impl ResultToModelConverter<NodeRegressionTrainPipelineResult, NodeRegressionTrainResult>
     for NodeRegressionToModelConverter
 {
     fn to_model(
         &self,
-        train_result: NodeRegressionTrainResult,
-        original_schema: GraphSchema,
+        result: NodeRegressionTrainResult,
+        original_schema: &GraphSchema,
     ) -> NodeRegressionTrainPipelineResult {
-        self.to_model(train_result, original_schema)
+        self.to_model(result, original_schema)
     }
 }
 
@@ -137,6 +98,8 @@ mod tests {
     use super::*;
     use crate::ml::models::base::{BaseModelData, Regressor, RegressorData};
     use crate::ml::models::training_method::TrainingMethod;
+    use crate::ml::training::statistics::TrainingStatistics;
+    use crate::types::schema::GraphSchema;
     use std::any::Any;
 
     // Placeholder implementations for tests
@@ -190,9 +153,22 @@ mod tests {
         let converter = NodeRegressionToModelConverter::new(pipeline, config);
 
         let regressor = Box::new(TestRegressor);
-        let stats = TrainingStatistics::new(vec![]);
+        let mut stats = TrainingStatistics::new(vec![Box::new(
+            crate::ml::metrics::regression::RegressionMetric::MSE,
+        )]);
+        let mut training_stats = std::collections::HashMap::new();
+        let mut validation_stats = std::collections::HashMap::new();
+        let scores = crate::ml::metrics::EvaluationScores::new(0.0, 0.0, 0.0);
+        training_stats.insert("MSE".to_string(), scores.clone());
+        validation_stats.insert("MSE".to_string(), scores);
+        stats.add_candidate_stats(crate::ml::metrics::ModelCandidateStats::new(
+            serde_json::json!({}),
+            training_stats,
+            validation_stats,
+        ));
         let train_result = NodeRegressionTrainResult::new(regressor, stats);
-        let _model = converter.to_model(train_result, ());
+        let schema = GraphSchema::empty();
+        let _model = converter.to_model(train_result, &schema);
 
         // Verify converter produces model (when Model system is complete, add assertions)
     }
@@ -204,10 +180,23 @@ mod tests {
         let converter = NodeRegressionToModelConverter::new(pipeline, config);
 
         let regressor = Box::new(TestRegressor);
-        let stats = TrainingStatistics::new(vec![]);
+        let mut stats = TrainingStatistics::new(vec![Box::new(
+            crate::ml::metrics::regression::RegressionMetric::MSE,
+        )]);
+        let mut training_stats = std::collections::HashMap::new();
+        let mut validation_stats = std::collections::HashMap::new();
+        let scores = crate::ml::metrics::EvaluationScores::new(0.0, 0.0, 0.0);
+        training_stats.insert("MSE".to_string(), scores.clone());
+        validation_stats.insert("MSE".to_string(), scores);
+        stats.add_candidate_stats(crate::ml::metrics::ModelCandidateStats::new(
+            serde_json::json!({}),
+            training_stats,
+            validation_stats,
+        ));
         let train_result = NodeRegressionTrainResult::new(regressor, stats);
+        let schema = GraphSchema::empty();
 
         // Use trait method
-        let _model = ResultToModelConverterTrait::to_model(&converter, train_result, ());
+        let _model = ResultToModelConverter::to_model(&converter, train_result, &schema);
     }
 }

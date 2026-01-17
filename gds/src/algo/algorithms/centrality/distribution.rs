@@ -6,7 +6,7 @@
 //!
 //! This module provides distribution computation for PageRank and other centrality algorithms.
 
-use super::result::CentralityAlgorithmResult;
+use super::CentralityAlgorithmResult;
 use crate::algo::common::result::centrality::centrality_statistics;
 use std::collections::HashMap;
 
@@ -129,7 +129,7 @@ impl PageRankDistributionComputer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algo::algorithms::centrality::result::CentralityAlgorithmResult;
+    use crate::algo::algorithms::centrality::CentralityAlgorithmResult;
     use crate::types::properties::node::NodePropertyValues;
     use crate::types::properties::{PropertyValues, PropertyValuesError, PropertyValuesResult};
     use crate::types::ValueType;

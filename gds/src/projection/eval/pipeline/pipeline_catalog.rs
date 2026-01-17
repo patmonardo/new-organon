@@ -187,11 +187,21 @@ impl PipelineCatalog {
             .write()
             .unwrap_or_else(|e| e.into_inner());
 
-        let user_catalog = catalogs
-            .get_mut(user)
-            .ok_or_else(|| format!("No pipelines exist for user `{}`.", user))?;
+        let user_catalog = catalogs.get_mut(user).ok_or_else(|| {
+            format!(
+                "Pipeline with name `{}` does not exist for user `{}`.",
+                pipeline_name, user
+            )
+        })?;
 
-        user_catalog.replace(pipeline_name.to_string(), pipeline)
+        user_catalog
+            .replace(pipeline_name.to_string(), pipeline)
+            .map_err(|_| {
+                format!(
+                    "Pipeline with name `{}` does not exist for user `{}`.",
+                    pipeline_name, user
+                )
+            })
     }
 
     /// Check if a pipeline exists in the catalog.
@@ -250,9 +260,11 @@ impl PipelineCatalog {
 
         // Attempt to downcast to the expected type
         entry.pipeline_as::<T>().ok_or_else(|| {
+            let expected = std::any::type_name::<T>();
+            let actual = entry.pipeline_type();
             format!(
-                "The pipeline `{}` is not of the expected type.",
-                pipeline_name
+                "The pipeline `{}` is of type `{}`, but expected type `{}`.",
+                pipeline_name, actual, expected
             )
         })
     }
@@ -437,6 +449,83 @@ mod tests {
         }
     }
 
+    // Alternate pipeline type to test type mismatch errors
+    #[derive(Debug)]
+    struct OtherPipeline;
+
+    impl crate::projection::eval::pipeline::Pipeline for OtherPipeline {
+        type FeatureStep = MockFeatureStep;
+
+        fn node_property_steps(
+            &self,
+        ) -> &[Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>] {
+            &[]
+        }
+
+        fn feature_steps(&self) -> &[Self::FeatureStep] {
+            &[]
+        }
+
+        fn specific_validate_before_execution(
+            &self,
+            _graph_store: &crate::types::graph_store::DefaultGraphStore,
+        ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError> {
+            Ok(())
+        }
+
+        fn to_map(&self) -> std::collections::HashMap<String, serde_json::Value> {
+            std::collections::HashMap::new()
+        }
+    }
+
+    impl TrainingPipeline for OtherPipeline {
+        fn pipeline_type(&self) -> &str {
+            "other"
+        }
+
+        fn training_parameter_space(
+            &self,
+        ) -> &HashMap<
+            crate::projection::eval::pipeline::TrainingMethod,
+            Vec<Box<dyn crate::projection::eval::pipeline::TunableTrainerConfig>>,
+        > {
+            use crate::projection::eval::pipeline::TrainingMethod;
+            use std::sync::OnceLock;
+            static EMPTY: OnceLock<
+                HashMap<
+                    TrainingMethod,
+                    Vec<Box<dyn crate::projection::eval::pipeline::TunableTrainerConfig>>,
+                >,
+            > = OnceLock::new();
+            EMPTY.get_or_init(HashMap::new)
+        }
+
+        fn training_parameter_space_mut(
+            &mut self,
+        ) -> &mut HashMap<
+            crate::projection::eval::pipeline::TrainingMethod,
+            Vec<Box<dyn crate::projection::eval::pipeline::TunableTrainerConfig>>,
+        > {
+            unreachable!("Not needed for tests")
+        }
+
+        fn auto_tuning_config(&self) -> &crate::projection::eval::pipeline::AutoTuningConfig {
+            use std::sync::OnceLock;
+            static CONFIG: OnceLock<crate::projection::eval::pipeline::AutoTuningConfig> =
+                OnceLock::new();
+            CONFIG.get_or_init(|| {
+                crate::projection::eval::pipeline::AutoTuningConfig::new(1).unwrap()
+            })
+        }
+
+        fn set_auto_tuning_config(
+            &mut self,
+            _config: crate::projection::eval::pipeline::AutoTuningConfig,
+        ) {
+            // Not needed for tests
+        }
+    }
+
     #[test]
     fn test_set_and_get_pipeline() {
         let catalog = PipelineCatalog::new();
@@ -506,7 +595,54 @@ mod tests {
         let catalog = PipelineCatalog::new();
         let result = catalog.drop("alice", "nonexistent");
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("does not exist"));
+        assert_eq!(
+            result.unwrap_err(),
+            "Pipeline with name `nonexistent` does not exist for user `alice`."
+        );
+    }
+
+    #[test]
+    fn test_get_nonexistent_pipeline_message() {
+        let catalog = PipelineCatalog::new();
+        let result = catalog.get("alice", "missing");
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "Pipeline with name `missing` does not exist for user `alice`."
+        );
+    }
+
+    #[test]
+    fn test_get_typed_pipeline_mismatch_message() {
+        let catalog = PipelineCatalog::new();
+        let pipeline = Arc::new(MockPipeline {
+            name: "node".to_string(),
+        });
+
+        catalog.set("alice", "p1", pipeline).unwrap();
+
+        // Expect a type mismatch error including actual and expected types.
+        let err = catalog
+            .get_typed::<OtherPipeline>("alice", "p1")
+            .unwrap_err();
+
+        assert!(err.contains("The pipeline `p1` is of type `node`"));
+        assert!(err.contains("expected type"));
+    }
+
+    #[test]
+    fn test_replace_nonexistent_pipeline_message() {
+        let catalog = PipelineCatalog::new();
+        let pipeline = Arc::new(MockPipeline {
+            name: "test".to_string(),
+        });
+
+        let result = catalog.replace("alice", "missing", pipeline);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "Pipeline with name `missing` does not exist for user `alice`."
+        );
     }
 
     #[test]

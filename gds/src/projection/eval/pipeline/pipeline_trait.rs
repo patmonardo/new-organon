@@ -243,10 +243,11 @@ impl fmt::Display for PipelineValidationError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::MissingNodeProperties { properties } => {
+                let formatted = format!("[{}]", properties.join(", "));
                 write!(
                     f,
-                    "Node properties {:?} defined in the feature steps do not exist in the graph or part of the pipeline",
-                    properties
+                    "Node properties {} defined in the feature steps do not exist in the graph or part of the pipeline",
+                    formatted
                 )
             }
             Self::GraphStructureInvalid { message } => {
@@ -274,6 +275,8 @@ mod tests {
         let error = PipelineValidationError::missing_node_properties(props);
         let msg = error.to_string();
 
+        assert!(msg.starts_with("Node properties ["));
+        assert!(msg.contains("[embedding, pagerank]"));
         assert!(msg.contains("embedding"));
         assert!(msg.contains("pagerank"));
     }

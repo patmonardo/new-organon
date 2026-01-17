@@ -52,3 +52,35 @@ impl PipelineGraphFilter {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_new_with_relationships() {
+        let filter = PipelineGraphFilter::new(
+            vec!["Person".to_string()],
+            Some(vec!["KNOWS".to_string()]),
+        );
+
+        assert_eq!(filter.node_labels, vec!["Person"]);
+        assert_eq!(filter.relationship_types, vec!["KNOWS"]);
+    }
+
+    #[test]
+    fn test_new_defaults_relationships() {
+        let filter = PipelineGraphFilter::new(vec!["Person".to_string()], None);
+
+        assert_eq!(filter.node_labels, vec!["Person"]);
+        assert!(filter.relationship_types.is_empty());
+    }
+
+    #[test]
+    fn test_with_node_labels() {
+        let filter = PipelineGraphFilter::with_node_labels(vec!["Person".to_string()]);
+
+        assert_eq!(filter.node_labels, vec!["Person"]);
+        assert!(filter.relationship_types.is_empty());
+    }
+}

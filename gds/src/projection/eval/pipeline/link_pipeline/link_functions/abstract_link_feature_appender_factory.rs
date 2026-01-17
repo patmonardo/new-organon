@@ -6,41 +6,10 @@ use crate::types::properties::node::NodePropertyValues;
 use crate::types::ValueType;
 use std::sync::Arc;
 
-/// Abstract factory for creating type-specific LinkFeatureAppenders.
+/// Abstract factory for creating type-specific link feature appenders.
 ///
-/// # The Mexican Jumping Bean Container! 🫘
-///
-/// This is the **Scientific Syllogism** - the Container that holds
-/// jumping implementations (type-specific appenders) that dispatch
-/// based on property value types.
-///
-/// # Pattern: Abstract Factory with Type Dispatch
-///
-/// Subclasses implement methods for each supported type:
-/// - `double_array_appender` - for f64[] properties
-/// - `float_array_appender` - for f32[] properties
-/// - `long_array_appender` - for i64[] properties
-/// - `long_appender` - for i64 scalar properties
-/// - `double_appender` - for f64 scalar properties
-///
-/// The factory inspects Graph property types and dispatches to
-/// the appropriate constructor.
-///
-/// # Used By
-///
-/// - L2FeatureStep (L2LinkFeatureAppenderFactory)
-/// - HadamardFeatureStep (HadamardLinkFeatureAppenderFactory)
-/// - CosineFeatureStep (CosineLinkFeatureAppenderFactory)
-///
-/// # The Four-Fold
-///
-/// - **Pure Container**: AbstractLinkFeatureAppenderFactory trait
-/// - **Given Container**: Concrete factories (L2Factory, HadamardFactory, etc.)
-/// - **Given Contained**: createAppender() type dispatch logic (empirical)
-/// - **Pure Contained**: Type-specific appender construction (deferred)
-///
-/// This is the **Container of Jumping Beans** - each bean (appender)
-/// knows how to jump (compute) for its specific type!
+/// Implementations dispatch based on property value type to build the
+/// appropriate appender.
 pub trait AbstractLinkFeatureAppenderFactory {
     /// Creates a DoubleArray-typed appender.
     fn double_array_appender(
@@ -82,8 +51,7 @@ pub trait AbstractLinkFeatureAppenderFactory {
     /// Inspects the property's ValueType in the graph and dispatches
     /// to the appropriate type-specific constructor method.
     ///
-    /// # Type Dispatch (Given Contained)
-    ///
+    /// Type dispatch:
     /// ```text
     /// match propertyType:
     ///   DoubleArray -> double_array_appender()

@@ -1,16 +1,18 @@
 use super::node_classification_pipeline_train_config::NodeClassificationPipelineTrainConfig;
+use super::node_classification_train::NodeClassificationTrain;
 use super::node_classification_train_algorithm::NodeClassificationTrainAlgorithm;
 use super::node_classification_training_pipeline::NodeClassificationTrainingPipeline;
+use crate::core::utils::progress::tasks::progress_tracker::NoopProgressTracker;
+use crate::core::utils::progress::tasks::progress_tracker::ProgressTracker;
+use crate::core::utils::progress::tasks::Task;
+use crate::mem::MemoryEstimation;
+use crate::projection::eval::pipeline::node_pipeline::node_property_pipeline_base_train_config::NodePropertyPipelineBaseTrainConfig;
+use crate::projection::eval::pipeline::node_pipeline::NodeFeatureProducer;
+use crate::projection::eval::pipeline::pipeline_trait::Pipeline;
+use crate::projection::eval::pipeline::PipelineCatalog;
+use crate::projection::eval::procedure::ExecutionContext;
 use crate::types::graph_store::DefaultGraphStore;
 use std::sync::Arc;
-
-// Placeholder types until training infrastructure is translated
-pub type PipelineCatalog = ();
-pub type ExecutionContext = ();
-pub type ProgressTracker = ();
-pub type MemoryEstimation = ();
-pub type Task = ();
-pub type NodeClassificationTrain = ();
 
 /// Factory for creating NodeClassificationTrainAlgorithm instances.
 ///
@@ -22,13 +24,19 @@ pub type NodeClassificationTrain = ();
 pub struct NodeClassificationTrainPipelineAlgorithmFactory {
     execution_context: ExecutionContext,
     gds_version: String,
+    pipeline_catalog: Arc<PipelineCatalog>,
 }
 
 impl NodeClassificationTrainPipelineAlgorithmFactory {
-    pub fn new(execution_context: ExecutionContext, gds_version: String) -> Self {
+    pub fn new(
+        execution_context: ExecutionContext,
+        gds_version: String,
+        pipeline_catalog: Arc<PipelineCatalog>,
+    ) -> Self {
         Self {
             execution_context,
             gds_version,
+            pipeline_catalog,
         }
     }
 
@@ -47,17 +55,19 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         &self,
         graph_store: Arc<DefaultGraphStore>,
         configuration: NodeClassificationPipelineTrainConfig,
-        progress_tracker: ProgressTracker,
+        progress_tracker: Box<dyn ProgressTracker>,
     ) -> NodeClassificationTrainAlgorithm {
-        // Note: When PipelineCatalog is translated, retrieve a typed pipeline from the catalog.
-        // let pipeline = PipelineCatalog::get_typed::<NodeClassificationTrainingPipeline>(
-        //     configuration.username(),
-        //     configuration.pipeline(),
-        // );
+        let pipeline = self
+            .pipeline_catalog
+            .get_typed::<NodeClassificationTrainingPipeline>("", configuration.pipeline())
+            .unwrap_or_else(|_| Arc::new(NodeClassificationTrainingPipeline::new()));
 
-        let pipeline = NodeClassificationTrainingPipeline::new();
-
-        self.build_with_pipeline(graph_store, configuration, pipeline, progress_tracker)
+        self.build_with_pipeline(
+            graph_store,
+            configuration,
+            (*pipeline).clone(),
+            progress_tracker,
+        )
     }
 
     /// Build algorithm with explicit pipeline.
@@ -68,40 +78,33 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         graph_store: Arc<DefaultGraphStore>,
         configuration: NodeClassificationPipelineTrainConfig,
         pipeline: NodeClassificationTrainingPipeline,
-        progress_tracker: ProgressTracker,
+        progress_tracker: Box<dyn ProgressTracker>,
     ) -> NodeClassificationTrainAlgorithm {
         // Note: Pipeline/metric validation will be wired in once the metrics system is translated.
         // validate_main_metric(&pipeline, &configuration.metrics()[0].to_string());
 
-        // Note: Wire NodeFeatureProducer + node-property-step context validation when training is translated.
-        // let node_feature_producer = NodeFeatureProducer::create(
-        //     graph_store.clone(),
-        //     &configuration,
-        //     &self.execution_context,
-        //     &progress_tracker,
-        // );
+        let node_feature_producer =
+            NodeFeatureProducer::create(graph_store.clone(), configuration.clone());
+        node_feature_producer
+            .validate_node_property_steps_context_configs(pipeline.node_property_steps())
+            .expect("Invalid node property step context configs");
 
-        // node_feature_producer.validate_node_property_steps_context_configs(
-        //     pipeline.node_property_steps()
-        // );
+        let trainer = Box::new(NodeClassificationTrain::create(
+            graph_store.clone(),
+            pipeline.clone(),
+            configuration.clone(),
+            node_feature_producer,
+            progress_tracker,
+        ));
 
-        // Note: Create NodeClassificationTrain once training infrastructure is translated.
-        // let trainer = NodeClassificationTrain::create(
-        //     graph_store.clone(),
-        //     &pipeline,
-        //     &configuration,
-        //     node_feature_producer,
-        //     &progress_tracker,
-        // );
-
-        let trainer = ();
+        let algorithm_progress = Box::new(NoopProgressTracker);
 
         NodeClassificationTrainAlgorithm::new(
             trainer,
             pipeline,
             graph_store,
             configuration,
-            progress_tracker,
+            algorithm_progress,
         )
     }
 
@@ -109,7 +112,7 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
     pub fn memory_estimation(
         &self,
         _configuration: &NodeClassificationPipelineTrainConfig,
-    ) -> MemoryEstimation {
+    ) -> Box<dyn MemoryEstimation> {
         // Note: Implement once MemoryEstimations and NodeClassificationTrain are translated.
         // let pipeline = PipelineCatalog::get_typed::<NodeClassificationTrainingPipeline>(
         //     configuration.username(),
@@ -126,7 +129,7 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         //     .build()
 
         // Placeholder
-        ()
+        crate::mem::MemoryEstimations::empty()
     }
 
     /// Get task name for progress tracking.
@@ -148,7 +151,7 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         // Self::progress_task_with_pipeline(graph_store, &pipeline)
 
         // Placeholder
-        ()
+        Task::new("Node Classification Train Pipeline".to_string(), vec![])
     }
 
     /// Create progress task with explicit pipeline.
@@ -160,7 +163,7 @@ impl NodeClassificationTrainPipelineAlgorithmFactory {
         // NodeClassificationTrain::progress_task(pipeline, graph_store.node_count())
 
         // Placeholder
-        ()
+        Task::new("Node Classification Train Pipeline".to_string(), vec![])
     }
 }
 
@@ -172,12 +175,14 @@ mod tests {
 
     #[test]
     fn test_new_factory() {
-        let execution_context = ();
+        let execution_context = ExecutionContext::empty();
+        let pipeline_catalog = Arc::new(PipelineCatalog::new());
         let gds_version = "2.5.0".to_string();
 
         let factory = NodeClassificationTrainPipelineAlgorithmFactory::new(
             execution_context,
             gds_version.clone(),
+            pipeline_catalog,
         );
 
         assert_eq!(factory.gds_version(), "2.5.0");
@@ -185,7 +190,11 @@ mod tests {
 
     #[test]
     fn test_task_name() {
-        let factory = NodeClassificationTrainPipelineAlgorithmFactory::new((), "2.5.0".to_string());
+        let factory = NodeClassificationTrainPipelineAlgorithmFactory::new(
+            ExecutionContext::empty(),
+            "2.5.0".to_string(),
+            Arc::new(PipelineCatalog::new()),
+        );
         assert_eq!(factory.task_name(), "Node Classification Train Pipeline");
     }
 
@@ -198,8 +207,11 @@ mod tests {
         };
         let _graph_store =
             DefaultGraphStore::random(&config).expect("Failed to generate random graph");
-        let _factory =
-            NodeClassificationTrainPipelineAlgorithmFactory::new((), "2.5.0".to_string());
+        let _factory = NodeClassificationTrainPipelineAlgorithmFactory::new(
+            ExecutionContext::empty(),
+            "2.5.0".to_string(),
+            Arc::new(PipelineCatalog::new()),
+        );
         let _train_config = NodeClassificationPipelineTrainConfig::default();
 
         // Placeholder: build method not yet fully implemented
@@ -208,7 +220,11 @@ mod tests {
 
     #[test]
     fn test_progress_task() {
-        let factory = NodeClassificationTrainPipelineAlgorithmFactory::new((), "2.5.0".to_string());
+        let factory = NodeClassificationTrainPipelineAlgorithmFactory::new(
+            ExecutionContext::empty(),
+            "2.5.0".to_string(),
+            Arc::new(PipelineCatalog::new()),
+        );
         let config = RandomGraphConfig {
             node_count: 10,
             seed: Some(42),
@@ -242,11 +258,15 @@ mod tests {
 
     #[test]
     fn test_memory_estimation() {
-        let factory = NodeClassificationTrainPipelineAlgorithmFactory::new((), "2.5.0".to_string());
+        let factory = NodeClassificationTrainPipelineAlgorithmFactory::new(
+            ExecutionContext::empty(),
+            "2.5.0".to_string(),
+            Arc::new(PipelineCatalog::new()),
+        );
         let config = NodeClassificationPipelineTrainConfig::default();
 
         // Should return placeholder for now
-        factory.memory_estimation(&config);
+        let _ = factory.memory_estimation(&config);
     }
 
     // Note: duplicated progress-task tests removed.

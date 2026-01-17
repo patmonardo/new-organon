@@ -5,25 +5,21 @@
 //! Represents a single algorithm execution step that computes and mutates node properties
 //! (e.g., running PageRank or FastRP as part of feature extraction).
 //!
-//! **Rust Simplification**: This is a simplified direct-integration version without the Java
-//! Stub/ProcedureExecutor infrastructure. Algorithm execution happens directly via a registry
-//! pattern. Stubs can be added later when needed for Form Pipeline extensibility.
+//! Node property steps execute algorithms via ProcedureExecutor and then
+//! apply the results as node properties on the in-memory graph.
 
-use crate::algo::pagerank::{
-    computation::PageRankComputationRuntime, storage::PageRankStorageRuntime,
-};
-use crate::collections::backends::vec::VecDouble;
-use crate::config::PageRankConfig;
-use crate::core::utils::progress::tasks::NoopProgressTracker;
+use crate::algo::embeddings::fastrp::{FastRPAlgorithmSpec, FastRPResult};
+use crate::algo::pagerank::{PageRankAlgorithmSpec, PageRankResult};
+use crate::collections::backends::vec::{VecDouble, VecFloatArray};
+use crate::prelude::GraphStore;
 use crate::projection::eval::pipeline::{
     ExecutableNodePropertyStep, NodePropertyStepContextConfig,
 };
+use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor};
 use crate::projection::NodeLabel;
-use crate::projection::Orientation;
-use crate::projection::RelationshipType;
-use crate::types::graph_store::GraphStore;
-use crate::types::properties::node::DefaultDoubleNodePropertyValues;
-use crate::types::properties::node::NodePropertyValues;
+use crate::types::properties::node::{
+    DefaultDoubleNodePropertyValues, DefaultFloatArrayNodePropertyValues, NodePropertyValues,
+};
 use std::collections::{HashMap, HashSet};
 use std::error::Error as StdError;
 use std::sync::Arc;
@@ -46,10 +42,9 @@ pub const PAGERANK_MUTATE: &str = "gds.pagerank.mutate";
 /// Note: Execution wiring is deferred; creating a step is still supported.
 pub const FASTRP_MUTATE: &str = "gds.fastrp.mutate";
 
+const PIPELINE_GRAPH_NAME: &str = "__pipeline_graph__";
+
 /// Node property step that executes an algorithm to compute node properties.
-///
-/// This is a simplified Rust version that stores the algorithm name and configuration,
-/// and executes directly via an algorithm registry (no Java-style Stub/Procedure infrastructure).
 ///
 /// # Java Source (NodePropertyStep.java)
 /// ```java
@@ -137,6 +132,14 @@ impl NodePropertyStep {
     }
 }
 
+fn build_execution_context(
+    graph_store: &crate::types::graph_store::DefaultGraphStore,
+) -> ExecutionContext {
+    let mut context = ExecutionContext::empty();
+    context.add_graph(PIPELINE_GRAPH_NAME, Arc::new(graph_store.clone()));
+    context
+}
+
 impl ExecutableNodePropertyStep for NodePropertyStep {
     fn execute(
         &self,
@@ -168,6 +171,13 @@ impl ExecutableNodePropertyStep for NodePropertyStep {
         exec_config
             .entry("concurrency".to_string())
             .or_insert_with(|| serde_json::Value::Number(concurrency.into()));
+
+        let config_value = serde_json::to_value(exec_config.clone()).map_err(|e| {
+            Box::new(NodePropertyStepError::ExecutionFailed {
+                algorithm: self.algorithm_name.clone(),
+                message: format!("failed to serialize config: {e}"),
+            }) as Box<dyn StdError>
+        })?;
 
         match self.algorithm_name.as_str() {
             DEBUG_WRITE_CONSTANT_DOUBLE_MUTATE => {
@@ -201,54 +211,17 @@ impl ExecutableNodePropertyStep for NodePropertyStep {
             PAGERANK_MUTATE => {
                 let mutate_property = self.get_mutate_property()?;
 
-                let mut builder = PageRankConfig::builder();
+                let context = build_execution_context(graph_store);
+                let mut executor = ProcedureExecutor::new(context, ExecutionMode::Stream);
+                let mut spec = PageRankAlgorithmSpec::new(PIPELINE_GRAPH_NAME.to_string());
 
-                if let Some(df) = exec_config.get("dampingFactor").and_then(|v| v.as_f64()) {
-                    builder = builder.damping_factor(df);
-                }
-
-                if let Some(tol) = exec_config.get("tolerance").and_then(|v| v.as_f64()) {
-                    builder = builder.tolerance(tol);
-                }
-
-                if let Some(max_iter) = exec_config.get("maxIterations").and_then(|v| v.as_u64()) {
-                    builder = builder.max_iterations(max_iter as usize);
-                }
-
-                let config = builder.build().map_err(|e| {
-                    Box::new(NodePropertyStepError::ExecutionFailed {
-                        algorithm: self.algorithm_name.clone(),
-                        message: format!("invalid config: {e}"),
-                    }) as Box<dyn StdError>
-                })?;
-
-                // Build a graph view restricted to relationship types used by the pipeline.
-                let rel_types: HashSet<RelationshipType> = relationship_types
-                    .iter()
-                    .map(|t| RelationshipType::of(t.clone()))
-                    .collect();
-
-                let storage = PageRankStorageRuntime::with_relationship_types_and_orientation(
-                    graph_store,
-                    &rel_types,
-                    Orientation::Natural,
-                )
-                .map_err(|e| {
-                    Box::new(NodePropertyStepError::ExecutionFailed {
-                        algorithm: self.algorithm_name.clone(),
-                        message: format!("failed to build graph view: {e}"),
-                    }) as Box<dyn StdError>
-                })?;
-
-                let computation = PageRankComputationRuntime::new(
-                    config.max_iterations,
-                    config.damping_factor,
-                    config.tolerance,
-                    None,
-                );
-
-                let mut tracker = NoopProgressTracker;
-                let result = storage.run(&computation, config.base.concurrency, &mut tracker);
+                let result: PageRankResult =
+                    executor.compute(&mut spec, &config_value).map_err(|e| {
+                        Box::new(NodePropertyStepError::ExecutionFailed {
+                            algorithm: self.algorithm_name.clone(),
+                            message: e.to_string(),
+                        }) as Box<dyn StdError>
+                    })?;
 
                 let node_count = graph_store.node_count();
                 if result.scores.len() != node_count {
@@ -264,6 +237,57 @@ impl ExecutableNodePropertyStep for NodePropertyStep {
 
                 let backend = VecDouble::from(result.scores);
                 let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
+                let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+                let labels: HashSet<NodeLabel> = node_labels
+                    .iter()
+                    .map(|label| NodeLabel::of(label.clone()))
+                    .collect();
+
+                graph_store
+                    .add_node_property(labels, mutate_property, values)
+                    .map_err(|e| {
+                        Box::new(NodePropertyStepError::ExecutionFailed {
+                            algorithm: self.algorithm_name.clone(),
+                            message: e.to_string(),
+                        }) as Box<dyn StdError>
+                    })?;
+
+                Ok(())
+            }
+            FASTRP_MUTATE => {
+                let mutate_property = self.get_mutate_property()?;
+
+                let context = build_execution_context(graph_store);
+                let mut executor = ProcedureExecutor::new(context, ExecutionMode::Stream);
+                let mut spec = FastRPAlgorithmSpec::new(PIPELINE_GRAPH_NAME.to_string());
+
+                let result: FastRPResult =
+                    executor.compute(&mut spec, &config_value).map_err(|e| {
+                        Box::new(NodePropertyStepError::ExecutionFailed {
+                            algorithm: self.algorithm_name.clone(),
+                            message: e.to_string(),
+                        }) as Box<dyn StdError>
+                    })?;
+
+                let node_count = graph_store.node_count();
+                if result.embeddings.len() != node_count {
+                    return Err(Box::new(NodePropertyStepError::ExecutionFailed {
+                        algorithm: self.algorithm_name.clone(),
+                        message: format!(
+                            "fastrp returned {} embeddings for {} nodes",
+                            result.embeddings.len(),
+                            node_count
+                        ),
+                    }));
+                }
+
+                let dense: Vec<Option<Vec<f32>>> =
+                    result.embeddings.into_iter().map(Some).collect();
+                let backend = VecFloatArray::from(dense);
+                let values = DefaultFloatArrayNodePropertyValues::<VecFloatArray>::from_collection(
+                    backend, node_count,
+                );
                 let values: Arc<dyn NodePropertyValues> = Arc::new(values);
 
                 let labels: HashSet<NodeLabel> = node_labels
@@ -305,9 +329,6 @@ impl ExecutableNodePropertyStep for NodePropertyStep {
     }
 
     fn root_task_name(&self) -> &str {
-        // In Java, this comes from the algorithm spec's task name.
-        // For now, we use the procedure name as a stable task name until we have
-        // algorithm metadata in a registry.
         &self.algorithm_name
     }
 
@@ -518,5 +539,80 @@ mod tests {
         let step2 = NodePropertyStep::new("algo".to_string(), config2);
 
         assert_eq!(step1, step2);
+    }
+
+    #[test]
+    fn test_missing_mutate_property_error() {
+        let config = HashMap::new();
+        let step = NodePropertyStep::new("gds.pagerank.mutate".to_string(), config);
+
+        let err = step.get_mutate_property().unwrap_err();
+        assert!(matches!(
+            err,
+            NodePropertyStepError::MissingMutateProperty { .. }
+        ));
+        let msg = err.to_string();
+        assert!(msg.contains("missing required 'mutateProperty'"));
+    }
+
+    #[test]
+    fn test_debug_write_constant_double_mutate_writes_property() {
+        use crate::types::graph_store::DefaultGraphStore;
+        use crate::types::random::random_graph::RandomGraphConfig;
+
+        let mut config = HashMap::new();
+        config.insert(
+            MUTATE_PROPERTY_KEY.to_string(),
+            serde_json::Value::String("debugProp".to_string()),
+        );
+        config.insert(
+            "value".to_string(),
+            serde_json::Value::Number(serde_json::Number::from_f64(2.5).unwrap()),
+        );
+
+        let step = NodePropertyStep::new(DEBUG_WRITE_CONSTANT_DOUBLE_MUTATE.to_string(), config);
+
+        let config = RandomGraphConfig::default().with_seed(123);
+        let mut graph_store = DefaultGraphStore::random(&config).unwrap();
+
+        // Add a label so we can attach properties.
+        graph_store
+            .add_node_label(NodeLabel::of("Node"))
+            .expect("add node label");
+
+        step.execute(
+            &mut graph_store,
+            &["Node".to_string()],
+            &["REL".to_string()],
+            1,
+        )
+        .expect("step execute should succeed");
+
+        assert!(graph_store.has_node_property("debugProp"));
+    }
+
+    #[test]
+    fn test_to_map_includes_context_keys() {
+        let mut config = HashMap::new();
+        config.insert(
+            MUTATE_PROPERTY_KEY.to_string(),
+            serde_json::Value::String("score".to_string()),
+        );
+
+        let step = NodePropertyStep::with_context(
+            "gds.pagerank.mutate".to_string(),
+            config,
+            vec!["Person".to_string()],
+            vec!["KNOWS".to_string()],
+        );
+
+        let map = step.to_map();
+        let config_map = map
+            .get("config")
+            .and_then(|v| v.as_object())
+            .expect("config map should exist");
+
+        assert!(config_map.contains_key(NodePropertyStepContextConfig::CONTEXT_NODE_LABELS));
+        assert!(config_map.contains_key(NodePropertyStepContextConfig::CONTEXT_RELATIONSHIP_TYPES));
     }
 }

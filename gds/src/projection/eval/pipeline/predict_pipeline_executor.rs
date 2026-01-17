@@ -180,16 +180,16 @@ impl std::fmt::Display for PredictPipelineExecutorError {
                 write!(f, "Pipeline validation failed: {}", e)
             }
             Self::StepExecutionFailed(e) => {
-                write!(f, "Step execution failed: {}", e)
+                write!(f, "Failed to execute node property steps: {}", e)
             }
             Self::FeatureValidationFailed(e) => {
-                write!(f, "Feature validation failed: {}", e)
+                write!(f, "Feature property validation failed: {}", e)
             }
             Self::ExecutionFailed(msg) => {
                 write!(f, "Prediction execution failed: {}", msg)
             }
             Self::CleanupFailed(e) => {
-                write!(f, "Cleanup failed: {}", e)
+                write!(f, "Cleanup of intermediate properties failed: {}", e)
             }
         }
     }
@@ -233,6 +233,24 @@ mod tests {
         let display = format!("{}", error);
         assert!(display.contains("prediction error"));
         assert!(display.contains("Prediction execution failed"));
+
+        let error = PredictPipelineExecutorError::CleanupFailed(Box::new(std::fmt::Error));
+        let display = format!("{}", error);
+        assert!(display.contains("Cleanup of intermediate properties failed"));
+
+        let error = PredictPipelineExecutorError::StepExecutionFailed(Box::new(std::fmt::Error));
+        let display = format!("{}", error);
+        assert!(display.contains("Failed to execute node property steps"));
+
+        let error =
+            PredictPipelineExecutorError::FeatureValidationFailed(Box::new(std::fmt::Error));
+        let display = format!("{}", error);
+        assert!(display.contains("Feature property validation failed"));
+
+        let error =
+            PredictPipelineExecutorError::PipelineValidationFailed(Box::new(std::fmt::Error));
+        let display = format!("{}", error);
+        assert!(display.contains("Pipeline validation failed"));
     }
 
     #[test]
@@ -417,5 +435,271 @@ mod tests {
 
         // Cleanup should have removed the intermediate property.
         assert!(!executor.graph_store().has_node_property("feat"));
+    }
+
+    #[test]
+    fn test_predict_executor_propagates_step_execution_error() {
+        use crate::projection::eval::pipeline::ExecutableNodePropertyStep;
+        use crate::types::graph_store::DefaultGraphStore;
+        use crate::types::random::random_graph::RandomGraphConfig;
+
+        #[derive(Clone)]
+        struct FailingStep {
+            config: HashMap<String, serde_json::Value>,
+        }
+
+        impl ExecutableNodePropertyStep for FailingStep {
+            fn execute(
+                &self,
+                _graph_store: &mut DefaultGraphStore,
+                _node_labels: &[String],
+                _relationship_types: &[String],
+                _concurrency: usize,
+            ) -> Result<(), Box<dyn StdError>> {
+                Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "boom",
+                )))
+            }
+
+            fn config(&self) -> &HashMap<String, serde_json::Value> {
+                &self.config
+            }
+
+            fn proc_name(&self) -> &str {
+                "gds.pagerank.mutate"
+            }
+
+            fn mutate_node_property(&self) -> &str {
+                "pagerank"
+            }
+        }
+
+        struct TestPipeline {
+            steps: Vec<Box<dyn ExecutableNodePropertyStep>>,
+        }
+
+        impl Pipeline for TestPipeline {
+            type FeatureStep = NodeFeatureStep;
+
+            fn node_property_steps(&self) -> &[Box<dyn ExecutableNodePropertyStep>] {
+                &self.steps
+            }
+
+            fn feature_steps(&self) -> &[Self::FeatureStep] {
+                &[]
+            }
+
+            fn specific_validate_before_execution(
+                &self,
+                _graph_store: &DefaultGraphStore,
+            ) -> Result<(), PipelineValidationError> {
+                Ok(())
+            }
+
+            fn to_map(&self) -> HashMap<String, serde_json::Value> {
+                HashMap::new()
+            }
+        }
+
+        struct TestPredictExecutor {
+            pipeline: TestPipeline,
+            graph_store: Arc<DefaultGraphStore>,
+            node_labels: Vec<String>,
+            relationship_types: Vec<String>,
+        }
+
+        impl PredictPipelineExecutor<TestPipeline, ()> for TestPredictExecutor {
+            fn pipeline(&self) -> &TestPipeline {
+                &self.pipeline
+            }
+
+            fn pipeline_and_graph_store_mut(
+                &mut self,
+            ) -> (&TestPipeline, &mut Arc<DefaultGraphStore>) {
+                (&self.pipeline, &mut self.graph_store)
+            }
+
+            fn graph_store_mut(&mut self) -> &mut Arc<DefaultGraphStore> {
+                &mut self.graph_store
+            }
+
+            fn graph_store(&self) -> &Arc<DefaultGraphStore> {
+                &self.graph_store
+            }
+
+            fn node_labels(&self) -> &[String] {
+                &self.node_labels
+            }
+
+            fn relationship_types(&self) -> &[String] {
+                &self.relationship_types
+            }
+
+            fn concurrency(&self) -> usize {
+                1
+            }
+
+            fn execute(&mut self) -> Result<(), PredictPipelineExecutorError> {
+                Ok(())
+            }
+
+            fn node_property_step_filter(&self) -> PipelineGraphFilter {
+                PipelineGraphFilter::new(
+                    self.node_labels.clone(),
+                    Some(self.relationship_types.clone()),
+                )
+            }
+        }
+
+        let config = RandomGraphConfig::default().with_seed(9);
+        let graph_store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+
+        let mut step_config = HashMap::new();
+        step_config.insert(
+            crate::projection::eval::pipeline::MUTATE_PROPERTY_KEY.to_string(),
+            serde_json::json!("pagerank"),
+        );
+
+        let steps: Vec<Box<dyn ExecutableNodePropertyStep>> = vec![Box::new(FailingStep {
+            config: step_config,
+        })];
+
+        let pipeline = TestPipeline { steps };
+
+        let mut executor = TestPredictExecutor {
+            pipeline,
+            graph_store,
+            node_labels: vec!["Node".to_string()],
+            relationship_types: vec!["REL".to_string()],
+        };
+
+        let result = executor.compute();
+        assert!(matches!(
+            result,
+            Err(PredictPipelineExecutorError::StepExecutionFailed(_))
+        ));
+    }
+
+    #[test]
+    fn test_node_property_step_filter_labels_used_for_validation() {
+        use crate::types::graph_store::DefaultGraphStore;
+        use crate::types::random::random_graph::RandomGraphConfig;
+
+        #[derive(Debug)]
+        struct FilterPipeline {
+            expected_labels: Vec<String>,
+            seen_labels: Arc<std::sync::Mutex<Vec<String>>>,
+        }
+
+        impl Pipeline for FilterPipeline {
+            type FeatureStep = NodeFeatureStep;
+
+            fn node_property_steps(
+                &self,
+            ) -> &[Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>]
+            {
+                &[]
+            }
+
+            fn feature_steps(&self) -> &[Self::FeatureStep] {
+                &[]
+            }
+
+            fn validate_before_execution(
+                &self,
+                _graph_store: &DefaultGraphStore,
+                node_labels: &[String],
+            ) -> Result<(), PipelineValidationError> {
+                let mut guard = self.seen_labels.lock().unwrap();
+                *guard = node_labels.to_vec();
+                if node_labels != self.expected_labels.as_slice() {
+                    return Err(PipelineValidationError::Other {
+                        message: "unexpected labels".to_string(),
+                    });
+                }
+                Ok(())
+            }
+
+            fn specific_validate_before_execution(
+                &self,
+                _graph_store: &DefaultGraphStore,
+            ) -> Result<(), PipelineValidationError> {
+                Ok(())
+            }
+
+            fn to_map(&self) -> HashMap<String, serde_json::Value> {
+                HashMap::new()
+            }
+        }
+
+        struct FilterExecutor {
+            pipeline: FilterPipeline,
+            graph_store: Arc<DefaultGraphStore>,
+        }
+
+        impl PredictPipelineExecutor<FilterPipeline, ()> for FilterExecutor {
+            fn pipeline(&self) -> &FilterPipeline {
+                &self.pipeline
+            }
+
+            fn pipeline_and_graph_store_mut(
+                &mut self,
+            ) -> (&FilterPipeline, &mut Arc<DefaultGraphStore>) {
+                (&self.pipeline, &mut self.graph_store)
+            }
+
+            fn graph_store_mut(&mut self) -> &mut Arc<DefaultGraphStore> {
+                &mut self.graph_store
+            }
+
+            fn graph_store(&self) -> &Arc<DefaultGraphStore> {
+                &self.graph_store
+            }
+
+            fn node_labels(&self) -> &[String] {
+                &[]
+            }
+
+            fn relationship_types(&self) -> &[String] {
+                &[]
+            }
+
+            fn concurrency(&self) -> usize {
+                1
+            }
+
+            fn execute(&mut self) -> Result<(), PredictPipelineExecutorError> {
+                Ok(())
+            }
+
+            fn node_property_step_filter(&self) -> PipelineGraphFilter {
+                PipelineGraphFilter::new(
+                    self.pipeline.expected_labels.clone(),
+                    Some(vec!["REL".to_string()]),
+                )
+            }
+        }
+
+        let config = RandomGraphConfig::default().with_seed(11);
+        let graph_store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+
+        let expected_labels = vec!["Node".to_string()];
+        let seen_labels = Arc::new(std::sync::Mutex::new(Vec::new()));
+
+        let pipeline = FilterPipeline {
+            expected_labels: expected_labels.clone(),
+            seen_labels: Arc::clone(&seen_labels),
+        };
+
+        let mut executor = FilterExecutor {
+            pipeline,
+            graph_store,
+        };
+
+        executor.compute().expect("predict compute should succeed");
+
+        let guard = seen_labels.lock().unwrap();
+        assert_eq!(&*guard, &expected_labels);
     }
 }

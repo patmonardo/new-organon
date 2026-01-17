@@ -382,4 +382,37 @@ mod tests {
         let result = create_node_property_step("pagerank", config);
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_algorithm_not_found_message() {
+        let mut config = HashMap::new();
+        config.insert(
+            "mutateProperty".to_string(),
+            serde_json::Value::String("prop".to_string()),
+        );
+
+        let err = create_node_property_step("nope", config)
+            .err()
+            .expect("expected error");
+        let msg = err.to_string();
+        assert!(msg.contains("Could not find a procedure called"));
+        assert!(msg.contains("gds.nope.mutate"));
+    }
+
+    #[test]
+    fn test_reserved_key_message() {
+        let mut config = HashMap::new();
+        config.insert(
+            "mutateProperty".to_string(),
+            serde_json::Value::String("prop".to_string()),
+        );
+        config.insert("nodeLabels".to_string(), serde_json::Value::Array(vec![]));
+
+        let err = create_node_property_step("pagerank", config)
+            .err()
+            .expect("expected error");
+        let msg = err.to_string();
+        assert!(msg.contains("Cannot configure"));
+        assert!(msg.contains("Reserved keys"));
+    }
 }

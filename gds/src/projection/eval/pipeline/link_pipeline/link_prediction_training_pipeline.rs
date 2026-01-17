@@ -10,46 +10,10 @@ use std::marker::PhantomData;
 
 /// Training pipeline for link prediction.
 ///
-/// # Form Evaluation IS Feature Generation! 🌟
-///
-/// **The Principle Moment**:
-/// - **Form Evaluation → Feature Generation**
-/// - **Entity → Appearance of Shape** (principle moment of Form qua Contained)
-/// - **Form Evaluations are ALWAYS Features**
-///
-/// This pipeline **evaluates the Form** (Graph) to **generate Features** (Entities)!
-///
-/// # The Contained Principle
-///
-/// The LinkPredictionTrainingPipeline is the **Contained** manifestation:
-/// - **Container**: TrainingPipeline<F> (abstract)
-/// - **Contained**: LinkPredictionTrainingPipeline (concrete with LinkFeatureStep)
-/// - **Evaluation**: Form → Features (the principle moment!)
-///
-/// # Pipeline Architecture
-///
-/// ```text
-/// LinkPredictionTrainingPipeline extends TrainingPipeline<LinkFeatureStep>
-///   ├─ nodePropertySteps: Vec<ExecutableNodePropertyStep> (inherited)
-///   ├─ featureSteps: Vec<LinkFeatureStep> (inherited, specialized to Link)
-///   ├─ splitConfig: LinkPredictionSplitConfig (NEW - link-specific)
-///   ├─ trainingType: TrainingType::CLASSIFICATION (inherited)
-///   └─ parameterSpace: Vec<TrainerConfig> (inherited)
-///
-/// Key Differences from Node Pipelines:
-///   - Uses LinkFeatureStep instead of NodePropertyStep for features
-///   - Has LinkPredictionSplitConfig (with negative sampling config)
-///   - Always CLASSIFICATION (binary - link exists/doesn't exist)
-/// ```
-///
-/// # Example
-///
-/// ```text
-/// let mut pipeline = LinkPredictionTrainingPipeline::new();
-/// pipeline.add_feature_step(HadamardFeatureStep::new(vec!["embedding".to_string()]));
-/// pipeline.add_feature_step(CosineFeatureStep::new(vec!["features".to_string()]));
-/// pipeline.set_split_config(LinkPredictionSplitConfig::default());
-/// ```
+/// Pipeline structure:
+/// - Node property steps compute properties used by features.
+/// - Link feature steps derive pairwise features from node properties.
+/// - Split configuration controls train/test/validation and negative sampling.
 #[derive(Clone)]
 pub struct LinkFeatureStepWrapper {
     step: Box<dyn LinkFeatureStep>,
@@ -135,16 +99,7 @@ impl LinkPredictionTrainingPipeline {
     /// Model type constant
     pub const MODEL_TYPE: &'static str = "LinkPrediction";
 
-    /// Creates a new LinkPredictionTrainingPipeline.
-    ///
-    /// # The Form Container!
-    ///
-    /// This creates the **Container** that will **evaluate Forms** to **generate Features**!
-    ///
-    /// Defaults:
-    /// - Training type: CLASSIFICATION
-    /// - Split config: LinkPredictionSplitConfig::default()
-    /// - Empty feature steps
+    /// Creates a new LinkPredictionTrainingPipeline with default settings.
     pub fn new() -> Self {
         Self {
             pipeline_type: Self::PIPELINE_TYPE,
@@ -199,13 +154,9 @@ impl LinkPredictionTrainingPipeline {
 
     /// Returns the feature pipeline description.
     ///
-    /// # Form Evaluation Description!
-    ///
-    /// This describes **how the Form will be evaluated** to **generate Features**!
-    ///
     /// Returns map with:
-    /// - "nodePropertySteps": Preprocessing steps
-    /// - "featureSteps": Feature extraction steps (Form Evaluation!)
+    /// - "nodePropertySteps": preprocessing steps
+    /// - "featureSteps": feature extraction steps
     pub fn feature_pipeline_description(
         &self,
     ) -> HashMap<String, Vec<HashMap<String, serde_json::Value>>> {
@@ -219,7 +170,7 @@ impl LinkPredictionTrainingPipeline {
             .collect();
         description.insert("nodePropertySteps".to_string(), node_steps);
 
-        // Feature steps (the Form Evaluation steps!)
+        // Feature steps
         let feature_steps_maps: Vec<HashMap<String, serde_json::Value>> = self
             .feature_steps
             .iter()
@@ -243,10 +194,6 @@ impl LinkPredictionTrainingPipeline {
     }
 
     /// Validates the pipeline before execution.
-    ///
-    /// # Form Evaluation Validation!
-    ///
-    /// Ensures we have **at least one way to evaluate the Form** (generate Features)!
     pub fn validate_before_execution(&self) -> Result<(), String> {
         if self.feature_steps.is_empty() {
             return Err(
@@ -517,13 +464,9 @@ mod tests {
     }
 
     #[test]
-    fn test_form_evaluation_is_feature_generation() {
-        // Form Evaluation IS Feature Generation!
-        // Entity is the Appearance of Shape (principle moment of Form qua Contained)
-
+    fn test_feature_steps_preserve_order() {
         let mut pipeline = LinkPredictionTrainingPipeline::new();
 
-        // Add Form Evaluation steps (Feature Generation!)
         pipeline.add_feature_step(Box::new(HadamardFeatureStep::new(vec![
             "embedding".to_string()
         ])));
@@ -531,18 +474,8 @@ mod tests {
             "features".to_string()
         ])));
 
-        // The pipeline contains Form Evaluations
         assert_eq!(pipeline.feature_steps().len(), 2);
-
-        // Each step evaluates the Form to generate Features
         assert_eq!(pipeline.feature_steps()[0].name(), "HADAMARD");
         assert_eq!(pipeline.feature_steps()[1].name(), "COSINE");
-
-        // This is the Contained principle:
-        // - Container: TrainingPipeline<F> (abstract)
-        // - Contained: LinkPredictionTrainingPipeline (concrete)
-        // - Evaluation: Form → Features (the principle moment!)
-
-        // Form Evaluations are ALWAYS Features! 🌟
     }
 }

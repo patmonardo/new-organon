@@ -19,11 +19,7 @@ use crate::types::graph_store::GraphStore;
 /// - Tracks progress and handles errors
 /// - Cleans up intermediate properties after execution
 ///
-/// # Direct Integration Approach
-///
-/// This implementation uses direct validation and execution without the Java
-/// Stub/ProcedureExecutor infrastructure. Algorithm execution happens via the
-/// registry pattern in ExecutableNodePropertyStep.
+/// Each step handles execution and mutation internally (ProcedureExecutor-backed).
 #[derive(Debug)]
 pub struct NodePropertyStepExecutor {
     node_labels: Vec<String>,
@@ -217,7 +213,7 @@ impl std::fmt::Display for NodePropertyStepExecutorError {
             Self::InvalidNodeLabel { label, step_name } => {
                 write!(
                     f,
-                    "Invalid node label '{}' in contextNodeLabels for step '{}'",
+                    "Invalid node label '{}' for contextNodeLabels for step `{}`",
                     label, step_name
                 )
             }
@@ -227,7 +223,7 @@ impl std::fmt::Display for NodePropertyStepExecutorError {
             } => {
                 write!(
                     f,
-                    "Invalid relationship type '{}' in contextRelationshipTypes for step '{}'",
+                    "Invalid relationship type '{}' for contextRelationshipTypes for step `{}`",
                     rel_type, step_name
                 )
             }
@@ -433,6 +429,17 @@ mod tests {
         let display = format!("{}", error);
         assert!(display.contains("TestLabel"));
         assert!(display.contains("test_step"));
+        assert!(display.contains("contextNodeLabels"));
+        assert!(display.contains("for step `test_step`"));
+
+        let error = NodePropertyStepExecutorError::InvalidRelationshipType {
+            rel_type: "TEST_REL".to_string(),
+            step_name: "rel_step".to_string(),
+        };
+        let display = format!("{}", error);
+        assert!(display.contains("TEST_REL"));
+        assert!(display.contains("contextRelationshipTypes"));
+        assert!(display.contains("for step `rel_step`"));
 
         let error = NodePropertyStepExecutorError::GraphStoreLocked;
         let display = format!("{}", error);

@@ -1,4 +1,5 @@
 use super::{NodePropertyPipelineBaseTrainConfig, NodePropertyTrainingPipeline};
+use crate::ml::models::{Features, FeaturesFactory};
 use crate::projection::eval::pipeline::{
     ExecutableNodePropertyStep, NodePropertyStepExecutor, NodePropertyStepExecutorError,
 };
@@ -6,12 +7,7 @@ use crate::types::graph_store::DefaultGraphStore;
 use crate::types::graph_store::GraphStore;
 use std::sync::Arc;
 
-// These types are placeholders until the ml-models package is translated.
-// use crate::ml::models::Features;
-// use crate::ml::models::FeaturesFactory;
-
-/// Placeholder for Features type until ml-models is translated
-pub type Features = ();
+// Features and FeaturesFactory are now backed by crate::ml::models.
 
 /// Producer for extracting node features in ML pipelines.
 ///
@@ -130,7 +126,7 @@ impl<C: NodePropertyPipelineBaseTrainConfig> NodeFeatureProducer<C> {
     pub fn procedure_features<P: NodePropertyTrainingPipeline>(
         &mut self,
         pipeline: &P,
-    ) -> Result<Features, NodeFeatureProducerError> {
+    ) -> Result<Box<dyn Features>, NodeFeatureProducerError> {
         // Execute node property steps to compute intermediate properties
         self.step_executor
             .execute_node_property_steps(&mut self.graph_store, pipeline.node_property_steps())
@@ -150,11 +146,14 @@ impl<C: NodePropertyPipelineBaseTrainConfig> NodeFeatureProducer<C> {
             .map_err(|e| NodeFeatureProducerError::FeatureValidationFailed(e.to_string()))?;
 
         // Extract features (eager or lazy).
-        // Feature extraction is not implemented yet; return a placeholder until
-        // ml-models is translated.
-        let _eager = pipeline.require_eager_features();
-        let _props = pipeline.feature_properties();
-        let features = (); // Placeholder
+        // Note: label-filtered graph views are not yet available in GraphStore;
+        // we currently extract from the full graph.
+        let target_graph = self.graph_store.get_graph();
+        let features = if pipeline.require_eager_features() {
+            FeaturesFactory::extract_eager_features(target_graph, &pipeline.feature_properties())
+        } else {
+            FeaturesFactory::extract_lazy_features(target_graph, &pipeline.feature_properties())
+        };
 
         // Cleanup intermediate properties (always executed, like finally block)
         self.step_executor

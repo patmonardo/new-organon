@@ -377,28 +377,28 @@ impl std::fmt::Display for PipelineExecutorError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::MissingDatasetSplit(split) => {
-                write!(f, "Missing dataset split: {}", split)
+                write!(f, "Missing dataset split `{}`", split)
             }
             Self::PipelineValidationFailed(e) => {
                 write!(f, "Pipeline validation failed: {}", e)
             }
             Self::StepValidationFailed(e) => {
-                write!(f, "Step validation failed: {}", e)
+                write!(f, "Node property step context validation failed: {}", e)
             }
             Self::DatasetSplitFailed(msg) => {
-                write!(f, "Dataset splitting failed: {}", msg)
+                write!(f, "Failed to split datasets: {}", msg)
             }
             Self::StepExecutionFailed(e) => {
-                write!(f, "Step execution failed: {}", e)
+                write!(f, "Failed to execute node property steps: {}", e)
             }
             Self::FeatureValidationFailed(e) => {
-                write!(f, "Feature validation failed: {}", e)
+                write!(f, "Feature property validation failed: {}", e)
             }
             Self::ExecutionFailed(msg) => {
-                write!(f, "Execution failed: {}", msg)
+                write!(f, "Pipeline execution failed: {}", msg)
             }
             Self::CleanupFailed(e) => {
-                write!(f, "Cleanup failed: {}", e)
+                write!(f, "Cleanup of intermediate properties failed: {}", e)
             }
         }
     }
@@ -445,10 +445,12 @@ mod tests {
         let error = PipelineExecutorError::MissingDatasetSplit("TRAIN".to_string());
         let display = format!("{}", error);
         assert!(display.contains("TRAIN"));
+        assert!(display.contains("Missing dataset split"));
 
         let error = PipelineExecutorError::ExecutionFailed("algorithm error".to_string());
         let display = format!("{}", error);
         assert!(display.contains("algorithm error"));
+        assert!(display.contains("Pipeline execution failed"));
     }
 
     #[test]
@@ -613,5 +615,86 @@ mod tests {
             assert_eq!(filter.node_labels, vec!["Node".to_string()]);
             assert_eq!(filter.relationship_types, vec!["REL".to_string()]);
         }
+    }
+
+    #[test]
+    fn test_feature_input_filter_is_present_and_correct() {
+        use crate::types::graph_store::DefaultGraphStore;
+        use crate::types::random::random_graph::RandomGraphConfig;
+        use std::collections::HashMap;
+
+        #[derive(Clone)]
+        struct MockFeatureStep;
+        impl crate::projection::eval::pipeline::FeatureStep for MockFeatureStep {
+            fn name(&self) -> &str {
+                "mock"
+            }
+            fn input_node_properties(&self) -> &[String] {
+                &[]
+            }
+            fn configuration(&self) -> &std::collections::HashMap<String, serde_json::Value> {
+                use std::sync::OnceLock;
+                static CONFIG: OnceLock<std::collections::HashMap<String, serde_json::Value>> =
+                    OnceLock::new();
+                CONFIG.get_or_init(std::collections::HashMap::new)
+            }
+            fn to_map(&self) -> std::collections::HashMap<String, serde_json::Value> {
+                std::collections::HashMap::new()
+            }
+        }
+
+        #[derive(Debug)]
+        struct TestPipeline;
+        impl Pipeline for TestPipeline {
+            type FeatureStep = MockFeatureStep;
+            fn node_property_steps(
+                &self,
+            ) -> &[Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>]
+            {
+                &[]
+            }
+            fn feature_steps(&self) -> &[Self::FeatureStep] {
+                &[]
+            }
+            fn specific_validate_before_execution(
+                &self,
+                _graph_store: &DefaultGraphStore,
+            ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError>
+            {
+                Ok(())
+            }
+            fn to_map(&self) -> HashMap<String, serde_json::Value> {
+                HashMap::new()
+            }
+        }
+
+        let config = RandomGraphConfig::default().with_seed(7);
+        let graph_store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+
+        let pipeline = TestPipeline;
+        let node_labels = vec!["Person".to_string()];
+        let relationship_types = vec!["KNOWS".to_string()];
+
+        let executor = TrainingPipelineExecutor::new(
+            pipeline,
+            graph_store,
+            node_labels.clone(),
+            relationship_types.clone(),
+            1,
+        );
+
+        let filters = executor.generate_dataset_split_graph_filters();
+
+        let feature_input = filters
+            .get(&DatasetSplits::FeatureInput)
+            .expect("FEATURE_INPUT split should exist");
+
+        assert_eq!(feature_input.node_labels, node_labels);
+        assert_eq!(feature_input.relationship_types, relationship_types);
+
+        // Verify TRAIN/TEST keys are present and distinct
+        assert!(filters.contains_key(&DatasetSplits::Train));
+        assert!(filters.contains_key(&DatasetSplits::Test));
+        assert_ne!(DatasetSplits::Train, DatasetSplits::Test);
     }
 }

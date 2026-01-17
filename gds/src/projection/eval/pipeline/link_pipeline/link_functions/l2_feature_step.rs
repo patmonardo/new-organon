@@ -10,37 +10,7 @@ use std::sync::Arc;
 
 /// L2 distance (Euclidean distance) link feature.
 ///
-/// Computes squared Euclidean distance between node property vectors:
-/// ```text
-/// L2(v1, v2) = [(v1[0]-v2[0])², (v1[1]-v2[1])², ..., (v1[n]-v2[n])²]
-/// ```
-///
-/// Note: Returns **squared differences** per dimension, not the final sqrt.
-/// Classifier can learn the sqrt relationship if needed.
-///
-/// # Use Case
-///
-/// L2 measures **geometric distance** - how far apart are the vectors in space?
-/// - Smaller values = nodes are closer (more similar)
-/// - Larger values = nodes are farther (less similar)
-///
-/// Common for spatial embeddings where absolute position matters.
-///
-/// # Example
-///
-/// ```text
-/// Node A: [3, 4, 0]
-/// Node B: [0, 0, 0]
-/// L2: [(3-0)², (4-0)², (0-0)²] = [9, 16, 0]
-/// Full L2 distance = sqrt(9 + 16 + 0) = 5.0
-/// ```
-///
-/// # Why Squared?
-///
-/// Returns squared differences per dimension instead of final sqrt because:
-/// 1. More efficient (avoids sqrt computation)
-/// 2. Preserves ordering (x² < y² ⟺ x < y for positive values)
-/// 3. Gives classifier more flexibility (can learn nonlinear combinations)
+/// Returns squared differences per dimension.
 #[derive(Debug, Clone)]
 pub struct L2FeatureStep {
     /// Node properties to compute L2 distance on

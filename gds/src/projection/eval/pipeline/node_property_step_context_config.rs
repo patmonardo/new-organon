@@ -99,3 +99,35 @@ impl NodePropertyStepContextConfig {
         &self.context_relationship_types
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_from_map_defaults() {
+        let config = HashMap::new();
+        let parsed = NodePropertyStepContextConfig::from_map(&config);
+
+        assert!(parsed.context_node_labels().is_empty());
+        assert!(parsed.context_relationship_types().is_empty());
+    }
+
+    #[test]
+    fn test_from_map_reads_context_fields() {
+        let mut config = HashMap::new();
+        config.insert(
+            NodePropertyStepContextConfig::CONTEXT_NODE_LABELS.to_string(),
+            serde_json::Value::Array(vec![serde_json::Value::String("Person".to_string())]),
+        );
+        config.insert(
+            NodePropertyStepContextConfig::CONTEXT_RELATIONSHIP_TYPES.to_string(),
+            serde_json::Value::Array(vec![serde_json::Value::String("KNOWS".to_string())]),
+        );
+
+        let parsed = NodePropertyStepContextConfig::from_map(&config);
+
+        assert_eq!(parsed.context_node_labels(), &["Person"]);
+        assert_eq!(parsed.context_relationship_types(), &["KNOWS"]);
+    }
+}

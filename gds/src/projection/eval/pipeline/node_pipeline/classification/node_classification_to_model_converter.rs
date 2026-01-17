@@ -1,13 +1,11 @@
 use super::node_classification_model_result::NodeClassificationModelResult;
+use super::node_classification_pipeline_model_info::NodeClassificationPipelineModelInfo;
 use super::node_classification_pipeline_train_config::NodeClassificationPipelineTrainConfig;
 use super::node_classification_train_result::NodeClassificationTrainResult;
 use super::node_classification_training_pipeline::NodeClassificationTrainingPipeline;
-// Placeholder types until model catalog and schema are translated
-pub type GraphSchema = ();
-pub type Model = ();
-pub type GdsVersion = String;
-pub type NodePropertyPredictPipeline = ();
-pub type NodeClassificationPipelineModelInfo = ();
+use crate::projection::eval::pipeline::node_pipeline::NodePropertyPredictPipeline;
+use crate::projection::eval::pipeline::ResultToModelConverter;
+use crate::types::schema::GraphSchema;
 
 /// Converter from training result to catalog model.
 ///
@@ -37,29 +35,41 @@ impl NodeClassificationToModelConverter {
     /// Convert training result to model result.
     pub fn to_model(
         &self,
-        result: &NodeClassificationTrainResult,
+        result: NodeClassificationTrainResult,
         _original_schema: &GraphSchema,
     ) -> NodeClassificationModelResult {
-        // Note: When model catalog/types are translated, create and return a real catalog Model.
-        // let catalog_model = Model::of(
-        //     GdsVersionInfoProvider::gds_version(),
-        //     NodeClassificationTrainingPipeline::MODEL_TYPE,
-        //     original_schema,
-        //     result.classifier().data(),
-        //     self.config.clone(),
-        //     NodeClassificationPipelineModelInfo::of(
-        //         result.training_statistics().winning_model_test_metrics(),
-        //         result.training_statistics().winning_model_outer_train_metrics(),
-        //         result.training_statistics().best_candidate(),
-        //         NodePropertyPredictPipeline::from(self.pipeline.clone()),
-        //         result.class_id_map().original_ids_list(),
-        //     )
-        // );
+        let training_statistics = result.training_statistics().clone();
+        let model_info = NodeClassificationPipelineModelInfo::of(
+            training_statistics.winning_model_test_metrics(),
+            training_statistics.winning_model_outer_train_metrics(),
+            training_statistics.best_candidate(),
+            NodePropertyPredictPipeline::from_pipeline(&self.pipeline),
+            result
+                .class_id_map()
+                .original_ids_list()
+                .iter()
+                .map(|id| *id as i64)
+                .collect(),
+        );
 
-        let catalog_model = ();
-        result.training_statistics();
+        NodeClassificationModelResult::new(
+            result.into_classifier(),
+            self.config.clone(),
+            model_info,
+            training_statistics,
+        )
+    }
+}
 
-        NodeClassificationModelResult::new(catalog_model, ())
+impl ResultToModelConverter<NodeClassificationModelResult, NodeClassificationTrainResult>
+    for NodeClassificationToModelConverter
+{
+    fn to_model(
+        &self,
+        result: NodeClassificationTrainResult,
+        original_schema: &GraphSchema,
+    ) -> NodeClassificationModelResult {
+        self.to_model(result, original_schema)
     }
 }
 
@@ -74,6 +84,59 @@ impl NodeClassificationToModelConverter {
 mod tests {
     use super::*;
     use crate::ml::core::subgraph::LocalIdMap;
+    use crate::ml::metrics::classification::GlobalAccuracy;
+    use crate::ml::metrics::{EvaluationScores, ModelCandidateStats};
+    use crate::ml::models::base::{BaseModelData, ClassifierData};
+    use crate::ml::models::training_method::TrainingMethod;
+    use crate::ml::training::statistics::TrainingStatistics;
+    use crate::types::schema::GraphSchema;
+    use serde_json::json;
+    use std::any::Any;
+    use std::collections::HashMap;
+
+    #[derive(Debug)]
+    struct TestClassifierData;
+
+    impl BaseModelData for TestClassifierData {
+        fn trainer_method(&self) -> TrainingMethod {
+            TrainingMethod::LogisticRegression
+        }
+
+        fn feature_dimension(&self) -> usize {
+            1
+        }
+
+        fn as_any(&self) -> &dyn Any {
+            self
+        }
+    }
+
+    impl ClassifierData for TestClassifierData {
+        fn number_of_classes(&self) -> usize {
+            2
+        }
+    }
+
+    #[derive(Debug)]
+    struct TestClassifier;
+
+    impl crate::ml::models::Classifier for TestClassifier {
+        fn data(&self) -> &dyn ClassifierData {
+            &TestClassifierData
+        }
+
+        fn predict_probabilities(&self, _features: &[f64]) -> Vec<f64> {
+            vec![0.5, 0.5]
+        }
+
+        fn predict_probabilities_batch(
+            &self,
+            batch: &[usize],
+            _features: &dyn crate::ml::models::Features,
+        ) -> crate::ml::core::tensor::Matrix {
+            crate::ml::core::tensor::Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
+        }
+    }
 
     #[test]
     fn test_new_converter() {
@@ -93,18 +156,39 @@ mod tests {
         let config = NodeClassificationPipelineTrainConfig::default();
         let converter = NodeClassificationToModelConverter::new(pipeline, config);
 
-        let train_result = NodeClassificationTrainResult::new(
-            (),
-            (),
-            LocalIdMap::of(&[0, 1, 2]),
-            std::collections::HashMap::new(),
-        );
-        let schema = ();
+        let mut training_statistics =
+            TrainingStatistics::new(vec![Box::new(GlobalAccuracy::new())]);
 
-        let model_result = converter.to_model(&train_result, &schema);
+        let mut training_stats = HashMap::new();
+        training_stats.insert(
+            GlobalAccuracy::NAME.to_string(),
+            EvaluationScores::new(0.8, 0.8, 0.8),
+        );
+
+        let mut validation_stats = HashMap::new();
+        validation_stats.insert(
+            GlobalAccuracy::NAME.to_string(),
+            EvaluationScores::new(0.75, 0.75, 0.75),
+        );
+
+        training_statistics.add_candidate_stats(ModelCandidateStats::new(
+            json!({ "method": "logisticRegression" }),
+            training_stats,
+            validation_stats,
+        ));
+
+        let train_result = NodeClassificationTrainResult::new(
+            Box::new(TestClassifier),
+            training_statistics,
+            LocalIdMap::of(&[0, 1, 2]),
+            crate::collections::long_multiset::LongMultiSet::new(),
+        );
+        let schema = GraphSchema::empty();
+
+        let model_result = converter.to_model(train_result, &schema);
 
         // Verify result was created
-        let _catalog_model = model_result.catalog_model();
+        let _classifier = model_result.classifier();
         let _stats = model_result.training_statistics();
     }
 

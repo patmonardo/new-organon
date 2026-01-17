@@ -1,15 +1,15 @@
+use crate::projection::eval::pipeline::node_pipeline::node_property_pipeline_base_train_config::NodePropertyPipelineBaseTrainConfig;
+use crate::projection::eval::pipeline::pipeline_train_algorithm::{
+    PipelineTrainAlgorithm, PipelineTrainAlgorithmError,
+};
+use crate::projection::eval::pipeline::PipelineTrainer;
 use crate::types::graph_store::DefaultGraphStore;
 use std::sync::Arc;
 
 use super::{
-    NodeRegressionPipelineTrainConfig, NodeRegressionToModelConverter, NodeRegressionTrainResult,
-    NodeRegressionTrainingPipeline,
+    NodeRegressionPipelineTrainConfig, NodeRegressionToModelConverter,
+    NodeRegressionTrainPipelineResult, NodeRegressionTrainResult, NodeRegressionTrainingPipeline,
 };
-
-// Placeholder types until algorithm framework is complete
-pub type PipelineTrainer<T> = std::marker::PhantomData<T>;
-pub type PipelineTrainAlgorithm<T, R, C, F> = std::marker::PhantomData<(T, R, C, F)>;
-pub type ProgressTracker = ();
 
 /// Algorithm wrapper for node regression pipeline training.
 ///
@@ -35,14 +35,16 @@ pub type ProgressTracker = ();
 /// 3. Extends `PipelineTrainAlgorithm` to integrate with Algorithm framework
 ///
 /// The base class handles the train → convert → catalog flow.
-#[derive(Debug)]
 pub struct NodeRegressionTrainAlgorithm {
-    pipeline_trainer: PipelineTrainer<NodeRegressionTrainResult>,
+    pipeline_trainer: Box<dyn PipelineTrainer<Result = NodeRegressionTrainResult>>,
     pipeline: NodeRegressionTrainingPipeline,
     model_converter: NodeRegressionToModelConverter,
     graph_store: Arc<DefaultGraphStore>,
     config: NodeRegressionPipelineTrainConfig,
-    _progress_tracker: ProgressTracker,
+    progress_tracker:
+        Box<dyn crate::core::utils::progress::tasks::progress_tracker::ProgressTracker>,
+    node_labels: Vec<String>,
+    relationship_types: Vec<String>,
 }
 
 impl NodeRegressionTrainAlgorithm {
@@ -59,21 +61,27 @@ impl NodeRegressionTrainAlgorithm {
     /// )
     /// ```
     pub fn new(
-        _pipeline_trainer: PipelineTrainer<NodeRegressionTrainResult>,
+        pipeline_trainer: Box<dyn PipelineTrainer<Result = NodeRegressionTrainResult>>,
         pipeline: NodeRegressionTrainingPipeline,
         graph_store: Arc<DefaultGraphStore>,
         config: NodeRegressionPipelineTrainConfig,
-        _progress_tracker: ProgressTracker,
+        progress_tracker: Box<
+            dyn crate::core::utils::progress::tasks::progress_tracker::ProgressTracker,
+        >,
     ) -> Self {
         let model_converter = NodeRegressionToModelConverter::new(pipeline.clone(), config.clone());
+        let node_labels = config.node_labels();
+        let relationship_types = Vec::new();
 
         Self {
-            pipeline_trainer: std::marker::PhantomData,
+            pipeline_trainer,
             pipeline,
             model_converter,
             graph_store,
             config,
-            _progress_tracker: (),
+            progress_tracker,
+            node_labels,
+            relationship_types,
         }
     }
 
@@ -96,6 +104,57 @@ impl NodeRegressionTrainAlgorithm {
     pub fn model_converter(&self) -> &NodeRegressionToModelConverter {
         &self.model_converter
     }
+
+    pub fn progress_tracker(
+        &self,
+    ) -> &dyn crate::core::utils::progress::tasks::progress_tracker::ProgressTracker {
+        self.progress_tracker.as_ref()
+    }
+
+    pub fn compute(
+        &mut self,
+    ) -> Result<NodeRegressionTrainPipelineResult, PipelineTrainAlgorithmError> {
+        PipelineTrainAlgorithm::compute(self)
+    }
+}
+
+impl
+    PipelineTrainAlgorithm<
+        NodeRegressionTrainResult,
+        NodeRegressionTrainPipelineResult,
+        NodeRegressionTrainingPipeline,
+    > for NodeRegressionTrainAlgorithm
+{
+    fn pipeline(&self) -> &NodeRegressionTrainingPipeline {
+        &self.pipeline
+    }
+
+    fn graph_store(&self) -> &Arc<DefaultGraphStore> {
+        &self.graph_store
+    }
+
+    fn node_labels(&self) -> &[String] {
+        &self.node_labels
+    }
+
+    fn relationship_types(&self) -> &[String] {
+        &self.relationship_types
+    }
+
+    fn pipeline_trainer_mut(
+        &mut self,
+    ) -> &mut dyn PipelineTrainer<Result = NodeRegressionTrainResult> {
+        &mut *self.pipeline_trainer
+    }
+
+    fn result_to_model_converter(
+        &self,
+    ) -> &dyn crate::projection::eval::pipeline::ResultToModelConverter<
+        NodeRegressionTrainPipelineResult,
+        NodeRegressionTrainResult,
+    > {
+        &self.model_converter
+    }
 }
 
 // Note: implementing the Algorithm trait is deferred until the broader
@@ -115,8 +174,19 @@ mod tests {
 
     #[test]
     fn test_algorithm_new() {
+        use crate::core::utils::progress::tasks::progress_tracker::NoopProgressTracker;
         use crate::types::graph_store::DefaultGraphStore;
         use crate::types::random::random_graph::RandomGraphConfig;
+
+        struct MockTrainer;
+
+        impl PipelineTrainer for MockTrainer {
+            type Result = NodeRegressionTrainResult;
+
+            fn run(&mut self) -> Result<Self::Result, Box<dyn std::error::Error>> {
+                Err("not implemented".into())
+            }
+        }
 
         let pipeline = NodeRegressionTrainingPipeline::new();
         let config = NodeRegressionPipelineTrainConfig::default();
@@ -129,18 +199,29 @@ mod tests {
             Arc::new(DefaultGraphStore::random(&random_config).expect("random graph"));
 
         let _algorithm = NodeRegressionTrainAlgorithm::new(
-            std::marker::PhantomData, // pipeline_trainer
+            Box::new(MockTrainer),
             pipeline,
             graph_store,
             config,
-            (), // progress_tracker
+            Box::new(NoopProgressTracker),
         );
     }
 
     #[test]
     fn test_algorithm_accessors() {
+        use crate::core::utils::progress::tasks::progress_tracker::NoopProgressTracker;
         use crate::types::graph_store::DefaultGraphStore;
         use crate::types::random::random_graph::RandomGraphConfig;
+
+        struct MockTrainer;
+
+        impl PipelineTrainer for MockTrainer {
+            type Result = NodeRegressionTrainResult;
+
+            fn run(&mut self) -> Result<Self::Result, Box<dyn std::error::Error>> {
+                Err("not implemented".into())
+            }
+        }
 
         let pipeline = NodeRegressionTrainingPipeline::new();
         let config = NodeRegressionPipelineTrainConfig::default();
@@ -153,11 +234,11 @@ mod tests {
             Arc::new(DefaultGraphStore::random(&random_config).expect("random graph"));
 
         let algorithm = NodeRegressionTrainAlgorithm::new(
-            std::marker::PhantomData,
+            Box::new(MockTrainer),
             pipeline.clone(),
             graph_store.clone(),
             config,
-            (),
+            Box::new(NoopProgressTracker),
         );
 
         assert_eq!(

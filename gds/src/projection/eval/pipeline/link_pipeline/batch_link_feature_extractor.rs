@@ -7,59 +7,8 @@ use std::sync::Arc;
 
 /// Parallel worker for link feature extraction.
 ///
-/// # Features are Entities Extracted from Graphs! 🎯
-///
-/// **The Deep Insight**:
-/// - **Graph → Form** (Form executes "as a Graph")
-/// - **Features → Entities** (Entities extracted from Forms)
-/// - **BatchLinkFeatureExtractor → The Extraction Mechanism**
-///
-/// This is the **worker** that performs the actual extraction:
-/// - Takes a DegreePartition (batch of relationships)
-/// - Iterates each relationship in the partition
-/// - Extracts features (Entities) for each (source, target) pair
-/// - Writes to shared HugeObjectArray
-/// - Reports progress
-///
-/// # CAR:CDR at Entity Level
-///
-/// - **CAR (Graph)**: The Given structure (Form)
-/// - **CDR (Features)**: The Reconstructed entities
-/// - **This Worker**: The extraction process itself!
-///
-/// **Science = CAR + CDR**:
-/// - Graph (Given) → Extraction (Process) → Features (Reconstructed Entities)
-///
-/// # Pattern: Runnable Worker
-///
-/// Java pattern:
-/// ```java
-/// class BatchLinkFeatureExtractor implements Runnable {
-///     public void run() {
-///         partition.consume(nodeId -> {
-///             graph.forEachRelationship(nodeId, (src, tgt) -> {
-///                 features = extractor.extractFeatures(src, tgt);
-///                 linkFeatures.set(offset++, features);
-///             });
-///         });
-///     }
-/// }
-/// ```
-///
-/// Rust pattern:
-/// ```rust
-/// impl Runnable for BatchLinkFeatureExtractor {
-///     fn run(&self) {
-///         for node in partition {
-///             graph.for_each_relationship(node, |src, tgt| {
-///                 let features = extractor.extract_features(src, tgt);
-///                 link_features.set(offset, features);
-///                 offset += 1;
-///             });
-///         }
-///     }
-/// }
-/// ```
+/// Processes a partition of relationships, extracts features per edge,
+/// writes into a shared output array, and updates progress.
 pub struct BatchLinkFeatureExtractor {
     /// The feature extractor (orchestrator)
     _extractor: Arc<LinkFeatureExtractor>,
@@ -85,16 +34,6 @@ pub struct BatchLinkFeatureExtractor {
 
 impl BatchLinkFeatureExtractor {
     /// Creates a new batch extractor.
-    ///
-    /// # The Extraction Worker!
-    ///
-    /// This worker will:
-    /// 1. Iterate its partition of nodes
-    /// 2. For each node, iterate its relationships
-    /// 3. Extract features for each (source, target) pair
-    /// 4. Write to shared linkFeatures array
-    /// 5. Update progress
-    ///
     /// # Arguments
     ///
     /// * `extractor` - The LinkFeatureExtractor orchestrator
@@ -123,22 +62,6 @@ impl BatchLinkFeatureExtractor {
     }
 
     /// Run the extraction for this batch.
-    ///
-    /// # The Extraction Process!
-    ///
-    /// This is where **Features (Entities) are extracted from Graph (Form)**!
-    ///
-    /// Process:
-    /// 1. For each node in partition
-    /// 2. For each relationship from that node
-    /// 3. Extract features: `extractor.extract_features(source, target)`
-    /// 4. Write to: `linkFeatures.set(currentOffset++, features)`
-    /// 5. Report progress: `progressTracker.logSteps(relationshipCount)`
-    ///
-    /// **This is the actual CAR→CDR transformation**:
-    /// - Input: Graph structure (CAR - Given)
-    /// - Process: Feature extraction (Science)
-    /// - Output: Feature entities (CDR - Reconstructed)
     pub fn run(&self) {
         // Note: Implement the extraction loop once DegreePartition/Graph/HugeObjectArray are wired.
         // let mut current_offset = self.relationship_offset.load(Ordering::Relaxed);
@@ -159,7 +82,6 @@ impl BatchLinkFeatureExtractor {
         // // Report progress
         // self.progress_tracker.log_steps(self.partition.relationship_count());
 
-        // Placeholder for Gamma quality
         let _ = self.relationship_offset.fetch_add(1, Ordering::Relaxed);
     }
 }
@@ -232,9 +154,6 @@ mod tests {
     #[test]
     #[ignore] // FIXME: Random graph doesn't have 'embedding' property
     fn test_features_are_entities() {
-        // Features are Entities extracted from Graphs!
-        // Since Form executes "as a Graph", Features are our Entities!
-
         let graph_store = random_graph_store(&RandomGraphConfig::seeded(42));
         let graph = graph_store.graph();
 
@@ -242,10 +161,8 @@ mod tests {
             "embedding".to_string(),
         ]))];
 
-        // The extractor orchestrates Entity extraction
         let extractor = Arc::new(LinkFeatureExtractor::of(graph.as_ref(), steps));
 
-        // The batch worker performs the actual extraction
         let _batch_extractor = BatchLinkFeatureExtractor::new(
             extractor,
             PhantomData,
@@ -254,30 +171,20 @@ mod tests {
             PhantomData,
             PhantomData,
         );
-
-        // CAR (Graph/Form) → CDR (Features/Entities)
-        // The batch worker is the EXTRACTION MECHANISM!
-        // This is Science in Action! 🎯
     }
 
     #[test]
     #[ignore] // FIXME: Random graph doesn't have 'features' property
     fn test_car_cdr_entity_extraction() {
-        // The Complete Science at Entity Level!
-
         let graph_store = random_graph_store(&RandomGraphConfig::seeded(42));
         let graph = graph_store.graph();
 
-        // CAR - The Given (Graph/Form structure)
         let steps: Vec<Box<dyn LinkFeatureStep>> = vec![Box::new(HadamardFeatureStep::new(vec![
             "features".to_string(),
         ]))];
 
-        // Science - The Extraction Process
         let extractor = Arc::new(LinkFeatureExtractor::of(graph.as_ref(), steps));
 
-        // CDR - The Reconstructed Entities (Features)
-        // BatchLinkFeatureExtractor performs the reconstruction!
         let batch_extractor = BatchLinkFeatureExtractor::new(
             Arc::clone(&extractor),
             PhantomData,
@@ -287,13 +194,9 @@ mod tests {
             PhantomData,
         );
 
-        // The worker exists! Ready to extract Entities from Forms!
         assert_eq!(
             batch_extractor.relationship_offset.load(Ordering::Relaxed),
             0
         );
-
-        // Graph (Form) → Extraction (Worker) → Features (Entities)
-        // This is the COMPLETE CAR:CDR at Entity level! 🌟
     }
 }
