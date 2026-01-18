@@ -4,6 +4,7 @@
 //! This is a literal 1:1 translation following repository translation policy.
 
 use super::long_uniform_sampler_with_retries::LongUniformSamplerWithRetries;
+use crate::mem::{Estimate, MemoryRange};
 
 /// Sample numbers by excluding from the given range.
 ///
@@ -103,24 +104,19 @@ impl LongUniformSamplerByExclusion {
     pub fn memory_estimation(
         number_of_samples: usize,
         max_lower_bound_on_valid_samples: usize,
-    ) -> usize {
-        let sampler_with_retries_min = LongUniformSamplerWithRetries::memory_estimation(0);
-        let sampler_with_retries_max = LongUniformSamplerWithRetries::memory_estimation(
+    ) -> MemoryRange {
+        let sampler_with_retries_estimation = LongUniformSamplerWithRetries::memory_estimation(
             number_of_samples.min(max_lower_bound_on_valid_samples - number_of_samples),
-        );
+        )
+        .union(&LongUniformSamplerWithRetries::memory_estimation(0));
 
-        let base_size = std::mem::size_of::<Self>();
-        let result_array = number_of_samples * std::mem::size_of::<u64>();
+        let base = Estimate::size_of_instance("LongUniformSamplerByExclusion")
+            + Estimate::size_of_long_array(number_of_samples);
 
-        // Min: empty valid sample space
-        let min = base_size + result_array + sampler_with_retries_min;
-        // Max: full valid sample space
-        let max = base_size
-            + result_array
-            + (max_lower_bound_on_valid_samples * std::mem::size_of::<u64>())
-            + sampler_with_retries_max;
-
-        (min + max) / 2 // Return average
+        sampler_with_retries_estimation.add(&MemoryRange::of_range(
+            base + Estimate::size_of_long_array_list(0),
+            base + Estimate::size_of_long_array_list(max_lower_bound_on_valid_samples),
+        ))
     }
 }
 

@@ -219,10 +219,7 @@ impl GraphSageModelTrainer {
 
             let batches_per_iter = self.parameters.batches_per_iteration(graph.node_count());
 
-            let mut updater = AdamOptimizer::new(
-                weights.iter().map(|w| w.handle()).collect(),
-                self.parameters.learning_rate,
-            );
+            let mut updater = AdamOptimizer::new(weights.clone(), self.parameters.learning_rate);
 
             let mut prev_loss = prev_epoch_loss;
             let mut epoch_losses = Vec::new();

@@ -53,7 +53,7 @@ impl ReducedCrossEntropyLoss {
         // Parents are [weights, features, labels, bias] - NOT predictions
         let parents: Vec<VariableRef> = vec![weights, features, labels, bias];
         let dimensions = dimensions::scalar();
-        let base = AbstractVariable::with_gradient_requirement(parents, dimensions, true);
+        let base = AbstractVariable::new(parents, dimensions);
 
         Self {
             base,

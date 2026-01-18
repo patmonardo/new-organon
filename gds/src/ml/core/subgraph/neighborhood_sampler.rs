@@ -3,8 +3,12 @@
 //! Translated from Java GDS ml-core NeighborhoodSampler.java.
 //! This is a literal 1:1 translation following repository translation policy.
 
-use crate::ml::core::samplers::UniformSampler;
+use crate::ml::core::relationship_weights::DEFAULT_VALUE;
+use crate::ml::core::samplers::{UniformSampler, WeightedUniformSampler};
 use crate::types::graph::Graph;
+use crate::types::properties::relationship::traits::{
+    RelationshipCursorBox, WeightedRelationshipCursorBox,
+};
 
 /// Samples neighborhoods for graph neural network batch processing.
 ///
@@ -33,9 +37,30 @@ impl NeighborhoodSampler {
             return Vec::new();
         }
 
-        let mut sampler = UniformSampler::new(self.random_seed ^ node_id);
-        let iter =
-            (0..degree).filter_map(|i| graph.nth_target(node_id as i64, i).map(|t| t as u64));
-        sampler.sample(iter, degree as u64, sample_size.min(degree))
+        let concurrent_graph = Graph::concurrent_copy(graph);
+
+        // Every neighbor needs to be sampled
+        if degree <= sample_size {
+            return concurrent_graph
+                .stream_relationships(node_id as i64, DEFAULT_VALUE)
+                .map(|cursor: RelationshipCursorBox| cursor.target_id() as u64)
+                .collect();
+        }
+
+        if graph.has_relationship_property() {
+            let mut sampler = WeightedUniformSampler::new(self.random_seed + node_id);
+            let input = concurrent_graph
+                .stream_relationships_weighted(node_id as i64, DEFAULT_VALUE)
+                .map(|cursor: WeightedRelationshipCursorBox| {
+                    (cursor.target_id() as u64, cursor.weight())
+                });
+            sampler.sample(input, degree, sample_size)
+        } else {
+            let mut sampler = UniformSampler::new(self.random_seed + node_id);
+            let input = concurrent_graph
+                .stream_relationships(node_id as i64, DEFAULT_VALUE)
+                .map(|cursor: RelationshipCursorBox| cursor.target_id() as u64);
+            sampler.sample(input, degree as u64, sample_size)
+        }
     }
 }

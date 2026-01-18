@@ -67,8 +67,9 @@ impl ArrayFeatureExtractor for ArrayPropertyExtractor {
 
         if property_value.len() != self.dimension {
             panic!(
-                "The property `{}` contains arrays of differing lengths `{}` and `{}`.",
+                "The property `{}` on node `{}` contains arrays of differing lengths `{}` and `{}`.",
                 &self.property_key,
+                node_id,
                 property_value.len(),
                 self.dimension
             );

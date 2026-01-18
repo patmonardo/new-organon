@@ -27,7 +27,7 @@ impl NormalizeRows {
     /// Ref-based constructor for DAG-safe graph building.
     pub fn new_ref(parent: VariableRef) -> Self {
         let dimensions = parent.dimensions().to_vec();
-        let base = AbstractVariable::with_gradient_requirement(vec![parent], dimensions, true);
+        let base = AbstractVariable::new(vec![parent], dimensions);
         Self { base }
     }
 

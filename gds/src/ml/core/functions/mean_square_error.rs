@@ -47,10 +47,7 @@ impl MeanSquareError {
 
         let parents: Vec<VariableRef> = vec![predictions, targets];
         let dimensions = dimensions::scalar();
-        // Require gradient if any parent requires gradient
-        let require_gradient = parents.iter().any(|p| p.require_gradient());
-        let base =
-            AbstractVariable::with_gradient_requirement(parents, dimensions, require_gradient);
+        let base = AbstractVariable::new(parents, dimensions);
 
         Self { base }
     }

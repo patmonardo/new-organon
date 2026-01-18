@@ -46,13 +46,9 @@ impl Training {
             return;
         }
 
-        // Create updater with weight handles
-        let weight_handles: Vec<Arc<RwLock<Box<dyn Tensor>>>> = objective
-            .weights()
-            .into_iter()
-            .map(|w| w.handle())
-            .collect();
-        let mut updater = AdamOptimizer::new(weight_handles, self.config.learning_rate());
+        // Create updater with weights
+        let weights = objective.weights();
+        let mut updater = AdamOptimizer::new(weights, self.config.learning_rate());
         let mut stopper = factory::default_stopper(&self.config);
 
         let mut losses = Vec::new();

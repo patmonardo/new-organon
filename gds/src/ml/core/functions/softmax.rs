@@ -41,7 +41,7 @@ impl Softmax {
         let dimensions = parent.dimensions().to_vec();
 
         // Java: super(parent, parent.dimensions())
-        let base = AbstractVariable::with_gradient_requirement(vec![parent], dimensions, true);
+        let base = AbstractVariable::new(vec![parent], dimensions);
 
         Self { base }
     }

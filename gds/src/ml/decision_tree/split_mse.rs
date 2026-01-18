@@ -4,6 +4,7 @@
 //! This is a literal 1:1 translation following repository translation policy.
 
 use crate::collections::{HugeDoubleArray, HugeLongArray};
+use crate::mem::Estimate;
 use crate::ml::decision_tree::{ImpurityCriterion, ImpurityData, ImpurityDataAny};
 use std::any::Any;
 use std::sync::Arc;
@@ -19,7 +20,7 @@ impl SplitMeanSquaredError {
     }
 
     pub fn memory_estimation() -> usize {
-        std::mem::size_of::<Self>()
+        Estimate::size_of_instance("SplitMeanSquaredError")
     }
 
     fn update_impurity_data(
@@ -124,7 +125,7 @@ impl MSEImpurityData {
     }
 
     pub fn memory_estimation() -> usize {
-        std::mem::size_of::<Self>()
+        Estimate::size_of_instance("MSEImpurityData")
     }
 
     pub fn sum(&self) -> f64 {

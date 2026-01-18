@@ -4,7 +4,7 @@
 
 use crate::collections::HugeDoubleArray;
 use crate::ml::{
-    core::batch::consecutive_with_batch_size,
+    core::batch::from_array,
     gradient_descent::{Objective, Training},
     models::{Features, RegressorTrainer},
 };
@@ -68,8 +68,9 @@ impl RegressorTrainer for LinearRegressionTrainer {
             LinearRegressionObjective::new(features, targets, self.train_config.penalty());
 
         // Create batch queue supplier - matches Java's BatchQueue.fromArray(trainSet, batchSize)
-        let queue_supplier =
-            || consecutive_with_batch_size(train_set.len() as u64, self.train_config.batch_size());
+        let train_ids = Arc::clone(train_set);
+        let batch_size = self.train_config.batch_size();
+        let queue_supplier = move || from_array(Arc::clone(&train_ids), batch_size);
 
         // Create training instance with config and progress tracking
         let training = Training::new(

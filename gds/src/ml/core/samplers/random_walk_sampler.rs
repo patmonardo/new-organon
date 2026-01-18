@@ -30,6 +30,7 @@
 //! let walk = sampler.walk(start_node);
 //! ```
 
+use crate::mem::{Estimate, MemoryRange};
 use crate::types::graph::Graph;
 use rand::Rng;
 use rand::SeedableRng;
@@ -37,7 +38,7 @@ use rand_chacha::ChaCha8Rng;
 use std::sync::Arc;
 
 const NO_MORE_NODES: i64 = -1;
-const MAX_TRIES: usize = 1000;
+const MAX_TRIES: usize = 100;
 
 /// Function that computes cumulative relationship weight for a node.
 ///
@@ -275,14 +276,10 @@ impl<W: CumulativeWeightSupplier> RandomWalkSampler<W> {
     /// # Returns
     ///
     /// Memory range in bytes (min, max) accounting for variable walk lengths
-    pub fn memory_estimation(walk_length: usize) -> (usize, usize) {
-        let base_size = std::mem::size_of::<Self>();
-        let walk_size = walk_length * std::mem::size_of::<u64>();
-
-        (
-            base_size + walk_size,     // Minimum: one walk
-            base_size + 2 * walk_size, // Maximum: two walks in memory
-        )
+    pub fn memory_estimation(walk_length: usize) -> MemoryRange {
+        let base = Estimate::size_of_instance("RandomWalkSampler");
+        let walk_bytes = Estimate::size_of_long_array(walk_length);
+        MemoryRange::of_range(base + walk_bytes, base + 2 * walk_bytes)
     }
 }
 
@@ -425,11 +422,11 @@ mod tests {
 
     #[test]
     fn test_memory_estimation() {
-        let (min_mem, max_mem) = RandomWalkSampler::<fn(u64) -> f64>::memory_estimation(1000);
+        let range = RandomWalkSampler::<fn(u64) -> f64>::memory_estimation(1000);
 
-        assert!(min_mem > 0);
-        assert!(max_mem >= min_mem);
-        assert!(max_mem <= 3 * min_mem); // Reasonable upper bound
+        assert!(range.min() > 0);
+        assert!(range.max() >= range.min());
+        assert!(range.max() <= 3 * range.min()); // Reasonable upper bound
     }
 
     #[test]

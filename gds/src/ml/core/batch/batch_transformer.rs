@@ -4,9 +4,18 @@
 //! This is a literal 1:1 translation following repository translation policy.
 
 /// A functional interface for transforming batch indices.
-pub trait BatchTransformer {
+pub trait BatchTransformer: Send + Sync {
     /// Apply a transformation to the given index.
     fn apply(&self, index: u64) -> u64;
+}
+
+impl<F> BatchTransformer for F
+where
+    F: Fn(u64) -> u64 + Send + Sync,
+{
+    fn apply(&self, index: u64) -> u64 {
+        self(index)
+    }
 }
 
 /// Identity batch transformer that returns the index unchanged.

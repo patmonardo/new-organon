@@ -3,7 +3,7 @@
 //! This directly mirrors Java's `Vector extends Tensor<Vector>` pattern.
 //! Contains data and dimensions directly, not wrapped in TensorData.
 
-use super::tensor::{AsAny, Tensor};
+use super::tensor::Tensor;
 use crate::ml::core::dimensions;
 use serde::{Deserialize, Serialize};
 use std::ops::{Index, IndexMut};
@@ -104,6 +104,14 @@ impl Vector {
 // ============================================================================
 
 impl Tensor for Vector {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
+        self
+    }
+
     fn dimensions(&self) -> &[usize] {
         &self.dimensions
     }
@@ -197,16 +205,6 @@ impl Tensor for Vector {
 
     fn short_description(&self) -> String {
         format!("Vector({})", self.length())
-    }
-}
-
-impl AsAny for Vector {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
     }
 }
 

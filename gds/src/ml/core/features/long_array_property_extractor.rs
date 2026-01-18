@@ -39,12 +39,18 @@ impl ArrayFeatureExtractor for LongArrayPropertyExtractor {
         let values = self
             .node_property_values
             .long_array_value(node_id)
-            .unwrap_or_else(|e| panic!("Failed reading property `{}`: {e}", self.property_key));
+            .unwrap_or_else(|e| {
+                panic!(
+                    "Failed reading property `{}` for node `{}`: {e}",
+                    self.property_key, node_id
+                )
+            });
 
         if values.len() != self.dimension {
             panic!(
-                "The property `{}` contains arrays of differing lengths `{}` and `{}`.",
+                "The property `{}` on node `{}` contains arrays of differing lengths `{}` and `{}`.",
                 &self.property_key,
+                node_id,
                 values.len(),
                 self.dimension
             );

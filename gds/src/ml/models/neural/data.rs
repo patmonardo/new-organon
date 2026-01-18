@@ -192,10 +192,10 @@ mod tests {
         assert_eq!(data.weights()[1].dimensions(), vec![25, 50]); // 25x50
         assert_eq!(data.weights()[2].dimensions(), vec![3, 25]); // 3x25
 
-        // Vectors are stored as column vectors: [dim, 1]
-        assert_eq!(data.biases()[0].dimensions(), vec![50, 1]); // 50x1 column vector
-        assert_eq!(data.biases()[1].dimensions(), vec![25, 1]); // 25x1 column vector
-        assert_eq!(data.biases()[2].dimensions(), vec![3, 1]); // 3x1 column vector
+        // Vectors are stored as 1D tensors: [dim]
+        assert_eq!(data.biases()[0].dimensions(), vec![50]); // length 50 vector
+        assert_eq!(data.biases()[1].dimensions(), vec![25]); // length 25 vector
+        assert_eq!(data.biases()[2].dimensions(), vec![3]); // length 3 vector
     }
 
     #[test]

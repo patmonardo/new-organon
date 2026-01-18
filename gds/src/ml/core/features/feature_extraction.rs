@@ -8,15 +8,15 @@
 //! Matrices and HugeObjectArrays.
 
 use super::{
-    ArrayFeatureExtractor, ArrayPropertyExtractor, FeatureConsumer, FeatureExtractor,
+    ArrayFeatureExtractor, ArrayPropertyExtractor, BiasFeature, FeatureConsumer, FeatureExtractor,
     HugeObjectArrayFeatureConsumer, LongArrayPropertyExtractor, ScalarFeatureExtractor,
     ScalarPropertyExtractor,
 };
-// Note: These imports will need to be completed once we translate the full ml/core module
-// use crate::ml::core::batch::Batch;
-// use crate::ml::core::functions::Constant;
-// use crate::ml::core::tensor::Matrix;
 use crate::collections::HugeObjectArray;
+use crate::mem::Estimate;
+use crate::ml::core::batch::Batch;
+use crate::ml::core::functions::Constant;
+use crate::ml::core::tensor::Matrix;
 use crate::types::graph::Graph;
 use crate::types::ValueType;
 // use crate::collections::HugeObjectArray;
@@ -78,8 +78,40 @@ pub fn extract(
     }
 }
 
-// Batch extraction helper is omitted until batch/functions/tensor modules land in Rust:
-// pub fn extract_batch(batch: &Batch, extractors: &[AnyFeatureExtractor]) -> Constant<Matrix>
+/// Extract features for a batch into a constant matrix.
+///
+/// Java: `FeatureExtraction.extract(Batch batch, List<FeatureExtractor> extractors)`
+pub fn extract_batch<B: Batch>(batch: &B, extractors: &[AnyFeatureExtractor]) -> Constant {
+    let feature_dim = feature_count(extractors);
+    let mut matrix = Matrix::with_dimensions(batch.size(), feature_dim);
+
+    struct MatrixFeatureConsumer<'a> {
+        matrix: &'a mut Matrix,
+    }
+
+    impl FeatureConsumer for MatrixFeatureConsumer<'_> {
+        fn accept_scalar(&mut self, node_offset: u64, offset: usize, value: f64) {
+            self.matrix.set_data_at(node_offset as usize, offset, value);
+        }
+
+        fn accept_array(&mut self, node_offset: u64, offset: usize, values: &[f64]) {
+            let row = node_offset as usize;
+            for (i, value) in values.iter().enumerate() {
+                self.matrix.set_data_at(row, offset + i, *value);
+            }
+        }
+    }
+
+    let mut consumer = MatrixFeatureConsumer {
+        matrix: &mut matrix,
+    };
+
+    for (row_idx, node_id) in batch.element_ids().enumerate() {
+        extract(node_id, row_idx as u64, extractors, &mut consumer);
+    }
+
+    Constant::new(Box::new(matrix))
+}
 
 /// Extract features for all nodes in a graph into a HugeObjectArray of `Vec<f64>`.
 ///
@@ -186,8 +218,26 @@ pub fn feature_count_from_graph(graph: &dyn Graph, feature_properties: &[String]
     feature_count(&property_extractors(graph, feature_properties))
 }
 
-// pub fn feature_count_with_bias(graph: &Graph, feature_properties: &[String]) -> usize
-// pub fn memory_usage_in_bytes(number_of_features: usize) -> usize
+/// Compute feature count including a bias feature.
+///
+/// Java: `FeatureExtraction.featureCountWithBias(graph, featureProperties)`
+pub fn feature_count_with_bias(graph: &dyn Graph, feature_properties: &[String]) -> usize {
+    let mut feature_extractors = property_extractors(graph, feature_properties);
+    feature_extractors.push(AnyFeatureExtractor::Scalar(Box::new(BiasFeature)));
+    feature_count(&feature_extractors)
+}
+
+/// Estimate memory usage for feature extractors.
+///
+/// Java: `FeatureExtraction.memoryUsageInBytes(int numberOfFeatures)`
+pub fn memory_usage_in_bytes(number_of_features: usize) -> usize {
+    let size_if_all_scalars =
+        number_of_features * Estimate::size_of_instance("ScalarPropertyExtractor");
+    let size_if_all_arrays =
+        number_of_features * Estimate::size_of_instance("ArrayPropertyExtractor");
+
+    size_if_all_scalars.max(size_if_all_arrays)
+}
 
 #[cfg(test)]
 mod tests {

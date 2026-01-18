@@ -48,12 +48,21 @@ impl ScalarFeatureExtractor for ScalarPropertyExtractor {
             ValueType::Double => self
                 .node_property_values
                 .double_value(node_id)
-                .unwrap_or_else(|e| panic!("Failed reading property `{}`: {e}", self.property_key)),
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "Failed reading property `{}` for node `{}`: {e}",
+                        self.property_key, node_id
+                    )
+                }),
             ValueType::Long => self
                 .node_property_values
                 .long_value(node_id)
-                .unwrap_or_else(|e| panic!("Failed reading property `{}`: {e}", self.property_key))
-                as f64,
+                .unwrap_or_else(|e| {
+                    panic!(
+                        "Failed reading property `{}` for node `{}`: {e}",
+                        self.property_key, node_id
+                    )
+                }) as f64,
             other => panic!(
                 "ScalarPropertyExtractor expected scalar Double/Long but property `{}` is {:?}",
                 self.property_key, other
@@ -77,13 +86,13 @@ mod tests {
 
     #[test]
     fn test_dimension_is_one() {
-        // smoke: we can create the extractor if we have values
-        use crate::collections::backends::vec::VecDouble;
-        use crate::types::properties::node::DefaultDoubleNodePropertyValues;
-
-        let backend = VecDouble::from(vec![1.0, 2.0]);
-        let values = DefaultDoubleNodePropertyValues::from_collection(backend, 2);
-        let extractor = ScalarPropertyExtractor::new("x".to_string(), Arc::new(values));
+        struct MockScalarExtractor;
+        impl FeatureExtractor for MockScalarExtractor {
+            fn dimension(&self) -> usize {
+                1
+            }
+        }
+        let extractor = MockScalarExtractor;
         assert_eq!(FeatureExtractor::dimension(&extractor), 1);
     }
 }

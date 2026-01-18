@@ -29,6 +29,9 @@
 //! let walk = walker.walk(start_node);
 //! ```
 
+mod int_uniform_sampler_by_exclusion;
+mod int_uniform_sampler_from_range;
+mod int_uniform_sampler_with_retries;
 mod long_uniform_sampler_by_exclusion;
 mod long_uniform_sampler_from_range;
 mod long_uniform_sampler_with_retries;
@@ -36,6 +39,9 @@ mod random_walk_sampler;
 mod uniform_sampler;
 mod weighted_uniform_sampler;
 
+pub use int_uniform_sampler_by_exclusion::IntUniformSamplerByExclusion;
+pub use int_uniform_sampler_from_range::IntUniformSamplerFromRange;
+pub use int_uniform_sampler_with_retries::IntUniformSamplerWithRetries;
 pub use long_uniform_sampler_by_exclusion::LongUniformSamplerByExclusion;
 pub use long_uniform_sampler_from_range::LongUniformSamplerFromRange;
 pub use long_uniform_sampler_with_retries::LongUniformSamplerWithRetries;

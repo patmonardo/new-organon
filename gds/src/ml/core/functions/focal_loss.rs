@@ -44,8 +44,8 @@ impl FocalLoss {
         class_weights: Vec<f64>,
     ) -> Self {
         let parents = vec![predictions, targets];
-        let dimensions = vec![1];
-        let base = AbstractVariable::with_gradient_requirement(parents, dimensions, true);
+        let dimensions = crate::ml::core::dimensions::scalar();
+        let base = AbstractVariable::new(parents, dimensions);
 
         Self {
             base,

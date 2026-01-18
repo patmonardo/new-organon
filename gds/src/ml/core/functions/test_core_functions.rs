@@ -10,7 +10,7 @@ mod core_function_tests {
     #[test]
     fn test_constant_scalar_creation_and_apply() {
         let constant = Constant::scalar(42.0);
-        assert_eq!(constant.dimensions(), &[1, 1]);
+        assert_eq!(constant.dimensions(), &[1]);
         assert!(!constant.require_gradient());
 
         let ctx = ComputationContext::new();
@@ -27,7 +27,7 @@ mod core_function_tests {
     fn test_constant_vector_creation_and_apply() {
         let data = vec![1.0, 2.0, 3.0];
         let constant = Constant::vector(data.clone());
-        assert_eq!(constant.dimensions(), &[3, 1]);
+        assert_eq!(constant.dimensions(), &[3]);
         assert!(!constant.require_gradient());
 
         let ctx = ComputationContext::new();
@@ -79,7 +79,7 @@ mod core_function_tests {
     fn test_weights_vector_creation_and_apply() {
         let data = vec![1.0, 2.0, 3.0];
         let weights = Weights::of_vector(data.clone());
-        assert_eq!(weights.dimensions(), &[3, 1]);
+        assert_eq!(weights.dimensions(), &[3]);
         assert!(weights.require_gradient());
 
         let ctx = ComputationContext::new();
@@ -95,7 +95,7 @@ mod core_function_tests {
     #[test]
     fn test_weights_scalar_creation_and_apply() {
         let weights = Weights::of_scalar(5.0);
-        assert_eq!(weights.dimensions(), &[1, 1]);
+        assert_eq!(weights.dimensions(), &[1]);
         assert!(weights.require_gradient());
 
         let ctx = ComputationContext::new();

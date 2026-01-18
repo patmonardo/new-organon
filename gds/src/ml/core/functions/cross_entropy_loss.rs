@@ -55,11 +55,7 @@ impl CrossEntropyLoss {
         class_weights: Vec<f64>,
     ) -> Self {
         // Java: super(List.of(predictions, targets), Dimensions.scalar())
-        let base = AbstractVariable::with_gradient_requirement(
-            vec![predictions, targets],
-            dimensions::scalar(),
-            true,
-        );
+        let base = AbstractVariable::new(vec![predictions, targets], dimensions::scalar());
 
         Self {
             base,

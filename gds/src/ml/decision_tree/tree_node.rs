@@ -5,6 +5,8 @@
 
 use std::fmt;
 
+use crate::mem::Estimate;
+
 /// A node in a decision tree, either a split node or a leaf.
 ///
 /// Corresponds to TreeNode<PREDICTION> in Java GDS.
@@ -41,14 +43,14 @@ impl<P: Clone> TreeNode<P> {
     }
 
     pub fn split_memory_estimation() -> usize {
-        std::mem::size_of::<TreeNode<()>>()
+        Estimate::size_of_instance("TreeNode")
     }
 
     pub fn leaf_memory_estimation() -> usize
     where
         P: Sized,
     {
-        std::mem::size_of::<TreeNode<P>>() + std::mem::size_of::<P>()
+        Estimate::size_of_instance("TreeNode") + std::mem::size_of::<P>()
     }
 
     pub fn set_prediction(&mut self, prediction: P) {

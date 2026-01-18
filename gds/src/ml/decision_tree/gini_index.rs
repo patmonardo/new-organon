@@ -4,6 +4,7 @@
 //! This is a literal 1:1 translation following repository translation policy.
 
 use crate::collections::{HugeIntArray, HugeLongArray};
+use crate::mem::Estimate;
 use crate::ml::decision_tree::{ImpurityCriterion, ImpurityData, ImpurityDataAny};
 use std::any::Any;
 use std::sync::Arc;
@@ -23,7 +24,8 @@ impl GiniIndex {
     }
 
     pub fn memory_estimation(number_of_training_samples: usize) -> usize {
-        HugeIntArray::memory_estimation(number_of_training_samples) + std::mem::size_of::<Self>()
+        HugeIntArray::memory_estimation(number_of_training_samples)
+            + Estimate::size_of_instance("GiniIndex")
     }
 }
 
@@ -142,7 +144,8 @@ impl GiniImpurityData {
     }
 
     pub fn memory_estimation(number_of_classes: usize) -> usize {
-        std::mem::size_of::<Self>() + std::mem::size_of::<i64>() * number_of_classes
+        Estimate::size_of_instance("GiniImpurityData")
+            + Estimate::size_of_long_array(number_of_classes)
     }
 }
 

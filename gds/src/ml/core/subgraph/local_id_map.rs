@@ -14,6 +14,8 @@
 
 use std::collections::HashMap;
 
+use crate::mem::{Estimate, MemoryEstimation, MemoryEstimations};
+
 /// Bidirectional mapping between original graph node IDs and local consecutive IDs.
 ///
 /// Java uses HPPC's LongArrayList + LongIntHashMap for memory efficiency.
@@ -28,6 +30,20 @@ pub struct LocalIdMap {
 }
 
 impl LocalIdMap {
+    /// Memory estimation aligned with Java's LocalIdMap.memoryEstimation().
+    pub fn memory_estimation(number_of_classes: usize) -> Box<dyn MemoryEstimation> {
+        MemoryEstimations::builder("LocalIdMap")
+            .fixed(
+                "original IDs",
+                Estimate::size_of_long_array(number_of_classes),
+            )
+            .fixed(
+                "id mapping",
+                Estimate::size_of_long_array(number_of_classes)
+                    + Estimate::size_of_int_array(number_of_classes),
+            )
+            .build()
+    }
     /// Create a new empty LocalIdMap.
     pub fn new() -> Self {
         Self {

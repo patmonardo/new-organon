@@ -395,11 +395,8 @@ mod feature_bagger_tests {
     #[test]
     fn test_feature_bagger_memory_estimation() {
         let estimate = FeatureBagger::memory_estimation(50);
-        assert!(estimate > 0);
-
-        // Should be roughly: size_of(FeatureBagger) + 50 * size_of(usize)
-        let min_expected = std::mem::size_of::<usize>() * 50;
-        assert!(estimate >= min_expected);
+        assert!(estimate.min() > 0);
+        assert!(estimate.max() >= estimate.min());
     }
 }
 
@@ -454,7 +451,7 @@ mod mse_impurity_tests {
     fn test_mse_memory_estimation() {
         let estimate = MSEImpurityData::memory_estimation();
         assert!(estimate > 0);
-        assert!(estimate >= std::mem::size_of::<MSEImpurityData>());
+        assert!(estimate >= crate::mem::Estimate::size_of_instance("MSEImpurityData"));
     }
 }
 

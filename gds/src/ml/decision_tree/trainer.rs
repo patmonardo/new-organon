@@ -4,6 +4,7 @@
 //! This is a literal 1:1 translation following repository translation policy.
 
 use crate::collections::HugeLongArray;
+use crate::mem::Estimate;
 use crate::ml::decision_tree::{
     predictor::DecisionTreePredictor, DecisionTreeTrainerConfig, FeatureBagger, Group,
     ImpurityCriterion, Splitter, StackRecord, TreeNode,
@@ -31,9 +32,9 @@ pub trait DecisionTreeTrainer<P: Clone> {
             .max_depth()
             .min(1.max(number_of_training_samples.saturating_sub(config.min_split_size()) + 2));
         let max_items_on_stack = 2 * normalized_max_depth;
-        let max_stack_size = std::mem::size_of::<VecDeque<StackRecord<P>>>()
+        let max_stack_size = Estimate::size_of_instance("VecDeque")
             + std::mem::size_of::<StackRecord<P>>() * max_items_on_stack
-            + (std::mem::size_of::<i64>() * number_of_training_samples / max_items_on_stack)
+            + (Estimate::size_of_long_array(number_of_training_samples) / max_items_on_stack)
                 * max_items_on_stack;
 
         let splitter_estimation =
@@ -56,7 +57,7 @@ pub trait DecisionTreeTrainer<P: Clone> {
             .min(2.0 * (number_of_training_samples as f64) / (config.min_split_size() as f64))
             .ceil() as usize;
 
-        std::mem::size_of::<DecisionTreePredictor<P>>()
+        Estimate::size_of_instance("DecisionTreePredictor")
             + (1..=max_num_leaf_nodes).sum::<usize>() * leaf_node_size_in_bytes
             + (0..max_num_leaf_nodes.saturating_sub(1)).sum::<usize>()
                 * TreeNode::<P>::split_memory_estimation()

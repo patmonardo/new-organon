@@ -93,11 +93,7 @@ impl EWiseAddMatrixScalar {
 
         // Java: super(List.of(matrixVariable, scalarVariable), matrixVariable.dimensions())
         // Store parents [matrix, scalar] in VariableBase
-        let base = AbstractVariable::with_gradient_requirement(
-            vec![matrix_variable, scalar_variable],
-            dimensions,
-            true,
-        );
+        let base = AbstractVariable::new(vec![matrix_variable, scalar_variable], dimensions);
 
         Self { base }
     }
@@ -142,7 +138,7 @@ impl Variable for EWiseAddMatrixScalar {
             .expect("Expected Matrix type");
 
         // Handle scalar - extract value from tensor data
-        // Note: Scalar tensors have dimensions [1, 1] and can be downcast to either Scalar or Matrix
+        // Note: Scalar tensors have dimensions [1] and can be downcast to either Scalar or Matrix
         let scalar_value = if let Some(scalar_tensor) = scalar.as_any().downcast_ref::<Scalar>() {
             scalar_tensor.value()
         } else if let Some(matrix_tensor) = scalar.as_any().downcast_ref::<Matrix>() {

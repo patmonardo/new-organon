@@ -3,7 +3,7 @@
 //! Translated from `MLPClassifierTrainer.java` from Java GDS.
 
 use crate::collections::HugeIntArray;
-use crate::ml::core::batch::{AnyBatch, BatchQueue, ListBatch};
+use crate::ml::core::batch::from_array;
 use crate::ml::gradient_descent::Training;
 use crate::ml::models::{Classifier, ClassifierTrainer, Features};
 use parking_lot::RwLock;
@@ -15,49 +15,6 @@ use super::{
     classifier::MLPClassifier, config::MLPClassifierTrainConfig, data::MLPClassifierData,
     objective::MLPClassifierObjective,
 };
-
-struct TrainSetBatchQueue {
-    ids: Arc<Vec<u64>>,
-    batch_size: usize,
-    current_batch: usize,
-}
-
-impl TrainSetBatchQueue {
-    fn new(ids: Arc<Vec<u64>>, batch_size: usize) -> Self {
-        Self {
-            ids,
-            batch_size,
-            current_batch: 0,
-        }
-    }
-}
-
-impl BatchQueue for TrainSetBatchQueue {
-    fn pop(&mut self) -> Option<Box<dyn AnyBatch>> {
-        let start = self.current_batch * self.batch_size;
-        if start >= self.ids.len() {
-            return None;
-        }
-
-        let end = (start + self.batch_size).min(self.ids.len());
-        let batch_ids = self.ids[start..end].to_vec();
-        self.current_batch += 1;
-
-        Some(Box::new(ListBatch::new(batch_ids)))
-    }
-
-    fn total_size(&self) -> u64 {
-        self.ids.len() as u64
-    }
-
-    fn batch_size(&self) -> usize {
-        self.batch_size
-    }
-
-    fn current_batch(&self) -> u64 {
-        self.current_batch as u64
-    }
-}
 
 /// Trainer for MLP Classifier
 ///
@@ -144,10 +101,7 @@ impl MLPClassifierTrainer {
         // Create batch queue supplier (matches Java's BatchQueue.fromArray(trainSet, batchSize))
         let train_ids = Arc::clone(train_set);
         let batch_size = self.train_config.batch_size;
-        let queue_supplier = move || {
-            Box::new(TrainSetBatchQueue::new(Arc::clone(&train_ids), batch_size))
-                as Box<dyn BatchQueue>
-        };
+        let queue_supplier = move || from_array(Arc::clone(&train_ids), batch_size);
 
         // Train the model
         training.train(&objective, queue_supplier, self.concurrency);
@@ -221,10 +175,7 @@ impl ClassifierTrainer for MLPClassifierTrainer {
         // Create batch queue supplier (matches Java's BatchQueue.fromArray(trainSet, batchSize))
         let train_ids = Arc::clone(train_set);
         let batch_size = self.train_config.batch_size;
-        let queue_supplier = move || {
-            Box::new(TrainSetBatchQueue::new(Arc::clone(&train_ids), batch_size))
-                as Box<dyn BatchQueue>
-        };
+        let queue_supplier = move || from_array(Arc::clone(&train_ids), batch_size);
 
         // Train the model
         training.train(&objective, queue_supplier, self.concurrency);
@@ -342,7 +293,7 @@ mod tests {
     #[test]
     fn test_train_set_batch_queue_preserves_ids() {
         let train_set = Arc::new(vec![10, 20, 30, 40, 50]);
-        let mut queue = TrainSetBatchQueue::new(Arc::clone(&train_set), 2);
+        let mut queue = from_array(Arc::clone(&train_set), 2);
 
         let batch1 = queue.pop().unwrap();
         let ids1: Vec<u64> = batch1.element_ids_boxed().collect();

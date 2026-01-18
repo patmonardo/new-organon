@@ -50,11 +50,24 @@ pub trait BatchQueue {
 
 /// Compute the optimal batch size based on total size, minimum batch size, and concurrency.
 pub fn compute_batch_size(total_size: u64, min_batch_size: usize, concurrency: usize) -> usize {
-    // Simplified version - in real implementation would use ParallelUtil.adjustedBatchSize equivalent
-    let adjusted = (total_size as usize)
-        .saturating_div(concurrency)
-        .max(min_batch_size);
-    adjusted.min(usize::MAX)
+    if total_size == 0 {
+        return 0;
+    }
+
+    let min_batch_size = min_batch_size.max(1) as u64;
+    let concurrency = concurrency.max(1) as u64;
+
+    // Java ParallelUtil.adjustedBatchSize equivalent: ceil(total_size / concurrency),
+    // then clamp to at least min_batch_size, and never exceed total_size.
+    let mut batch_size = (total_size + concurrency - 1) / concurrency;
+    if batch_size < min_batch_size {
+        batch_size = min_batch_size;
+    }
+    if batch_size > total_size {
+        batch_size = total_size;
+    }
+
+    batch_size as usize
 }
 
 /// Create a consecutive batch queue with default batch size.
@@ -77,6 +90,16 @@ pub fn consecutive_with_batch_size(total_size: u64, batch_size: usize) -> Box<dy
     Box::new(ConsecutiveBatchQueue::new(total_size, batch_size))
 }
 
+/// Create a batch queue from an array of IDs.
+pub fn from_array(ids: std::sync::Arc<Vec<u64>>, batch_size: usize) -> Box<dyn BatchQueue> {
+    Box::new(ArrayBatchQueue::new(ids, batch_size))
+}
+
+/// Create a batch queue from a slice of IDs.
+pub fn from_slice(ids: &[u64], batch_size: usize) -> Box<dyn BatchQueue> {
+    from_array(std::sync::Arc::new(ids.to_vec()), batch_size)
+}
+
 /// Consecutive batch queue implementation.
 ///
 /// Matches Java's ConsecutiveBatchQueue which tracks batches by index
@@ -85,6 +108,50 @@ pub struct ConsecutiveBatchQueue {
     total_size: u64,
     batch_size: usize,
     current_batch: u64,
+}
+
+/// Batch queue backed by a list of IDs.
+pub struct ArrayBatchQueue {
+    ids: std::sync::Arc<Vec<u64>>,
+    batch_size: usize,
+    current_batch: usize,
+}
+
+impl ArrayBatchQueue {
+    pub fn new(ids: std::sync::Arc<Vec<u64>>, batch_size: usize) -> Self {
+        Self {
+            ids,
+            batch_size,
+            current_batch: 0,
+        }
+    }
+}
+
+impl BatchQueue for ArrayBatchQueue {
+    fn pop(&mut self) -> Option<Box<dyn AnyBatch>> {
+        let start = self.current_batch * self.batch_size;
+        if start >= self.ids.len() {
+            return None;
+        }
+
+        let end = (start + self.batch_size).min(self.ids.len());
+        let batch_ids = self.ids[start..end].to_vec();
+        self.current_batch += 1;
+
+        Some(Box::new(super::ListBatch::new(batch_ids)))
+    }
+
+    fn total_size(&self) -> u64 {
+        self.ids.len() as u64
+    }
+
+    fn batch_size(&self) -> usize {
+        self.batch_size
+    }
+
+    fn current_batch(&self) -> u64 {
+        self.current_batch as u64
+    }
 }
 
 impl ConsecutiveBatchQueue {
@@ -167,6 +234,7 @@ mod tests {
         assert_eq!(compute_batch_size(100, 10, 4), 25);
         assert_eq!(compute_batch_size(10, 5, 2), 5);
         assert_eq!(compute_batch_size(1, 1, 1), 1);
+        assert_eq!(compute_batch_size(3, 10, 4), 3);
     }
 
     #[test]

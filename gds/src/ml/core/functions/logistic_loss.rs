@@ -52,7 +52,7 @@ impl LogisticLoss {
 
         // Parents: [weights, features, targets] - NOT predictions (graph optimization)
         let parents: Vec<VariableRef> = vec![weights.into(), features.into(), targets.into()];
-        let base = AbstractVariable::with_gradient_requirement(parents, dimensions::scalar(), true);
+        let base = AbstractVariable::new(parents, dimensions::scalar());
 
         Self {
             base,
@@ -84,7 +84,7 @@ impl LogisticLoss {
         // Parents: [weights, bias, features, targets] - NOT predictions (graph optimization)
         let parents: Vec<VariableRef> =
             vec![weights.into(), bias.into(), features.into(), targets.into()];
-        let base = AbstractVariable::with_gradient_requirement(parents, dimensions::scalar(), true);
+        let base = AbstractVariable::new(parents, dimensions::scalar());
 
         Self {
             base,

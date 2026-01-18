@@ -59,7 +59,7 @@ impl RootMeanSquareError {
 
         let parents: Vec<VariableRef> = vec![predictions, targets];
         let dimensions = dimensions::scalar();
-        let base = AbstractVariable::with_gradient_requirement(parents, dimensions, true);
+        let base = AbstractVariable::new(parents, dimensions);
 
         Self { base }
     }
@@ -93,8 +93,8 @@ impl Variable for RootMeanSquareError {
 
         let mut squared_error_sum = 0.0;
         for idx in 0..targets.length() {
-            // predictions is Matrix, targets is Vector - both use data_at(idx) for 1D access
-            let error = predictions.data_at(idx, 0) - targets.data_at(idx);
+            // predictions is a Matrix that is vector-shaped; use flat indexing like Java.
+            let error = predictions.data_at_flat(idx) - targets.data_at(idx);
             squared_error_sum += error * error;
         }
 
@@ -133,7 +133,10 @@ impl Variable for RootMeanSquareError {
             let _parent_data = ctx.data(parent).expect("Parent data not computed");
 
             if root_of_sum_of_square_error_over_n.value() == 0.0 {
-                return Box::new(Vector::with_size(number_of_examples));
+                return Box::new(Matrix::with_dimensions(
+                    predictions.rows(),
+                    predictions.cols(),
+                ));
             }
 
             let denominator = root_of_sum_of_square_error_over_n
@@ -157,15 +160,14 @@ impl Variable for RootMeanSquareError {
                 .downcast_ref::<Vector>()
                 .expect("Targets must be Vector");
 
-            // Create gradient data vector
-            let mut gradient_data = Vec::new();
+            let mut parent_gradient =
+                Matrix::with_dimensions(predictions.rows(), predictions.cols());
             for idx in 0..number_of_examples {
-                // predictions is Matrix, targets is Vector
-                let error = predictions.data_at(idx, 0) - targets.data_at(idx);
-                gradient_data.push(error * scale);
+                let error = predictions.data_at_flat(idx) - targets.data_at(idx);
+                parent_gradient.set_data_at_flat(idx, error * scale);
             }
 
-            return Box::new(Vector::new(gradient_data));
+            return Box::new(parent_gradient);
         }
 
         panic!(

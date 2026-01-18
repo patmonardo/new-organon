@@ -4,20 +4,20 @@
 //! This is a literal 1:1 translation following repository translation policy.
 
 use super::{Batch, BatchTransformer};
+use std::sync::Arc;
 
 /// A batch that applies a transformation to element IDs from a delegate batch.
-pub struct MappedBatch<B, T> {
+pub struct MappedBatch<B> {
     delegate: B,
-    transformer: T,
+    transformer: Arc<dyn BatchTransformer>,
 }
 
-impl<B, T> MappedBatch<B, T>
+impl<B> MappedBatch<B>
 where
     B: Batch,
-    T: BatchTransformer,
 {
     /// Create a new MappedBatch with a delegate batch and transformer.
-    pub fn new(delegate: B, transformer: T) -> Self {
+    pub fn new(delegate: B, transformer: Arc<dyn BatchTransformer>) -> Self {
         Self {
             delegate,
             transformer,
@@ -25,18 +25,14 @@ where
     }
 }
 
-impl<B, T> Batch for MappedBatch<B, T>
+impl<B> Batch for MappedBatch<B>
 where
     B: Batch,
-    T: BatchTransformer + Copy,
 {
-    type ElementIdsIter = MappedIterator<B::ElementIdsIter, T>;
+    type ElementIdsIter = MappedIterator<B::ElementIdsIter>;
 
     fn element_ids(&self) -> Self::ElementIdsIter {
-        MappedIterator {
-            iter: self.delegate.element_ids(),
-            transformer: self.transformer,
-        }
+        MappedIterator::new(self.delegate.element_ids(), Arc::clone(&self.transformer))
     }
 
     fn size(&self) -> usize {
@@ -45,15 +41,23 @@ where
 }
 
 /// Iterator that applies a transformation to element IDs.
-pub struct MappedIterator<I, T> {
+pub struct MappedIterator<I> {
     iter: I,
-    transformer: T,
+    transformer: Arc<dyn BatchTransformer>,
 }
 
-impl<I, T> Iterator for MappedIterator<I, T>
+impl<I> MappedIterator<I>
 where
     I: Iterator<Item = u64>,
-    T: BatchTransformer,
+{
+    fn new(iter: I, transformer: Arc<dyn BatchTransformer>) -> Self {
+        Self { iter, transformer }
+    }
+}
+
+impl<I> Iterator for MappedIterator<I>
+where
+    I: Iterator<Item = u64>,
 {
     type Item = u64;
 
@@ -74,7 +78,7 @@ mod tests {
     #[test]
     fn test_mapped_batch_with_identity() {
         let delegate = ListBatch::new(vec![1, 2, 3, 4, 5]);
-        let transformer = IdentityBatchTransformer;
+        let transformer = Arc::new(IdentityBatchTransformer);
         let mapped = MappedBatch::new(delegate, transformer);
 
         assert_eq!(mapped.size(), 5);
@@ -84,7 +88,6 @@ mod tests {
 
     #[test]
     fn test_mapped_batch_with_offset() {
-        #[derive(Copy, Clone)]
         struct OffsetTransformer {
             offset: u64,
         }
@@ -96,7 +99,7 @@ mod tests {
         }
 
         let delegate = ListBatch::new(vec![1, 2, 3]);
-        let transformer = OffsetTransformer { offset: 10 };
+        let transformer = Arc::new(OffsetTransformer { offset: 10 });
         let mapped = MappedBatch::new(delegate, transformer);
 
         assert_eq!(mapped.size(), 3);
@@ -107,7 +110,7 @@ mod tests {
     #[test]
     fn test_mapped_iterator_size_hint() {
         let delegate = ListBatch::new(vec![1, 2, 3, 4, 5]);
-        let transformer = IdentityBatchTransformer;
+        let transformer = Arc::new(IdentityBatchTransformer);
         let mapped = MappedBatch::new(delegate, transformer);
 
         let mut iter = mapped.element_ids();

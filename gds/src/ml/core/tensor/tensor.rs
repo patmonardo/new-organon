@@ -3,19 +3,21 @@
 //! Translated from Java GDS ml-core Tensor.java.
 //! This provides a trait object-safe interface for ML functions.
 
+use std::any::Any;
 use std::fmt;
-
-/// Trait for downcasting to Any for type checking.
-pub trait AsAny {
-    fn as_any(&self) -> &dyn std::any::Any;
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
-}
 
 /// Core tensor trait that is object-safe for use in ML functions.
 ///
 /// This trait provides the interface needed by ML functions while being
 /// compatible with trait objects (Box<dyn Tensor>).
-pub trait Tensor: fmt::Debug + fmt::Display + Send + Sync + AsAny {
+pub trait Tensor: fmt::Debug + fmt::Display + Send + Sync {
+    /// Downcast support for dynamic tensor types.
+    ///
+    /// Rust: replaces Java's runtime type checks and instanceof usage.
+    fn as_any(&self) -> &dyn Any;
+
+    /// Mutable downcast support for dynamic tensor types.
+    fn as_any_mut(&mut self) -> &mut dyn Any;
     /// Get the dimensions of this tensor.
     /// Java: `public int[] dimensions()`
     fn dimensions(&self) -> &[usize];

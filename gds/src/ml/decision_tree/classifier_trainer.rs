@@ -4,6 +4,7 @@
 //! This is a literal 1:1 translation following repository translation policy.
 
 use crate::collections::HugeIntArray;
+use crate::mem::Estimate;
 use crate::ml::decision_tree::{
     DecisionTreeTrainer, DecisionTreeTrainerConfig, FeatureBagger, Features, GiniImpurityData,
     Group, ImpurityCriterion, TreeNode,
@@ -44,14 +45,14 @@ impl<'a> DecisionTreeClassifierTrainer<'a> {
         number_of_training_samples: usize,
         number_of_classes: usize,
     ) -> usize {
-        std::mem::size_of::<Self>()
+        Estimate::size_of_instance("DecisionTreeClassifierTrainer")
             + Self::estimate_tree(
                 config,
                 number_of_training_samples,
                 TreeNode::<usize>::leaf_memory_estimation(),
                 GiniImpurityData::memory_estimation(number_of_classes),
             )
-            + std::mem::size_of::<i64>() * number_of_classes
+            + Estimate::size_of_long_array(number_of_classes)
     }
 
     fn to_terminal(&self, group: &Group) -> usize {

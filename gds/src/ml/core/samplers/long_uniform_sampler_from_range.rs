@@ -5,6 +5,7 @@
 
 use super::long_uniform_sampler_by_exclusion::LongUniformSamplerByExclusion;
 use super::long_uniform_sampler_with_retries::LongUniformSamplerWithRetries;
+use crate::mem::{Estimate, MemoryRange};
 
 /// Threshold for choosing retry vs exclusion strategy
 const RETRY_SAMPLING_RATIO: f64 = 0.6;
@@ -83,7 +84,7 @@ impl LongUniformSamplerFromRange {
     /// Estimate memory usage for this sampler.
     ///
     /// Since only one sampler is used at a time, we can deduct the cost of one result array.
-    pub fn memory_estimation(number_of_samples: usize) -> usize {
+    pub fn memory_estimation(number_of_samples: usize) -> MemoryRange {
         let retry_estimation = LongUniformSamplerWithRetries::memory_estimation(number_of_samples);
 
         let exclusion_estimation = LongUniformSamplerByExclusion::memory_estimation(
@@ -91,11 +92,15 @@ impl LongUniformSamplerFromRange {
             ((number_of_samples as f64) / RETRY_SAMPLING_RATIO).ceil() as usize,
         );
 
-        let base_size = std::mem::size_of::<Self>();
-        let result_array = number_of_samples * std::mem::size_of::<u64>();
-
-        // Add both samplers, but deduct one result array since only one is active
-        retry_estimation + exclusion_estimation + base_size - result_array
+        retry_estimation
+            .add(&exclusion_estimation)
+            .add(&MemoryRange::of(Estimate::size_of_instance(
+                "LongUniformSamplerFromRange",
+            )))
+            // Only one sampler active → subtract one result array.
+            .element_wise_subtract(&MemoryRange::of(Estimate::size_of_long_array(
+                number_of_samples,
+            )))
     }
 }
 

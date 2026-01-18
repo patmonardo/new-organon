@@ -6,7 +6,7 @@ use crate::ml::core::features::BiasFeature;
 use crate::ml::core::features::HugeObjectArrayFeatureConsumer;
 use crate::ml::core::functions::NormalizeRows;
 use crate::ml::core::neighborhood_function::NeighborhoodFunction;
-use crate::ml::core::subgraph::{LocalIdMap, NeighborhoodSampler, SubGraph};
+use crate::ml::core::subgraph::{NeighborhoodSampler, SubGraph};
 use crate::ml::core::variable::VariableRef;
 use crate::types::graph::Graph;
 use crate::types::schema::NodeLabel;
@@ -53,21 +53,22 @@ pub fn sub_graphs_per_layer(
 ) -> Vec<SubGraph> {
     let mut rng = ChaCha8Rng::seed_from_u64(random_seed);
 
-    let mut samplers: Vec<GraphNeighborhoodFunction> = layers
+    let mut samplers: Vec<Arc<dyn NeighborhoodFunction>> = layers
         .iter()
         .map(|layer| {
             let sampler = NeighborhoodSampler::new(rng.gen());
-            GraphNeighborhoodFunction {
+            Arc::new(GraphNeighborhoodFunction {
                 graph: Arc::clone(&graph),
                 sampler,
                 sample_size: layer.sample_size(),
-            }
+            }) as Arc<dyn NeighborhoodFunction>
         })
         .collect();
 
     samplers.reverse();
 
-    build_sub_graphs(node_ids, &samplers)
+    let (weight_function, weighted) = SubGraph::relationship_weight_function(graph.as_ref());
+    SubGraph::build_sub_graphs(node_ids, &samplers, weight_function, weighted)
 }
 
 /// Java: `GraphSageHelper.initializeSingleLabelFeatures(...)`
@@ -248,61 +249,4 @@ impl NeighborhoodFunction for GraphNeighborhoodFunction {
             .sample(self.graph.as_ref(), node_id, self.sample_size);
         Box::new(sampled.into_iter())
     }
-}
-
-fn build_sub_graphs(node_ids: &[u64], samplers: &[GraphNeighborhoodFunction]) -> Vec<SubGraph> {
-    let mut current_batch: Vec<u64> = node_ids.to_vec();
-    let mut result = Vec::with_capacity(samplers.len());
-
-    for sampler in samplers {
-        let mut map = LocalIdMap::new();
-        // Ensure batch nodes are mapped first in stable order -> local IDs [0..batch_size)
-        for &id in &current_batch {
-            map.to_mapped(id);
-        }
-
-        let mut neighbors_local: Vec<Vec<usize>> = Vec::with_capacity(current_batch.len());
-        let weighted = sampler.graph.has_relationship_property();
-        let mut neighbor_weights: Option<Vec<Vec<f64>>> = if weighted {
-            Some(Vec::with_capacity(current_batch.len()))
-        } else {
-            None
-        };
-
-        for &src in &current_batch {
-            let src_local = map.to_mapped(src);
-            debug_assert!(src_local < current_batch.len());
-
-            let mut neighs = Vec::new();
-            let mut weights = Vec::new();
-
-            for nbr in sampler.sample(src) {
-                if weighted {
-                    let w = sampler
-                        .graph
-                        .relationship_property(src as i64, nbr as i64, 1.0);
-                    weights.push(w);
-                }
-                let n_local = map.to_mapped(nbr);
-                neighs.push(n_local);
-            }
-            neighbors_local.push(neighs);
-            if let Some(ws) = neighbor_weights.as_mut() {
-                ws.push(weights);
-            }
-        }
-
-        let mapped_batch_ids: Vec<usize> = (0..current_batch.len()).collect();
-        let sub = SubGraph::new(
-            mapped_batch_ids,
-            map.original_ids_vec(),
-            neighbors_local,
-            neighbor_weights,
-            weighted,
-        );
-        current_batch = sub.original_node_ids().to_vec();
-        result.push(sub);
-    }
-
-    result
 }

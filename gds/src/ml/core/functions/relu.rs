@@ -62,12 +62,7 @@ impl Relu {
     /// Ref-based constructor for DAG-safe graph building.
     pub fn new_ref(parent: VariableRef, alpha: f64) -> Self {
         let dimensions = parent.dimensions().to_vec();
-        let require_gradient = parent.require_gradient();
-        let base = AbstractVariable::with_gradient_requirement(
-            vec![parent.clone()],
-            dimensions,
-            require_gradient,
-        );
+        let base = AbstractVariable::new(vec![parent.clone()], dimensions);
         Self {
             base,
             parent,

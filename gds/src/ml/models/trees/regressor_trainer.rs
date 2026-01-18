@@ -192,7 +192,10 @@ impl RandomForestRegressorTrainer {
                             + Estimate::size_of_bitset(used_samples),
                     );
 
-                    let per_tree_min = FeatureBagger::memory_estimation(min_bagged_features)
+                    let bagger_min = FeatureBagger::memory_estimation(min_bagged_features);
+                    let bagger_max = FeatureBagger::memory_estimation(max_bagged_features);
+
+                    let per_tree_min = bagger_min.min()
                         + DecisionTreeRegressorTrainer::memory_estimation(
                             &DecisionTreeTrainerConfig::builder()
                                 .max_depth(config.forest.max_depth)
@@ -204,7 +207,7 @@ impl RandomForestRegressorTrainer {
                         )
                         + bootstrapped.min();
 
-                    let per_tree_max = FeatureBagger::memory_estimation(max_bagged_features)
+                    let per_tree_max = bagger_max.max()
                         + DecisionTreeRegressorTrainer::memory_estimation(
                             &DecisionTreeTrainerConfig::builder()
                                 .max_depth(config.forest.max_depth)

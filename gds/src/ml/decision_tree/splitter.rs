@@ -5,6 +5,7 @@
 
 use crate::collections::HugeLongArray;
 use crate::core::utils::paged::HugeSerialIndirectMergeSort;
+use crate::mem::Estimate;
 use crate::ml::decision_tree::{
     FeatureBagger, Group, Groups, ImpurityCriterion, ImpurityData, Split,
 };
@@ -44,10 +45,10 @@ impl<'a> Splitter<'a> {
         number_of_training_samples: usize,
         size_of_impurity_data: usize,
     ) -> usize {
-        std::mem::size_of::<Self>()
-            + std::mem::size_of::<i64>() * number_of_training_samples // sort_cache
+        Estimate::size_of_instance("Splitter")
+            + Estimate::size_of_long_array(number_of_training_samples) // sort_cache
             + 4 * size_of_impurity_data
-            + 4 * std::mem::size_of::<i64>() * number_of_training_samples // child arrays
+            + 4 * Estimate::size_of_long_array(number_of_training_samples) // child arrays
     }
 
     pub fn find_best_split(&mut self, group: &Group) -> Split {

@@ -12,7 +12,7 @@ mod constant_tests {
     #[test]
     fn test_scalar_constant_creation() {
         let constant = Constant::scalar(42.0);
-        assert_eq!(constant.dimensions(), &[1, 1]);
+        assert_eq!(constant.dimensions(), &[1]);
         assert!(!constant.require_gradient());
     }
 
@@ -35,7 +35,7 @@ mod constant_tests {
         let data = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         let constant = Constant::vector(data.clone());
 
-        assert_eq!(constant.dimensions(), &[5, 1]);
+        assert_eq!(constant.dimensions(), &[5]);
         assert!(!constant.require_gradient());
     }
 
@@ -99,11 +99,11 @@ mod constant_tests {
     #[test]
     fn test_constant_size_estimation() {
         // Scalar: 1 element
-        assert_eq!(Constant::size_in_bytes(&[1, 1]), std::mem::size_of::<f64>());
+        assert_eq!(Constant::size_in_bytes(&[1]), std::mem::size_of::<f64>());
 
         // Vector: 100 elements
         assert_eq!(
-            Constant::size_in_bytes(&[100, 1]),
+            Constant::size_in_bytes(&[100]),
             100 * std::mem::size_of::<f64>()
         );
 
@@ -149,7 +149,7 @@ mod weights_tests {
         let data = vec![1.0, 2.0, 3.0];
         let weights = Weights::of_vector(data.clone());
 
-        assert_eq!(weights.dimensions(), &[3, 1]);
+        assert_eq!(weights.dimensions(), &[3]);
         assert!(weights.require_gradient());
     }
 
@@ -171,7 +171,7 @@ mod weights_tests {
     #[test]
     fn test_scalar_weights_creation() {
         let weights = Weights::of_scalar(5.0);
-        assert_eq!(weights.dimensions(), &[1, 1]);
+        assert_eq!(weights.dimensions(), &[1]);
         assert!(weights.require_gradient());
     }
 
@@ -264,7 +264,7 @@ mod sigmoid_tests {
         let parent = Box::new(Constant::scalar(0.5));
         let sigmoid = Sigmoid::new(parent);
 
-        assert_eq!(sigmoid.dimensions(), &[1, 1]);
+        assert_eq!(sigmoid.dimensions(), &[1]);
         // Constant parent doesn't require gradient, so sigmoid won't either
         assert!(!sigmoid.require_gradient());
     }
@@ -307,7 +307,7 @@ mod mean_square_error_tests {
 
         let mse = MeanSquareError::new(predictions, targets);
 
-        assert_eq!(mse.dimensions(), &[1, 1]);
+        assert_eq!(mse.dimensions(), &[1]);
         assert!(!mse.require_gradient());
     }
 
@@ -350,7 +350,7 @@ mod mean_square_error_tests {
         let mse = MeanSquareError::new(predictions, targets);
 
         // MSE always outputs a scalar
-        assert_eq!(mse.dimensions(), &[1, 1]);
+        assert_eq!(mse.dimensions(), &[1]);
     }
 }
 
@@ -418,7 +418,7 @@ mod element_sum_tests {
         let parent = Box::new(Constant::vector(vec![1.0, 2.0, 3.0]));
         let sum = ElementSum::new(vec![parent]);
 
-        assert_eq!(sum.dimensions(), &[1, 1]);
+        assert_eq!(sum.dimensions(), &[1]);
         assert!(!sum.require_gradient());
     }
 
@@ -430,7 +430,7 @@ mod element_sum_tests {
 
         let sum = ElementSum::new(vec![parent1, parent2, parent3]);
 
-        assert_eq!(sum.dimensions(), &[1, 1]);
+        assert_eq!(sum.dimensions(), &[1]);
         assert_eq!(sum.parents().len(), 3);
     }
 
@@ -442,7 +442,7 @@ mod element_sum_tests {
         let sum = ElementSum::new(vec![parent1, parent2]);
 
         // ElementSum always outputs a scalar
-        assert_eq!(sum.dimensions(), &[1, 1]);
+        assert_eq!(sum.dimensions(), &[1]);
     }
 }
 
@@ -456,7 +456,7 @@ mod l2_norm_squared_tests {
         let parent = Box::new(Constant::vector(vec![3.0, 4.0]));
         let l2_norm = L2NormSquared::new(parent);
 
-        assert_eq!(l2_norm.dimensions(), &[1, 1]);
+        assert_eq!(l2_norm.dimensions(), &[1]);
         assert!(!l2_norm.require_gradient());
     }
 
@@ -466,7 +466,7 @@ mod l2_norm_squared_tests {
         let l2_norm = L2NormSquared::new(parent);
 
         // L2NormSquared always outputs a scalar
-        assert_eq!(l2_norm.dimensions(), &[1, 1]);
+        assert_eq!(l2_norm.dimensions(), &[1]);
     }
 
     #[test]
@@ -488,7 +488,7 @@ mod relu_tests {
         let parent = Box::new(Constant::scalar(1.0));
         let relu = Relu::new(parent, 0.01);
 
-        assert_eq!(relu.dimensions(), &[1, 1]);
+        assert_eq!(relu.dimensions(), &[1]);
         assert!(!relu.require_gradient());
     }
 
@@ -497,7 +497,7 @@ mod relu_tests {
         let parent = Box::new(Constant::scalar(1.0));
         let relu = Relu::with_default_alpha(parent);
 
-        assert_eq!(relu.dimensions(), &[1, 1]);
+        assert_eq!(relu.dimensions(), &[1]);
     }
 
     #[test]
@@ -519,7 +519,7 @@ mod constant_scale_tests {
         let parent = Box::new(Constant::scalar(5.0));
         let scaled = ConstantScale::new(parent, 2.0);
 
-        assert_eq!(scaled.dimensions(), &[1, 1]);
+        assert_eq!(scaled.dimensions(), &[1]);
         assert!(!scaled.require_gradient());
     }
 

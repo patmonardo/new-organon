@@ -8,6 +8,8 @@ use rand::Rng;
 use rand::SeedableRng;
 use std::collections::HashSet;
 
+use crate::mem::{Estimate, MemoryRange};
+
 /// Samples with retries until the desired number of unique samples are obtained.
 ///
 /// WARNING: There is no maximum number of retries, so can take a long while if the number
@@ -85,10 +87,12 @@ impl LongUniformSamplerWithRetries {
     /// Estimate memory usage for this sampler.
     ///
     /// Returns approximate bytes needed for the sampler and result array.
-    pub fn memory_estimation(number_of_samples: usize) -> usize {
-        std::mem::size_of::<Self>()
-            + number_of_samples * std::mem::size_of::<u64>() // HashSet entries
-            + number_of_samples * std::mem::size_of::<u64>() // Result array
+    pub fn memory_estimation(number_of_samples: usize) -> MemoryRange {
+        MemoryRange::of(
+            Estimate::size_of_instance("LongUniformSamplerWithRetries")
+                + Estimate::size_of_long_hash_set(number_of_samples)
+                + Estimate::size_of_long_array(number_of_samples),
+        )
     }
 }
 

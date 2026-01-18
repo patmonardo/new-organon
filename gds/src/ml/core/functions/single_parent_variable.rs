@@ -54,7 +54,9 @@ impl SingleParentVariable {
     ///
     /// Concrete implementations must override this method.
     pub fn gradient_for_parent(&self, _ctx: &ComputationContext) -> Box<dyn Tensor> {
-        unimplemented!("gradient_for_parent() must be implemented by concrete subclasses")
+        panic!(
+            "SingleParentVariable is abstract; implement gradient_for_parent() in a concrete type"
+        )
     }
 }
 
@@ -62,7 +64,7 @@ impl Variable for SingleParentVariable {
     /// Apply: Must be implemented by concrete subclasses.
     /// Java: `public abstract T apply(ComputationContext ctx);`
     fn apply(&self, _ctx: &ComputationContext) -> Box<dyn Tensor> {
-        unimplemented!("apply() must be implemented by concrete subclasses (Sigmoid, Relu, etc.)")
+        panic!("SingleParentVariable is abstract; implement apply() in a concrete type")
     }
 
     /// Gradient: Template method that validates parent and calls gradient_for_parent.

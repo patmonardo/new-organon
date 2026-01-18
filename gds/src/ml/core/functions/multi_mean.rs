@@ -63,10 +63,7 @@ impl MultiMean {
 
         for (batch_idx, &batch_node_id) in batch_ids.iter().enumerate() {
             let neighbors = self.sub_graph.neighbors(batch_node_id);
-            let mut denom = 1.0;
-            for &neighbor in neighbors {
-                denom += self.sub_graph.relationship_weight(batch_node_id, neighbor);
-            }
+            let denom = (neighbors.len() + 1) as f64;
 
             // Pass gradient to batch node's data
             for col in 0..cols {
@@ -108,10 +105,7 @@ impl Variable for MultiMean {
 
         for (batch_idx, &batch_node_id) in batch_ids.iter().enumerate() {
             let neighbors = self.sub_graph.neighbors(batch_node_id);
-            let mut denom = 1.0;
-            for &neighbor in neighbors {
-                denom += self.sub_graph.relationship_weight(batch_node_id, neighbor);
-            }
+            let denom = (neighbors.len() + 1) as f64;
 
             // Initialize with node's own features (weighted by 1.0)
             for col in 0..cols {
