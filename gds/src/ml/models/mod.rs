@@ -13,6 +13,7 @@
 //!   - Neural networks (MLP)
 //! - AutoML system for hyperparameter optimization
 
+pub mod automl;
 pub mod base;
 pub mod classifier_factory;
 pub mod classifier_trainer_factory;
@@ -38,6 +39,7 @@ pub use regression_trainer_factory::RegressionTrainerFactory;
 pub use training_method::TrainingMethod;
 
 // Model implementations
+pub use automl::*;
 pub use linear::{LinearRegressionData, LinearRegressor};
 pub use logistic_regression::{LogisticRegressionClassifier, LogisticRegressionData};
 pub use neural::{

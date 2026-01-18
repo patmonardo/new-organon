@@ -1,118 +1,142 @@
-use super::parameter::*;
-use crate::ml::models::TrainerConfig;
-use rand::prelude::*;
-use rand_chacha::ChaCha8Rng;
+use super::config::TunableTrainerConfig;
+use super::hyperparameter::{DoubleRangeParameter, IntegerRangeParameter, NumericalRangeParameter};
+use crate::ml::models::{TrainerConfig, TrainingMethod};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::collections::HashMap;
 
 /// HyperParameterOptimizer defines a strategy for searching through a hyperparameter space
-pub trait HyperParameterOptimizer: Iterator<Item = TrainerConfig> {}
+///
+/// Java: `interface HyperParameterOptimizer extends Iterator<TrainerConfig>`
+pub trait HyperParameterOptimizer: Iterator<Item = Box<dyn TrainerConfig>> {}
 
 /// A basic implementation of random search through a hyperparameter space
+///
+/// 1:1 with RandomSearch.java
 pub struct RandomSearch {
     concrete_configs: Vec<TunableTrainerConfig>,
     tunable_configs: Vec<TunableTrainerConfig>,
-    total_trials: usize,
-    concrete_trials: usize,
-    rng: ChaCha8Rng,
-    finished_trials: usize,
+    total_number_of_trials: usize,
+    number_of_concrete_trials: usize,
+    random: StdRng,
+    number_of_finished_trials: usize,
 }
 
 impl RandomSearch {
     pub fn new(
-        parameter_space: HashMap<String, Vec<TunableTrainerConfig>>,
+        parameter_space: HashMap<TrainingMethod, Vec<TunableTrainerConfig>>,
         max_trials: usize,
-        seed: Option<u64>,
+        random_seed: u64,
     ) -> Self {
-        let rng = ChaCha8Rng::seed_from_u64(seed.unwrap_or_else(random));
+        Self::new_with_seed(parameter_space, max_trials, Some(random_seed))
+    }
 
-        let concrete = parameter_space
+    pub fn new_with_seed(
+        parameter_space: HashMap<TrainingMethod, Vec<TunableTrainerConfig>>,
+        max_trials: usize,
+        random_seed: Option<u64>,
+    ) -> Self {
+        let concrete_configs: Vec<TunableTrainerConfig> = parameter_space
             .values()
             .flatten()
-            .filter(|c| c.is_concrete())
+            .filter(|config| config.is_concrete())
             .cloned()
-            .collect::<Vec<_>>();
+            .collect();
 
-        let tunable = parameter_space
+        let tunable_configs: Vec<TunableTrainerConfig> = parameter_space
             .values()
             .flatten()
-            .filter(|c| !c.is_concrete())
+            .filter(|config| !config.is_concrete())
             .cloned()
-            .collect::<Vec<_>>();
+            .collect();
 
-        let concrete_count = concrete.len();
-        let tunable_count = tunable.len();
-
-        // Ensure we try each concrete config at least once
-        let total = max_trials.max(concrete_count);
+        let number_of_concrete_trials = concrete_configs.len();
+        let total_number_of_trials = max_trials + number_of_concrete_trials;
+        let random = random_seed
+            .map(StdRng::seed_from_u64)
+            .unwrap_or_else(StdRng::from_entropy);
 
         Self {
-            concrete_configs: concrete,
-            tunable_configs: tunable,
-            total_trials: total,
-            concrete_trials: concrete_count,
-            rng,
-            finished_trials: 0,
+            concrete_configs,
+            tunable_configs,
+            total_number_of_trials,
+            number_of_concrete_trials,
+            random,
+            number_of_finished_trials: 0,
         }
+    }
+
+    pub fn has_next(&self) -> bool {
+        (self.number_of_finished_trials < self.number_of_concrete_trials)
+            || (self.number_of_finished_trials < self.total_number_of_trials
+                && !self.tunable_configs.is_empty())
     }
 
     fn sample_integer(&mut self, range: &IntegerRangeParameter) -> i32 {
-        self.rng.gen_range(range.min()..=range.max())
+        self.random.gen_range(range.min()..range.max())
     }
 
     fn sample_double(&mut self, range: &DoubleRangeParameter) -> f64 {
-        let min = range.min();
-        let max = range.max();
-
         if range.log_scale() {
-            let log_min = if min < 1e-20 { 1e-20_f64.ln() } else { min.ln() };
-            let log_max = max.ln();
-            let log_value = self.rng.gen_range(log_min..=log_max);
-            log_value.exp()
+            let min = if range.min() < 1e-20 {
+                (1e-20_f64).ln()
+            } else {
+                range.min().ln()
+            };
+            let max = range.max().ln();
+            self.random.gen_range(min..max).exp()
         } else {
-            self.rng.gen_range(min..=max)
+            self.random.gen_range(range.min()..range.max())
         }
     }
 
-    fn sample_config(&mut self, config: &TunableTrainerConfig) -> TrainerConfig {
-        let mut params = config.concrete_parameters().clone();
-
-        // Sample numerical ranges
-        for (key, range) in config.double_ranges() {
-            params.insert(
-                key.to_string(),
-                Box::new(DoubleParameter::of(self.sample_double(range))) as Box<dyn ConcreteParameter>,
-            );
-        }
-
-        for (key, range) in config.integer_ranges() {
-            params.insert(
-                key.to_string(),
-                Box::new(IntegerParameter::of(self.sample_integer(range))) as Box<dyn ConcreteParameter>,
-            );
-        }
-
-        TrainerConfig::from_parameters(params)
+    fn sample(&mut self, tunable_config: &TunableTrainerConfig) -> Box<dyn TrainerConfig> {
+        let mut hyper_parameter_values = HashMap::new();
+        tunable_config
+            .double_ranges()
+            .iter()
+            .for_each(|(name, range)| {
+                hyper_parameter_values.insert(
+                    name.clone(),
+                    serde_json::Value::Number(
+                        serde_json::Number::from_f64(self.sample_double(range)).unwrap(),
+                    ),
+                );
+            });
+        tunable_config
+            .integer_ranges()
+            .iter()
+            .for_each(|(name, range)| {
+                hyper_parameter_values.insert(
+                    name.clone(),
+                    serde_json::Value::Number(self.sample_integer(range).into()),
+                );
+            });
+        tunable_config.materialize(hyper_parameter_values)
     }
 }
 
 impl Iterator for RandomSearch {
-    type Item = TrainerConfig;
+    type Item = Box<dyn TrainerConfig>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.finished_trials >= self.total_trials {
-            return None;
+        if !self.has_next() {
+            panic!("RandomSearch has already exhausted the maximum trials or the parameter space.");
         }
 
-        let config = if self.finished_trials < self.concrete_trials {
-            // Use concrete configs first
-            self.concrete_configs[self.finished_trials].to_trainer_config()
+        let config = if self.number_of_finished_trials < self.concrete_configs.len() {
+            let config =
+                self.concrete_configs[self.number_of_finished_trials].materialize(HashMap::new());
+            self.number_of_finished_trials += 1;
+            config
         } else {
-            // Sample from tunable configs
-            let idx = self.rng.gen_range(0..self.tunable_configs.len());
-            self.sample_config(&self.tunable_configs[idx])
+            self.number_of_finished_trials += 1;
+            let idx = self.random.gen_range(0..self.tunable_configs.len());
+            let tunable = self.tunable_configs[idx].clone();
+            self.sample(&tunable)
         };
 
-        self.finished_trials += 1;
         Some(config)
     }
 }
+
+impl HyperParameterOptimizer for RandomSearch {}

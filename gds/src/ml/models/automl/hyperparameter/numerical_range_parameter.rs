@@ -3,7 +3,7 @@
 //! Translated from NumericalRangeParameter.java
 //! Base trait for numerical range parameters.
 
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::collections::HashMap;
 
 /// Trait for numerical range parameters
@@ -11,7 +11,7 @@ use std::collections::HashMap;
 /// Java: `interface NumericalRangeParameter<T extends Number> { T min(); T max(); }`
 pub trait NumericalRangeParameter<T>: Send + Sync
 where
-    T: Clone + Send + Sync,
+    T: Clone + Send + Sync + Serialize,
 {
     /// Get the minimum value
     fn min(&self) -> T;
@@ -32,4 +32,3 @@ where
         map
     }
 }
-

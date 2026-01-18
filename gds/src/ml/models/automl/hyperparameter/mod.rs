@@ -12,12 +12,12 @@ mod list_parameter;
 mod numerical_range_parameter;
 mod string_parameter;
 
-pub use concrete_parameter::ConcreteParameter;
+pub use concrete_parameter::{ConcreteParameter, ConcreteParameterValue};
 pub use double_parameter::DoubleParameter;
 pub use double_range_parameter::DoubleRangeParameter;
 pub use integer_parameter::IntegerParameter;
 pub use integer_range_parameter::IntegerRangeParameter;
-pub use list_parameter::ListParameter;
+pub use list_parameter::{ListParameter, ListParameterValue};
 pub use numerical_range_parameter::NumericalRangeParameter;
 pub use string_parameter::StringParameter;
 

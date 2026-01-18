@@ -2,15 +2,13 @@
 //!
 //! Translated from StringParameter.java
 
-use super::concrete_parameter::ConcreteParameter;
-use derive_more::From;
+use super::concrete_parameter::{ConcreteParameter, ConcreteParameterValue};
 use serde::{Deserialize, Serialize};
-use std::any::Any;
 
 /// String parameter value
 ///
 /// Java: `interface StringParameter extends ConcreteParameter<String>`
-#[derive(Debug, Clone, PartialEq, Eq, Hash, From, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct StringParameter(pub String);
 
 impl StringParameter {
@@ -30,12 +28,7 @@ impl StringParameter {
 }
 
 impl ConcreteParameter for StringParameter {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn value_any(&self) -> Box<dyn Any> {
-        Box::new(self.0.clone())
+    fn value(&self) -> ConcreteParameterValue {
+        ConcreteParameterValue::String(self.0.clone())
     }
 }
-

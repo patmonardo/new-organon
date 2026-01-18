@@ -1,41 +1,5 @@
 use crate::ml::metrics::{Metric, MetricComparator, OutOfBagError};
 
-#[derive(Debug, Clone)]
-pub struct SignedProbabilities {
-    probabilities: Vec<f64>,
-    positive_count: usize,
-    negative_count: usize,
-}
-
-impl SignedProbabilities {
-    pub const ALMOST_ZERO: f64 = 1e-100;
-
-    pub fn new(mut probabilities: Vec<f64>, positive_count: usize, negative_count: usize) -> Self {
-        probabilities.sort_by(|a, b| {
-            a.abs()
-                .partial_cmp(&b.abs())
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-        Self {
-            probabilities,
-            positive_count,
-            negative_count,
-        }
-    }
-
-    pub fn positive_count(&self) -> usize {
-        self.positive_count
-    }
-
-    pub fn negative_count(&self) -> usize {
-        self.negative_count
-    }
-
-    pub fn probabilities(&self) -> &[f64] {
-        &self.probabilities
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum LinkMetric {
     AUCPR,
@@ -117,6 +81,42 @@ impl Metric for LinkMetric {
 
     fn comparator(&self) -> MetricComparator {
         MetricComparator::Natural
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SignedProbabilities {
+    probabilities: Vec<f64>,
+    positive_count: usize,
+    negative_count: usize,
+}
+
+impl SignedProbabilities {
+    pub const ALMOST_ZERO: f64 = 1e-100;
+
+    pub fn new(mut probabilities: Vec<f64>, positive_count: usize, negative_count: usize) -> Self {
+        probabilities.sort_by(|a, b| {
+            a.abs()
+                .partial_cmp(&b.abs())
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+        Self {
+            probabilities,
+            positive_count,
+            negative_count,
+        }
+    }
+
+    pub fn positive_count(&self) -> usize {
+        self.positive_count
+    }
+
+    pub fn negative_count(&self) -> usize {
+        self.negative_count
+    }
+
+    pub fn probabilities(&self) -> &[f64] {
+        &self.probabilities
     }
 }
 

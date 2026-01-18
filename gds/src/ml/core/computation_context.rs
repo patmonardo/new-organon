@@ -20,7 +20,7 @@
 //! let gradient = ctx.gradient(&weight_variable);
 //! ```
 
-use crate::ml::core::{dimensions, tensor::Tensor, variable::Variable};
+use crate::ml::core::{dimensions, Tensor, Variable};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;

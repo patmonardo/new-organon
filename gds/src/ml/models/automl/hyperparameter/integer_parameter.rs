@@ -2,15 +2,13 @@
 //!
 //! Translated from IntegerParameter.java
 
-use super::concrete_parameter::ConcreteParameter;
-use derive_more::From;
+use super::concrete_parameter::{ConcreteParameter, ConcreteParameterValue};
 use serde::{Deserialize, Serialize};
-use std::any::Any;
 
 /// Integer parameter value
 ///
 /// Java: `interface IntegerParameter extends ConcreteParameter<Integer>`
-#[derive(Debug, Clone, PartialEq, Eq, Hash, From, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct IntegerParameter(pub i32);
 
 impl IntegerParameter {
@@ -30,12 +28,7 @@ impl IntegerParameter {
 }
 
 impl ConcreteParameter for IntegerParameter {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn value_any(&self) -> Box<dyn Any> {
-        Box::new(self.0)
+    fn value(&self) -> ConcreteParameterValue {
+        ConcreteParameterValue::Integer(self.0)
     }
 }
-

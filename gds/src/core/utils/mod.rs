@@ -27,6 +27,7 @@ pub mod progress;
 pub mod queue;
 pub mod set_bits_iterable;
 pub mod shuffle;
+pub mod string_formatting;
 pub mod two_arrays_sort;
 pub mod warnings;
 
@@ -41,6 +42,10 @@ pub use original_id_node_property_values::OriginalIdNodePropertyValues;
 pub use progress_timer::ProgressTimer;
 pub use set_bits_iterable::SetBitsIterable;
 pub use shuffle::{Random as ShuffleRandom, ShuffleUtil, SplittableRandom};
+pub use string_formatting::{
+    format_number, format_with_locale, is_empty, to_lower_case_with_locale,
+    to_upper_case_with_locale,
+};
 pub use time_util::{TimeUtil, ZoneId};
 pub use two_arrays_sort::{
     is_correctly_sorted, sort_double_array_by_long_values, sort_double_array_by_long_values_desc,

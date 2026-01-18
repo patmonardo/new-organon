@@ -1,11 +1,7 @@
+use crate::collections::long_multiset::LongMultiSet;
 use crate::ml::core::subgraph::LocalIdMap;
+use crate::ml::metrics::{ClassificationMetric, ClassificationMetricSpecification, Metric};
 use crate::projection::eval::pipeline::node_pipeline::NodePropertyPipelineBaseTrainConfig;
-
-// Placeholder types until ml-metrics and collections packages are translated
-pub type ClassificationMetricSpecification = ();
-pub type Metric = ();
-pub type ClassificationMetric = ();
-pub type LongMultiSet = std::collections::HashMap<i64, usize>;
 
 /// Training configuration for node classification pipelines.
 ///
@@ -41,24 +37,24 @@ impl NodeClassificationPipelineTrainConfig {
     }
 
     /// Create concrete metrics from specifications given class ID map and class counts.
-    pub fn metrics(&self, _class_id_map: &LocalIdMap, _class_counts: &LongMultiSet) -> Vec<Metric> {
-        // Note: This will expand metric specifications once ClassificationMetricSpecification is translated.
-        // self.metrics
-        //     .iter()
-        //     .flat_map(|spec| spec.create_metrics(class_id_map, class_counts))
-        //     .collect()
-        vec![]
+    pub fn metrics(
+        &self,
+        class_id_map: &LocalIdMap,
+        class_counts: &LongMultiSet,
+    ) -> Vec<Box<dyn Metric>> {
+        self.metrics
+            .iter()
+            .flat_map(|spec| spec.create_metrics(class_id_map, class_counts))
+            .collect()
     }
 
     /// Filter classification metrics (non-model-specific).
-    pub fn classification_metrics(_metrics: &[Metric]) -> Vec<ClassificationMetric> {
-        // Note: This will filter metrics once the Metric trait hierarchy is translated.
-        // metrics
-        //     .iter()
-        //     .filter(|m| !m.is_model_specific())
-        //     .map(|m| m as ClassificationMetric)
-        //     .collect()
-        vec![]
+    pub fn classification_metrics(metrics: &[Box<dyn Metric>]) -> Vec<&dyn ClassificationMetric> {
+        metrics
+            .iter()
+            .filter(|metric| !metric.is_model_specific())
+            .filter_map(|metric| metric.as_classification_metric())
+            .collect()
     }
 }
 
@@ -128,15 +124,38 @@ mod tests {
         let class_counts = LongMultiSet::new();
 
         let metrics = config.metrics(&class_id_map, &class_counts);
-        // Until metrics are implemented, should return empty vec
         assert_eq!(metrics.len(), 0);
     }
 
     #[test]
     fn test_classification_metrics_filter() {
-        let metrics: Vec<Metric> = vec![];
+        let metrics: Vec<Box<dyn Metric>> = vec![
+            Box::new(crate::ml::metrics::OutOfBagError::new()),
+            Box::new(crate::ml::metrics::classification::GlobalAccuracy::new()),
+        ];
         let filtered = NodeClassificationPipelineTrainConfig::classification_metrics(&metrics);
-        assert_eq!(filtered.len(), 0);
+        assert_eq!(filtered.len(), 1);
+    }
+
+    #[test]
+    fn test_metrics_from_specifications() {
+        let spec = ClassificationMetricSpecification::parse("F1(class=*)").unwrap();
+        let config = NodeClassificationPipelineTrainConfig::new(
+            "test_pipeline".to_string(),
+            vec!["Label1".to_string()],
+            "target_property".to_string(),
+            Some(42),
+            vec![spec],
+        );
+
+        let class_id_map = LocalIdMap::of(&[0, 1, 2]);
+        let class_counts = LongMultiSet::new();
+        let metrics = config.metrics(&class_id_map, &class_counts);
+
+        let mut names: Vec<String> = metrics.iter().map(|m| m.name().to_string()).collect();
+        names.sort();
+        assert_eq!(names.len(), 3);
+        assert!(names.iter().all(|name| name.starts_with("F1(class=")));
     }
 
     #[test]

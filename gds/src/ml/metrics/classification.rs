@@ -1,7 +1,35 @@
+use super::metric::{Metric, MetricComparator};
 use crate::collections::long_multiset::LongMultiSet;
 use crate::collections::HugeLongArray;
 use crate::ml::core::subgraph::LocalIdMap;
-use crate::ml::metrics::{Metric, MetricComparator};
+
+/// Out-of-bag error metric for Random Forest models.
+///
+/// This metric is model-specific and only applicable to Random Forest training.
+#[derive(Debug, Clone, Default)]
+pub struct OutOfBagError;
+
+impl OutOfBagError {
+    pub const NAME: &'static str = "OUT_OF_BAG_ERROR";
+
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Metric for OutOfBagError {
+    fn name(&self) -> &str {
+        Self::NAME
+    }
+
+    fn comparator(&self) -> MetricComparator {
+        MetricComparator::Natural
+    }
+
+    fn is_model_specific(&self) -> bool {
+        true
+    }
+}
 
 pub const EPSILON: f64 = 1e-8;
 
@@ -33,6 +61,10 @@ impl Metric for Accuracy {
 
     fn comparator(&self) -> MetricComparator {
         MetricComparator::Natural
+    }
+
+    fn as_classification_metric(&self) -> Option<&dyn ClassificationMetric> {
+        Some(self)
     }
 }
 
@@ -86,6 +118,10 @@ impl Metric for GlobalAccuracy {
     fn comparator(&self) -> MetricComparator {
         MetricComparator::Natural
     }
+
+    fn as_classification_metric(&self) -> Option<&dyn ClassificationMetric> {
+        Some(self)
+    }
 }
 
 impl ClassificationMetric for GlobalAccuracy {
@@ -131,6 +167,10 @@ impl Metric for F1Score {
 
     fn comparator(&self) -> MetricComparator {
         MetricComparator::Natural
+    }
+
+    fn as_classification_metric(&self) -> Option<&dyn ClassificationMetric> {
+        Some(self)
     }
 }
 
@@ -190,6 +230,10 @@ impl Metric for Precision {
     fn comparator(&self) -> MetricComparator {
         MetricComparator::Natural
     }
+
+    fn as_classification_metric(&self) -> Option<&dyn ClassificationMetric> {
+        Some(self)
+    }
 }
 
 impl ClassificationMetric for Precision {
@@ -245,6 +289,10 @@ impl Metric for Recall {
     fn comparator(&self) -> MetricComparator {
         MetricComparator::Natural
     }
+
+    fn as_classification_metric(&self) -> Option<&dyn ClassificationMetric> {
+        Some(self)
+    }
 }
 
 impl ClassificationMetric for Recall {
@@ -295,6 +343,10 @@ impl Metric for F1Macro {
     fn comparator(&self) -> MetricComparator {
         MetricComparator::Natural
     }
+
+    fn as_classification_metric(&self) -> Option<&dyn ClassificationMetric> {
+        Some(self)
+    }
 }
 
 impl ClassificationMetric for F1Macro {
@@ -339,6 +391,10 @@ impl Metric for F1Weighted {
 
     fn comparator(&self) -> MetricComparator {
         MetricComparator::Natural
+    }
+
+    fn as_classification_metric(&self) -> Option<&dyn ClassificationMetric> {
+        Some(self)
     }
 }
 

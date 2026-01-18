@@ -2,15 +2,13 @@
 //!
 //! Translated from DoubleParameter.java
 
-use super::concrete_parameter::ConcreteParameter;
-use derive_more::From;
+use super::concrete_parameter::{ConcreteParameter, ConcreteParameterValue};
 use serde::{Deserialize, Serialize};
-use std::any::Any;
 
 /// Double parameter value
 ///
 /// Java: `interface DoubleParameter extends ConcreteParameter<Double>`
-#[derive(Debug, Clone, PartialEq, From, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DoubleParameter(pub f64);
 
 impl DoubleParameter {
@@ -30,12 +28,7 @@ impl DoubleParameter {
 }
 
 impl ConcreteParameter for DoubleParameter {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn value_any(&self) -> Box<dyn Any> {
-        Box::new(self.0)
+    fn value(&self) -> ConcreteParameterValue {
+        ConcreteParameterValue::Double(self.0)
     }
 }
-

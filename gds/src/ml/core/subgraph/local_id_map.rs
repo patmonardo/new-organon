@@ -122,6 +122,11 @@ impl LocalIdMap {
         self.original_ids.len()
     }
 
+    /// Get the local ID for an original ID, if it exists.
+    pub fn mapped(&self, original_id: u64) -> Option<usize> {
+        self.original_to_internal.get(&original_id).copied()
+    }
+
     /// Check if an original ID is already mapped.
     pub fn contains(&self, original_id: u64) -> bool {
         self.original_to_internal.contains_key(&original_id)
