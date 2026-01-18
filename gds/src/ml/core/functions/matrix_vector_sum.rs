@@ -11,11 +11,11 @@
 //! - MatrixVectorSum adds: matrix, vector operands and broadcasting logic
 //! - Delegates Variable trait methods to inner AbstractVariable
 
-use crate::ml::core::abstract_variable::AbstractVariable;
-use crate::ml::core::computation_context::ComputationContext;
+use crate::ml::core::AbstractVariable;
+use crate::ml::core::ComputationContext;
 use crate::ml::core::dimensions::{COLUMNS_INDEX, ROWS_INDEX};
-use crate::ml::core::tensor::{Matrix, Tensor, Vector};
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::{Matrix, Tensor, Vector};
+use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
 /// Adds a vector to each row of a matrix (broadcasting).

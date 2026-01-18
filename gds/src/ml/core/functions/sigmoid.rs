@@ -11,10 +11,10 @@
 //! - Sigmoid adds: sigmoid activation logic (forward/backward)
 //! - Delegates Variable trait methods to inner AbstractVariable
 
-use crate::ml::core::abstract_variable::AbstractVariable;
-use crate::ml::core::computation_context::ComputationContext;
-use crate::ml::core::tensor::Tensor;
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::AbstractVariable;
+use crate::ml::core::ComputationContext;
+use crate::ml::core::Tensor;
+use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
 /// Sigmoid activation function: σ(x) = 1 / (1 + e^(-x))
@@ -56,7 +56,7 @@ impl Sigmoid {
     /// Calculate size in bytes for matrix sigmoid output.
     /// Java: `public static long sizeInBytes(int rows, int cols)`
     pub fn size_in_bytes(rows: usize, cols: usize) -> usize {
-        crate::ml::core::tensor::size_in_bytes(&[rows, cols])
+        crate::ml::core::size_in_bytes(&[rows, cols])
     }
 
     /// Sigmoid function: σ(x) = 1 / (1 + e^(-x))

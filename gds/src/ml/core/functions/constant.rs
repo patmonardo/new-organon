@@ -70,7 +70,7 @@ impl Constant {
 
     /// Calculate size in bytes for given dimensions.
     pub fn size_in_bytes(dimensions: &[usize]) -> usize {
-        crate::ml::core::tensor::size_in_bytes(dimensions)
+        crate::ml::core::size_in_bytes(dimensions)
     }
 }
 

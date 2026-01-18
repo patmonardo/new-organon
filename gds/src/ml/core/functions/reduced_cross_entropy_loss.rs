@@ -3,11 +3,11 @@
 //! Translated from Java GDS ml-core functions ReducedCrossEntropyLoss.java.
 //! This is a literal 1:1 translation following repository translation policy.
 
-use crate::ml::core::abstract_variable::AbstractVariable;
-use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
-use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::AbstractVariable;
+use crate::ml::core::ComputationContext;
+use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
+use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
 /// Computes cross entropy loss given weights, bias, predictions, features and labels,
@@ -83,7 +83,7 @@ impl ReducedCrossEntropyLoss {
     }
 
     pub fn size_in_bytes() -> usize {
-        crate::ml::core::tensor::size_in_bytes(&[1])
+        crate::ml::core::size_in_bytes(&[1])
     }
 
     fn compute_individual_loss(

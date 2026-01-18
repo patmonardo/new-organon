@@ -2,7 +2,7 @@
 //!
 //! Translated from Java GDS ml-core TensorFunctions.java.
 
-use crate::ml::core::tensor::Tensor;
+use crate::ml::core::Tensor;
 
 /// Average multiple lists of tensors.
 ///
@@ -53,7 +53,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ml::core::tensor::Scalar;
+    use crate::ml::core::Scalar;
 
     #[test]
     fn test_average_tensors() {

@@ -10,7 +10,6 @@
 
 // Core functionality
 pub mod core;
-pub mod embeddings;
 pub mod metrics;
 pub mod models;
 

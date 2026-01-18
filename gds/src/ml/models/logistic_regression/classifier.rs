@@ -1,19 +1,17 @@
 use super::data::LogisticRegressionData;
-use crate::ml::{
-    core::{
-        batch::Batch,
-        functions::{
-            constant::Constant,
-            matrix_multiply_with_transposed_second_operand::MatrixMultiplyWithTransposedSecondOperand,
-            matrix_vector_sum::MatrixVectorSum, reduced_softmax::ReducedSoftmax, sigmoid::Sigmoid,
-            softmax::Softmax,
-        },
-        tensor::Matrix,
-        variable::VariableRef,
-        ComputationContext,
+use crate::ml::core::{
+    batch::Batch,
+    functions::{
+        constant::Constant,
+        matrix_multiply_with_transposed_second_operand::MatrixMultiplyWithTransposedSecondOperand,
+        matrix_vector_sum::MatrixVectorSum, reduced_softmax::ReducedSoftmax, sigmoid::Sigmoid,
+        softmax::Softmax,
     },
-    models::{Classifier, Features},
+    tensor::Matrix,
+    variable::VariableRef,
+    ComputationContext,
 };
+use crate::ml::models::{Classifier, Features};
 use std::sync::Arc;
 
 /// Logistic Regression classifier implementation

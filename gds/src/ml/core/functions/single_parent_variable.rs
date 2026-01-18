@@ -5,10 +5,10 @@
 //!
 //! Uses type erasure pattern (Box<dyn Variable>) to match our architecture.
 
-use crate::ml::core::abstract_variable::AbstractVariable;
-use crate::ml::core::computation_context::ComputationContext;
-use crate::ml::core::tensor::Tensor;
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::AbstractVariable;
+use crate::ml::core::ComputationContext;
+use crate::ml::core::Tensor;
+use crate::ml::core::{Variable, VariableRef};
 
 /// Abstract base for variables with a single parent.
 ///

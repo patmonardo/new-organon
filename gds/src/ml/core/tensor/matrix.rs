@@ -59,7 +59,7 @@ impl Matrix {
     /// Calculate size in bytes for matrix.
     /// Java: `public static long sizeInBytes(int rows, int cols)`
     pub fn size_in_bytes(rows: usize, cols: usize) -> usize {
-        crate::ml::core::tensor::size_in_bytes(&[rows, cols])
+        crate::ml::core::size_in_bytes(&[rows, cols])
     }
 
     // ========================================================================

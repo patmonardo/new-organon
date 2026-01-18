@@ -13,11 +13,11 @@
 //!
 //! This is the **origin of gradients** in the computational graph!
 
-use crate::ml::core::abstract_variable::AbstractVariable;
-use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
-use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::AbstractVariable;
+use crate::ml::core::ComputationContext;
+use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
+use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
 const PREDICTED_PROBABILITY_THRESHOLD: f64 = 1e-50;
@@ -80,7 +80,7 @@ impl CrossEntropyLoss {
     /// Calculate size in bytes for scalar loss output.
     /// Java: `public static long sizeInBytes()`
     pub fn size_in_bytes() -> usize {
-        crate::ml::core::tensor::size_in_bytes(&[1])
+        crate::ml::core::size_in_bytes(&[1])
     }
 
     // ========================================================================

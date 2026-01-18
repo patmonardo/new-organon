@@ -3,12 +3,12 @@
 //! Translated from Java GDS ml-core functions MultiMean.java.
 //! This is a literal 1:1 translation following repository translation policy.
 
-use crate::ml::core::abstract_variable::AbstractVariable;
-use crate::ml::core::computation_context::ComputationContext;
+use crate::ml::core::AbstractVariable;
+use crate::ml::core::ComputationContext;
 use crate::ml::core::dimensions::{COLUMNS_INDEX, ROWS_INDEX};
 use crate::ml::core::subgraph::BatchNeighbors;
-use crate::ml::core::tensor::{Matrix, Tensor};
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::{Matrix, Tensor};
+use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
 /// Computes the mean of node features and their neighbors' features.

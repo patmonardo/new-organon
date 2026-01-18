@@ -2,10 +2,10 @@
 
 #[cfg(test)]
 mod core_function_tests {
-    use crate::ml::core::computation_context::ComputationContext;
     use crate::ml::core::functions::{Constant, Weights};
-    use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-    use crate::ml::core::variable::Variable;
+    use crate::ml::core::ComputationContext;
+    use crate::ml::core::Variable;
+    use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
 
     #[test]
     fn test_constant_scalar_creation_and_apply() {

@@ -37,10 +37,10 @@
 //! }
 //! ```
 
-use crate::ml::core::abstract_variable::AbstractVariable;
-use crate::ml::core::computation_context::ComputationContext;
-use crate::ml::core::tensor::{Matrix, Scalar, Tensor};
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::AbstractVariable;
+use crate::ml::core::ComputationContext;
+use crate::ml::core::{Matrix, Scalar, Tensor};
+use crate::ml::core::{Variable, VariableRef};
 use std::any::Any;
 
 /// Element-wise addition of matrix and scalar.
@@ -54,7 +54,7 @@ use std::any::Any;
 ///
 /// ```rust,ignore
 /// use gds::ml::core::functions::{EWiseAddMatrixScalar, Constant};
-/// use gds::ml::core::tensor::{Matrix, Scalar};
+/// use gds::ml::core::{Matrix, Scalar};
 ///
 /// let matrix = Box::new(Constant::new(Matrix::new(vec![1.0, 2.0, 3.0, 4.0], vec![2, 2])));
 /// let scalar = Box::new(Constant::new(Scalar::new(10.0)));
@@ -198,9 +198,9 @@ impl Variable for EWiseAddMatrixScalar {
             .downcast_ref::<Matrix>()
             .expect("Expected Matrix gradient");
 
-        let matrix_id = crate::ml::core::variable::variable_id(self.matrix_variable());
-        let scalar_id = crate::ml::core::variable::variable_id(self.scalar_variable());
-        let parent_id = crate::ml::core::variable::variable_id(parent);
+        let matrix_id = crate::ml::core::variable_id(self.matrix_variable());
+        let scalar_id = crate::ml::core::variable_id(self.scalar_variable());
+        let parent_id = crate::ml::core::variable_id(parent);
 
         if parent_id == matrix_id {
             // Gradient w.r.t. matrix: pass through

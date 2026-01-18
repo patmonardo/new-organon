@@ -11,11 +11,11 @@
 //! - Weights adds: data storage (trainable parameters)
 //! - Weights delegates Variable trait methods to inner AbstractVariable
 
-use crate::ml::core::abstract_variable::AbstractVariable;
-use crate::ml::core::abstract_variable::NotAFunctionException;
-use crate::ml::core::computation_context::ComputationContext;
-use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
+use crate::ml::core::AbstractVariable;
+use crate::ml::core::ComputationContext;
+use crate::ml::core::NotAFunctionException;
+use crate::ml::core::{Variable, VariableRef};
 use parking_lot::{MappedRwLockReadGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::fmt;
 use std::sync::Arc;
@@ -94,7 +94,7 @@ impl Weights {
     /// Calculate size in bytes for matrix weights.
     /// Java: `public static long sizeInBytes(int rows, int cols)`
     pub fn size_in_bytes(rows: usize, cols: usize) -> usize {
-        crate::ml::core::tensor::size_in_bytes(&[rows, cols])
+        crate::ml::core::size_in_bytes(&[rows, cols])
     }
 
     /// Shared handle to the underlying tensor used by optimizers.

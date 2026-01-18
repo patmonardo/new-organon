@@ -3,7 +3,7 @@
 //! Translated from Java GDS ml-core TensorFactory.java.
 
 use crate::ml::core::dimensions::{COLUMNS_INDEX, ROWS_INDEX};
-use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
+use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
 
 /// Create a constant tensor filled with value `v` and the given dimensions.
 ///

@@ -57,7 +57,7 @@ impl ComputationContext {
         let dims = variable.dimensions();
         let dim_str = format!("{:?}", dims);
         // Use process-local identity (allocation address) for unique identification
-        let addr = crate::ml::core::variable::variable_id(variable).0;
+        let addr = crate::ml::core::variable_id(variable).0;
         format!("{}:{}", addr, dim_str)
     }
 
@@ -217,7 +217,7 @@ impl ComputationContext {
 
 enum VariableNode<'a> {
     Borrowed(&'a dyn Variable),
-    Owned(crate::ml::core::variable::VariableRef),
+    Owned(crate::ml::core::VariableRef),
 }
 
 impl VariableNode<'_> {
@@ -229,7 +229,7 @@ impl VariableNode<'_> {
     }
 
     fn ptr_usize(&self) -> usize {
-        crate::ml::core::variable::variable_id(self.as_dyn()).0
+        crate::ml::core::variable_id(self.as_dyn()).0
     }
 }
 
@@ -242,7 +242,7 @@ impl Default for ComputationContext {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ml::core::tensor::{Scalar, Tensor};
+    use crate::ml::core::{Scalar, Tensor};
     use std::fmt;
 
     #[test]
@@ -254,7 +254,7 @@ mod tests {
 
     struct TestLeafVariable {
         dims: Vec<usize>,
-        parents: Vec<crate::ml::core::variable::VariableRef>,
+        parents: Vec<crate::ml::core::VariableRef>,
     }
 
     impl TestLeafVariable {
@@ -285,7 +285,7 @@ mod tests {
             true
         }
 
-        fn parents(&self) -> &[crate::ml::core::variable::VariableRef] {
+        fn parents(&self) -> &[crate::ml::core::VariableRef] {
             &self.parents
         }
 

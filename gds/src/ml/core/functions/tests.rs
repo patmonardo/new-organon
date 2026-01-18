@@ -4,10 +4,10 @@
 
 #[cfg(test)]
 mod constant_tests {
-    use crate::ml::core::computation_context::ComputationContext;
+    use crate::ml::core::ComputationContext;
     use crate::ml::core::functions::Constant;
-    use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-    use crate::ml::core::variable::Variable;
+    use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
+    use crate::ml::core::Variable;
 
     #[test]
     fn test_scalar_constant_creation() {
@@ -117,10 +117,10 @@ mod constant_tests {
 
 #[cfg(test)]
 mod weights_tests {
-    use crate::ml::core::computation_context::ComputationContext;
+    use crate::ml::core::ComputationContext;
     use crate::ml::core::functions::Weights;
-    use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-    use crate::ml::core::variable::Variable;
+    use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
+    use crate::ml::core::Variable;
 
     #[test]
     fn test_matrix_weights_creation() {
@@ -216,7 +216,7 @@ mod weights_tests {
     fn test_weights_size_estimation() {
         assert_eq!(
             Weights::size_in_bytes(10, 20),
-            crate::ml::core::tensor::size_in_bytes(&[10, 20])
+            crate::ml::core::size_in_bytes(&[10, 20])
         );
     }
 }
@@ -224,7 +224,7 @@ mod weights_tests {
 #[cfg(test)]
 mod sigmoid_tests {
     use crate::ml::core::functions::{Constant, Sigmoid};
-    use crate::ml::core::variable::Variable;
+    use crate::ml::core::Variable;
 
     #[test]
     fn test_sigmoid_function_zero() {
@@ -290,7 +290,7 @@ mod sigmoid_tests {
     fn test_sigmoid_size_estimation() {
         assert_eq!(
             Sigmoid::size_in_bytes(10, 20),
-            crate::ml::core::tensor::size_in_bytes(&[10, 20])
+            crate::ml::core::size_in_bytes(&[10, 20])
         );
     }
 }
@@ -298,7 +298,7 @@ mod sigmoid_tests {
 #[cfg(test)]
 mod mean_square_error_tests {
     use crate::ml::core::functions::{Constant, MeanSquareError};
-    use crate::ml::core::variable::Variable;
+    use crate::ml::core::Variable;
 
     #[test]
     fn test_mse_creation() {
@@ -357,7 +357,7 @@ mod mean_square_error_tests {
 #[cfg(test)]
 mod matrix_sum_tests {
     use crate::ml::core::functions::{Constant, MatrixSum};
-    use crate::ml::core::variable::Variable;
+    use crate::ml::core::Variable;
 
     #[test]
     fn test_matrix_sum_single_parent() {
@@ -411,7 +411,7 @@ mod matrix_sum_tests {
 #[cfg(test)]
 mod element_sum_tests {
     use crate::ml::core::functions::{Constant, ElementSum};
-    use crate::ml::core::variable::Variable;
+    use crate::ml::core::Variable;
 
     #[test]
     fn test_element_sum_single_parent() {
@@ -449,7 +449,7 @@ mod element_sum_tests {
 #[cfg(test)]
 mod l2_norm_squared_tests {
     use crate::ml::core::functions::{Constant, L2NormSquared};
-    use crate::ml::core::variable::Variable;
+    use crate::ml::core::Variable;
 
     #[test]
     fn test_l2_norm_squared_creation() {
@@ -473,7 +473,7 @@ mod l2_norm_squared_tests {
     fn test_l2_norm_squared_memory_estimation() {
         assert_eq!(
             L2NormSquared::size_in_bytes_of_apply(),
-            crate::ml::core::tensor::size_in_bytes(&[1])
+            crate::ml::core::size_in_bytes(&[1])
         );
     }
 }
@@ -481,7 +481,7 @@ mod l2_norm_squared_tests {
 #[cfg(test)]
 mod relu_tests {
     use crate::ml::core::functions::{Constant, Relu};
-    use crate::ml::core::variable::Variable;
+    use crate::ml::core::Variable;
 
     #[test]
     fn test_relu_creation_with_alpha() {
@@ -512,7 +512,7 @@ mod relu_tests {
 #[cfg(test)]
 mod constant_scale_tests {
     use crate::ml::core::functions::{Constant, ConstantScale};
-    use crate::ml::core::variable::Variable;
+    use crate::ml::core::Variable;
 
     #[test]
     fn test_constant_scale_creation() {

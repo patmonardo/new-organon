@@ -18,10 +18,10 @@
 //! - Delegates `Variable` trait methods to inner `AbstractVariable`
 //! - Adds ReLU-specific activation logic
 
-use crate::ml::core::abstract_variable::AbstractVariable;
-use crate::ml::core::computation_context::ComputationContext;
-use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::AbstractVariable;
+use crate::ml::core::ComputationContext;
+use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
+use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
 const ALPHA: f64 = 0.01;

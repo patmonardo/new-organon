@@ -3,10 +3,10 @@
 //! Translated from Java GDS ml-core functions ReducedSoftmax.java.
 //! This is a literal 1:1 translation following repository translation policy.
 
-use crate::ml::core::computation_context::ComputationContext;
+use crate::ml::core::ComputationContext;
 use crate::ml::core::dimensions::{COLUMNS_INDEX, ROWS_INDEX};
-use crate::ml::core::tensor::{Matrix, Tensor};
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::{Matrix, Tensor};
+use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
 /// Computes the softmax for all classes except the last one which is
@@ -40,7 +40,7 @@ impl ReducedSoftmax {
     }
 
     pub fn size_in_bytes(rows: usize, cols: usize) -> usize {
-        crate::ml::core::tensor::size_in_bytes(&[rows, cols - 1])
+        crate::ml::core::size_in_bytes(&[rows, cols - 1])
     }
 
     fn rescale(result: &mut Matrix) {

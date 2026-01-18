@@ -1,4 +1,4 @@
-use crate::ml::core::tensor::Tensor;
+use crate::ml::core::Tensor;
 
 /// Functional interface for parameter updates
 pub trait Updater {

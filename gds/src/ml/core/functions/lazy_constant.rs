@@ -3,10 +3,10 @@
 //! Translated from Java GDS ml-core functions LazyConstant.java.
 //! This is a literal 1:1 translation following repository translation policy.
 
-use crate::ml::core::abstract_variable::NotAFunctionException;
-use crate::ml::core::computation_context::ComputationContext;
-use crate::ml::core::tensor::Tensor;
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::NotAFunctionException;
+use crate::ml::core::ComputationContext;
+use crate::ml::core::Tensor;
+use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
 /// A constant that lazily produces its value via a supplier function.

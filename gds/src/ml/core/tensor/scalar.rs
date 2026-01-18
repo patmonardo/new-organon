@@ -46,7 +46,7 @@ impl Scalar {
     /// Calculate size in bytes for scalar.
     /// Java: `public static long sizeInBytes()`
     pub fn size_in_bytes() -> usize {
-        crate::ml::core::tensor::size_in_bytes(&dimensions::scalar())
+        crate::ml::core::size_in_bytes(&dimensions::scalar())
     }
 }
 

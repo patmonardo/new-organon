@@ -3,11 +3,11 @@
 //! Translated from Java GDS ml-core functions LogisticLoss.java.
 //! This is a literal 1:1 translation following repository translation policy.
 
-use crate::ml::core::abstract_variable::AbstractVariable;
-use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
-use crate::ml::core::tensor::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::AbstractVariable;
+use crate::ml::core::ComputationContext;
+use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
+use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
 /// Logistic loss function combining logistic regression prediction and cross-entropy loss.

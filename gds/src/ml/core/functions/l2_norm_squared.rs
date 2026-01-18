@@ -3,11 +3,11 @@
 //! Translated from Java GDS ml-core functions L2NormSquared.java.
 //! This is a literal 1:1 translation following repository translation policy.
 
-use crate::ml::core::abstract_variable::AbstractVariable;
-use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
-use crate::ml::core::tensor::{Scalar, Tensor};
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::AbstractVariable;
+use crate::ml::core::ComputationContext;
+use crate::ml::core::{Scalar, Tensor};
+use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
 /// L2 norm squared of a tensor.
@@ -35,7 +35,7 @@ impl L2NormSquared {
     }
 
     pub fn size_in_bytes_of_apply() -> usize {
-        crate::ml::core::tensor::size_in_bytes(&[1])
+        crate::ml::core::size_in_bytes(&[1])
     }
 
     fn gradient_for_parent(&self, ctx: &ComputationContext) -> Box<dyn Tensor> {

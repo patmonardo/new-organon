@@ -11,10 +11,10 @@
 //! - Softmax adds: softmax normalization logic (exp + row-wise normalization)
 //! - Delegates Variable trait methods to inner VariableBase
 
-use crate::ml::core::abstract_variable::AbstractVariable;
-use crate::ml::core::computation_context::ComputationContext;
-use crate::ml::core::tensor::{Matrix, Tensor};
-use crate::ml::core::variable::{Variable, VariableRef};
+use crate::ml::core::AbstractVariable;
+use crate::ml::core::ComputationContext;
+use crate::ml::core::{Matrix, Tensor};
+use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
 /// Softmax activation function for multi-class classification.
@@ -58,7 +58,7 @@ impl Softmax {
     /// Calculate size in bytes for matrix softmax output.
     /// Java: `public static long sizeInBytes(int rows, int cols)`
     pub fn size_in_bytes(rows: usize, cols: usize) -> usize {
-        crate::ml::core::tensor::size_in_bytes(&[rows, cols])
+        crate::ml::core::size_in_bytes(&[rows, cols])
     }
 
     /// Rescale softmax output to ensure numerical stability.

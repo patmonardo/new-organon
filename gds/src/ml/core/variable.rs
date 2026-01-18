@@ -13,8 +13,8 @@
 //! to just `Variable` at runtime. Our Rust equivalent: `Box<dyn Variable>` works
 //! identically, with `Box<dyn Tensor>` for tensor values.
 
-use crate::ml::core::computation_context::ComputationContext;
-use crate::ml::core::tensor::Tensor;
+use crate::ml::core::ComputationContext;
+use crate::ml::core::Tensor;
 use std::any::Any;
 use std::fmt;
 use std::sync::Arc;
