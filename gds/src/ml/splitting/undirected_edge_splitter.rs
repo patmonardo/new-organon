@@ -1,14 +1,14 @@
-use super::edge_splitter::{BaseEdgeSplitter, EdgeSplitter};
-use crate::{
-    core::{
-        concurrency::{Concurrency, RunWithConcurrency},
-        graph::Graph,
-        id_map::IdMap,
-        partition::PartitionUtils,
-        relationship::RelationshipType,
-    },
-    graph::builder::RelationshipsBuilder,
+use super::edge_splitter::{
+    split_positive_examples_with, BaseEdgeSplitter, EdgeSplitter, RelationshipsBuilderFactory,
 };
+use crate::concurrency::virtual_threads::RunWithConcurrency;
+use crate::concurrency::Concurrency;
+use crate::core::utils::partition::PartitionUtils;
+use crate::projection::factory::RelationshipsBuilder;
+use crate::projection::RelationshipType;
+use crate::types::graph::id_map::IdMap;
+use crate::types::graph::Graph;
+use std::collections::HashSet;
 use std::sync::{atomic::AtomicUsize, Arc};
 
 /// Splits an undirected graph into two relationship sets:
@@ -18,16 +18,16 @@ use std::sync::{atomic::AtomicUsize, Arc};
 /// with the same node pair but with random direction.
 pub struct UndirectedEdgeSplitter {
     base: BaseEdgeSplitter,
-    seen_relationships: Arc<parking_lot::RwLock<rustc_hash::FxHashSet<(i64, i64)>>>,
+    seen_relationships: Arc<parking_lot::RwLock<HashSet<(i64, i64)>>>,
 }
 
 impl UndirectedEdgeSplitter {
     /// Creates a new UndirectedEdgeSplitter
     pub fn new(
         maybe_seed: Option<u64>,
-        root_nodes: Arc<IdMap>,
-        source_nodes: Arc<IdMap>,
-        target_nodes: Arc<IdMap>,
+        root_nodes: Arc<dyn IdMap>,
+        source_nodes: Arc<dyn IdMap>,
+        target_nodes: Arc<dyn IdMap>,
         selected_relationship_type: RelationshipType,
         remaining_relationship_type: RelationshipType,
         concurrency: usize,
@@ -42,9 +42,7 @@ impl UndirectedEdgeSplitter {
                 remaining_relationship_type,
                 concurrency,
             ),
-            seen_relationships: Arc::new(
-                parking_lot::RwLock::new(rustc_hash::FxHashSet::default()),
-            ),
+            seen_relationships: Arc::new(parking_lot::RwLock::new(HashSet::new())),
         }
     }
 
@@ -74,16 +72,27 @@ impl UndirectedEdgeSplitter {
 impl EdgeSplitter for UndirectedEdgeSplitter {
     fn split_positive_examples(
         &mut self,
-        graph: Arc<Graph>,
+        graph: Arc<dyn Graph>,
         holdout_fraction: f64,
         remaining_rel_property_key: Option<String>,
+        builder_factory: &dyn RelationshipsBuilderFactory,
     ) -> super::edge_splitter::SplitResult {
-        // Clear seen relationships for new split
         self.seen_relationships.write().clear();
-
-        // Delegate to base implementation
-        self.base
-            .split_positive_examples(graph, holdout_fraction, remaining_rel_property_key)
+        let selected_relationship_type = self.base.selected_relationship_type().clone();
+        let remaining_relationship_type = self.base.remaining_relationship_type().clone();
+        let source_nodes = self.base.source_nodes().clone();
+        let target_nodes = self.base.target_nodes().clone();
+        split_positive_examples_with(
+            self,
+            graph,
+            holdout_fraction,
+            remaining_rel_property_key,
+            builder_factory,
+            selected_relationship_type,
+            remaining_relationship_type,
+            source_nodes,
+            target_nodes,
+        )
     }
 
     fn sample(&mut self, probability: f64) -> bool {
@@ -92,43 +101,64 @@ impl EdgeSplitter for UndirectedEdgeSplitter {
 
     fn valid_positive_relationship_candidate_count(
         &self,
-        graph: &Graph,
+        graph: &dyn Graph,
         is_valid_node_pair: Arc<dyn Fn(i64, i64) -> bool + Send + Sync>,
     ) -> usize {
         let valid_relationship_count = Arc::new(AtomicUsize::new(0));
 
+        let node_count = graph.node_count();
+        let relationship_count = graph.relationship_count();
+        let degrees = {
+            let graph = Graph::concurrent_copy(graph);
+            Box::new(move |node_id: usize| graph.degree(node_id as i64))
+                as Box<dyn crate::core::utils::partition::DegreeFunction>
+        };
+
         // Create tasks for each partition
-        let count_valid_relationship_tasks =
-            PartitionUtils::degree_partition(graph, self.base.concurrency(), {
-                let graph = graph.clone();
+        let count_valid_relationship_tasks = PartitionUtils::degree_partition(
+            node_count,
+            relationship_count,
+            degrees,
+            self.base.concurrency(),
+            {
+                let graph = Graph::concurrent_copy(graph);
                 let valid_relationship_count = valid_relationship_count.clone();
                 let is_valid_node_pair = is_valid_node_pair.clone();
 
                 move |partition| {
-                    let concurrent_graph = graph.concurrent_copy();
-
+                    let graph = Graph::concurrent_copy(graph.as_ref());
+                    let is_valid_node_pair = is_valid_node_pair.clone();
+                    let valid_relationship_count = valid_relationship_count.clone();
                     Box::new(move || {
                         let mut local_count = 0;
 
-                        for node_id in partition.iter() {
-                            concurrent_graph.for_each_relationship(node_id, |source, target, _| {
-                                // Only count each undirected edge once
-                                if source < target && is_valid_node_pair(source, target) {
-                                    local_count += 1;
+                        for node_id in partition.as_partition().iter() {
+                            let node_id = node_id as i64;
+                            for cursor in
+                                graph.stream_relationships(node_id, graph.default_property_value())
+                            {
+                                let source = cursor.source_id();
+                                let target = cursor.target_id();
+                                if source < target
+                                    && (is_valid_node_pair(source, target)
+                                        || is_valid_node_pair(target, source))
+                                {
+                                    local_count += 2;
                                 }
-                                true
-                            });
+                            }
                         }
 
                         valid_relationship_count
                             .fetch_add(local_count, std::sync::atomic::Ordering::Relaxed);
                     }) as Box<dyn FnOnce() + Send>
                 }
-            });
+            },
+            None,
+        );
 
         // Run tasks concurrently
-        RunWithConcurrency::new()
-            .concurrency(self.base.concurrency())
+        let _ = RunWithConcurrency::builder()
+            .concurrency(Concurrency::of(self.base.concurrency()))
             .tasks(count_valid_relationship_tasks)
             .run();
 
@@ -137,47 +167,74 @@ impl EdgeSplitter for UndirectedEdgeSplitter {
 
     fn positive_sampling(
         &mut self,
-        graph: &Graph,
-        selected_rels_builder: &mut RelationshipsBuilder,
-        remaining_rels_consumer: Arc<dyn Fn(i64, i64, f64) + Send + Sync>,
+        graph: &dyn Graph,
+        selected_rels_builder: &mut dyn RelationshipsBuilder,
+        remaining_rels_builder: &mut dyn RelationshipsBuilder,
+        remaining_rel_property_key: Option<&str>,
         selected_rel_count: &mut usize,
         remaining_rel_count: &mut usize,
         node_id: i64,
-        is_valid_node_pair: Arc<dyn Fn(i64, i64) -> bool + Send + Sync>,
+        is_valid_node_pair: &dyn Fn(i64, i64) -> bool,
         positive_samples_remaining: &mut usize,
         candidate_edges_remaining: &mut usize,
     ) {
-        graph.for_each_relationship(node_id, |source, target, weight| {
-            // Process each undirected edge only once
+        for cursor in graph.stream_relationships(node_id, graph.default_property_value()) {
+            let source = cursor.source_id();
+            let target = cursor.target_id();
+            let weight = cursor.property();
+
             if source < target
-                && is_valid_node_pair(source, target)
+                && (is_valid_node_pair(source, target) || is_valid_node_pair(target, source))
                 && !self.has_seen_relationship(source, target)
             {
                 self.mark_relationship_seen(source, target);
-                *candidate_edges_remaining -= 1;
 
-                if *positive_samples_remaining > 0
-                    && self.sample(
-                        (*positive_samples_remaining as f64)
-                            / (*candidate_edges_remaining as f64 + 1.0),
-                    )
-                {
-                    // For selected relationships, randomly choose direction
-                    if self.sample(0.5) {
-                        selected_rels_builder.add(source, target, weight);
-                    } else {
-                        selected_rels_builder.add(target, source, weight);
-                    }
-                    *selected_rel_count += 1;
-                    *positive_samples_remaining -= 1;
-                } else {
-                    // For remaining relationships, maintain undirected nature
-                    (remaining_rels_consumer)(source, target, weight);
-                    (remaining_rels_consumer)(target, source, weight);
-                    *remaining_rel_count += 2;
+                if *candidate_edges_remaining == 0 {
+                    break;
                 }
+
+                let probability = if *candidate_edges_remaining == 0 {
+                    0.0
+                } else {
+                    *positive_samples_remaining as f64 / *candidate_edges_remaining as f64
+                };
+
+                if *positive_samples_remaining > 0 && self.sample(probability) {
+                    if let Some((root_source, root_target)) = if is_valid_node_pair(source, target)
+                    {
+                        self.base.to_root_ids(graph, source, target)
+                    } else {
+                        self.base.to_root_ids(graph, target, source)
+                    } {
+                        selected_rels_builder.add_from_internal(
+                            root_source,
+                            root_target,
+                            super::edge_splitter::POSITIVE,
+                        );
+                        *selected_rel_count += 1;
+                        *positive_samples_remaining = positive_samples_remaining.saturating_sub(2);
+                    }
+                } else if let Some((root_source, root_target)) =
+                    self.base.to_root_ids(graph, source, target)
+                {
+                    match remaining_rel_property_key {
+                        Some(_) => {
+                            remaining_rels_builder.add_from_internal(
+                                root_source,
+                                root_target,
+                                weight,
+                            );
+                        }
+                        None => {
+                            remaining_rels_builder
+                                .add_from_internal_no_property(root_source, root_target);
+                        }
+                    }
+                    *remaining_rel_count += 1;
+                }
+
+                *candidate_edges_remaining = candidate_edges_remaining.saturating_sub(2);
             }
-            true
-        });
+        }
     }
 }

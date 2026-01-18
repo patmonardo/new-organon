@@ -4,19 +4,20 @@ use super::Metric;
 /// Filters metrics to only those marked as model-specific and delegates to a consumer.
 ///
 /// This is a 1:1 translation of ModelSpecificMetricsHandler from Java GDS.
+#[derive(Clone)]
 pub struct ModelSpecificMetricsHandler {
     metrics: Vec<String>,
     metric_consumer: MetricConsumer,
 }
 
-type MetricConsumer = Box<dyn Fn(&dyn Metric, f64) + Send + Sync>;
+type MetricConsumer = std::sync::Arc<dyn Fn(&dyn Metric, f64) + Send + Sync>;
 
 impl ModelSpecificMetricsHandler {
     /// Creates a no-op handler that does nothing
     pub fn noop() -> Self {
         Self {
             metrics: Vec::new(),
-            metric_consumer: Box::new(|_, _| {}),
+            metric_consumer: std::sync::Arc::new(|_, _| {}),
         }
     }
 
@@ -34,7 +35,7 @@ impl ModelSpecificMetricsHandler {
 
         Self {
             metrics: filtered_metrics,
-            metric_consumer: Box::new(consumer),
+            metric_consumer: std::sync::Arc::new(consumer),
         }
     }
 
@@ -63,7 +64,7 @@ impl ModelSpecificMetricsHandler {
 
         Self {
             metrics: filtered_metrics,
-            metric_consumer: Box::new(|_, _| {}),
+            metric_consumer: std::sync::Arc::new(|_, _| {}),
         }
     }
 

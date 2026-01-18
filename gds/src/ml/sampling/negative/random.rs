@@ -64,7 +64,8 @@ impl RandomNegativeSampler {
     }
 
     fn sample(rng: &mut StdRng, probability: f64) -> bool {
-        rng.gen_range(0.0..1.0) < probability
+        let clamped = probability.clamp(0.0, 1.0);
+        rng.gen_bool(clamped)
     }
 }
 
@@ -131,8 +132,11 @@ impl NegativeSampler for RandomNegativeSampler {
                         && !neighbors.contains(&negative_target)
                         && negative_target != node_id
                     {
-                        let prob = remaining_test_samples as f64
-                            / (remaining_test_samples + remaining_train_samples) as f64;
+                        let total_remaining = remaining_test_samples + remaining_train_samples;
+                        if total_remaining == 0 {
+                            break;
+                        }
+                        let prob = remaining_test_samples as f64 / total_remaining as f64;
 
                         let Some(source_root) = self.graph.to_root_node_id(node_id) else {
                             break;

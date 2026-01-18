@@ -95,7 +95,7 @@ mod tests {
             vec!["Label1".to_string()],
             "target_property".to_string(),
             Some(42),
-            vec![RegressionMetric::MSE], // Real metric
+            vec![RegressionMetric::MeanSquaredError], // Real metric
         );
 
         assert_eq!(config.pipeline(), "test_pipeline");
@@ -135,7 +135,7 @@ mod tests {
             vec!["Label1".to_string()],
             "target_property".to_string(),
             Some(42),
-            vec![RegressionMetric::MSE], // Real metric
+            vec![RegressionMetric::MeanSquaredError], // Real metric
         );
 
         let result = config.validate_metrics();
@@ -149,7 +149,10 @@ mod tests {
             vec!["Label1".to_string()],
             "target_property".to_string(),
             Some(42),
-            vec![RegressionMetric::MSE, RegressionMetric::MAE], // Real metrics
+            vec![
+                RegressionMetric::MeanSquaredError,
+                RegressionMetric::MeanAbsoluteError,
+            ], // Real metrics
         );
 
         assert_eq!(config.metrics().len(), 2);

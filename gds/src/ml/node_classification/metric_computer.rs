@@ -1,12 +1,17 @@
 use crate::{
     collections::HugeLongArray,
+    concurrency::{Concurrency, TerminationFlag},
+    core::utils::progress::TaskProgressTracker,
+    mem::{Estimate, MemoryEstimation, MemoryEstimations, MemoryRange},
     ml::{
+        core::batch::DEFAULT_BATCH_SIZE,
         metrics::classification::ClassificationMetric,
-        models::{Classifier, Features},
+        models::{Classifier, ClassifierFactory, Features, TrainerConfig},
     },
 };
-use rayon::prelude::*;
 use std::sync::Arc;
+
+use super::parallel_classifier::ParallelNodeClassifier;
 
 /// Computer for classification metrics
 /// 1:1 translation of ClassificationMetricComputer.java
@@ -31,9 +36,19 @@ impl ClassificationMetricComputer {
         labels: Arc<HugeLongArray>,
         evaluation_set: Arc<Vec<u64>>, // ReadOnlyHugeLongArray
         classifier: Arc<dyn Classifier>,
+        concurrency: Concurrency,
+        termination_flag: TerminationFlag,
+        progress_tracker: TaskProgressTracker,
     ) -> Self {
         // Predict classes for evaluation set
-        let predictor = ParallelNodeClassifier::new(classifier, features, 100);
+        let predictor = ParallelNodeClassifier::new(
+            classifier,
+            features,
+            DEFAULT_BATCH_SIZE,
+            concurrency,
+            termination_flag,
+            progress_tracker,
+        );
 
         let predicted_classes = predictor.predict(&evaluation_set);
         let local_labels = Self::make_local_targets(&evaluation_set, &labels);
@@ -60,74 +75,56 @@ impl ClassificationMetricComputer {
         }
         local_targets
     }
-}
 
-/// Parallel classifier implementation with batch processing
-/// 1:1 translation of ParallelNodeClassifier.java
-struct ParallelNodeClassifier {
-    classifier: Arc<dyn Classifier>,
-    features: Arc<dyn Features>,
-    batch_size: usize,
-}
-
-impl ParallelNodeClassifier {
-    fn new(
-        classifier: Arc<dyn Classifier>,
-        features: Arc<dyn Features>,
+    /// Memory estimation for evaluation (Java: estimateEvaluation)
+    #[allow(clippy::too_many_arguments)]
+    pub fn estimate_evaluation(
+        config: &dyn TrainerConfig,
         batch_size: usize,
-    ) -> Self {
-        Self {
-            classifier,
-            features,
-            batch_size,
-        }
-    }
+        train_set_size: impl Fn(u64) -> u64 + Send + Sync + 'static,
+        test_set_size: impl Fn(u64) -> u64 + Send + Sync + 'static,
+        fudged_class_count: usize,
+        fudged_feature_count: usize,
+        is_reduced: bool,
+    ) -> Box<dyn MemoryEstimation> {
+        let train_set_size = Arc::new(train_set_size);
+        let test_set_size = Arc::new(test_set_size);
+        let method = config.method();
 
-    fn predict(&self, evaluation_set: &[u64]) -> HugeLongArray {
-        let mut predictions = HugeLongArray::new(evaluation_set.len());
-
-        // Process in batches for better performance
-        // 1:1 with Java's BatchQueue.consecutive().parallelConsume()
-        let batch_predictions: Vec<(usize, i64)> = evaluation_set
-            .par_chunks(self.batch_size)
-            .enumerate()
-            .flat_map(|(batch_idx, batch)| self.process_batch(batch, batch_idx * self.batch_size))
-            .collect();
-
-        // Set predictions in the array
-        for (idx, prediction) in batch_predictions {
-            predictions.set(idx, prediction);
-        }
-
-        predictions
-    }
-
-    /// Process a batch of node IDs and return (index, prediction) pairs
-    /// 1:1 with NodeClassificationPredictConsumer.accept() in Java
-    fn process_batch(&self, batch: &[u64], offset: usize) -> Vec<(usize, i64)> {
-        batch
-            .iter()
-            .enumerate()
-            .map(|(local_idx, &node_id)| {
-                let global_idx = offset + local_idx;
-
-                // Get feature vector for this node
-                let feature_vec = self.features.get(node_id as usize);
-
-                // Predict probabilities
-                let probs = self.classifier.predict_probabilities(feature_vec);
-
-                // Find class with maximum probability
-                // 1:1 with Java's argmax logic in NodeClassificationPredictConsumer
-                let predicted_class = probs
-                    .iter()
-                    .enumerate()
-                    .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-                    .map(|(idx, _)| idx as i64)
-                    .unwrap_or(0);
-
-                (global_idx, predicted_class)
+        MemoryEstimations::builder("computing metrics")
+            .range_per_graph_dimension("local targets", {
+                let test_set_size = Arc::clone(&test_set_size);
+                move |dim, _| {
+                    let size = test_set_size(dim.node_count() as u64) as usize;
+                    MemoryRange::of(Estimate::size_of_long_array(size))
+                }
             })
-            .collect()
+            .range_per_graph_dimension("predicted classes", {
+                let test_set_size = Arc::clone(&test_set_size);
+                move |dim, _| {
+                    let size = test_set_size(dim.node_count() as u64) as usize;
+                    MemoryRange::of(Estimate::size_of_long_array(size))
+                }
+            })
+            .add(ClassifierFactory::data_memory_estimation(
+                config,
+                {
+                    let train_set_size = Arc::clone(&train_set_size);
+                    move |node_count| (train_set_size)(node_count)
+                },
+                fudged_class_count,
+                MemoryRange::of(fudged_feature_count),
+                is_reduced,
+            ))
+            .range_per_graph_dimension("classifier runtime", move |_, _| {
+                ClassifierFactory::runtime_overhead_memory_estimation(
+                    method,
+                    batch_size,
+                    fudged_class_count,
+                    fudged_feature_count,
+                    is_reduced,
+                )
+            })
+            .build()
     }
 }

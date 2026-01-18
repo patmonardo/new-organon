@@ -118,9 +118,10 @@ impl Classifier for MLPClassifier {
     }
 
     fn predict_probabilities_batch(&self, batch: &[usize], features: &dyn Features) -> Matrix {
-        use crate::ml::core::batch::RangeBatch;
-        let range_batch = RangeBatch::new(0, batch.len(), batch.len() as u64);
-        self.predict_probabilities_batch(&range_batch, features)
+        use crate::ml::core::batch::ListBatch;
+        let ids: Vec<u64> = batch.iter().map(|id| *id as u64).collect();
+        let list_batch = ListBatch::new(ids);
+        self.predict_probabilities_batch(&list_batch, features)
     }
 }
 
@@ -222,6 +223,53 @@ mod tests {
                 .map(|col| predictions[(row, col)])
                 .sum();
             assert!((row_sum - 1.0).abs() < 1e-10);
+        }
+    }
+
+    #[test]
+    fn test_batch_predictions_respects_ids() {
+        let data = MLPClassifierData::create(2, 3, &[4], 999);
+        let classifier = MLPClassifier::new(data);
+
+        struct TestFeatures {
+            data: Vec<Vec<f64>>,
+        }
+        impl TestFeatures {
+            fn new() -> Self {
+                Self {
+                    data: vec![
+                        vec![1.0, 2.0, 3.0],
+                        vec![4.0, 5.0, 6.0],
+                        vec![7.0, 8.0, 9.0],
+                    ],
+                }
+            }
+        }
+        impl Features for TestFeatures {
+            fn get(&self, node_id: usize) -> &[f64] {
+                &self.data[node_id]
+            }
+
+            fn feature_dimension(&self) -> usize {
+                3
+            }
+
+            fn size(&self) -> usize {
+                self.data.len()
+            }
+        }
+
+        let features = TestFeatures::new();
+        use crate::ml::core::batch::ListBatch;
+        let batch_ids = ListBatch::new(vec![2u64, 0u64]);
+        let predictions = classifier.predict_probabilities_batch(&batch_ids, &features);
+
+        let expected_row0 = classifier.predict_probabilities(features.get(2));
+        let expected_row1 = classifier.predict_probabilities(features.get(0));
+
+        for col in 0..predictions.cols() {
+            assert!((predictions[(0, col)] - expected_row0[col]).abs() < 1e-10);
+            assert!((predictions[(1, col)] - expected_row1[col]).abs() < 1e-10);
         }
     }
 }

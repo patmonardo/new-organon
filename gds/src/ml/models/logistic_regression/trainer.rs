@@ -82,6 +82,7 @@ impl ClassifierTrainer for LogisticRegressionTrainer {
                 .build()
                 .unwrap(),
             train_set.len(),
+            Arc::clone(&self._termination_flag),
         );
 
         let queue_supplier =

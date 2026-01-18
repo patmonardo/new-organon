@@ -4,9 +4,12 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 
 pub mod classification;
+pub mod link;
+pub mod model_specific;
 mod model_specific_handler;
 pub mod regression;
 
+pub use model_specific::OutOfBagError;
 pub use model_specific_handler::ModelSpecificMetricsHandler;
 
 pub trait Metric: Send + Sync {
@@ -145,19 +148,48 @@ impl ModelCandidateStats {
         }
     }
 
-    pub fn render_metrics(&self) -> serde_json::Value {
-        let mut metrics = serde_json::Map::new();
+    pub fn to_map(&self) -> serde_json::Value {
+        serde_json::json!({
+            "parameters": self.trainer_config,
+            "metrics": self.render_metrics_with(None, None),
+        })
+    }
 
-        for (metric, scores) in &self.training_stats {
-            metrics.insert(
-                metric.to_string(),
-                json!({
-                    "train": scores.to_map(),
-                    "validation": self.validation_stats.get(metric)
-                        .map(|s| s.to_map())
-                        .unwrap_or_else(|| json!(null))
-                }),
-            );
+    pub fn render_metrics(&self) -> serde_json::Value {
+        self.render_metrics_with(None, None)
+    }
+
+    pub fn render_metrics_with(
+        &self,
+        test_metrics: Option<&HashMap<String, f64>>,
+        outer_train_metrics: Option<&HashMap<String, f64>>,
+    ) -> serde_json::Value {
+        let mut metrics = serde_json::Map::new();
+        let mut keys: Vec<String> = self
+            .training_stats
+            .keys()
+            .chain(self.validation_stats.keys())
+            .cloned()
+            .collect();
+        keys.sort();
+        keys.dedup();
+
+        for metric in keys {
+            let mut result = serde_json::Map::new();
+            if let Some(scores) = self.training_stats.get(&metric) {
+                result.insert("train".to_string(), scores.to_map());
+            }
+            if let Some(scores) = self.validation_stats.get(&metric) {
+                result.insert("validation".to_string(), scores.to_map());
+            }
+            if let Some(test) = test_metrics.and_then(|m| m.get(&metric)) {
+                result.insert("test".to_string(), json!(test));
+            }
+            if let Some(outer) = outer_train_metrics.and_then(|m| m.get(&metric)) {
+                result.insert("outerTrain".to_string(), json!(outer));
+            }
+
+            metrics.insert(metric, serde_json::Value::Object(result));
         }
 
         serde_json::Value::Object(metrics)

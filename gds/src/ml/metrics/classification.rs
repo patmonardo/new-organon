@@ -1,4 +1,6 @@
+use crate::collections::long_multiset::LongMultiSet;
 use crate::collections::HugeLongArray;
+use crate::ml::core::subgraph::LocalIdMap;
 use crate::ml::metrics::{Metric, MetricComparator};
 
 pub const EPSILON: f64 = 1e-8;
@@ -9,8 +11,8 @@ pub trait ClassificationMetric: Metric {
 
 #[derive(Debug, Clone)]
 pub struct Accuracy {
-    _original_target: i64, // Reserved for future debugging/tracing functionality
     internal_target: i64,
+    name: String,
 }
 
 impl Accuracy {
@@ -18,15 +20,15 @@ impl Accuracy {
 
     pub fn new(original_target: i64, internal_target: i64) -> Self {
         Self {
-            _original_target: original_target,
             internal_target,
+            name: format!("{}(class={})", Self::NAME, original_target),
         }
     }
 }
 
 impl Metric for Accuracy {
     fn name(&self) -> &str {
-        Self::NAME
+        &self.name
     }
 
     fn comparator(&self) -> MetricComparator {
@@ -36,29 +38,26 @@ impl Metric for Accuracy {
 
 impl ClassificationMetric for Accuracy {
     fn compute(&self, targets: &HugeLongArray, predictions: &HugeLongArray) -> f64 {
-        let mut correct = 0;
-        let mut total = 0;
-        let mut _total_target_class = 0;
-        let mut _true_positives = 0;
+        debug_assert_eq!(targets.size(), predictions.size());
 
-        for i in 0..targets.size() {
-            let target = targets.get(i);
-            if target == self.internal_target {
-                _total_target_class += 1;
-                if predictions.get(i) == target {
-                    _true_positives += 1;
-                }
-            }
-            if predictions.get(i) == target {
-                correct += 1;
-            }
-            total += 1;
-        }
-
-        if total == 0 {
+        if targets.size() == 0 {
             return 0.0;
         }
-        correct as f64 / total as f64
+
+        let mut accurates = 0u64;
+        for i in 0..targets.size() {
+            let target_class = targets.get(i);
+            let predicted_class = predictions.get(i);
+
+            let predicted_is_positive = predicted_class == self.internal_target;
+            let target_is_positive = target_class == self.internal_target;
+
+            if predicted_is_positive == target_is_positive {
+                accurates += 1;
+            }
+        }
+
+        accurates as f64 / targets.size() as f64
     }
 }
 
@@ -91,27 +90,27 @@ impl Metric for GlobalAccuracy {
 
 impl ClassificationMetric for GlobalAccuracy {
     fn compute(&self, targets: &HugeLongArray, predictions: &HugeLongArray) -> f64 {
-        let mut accurate_predictions = 0;
-        let mut total = 0;
+        debug_assert_eq!(targets.size(), predictions.size());
 
+        let mut accurate_predictions = 0u64;
         for i in 0..targets.size() {
             if targets.get(i) == predictions.get(i) {
                 accurate_predictions += 1;
             }
-            total += 1;
         }
 
-        if total == 0 {
+        if targets.size() == 0 {
             return 0.0;
         }
-        accurate_predictions as f64 / total as f64
+
+        round_up(accurate_predictions as f64 / targets.size() as f64, 8)
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct F1Score {
-    _original_target: i64, // Reserved for future debugging/tracing functionality
     internal_target: i64,
+    name: String,
 }
 
 impl F1Score {
@@ -119,15 +118,15 @@ impl F1Score {
 
     pub fn new(original_target: i64, internal_target: i64) -> Self {
         Self {
-            _original_target: original_target,
             internal_target,
+            name: format!("{}(class={})", Self::NAME, original_target),
         }
     }
 }
 
 impl Metric for F1Score {
     fn name(&self) -> &str {
-        Self::NAME
+        &self.name
     }
 
     fn comparator(&self) -> MetricComparator {
@@ -137,6 +136,7 @@ impl Metric for F1Score {
 
 impl ClassificationMetric for F1Score {
     fn compute(&self, targets: &HugeLongArray, predictions: &HugeLongArray) -> f64 {
+        debug_assert_eq!(targets.size(), predictions.size());
         let mut true_positives = 0;
         let mut false_positives = 0;
         let mut false_negatives = 0;
@@ -156,22 +156,215 @@ impl ClassificationMetric for F1Score {
             }
         }
 
-        let precision = if true_positives + false_positives == 0 {
-            0.0
-        } else {
-            true_positives as f64 / (true_positives + false_positives) as f64
-        };
+        let precision =
+            true_positives as f64 / ((true_positives + false_positives) as f64 + EPSILON);
+        let recall = true_positives as f64 / ((true_positives + false_negatives) as f64 + EPSILON);
+        let result = 2.0 * (precision * recall) / (precision + recall + EPSILON);
+        debug_assert!(result <= 1.0 + EPSILON);
+        result
+    }
+}
 
-        let recall = if true_positives + false_negatives == 0 {
-            0.0
-        } else {
-            true_positives as f64 / (true_positives + false_negatives) as f64
-        };
+#[derive(Debug, Clone)]
+pub struct Precision {
+    internal_target: i64,
+    name: String,
+}
 
-        if precision + recall < EPSILON {
-            0.0
-        } else {
-            2.0 * (precision * recall) / (precision + recall)
+impl Precision {
+    pub const NAME: &'static str = "PRECISION";
+
+    pub fn new(original_target: i64, internal_target: i64) -> Self {
+        Self {
+            internal_target,
+            name: format!("{}(class={})", Self::NAME, original_target),
         }
     }
+}
+
+impl Metric for Precision {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn comparator(&self) -> MetricComparator {
+        MetricComparator::Natural
+    }
+}
+
+impl ClassificationMetric for Precision {
+    fn compute(&self, targets: &HugeLongArray, predictions: &HugeLongArray) -> f64 {
+        debug_assert_eq!(targets.size(), predictions.size());
+        let mut true_positives = 0;
+        let mut false_positives = 0;
+
+        for i in 0..targets.size() {
+            let target_class = targets.get(i);
+            let predicted_class = predictions.get(i);
+            let predicted_is_positive = predicted_class == self.internal_target;
+            if !predicted_is_positive {
+                continue;
+            }
+
+            let target_is_positive = target_class == self.internal_target;
+            if target_is_positive {
+                true_positives += 1;
+            } else {
+                false_positives += 1;
+            }
+        }
+
+        let result = true_positives as f64 / ((true_positives + false_positives) as f64 + EPSILON);
+        debug_assert!(result <= 1.0 + EPSILON);
+        result
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Recall {
+    internal_target: i64,
+    name: String,
+}
+
+impl Recall {
+    pub const NAME: &'static str = "RECALL";
+
+    pub fn new(original_target: i64, internal_target: i64) -> Self {
+        Self {
+            internal_target,
+            name: format!("{}(class={})", Self::NAME, original_target),
+        }
+    }
+}
+
+impl Metric for Recall {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn comparator(&self) -> MetricComparator {
+        MetricComparator::Natural
+    }
+}
+
+impl ClassificationMetric for Recall {
+    fn compute(&self, targets: &HugeLongArray, predictions: &HugeLongArray) -> f64 {
+        debug_assert_eq!(targets.size(), predictions.size());
+        let mut true_positives = 0;
+        let mut false_negatives = 0;
+
+        for i in 0..targets.size() {
+            let target_class = targets.get(i);
+            let predicted_class = predictions.get(i);
+
+            let predicted_is_positive = predicted_class == self.internal_target;
+            let target_is_positive = target_class == self.internal_target;
+            let predicted_is_negative = !predicted_is_positive;
+
+            if predicted_is_positive && target_is_positive {
+                true_positives += 1;
+            }
+
+            if predicted_is_negative && target_is_positive {
+                false_negatives += 1;
+            }
+        }
+
+        true_positives as f64 / ((true_positives + false_negatives) as f64 + EPSILON)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct F1Macro {
+    class_id_map: LocalIdMap,
+}
+
+impl F1Macro {
+    pub const NAME: &'static str = "F1_MACRO";
+
+    pub fn new(class_id_map: LocalIdMap) -> Self {
+        Self { class_id_map }
+    }
+}
+
+impl Metric for F1Macro {
+    fn name(&self) -> &str {
+        Self::NAME
+    }
+
+    fn comparator(&self) -> MetricComparator {
+        MetricComparator::Natural
+    }
+}
+
+impl ClassificationMetric for F1Macro {
+    fn compute(&self, targets: &HugeLongArray, predictions: &HugeLongArray) -> f64 {
+        let mut sum = 0.0;
+        let mut count = 0usize;
+        for (original, internal) in self.class_id_map.mappings() {
+            let metric = F1Score::new(original as i64, internal as i64);
+            sum += metric.compute(targets, predictions);
+            count += 1;
+        }
+
+        if count == 0 {
+            -1.0
+        } else {
+            sum / count as f64
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct F1Weighted {
+    class_id_map: LocalIdMap,
+    global_class_counts: LongMultiSet,
+}
+
+impl F1Weighted {
+    pub const NAME: &'static str = "F1_WEIGHTED";
+
+    pub fn new(class_id_map: LocalIdMap, global_class_counts: LongMultiSet) -> Self {
+        Self {
+            class_id_map,
+            global_class_counts,
+        }
+    }
+}
+
+impl Metric for F1Weighted {
+    fn name(&self) -> &str {
+        Self::NAME
+    }
+
+    fn comparator(&self) -> MetricComparator {
+        MetricComparator::Natural
+    }
+}
+
+impl ClassificationMetric for F1Weighted {
+    fn compute(&self, targets: &HugeLongArray, predictions: &HugeLongArray) -> f64 {
+        if self.global_class_counts.size() == 0 {
+            return 0.0;
+        }
+
+        let mut weighted_sum = 0.0;
+        for (original, internal) in self.class_id_map.mappings() {
+            let weight = self.global_class_counts.count(original as i64) as f64;
+            let score =
+                F1Score::new(original as i64, internal as i64).compute(targets, predictions);
+            weighted_sum += weight * score;
+        }
+
+        weighted_sum / self.global_class_counts.sum() as f64
+    }
+}
+
+fn round_up(value: f64, decimals: u32) -> f64 {
+    if decimals == 0 {
+        return value.ceil();
+    }
+
+    let factor = 10_f64.powi(decimals as i32);
+    (value * factor).ceil() / factor
 }

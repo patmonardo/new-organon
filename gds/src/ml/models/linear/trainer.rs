@@ -72,7 +72,11 @@ impl RegressorTrainer for LinearRegressionTrainer {
             || consecutive_with_batch_size(train_set.len() as u64, self.train_config.batch_size());
 
         // Create training instance with config and progress tracking
-        let training = Training::new(self.train_config.gradient().clone(), train_set.len());
+        let training = Training::new(
+            self.train_config.gradient().clone(),
+            train_set.len(),
+            Arc::clone(&self._termination_flag),
+        );
 
         // Run gradient descent training
         training.train(&objective, queue_supplier, self.concurrency);

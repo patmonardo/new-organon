@@ -1,3 +1,4 @@
+use crate::ml::decision_tree::ClassifierImpurityCriterionType;
 use crate::ml::models::{TrainerConfig, TrainingMethod};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -78,6 +79,14 @@ fn default_min_samples_leaf() -> usize {
 pub struct RandomForestClassifierTrainerConfig {
     #[serde(flatten)]
     pub forest: RandomForestConfig,
+
+    /// Impurity criterion for classification trees
+    #[serde(default = "default_classifier_criterion")]
+    pub criterion: ClassifierImpurityCriterionType,
+}
+
+fn default_classifier_criterion() -> ClassifierImpurityCriterionType {
+    ClassifierImpurityCriterionType::Gini
 }
 
 impl TrainerConfig for RandomForestClassifierTrainerConfig {
@@ -87,6 +96,10 @@ impl TrainerConfig for RandomForestClassifierTrainerConfig {
 
     fn to_map(&self) -> HashMap<String, serde_json::Value> {
         let mut map = HashMap::new();
+        map.insert(
+            "criterion".to_string(),
+            serde_json::Value::String(self.criterion.to_string()),
+        );
         map.insert(
             "maxFeaturesRatio".to_string(),
             serde_json::json!(self.forest.max_features_ratio),

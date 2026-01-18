@@ -113,8 +113,68 @@ impl TrainerConfigTrait for MLPClassifierTrainConfig {
     }
 
     fn to_map(&self) -> std::collections::HashMap<String, serde_json::Value> {
-        // Note: Placeholder; implement serialization.
-        std::collections::HashMap::new()
+        let mut map = std::collections::HashMap::new();
+        map.insert(
+            "method".to_string(),
+            serde_json::Value::String("MLPClassification".to_string()),
+        );
+        map.insert(
+            "methodName".to_string(),
+            serde_json::Value::String("MLPClassification".to_string()),
+        );
+        map.insert(
+            "batch_size".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(self.batch_size)),
+        );
+        map.insert(
+            "min_epochs".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(self.min_epochs)),
+        );
+        map.insert(
+            "patience".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(self.patience)),
+        );
+        map.insert(
+            "max_epochs".to_string(),
+            serde_json::Value::Number(serde_json::Number::from(self.max_epochs)),
+        );
+        map.insert(
+            "tolerance".to_string(),
+            serde_json::Value::Number(serde_json::Number::from_f64(self.tolerance).unwrap()),
+        );
+        map.insert(
+            "learning_rate".to_string(),
+            serde_json::Value::Number(serde_json::Number::from_f64(self.learning_rate).unwrap()),
+        );
+        map.insert(
+            "penalty".to_string(),
+            serde_json::Value::Number(serde_json::Number::from_f64(self.penalty).unwrap()),
+        );
+        map.insert(
+            "focus_weight".to_string(),
+            serde_json::Value::Number(serde_json::Number::from_f64(self.focus_weight).unwrap()),
+        );
+        if !self.class_weights.is_empty() {
+            let weights_array: Vec<serde_json::Value> = self
+                .class_weights
+                .iter()
+                .map(|&w| serde_json::Value::Number(serde_json::Number::from_f64(w).unwrap()))
+                .collect();
+            map.insert(
+                "class_weights".to_string(),
+                serde_json::Value::Array(weights_array),
+            );
+        }
+        let hidden_layers: Vec<serde_json::Value> = self
+            .hidden_layer_sizes
+            .iter()
+            .map(|&v| serde_json::Value::Number(serde_json::Number::from(v)))
+            .collect();
+        map.insert(
+            "hidden_layer_sizes".to_string(),
+            serde_json::Value::Array(hidden_layers),
+        );
+        map
     }
 }
 

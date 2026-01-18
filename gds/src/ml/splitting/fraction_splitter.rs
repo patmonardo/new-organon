@@ -7,6 +7,7 @@ pub struct FractionSplitter;
 impl FractionSplitter {
     /// Splits an array into training and test sets
     pub fn split(ids: ReadOnlyHugeLongArray, train_fraction: f64) -> TrainingExamplesSplit {
+        let train_fraction = train_fraction.clamp(0.0, 1.0);
         let train_size = Self::train_size(ids.len(), train_fraction);
         let test_size = ids.len() - train_size;
 

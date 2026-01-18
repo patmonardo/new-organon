@@ -3,6 +3,8 @@
 
 use crate::{
     collections::HugeLongArray,
+    concurrency::Concurrency,
+    core::utils::{paged::HugeMergeSort, progress::ProgressTracker, shuffle::ShuffleUtil},
     ml::splitting::{FractionSplitter, TrainingExamplesSplit},
 };
 use std::sync::Arc;
@@ -11,13 +13,31 @@ use std::sync::Arc;
 /// 1:1 with NodeSplits interface in Java
 #[derive(Debug, Clone)]
 pub struct NodeSplits {
-    pub all_training_examples: Arc<Vec<i64>>,
-    pub outer_split: TrainingExamplesSplit,
+    all_training_examples: Arc<Vec<i64>>,
+    outer_split: TrainingExamplesSplit,
+}
+
+impl NodeSplits {
+    pub fn new(all_training_examples: Arc<Vec<i64>>, outer_split: TrainingExamplesSplit) -> Self {
+        Self {
+            all_training_examples,
+            outer_split,
+        }
+    }
+
+    pub fn all_training_examples(&self) -> &Arc<Vec<i64>> {
+        &self.all_training_examples
+    }
+
+    pub fn outer_split(&self) -> &TrainingExamplesSplit {
+        &self.outer_split
+    }
 }
 
 /// Splits nodes into training and test sets
 /// 1:1 with NodeSplitter.java
 pub struct NodeSplitter {
+    concurrency: Concurrency,
     number_of_examples: usize,
     to_original_id: Arc<dyn Fn(usize) -> i64 + Send + Sync>,
     to_mapped_id: Arc<dyn Fn(i64) -> usize + Send + Sync>,
@@ -26,11 +46,13 @@ pub struct NodeSplitter {
 impl NodeSplitter {
     /// Creates a new node splitter
     pub fn new(
+        concurrency: Concurrency,
         number_of_examples: usize,
         to_original_id: Arc<dyn Fn(usize) -> i64 + Send + Sync>,
         to_mapped_id: Arc<dyn Fn(i64) -> usize + Send + Sync>,
     ) -> Self {
         Self {
+            concurrency,
             number_of_examples,
             to_original_id,
             to_mapped_id,
@@ -44,20 +66,14 @@ impl NodeSplitter {
         test_fraction: f64,
         validation_folds: usize,
         random_seed: Option<u64>,
+        progress_tracker: &mut dyn ProgressTracker,
     ) -> NodeSplits {
         let mut all_training_examples = HugeLongArray::new(self.number_of_examples);
 
         // Sort by original IDs for deterministic projections (matches Java)
         all_training_examples.set_all(|i| (self.to_original_id)(i));
 
-        // Simple sequential sort (parallel sort with infrastructure comes later)
-        let mut vec: Vec<i64> = (0..self.number_of_examples)
-            .map(|i| all_training_examples.get(i))
-            .collect();
-        vec.sort_unstable();
-        for (i, &val) in vec.iter().enumerate() {
-            all_training_examples.set(i, val);
-        }
+        HugeMergeSort::sort(&mut all_training_examples, self.concurrency);
 
         for i in 0..self.number_of_examples {
             let original_id = all_training_examples.get(i);
@@ -66,24 +82,14 @@ impl NodeSplitter {
         }
 
         // Shuffle with seed if provided (matches Java ShuffleUtil)
-        if let Some(seed) = random_seed {
-            use rand::rngs::StdRng;
-            use rand::{Rng, SeedableRng};
-            let mut rng = StdRng::seed_from_u64(seed);
+        let mut rng = ShuffleUtil::create_random_data_generator(random_seed);
+        ShuffleUtil::shuffle_array(&mut all_training_examples, &mut rng);
 
-            for i in (1..self.number_of_examples).rev() {
-                let j = rng.gen_range(0..=i);
-                let temp = all_training_examples.get(i);
-                all_training_examples.set(i, all_training_examples.get(j));
-                all_training_examples.set(j, temp);
-            }
-        }
-
-        // Convert to Vec<u64> for ReadOnlyHugeLongArray equivalent
-        let all_vec: Vec<i64> = (0..self.number_of_examples)
-            .map(|i| all_training_examples.get(i))
-            .collect();
-        let all_examples = Arc::new(all_vec);
+        let all_examples = Arc::new(
+            (0..self.number_of_examples)
+                .map(|i| all_training_examples.get(i))
+                .collect::<Vec<_>>(),
+        );
 
         let outer_split = FractionSplitter::split(all_examples.clone(), 1.0 - test_fraction);
 
@@ -92,12 +98,10 @@ impl NodeSplitter {
             outer_split.train_set().len(),
             outer_split.test_set().len(),
             validation_folds,
+            progress_tracker,
         );
 
-        NodeSplits {
-            all_training_examples: all_examples,
-            outer_split,
-        }
+        NodeSplits::new(all_examples, outer_split)
     }
 
     /// Warns if training or test sets are too small
@@ -107,21 +111,20 @@ impl NodeSplitter {
         train_size: usize,
         test_size: usize,
         validation_folds: usize,
+        progress_tracker: &mut dyn ProgressTracker,
     ) {
-        // Note: In Java this uses ProgressTracker.logWarning
-        // For now we use eprintln until infrastructure is available
         if train_size < 500 || test_size < 100 {
-            eprintln!(
+            progress_tracker.log_warning(&format!(
                 "Warning: Small node sets detected: training={}, test={}. Consider adjusting split fractions.",
                 train_size, test_size
-            );
+            ));
         }
 
         if validation_folds > 0 && train_size / validation_folds < 100 {
-            eprintln!(
+            progress_tracker.log_warning(&format!(
                 "Warning: Small validation fold size: {} nodes per fold. Consider reducing validation_folds.",
                 train_size / validation_folds
-            );
+            ));
         }
     }
 }

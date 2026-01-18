@@ -25,6 +25,7 @@ impl StratifiedKFoldSplitter {
         random_seed: Option<u64>,
         distinct_internal_targets: BTreeSet<i64>,
     ) -> Self {
+        assert!(k > 0, "k must be positive");
         let random = match random_seed {
             Some(seed) => StdRng::seed_from_u64(seed),
             None => StdRng::from_entropy(),
@@ -82,10 +83,9 @@ impl StratifiedKFoldSplitter {
             .map(|fold| {
                 train_sets[fold].shuffle(&mut self.random);
                 test_sets[fold].shuffle(&mut self.random);
-                TrainingExamplesSplit::of(
-                    Arc::new(train_sets[fold].clone()),
-                    Arc::new(test_sets[fold].clone()),
-                )
+                let train = Arc::new(std::mem::take(&mut train_sets[fold]));
+                let test = Arc::new(std::mem::take(&mut test_sets[fold]));
+                TrainingExamplesSplit::of(train, test)
             })
             .collect()
     }

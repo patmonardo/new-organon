@@ -6,6 +6,7 @@ use crate::ml::core::tensor::Matrix;
 use crate::ml::models::{BaseModelData, Classifier, ClassifierData, Features, TrainingMethod};
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::sync::Arc;
 
 use super::config::RandomForestConfig;
 
@@ -37,7 +38,9 @@ impl RandomForestClassifier {
 
         for tree in &self.data.decision_trees {
             let predicted_class = *tree.predict(features);
-            predictions_per_class[predicted_class] += 1;
+            if predicted_class < predictions_per_class.len() {
+                predictions_per_class[predicted_class] += 1;
+            }
         }
 
         predictions_per_class
@@ -52,6 +55,9 @@ impl Classifier for RandomForestClassifier {
     /// Predict class probabilities for a single feature vector
     /// 1:1 with predictProbabilities(double[] features) in Java
     fn predict_probabilities(&self, features: &[f64]) -> Vec<f64> {
+        if self.data.decision_trees.is_empty() {
+            return vec![0.0; self.data.number_of_classes()];
+        }
         let votes_per_class = self.gather_tree_predictions(features);
         let number_of_trees = self.data.decision_trees.len() as f64;
 
@@ -85,8 +91,9 @@ impl Classifier for RandomForestClassifier {
 /// 1:1 translation of RandomForestClassifierData.java from Java GDS.
 ///
 /// NOTE: Serialization deferred - trait objects require special handling
+#[derive(Clone)]
 pub struct RandomForestClassifierData {
-    pub decision_trees: Vec<Box<dyn DecisionTreePredictor<usize>>>,
+    pub decision_trees: Vec<Arc<dyn DecisionTreePredictor<usize>>>,
     pub num_classes: usize,
     pub num_features: usize,
 }

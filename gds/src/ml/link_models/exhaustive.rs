@@ -4,14 +4,11 @@ use std::{collections::HashMap, sync::Arc};
 
 pub struct ExhaustiveLinkPredictionResult {
     prediction_queue: Arc<BoundedLongLongPriorityQueue>,
-    links_considered: usize,
+    links_considered: u64,
 }
 
 impl ExhaustiveLinkPredictionResult {
-    pub fn new(
-        best_predictions: Arc<BoundedLongLongPriorityQueue>,
-        links_considered: usize,
-    ) -> Self {
+    pub fn new(best_predictions: Arc<BoundedLongLongPriorityQueue>, links_considered: u64) -> Self {
         Self {
             prediction_queue: best_predictions,
             links_considered,
@@ -46,7 +43,7 @@ impl LinkPredictionResult for ExhaustiveLinkPredictionResult {
         );
         stats.insert(
             "linksConsidered".to_string(),
-            serde_json::Value::Number(self.links_considered.into()),
+            serde_json::Value::Number(serde_json::Number::from(self.links_considered)),
         );
         stats
     }

@@ -1,11 +1,18 @@
-use crate::ml::metrics::{EvaluationScores, Metric, ModelCandidateStats};
+use crate::ml::metrics::{EvaluationScores, Metric, MetricComparator, ModelCandidateStats};
+use std::cmp::Ordering;
 use std::collections::HashMap;
+
+#[derive(Debug, Clone)]
+struct MetricSpec {
+    name: String,
+    comparator: MetricComparator,
+}
 
 /// Statistics collected during model training
 #[derive(Debug, Clone)]
 pub struct TrainingStatistics {
     model_candidate_stats: Vec<ModelCandidateStats>,
-    metrics: Vec<String>,
+    metrics: Vec<MetricSpec>,
     test_scores: HashMap<String, f64>,
     outer_train_scores: HashMap<String, f64>,
 }
@@ -13,10 +20,16 @@ pub struct TrainingStatistics {
 impl TrainingStatistics {
     /// Creates a new TrainingStatistics with the given metrics
     pub fn new(metrics: Vec<Box<dyn Metric>>) -> Self {
-        let metric_names = metrics.iter().map(|m| m.name().to_string()).collect();
+        let metric_specs = metrics
+            .iter()
+            .map(|m| MetricSpec {
+                name: m.name().to_string(),
+                comparator: m.comparator(),
+            })
+            .collect();
         Self {
             model_candidate_stats: Vec::new(),
-            metrics: metric_names,
+            metrics: metric_specs,
             test_scores: HashMap::new(),
             outer_train_scores: HashMap::new(),
         }
@@ -24,7 +37,11 @@ impl TrainingStatistics {
 
     /// Returns the main evaluation metric name
     pub fn evaluation_metric(&self) -> &str {
-        self.metrics.first().expect("No metrics defined")
+        &self.metrics.first().expect("No metrics defined").name
+    }
+
+    fn evaluation_comparator(&self) -> MetricComparator {
+        self.metrics.first().expect("No metrics defined").comparator
     }
 
     /// Adds statistics for a model candidate
@@ -94,11 +111,18 @@ impl TrainingStatistics {
 
     /// Gets the score of the best trial
     pub fn best_trial_score(&self) -> f64 {
+        let comparator = self.evaluation_comparator();
         self.model_candidate_stats
             .iter()
             .filter_map(|stats| stats.validation_stats.get(self.evaluation_metric()))
             .map(|s| s.avg)
-            .max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+            .reduce(|best, candidate| {
+                if comparator.compare(candidate, best) == Ordering::Greater {
+                    candidate
+                } else {
+                    best
+                }
+            })
             .expect("Empty validation stats")
     }
 
@@ -125,7 +149,7 @@ impl TrainingStatistics {
             serde_json::to_value(
                 self.model_candidate_stats
                     .iter()
-                    .map(ModelCandidateStats::render_metrics)
+                    .map(ModelCandidateStats::to_map)
                     .collect::<Vec<_>>(),
             )
             .unwrap(),

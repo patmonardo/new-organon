@@ -157,6 +157,7 @@ impl NodeClassificationTrain {
         let node_count = self.node_graph.node_count();
 
         let node_splitter = NodeSplitter::new(
+            Concurrency::available_cores(),
             node_count,
             Arc::new({
                 let graph = Arc::clone(&self.node_graph);
@@ -176,6 +177,7 @@ impl NodeClassificationTrain {
             split_config.test_fraction(),
             split_config.validation_folds(),
             self.train_config.random_seed(),
+            self.progress_tracker.as_mut(),
         );
 
         let (metrics, classification_metrics) = default_metrics();
@@ -191,16 +193,16 @@ impl NodeClassificationTrain {
             .procedure_features(&self.pipeline)
             .map_err(|e| format!("Feature production failed: {e}"))?;
 
-        let classifier = self.train_simple_model(&node_splits.outer_split, &features)?;
+        let classifier = self.train_simple_model(node_splits.outer_split(), &features)?;
         self.evaluate_model(
-            &node_splits.outer_split,
+            node_splits.outer_split(),
             &features,
             &classifier,
             &classification_metrics,
             &mut training_statistics,
         );
 
-        let retrained = self.retrain_best_model(&node_splits.all_training_examples, &features)?;
+        let retrained = self.retrain_best_model(node_splits.all_training_examples(), &features)?;
 
         self.progress_tracker.end_subtask();
 

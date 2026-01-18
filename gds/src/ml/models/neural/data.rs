@@ -34,6 +34,9 @@ impl MLPClassifierData {
         hidden_layer_sizes: &[usize],
         random_seed: u64,
     ) -> Self {
+        if hidden_layer_sizes.is_empty() {
+            panic!("hidden_layer_sizes must not be empty");
+        }
         let mut rng = StdRng::seed_from_u64(random_seed);
         let mut weights = Vec::new();
         let mut biases = Vec::new();
@@ -206,5 +209,11 @@ mod tests {
         for &value in first_weight.data() {
             assert!(value.abs() <= expected_bound + 1e-10); // Allow small floating point errors
         }
+    }
+
+    #[test]
+    #[should_panic(expected = "hidden_layer_sizes must not be empty")]
+    fn test_empty_hidden_layer_sizes_panics() {
+        let _ = MLPClassifierData::create(2, 3, &[], 1);
     }
 }

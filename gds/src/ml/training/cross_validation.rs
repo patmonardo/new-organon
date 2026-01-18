@@ -6,7 +6,10 @@ use crate::ml::{
     splitting::StratifiedKFoldSplitter,
 };
 use parking_lot::RwLock;
-use std::{collections::BTreeSet, sync::Arc};
+use std::{
+    collections::BTreeSet,
+    sync::{Arc, Mutex},
+};
 
 use super::statistics::TrainingStatistics;
 
@@ -34,6 +37,24 @@ pub type ModelTrainer<MODEL> = Box<
 /// Model evaluator function type
 pub type ModelEvaluator<MODEL> =
     Box<dyn Fn(ReadOnlyHugeLongArray, &MODEL, &mut dyn MetricConsumer) + Send + Sync>;
+
+struct LockedStatsConsumer {
+    builder: Arc<Mutex<ModelStatsBuilder>>,
+}
+
+impl LockedStatsConsumer {
+    fn new(builder: Arc<Mutex<ModelStatsBuilder>>) -> Self {
+        Self { builder }
+    }
+}
+
+impl MetricConsumer for LockedStatsConsumer {
+    fn consume(&mut self, metric: &dyn Metric, value: f64) {
+        if let Ok(mut builder) = self.builder.lock() {
+            builder.update(metric, value);
+        }
+    }
+}
 
 impl<MODEL> CrossValidation<MODEL> {
     /// Creates a new CrossValidation instance
@@ -91,9 +112,13 @@ impl<MODEL> CrossValidation<MODEL> {
                 model_params.to_map()
             );
 
-            let mut validation_stats_builder = ModelStatsBuilder::new(validation_splits.len());
+            let validation_stats_builder =
+                Arc::new(Mutex::new(ModelStatsBuilder::new(validation_splits.len())));
             let mut train_stats_builder = ModelStatsBuilder::new(validation_splits.len());
-            let metrics_handler = ModelSpecificMetricsHandler::new(&self.metrics, |_, _| {});
+            let metrics_handler = ModelSpecificMetricsHandler::for_stats_builder(
+                &self.metrics,
+                validation_stats_builder.clone(),
+            );
 
             for (fold, split) in validation_splits.iter().enumerate() {
                 let train_set = split.train_set();
@@ -108,11 +133,9 @@ impl<MODEL> CrossValidation<MODEL> {
                 );
                 log::debug!("Finished fold {} training", fold + 1);
 
-                (self.model_evaluator)(
-                    validation_set,
-                    &trained_model,
-                    &mut validation_stats_builder as &mut dyn MetricConsumer,
-                );
+                let mut validation_consumer =
+                    LockedStatsConsumer::new(validation_stats_builder.clone());
+                (self.model_evaluator)(validation_set, &trained_model, &mut validation_consumer);
                 (self.model_evaluator)(
                     train_set,
                     &trained_model,
@@ -123,7 +146,10 @@ impl<MODEL> CrossValidation<MODEL> {
             let candidate_stats = ModelCandidateStats::new(
                 serde_json::to_value(model_params.to_map()).unwrap(),
                 train_stats_builder.build(),
-                validation_stats_builder.build(),
+                validation_stats_builder
+                    .lock()
+                    .expect("validation stats builder mutex poisoned")
+                    .build(),
             );
             training_statistics.add_candidate_stats(candidate_stats);
 

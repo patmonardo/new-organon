@@ -34,6 +34,9 @@ impl Regressor for RandomForestRegressor {
     /// 1:1 with Regressor.predict(double[] features) in Java
     fn predict(&self, features: &[f64]) -> f64 {
         let number_of_decision_trees = self.data.decision_trees.len();
+        if number_of_decision_trees == 0 {
+            return 0.0;
+        }
 
         let mut sum = 0.0;
         for i in 0..number_of_decision_trees {

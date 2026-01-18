@@ -3,9 +3,14 @@
 
 use crate::{
     collections::{HugeLongArray, HugeObjectArray},
+    concurrency::{virtual_threads::RunWithConcurrency, Concurrency, TerminationFlag},
+    core::utils::progress::TaskProgressTracker,
+    ml::core::batch::{BatchTransformer, IdentityBatchTransformer, RangeBatch},
     ml::models::{Classifier, Features},
 };
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+
+use super::predict_consumer::NodeClassificationPredictConsumer;
 
 /// Parallel node classifier that can process predictions in batches
 /// 1:1 translation of ParallelNodeClassifier.java
@@ -13,6 +18,9 @@ pub struct ParallelNodeClassifier {
     classifier: Arc<dyn Classifier>,
     features: Arc<dyn Features>,
     batch_size: usize,
+    concurrency: Concurrency,
+    termination_flag: TerminationFlag,
+    progress_tracker: TaskProgressTracker,
 }
 
 impl ParallelNodeClassifier {
@@ -22,28 +30,51 @@ impl ParallelNodeClassifier {
         classifier: Arc<dyn Classifier>,
         features: Arc<dyn Features>,
         batch_size: usize,
+        concurrency: Concurrency,
+        termination_flag: TerminationFlag,
+        progress_tracker: TaskProgressTracker,
     ) -> Self {
         Self {
             classifier,
             features,
             batch_size,
+            concurrency,
+            termination_flag,
+            progress_tracker,
         }
     }
 
     /// Predicts classes for an evaluation set
     /// 1:1 with predict(ReadOnlyHugeLongArray) in Java
     pub fn predict(&self, evaluation_set: &[u64]) -> HugeLongArray {
-        self.predict_internal(evaluation_set.len(), |i| evaluation_set[i], None)
+        let transformer = Arc::new(EvaluationSetTransformer::new(Arc::new(
+            evaluation_set.to_vec(),
+        )));
+        self.predict_internal(evaluation_set.len(), transformer, None)
+            .0
     }
 
     /// Predicts with optional probabilities output
     /// 1:1 with predict(HugeObjectArray<double[]>) in Java
-    pub fn predict_with_probabilities(
-        &self,
-        predicted_probabilities: Option<&mut HugeObjectArray<Vec<f64>>>,
-    ) -> HugeLongArray {
+    pub fn predict_with_probabilities(&self) -> (HugeLongArray, HugeObjectArray<Vec<f64>>) {
         let size = self.features.size();
-        self.predict_internal(size, |i| i as u64, predicted_probabilities)
+        let transformer: Arc<dyn BatchTransformer + Send + Sync> =
+            Arc::new(IdentityBatchTransformer);
+        let probabilities = HugeObjectArray::new(size);
+        let (classes, probabilities) =
+            self.predict_internal(size, transformer, Some(probabilities));
+        (
+            classes,
+            probabilities.expect("probabilities must be present"),
+        )
+    }
+
+    /// Predict classes for all nodes without probabilities (identity mapping).
+    pub fn predict_all(&self) -> HugeLongArray {
+        let size = self.features.size();
+        let transformer: Arc<dyn BatchTransformer + Send + Sync> =
+            Arc::new(IdentityBatchTransformer);
+        self.predict_internal(size, transformer, None).0
     }
 
     /// Internal prediction method
@@ -51,37 +82,82 @@ impl ParallelNodeClassifier {
     fn predict_internal(
         &self,
         evaluation_set_size: usize,
-        node_id_mapper: impl Fn(usize) -> u64,
-        mut predicted_probabilities: Option<&mut HugeObjectArray<Vec<f64>>>,
-    ) -> HugeLongArray {
-        let mut predicted_classes = HugeLongArray::new(evaluation_set_size);
-
-        // Process in batches
-        for batch_start in (0..evaluation_set_size).step_by(self.batch_size) {
-            let batch_end = (batch_start + self.batch_size).min(evaluation_set_size);
-
-            for i in batch_start..batch_end {
-                let node_id = node_id_mapper(i) as usize;
-                let feature_vec = self.features.get(node_id);
-                let probs = self.classifier.predict_probabilities(feature_vec);
-
-                // Store probabilities if requested
-                if let Some(prob_array) = predicted_probabilities.as_mut() {
-                    prob_array.set(node_id, probs.clone());
-                }
-
-                // Find class with max probability
-                let best_class = probs
-                    .iter()
-                    .enumerate()
-                    .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
-                    .map(|(idx, _)| idx as i64)
-                    .unwrap_or(0);
-
-                predicted_classes.set(i, best_class);
-            }
+        node_id_mapper: Arc<dyn BatchTransformer + Send + Sync>,
+        predicted_probabilities: Option<HugeObjectArray<Vec<f64>>>,
+    ) -> (HugeLongArray, Option<HugeObjectArray<Vec<f64>>>) {
+        if evaluation_set_size == 0 {
+            return (HugeLongArray::new(0), predicted_probabilities);
         }
 
-        predicted_classes
+        let predicted_classes = Arc::new(Mutex::new(HugeLongArray::new(evaluation_set_size)));
+        let predicted_probabilities = predicted_probabilities.map(|arr| Arc::new(Mutex::new(arr)));
+
+        let consumer = Arc::new(NodeClassificationPredictConsumer::new(
+            Arc::clone(&self.features),
+            Arc::clone(&self.classifier),
+            predicted_probabilities.clone(),
+            Arc::clone(&predicted_classes),
+            self.progress_tracker.clone(),
+        ));
+
+        let tasks: Vec<Box<dyn FnOnce() + Send>> = (0..evaluation_set_size)
+            .step_by(self.batch_size)
+            .map(|start| {
+                let batch_size = self.batch_size;
+                let node_id_mapper = Arc::clone(&node_id_mapper);
+                let consumer = Arc::clone(&consumer);
+                let termination_flag = self.termination_flag.clone();
+                Box::new(move || {
+                    if !termination_flag.running() {
+                        return;
+                    }
+                    let batch =
+                        RangeBatch::new(start as u64, batch_size, evaluation_set_size as u64);
+                    consumer.accept(&batch, node_id_mapper.as_ref());
+                }) as Box<dyn FnOnce() + Send>
+            })
+            .collect();
+
+        let _ = RunWithConcurrency::builder()
+            .concurrency(self.concurrency)
+            .termination_flag(self.termination_flag.clone())
+            .tasks(tasks)
+            .run();
+
+        let predicted_classes = Arc::try_unwrap(predicted_classes)
+            .map(|mutex| {
+                mutex
+                    .into_inner()
+                    .expect("predicted_classes mutex poisoned")
+            })
+            .unwrap_or_else(|arc| {
+                arc.lock()
+                    .expect("predicted_classes mutex poisoned")
+                    .clone()
+            });
+
+        let predicted_probabilities = predicted_probabilities.and_then(|probabilities| {
+            Arc::try_unwrap(probabilities)
+                .ok()
+                .and_then(|mutex| mutex.into_inner().ok())
+        });
+
+        (predicted_classes, predicted_probabilities)
+    }
+}
+
+struct EvaluationSetTransformer {
+    evaluation_set: Arc<Vec<u64>>,
+}
+
+impl EvaluationSetTransformer {
+    fn new(evaluation_set: Arc<Vec<u64>>) -> Self {
+        Self { evaluation_set }
+    }
+}
+
+impl BatchTransformer for EvaluationSetTransformer {
+    fn apply(&self, index: u64) -> u64 {
+        self.evaluation_set[index as usize]
     }
 }

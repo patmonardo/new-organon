@@ -1,4 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct PredictedLink {
     source_id: i64,
     target_id: i64,

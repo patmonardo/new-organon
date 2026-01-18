@@ -36,8 +36,12 @@ pub fn create_sampler<GS: GraphStore>(
         let negative_example_graph = graph_store.get_graph_with_types(&relationship_types)
             .unwrap_or_else(|_| panic!("Failed to create filtered graph for negative sampling with relationship type: {}", rel_type_str));
 
-        let test_train_fraction =
-            test_positive_count as f64 / (test_positive_count + train_positive_count) as f64;
+        let total_positive = test_positive_count + train_positive_count;
+        let test_train_fraction = if total_positive > 0 {
+            test_positive_count as f64 / total_positive as f64
+        } else {
+            0.0
+        };
 
         Box::new(UserInputNegativeSampler::new(
             negative_example_graph,

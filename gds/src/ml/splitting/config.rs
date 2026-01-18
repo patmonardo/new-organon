@@ -1,4 +1,5 @@
-use crate::core::{concurrency::Concurrency, relationship::RelationshipType};
+use crate::concurrency::Concurrency;
+use crate::projection::RelationshipType;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -92,12 +93,12 @@ impl SplitRelationshipsConfig {
     pub fn to_parameters(&self, concurrency: Concurrency) -> SplitRelationshipsParameters {
         SplitRelationshipsParameters {
             concurrency,
-            holdout_relationship_type: RelationshipType::new(
+            holdout_relationship_type: RelationshipType::of(
                 self.holdout_relationship_type
                     .clone()
                     .unwrap_or_else(|| "HOLDOUT".to_string()),
             ),
-            remaining_relationship_type: RelationshipType::new(
+            remaining_relationship_type: RelationshipType::of(
                 self.remaining_relationship_type
                     .clone()
                     .unwrap_or_else(|| "REMAINING".to_string()),

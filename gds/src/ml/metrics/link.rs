@@ -1,5 +1,4 @@
-use crate::ml::metrics::{Metric, MetricComparator};
-use derive_builder::Builder;
+use crate::ml::metrics::{Metric, MetricComparator, OutOfBagError};
 
 #[derive(Debug, Clone)]
 pub struct SignedProbabilities {
@@ -43,6 +42,17 @@ pub enum LinkMetric {
 }
 
 impl LinkMetric {
+    pub fn parse_link_metric(name: &str) -> Box<dyn Metric> {
+        if name == OutOfBagError::NAME {
+            return Box::new(OutOfBagError::new());
+        }
+
+        match name {
+            "AUCPR" => Box::new(LinkMetric::AUCPR),
+            _ => panic!("Metrics must be strings"),
+        }
+    }
+
     pub fn compute(
         &self,
         signed_probabilities: &SignedProbabilities,
@@ -59,7 +69,7 @@ impl LinkMetric {
         negative_class_weight: f64,
     ) -> f64 {
         let positive_count = signed_probabilities.positive_count();
-        let negative_count = signed_probabilities.negative_count();
+        let _negative_count = signed_probabilities.negative_count();
 
         if positive_count == 0 {
             return 0.0;
@@ -114,16 +124,14 @@ pub struct SignedProbabilitiesBuilder {
     probabilities: Vec<f64>,
     positive_count: usize,
     negative_count: usize,
-    concurrency: usize,
 }
 
 impl SignedProbabilitiesBuilder {
     pub fn new(concurrency: usize) -> Self {
         Self {
-            probabilities: Vec::new(),
+            probabilities: Vec::with_capacity(concurrency),
             positive_count: 0,
             negative_count: 0,
-            concurrency,
         }
     }
 

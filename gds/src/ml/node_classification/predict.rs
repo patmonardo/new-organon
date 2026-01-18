@@ -3,7 +3,13 @@
 
 use crate::{
     collections::{HugeLongArray, HugeObjectArray},
-    ml::models::{Classifier, Features},
+    concurrency::{Concurrency, TerminationFlag},
+    core::utils::progress::{LeafTask, ProgressTracker, TaskProgressTracker, Tasks},
+    mem::{Estimate, MemoryEstimation, MemoryEstimations, MemoryRange},
+    ml::{
+        core::batch::compute_batch_size,
+        models::{Classifier, ClassifierFactory, Features, TrainingMethod},
+    },
 };
 use std::{fmt, sync::Arc};
 
@@ -56,6 +62,9 @@ pub struct NodeClassificationPredict {
     features: Arc<dyn Features>,
     batch_size: usize,
     produce_probabilities: bool,
+    concurrency: Concurrency,
+    termination_flag: TerminationFlag,
+    progress_tracker: TaskProgressTracker,
 }
 
 impl NodeClassificationPredict {
@@ -66,12 +75,18 @@ impl NodeClassificationPredict {
         features: Arc<dyn Features>,
         batch_size: usize,
         produce_probabilities: bool,
+        concurrency: Concurrency,
+        termination_flag: TerminationFlag,
+        progress_tracker: TaskProgressTracker,
     ) -> Self {
         Self {
             classifier,
             features,
             batch_size,
             produce_probabilities,
+            concurrency,
+            termination_flag,
+            progress_tracker,
         }
     }
 
@@ -80,30 +95,27 @@ impl NodeClassificationPredict {
     pub fn compute(&self) -> NodeClassificationPredictResult {
         let node_count = self.features.size();
 
-        // Initialize probabilities if requested
-        let mut predicted_probabilities = if self.produce_probabilities {
-            let num_classes = self.classifier.number_of_classes();
-            let mut predictions = HugeObjectArray::new(node_count);
-            // Initialize with zero vectors
-            for i in 0..node_count {
-                predictions.set(i, vec![0.0; num_classes]);
-            }
-            Some(predictions)
-        } else {
-            None
-        };
+        let mut tracker = self.progress_tracker.clone();
+        tracker.begin_subtask_with_volume(node_count);
+        tracker.set_steps(node_count);
 
         let parallel_classifier = super::parallel_classifier::ParallelNodeClassifier::new(
             self.classifier.clone(),
             self.features.clone(),
             self.batch_size,
+            self.concurrency,
+            self.termination_flag.clone(),
+            self.progress_tracker.clone(),
         );
 
-        // Predict both classes and probabilities in a single pass
-        let predicted_classes =
-            parallel_classifier.predict_with_probabilities(predicted_probabilities.as_mut());
+        let (predicted_classes, predicted_probabilities) = if self.produce_probabilities {
+            let (classes, probabilities) = parallel_classifier.predict_with_probabilities();
+            (classes, Some(Arc::new(probabilities)))
+        } else {
+            (parallel_classifier.predict_all(), None)
+        };
 
-        let predicted_probabilities = predicted_probabilities.map(Arc::new);
+        tracker.end_subtask();
 
         NodeClassificationPredictResult::new(Arc::new(predicted_classes), predicted_probabilities)
     }
@@ -112,15 +124,80 @@ impl NodeClassificationPredict {
 /// Memory estimation for node classification prediction
 /// 1:1 with memoryEstimation() in Java
 pub fn estimate_predict_memory(
-    node_count: usize,
-    predict_probabilities: bool,
-    number_of_classes: usize,
-) -> usize {
-    let mut memory = std::mem::size_of::<i64>() * node_count; // predicted classes
+    produce_probabilities: bool,
+    batch_size: usize,
+    feature_count: usize,
+    class_count: usize,
+) -> Box<dyn MemoryEstimation> {
+    let mut builder = MemoryEstimations::builder("NodeClassificationPredict");
 
-    if predict_probabilities {
-        memory += std::mem::size_of::<f64>() * node_count * number_of_classes; // probabilities
+    if produce_probabilities {
+        builder = builder.range_per_graph_dimension("predicted probabilities", move |dim, _| {
+            let node_count = dim.node_count();
+            let array_bytes = Estimate::size_of_object_array(node_count);
+            let per_row = Estimate::size_of_double_array(class_count);
+            MemoryRange::of(array_bytes + per_row.saturating_mul(node_count))
+        });
     }
 
-    memory
+    builder
+        .range_per_graph_dimension("predicted classes", move |dim, _| {
+            MemoryRange::of(Estimate::size_of_long_array(dim.node_count()))
+        })
+        .fixed_range(
+            "computation graph",
+            ClassifierFactory::runtime_overhead_memory_estimation(
+                TrainingMethod::LogisticRegression,
+                batch_size,
+                class_count,
+                feature_count,
+                false,
+            ),
+        )
+        .build()
+}
+
+/// Memory estimation with derived batch size (Java: memoryEstimationWithDerivedBatchSize)
+pub fn estimate_predict_memory_with_derived_batch_size(
+    method: TrainingMethod,
+    produce_probabilities: bool,
+    min_batch_size: usize,
+    feature_count: usize,
+    class_count: usize,
+    is_reduced: bool,
+) -> Box<dyn MemoryEstimation> {
+    let mut builder = MemoryEstimations::builder("NodeClassificationPredict");
+
+    if produce_probabilities {
+        builder = builder.range_per_graph_dimension("predicted probabilities", move |dim, _| {
+            let node_count = dim.node_count();
+            let array_bytes = Estimate::size_of_object_array(node_count);
+            let per_row = Estimate::size_of_double_array(class_count);
+            MemoryRange::of(array_bytes + per_row.saturating_mul(node_count))
+        });
+    }
+
+    builder
+        .range_per_graph_dimension("predicted classes", move |dim, _| {
+            MemoryRange::of(Estimate::size_of_long_array(dim.node_count()))
+        })
+        .range_per_graph_dimension("classifier runtime", move |dim, threads| {
+            let batch_size = compute_batch_size(dim.node_count() as u64, min_batch_size, threads);
+            ClassifierFactory::runtime_overhead_memory_estimation(
+                method,
+                batch_size,
+                class_count,
+                feature_count,
+                is_reduced,
+            )
+        })
+        .build()
+}
+
+/// Progress task (Java: NodeClassificationPredict.progressTask)
+pub fn progress_task(node_count: u64) -> LeafTask {
+    Tasks::leaf_with_volume(
+        "Node classification predict".to_string(),
+        node_count as usize,
+    )
 }

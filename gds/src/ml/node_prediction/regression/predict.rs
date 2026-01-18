@@ -3,38 +3,83 @@
 
 use crate::{
     collections::HugeDoubleArray,
+    concurrency::{parallel_util::parallel_for_each_node, Concurrency, TerminationFlag},
+    core::utils::progress::{LeafTask, ProgressTracker, TaskProgressTracker, Tasks},
     ml::models::{Features, Regressor},
 };
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 /// Performs regression prediction on nodes
 /// 1:1 with NodeRegressionPredict.java
 pub struct NodeRegressionPredict {
     regressor: Arc<dyn Regressor>,
     features: Arc<dyn Features>,
+    concurrency: Concurrency,
+    progress_tracker: TaskProgressTracker,
+    termination_flag: TerminationFlag,
 }
 
 impl NodeRegressionPredict {
     /// Creates a new regression predictor
-    pub fn new(regressor: Arc<dyn Regressor>, features: Arc<dyn Features>) -> Self {
+    pub fn new(
+        regressor: Arc<dyn Regressor>,
+        features: Arc<dyn Features>,
+        concurrency: Concurrency,
+        progress_tracker: TaskProgressTracker,
+        termination_flag: TerminationFlag,
+    ) -> Self {
         Self {
             regressor,
             features,
+            concurrency,
+            progress_tracker,
+            termination_flag,
         }
     }
 
     /// Computes predictions for all nodes
     /// 1:1 with compute() in Java
     pub fn compute(&self) -> HugeDoubleArray {
-        let mut predicted_targets = HugeDoubleArray::new(self.features.size());
+        let mut tracker = self.progress_tracker.clone();
+        tracker.begin_subtask_with_description("Predict");
 
-        // Sequential prediction (parallel version with infrastructure comes later)
-        for id in 0..self.features.size() {
-            let feature_vec = self.features.get(id);
-            let prediction = self.regressor.predict(feature_vec);
-            predicted_targets.set(id, prediction);
-        }
+        let predicted_targets = Arc::new(Mutex::new(HugeDoubleArray::new(self.features.size())));
+        let predicted_targets_for_task = Arc::clone(&predicted_targets);
+        let regressor = Arc::clone(&self.regressor);
+        let features = Arc::clone(&self.features);
+
+        parallel_for_each_node(
+            self.features.size(),
+            self.concurrency,
+            &self.termination_flag,
+            move |id| {
+                let feature_vec = features.get(id);
+                let prediction = regressor.predict(feature_vec);
+                if let Ok(mut targets) = predicted_targets_for_task.lock() {
+                    targets.set(id, prediction);
+                }
+            },
+        );
+
+        let predicted_targets = Arc::try_unwrap(predicted_targets)
+            .map(|mutex| {
+                mutex
+                    .into_inner()
+                    .expect("predicted_targets mutex poisoned")
+            })
+            .unwrap_or_else(|arc| {
+                arc.lock()
+                    .expect("predicted_targets mutex poisoned")
+                    .clone()
+            });
+
+        tracker.end_subtask_with_description("Predict");
 
         predicted_targets
     }
+}
+
+/// Progress task for regression prediction
+pub fn progress_task(node_count: u64) -> LeafTask {
+    Tasks::leaf_with_volume("Predict".to_string(), node_count as usize)
 }

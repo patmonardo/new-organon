@@ -39,7 +39,8 @@ impl UserInputNegativeSampler {
     }
 
     fn sample(rng: &mut StdRng, probability: f64) -> bool {
-        rng.gen_range(0.0..1.0) < probability
+        let clamped = probability.clamp(0.0, 1.0);
+        rng.gen_bool(clamped)
     }
 
     fn validate_negative_relationships(

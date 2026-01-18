@@ -156,6 +156,7 @@ impl<'a> Objective for MLPClassifierObjective<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ml::core::batch::ListBatch;
     use crate::ml::core::batch::RangeBatch;
 
     #[test]
@@ -292,5 +293,49 @@ mod tests {
         let result = ctx.forward(label_vector.as_ref());
 
         assert_eq!(result.data().len(), 2);
+    }
+
+    #[test]
+    fn test_batch_label_vector_respects_ids() {
+        let data = MLPClassifierData::create(2, 3, &[4], 777);
+        let classifier = MLPClassifier::new(data);
+
+        struct TestFeatures {
+            data: Vec<Vec<f64>>,
+        }
+        impl TestFeatures {
+            fn new() -> Self {
+                Self {
+                    data: vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]],
+                }
+            }
+        }
+        impl Features for TestFeatures {
+            fn get(&self, node_id: usize) -> &[f64] {
+                &self.data[node_id]
+            }
+
+            fn feature_dimension(&self) -> usize {
+                3
+            }
+
+            fn size(&self) -> usize {
+                self.data.len()
+            }
+        }
+
+        let features = TestFeatures::new();
+        let labels = HugeIntArray::from_vec(vec![10, 11, 12, 13]);
+
+        let objective =
+            MLPClassifierObjective::new(classifier, &features, &labels, 0.01, 0.0, vec![1.0, 1.0]);
+
+        let batch = ListBatch::new(vec![3, 1]);
+        let label_vector = objective.batch_label_vector(&batch);
+
+        let ctx = crate::ml::core::computation_context::ComputationContext::new();
+        let result = ctx.forward(label_vector.as_ref());
+
+        assert_eq!(result.data(), &[13.0, 11.0]);
     }
 }

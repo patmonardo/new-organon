@@ -3,6 +3,8 @@
 
 use crate::{
     collections::{HugeLongArray, HugeObjectArray},
+    core::utils::progress::{ProgressTracker, TaskProgressTracker},
+    ml::core::batch::{Batch, BatchTransformer},
     ml::models::{Classifier, Features},
 };
 use std::sync::{Arc, Mutex};
@@ -14,6 +16,7 @@ pub struct NodeClassificationPredictConsumer {
     classifier: Arc<dyn Classifier>,
     predicted_probabilities: Option<Arc<Mutex<HugeObjectArray<Vec<f64>>>>>,
     predicted_classes: Arc<Mutex<HugeLongArray>>,
+    progress_tracker: TaskProgressTracker,
 }
 
 impl NodeClassificationPredictConsumer {
@@ -23,33 +26,33 @@ impl NodeClassificationPredictConsumer {
         classifier: Arc<dyn Classifier>,
         predicted_probabilities: Option<Arc<Mutex<HugeObjectArray<Vec<f64>>>>>,
         predicted_classes: Arc<Mutex<HugeLongArray>>,
+        progress_tracker: TaskProgressTracker,
     ) -> Self {
         Self {
             features,
             classifier,
             predicted_probabilities,
             predicted_classes,
+            progress_tracker,
         }
     }
 
     /// Accepts a batch for processing
     /// 1:1 with accept(Batch) in Java
-    pub fn accept(&self, batch_start: usize, batch_end: usize, node_ids: &[u64]) {
+    pub fn accept<B: Batch>(&self, batch: &B, node_ids: &dyn BatchTransformer) {
         let number_of_classes = self.classifier.number_of_classes();
 
-        // Create batch indices for this batch
-        let batch_indices: Vec<usize> = (batch_start..batch_end)
-            .map(|i| node_ids[i] as usize)
+        let element_ids: Vec<u64> = batch.element_ids().collect();
+        let mapped_ids: Vec<usize> = element_ids
+            .iter()
+            .map(|id| node_ids.apply(*id) as usize)
             .collect();
 
-        // Get probability matrix for entire batch
         let probability_matrix = self
             .classifier
-            .predict_probabilities_batch(&batch_indices, &*self.features);
+            .predict_probabilities_batch(&mapped_ids, &*self.features);
 
-        // Process each element in the batch
-        for (row, &node_id) in batch_indices.iter().enumerate() {
-            // Find best class for current row
+        for (row, &element_id) in element_ids.iter().enumerate() {
             let mut best_class = 0;
             let mut max_prob = probability_matrix[(row, 0)];
 
@@ -61,12 +64,11 @@ impl NodeClassificationPredictConsumer {
                 }
             }
 
-            // Store results
             let mut predicted_classes = self
                 .predicted_classes
                 .lock()
                 .expect("predicted_classes mutex poisoned");
-            predicted_classes.set(node_id, best_class as i64);
+            predicted_classes.set(element_id as usize, best_class as i64);
 
             if let Some(ref probs) = self.predicted_probabilities {
                 let mut class_probs = vec![0.0; number_of_classes];
@@ -76,8 +78,11 @@ impl NodeClassificationPredictConsumer {
                 let mut probabilities = probs
                     .lock()
                     .expect("predicted_probabilities mutex poisoned");
-                probabilities.set(node_id, class_probs);
+                probabilities.set(element_id as usize, class_probs);
             }
         }
+
+        let mut tracker = self.progress_tracker.clone();
+        tracker.log_steps(batch.size());
     }
 }

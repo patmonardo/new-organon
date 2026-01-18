@@ -138,7 +138,7 @@ impl<P> StackRecord<P> {
 }
 
 /// Impurity criterion types for classification.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ClassifierImpurityCriterionType {
     Gini,
     Entropy,

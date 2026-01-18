@@ -16,11 +16,20 @@ use std::sync::Arc;
 pub struct Training {
     config: GradientDescentConfig,
     train_size: usize,
+    termination_flag: Arc<RwLock<bool>>,
 }
 
 impl Training {
-    pub fn new(config: GradientDescentConfig, train_size: usize) -> Self {
-        Self { config, train_size }
+    pub fn new(
+        config: GradientDescentConfig,
+        train_size: usize,
+        termination_flag: Arc<RwLock<bool>>,
+    ) -> Self {
+        Self {
+            config,
+            train_size,
+            termination_flag,
+        }
     }
 
     /// Train the objective using gradient descent
@@ -32,6 +41,11 @@ impl Training {
         mut queue_supplier: impl FnMut() -> Box<dyn BatchQueue>,
         concurrency: usize,
     ) {
+        if *self.termination_flag.read() {
+            log::info!("terminated before training start");
+            return;
+        }
+
         // Create updater with weight handles
         let weight_handles: Vec<Arc<RwLock<Box<dyn Tensor>>>> = objective
             .weights()
@@ -50,8 +64,15 @@ impl Training {
 
         log::info!("Initial loss {}", initial_loss);
 
+        let mut terminated_by_flag = false;
+
         // Main training loop (Java: while (!stopper.terminated()))
         while !stopper.terminated() {
+            if *self.termination_flag.read() {
+                terminated_by_flag = true;
+                break;
+            }
+
             // Update weights with previous gradients BEFORE computing new ones
             // Java: updater.update(prevWeightGradients);
             updater.update(&prev_weight_gradients);
@@ -59,6 +80,12 @@ impl Training {
             // Execute batches for this epoch
             // Java: consumers = executeBatches(concurrency, objective, queueSupplier.get());
             let consumers = self.execute_batches(concurrency, objective, queue_supplier());
+
+            if *self.termination_flag.read() {
+                terminated_by_flag = true;
+                break;
+            }
+
             prev_weight_gradients = Self::avg_weight_gradients(&consumers);
 
             // Compute average loss for this epoch
@@ -71,6 +98,9 @@ impl Training {
         }
 
         // Final logging (Java: progressTracker.logMessage(...))
+        let last_loss = losses.last().copied().unwrap_or(initial_loss);
+        let epochs_ran = losses.len();
+
         log::info!(
             "{} after {} out of {} epochs. Initial loss: {}, Last loss: {}.{}",
             if stopper.converged() {
@@ -78,12 +108,14 @@ impl Training {
             } else {
                 "terminated"
             },
-            losses.len(),
+            epochs_ran,
             self.config.max_epochs(),
             initial_loss,
-            losses.last().unwrap(),
+            last_loss,
             if stopper.converged() {
                 ""
+            } else if terminated_by_flag {
+                " Terminated early"
             } else {
                 " Did not converge"
             }
@@ -104,6 +136,9 @@ impl Training {
         // Process batches across consumers
         let mut consumer_idx = 0;
         while let Some(batch) = batches.pop() {
+            if *self.termination_flag.read() {
+                break;
+            }
             let vec_batch = VecBatch::from_any_batch(batch.as_ref());
             consumers[consumer_idx].accept(&vec_batch);
             consumer_idx = (consumer_idx + 1) % consumers.len();
