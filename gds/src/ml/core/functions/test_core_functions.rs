@@ -5,7 +5,7 @@ mod core_function_tests {
     use crate::ml::core::functions::{Constant, Weights};
     use crate::ml::core::ComputationContext;
     use crate::ml::core::Variable;
-    use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
+    use crate::ml::core::{Scalar, Vector, Matrix, Tensor};
 
     #[test]
     fn test_constant_scalar_creation_and_apply() {

@@ -11,7 +11,7 @@
 //! - Weights adds: data storage (trainable parameters)
 //! - Weights delegates Variable trait methods to inner AbstractVariable
 
-use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
+use crate::ml::core::{Scalar, Vector, Matrix, Tensor};
 use crate::ml::core::AbstractVariable;
 use crate::ml::core::ComputationContext;
 use crate::ml::core::NotAFunctionException;

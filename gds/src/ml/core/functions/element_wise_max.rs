@@ -3,12 +3,12 @@
 //! Translated from Java GDS ml-core functions ElementWiseMax.java.
 //! This is a literal 1:1 translation following repository translation policy.
 
-use crate::ml::core::ComputationContext;
-use crate::ml::core::dimensions::{COLUMNS_INDEX, ROWS_INDEX};
-use crate::ml::core::subgraph::BatchNeighbors;
-use crate::ml::core::{Matrix, Tensor};
 use crate::ml::core::AbstractVariable;
+use crate::ml::core::BatchNeighbors;
+use crate::ml::core::ComputationContext;
+use crate::ml::core::{Matrix, Tensor};
 use crate::ml::core::{Variable, VariableRef};
+use crate::ml::core::{COLUMNS_INDEX, ROWS_INDEX};
 use std::fmt;
 
 const INVALID_NEIGHBOR: i32 = -1;
