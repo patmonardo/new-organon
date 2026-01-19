@@ -100,26 +100,15 @@ pub mod prelude {
     // Re-export Arrow factory when available
     #[cfg(feature = "arrow")]
     pub use super::arrow::{ArrowNativeFactory, ArrowProjectionConfig, ArrowProjectionError};
-    // Re-export a CSR/Huge-style factory (delegates to Arrow for now)
-    #[cfg(feature = "arrow")]
-    pub use super::csr_huge::CsrHugeGraphStoreFactory;
 }
 
 // Arrow-native factory (PRIORITY - Phase 1-8)
 #[cfg(feature = "arrow")]
 pub mod arrow;
 
-// Minimal CSR/Huge-style factory module (Phase 1: delegates to ArrowNativeFactory)
-#[cfg(feature = "arrow")]
-pub mod csr_huge;
-
 // Relationships builder trait (minimal stub for ML negative sampling)
 pub mod relationships_builder;
 pub use relationships_builder::RelationshipsBuilder;
-
-// Compute suite projection (GPU/CPU) - resource projection seam
-pub mod compute_suite;
-pub use compute_suite::*;
 
 // Future: Polars-native factory
 // #[cfg(feature = "polars")]

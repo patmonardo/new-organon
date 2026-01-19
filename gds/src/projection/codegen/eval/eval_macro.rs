@@ -80,7 +80,7 @@ macro_rules! eval_value_type_table {
                 /// Returns true if newly registered, false if already present.
                 /// Call this during store initialization or macro-generated setup.
                 pub fn register() -> bool {
-                    form_processor::register_property_descriptor((*DESCRIPTOR).clone())
+                        form_processor::register_property_descriptor((*DESCRIPTOR).clone())
                 }
 
                 /// Functor for this property type (Gross ↔ Subtle conversions)

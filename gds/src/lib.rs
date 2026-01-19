@@ -19,7 +19,6 @@ pub mod pregel;
 pub mod prints;
 pub mod procedures;
 pub mod projection;
-pub mod substrate;
 pub mod types;
 pub mod values;
 

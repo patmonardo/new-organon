@@ -238,7 +238,7 @@ pub trait TrainingPipeline: Pipeline {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::projection::eval::FeatureStep;
+    use crate::projection::eval::pipeline::FeatureStep;
 
     #[test]
     fn test_training_method_display() {
