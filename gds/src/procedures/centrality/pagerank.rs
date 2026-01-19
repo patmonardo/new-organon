@@ -30,6 +30,7 @@
 use crate::algo::pagerank::{
     computation::PageRankComputationRuntime, storage::PageRankStorageRuntime,
 };
+use crate::collections::backends::vec::VecDouble;
 use crate::config::base_types::AlgoBaseConfig;
 use crate::config::PageRankConfig;
 use crate::mem::MemoryRange;
@@ -37,6 +38,10 @@ use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResu
 use crate::procedures::traits::{CentralityScore, Result};
 use crate::projection::orientation::Orientation;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+use crate::types::properties::node::NodePropertyValues;
+use crate::types::schema::NodeLabel;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -71,6 +76,13 @@ pub struct PageRankStats {
     pub converged: bool,
     /// Execution time in milliseconds
     pub execution_time_ms: u64,
+}
+
+/// Result for PageRank mutate mode
+#[derive(Debug, Clone)]
+pub struct PageRankMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 // ============================================================================
@@ -224,7 +236,7 @@ impl PageRankFacade {
         }
     }
 
-    fn compute_scores(self) -> Result<(Vec<f64>, u32, bool, std::time::Duration)> {
+    fn compute_scores(&self) -> Result<(Vec<f64>, u32, bool, std::time::Duration)> {
         self.validate()?;
         let start = Instant::now();
 
@@ -384,25 +396,38 @@ impl PageRankFacade {
     /// # use gds::procedures::centrality::PageRankFacade;
     /// let facade = PageRankFacade::new().damping_factor(0.85);
     /// let result = facade.mutate("pagerank")?;
-    /// println!("Updated {} nodes", result.nodes_updated);
+    /// println!("Updated {} nodes", result.summary.nodes_updated);
     /// ```
-    pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
+    pub fn mutate(self, property_name: &str) -> Result<PageRankMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
         let start_time = Instant::now();
         let (scores, _iterations_ran, _converged, _elapsed) = self.compute_scores()?;
 
-        // For now, use placeholder mutation - just count the nodes that would be updated
-        // TODO: Implement actual graph mutation using the mutation machinery
         let nodes_updated = scores.len() as u64;
+        let node_count = scores.len();
+        let backend = VecDouble::from(scores);
+        let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+        let mut new_store = self.graph_store.as_ref().clone();
+        let labels: HashSet<NodeLabel> = new_store.node_labels();
+        new_store
+            .add_node_property(labels, property_name.to_string(), values)
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "PageRank mutate failed to add property: {e}"
+                ))
+            })?;
 
         let execution_time = start_time.elapsed();
-        Ok(MutationResult::new(
-            nodes_updated,
-            property_name.to_string(),
-            execution_time,
-        ))
+        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+
+        Ok(PageRankMutateResult {
+            summary,
+            updated_store: Arc::new(new_store),
+        })
     }
 
     /// Write mode: Compute and write results to external storage
@@ -490,6 +515,7 @@ impl PageRankFacade {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::properties::PropertyValues;
     use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 
     fn store() -> Arc<DefaultGraphStore> {
@@ -585,7 +611,12 @@ mod tests {
         let result = facade.mutate("pagerank");
         assert!(result.is_ok()); // Should succeed with valid property
         let mutation_result = result.unwrap();
-        assert_eq!(mutation_result.property_name, "pagerank");
+        assert_eq!(mutation_result.summary.property_name, "pagerank");
+        let values = mutation_result
+            .updated_store
+            .node_property_values("pagerank")
+            .unwrap();
+        assert_eq!(values.element_count(), 8);
     }
 
     #[test]

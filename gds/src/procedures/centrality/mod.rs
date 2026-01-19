@@ -19,14 +19,12 @@ pub mod hits;
 pub mod pagerank;
 
 // Re-export main facades
-pub use articulation_points::{
-    ArticulationPointRow, ArticulationPointsFacade, ArticulationPointsStats,
-};
-pub use betweenness::BetweennessCentralityFacade;
-pub use bridges::{BridgeRow, BridgesFacade, BridgesStats};
-pub use celf::{CELFFacade, CELFRow, CELFStats};
-pub use closeness::ClosenessCentralityFacade;
-pub use degree_centrality::DegreeCentralityFacade;
-pub use harmonic::HarmonicCentralityFacade;
-pub use hits::{HitsCentralityFacade, HitsStats};
-pub use pagerank::PageRankFacade;
+pub use articulation_points::*;
+pub use betweenness::*;
+pub use bridges::*;
+pub use celf::*;
+pub use closeness::*;
+pub use degree_centrality::*;
+pub use harmonic::*;
+pub use hits::*;
+pub use pagerank::*;

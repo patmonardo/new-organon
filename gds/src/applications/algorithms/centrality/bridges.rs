@@ -165,11 +165,19 @@ pub fn handle_bridges(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
             let facade = BridgesFacade::new(Arc::clone(graph_resources.store()))
                 .concurrency(concurrency_value);
             match facade.mutate(property_name) {
-                Ok(result) => json!({
-                    "ok": true,
-                    "op": op,
-                    "data": result
-                }),
+                Ok(result) => {
+                    catalog.set(graph_name, result.updated_store);
+
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "data": {
+                            "edges_updated": result.summary.nodes_updated,
+                            "property_name": result.summary.property_name,
+                            "execution_time_ms": result.summary.execution_time_ms
+                        }
+                    })
+                }
                 Err(e) => err(
                     op,
                     "EXECUTION_ERROR",

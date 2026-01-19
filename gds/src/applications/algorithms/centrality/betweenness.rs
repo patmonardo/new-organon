@@ -215,11 +215,20 @@ pub fn handle_betweenness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
                 .sampling_size(sampling_size)
                 .random_seed(random_seed);
             match facade.mutate(property_name) {
-                Ok(result) => json!({
-                    "ok": true,
-                    "op": op,
-                    "data": result
-                }),
+                Ok(result) => {
+                    // Replace in catalog with updated store from facade
+                    catalog.set(graph_name, result.updated_store);
+
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "data": {
+                            "nodes_updated": result.summary.nodes_updated,
+                            "property_name": result.summary.property_name,
+                            "execution_time_ms": result.summary.execution_time_ms
+                        }
+                    })
+                }
                 Err(e) => err(
                     op,
                     "EXECUTION_ERROR",

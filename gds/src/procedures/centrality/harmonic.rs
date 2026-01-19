@@ -11,14 +11,18 @@
 //! - Normalizes by `(nodeCount - 1)`
 
 use crate::algo::harmonic::{HarmonicComputationRuntime, HarmonicStorageRuntime};
+use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
 use crate::projection::orientation::Orientation;
+use crate::projection::NodeLabel;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
@@ -34,6 +38,13 @@ pub struct HarmonicCentralityStats {
     pub p99: f64,
     pub isolated_nodes: u64,
     pub execution_time_ms: u64,
+}
+
+/// Mutation result for harmonic centrality, including the updated graph store.
+#[derive(Debug, Clone)]
+pub struct HarmonicCentralityMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 /// Harmonic centrality facade/builder bound to a live graph store.
@@ -221,19 +232,39 @@ impl HarmonicCentralityFacade {
         })
     }
 
-    /// Mutate mode is not implemented yet for harmonic.
-    pub fn mutate(
-        self,
-        property_name: &str,
-    ) -> Result<crate::procedures::builder_base::MutationResult> {
+    /// Mutate mode: compute scores, write them to a new graph store, and return it.
+    pub fn mutate(self, property_name: &str) -> Result<HarmonicCentralityMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
+        let start_time = Instant::now();
+        let (scores, _elapsed) = self.compute_scores()?;
 
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "HarmonicCentrality mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let nodes_updated = scores.len() as u64;
+
+        // Build property values
+        let node_count = scores.len();
+        let backend = VecDouble::from(scores);
+        let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
+        let values: Arc<dyn crate::types::properties::node::NodePropertyValues> = Arc::new(values);
+
+        // Clone store, add property, and return updated store
+        let mut new_store = self.graph_store.as_ref().clone();
+        let labels: HashSet<NodeLabel> = new_store.node_labels();
+        new_store
+            .add_node_property(labels, property_name.to_string(), values)
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "Harmonic mutate failed to add property: {e}"
+                ))
+            })?;
+
+        let execution_time = start_time.elapsed();
+        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+
+        Ok(HarmonicCentralityMutateResult {
+            summary,
+            updated_store: Arc::new(new_store),
+        })
     }
 
     /// Write mode is not implemented yet for harmonic.
@@ -313,6 +344,10 @@ mod tests {
     fn test_mutate_validates_property_name() {
         let facade = HarmonicCentralityFacade::new(store());
         assert!(facade.clone().mutate("").is_err());
-        assert!(facade.mutate("harmonic").is_err());
+        let result = facade.mutate("harmonic");
+        assert!(result.is_ok());
+        let mutation_result = result.unwrap();
+        assert_eq!(mutation_result.summary.property_name, "harmonic");
+        assert!(mutation_result.updated_store.has_node_property("harmonic"));
     }
 }

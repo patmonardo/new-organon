@@ -182,12 +182,26 @@ pub fn handle_closeness(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Valu
                 .direction(&direction)
                 .wasserman_faust(wasserman_faust)
                 .concurrency(concurrency_value);
+            // Compute scores and mutate the store via facade.mutate(), then replace
+            // the graph store in the catalog with the updated store containing
+            // the new property column.
             match facade.mutate(property_name) {
-                Ok(result) => json!({
-                    "ok": true,
-                    "op": op,
-                    "data": result
-                }),
+                Ok(result) => {
+                    // Replace in catalog
+                    catalog.set(graph_name, result.updated_store);
+
+                    let mutation_result = serde_json::json!({
+                        "nodes_updated": result.summary.nodes_updated,
+                        "property_name": result.summary.property_name,
+                        "execution_time_ms": result.summary.execution_time_ms
+                    });
+
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "data": mutation_result
+                    })
+                }
                 Err(e) => err(
                     op,
                     "EXECUTION_ERROR",

@@ -7,9 +7,12 @@ use crate::algo::bridges::storage::BridgesStorageRuntime;
 use crate::core::utils::progress::ProgressTracker;
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::types::properties::relationship::impls::default_relationship_property_values::DefaultRelationshipPropertyValues;
+use crate::types::properties::relationship::RelationshipPropertyValues;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -25,6 +28,13 @@ pub struct BridgeRow {
 pub struct BridgesStats {
     pub bridge_count: usize,
     pub execution_time_ms: u64,
+}
+
+/// Result for Bridges mutate mode
+#[derive(Debug, Clone)]
+pub struct BridgesMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 /// Bridges facade bound to a live graph store
@@ -175,20 +185,79 @@ impl BridgesFacade {
     /// # use gds::Graph;
     /// # let graph = Graph::default();
     /// let result = graph.bridges().mutate("is_bridge")?;
-    /// println!("Computed and stored for {} edges", result.edges_updated);
+    /// println!("Computed and stored for {} edges", result.summary.nodes_updated);
     /// ```
-    pub fn mutate(
-        self,
-        property_name: &str,
-    ) -> Result<crate::procedures::builder_base::MutationResult> {
+    pub fn mutate(self, property_name: &str) -> Result<BridgesMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "Bridges mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let (bridges, elapsed) = self.compute_bridges()?;
+        let bridge_set: HashSet<(u64, u64)> = bridges
+            .into_iter()
+            .map(|bridge| (bridge.from, bridge.to))
+            .collect();
+
+        let mut new_store = (*self.graph_store).clone();
+        let mut edges_updated = 0u64;
+
+        for rel_type in self.graph_store.relationship_types() {
+            let mut rel_types = HashSet::new();
+            rel_types.insert(rel_type.clone());
+
+            let graph = self
+                .graph_store
+                .get_graph_with_types(&rel_types)
+                .map_err(|e| {
+                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                        "Bridges mutate failed to read relationships: {e}"
+                    ))
+                })?;
+
+            let fallback = graph.default_property_value();
+            let mut values: Vec<f64> = Vec::with_capacity(graph.relationship_count());
+
+            for node_id in 0..graph.node_count() {
+                let source = node_id as i64;
+                for cursor in graph.stream_relationships(source, fallback) {
+                    let target = cursor.target_id();
+                    if target < 0 {
+                        continue;
+                    }
+                    let (a, b) = if source <= target {
+                        (source as u64, target as u64)
+                    } else {
+                        (target as u64, source as u64)
+                    };
+                    let is_bridge = bridge_set.contains(&(a, b));
+                    values.push(if is_bridge { 1.0 } else { 0.0 });
+                }
+            }
+
+            edges_updated += values.len() as u64;
+            if values.is_empty() {
+                continue;
+            }
+
+            let element_count = values.len();
+            let pv: Arc<dyn RelationshipPropertyValues> = Arc::new(
+                DefaultRelationshipPropertyValues::with_values(values, 0.0, element_count),
+            );
+
+            new_store
+                .add_relationship_property(rel_type, property_name, pv)
+                .map_err(|e| {
+                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                        "Bridges mutate failed to add property: {e}"
+                    ))
+                })?;
+        }
+
+        let summary = MutationResult::new(edges_updated, property_name.to_string(), elapsed);
+
+        Ok(BridgesMutateResult {
+            summary,
+            updated_store: Arc::new(new_store),
+        })
     }
 
     /// Write mode is not implemented yet for Bridges.
@@ -301,6 +370,7 @@ mod tests {
     use crate::types::graph_store::{
         Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
     };
+    use crate::types::properties::PropertyValues;
     use crate::types::schema::{Direction, MutableGraphSchema};
     use std::collections::HashMap;
 
@@ -394,5 +464,23 @@ mod tests {
         assert_eq!(rows.len(), 1);
         let bridge = &rows[0];
         assert!((bridge.from == 2 && bridge.to == 3) || (bridge.from == 3 && bridge.to == 2));
+    }
+
+    #[test]
+    fn mutate_adds_bridge_property() {
+        let store = store_from_undirected_edges(4, &[(0, 1), (1, 2), (2, 3)]);
+        let graph = Graph::new(Arc::new(store));
+
+        let result = graph.bridges().mutate("is_bridge").unwrap();
+        let rel_type = RelationshipType::of("REL");
+        let values = result
+            .updated_store
+            .relationship_property_values(&rel_type, "is_bridge")
+            .unwrap();
+
+        assert_eq!(values.element_count(), 6);
+        for idx in 0..values.element_count() {
+            assert_eq!(values.double_value(idx as u64).unwrap(), 1.0);
+        }
     }
 }

@@ -10,15 +10,19 @@ use crate::algo::articulation_points::computation::{
     ArticulationPointsComputationRuntime, STACK_EVENT_SIZE_BYTES,
 };
 use crate::algo::articulation_points::storage::ArticulationPointsStorageRuntime;
+use crate::collections::backends::vec::VecDouble;
 use crate::core::utils::progress::ProgressTracker;
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+use crate::types::properties::node::NodePropertyValues;
+use crate::types::schema::NodeLabel;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
@@ -34,6 +38,13 @@ pub struct ArticulationPointRow {
 pub struct ArticulationPointsStats {
     pub articulation_point_count: u64,
     pub execution_time_ms: u64,
+}
+
+/// Result for articulation points mutate mode
+#[derive(Debug, Clone)]
+pub struct ArticulationPointsMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 /// Articulation points facade bound to a live graph store.
@@ -282,20 +293,44 @@ impl ArticulationPointsFacade {
     /// # use gds::Graph;
     /// # let graph = Graph::default();
     /// let result = graph.articulation_points().mutate("is_articulation_point")?;
-    /// println!("Computed and stored for {} nodes", result.nodes_updated);
+    /// println!("Computed and stored for {} nodes", result.summary.nodes_updated);
     /// ```
-    pub fn mutate(
-        self,
-        property_name: &str,
-    ) -> Result<crate::procedures::builder_base::MutationResult> {
+    pub fn mutate(self, property_name: &str) -> Result<ArticulationPointsMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "Articulation Points mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let start_time = Instant::now();
+        let (bitset, _elapsed) = self.compute_bitset()?;
+
+        let node_count = self.graph_store.node_count();
+        let nodes_updated = node_count as u64;
+        let mut scores: Vec<f64> = Vec::with_capacity(node_count);
+        for node_id in 0..node_count {
+            let is_articulation = bitset.get(node_id);
+            scores.push(if is_articulation { 1.0 } else { 0.0 });
+        }
+
+        let backend = VecDouble::from(scores);
+        let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+        let mut new_store = self.graph_store.as_ref().clone();
+        let labels: HashSet<NodeLabel> = new_store.node_labels();
+        new_store
+            .add_node_property(labels, property_name.to_string(), values)
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "Articulation Points mutate failed to add property: {e}"
+                ))
+            })?;
+
+        let execution_time = start_time.elapsed();
+        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+
+        Ok(ArticulationPointsMutateResult {
+            summary,
+            updated_store: Arc::new(new_store),
+        })
     }
 
     /// Write mode is not implemented yet for Articulation Points.
@@ -330,6 +365,7 @@ mod tests {
     use crate::types::graph_store::{
         Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
     };
+    use crate::types::properties::PropertyValues;
     use crate::types::schema::{Direction, MutableGraphSchema};
     use std::collections::HashMap;
 
@@ -402,5 +438,28 @@ mod tests {
 
         let rows: Vec<_> = graph.articulation_points().stream().unwrap().collect();
         assert!(rows.is_empty());
+    }
+
+    #[test]
+    fn mutate_adds_articulation_point_property() {
+        let store = store_from_undirected_edges(5, &[(0, 1), (1, 2), (2, 3), (3, 4)]);
+        let graph = Graph::new(Arc::new(store));
+
+        let result = graph
+            .articulation_points()
+            .mutate("is_articulation_point")
+            .unwrap();
+
+        let values = result
+            .updated_store
+            .node_property_values("is_articulation_point")
+            .unwrap();
+
+        assert_eq!(values.element_count(), 5);
+        assert_eq!(values.double_value(0).unwrap(), 0.0);
+        assert_eq!(values.double_value(1).unwrap(), 1.0);
+        assert_eq!(values.double_value(2).unwrap(), 1.0);
+        assert_eq!(values.double_value(3).unwrap(), 1.0);
+        assert_eq!(values.double_value(4).unwrap(), 0.0);
     }
 }

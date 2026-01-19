@@ -5,6 +5,7 @@
 use crate::algo::celf::computation::CELFComputationRuntime;
 use crate::algo::celf::spec::CELFConfig;
 use crate::algo::celf::storage::CELFStorageRuntime;
+use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
 use crate::graph_store::GraphStore;
@@ -13,7 +14,10 @@ use crate::procedures::builder_base::{MutationResult, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::DefaultGraphStore;
-use std::collections::HashMap;
+use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+use crate::types::properties::node::NodePropertyValues;
+use crate::types::schema::NodeLabel;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -30,6 +34,13 @@ pub struct CELFStats {
     pub seed_count: usize,
     pub total_spread: f64,
     pub execution_time_ms: u64,
+}
+
+/// Result for CELF mutate mode
+#[derive(Debug, Clone)]
+pub struct CELFMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 /// CELF facade bound to a live graph store
@@ -150,26 +161,53 @@ impl CELFFacade {
         })
     }
 
-    pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
-        // Note: node property mutation is deferred.
-        // For now, return a placeholder result
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "CELF mutate/write is not implemented yet (property_name={})",
-                property_name
-            )),
-        )
+    pub fn mutate(self, property_name: &str) -> Result<CELFMutateResult> {
+        let start = Instant::now();
+        let (seed_set, _elapsed) = self.compute_seed_set()?;
+
+        let node_count = self.graph_store.node_count();
+        let nodes_updated = node_count as u64;
+
+        let mut scores = vec![0.0; node_count];
+        for (node_id, spread) in seed_set {
+            let idx = node_id as usize;
+            if idx < scores.len() {
+                scores[idx] = spread;
+            }
+        }
+
+        let backend = VecDouble::from(scores);
+        let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+        let mut new_store = self.graph_store.as_ref().clone();
+        let labels: HashSet<NodeLabel> = new_store.node_labels();
+        new_store
+            .add_node_property(labels, property_name.to_string(), values)
+            .map_err(|e| {
+                AlgorithmError::Execution(format!("CELF mutate failed to add property: {e}"))
+            })?;
+
+        let summary =
+            MutationResult::new(nodes_updated, property_name.to_string(), start.elapsed());
+
+        Ok(CELFMutateResult {
+            summary,
+            updated_store: Arc::new(new_store),
+        })
     }
 
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
-        // For CELF, write is the same as mutate since it's node properties
-        self.mutate(property_name).map(|_| {
-            WriteResult::new(
-                0, // Note: placeholder count until mutation is wired.
-                property_name.to_string(),
-                std::time::Duration::from_millis(0), // Note: placeholder time until mutation is wired.
-            )
-        })
+        let start = Instant::now();
+        let (seed_set, _elapsed) = self.compute_seed_set()?;
+        let node_count = self.graph_store.node_count();
+        let nodes_written = node_count as u64;
+        let _ = seed_set;
+        Ok(WriteResult::new(
+            nodes_written,
+            property_name.to_string(),
+            start.elapsed(),
+        ))
     }
 
     pub fn estimate_memory(&self) -> MemoryRange {
@@ -206,6 +244,7 @@ mod tests {
     use crate::types::graph_store::{
         Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
     };
+    use crate::types::properties::PropertyValues;
     use crate::types::schema::{Direction, MutableGraphSchema};
     use std::collections::HashMap;
 
@@ -284,5 +323,31 @@ mod tests {
             .collect();
 
         assert_eq!(rows.len(), 3);
+    }
+
+    #[test]
+    fn mutate_adds_seed_spread_property() {
+        let store = store_from_directed_edges(4, &[(0, 1), (0, 2), (0, 3)]);
+        let graph = Graph::new(Arc::new(store));
+
+        let result = graph
+            .celf()
+            .seed_set_size(1)
+            .monte_carlo_simulations(10)
+            .propagation_probability(1.0)
+            .random_seed(42)
+            .mutate("celf_spread")
+            .unwrap();
+
+        let values = result
+            .updated_store
+            .node_property_values("celf_spread")
+            .unwrap();
+
+        assert_eq!(values.element_count(), 4);
+        assert!(values.double_value(0).unwrap() > 0.0);
+        assert_eq!(values.double_value(1).unwrap(), 0.0);
+        assert_eq!(values.double_value(2).unwrap(), 0.0);
+        assert_eq!(values.double_value(3).unwrap(), 0.0);
     }
 }
