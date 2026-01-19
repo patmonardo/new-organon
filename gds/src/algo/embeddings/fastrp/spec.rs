@@ -2,11 +2,16 @@
 //!
 //! Implements the `AlgorithmSpec` contract for the executor runtime.
 
+use crate::collections::backends::vec::VecFloatArray;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::{AlgorithmError, LogLevel};
 use crate::projection::orientation::Orientation;
+use crate::projection::NodeLabel;
 use crate::projection::RelationshipType;
+use crate::types::properties::node::{DefaultFloatArrayNodePropertyValues, NodePropertyValues};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::sync::Arc;
 
 use super::computation::FastRPComputationRuntime;
 use super::storage::FastRPStorageRuntime;
@@ -121,7 +126,7 @@ define_algorithm_spec! {
     name: "fastrp",
     output_type: FastRPResult,
     projection_hint: Dense,
-    modes: [Stream, Stats],
+    modes: [Stream, Stats, MutateNodeProperty],
 
     execute: |_self, graph_store, config_input, context| {
         let config: FastRPConfig = serde_json::from_value(config_input.clone())
@@ -166,6 +171,45 @@ define_algorithm_spec! {
         )?;
 
         Ok(result)
+    },
+
+    mutate_node_property: |_self, graph_store, config, result| {
+        let mutate_property = config
+            .get("mutateProperty")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| AlgorithmError::Execution("Missing mutateProperty".to_string()))?;
+
+        let labels: HashSet<NodeLabel> = config
+            .get("nodeLabels")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(|s| NodeLabel::of(s.to_string())))
+                    .collect()
+            })
+            .unwrap_or_else(|| graph_store.node_labels());
+
+        let node_count = graph_store.node_count();
+        if result.embeddings.len() != node_count {
+            return Err(AlgorithmError::Execution(format!(
+                "fastrp returned {} embeddings for {} nodes",
+                result.embeddings.len(),
+                node_count
+            )));
+        }
+
+        let dense: Vec<Option<Vec<f32>>> = result.embeddings.clone().into_iter().map(Some).collect();
+        let backend = VecFloatArray::from(dense);
+        let values = DefaultFloatArrayNodePropertyValues::<VecFloatArray>::from_collection(
+            backend, node_count,
+        );
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+        graph_store
+            .add_node_property(labels, mutate_property.to_string(), values)
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
+
+        Ok(node_count)
     }
 }
 

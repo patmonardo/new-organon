@@ -4,10 +4,14 @@
 
 use crate::algo::degree_centrality::computation::DegreeCentralityComputationRuntime;
 use crate::algo::degree_centrality::storage::{DegreeCentralityStorageRuntime, Orientation};
+use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
+use crate::projection::NodeLabel;
+use crate::types::properties::node::{DefaultDoubleNodePropertyValues, NodePropertyValues};
+use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -86,7 +90,7 @@ define_algorithm_spec! {
     name: "degree_centrality",
     output_type: DegreeCentralityResult,
     projection_hint: Dense,
-    modes: [Stream, Stats],
+    modes: [Stream, Stats, MutateNodeProperty],
 
     execute: |_self, graph_store, config, _context| {
         let parsed: DegreeCentralityConfig = serde_json::from_value(config.clone())
@@ -137,5 +141,41 @@ define_algorithm_spec! {
             node_count,
             execution_time: start.elapsed(),
         })
+    },
+
+    mutate_node_property: |_self, graph_store, config, result| {
+        let mutate_property = config
+            .get("mutateProperty")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| AlgorithmError::Execution("Missing mutateProperty".to_string()))?;
+
+        let labels: HashSet<NodeLabel> = config
+            .get("nodeLabels")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(|s| NodeLabel::of(s.to_string())))
+                    .collect()
+            })
+            .unwrap_or_else(|| graph_store.node_labels());
+
+        let node_count = graph_store.node_count();
+        if result.centralities.len() != node_count {
+            return Err(AlgorithmError::Execution(format!(
+                "degree_centrality returned {} scores for {} nodes",
+                result.centralities.len(),
+                node_count
+            )));
+        }
+
+        let backend = VecDouble::from(result.centralities.clone());
+        let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+        graph_store
+            .add_node_property(labels, mutate_property.to_string(), values)
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
+
+        Ok(node_count)
     }
 }

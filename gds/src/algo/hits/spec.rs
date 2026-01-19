@@ -2,9 +2,14 @@
 
 use crate::algo::hits::computation::HitsComputationRuntime;
 use crate::algo::hits::storage::HitsStorageRuntime;
+use crate::collections::backends::vec::VecDouble;
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
+use crate::projection::NodeLabel;
+use crate::types::properties::node::{DefaultDoubleNodePropertyValues, NodePropertyValues};
+use std::collections::HashSet;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -78,7 +83,7 @@ define_algorithm_spec! {
     name: "hits",
     output_type: HitsResult,
     projection_hint: Dense,
-    modes: [Stream, Stats],
+    modes: [Stream, Stats, MutateNodeProperty],
 
     execute: |_self, graph_store, config, _context| {
         let parsed: HitsConfig = serde_json::from_value(config.clone())
@@ -110,5 +115,41 @@ define_algorithm_spec! {
             converged: run.did_converge,
             execution_time: start.elapsed(),
         })
+    },
+
+    mutate_node_property: |_self, graph_store, config, result| {
+        let mutate_property = config
+            .get("mutateProperty")
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| AlgorithmError::Execution("Missing mutateProperty".to_string()))?;
+
+        let labels: HashSet<NodeLabel> = config
+            .get("nodeLabels")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(|s| NodeLabel::of(s.to_string())))
+                    .collect()
+            })
+            .unwrap_or_else(|| graph_store.node_labels());
+
+        let node_count = graph_store.node_count();
+        if result.hub_scores.len() != node_count {
+            return Err(AlgorithmError::Execution(format!(
+                "hits returned {} hub scores for {} nodes",
+                result.hub_scores.len(),
+                node_count
+            )));
+        }
+
+        let backend = VecDouble::from(result.hub_scores.clone());
+        let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+        graph_store
+            .add_node_property(labels, mutate_property.to_string(), values)
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
+
+        Ok(node_count)
     }
 }

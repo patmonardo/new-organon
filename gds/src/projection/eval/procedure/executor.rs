@@ -26,6 +26,7 @@
 
 use crate::types::prelude::GraphStore;
 use serde_json::Value as JsonValue;
+use std::sync::Arc;
 use std::time::Instant;
 
 // Re-export from sibling modules and codegen
@@ -137,7 +138,7 @@ impl ProcedureExecutor {
 
         // Step 5: Load graph from catalog
         let load_start = Instant::now();
-        let graph_store = self.context.load_graph(&graph_name)?;
+        let mut graph_store = self.context.load_graph(&graph_name)?;
         let load_time = load_start.elapsed();
 
         self.context.log(
@@ -203,7 +204,20 @@ impl ProcedureExecutor {
             compute_time.as_millis() as u64,
         );
 
-        // Step 8: Consume result (transform, validate, return)
+        // Step 8: Mutate in-memory graph if requested
+        if self.mode == ExecutionMode::MutateNodeProperty {
+            let graph_store_mut = Arc::get_mut(&mut graph_store).ok_or_else(|| {
+                ExecutorError::Orchestration(
+                    "Graph store is locked and cannot be mutated".to_string(),
+                )
+            })?;
+
+            algorithm
+                .mutate_node_property(graph_store_mut, &config, computation_result.result())
+                .map_err(ExecutorError::Algorithm)?;
+        }
+
+        // Step 9: Consume result (transform, validate, return)
         let consume_start = Instant::now();
         let output = algorithm.consume_result(computation_result, &self.mode)?;
         let consume_time = consume_start.elapsed();

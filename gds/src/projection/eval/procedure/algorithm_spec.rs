@@ -43,7 +43,7 @@ use super::{ComputationResult, ExecutionContext, ExecutionMode, ValidationConfig
 ///
 /// impl AlgorithmSpec for PageRankAlgorithm {
 ///     type Output = Vec<(NodeId, f64)>;
-///     
+///
 ///     fn name(&self) -> &str { "pagerank" }
 ///     fn graph_name(&self) -> &str { &self.graph_name }
 ///     // ... implement other methods
@@ -131,6 +131,20 @@ pub trait AlgorithmSpec: Send + Sync {
         config: &JsonValue,
         context: &ExecutionContext,
     ) -> Result<ComputationResult<Self::Output>, AlgorithmError>;
+
+    /// Mutate in-memory node properties based on the algorithm result.
+    ///
+    /// Default implementation returns an error to signal unsupported mutate mode.
+    fn mutate_node_property<G: GraphStore>(
+        &self,
+        _graph_store: &mut G,
+        _config: &JsonValue,
+        _result: &Self::Output,
+    ) -> Result<usize, AlgorithmError> {
+        Err(AlgorithmError::Execution(
+            "MutateNodeProperty not supported for this algorithm".to_string(),
+        ))
+    }
 
     /// Consume result and produce output
     ///

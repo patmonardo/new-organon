@@ -17,9 +17,8 @@ use crate::projection::eval::pipeline::{
 };
 use std::collections::HashMap;
 
-use super::node_property_step::{
-    DEBUG_WRITE_CONSTANT_DOUBLE_MUTATE, FASTRP_MUTATE, MUTATE_PROPERTY_KEY, PAGERANK_MUTATE,
-};
+use super::node_property_step::MUTATE_PROPERTY_KEY;
+use super::procedure_registry::ProcedureRegistry;
 
 /// Reserved configuration keys that cannot be set in individual node property steps.
 ///
@@ -124,13 +123,10 @@ fn validate_node_property_step_config(
     algorithm_name: &str,
     procedure_config: &HashMap<String, serde_json::Value>,
 ) -> Result<(), NodePropertyStepFactoryError> {
-    match algorithm_name {
-        DEBUG_WRITE_CONSTANT_DOUBLE_MUTATE | PAGERANK_MUTATE | FASTRP_MUTATE => {}
-        _ => {
-            return Err(NodePropertyStepFactoryError::AlgorithmNotFound {
-                algorithm_name: algorithm_name.to_string(),
-            });
-        }
+    if ProcedureRegistry::resolve(algorithm_name).is_none() {
+        return Err(NodePropertyStepFactoryError::AlgorithmNotFound {
+            algorithm_name: algorithm_name.to_string(),
+        });
     }
 
     match procedure_config

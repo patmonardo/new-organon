@@ -19,6 +19,7 @@ pub mod feature_step;
 pub mod feature_step_util;
 pub mod node_property_step;
 pub mod node_property_step_context_config;
+pub mod node_property_step_execution;
 pub mod node_property_step_executor;
 pub mod node_property_step_factory;
 pub mod non_empty_set_validation;
@@ -30,6 +31,7 @@ pub mod pipeline_train_algorithm;
 pub mod pipeline_trainer;
 pub mod pipeline_trait;
 pub mod predict_pipeline_executor;
+pub mod procedure_registry;
 pub mod result_to_model_converter;
 pub mod training_pipeline;
 
@@ -65,5 +67,6 @@ pub use pipeline_train_algorithm::{PipelineTrainAlgorithm, PipelineTrainAlgorith
 pub use pipeline_trainer::PipelineTrainer;
 pub use pipeline_trait::{Pipeline, PipelineValidationError};
 pub use predict_pipeline_executor::{PredictPipelineExecutor, PredictPipelineExecutorError};
+pub use procedure_registry::{ProcedureKind, ProcedureRegistry};
 pub use result_to_model_converter::ResultToModelConverter;
 pub use training_pipeline::{TrainingMethod, TrainingPipeline, TrainingType, TunableTrainerConfig};

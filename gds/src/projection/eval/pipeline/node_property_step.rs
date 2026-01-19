@@ -8,21 +8,12 @@
 //! Node property steps execute algorithms via ProcedureExecutor and then
 //! apply the results as node properties on the in-memory graph.
 
-use crate::algo::embeddings::fastrp::{FastRPAlgorithmSpec, FastRPResult};
-use crate::algo::pagerank::{PageRankAlgorithmSpec, PageRankResult};
-use crate::collections::backends::vec::{VecDouble, VecFloatArray};
-use crate::prelude::GraphStore;
+use crate::projection::eval::pipeline::node_property_step_execution::execute_node_property_step;
 use crate::projection::eval::pipeline::{
     ExecutableNodePropertyStep, NodePropertyStepContextConfig,
 };
-use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor};
-use crate::projection::NodeLabel;
-use crate::types::properties::node::{
-    DefaultDoubleNodePropertyValues, DefaultFloatArrayNodePropertyValues, NodePropertyValues,
-};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::error::Error as StdError;
-use std::sync::Arc;
 
 /// Configuration key for the mutate property name.
 pub const MUTATE_PROPERTY_KEY: &str = "mutateProperty";
@@ -42,7 +33,14 @@ pub const PAGERANK_MUTATE: &str = "gds.pagerank.mutate";
 /// Note: Execution wiring is deferred; creating a step is still supported.
 pub const FASTRP_MUTATE: &str = "gds.fastrp.mutate";
 
-const PIPELINE_GRAPH_NAME: &str = "__pipeline_graph__";
+/// Degree centrality mutate procedure.
+pub const DEGREE_CENTRALITY_MUTATE: &str = "gds.degree_centrality.mutate";
+
+/// HITS centrality mutate procedure.
+pub const HITS_MUTATE: &str = "gds.hits.mutate";
+
+/// Harmonic centrality mutate procedure.
+pub const HARMONIC_MUTATE: &str = "gds.harmonic.mutate";
 
 /// Node property step that executes an algorithm to compute node properties.
 ///
@@ -119,25 +117,6 @@ impl NodePropertyStep {
     pub fn algorithm_name(&self) -> &str {
         &self.algorithm_name
     }
-
-    /// Get the mutate property name from configuration.
-    fn get_mutate_property(&self) -> Result<String, NodePropertyStepError> {
-        self.config
-            .get(MUTATE_PROPERTY_KEY)
-            .and_then(|v| v.as_str())
-            .map(String::from)
-            .ok_or_else(|| NodePropertyStepError::MissingMutateProperty {
-                algorithm: self.algorithm_name.clone(),
-            })
-    }
-}
-
-fn build_execution_context(
-    graph_store: &crate::types::graph_store::DefaultGraphStore,
-) -> ExecutionContext {
-    let mut context = ExecutionContext::empty();
-    context.add_graph(PIPELINE_GRAPH_NAME, Arc::new(graph_store.clone()));
-    context
 }
 
 impl ExecutableNodePropertyStep for NodePropertyStep {
@@ -179,137 +158,13 @@ impl ExecutableNodePropertyStep for NodePropertyStep {
             }) as Box<dyn StdError>
         })?;
 
-        match self.algorithm_name.as_str() {
-            DEBUG_WRITE_CONSTANT_DOUBLE_MUTATE => {
-                let mutate_property = self.get_mutate_property()?;
-                let value = exec_config
-                    .get("value")
-                    .and_then(|v| v.as_f64())
-                    .unwrap_or(1.0);
-
-                let node_count = graph_store.node_count();
-                let backend = VecDouble::from(vec![value; node_count]);
-                let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
-                let values: Arc<dyn NodePropertyValues> = Arc::new(values);
-
-                let labels: HashSet<NodeLabel> = node_labels
-                    .iter()
-                    .map(|label| NodeLabel::of(label.clone()))
-                    .collect();
-
-                graph_store
-                    .add_node_property(labels, mutate_property, values)
-                    .map_err(|e| {
-                        Box::new(NodePropertyStepError::ExecutionFailed {
-                            algorithm: self.algorithm_name.clone(),
-                            message: e.to_string(),
-                        }) as Box<dyn StdError>
-                    })?;
-
-                Ok(())
-            }
-            PAGERANK_MUTATE => {
-                let mutate_property = self.get_mutate_property()?;
-
-                let context = build_execution_context(graph_store);
-                let mut executor = ProcedureExecutor::new(context, ExecutionMode::Stream);
-                let mut spec = PageRankAlgorithmSpec::new(PIPELINE_GRAPH_NAME.to_string());
-
-                let result: PageRankResult =
-                    executor.compute(&mut spec, &config_value).map_err(|e| {
-                        Box::new(NodePropertyStepError::ExecutionFailed {
-                            algorithm: self.algorithm_name.clone(),
-                            message: e.to_string(),
-                        }) as Box<dyn StdError>
-                    })?;
-
-                let node_count = graph_store.node_count();
-                if result.scores.len() != node_count {
-                    return Err(Box::new(NodePropertyStepError::ExecutionFailed {
-                        algorithm: self.algorithm_name.clone(),
-                        message: format!(
-                            "pagerank returned {} scores for {} nodes",
-                            result.scores.len(),
-                            node_count
-                        ),
-                    }));
-                }
-
-                let backend = VecDouble::from(result.scores);
-                let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
-                let values: Arc<dyn NodePropertyValues> = Arc::new(values);
-
-                let labels: HashSet<NodeLabel> = node_labels
-                    .iter()
-                    .map(|label| NodeLabel::of(label.clone()))
-                    .collect();
-
-                graph_store
-                    .add_node_property(labels, mutate_property, values)
-                    .map_err(|e| {
-                        Box::new(NodePropertyStepError::ExecutionFailed {
-                            algorithm: self.algorithm_name.clone(),
-                            message: e.to_string(),
-                        }) as Box<dyn StdError>
-                    })?;
-
-                Ok(())
-            }
-            FASTRP_MUTATE => {
-                let mutate_property = self.get_mutate_property()?;
-
-                let context = build_execution_context(graph_store);
-                let mut executor = ProcedureExecutor::new(context, ExecutionMode::Stream);
-                let mut spec = FastRPAlgorithmSpec::new(PIPELINE_GRAPH_NAME.to_string());
-
-                let result: FastRPResult =
-                    executor.compute(&mut spec, &config_value).map_err(|e| {
-                        Box::new(NodePropertyStepError::ExecutionFailed {
-                            algorithm: self.algorithm_name.clone(),
-                            message: e.to_string(),
-                        }) as Box<dyn StdError>
-                    })?;
-
-                let node_count = graph_store.node_count();
-                if result.embeddings.len() != node_count {
-                    return Err(Box::new(NodePropertyStepError::ExecutionFailed {
-                        algorithm: self.algorithm_name.clone(),
-                        message: format!(
-                            "fastrp returned {} embeddings for {} nodes",
-                            result.embeddings.len(),
-                            node_count
-                        ),
-                    }));
-                }
-
-                let dense: Vec<Option<Vec<f32>>> =
-                    result.embeddings.into_iter().map(Some).collect();
-                let backend = VecFloatArray::from(dense);
-                let values = DefaultFloatArrayNodePropertyValues::<VecFloatArray>::from_collection(
-                    backend, node_count,
-                );
-                let values: Arc<dyn NodePropertyValues> = Arc::new(values);
-
-                let labels: HashSet<NodeLabel> = node_labels
-                    .iter()
-                    .map(|label| NodeLabel::of(label.clone()))
-                    .collect();
-
-                graph_store
-                    .add_node_property(labels, mutate_property, values)
-                    .map_err(|e| {
-                        Box::new(NodePropertyStepError::ExecutionFailed {
-                            algorithm: self.algorithm_name.clone(),
-                            message: e.to_string(),
-                        }) as Box<dyn StdError>
-                    })?;
-
-                Ok(())
-            }
-            _ => Err(Box::new(NodePropertyStepError::AlgorithmNotImplemented {
-                algorithm: self.algorithm_name.clone(),
-            })),
-        }
+        execute_node_property_step(
+            &self.algorithm_name,
+            graph_store,
+            &exec_config,
+            &config_value,
+            node_labels,
+        )
     }
 
     fn config(&self) -> &HashMap<String, serde_json::Value> {
@@ -459,6 +314,8 @@ impl StdError for NodePropertyStepError {}
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::projection::NodeLabel;
+    use crate::types::graph_store::GraphStore;
 
     #[test]
     fn test_node_property_step_creation() {
@@ -539,20 +396,6 @@ mod tests {
         let step2 = NodePropertyStep::new("algo".to_string(), config2);
 
         assert_eq!(step1, step2);
-    }
-
-    #[test]
-    fn test_missing_mutate_property_error() {
-        let config = HashMap::new();
-        let step = NodePropertyStep::new("gds.pagerank.mutate".to_string(), config);
-
-        let err = step.get_mutate_property().unwrap_err();
-        assert!(matches!(
-            err,
-            NodePropertyStepError::MissingMutateProperty { .. }
-        ));
-        let msg = err.to_string();
-        assert!(msg.contains("missing required 'mutateProperty'"));
     }
 
     #[test]

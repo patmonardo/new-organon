@@ -24,7 +24,7 @@ use crate::types::graph_store::GraphStore;
 pub struct NodePropertyStepExecutor {
     node_labels: Vec<String>,
     relationship_types: Vec<String>,
-    _available_relationship_types_for_node_properties: HashSet<String>,
+    available_relationship_types_for_node_properties: HashSet<String>,
     concurrency: usize,
 }
 
@@ -46,8 +46,7 @@ impl NodePropertyStepExecutor {
         Self {
             node_labels,
             relationship_types,
-            _available_relationship_types_for_node_properties:
-                available_relationship_types_for_node_properties,
+            available_relationship_types_for_node_properties,
             concurrency,
         }
     }
@@ -101,12 +100,15 @@ impl NodePropertyStepExecutor {
             .ok_or_else(|| NodePropertyStepExecutorError::GraphStoreLocked)?;
 
         for (i, step) in steps.iter().enumerate() {
-            // Execute the step with pipeline's node labels and relationship types
-            // The step will use its context config to determine actual feature inputs
+            // Resolve feature input labels/types using step context and pipeline defaults.
+            let feature_input_node_labels = self.feature_input_node_labels(step.as_ref());
+            let feature_input_relationship_types =
+                self.feature_input_relationship_types(step.as_ref());
+
             step.execute(
                 graph_store,
-                &self.node_labels,
-                &self.relationship_types,
+                &feature_input_node_labels,
+                &feature_input_relationship_types,
                 self.concurrency,
             )
             .map_err(|e| NodePropertyStepExecutorError::StepExecutionFailed {
@@ -176,6 +178,47 @@ impl NodePropertyStepExecutor {
             }
         }
         Ok(())
+    }
+
+    fn feature_input_node_labels(&self, step: &dyn ExecutableNodePropertyStep) -> Vec<String> {
+        if step.context_node_labels().is_empty() {
+            return self.node_labels.clone();
+        }
+
+        let mut labels = self.node_labels.clone();
+        for label in step.context_node_labels() {
+            if !labels.iter().any(|existing| existing == label) {
+                labels.push(label.clone());
+            }
+        }
+
+        labels
+    }
+
+    fn feature_input_relationship_types(
+        &self,
+        step: &dyn ExecutableNodePropertyStep,
+    ) -> Vec<String> {
+        let base_types: Vec<String> = if step.context_relationship_types().is_empty() {
+            self.relationship_types.clone()
+        } else {
+            step.context_relationship_types().to_vec()
+        };
+
+        if self
+            .available_relationship_types_for_node_properties
+            .is_empty()
+        {
+            return base_types;
+        }
+
+        base_types
+            .into_iter()
+            .filter(|rel_type| {
+                self.available_relationship_types_for_node_properties
+                    .contains(rel_type)
+            })
+            .collect()
     }
 }
 
@@ -264,6 +307,7 @@ mod tests {
     use crate::types::graph_store::DefaultGraphStore;
     use crate::types::random::RandomGraphConfig;
     use std::collections::HashMap;
+    use std::sync::Mutex;
 
     fn create_test_graph_store() -> Arc<DefaultGraphStore> {
         let config = RandomGraphConfig {
@@ -417,6 +461,76 @@ mod tests {
 
         // Cleanup is best-effort; it should never fail the pipeline for missing properties.
         assert!(result.is_ok(), "Cleanup should succeed");
+    }
+
+    #[test]
+    fn test_feature_input_resolution_uses_context_and_available_rel_types() {
+        #[derive(Clone)]
+        struct CaptureStep {
+            context_labels: Vec<String>,
+            context_rel_types: Vec<String>,
+            config: HashMap<String, serde_json::Value>,
+            captured: Arc<Mutex<Option<(Vec<String>, Vec<String>)>>>,
+        }
+
+        impl ExecutableNodePropertyStep for CaptureStep {
+            fn execute(
+                &self,
+                _graph_store: &mut DefaultGraphStore,
+                node_labels: &[String],
+                relationship_types: &[String],
+                _concurrency: usize,
+            ) -> Result<(), Box<dyn StdError>> {
+                let mut guard = self.captured.lock().expect("capture lock");
+                *guard = Some((node_labels.to_vec(), relationship_types.to_vec()));
+                Ok(())
+            }
+
+            fn config(&self) -> &HashMap<String, serde_json::Value> {
+                &self.config
+            }
+
+            fn context_node_labels(&self) -> &[String] {
+                &self.context_labels
+            }
+
+            fn context_relationship_types(&self) -> &[String] {
+                &self.context_rel_types
+            }
+
+            fn proc_name(&self) -> &str {
+                "capture.step"
+            }
+
+            fn mutate_node_property(&self) -> &str {
+                "captured"
+            }
+        }
+
+        let mut graph_store = create_test_graph_store();
+        let node_labels = vec!["Node".to_string()];
+        let relationship_types = vec!["REL".to_string(), "REL2".to_string()];
+        let available_rel_types: HashSet<String> = vec!["REL2".to_string()].into_iter().collect();
+
+        let mut executor =
+            NodePropertyStepExecutor::new(node_labels, relationship_types, available_rel_types, 2);
+
+        let captured = Arc::new(Mutex::new(None));
+        let step = CaptureStep {
+            context_labels: vec!["Context".to_string()],
+            context_rel_types: vec![],
+            config: HashMap::new(),
+            captured: Arc::clone(&captured),
+        };
+
+        executor
+            .execute_node_property_steps(&mut graph_store, &[Box::new(step)])
+            .expect("execute should succeed");
+
+        let captured = captured.lock().expect("capture lock");
+        let (labels, rel_types) = captured.clone().expect("captured inputs");
+        assert_eq!(labels, vec!["Node".to_string(), "Context".to_string()]);
+        assert_eq!(rel_types, vec!["REL2".to_string()]);
     }
 
     #[test]
