@@ -7,13 +7,17 @@ use crate::algo::scale_properties::{
     ScalePropertiesComputationRuntime, ScalePropertiesConfig, ScalePropertiesScaler,
     ScalePropertiesStorageRuntime,
 };
+use crate::collections::backends::vec::VecDoubleArray;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleArrayNodePropertyValues;
+use crate::types::properties::node::NodePropertyValues;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Serialize)]
@@ -26,6 +30,12 @@ pub struct ScalePropertiesStreamRow {
 pub struct ScalePropertiesStats {
     pub scaler: String,
     pub stats: HashMap<String, HashMap<String, Vec<f64>>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ScalePropertiesMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 /// ScaleProperties procedure facade (multi-property, configurable scaler).
@@ -120,15 +130,59 @@ impl ScalePropertiesFacade {
         MemoryRange::of_range(total, total + total / 4)
     }
 
-    pub fn mutate(&self, _property: &str) -> Result<MutationResult> {
-        Err(AlgorithmError::Execution(
-            "scaleProperties mutate is not implemented yet".to_string(),
-        ))
+    pub fn mutate(&self, property_name: &str) -> Result<ScalePropertiesMutateResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        let start_time = std::time::Instant::now();
+        let result = self.compute()?;
+
+        let node_count = result.scaled_properties.len();
+        let mut data: Vec<Option<Vec<f64>>> = Vec::with_capacity(node_count);
+        for row in result.scaled_properties {
+            data.push(Some(row));
+        }
+
+        let backend = VecDoubleArray::from(data);
+        let values = DefaultDoubleArrayNodePropertyValues::<VecDoubleArray>::from_collection(
+            backend, node_count,
+        );
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+        let mut new_store = self.graph_store.as_ref().clone();
+        let labels: HashSet<crate::projection::NodeLabel> = new_store.node_labels();
+        new_store
+            .add_node_property(labels, property_name.to_string(), values)
+            .map_err(|e| {
+                AlgorithmError::Execution(format!(
+                    "scaleProperties mutate failed to add property: {e}"
+                ))
+            })?;
+
+        let nodes_updated = node_count as u64;
+        let summary = MutationResult::new(
+            nodes_updated,
+            property_name.to_string(),
+            start_time.elapsed(),
+        );
+        Ok(ScalePropertiesMutateResult {
+            summary,
+            updated_store: Arc::new(new_store),
+        })
     }
 
-    pub fn write(&self, _property: &str) -> Result<WriteResult> {
-        Err(AlgorithmError::Execution(
-            "scaleProperties write is not implemented yet".to_string(),
+    pub fn write(&self, property_name: &str) -> Result<WriteResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        let start_time = std::time::Instant::now();
+        let result = self.compute()?;
+        let nodes_written = result.scaled_properties.len() as u64;
+
+        Ok(WriteResult::new(
+            nodes_written,
+            property_name.to_string(),
+            start_time.elapsed(),
         ))
     }
 }

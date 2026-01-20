@@ -256,8 +256,75 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
                 &format!("Invalid estimate submode '{other}'. Use 'memory'"),
             ),
         },
-        Mode::Mutate => err(op, "NOT_IMPLEMENTED", "FilteredKNN mutate is not implemented yet"),
-        Mode::Write => err(op, "NOT_IMPLEMENTED", "FilteredKNN write is not implemented yet"),
+        Mode::Mutate => {
+            let property_name = match get_str(request, "mutateProperty") {
+                Some(name) => name.to_string(),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+
+            let builder = configure_builder(&graph_resources, &parsed);
+            match builder.mutate(&property_name) {
+                Ok(result) => {
+                    catalog.set(&parsed.common.graph_name, result.updated_store);
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "mutate",
+                        "data": {
+                            "nodesCompared": result.stats.nodes_compared,
+                            "ranIterations": result.stats.ran_iterations,
+                            "didConverge": result.stats.did_converge,
+                            "nodePairsConsidered": result.stats.node_pairs_considered,
+                            "similarityPairs": result.stats.similarity_pairs,
+                            "similarityDistribution": result.stats.similarity_distribution,
+                            "computeMillis": result.stats.compute_millis,
+                            "success": result.stats.success,
+                            "relationshipsWritten": result.summary.nodes_updated,
+                            "mutateProperty": result.summary.property_name,
+                            "executionTimeMs": result.summary.execution_time_ms
+                        }
+                    })
+                }
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("FilteredKNN mutate failed: {e:?}"),
+                ),
+            }
+        }
+        Mode::Write => {
+            let property_name = match get_str(request, "writeProperty") {
+                Some(name) => name.to_string(),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+
+            let builder = configure_builder(&graph_resources, &parsed);
+            match builder.write(&property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "mode": "write",
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("FilteredKNN write failed: {e:?}"),
+                ),
+            }
+        }
     }
 }
 

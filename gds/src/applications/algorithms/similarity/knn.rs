@@ -244,7 +244,98 @@ pub fn handle_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 &format!("Invalid estimate submode '{other}'. Use 'memory'"),
             ),
         },
-        Mode::Mutate => err(op, "NOT_IMPLEMENTED", "KNN mutate is not implemented yet"),
-        Mode::Write => err(op, "NOT_IMPLEMENTED", "KNN write is not implemented yet"),
+        Mode::Mutate => {
+            let property_name = match get_str(request, "mutateProperty") {
+                Some(name) => name.to_string(),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+
+            let (primary_name, primary_metric) = node_properties
+                .first()
+                .expect("node_properties empty; validated earlier")
+                .clone();
+
+            let mut builder = KnnBuilder::new(Arc::clone(graph_resources.store()), primary_name)
+                .k(top_k)
+                .similarity_cutoff(similarity_cutoff)
+                .metric(primary_metric)
+                .concurrency(common.concurrency.value());
+
+            if node_properties.len() > 1 {
+                for (name, metric) in node_properties.iter().skip(1) {
+                    builder = builder.add_property(name.clone(), *metric);
+                }
+            }
+
+            match builder.mutate(&property_name) {
+                Ok(result) => {
+                    catalog.set(&common.graph_name, result.updated_store);
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "mutate",
+                        "data": {
+                            "nodesCompared": result.stats.nodes_compared,
+                            "ranIterations": result.stats.ran_iterations,
+                            "didConverge": result.stats.did_converge,
+                            "nodePairsConsidered": result.stats.node_pairs_considered,
+                            "similarityPairs": result.stats.similarity_pairs,
+                            "similarityDistribution": result.stats.similarity_distribution,
+                            "computeMillis": result.stats.compute_millis,
+                            "success": result.stats.success,
+                            "relationshipsWritten": result.summary.nodes_updated,
+                            "mutateProperty": result.summary.property_name,
+                            "executionTimeMs": result.summary.execution_time_ms
+                        }
+                    })
+                }
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("KNN mutate failed: {e:?}")),
+            }
+        }
+        Mode::Write => {
+            let property_name = match get_str(request, "writeProperty") {
+                Some(name) => name.to_string(),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+
+            let (primary_name, primary_metric) = node_properties
+                .first()
+                .expect("node_properties empty; validated earlier")
+                .clone();
+
+            let mut builder = KnnBuilder::new(Arc::clone(graph_resources.store()), primary_name)
+                .k(top_k)
+                .similarity_cutoff(similarity_cutoff)
+                .metric(primary_metric)
+                .concurrency(common.concurrency.value());
+
+            if node_properties.len() > 1 {
+                for (name, metric) in node_properties.iter().skip(1) {
+                    builder = builder.add_property(name.clone(), *metric);
+                }
+            }
+
+            match builder.write(&property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "mode": "write",
+                    "data": result
+                }),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("KNN write failed: {e:?}")),
+            }
+        }
     }
 }

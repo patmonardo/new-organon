@@ -195,7 +195,91 @@ pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -
                 &format!("Invalid estimate submode '{other}'. Use 'memory'"),
             ),
         },
-        Mode::Mutate => err(op, "NOT_IMPLEMENTED", "NodeSimilarity mutate is not implemented yet"),
-        Mode::Write => err(op, "NOT_IMPLEMENTED", "NodeSimilarity write is not implemented yet"),
+        Mode::Mutate => {
+            let property_name = match get_str(request, "mutateProperty") {
+                Some(name) => name.to_string(),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+
+            let mut builder = NodeSimilarityBuilder::new(Arc::clone(graph_resources.store()))
+                .metric(metric)
+                .similarity_cutoff(similarity_cutoff)
+                .top_k(top_k)
+                .top_n(top_n)
+                .concurrency(common.concurrency.value());
+
+            if let Some(property) = &weight_property {
+                builder = builder.weight_property(property.clone());
+            }
+
+            match builder.mutate(&property_name) {
+                Ok(result) => {
+                    catalog.set(&common.graph_name, result.updated_store);
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "mutate",
+                        "data": {
+                            "nodesCompared": result.stats.nodes_compared,
+                            "similarityPairs": result.stats.similarity_pairs,
+                            "similarityDistribution": result.stats.similarity_distribution,
+                            "computeMillis": result.stats.compute_millis,
+                            "success": result.stats.success,
+                            "relationshipsWritten": result.summary.nodes_updated,
+                            "mutateProperty": result.summary.property_name,
+                            "executionTimeMs": result.summary.execution_time_ms
+                        }
+                    })
+                }
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("NodeSimilarity mutate failed: {e:?}"),
+                ),
+            }
+        }
+        Mode::Write => {
+            let property_name = match get_str(request, "writeProperty") {
+                Some(name) => name.to_string(),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+
+            let mut builder = NodeSimilarityBuilder::new(Arc::clone(graph_resources.store()))
+                .metric(metric)
+                .similarity_cutoff(similarity_cutoff)
+                .top_k(top_k)
+                .top_n(top_n)
+                .concurrency(common.concurrency.value());
+
+            if let Some(property) = &weight_property {
+                builder = builder.weight_property(property.clone());
+            }
+
+            match builder.write(&property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "mode": "write",
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("NodeSimilarity write failed: {e:?}"),
+                ),
+            }
+        }
     }
 }

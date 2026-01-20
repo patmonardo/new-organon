@@ -1,7 +1,8 @@
 use crate::algo::similarity::{NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult};
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::ConfigValidator;
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::similarity::build_similarity_relationship_store;
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -22,6 +23,14 @@ pub struct NodeSimilarityStats {
     #[serde(rename = "computeMillis")]
     pub compute_millis: u64,
     pub success: bool,
+}
+
+/// Mutate result for Node Similarity: summary + stats + updated store
+#[derive(Debug, Clone)]
+pub struct NodeSimilarityMutateResult {
+    pub summary: MutationResult,
+    pub stats: NodeSimilarityStats,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 pub struct NodeSimilarityBuilder {
@@ -163,43 +172,46 @@ impl NodeSimilarityBuilder {
 
     pub fn stats(self) -> Result<NodeSimilarityStats> {
         let results = self.compute_results()?;
+        Ok(build_stats(&results))
+    }
 
-        let mut sources = HashSet::new();
-        let tuples: Vec<(u64, u64, f64)> = results
+    pub fn mutate(self, property: &str) -> Result<NodeSimilarityMutateResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property, "property_name")?;
+
+        let graph_store = Arc::clone(&self.graph_store);
+        let start = std::time::Instant::now();
+        let results = self.compute_results()?;
+        let stats = build_stats(&results);
+
+        let pairs: Vec<(u64, u64, f64)> = results
             .iter()
-            .map(|r| {
-                sources.insert(r.source);
-                (r.source, r.target, r.similarity)
-            })
+            .map(|r| (r.source, r.target, r.similarity))
             .collect();
 
-        let stats =
-            crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
+        let updated_store =
+            build_similarity_relationship_store(graph_store.as_ref(), property, &pairs)?;
 
-        Ok(NodeSimilarityStats {
-            nodes_compared: sources.len() as u64,
-            similarity_pairs: results.len() as u64,
-            similarity_distribution: stats.summary(),
-            compute_millis: stats.compute_millis,
-            success: stats.success,
+        let relationships_updated = graph_store.relationship_count() as u64;
+        let summary =
+            MutationResult::new(relationships_updated, property.to_string(), start.elapsed());
+
+        Ok(NodeSimilarityMutateResult {
+            summary,
+            stats,
+            updated_store,
         })
     }
 
-    pub fn mutate(self, property: &str) -> Result<()> {
+    pub fn write(self, property: &str) -> Result<WriteResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property, "property_name")?;
 
-        Err(AlgorithmError::Execution(
-            "Node Similarity mutate/write is not implemented yet".to_string(),
-        ))
-    }
-
-    pub fn write(self, property: &str) -> Result<()> {
-        self.validate()?;
-        ConfigValidator::non_empty_string(property, "property_name")?;
-
-        Err(AlgorithmError::Execution(
-            "Node Similarity mutate/write is not implemented yet".to_string(),
+        let res = self.mutate(property)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            res.summary.property_name,
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
         ))
     }
 
@@ -223,5 +235,62 @@ impl NodeSimilarityBuilder {
         let total = results_memory + per_node_scratch + weight_memory;
         let overhead = total / 5;
         MemoryRange::of_range(total, total + overhead)
+    }
+}
+
+fn build_stats(results: &[NodeSimilarityResult]) -> NodeSimilarityStats {
+    let mut sources = HashSet::new();
+    let tuples: Vec<(u64, u64, f64)> = results
+        .iter()
+        .map(|r| {
+            sources.insert(r.source);
+            (r.source, r.target, r.similarity)
+        })
+        .collect();
+
+    let stats =
+        crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
+
+    NodeSimilarityStats {
+        nodes_compared: sources.len() as u64,
+        similarity_pairs: results.len() as u64,
+        similarity_distribution: stats.summary(),
+        compute_millis: stats.compute_millis,
+        success: stats.success,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::prelude::GraphStore;
+    use crate::types::random::RandomGraphConfig;
+
+    #[test]
+    fn mutate_adds_relationship_property() {
+        let config = RandomGraphConfig {
+            node_count: 12,
+            seed: Some(42),
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+
+        let result = NodeSimilarityBuilder::new(Arc::clone(&store))
+            .similarity_cutoff(0.0)
+            .top_k(3)
+            .concurrency(1)
+            .mutate("sim_score")
+            .unwrap();
+
+        let rel_type = result
+            .updated_store
+            .relationship_types()
+            .into_iter()
+            .next()
+            .expect("expected at least one relationship type");
+        let _ = result
+            .updated_store
+            .relationship_property_values(&rel_type, "sim_score")
+            .unwrap();
     }
 }

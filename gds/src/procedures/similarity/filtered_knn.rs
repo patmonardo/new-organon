@@ -7,6 +7,8 @@ use crate::algo::similarity::knn::storage::KnnSamplerType;
 use crate::algo::similarity::knn::KnnNnDescentStats;
 use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::similarity::build_similarity_relationship_store;
 use crate::procedures::traits::Result;
 use crate::projection::NodeLabel;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -31,6 +33,14 @@ pub struct FilteredKnnStats {
     #[serde(rename = "computeMillis")]
     pub compute_millis: u64,
     pub success: bool,
+}
+
+/// Mutate result for Filtered KNN: summary + stats + updated store
+#[derive(Debug, Clone)]
+pub struct FilteredKnnMutateResult {
+    pub summary: MutationResult,
+    pub stats: FilteredKnnStats,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 pub struct FilteredKnnBuilder {
@@ -260,29 +270,48 @@ impl FilteredKnnBuilder {
 
     pub fn stats(self) -> Result<FilteredKnnStats> {
         let (rows, nn_stats) = self.compute_rows_and_nn_stats()?;
+        Ok(build_stats(&rows, &nn_stats))
+    }
 
-        let mut sources = HashSet::new();
-        let tuples: Vec<(u64, u64, f64)> = rows
+    pub fn mutate(self, property_name: &str) -> Result<FilteredKnnMutateResult> {
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        let graph_store = Arc::clone(&self.graph_store);
+        let start = std::time::Instant::now();
+        let (rows, nn_stats) = self.compute_rows_and_nn_stats()?;
+        let stats = build_stats(&rows, &nn_stats);
+
+        let pairs: Vec<(u64, u64, f64)> = rows
             .iter()
-            .map(|r| {
-                sources.insert(r.source);
-                (r.source, r.target, r.similarity)
-            })
+            .map(|r| (r.source, r.target, r.similarity))
             .collect();
 
-        let stats =
-            crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
+        let updated_store =
+            build_similarity_relationship_store(graph_store.as_ref(), property_name, &pairs)?;
 
-        Ok(FilteredKnnStats {
-            nodes_compared: sources.len() as u64,
-            ran_iterations: nn_stats.ran_iterations as u64,
-            did_converge: nn_stats.did_converge,
-            node_pairs_considered: nn_stats.node_pairs_considered,
-            similarity_pairs: rows.len() as u64,
-            similarity_distribution: stats.summary(),
-            compute_millis: stats.compute_millis,
-            success: stats.success,
+        let relationships_updated = graph_store.relationship_count() as u64;
+        let summary = MutationResult::new(
+            relationships_updated,
+            property_name.to_string(),
+            start.elapsed(),
+        );
+
+        Ok(FilteredKnnMutateResult {
+            summary,
+            stats,
+            updated_store,
         })
+    }
+
+    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            res.summary.property_name,
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     pub fn estimate_memory(&self) -> MemoryRange {
@@ -311,10 +340,36 @@ impl FilteredKnnBuilder {
     }
 }
 
+fn build_stats(rows: &[FilteredKnnResultRow], nn_stats: &KnnNnDescentStats) -> FilteredKnnStats {
+    let mut sources = HashSet::new();
+    let tuples: Vec<(u64, u64, f64)> = rows
+        .iter()
+        .map(|r| {
+            sources.insert(r.source);
+            (r.source, r.target, r.similarity)
+        })
+        .collect();
+
+    let stats =
+        crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
+
+    FilteredKnnStats {
+        nodes_compared: sources.len() as u64,
+        ran_iterations: nn_stats.ran_iterations as u64,
+        did_converge: nn_stats.did_converge,
+        node_pairs_considered: nn_stats.node_pairs_considered,
+        similarity_pairs: rows.len() as u64,
+        similarity_distribution: stats.summary(),
+        compute_millis: stats.compute_millis,
+        success: stats.success,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::types::prelude::DefaultGraphStore;
+    use crate::types::prelude::GraphStore;
     use crate::types::random::RandomGraphConfig;
 
     #[test]
@@ -354,5 +409,33 @@ mod tests {
         assert!(stats.ran_iterations <= max_iterations as u64);
         // Non-negative by construction (u64); ensure it is wired through.
         let _ = stats.node_pairs_considered;
+    }
+
+    #[test]
+    fn mutate_adds_relationship_property() {
+        let config = RandomGraphConfig {
+            node_count: 12,
+            seed: Some(21),
+            ..RandomGraphConfig::default()
+        };
+        let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
+
+        let result = FilteredKnnBuilder::new(Arc::clone(&store), "random_score")
+            .k(3)
+            .similarity_cutoff(0.0)
+            .concurrency(1)
+            .mutate("sim_score")
+            .unwrap();
+
+        let rel_type = result
+            .updated_store
+            .relationship_types()
+            .into_iter()
+            .next()
+            .expect("expected at least one relationship type");
+        let _ = result
+            .updated_store
+            .relationship_property_values(&rel_type, "sim_score")
+            .unwrap();
     }
 }

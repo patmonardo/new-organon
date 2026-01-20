@@ -1,0 +1,308 @@
+Similarity batch request: [
+  {
+    "kind": "ApplicationForm",
+    "facade": "graph_store",
+    "op": "put",
+    "snapshot": {
+      "nodes": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "nodeProperties": {
+        "score": [
+          0.1,
+          0.2,
+          0.25,
+          0.4,
+          0.5,
+          0.9
+        ],
+        "vector": [
+          [
+            1,
+            0
+          ],
+          [
+            0.9,
+            0.1
+          ],
+          [
+            0.8,
+            0.2
+          ],
+          [
+            0,
+            1
+          ],
+          [
+            0.1,
+            0.9
+          ],
+          [
+            0.2,
+            0.8
+          ]
+        ]
+      },
+      "relationships": [
+        {
+          "type": "REL",
+          "source": 0,
+          "target": 1,
+          "properties": {
+            "weight": 1
+          }
+        },
+        {
+          "type": "REL",
+          "source": 1,
+          "target": 2,
+          "properties": {
+            "weight": 1
+          }
+        },
+        {
+          "type": "REL",
+          "source": 2,
+          "target": 3,
+          "properties": {
+            "weight": 1
+          }
+        },
+        {
+          "type": "REL",
+          "source": 3,
+          "target": 4,
+          "properties": {
+            "weight": 1
+          }
+        },
+        {
+          "type": "REL",
+          "source": 4,
+          "target": 5,
+          "properties": {
+            "weight": 1
+          }
+        },
+        {
+          "type": "REL",
+          "source": 5,
+          "target": 0,
+          "properties": {
+            "weight": 1
+          }
+        },
+        {
+          "type": "REL",
+          "source": 1,
+          "target": 4,
+          "properties": {
+            "weight": 1
+          }
+        }
+      ]
+    },
+    "user": {
+      "username": "alice",
+      "isAdmin": true
+    },
+    "databaseId": "db1",
+    "graphName": "similarity-1768912341831"
+  },
+  {
+    "kind": "ApplicationForm",
+    "facade": "algorithms",
+    "op": "node_similarity",
+    "mode": "mutate",
+    "user": {
+      "username": "alice",
+      "isAdmin": true
+    },
+    "databaseId": "db1",
+    "graphName": "similarity-1768912341831",
+    "concurrency": 1,
+    "similarityMetric": "jaccard",
+    "similarityCutoff": 0,
+    "topK": 5,
+    "topN": 0,
+    "mutateProperty": "node_similarity_similarity"
+  },
+  {
+    "kind": "ApplicationForm",
+    "facade": "algorithms",
+    "op": "filtered_node_similarity",
+    "mode": "mutate",
+    "user": {
+      "username": "alice",
+      "isAdmin": true
+    },
+    "databaseId": "db1",
+    "graphName": "similarity-1768912341831",
+    "concurrency": 1,
+    "similarityMetric": "jaccard",
+    "similarityCutoff": 0,
+    "topK": 5,
+    "topN": 0,
+    "mutateProperty": "filtered_node_similarity_similarity"
+  },
+  {
+    "kind": "ApplicationForm",
+    "facade": "algorithms",
+    "op": "knn",
+    "mode": "mutate",
+    "user": {
+      "username": "alice",
+      "isAdmin": true
+    },
+    "databaseId": "db1",
+    "graphName": "similarity-1768912341831",
+    "concurrency": 1,
+    "nodeProperties": [
+      {
+        "name": "vector",
+        "metric": "COSINE"
+      },
+      {
+        "name": "score",
+        "metric": "DEFAULT"
+      }
+    ],
+    "topK": 3,
+    "similarityCutoff": 0,
+    "mutateProperty": "knn_similarity"
+  },
+  {
+    "kind": "ApplicationForm",
+    "facade": "algorithms",
+    "op": "filtered_knn",
+    "mode": "mutate",
+    "user": {
+      "username": "alice",
+      "isAdmin": true
+    },
+    "databaseId": "db1",
+    "graphName": "similarity-1768912341831",
+    "concurrency": 1,
+    "nodeProperties": [
+      {
+        "name": "vector",
+        "metric": "COSINE"
+      }
+    ],
+    "topK": 3,
+    "similarityCutoff": 0,
+    "mutateProperty": "filtered_knn_similarity"
+  }
+]
+   Compiling gds v0.1.0 (/home/pat/VSCode/new-organon/gds)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.14s
+     Running `/home/pat/VSCode/new-organon/target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","snapshot":{"nodes":[0,1,2,3,4,5],"nodeProperties":{"score":[0.1,0.2,0.25,0.4,0.5,0.9],"vector":[[1,0],[0.9,0.1],[0.8,0.2],[0,1],[0.1,0.9],[0.2,0.8]]},"relationships":[{"type":"REL","source":0,"target":1,"properties":{"weight":1}},{"type":"REL","source":1,"target":2,"properties":{"weight":1}},{"type":"REL","source":2,"target":3,"properties":{"weight":1}},{"type":"REL","source":3,"target":4,"properties":{"weight":1}},{"type":"REL","source":4,"target":5,"properties":{"weight":1}},{"type":"REL","source":5,"target":0,"properties":{"weight":1}},{"type":"REL","source":1,"target":4,"properties":{"weight":1}}]},"user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"similarity-1768912341831"},{"kind":"ApplicationForm","facade":"algorithms","op":"node_similarity","mode":"mutate","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"similarity-1768912341831","concurrency":1,"similarityMetric":"jaccard","similarityCutoff":0,"topK":5,"topN":0,"mutateProperty":"node_similarity_similarity"},{"kind":"ApplicationForm","facade":"algorithms","op":"filtered_node_similarity","mode":"mutate","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"similarity-1768912341831","concurrency":1,"similarityMetric":"jaccard","similarityCutoff":0,"topK":5,"topN":0,"mutateProperty":"filtered_node_similarity_similarity"},{"kind":"ApplicationForm","facade":"algorithms","op":"knn","mode":"mutate","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"similarity-1768912341831","concurrency":1,"nodeProperties":[{"name":"vector","metric":"COSINE"},{"name":"score","metric":"DEFAULT"}],"topK":3,"similarityCutoff":0,"mutateProperty":"knn_similarity"},{"kind":"ApplicationForm","facade":"algorithms","op":"filtered_knn","mode":"mutate","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"similarity-1768912341831","concurrency":1,"nodeProperties":[{"name":"vector","metric":"COSINE"}],"topK":3,"similarityCutoff":0,"mutateProperty":"filtered_knn_similarity"}]'`
+[INFO] node_similarity - Start
+[PROGRESS] 100% - node_similarity
+[PROGRESS] 100% - node_similarity
+[INFO] node_similarity - Finished
+[INFO] filtered_node_similarity - Start
+[PROGRESS] 100% - filtered_node_similarity
+[PROGRESS] 100% - filtered_node_similarity
+[INFO] filtered_node_similarity - Finished
+[INFO] knn - Start
+[PROGRESS] 100% - knn
+[PROGRESS] 100% - knn
+[INFO] knn - Finished
+[INFO] filteredknn - Start
+[PROGRESS] 100% - filteredknn
+[PROGRESS] 100% - filteredknn
+[INFO] filteredknn - Finished
+
+Similarity mutate results:
+node_similarity {
+  "computeMillis": 1,
+  "executionTimeMs": 22,
+  "mutateProperty": "node_similarity_similarity",
+  "nodesCompared": 0,
+  "relationshipsWritten": 7,
+  "similarityDistribution": {
+    "max": 0,
+    "mean": 0,
+    "min": 0,
+    "p50": 0,
+    "p75": 0,
+    "p90": 0,
+    "p95": 0,
+    "p99": 0,
+    "p999": 0
+  },
+  "similarityPairs": 0,
+  "success": true
+}
+filtered_node_similarity {
+  "computeMillis": 1,
+  "executionTimeMs": 21,
+  "mutateProperty": "filtered_node_similarity_similarity",
+  "nodesCompared": 0,
+  "relationshipsWritten": 7,
+  "similarityDistribution": {
+    "max": 0,
+    "mean": 0,
+    "min": 0,
+    "p50": 0,
+    "p75": 0,
+    "p90": 0,
+    "p95": 0,
+    "p99": 0,
+    "p999": 0
+  },
+  "similarityPairs": 0,
+  "success": true
+}
+knn {
+  "computeMillis": 1,
+  "didConverge": true,
+  "executionTimeMs": 12,
+  "mutateProperty": "knn_similarity",
+  "nodePairsConsidered": 138,
+  "nodesCompared": 6,
+  "ranIterations": 2,
+  "relationshipsWritten": 7,
+  "similarityDistribution": {
+    "max": 0.97393,
+    "mean": 0.8446427777777779,
+    "min": 0.63475,
+    "p50": 0.85489,
+    "p75": 0.95301,
+    "p90": 0.97393,
+    "p95": 0.97393,
+    "p99": 0.97393,
+    "p999": 0.97393
+  },
+  "similarityPairs": 18,
+  "success": true
+}
+filtered_knn {
+  "computeMillis": 0,
+  "didConverge": true,
+  "executionTimeMs": 12,
+  "mutateProperty": "filtered_knn_similarity",
+  "nodePairsConsidered": 140,
+  "nodesCompared": 6,
+  "ranIterations": 2,
+  "relationshipsWritten": 7,
+  "similarityDistribution": {
+    "max": 0.99694,
+    "mean": 0.8872933333333333,
+    "min": 0.62126,
+    "p50": 0.98507,
+    "p75": 0.99549,
+    "p90": 0.99694,
+    "p95": 0.99694,
+    "p99": 0.99694,
+    "p999": 0.99694
+  },
+  "similarityPairs": 18,
+  "success": true
+}

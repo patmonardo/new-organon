@@ -1,0 +1,124 @@
+Graph management batch request: [
+  {
+    "kind": "ApplicationForm",
+    "facade": "graph_store",
+    "op": "put",
+    "snapshot": {
+      "nodes": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "nodeProperties": {
+        "score": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "vector": [
+          [
+            1,
+            0
+          ],
+          [
+            0.9,
+            0.1
+          ],
+          [
+            0.8,
+            0.2
+          ],
+          [
+            0.1,
+            0.9
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "relationships": [
+        {
+          "type": "REL",
+          "source": 0,
+          "target": 1,
+          "properties": {
+            "weight": 1
+          }
+        },
+        {
+          "type": "REL",
+          "source": 1,
+          "target": 2,
+          "properties": {
+            "weight": 1
+          }
+        },
+        {
+          "type": "REL",
+          "source": 2,
+          "target": 3,
+          "properties": {
+            "weight": 1
+          }
+        },
+        {
+          "type": "REL",
+          "source": 3,
+          "target": 4,
+          "properties": {
+            "weight": 1
+          }
+        },
+        {
+          "type": "REL",
+          "source": 4,
+          "target": 0,
+          "properties": {
+            "weight": 1
+          }
+        }
+      ]
+    },
+    "user": {
+      "username": "alice",
+      "isAdmin": true
+    },
+    "databaseId": "db1",
+    "graphName": "graph-mgmt-1768913398074"
+  },
+  {
+    "kind": "ApplicationForm",
+    "facade": "algorithms",
+    "op": "scale_properties",
+    "mode": "mutate",
+    "user": {
+      "username": "alice",
+      "isAdmin": true
+    },
+    "databaseId": "db1",
+    "graphName": "graph-mgmt-1768913398074",
+    "concurrency": 1,
+    "nodeProperties": [
+      "score",
+      "vector"
+    ],
+    "scaler": "minMax",
+    "mutateProperty": "scaled_features",
+    "writeProperty": "scaled_features"
+  }
+]
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.14s
+     Running `/home/pat/VSCode/new-organon/target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","snapshot":{"nodes":[0,1,2,3,4],"nodeProperties":{"score":[1,2,3,4,5],"vector":[[1,0],[0.9,0.1],[0.8,0.2],[0.1,0.9],[0,1]]},"relationships":[{"type":"REL","source":0,"target":1,"properties":{"weight":1}},{"type":"REL","source":1,"target":2,"properties":{"weight":1}},{"type":"REL","source":2,"target":3,"properties":{"weight":1}},{"type":"REL","source":3,"target":4,"properties":{"weight":1}},{"type":"REL","source":4,"target":0,"properties":{"weight":1}}]},"user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"graph-mgmt-1768913398074"},{"kind":"ApplicationForm","facade":"algorithms","op":"scale_properties","mode":"mutate","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"graph-mgmt-1768913398074","concurrency":1,"nodeProperties":["score","vector"],"scaler":"minMax","mutateProperty":"scaled_features","writeProperty":"scaled_features"}]'`
+
+Graph management mutate results:
+scale_properties {
+  "executionTimeMs": 0,
+  "nodesUpdated": 5,
+  "propertyName": "scaled_features"
+}

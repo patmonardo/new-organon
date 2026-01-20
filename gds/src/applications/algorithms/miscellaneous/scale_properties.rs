@@ -213,11 +213,79 @@ pub fn handle_scale_properties(request: &Value, catalog: Arc<dyn GraphCatalog>) 
                 }
             })
         }
-        "mutate" | "write" => err(
-            op,
-            "EXECUTION_ERROR",
-            "scaleProperties mutate/write not implemented",
-        ),
+        "mutate" => {
+            let property_name = match request.get("mutateProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+
+            let facade = graph_resources
+                .facade()
+                .scale_properties()
+                .node_properties(node_properties.clone())
+                .scaler(scaler.clone())
+                .concurrency(concurrency_value);
+
+            match facade.mutate(property_name) {
+                Ok(result) => {
+                    catalog.set(graph_name, result.updated_store);
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "mutate",
+                        "data": {
+                            "nodesUpdated": result.summary.nodes_updated,
+                            "propertyName": result.summary.property_name,
+                            "executionTimeMs": result.summary.execution_time_ms,
+                        }
+                    })
+                }
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("scaleProperties mutate failed: {e}"),
+                ),
+            }
+        }
+        "write" => {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+
+            let facade = graph_resources
+                .facade()
+                .scale_properties()
+                .node_properties(node_properties.clone())
+                .scaler(scaler.clone())
+                .concurrency(concurrency_value);
+
+            match facade.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "mode": "write",
+                    "data": result,
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("scaleProperties write failed: {e}"),
+                ),
+            }
+        }
         other => err(op, "INVALID_REQUEST", &format!("Invalid mode '{other}'")),
     }
 }

@@ -13,6 +13,7 @@ use crate::types::catalog::GraphCatalog;
 use crate::types::prelude::GraphStore;
 use serde_json::{json, Value};
 use std::sync::Arc;
+use std::time::Instant;
 
 pub fn handle_to_undirected(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     let op = "to_undirected";
@@ -131,7 +132,7 @@ pub fn handle_to_undirected(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
                 ),
             }
         }
-        "mutate" | "write" => {
+        "mutate" => {
             let facade = ToUndirectedFacade::new(Arc::clone(graph_resources.store()))
                 .relationship_type(relationship_type.clone())
                 .mutate_relationship_type(mutate_relationship_type.clone())
@@ -146,11 +147,44 @@ pub fn handle_to_undirected(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
                     json!({
                         "ok": true,
                         "op": op,
-                        "mode": mode,
+                        "mode": "mutate",
                         "data": {
                             "graphName": out_name,
                             "nodeCount": node_count,
                             "relationshipCount": relationship_count,
+                        }
+                    })
+                }
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("toUndirected failed: {e}")),
+            }
+        }
+        "write" => {
+            let start = Instant::now();
+            let facade = ToUndirectedFacade::new(Arc::clone(graph_resources.store()))
+                .relationship_type(relationship_type.clone())
+                .mutate_relationship_type(mutate_relationship_type.clone())
+                .mutate_graph_name(out_name.clone())
+                .concurrency(concurrency_value);
+
+            match facade.to_store(&out_name) {
+                Ok(store) => {
+                    let node_count = GraphStore::node_count(&store) as u64;
+                    let relationship_count = GraphStore::relationship_count(&store) as u64;
+                    let execution_time_ms = start.elapsed().as_millis() as u64;
+                    catalog.set(&out_name, Arc::new(store));
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "write",
+                        "data": {
+                            "graphName": out_name,
+                            "nodeCount": node_count,
+                            "relationshipCount": relationship_count,
+                            "writeResult": {
+                                "nodesWritten": node_count,
+                                "propertyName": out_name,
+                                "executionTimeMs": execution_time_ms,
+                            }
                         }
                     })
                 }

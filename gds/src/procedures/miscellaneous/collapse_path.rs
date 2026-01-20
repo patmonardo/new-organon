@@ -10,8 +10,17 @@ use crate::algo::walking::{
 };
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
-use crate::types::prelude::DefaultGraphStore;
+use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use serde::Serialize;
 use std::sync::Arc;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct CollapsePathStats {
+    pub graph_name: String,
+    pub mutate_relationship_type: String,
+    pub node_count: u64,
+    pub relationship_count: u64,
+}
 
 pub struct CollapsePathFacade {
     graph_store: Arc<DefaultGraphStore>,
@@ -89,6 +98,16 @@ impl CollapsePathFacade {
             .compute(&self.graph_store, &config, &mut computation)
             .map(|r| r.graph_store)
             .map_err(AlgorithmError::Execution)
+    }
+
+    pub fn stats(&self, graph_name: &str) -> Result<CollapsePathStats> {
+        let store = self.to_store(graph_name)?;
+        Ok(CollapsePathStats {
+            graph_name: graph_name.to_string(),
+            mutate_relationship_type: self.mutate_relationship_type.clone(),
+            node_count: store.node_count() as u64,
+            relationship_count: store.relationship_count() as u64,
+        })
     }
 
     pub fn graph_name(&self) -> String {

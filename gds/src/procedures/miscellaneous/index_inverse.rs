@@ -9,8 +9,16 @@ use crate::algo::index_inverse::{
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph_store::GraphName;
-use crate::types::prelude::DefaultGraphStore;
+use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use serde::Serialize;
 use std::sync::Arc;
+
+#[derive(Debug, Clone, Serialize)]
+pub struct IndexInverseStats {
+    pub graph_name: String,
+    pub node_count: u64,
+    pub relationship_count: u64,
+}
 
 pub struct IndexInverseFacade {
     graph_store: Arc<DefaultGraphStore>,
@@ -63,6 +71,15 @@ impl IndexInverseFacade {
             .map_err(|e| AlgorithmError::Execution(e))?;
 
         Ok(result.graph_store)
+    }
+
+    pub fn stats(&self, graph_name: &str) -> Result<IndexInverseStats> {
+        let store = self.to_store(graph_name)?;
+        Ok(IndexInverseStats {
+            graph_name: graph_name.to_string(),
+            node_count: store.node_count() as u64,
+            relationship_count: store.relationship_count() as u64,
+        })
     }
 
     pub fn graph_name(&self) -> GraphName {
