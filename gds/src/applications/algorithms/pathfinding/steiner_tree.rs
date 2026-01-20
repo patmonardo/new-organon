@@ -101,14 +101,18 @@ pub fn handle_steiner_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
                 Ok(Some(rows))
             };
 
-            let result_builder = FnStreamResultBuilder::new(
-                |_gr: &GraphResources, rows: Option<Vec<Value>>| {
+            let result_builder =
+                FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<Value>>| {
                     rows.unwrap_or_default().into_iter()
-                },
-            );
+                });
 
-            match convenience.process_stream(&graph_resources, common.concurrency, task, compute, result_builder)
-            {
+            match convenience.process_stream(
+                &graph_resources,
+                common.concurrency,
+                task,
+                compute,
+                result_builder,
+            ) {
                 Ok(stream) => {
                     let rows: Vec<Value> = stream.collect();
                     json!({
@@ -169,8 +173,13 @@ pub fn handle_steiner_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
                 },
             );
 
-            match convenience.process_stats(&graph_resources, common.concurrency, task, compute, builder)
-            {
+            match convenience.process_stats(
+                &graph_resources,
+                common.concurrency,
+                task,
+                compute,
+                builder,
+            ) {
                 Ok(v) => v,
                 Err(e) => err(
                     op,
@@ -216,7 +225,88 @@ pub fn handle_steiner_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
                 &format!("Invalid estimate submode '{other}'. Use 'memory'"),
             ),
         },
-        Mode::Mutate => err(op, "NOT_IMPLEMENTED", "SteinerTree mutate is not implemented"),
-        Mode::Write => err(op, "NOT_IMPLEMENTED", "SteinerTree write is not implemented"),
+        Mode::Mutate => {
+            let property_name = match request.get("mutateProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+
+            let mut builder = graph_resources
+                .facade()
+                .steiner_tree()
+                .source_node(source_node)
+                .target_nodes(target_nodes)
+                .delta(delta)
+                .apply_rerouting(apply_rerouting)
+                .concurrency(common.concurrency.value());
+
+            if let Some(ref prop) = relationship_weight_property {
+                builder = builder.relationship_weight_property(prop);
+            }
+
+            match builder.mutate(property_name) {
+                Ok(result) => {
+                    catalog.set(&common.graph_name, result.updated_store);
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "data": {
+                            "nodes_updated": result.summary.nodes_updated,
+                            "property_name": result.summary.property_name,
+                            "execution_time_ms": result.summary.execution_time_ms
+                        }
+                    })
+                }
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("SteinerTree mutate failed: {e:?}"),
+                ),
+            }
+        }
+        Mode::Write => {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+
+            let mut builder = graph_resources
+                .facade()
+                .steiner_tree()
+                .source_node(source_node)
+                .target_nodes(target_nodes)
+                .delta(delta)
+                .apply_rerouting(apply_rerouting)
+                .concurrency(common.concurrency.value());
+
+            if let Some(ref prop) = relationship_weight_property {
+                builder = builder.relationship_weight_property(prop);
+            }
+
+            match builder.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("SteinerTree write failed: {e:?}"),
+                ),
+            }
+        }
     }
 }

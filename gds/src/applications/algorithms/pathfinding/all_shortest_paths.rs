@@ -103,14 +103,18 @@ pub fn handle_all_shortest_paths(request: &Value, catalog: Arc<dyn GraphCatalog>
                 Ok(Some(rows))
             };
 
-            let result_builder = FnStreamResultBuilder::new(
-                |_gr: &GraphResources, rows: Option<Vec<Value>>| {
+            let result_builder =
+                FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<Value>>| {
                     rows.unwrap_or_default().into_iter()
-                },
-            );
+                });
 
-            match convenience.process_stream(&graph_resources, common.concurrency, task, compute, result_builder)
-            {
+            match convenience.process_stream(
+                &graph_resources,
+                common.concurrency,
+                task,
+                compute,
+                result_builder,
+            ) {
                 Ok(stream) => {
                     let rows: Vec<Value> = stream.collect();
                     json!({
@@ -173,8 +177,13 @@ pub fn handle_all_shortest_paths(request: &Value, catalog: Arc<dyn GraphCatalog>
                 },
             );
 
-            match convenience.process_stats(&graph_resources, common.concurrency, task, compute, builder)
-            {
+            match convenience.process_stats(
+                &graph_resources,
+                common.concurrency,
+                task,
+                compute,
+                builder,
+            ) {
                 Ok(v) => v,
                 Err(e) => err(
                     op,
@@ -183,42 +192,119 @@ pub fn handle_all_shortest_paths(request: &Value, catalog: Arc<dyn GraphCatalog>
                 ),
             }
         }
-        Mode::Estimate => {
-            match common.estimate_submode.as_deref() {
-                Some("memory") | None => {
-                    let mut builder = graph_resources
-                        .facade()
-                        .all_shortest_paths()
-                        .weighted(weighted)
-                        .direction(&direction)
-                        .weight_property(&weight_property)
-                        .concurrency(common.concurrency.value());
+        Mode::Estimate => match common.estimate_submode.as_deref() {
+            Some("memory") | None => {
+                let mut builder = graph_resources
+                    .facade()
+                    .all_shortest_paths()
+                    .weighted(weighted)
+                    .direction(&direction)
+                    .weight_property(&weight_property)
+                    .concurrency(common.concurrency.value());
 
-                    if !relationship_types.is_empty() {
-                        builder = builder.relationship_types(relationship_types);
-                    }
-                    if let Some(max) = max_results {
-                        builder = builder.max_results(max);
-                    }
+                if !relationship_types.is_empty() {
+                    builder = builder.relationship_types(relationship_types);
+                }
+                if let Some(max) = max_results {
+                    builder = builder.max_results(max);
+                }
 
-                    let memory = builder.estimate_memory();
+                let memory = builder.estimate_memory();
+                json!({
+                    "ok": true,
+                    "op": op,
+                    "data": {
+                        "minBytes": memory.min(),
+                        "maxBytes": memory.max()
+                    }
+                })
+            }
+            Some(other) => err(
+                op,
+                "INVALID_REQUEST",
+                &format!("Invalid estimate submode '{other}'. Use 'memory'"),
+            ),
+        },
+        Mode::Mutate => {
+            let property_name = match request.get("mutateProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+
+            let mut builder = graph_resources
+                .facade()
+                .all_shortest_paths()
+                .weighted(weighted)
+                .direction(&direction)
+                .weight_property(&weight_property)
+                .concurrency(common.concurrency.value());
+
+            if !relationship_types.is_empty() {
+                builder = builder.relationship_types(relationship_types);
+            }
+
+            match builder.mutate(property_name) {
+                Ok(result) => {
+                    catalog.set(&common.graph_name, result.updated_store);
                     json!({
                         "ok": true,
                         "op": op,
                         "data": {
-                            "minBytes": memory.min(),
-                            "maxBytes": memory.max()
+                            "nodes_updated": result.summary.nodes_updated,
+                            "property_name": result.summary.property_name,
+                            "execution_time_ms": result.summary.execution_time_ms
                         }
                     })
                 }
-                Some(other) => err(
+                Err(e) => err(
                     op,
-                    "INVALID_REQUEST",
-                    &format!("Invalid estimate submode '{other}'. Use 'memory'"),
+                    "EXECUTION_ERROR",
+                    &format!("AllShortestPaths mutate failed: {e:?}"),
                 ),
             }
         }
-        Mode::Mutate => err(op, "NOT_IMPLEMENTED", "AllShortestPaths mutate is not implemented"),
-        Mode::Write => err(op, "NOT_IMPLEMENTED", "AllShortestPaths write is not implemented"),
+        Mode::Write => {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+
+            let mut builder = graph_resources
+                .facade()
+                .all_shortest_paths()
+                .weighted(weighted)
+                .direction(&direction)
+                .weight_property(&weight_property)
+                .concurrency(common.concurrency.value());
+
+            if !relationship_types.is_empty() {
+                builder = builder.relationship_types(relationship_types);
+            }
+
+            match builder.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("AllShortestPaths write failed: {e:?}"),
+                ),
+            }
+        }
     }
 }

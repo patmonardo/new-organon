@@ -11,7 +11,7 @@ use crate::applications::algorithms::machinery::{
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::CatalogLoader;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::procedures::community::kmeans::KMeansSamplerType;
+use crate::procedures::community::kmeans::{KMeansFacade, KMeansSamplerType};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -215,6 +215,106 @@ pub fn handle_kmeans(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
             match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
                 Ok(response) => response,
                 Err(e) => err(op, "EXECUTION_ERROR", &format!("KMeans stats failed: {e}")),
+            }
+        }
+        "mutate" => {
+            let property_name = request
+                .get("mutateProperty")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .or_else(|| {
+                    request
+                        .get("expectedPropertyName")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+                .unwrap_or_else(|| "community".to_string());
+
+            let mut facade = KMeansFacade::new(Arc::clone(graph_resources.store()))
+                .k(k)
+                .node_property(node_property.as_str())
+                .concurrency(concurrency_value)
+                .max_iterations(max_iterations)
+                .random_seed(random_seed)
+                .compute_silhouette(compute_silhouette)
+                .sampler_type(sampler);
+
+            if let Some(centroids) = seed_centroids.clone() {
+                facade = facade.seed_centroids(centroids);
+            }
+
+            match facade.mutate(&property_name) {
+                Ok(result) => {
+                    catalog.set(graph_name, result.updated_store);
+                    json!({"ok": true, "op": op, "data": {
+                        "nodes_updated": result.summary.nodes_updated,
+                        "property_name": result.summary.property_name,
+                        "execution_time_ms": result.summary.execution_time_ms
+                    }})
+                }
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("KMeans mutate failed: {:?}", e),
+                ),
+            }
+        }
+        "write" => {
+            let property_name = request
+                .get("writeProperty")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .or_else(|| {
+                    request
+                        .get("expectedPropertyName")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+                .unwrap_or_else(|| "community".to_string());
+
+            let mut facade = KMeansFacade::new(Arc::clone(graph_resources.store()))
+                .k(k)
+                .node_property(node_property.as_str())
+                .concurrency(concurrency_value)
+                .max_iterations(max_iterations)
+                .random_seed(random_seed)
+                .compute_silhouette(compute_silhouette)
+                .sampler_type(sampler);
+
+            if let Some(centroids) = seed_centroids.clone() {
+                facade = facade.seed_centroids(centroids);
+            }
+
+            match facade.write(&property_name) {
+                Ok(result) => json!({"ok": true, "op": op, "data": result}),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("KMeans write failed: {:?}", e),
+                ),
+            }
+        }
+        "estimate" => {
+            let mut facade = KMeansFacade::new(Arc::clone(graph_resources.store()))
+                .k(k)
+                .node_property(node_property.as_str())
+                .concurrency(concurrency_value)
+                .max_iterations(max_iterations)
+                .random_seed(random_seed)
+                .compute_silhouette(compute_silhouette)
+                .sampler_type(sampler);
+
+            if let Some(centroids) = seed_centroids {
+                facade = facade.seed_centroids(centroids);
+            }
+
+            match facade.estimate_memory() {
+                Ok(range) => json!({"ok": true, "op": op, "data": range}),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("KMeans memory estimation failed: {:?}", e),
+                ),
             }
         }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),

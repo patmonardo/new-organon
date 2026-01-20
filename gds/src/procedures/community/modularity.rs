@@ -6,13 +6,20 @@
 use crate::algo::modularity::{
     ModularityComputationRuntime, ModularityResult, ModularityStorageRuntime,
 };
+use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+use crate::types::properties::node::NodePropertyValues;
+use crate::types::schema::NodeLabel;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
+use std::time::Instant;
 
 /// Result row for modularity stream mode
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
@@ -38,6 +45,13 @@ pub struct ModularityFacade {
     graph_store: Arc<DefaultGraphStore>,
     community_property: String,
     task_registry: Option<TaskRegistry>,
+}
+
+/// Mutate result for Modularity: summary + updated store
+#[derive(Debug, Clone)]
+pub struct ModularityMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl ModularityFacade {
@@ -115,23 +129,81 @@ impl ModularityFacade {
     }
 
     /// Mutate mode: writes modularity scores back to the graph store.
-    pub fn mutate(self) -> Result<MutationResult> {
-        // Note: mutation logic is deferred.
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "mutate not yet implemented".to_string(),
-            ),
-        )
+    pub fn mutate(self, property_name: &str) -> Result<ModularityMutateResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        let start = Instant::now();
+        let result = self.compute()?;
+
+        let node_count = self.graph_store.node_count();
+        let nodes_updated = node_count as u64;
+
+        let community_props = self
+            .graph_store
+            .node_property_values(&self.community_property)
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "Modularity mutate failed to load community property: {e}"
+                ))
+            })?;
+
+        let modularity_map: HashMap<u64, f64> = result
+            .community_modularities
+            .into_iter()
+            .map(|m| (m.community_id, m.modularity))
+            .collect();
+
+        let mut values_vec: Vec<f64> = Vec::with_capacity(node_count);
+        for node_id in 0..node_count as u64 {
+            if !community_props.has_value(node_id) {
+                values_vec.push(0.0);
+                continue;
+            }
+
+            let community_id = match community_props.long_value(node_id) {
+                Ok(v) if v >= 0 => v as u64,
+                _ => {
+                    values_vec.push(0.0);
+                    continue;
+                }
+            };
+
+            let value = modularity_map.get(&community_id).copied().unwrap_or(0.0);
+            values_vec.push(value);
+        }
+
+        let backend = VecDouble::from(values_vec);
+        let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+        let mut new_store = self.graph_store.as_ref().clone();
+        let labels_set: HashSet<NodeLabel> = new_store.node_labels();
+        new_store
+            .add_node_property(labels_set, property_name.to_string(), values)
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "Modularity mutate failed to add property: {e}"
+                ))
+            })?;
+
+        let summary =
+            MutationResult::new(nodes_updated, property_name.to_string(), start.elapsed());
+
+        Ok(ModularityMutateResult {
+            summary,
+            updated_store: Arc::new(new_store),
+        })
     }
 
     /// Write mode: writes modularity scores to a new graph.
-    pub fn write(self) -> Result<WriteResult> {
-        // Note: write logic is deferred.
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "write not yet implemented".to_string(),
-            ),
-        )
+    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     /// Estimate memory usage.

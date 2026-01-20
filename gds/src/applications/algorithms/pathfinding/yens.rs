@@ -228,8 +228,83 @@ pub fn handle_yens(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 &format!("Invalid estimate submode '{other}'. Use 'memory'"),
             ),
         },
-        "mutate" => err(op, "NOT_IMPLEMENTED", "Yen's mutate is not implemented"),
-        "write" => err(op, "NOT_IMPLEMENTED", "Yen's write is not implemented"),
+        "mutate" => {
+            let property_name = match request.get("mutateProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+
+            let mut builder = graph_resources
+                .facade()
+                .yens()
+                .source(source)
+                .target(target)
+                .k(k)
+                .weight_property(&weight_property)
+                .direction(&direction)
+                .concurrency(concurrency_value);
+
+            if !relationship_types.is_empty() {
+                builder = builder.relationship_types(relationship_types);
+            }
+
+            match builder.mutate(property_name) {
+                Ok(result) => {
+                    catalog.set(graph_name, result.updated_store);
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "data": {
+                            "nodes_updated": result.summary.nodes_updated,
+                            "property_name": result.summary.property_name,
+                            "execution_time_ms": result.summary.execution_time_ms
+                        }
+                    })
+                }
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("Yen's mutate failed: {e:?}")),
+            }
+        }
+        "write" => {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+
+            let mut builder = graph_resources
+                .facade()
+                .yens()
+                .source(source)
+                .target(target)
+                .k(k)
+                .weight_property(&weight_property)
+                .direction(&direction)
+                .concurrency(concurrency_value);
+
+            if !relationship_types.is_empty() {
+                builder = builder.relationship_types(relationship_types);
+            }
+
+            match builder.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("Yen's write failed: {e:?}")),
+            }
+        }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
 }

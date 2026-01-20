@@ -227,8 +227,81 @@ pub fn handle_dijkstra(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
                 &format!("Invalid estimate submode '{other}'. Use 'memory'"),
             ),
         },
-        "mutate" => err(op, "NOT_IMPLEMENTED", "Dijkstra mutate is not implemented"),
-        "write" => err(op, "NOT_IMPLEMENTED", "Dijkstra write is not implemented"),
+        "mutate" => {
+            let property_name = match request.get("mutateProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+
+            let mut builder = graph_resources
+                .facade()
+                .dijkstra()
+                .source(source)
+                .weight_property(&weight_property)
+                .direction(&direction)
+                .track_relationships(track_relationships)
+                .concurrency(concurrency_value);
+
+            if !targets.is_empty() {
+                builder = builder.targets(targets);
+            }
+
+            match builder.mutate(property_name) {
+                Ok(result) => {
+                    catalog.set(graph_name, result.updated_store);
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "data": {
+                            "nodes_updated": result.summary.nodes_updated,
+                            "property_name": result.summary.property_name,
+                            "execution_time_ms": result.summary.execution_time_ms
+                        }
+                    })
+                }
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("Dijkstra mutate failed: {e:?}")),
+            }
+        }
+        "write" => {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+
+            let mut builder = graph_resources
+                .facade()
+                .dijkstra()
+                .source(source)
+                .weight_property(&weight_property)
+                .direction(&direction)
+                .track_relationships(track_relationships)
+                .concurrency(concurrency_value);
+
+            if !targets.is_empty() {
+                builder = builder.targets(targets);
+            }
+
+            match builder.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("Dijkstra write failed: {e:?}")),
+            }
+        }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
 }

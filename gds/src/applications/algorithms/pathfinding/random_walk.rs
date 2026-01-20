@@ -68,7 +68,9 @@ pub fn handle_random_walk(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
 
     match common.mode {
         Mode::Stream => {
-            let task = Tasks::leaf("random_walk::stream".to_string()).base().clone();
+            let task = Tasks::leaf("random_walk::stream".to_string())
+                .base()
+                .clone();
 
             let source_nodes = source_nodes.clone();
             let compute = move |gr: &GraphResources,
@@ -97,14 +99,18 @@ pub fn handle_random_walk(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
                 Ok(Some(rows))
             };
 
-            let result_builder = FnStreamResultBuilder::new(
-                |_gr: &GraphResources, rows: Option<Vec<Value>>| {
+            let result_builder =
+                FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<Value>>| {
                     rows.unwrap_or_default().into_iter()
-                },
-            );
+                });
 
-            match convenience.process_stream(&graph_resources, common.concurrency, task, compute, result_builder)
-            {
+            match convenience.process_stream(
+                &graph_resources,
+                common.concurrency,
+                task,
+                compute,
+                result_builder,
+            ) {
                 Ok(stream) => {
                     let rows: Vec<Value> = stream.collect();
                     json!({
@@ -165,8 +171,13 @@ pub fn handle_random_walk(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
                 },
             );
 
-            match convenience.process_stats(&graph_resources, common.concurrency, task, compute, builder)
-            {
+            match convenience.process_stats(
+                &graph_resources,
+                common.concurrency,
+                task,
+                compute,
+                builder,
+            ) {
                 Ok(v) => v,
                 Err(e) => err(
                     op,
@@ -208,7 +219,94 @@ pub fn handle_random_walk(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Va
                 &format!("Invalid estimate submode '{other}'. Use 'memory'"),
             ),
         },
-        Mode::Mutate => err(op, "NOT_IMPLEMENTED", "RandomWalk mutate is not implemented"),
-        Mode::Write => err(op, "NOT_IMPLEMENTED", "RandomWalk write is not implemented"),
+        Mode::Mutate => {
+            let property_name = match request.get("mutateProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+
+            let mut builder = graph_resources
+                .facade()
+                .random_walk()
+                .walks_per_node(walks_per_node)
+                .walk_length(walk_length)
+                .return_factor(return_factor)
+                .in_out_factor(in_out_factor)
+                .concurrency(common.concurrency.value());
+
+            if !source_nodes.is_empty() {
+                builder = builder.source_nodes(source_nodes);
+            }
+            if let Some(seed) = random_seed {
+                builder = builder.random_seed(seed);
+            }
+
+            match builder.mutate(property_name) {
+                Ok(result) => {
+                    catalog.set(&common.graph_name, result.updated_store);
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "data": {
+                            "nodes_updated": result.summary.nodes_updated,
+                            "property_name": result.summary.property_name,
+                            "execution_time_ms": result.summary.execution_time_ms
+                        }
+                    })
+                }
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("RandomWalk mutate failed: {e:?}"),
+                ),
+            }
+        }
+        Mode::Write => {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+
+            let mut builder = graph_resources
+                .facade()
+                .random_walk()
+                .walks_per_node(walks_per_node)
+                .walk_length(walk_length)
+                .return_factor(return_factor)
+                .in_out_factor(in_out_factor)
+                .concurrency(common.concurrency.value());
+
+            if !source_nodes.is_empty() {
+                builder = builder.source_nodes(source_nodes);
+            }
+            if let Some(seed) = random_seed {
+                builder = builder.random_seed(seed);
+            }
+
+            match builder.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("RandomWalk write failed: {e:?}"),
+                ),
+            }
+        }
     }
 }

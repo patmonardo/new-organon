@@ -113,6 +113,13 @@ pub struct DijkstraBuilder {
     user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
 }
 
+/// Mutate result for Dijkstra: summary + updated store
+#[derive(Debug, Clone)]
+pub struct DijkstraMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
+}
+
 impl DijkstraBuilder {
     /// Create a new Dijkstra builder bound to a live graph store.
     ///
@@ -436,15 +443,38 @@ impl DijkstraBuilder {
     /// let result = builder.mutate("distance")?;
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
-    pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
+    pub fn mutate(self, property_name: &str) -> Result<DijkstraMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
+        let graph_store = Arc::clone(&self.graph_store);
+        let result = self.compute()?;
+        let paths: Vec<PathResult> = result
+            .paths
+            .into_iter()
+            .map(|path| PathResult {
+                source: path.source,
+                target: path.target,
+                path: path.path,
+                cost: path.cost,
+            })
+            .collect();
 
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "Dijkstra mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let updated_store = crate::procedures::pathfinding::build_path_relationship_store(
+            graph_store.as_ref(),
+            property_name,
+            &paths,
+        )?;
+
+        let summary = MutationResult::new(
+            paths.len() as u64,
+            property_name.to_string(),
+            result.metadata.execution_time,
+        );
+
+        Ok(DijkstraMutateResult {
+            summary,
+            updated_store,
+        })
     }
 
     /// Write mode: Compute and persist to storage
@@ -462,12 +492,12 @@ impl DijkstraBuilder {
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
-
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "Dijkstra mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     /// Estimate memory requirements for Dijkstra execution
@@ -610,12 +640,12 @@ mod tests {
     #[test]
     fn test_mutate_validates_property_name() {
         let builder = DijkstraBuilder::new(store()).source(0);
-        assert!(builder.mutate("distance").is_err());
+        assert!(builder.mutate("distance").is_ok());
     }
 
     #[test]
     fn test_write_validates_property_name() {
         let builder = DijkstraBuilder::new(store()).source(0);
-        assert!(builder.write("paths").is_err());
+        assert!(builder.write("paths").is_ok());
     }
 }

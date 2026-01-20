@@ -46,6 +46,13 @@ pub struct DeltaSteppingBuilder {
     user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
 }
 
+/// Mutate result for Delta Stepping: summary + updated store
+#[derive(Debug, Clone)]
+pub struct DeltaSteppingMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
+}
+
 impl DeltaSteppingBuilder {
     /// Create a new Delta Stepping builder bound to a live graph store.
     ///
@@ -326,26 +333,41 @@ impl DeltaSteppingBuilder {
         })
     }
 
-    pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
+    pub fn mutate(self, property_name: &str) -> Result<DeltaSteppingMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
+        let graph_store = Arc::clone(&self.graph_store);
+        let result = self.compute()?;
+        let paths: Vec<ProcedurePathResult> = result
+            .paths
+            .into_iter()
+            .map(super::core_to_procedure_path_result)
+            .collect();
 
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "Delta Stepping mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let updated_store =
+            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+
+        let summary = MutationResult::new(
+            paths.len() as u64,
+            property_name.to_string(),
+            result.metadata.execution_time,
+        );
+
+        Ok(DeltaSteppingMutateResult {
+            summary,
+            updated_store,
+        })
     }
 
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
-
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "Delta Stepping mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     /// Estimate memory requirements for Delta Stepping execution

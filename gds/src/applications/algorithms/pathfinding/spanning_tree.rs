@@ -1,8 +1,8 @@
 //! Spanning Tree algorithm dispatch handler.
 
 use crate::applications::algorithms::machinery::{
-    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate, FnStatsResultBuilder,
-    FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
+    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
+    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::applications::algorithms::pathfinding::shared::{
     err, get_bool, get_str, get_u64, timings_json,
@@ -23,7 +23,10 @@ pub fn handle_spanning_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
         None => return err(op, "INVALID_REQUEST", "Missing 'graphName' parameter"),
     };
 
-    let mode = request.get("mode").and_then(|v| v.as_str()).unwrap_or("stream");
+    let mode = request
+        .get("mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("stream");
 
     let concurrency_value = request
         .get("concurrency")
@@ -96,7 +99,9 @@ pub fn handle_spanning_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
 
     match mode {
         "stream" => {
-            let task = Tasks::leaf("spanning_tree::stream".to_string()).base().clone();
+            let task = Tasks::leaf("spanning_tree::stream".to_string())
+                .base()
+                .clone();
             let relationship_types = relationship_types.clone();
 
             let compute = move |gr: &GraphResources,
@@ -123,11 +128,10 @@ pub fn handle_spanning_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
                 Ok(Some(rows))
             };
 
-            let result_builder = FnStreamResultBuilder::new(
-                |_gr: &GraphResources, rows: Option<Vec<Value>>| {
+            let result_builder =
+                FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<Value>>| {
                     rows.unwrap_or_default().into_iter()
-                },
-            );
+                });
 
             match convenience.process_stream(
                 &graph_resources,
@@ -158,7 +162,9 @@ pub fn handle_spanning_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
             }
         }
         "stats" => {
-            let task = Tasks::leaf("spanning_tree::stats".to_string()).base().clone();
+            let task = Tasks::leaf("spanning_tree::stats".to_string())
+                .base()
+                .clone();
             let relationship_types = relationship_types.clone();
 
             let compute = move |gr: &GraphResources,
@@ -239,8 +245,89 @@ pub fn handle_spanning_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
                 &format!("Invalid estimate submode '{other}'. Use 'memory'"),
             ),
         },
-        "mutate" => err(op, "NOT_IMPLEMENTED", "SpanningTree mutate is not implemented"),
-        "write" => err(op, "NOT_IMPLEMENTED", "SpanningTree write is not implemented"),
+        "mutate" => {
+            let property_name = match request.get("mutateProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+
+            let mut builder = graph_resources
+                .facade()
+                .spanning_tree()
+                .start_node(start_node)
+                .compute_minimum(compute_minimum)
+                .weight_property(&weight_property)
+                .direction(&direction)
+                .concurrency(concurrency_value);
+
+            if !relationship_types.is_empty() {
+                builder = builder.relationship_types(relationship_types);
+            }
+
+            match builder.mutate(property_name) {
+                Ok(result) => {
+                    catalog.set(graph_name, result.updated_store);
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "data": {
+                            "nodes_updated": result.summary.nodes_updated,
+                            "property_name": result.summary.property_name,
+                            "execution_time_ms": result.summary.execution_time_ms
+                        }
+                    })
+                }
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("SpanningTree mutate failed: {e:?}"),
+                ),
+            }
+        }
+        "write" => {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+
+            let mut builder = graph_resources
+                .facade()
+                .spanning_tree()
+                .start_node(start_node)
+                .compute_minimum(compute_minimum)
+                .weight_property(&weight_property)
+                .direction(&direction)
+                .concurrency(concurrency_value);
+
+            if !relationship_types.is_empty() {
+                builder = builder.relationship_types(relationship_types);
+            }
+
+            match builder.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("SpanningTree write failed: {e:?}"),
+                ),
+            }
+        }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
 }

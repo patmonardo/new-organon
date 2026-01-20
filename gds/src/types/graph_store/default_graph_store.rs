@@ -334,6 +334,15 @@ impl DefaultGraphStore {
         Ok(store)
     }
 
+    pub(crate) fn with_added_relationship_type_preserve_name(
+        &self,
+        rel_type: RelationshipType,
+        outgoing: Vec<Vec<MappedNodeId>>,
+        direction: Direction,
+    ) -> GraphStoreResult<DefaultGraphStore> {
+        self.with_added_relationship_type(self.graph_name.clone(), rel_type, outgoing, direction)
+    }
+
     pub(crate) fn with_rebuilt_relationship_topologies(
         &self,
         graph_name: GraphName,

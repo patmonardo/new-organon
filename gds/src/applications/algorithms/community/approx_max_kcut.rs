@@ -11,6 +11,7 @@ use crate::applications::algorithms::machinery::{
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::CatalogLoader;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
+use crate::procedures::community::approx_max_kcut::ApproxMaxKCutFacade;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -203,6 +204,94 @@ pub fn handle_approx_max_kcut(request: &Value, catalog: Arc<dyn GraphCatalog>) -
                     op,
                     "EXECUTION_ERROR",
                     &format!("ApproxMaxKCut stats failed: {e}"),
+                ),
+            }
+        }
+        "mutate" => {
+            let property_name = request
+                .get("mutateProperty")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .or_else(|| {
+                    request
+                        .get("expectedPropertyName")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+                .unwrap_or_else(|| "community".to_string());
+
+            let facade = ApproxMaxKCutFacade::new(Arc::clone(graph_resources.store()))
+                .k(k)
+                .iterations(iterations)
+                .random_seed(random_seed)
+                .minimize(minimize)
+                .relationship_weight_property(relationship_weight_property)
+                .min_community_sizes(min_community_sizes)
+                .concurrency(concurrency_value);
+
+            match facade.mutate(&property_name) {
+                Ok(result) => {
+                    catalog.set(graph_name, result.updated_store);
+                    json!({"ok": true, "op": op, "data": {
+                        "nodes_updated": result.summary.nodes_updated,
+                        "property_name": result.summary.property_name,
+                        "execution_time_ms": result.summary.execution_time_ms
+                    }})
+                }
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("ApproxMaxKCut mutate failed: {:?}", e),
+                ),
+            }
+        }
+        "write" => {
+            let property_name = request
+                .get("writeProperty")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .or_else(|| {
+                    request
+                        .get("expectedPropertyName")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+                .unwrap_or_else(|| "community".to_string());
+
+            let facade = ApproxMaxKCutFacade::new(Arc::clone(graph_resources.store()))
+                .k(k)
+                .iterations(iterations)
+                .random_seed(random_seed)
+                .minimize(minimize)
+                .relationship_weight_property(relationship_weight_property)
+                .min_community_sizes(min_community_sizes)
+                .concurrency(concurrency_value);
+
+            match facade.write(&property_name) {
+                Ok(result) => json!({"ok": true, "op": op, "data": result}),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("ApproxMaxKCut write failed: {:?}", e),
+                ),
+            }
+        }
+        "estimate" => {
+            let facade = ApproxMaxKCutFacade::new(Arc::clone(graph_resources.store()))
+                .k(k)
+                .iterations(iterations)
+                .random_seed(random_seed)
+                .minimize(minimize)
+                .relationship_weight_property(relationship_weight_property)
+                .min_community_sizes(min_community_sizes)
+                .concurrency(concurrency_value);
+
+            match facade.estimate_memory() {
+                Ok(range) => json!({"ok": true, "op": op, "data": range}),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("ApproxMaxKCut memory estimation failed: {:?}", e),
                 ),
             }
         }

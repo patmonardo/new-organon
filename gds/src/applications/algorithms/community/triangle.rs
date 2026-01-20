@@ -152,13 +152,32 @@ pub fn handle_triangle(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
             }
         }
         "mutate" => {
+            let property_name = request
+                .get("mutateProperty")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .or_else(|| {
+                    request
+                        .get("expectedPropertyName")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+                .unwrap_or_else(|| "triangles".to_string());
+
             let mut facade = TriangleFacade::new(Arc::clone(graph_resources.store()))
                 .concurrency(concurrency_value);
             if let Some(max_deg) = max_degree {
                 facade = facade.max_degree(max_deg);
             }
-            match facade.mutate() {
-                Ok(result) => json!({"ok": true, "op": op, "data": result}),
+            match facade.mutate(&property_name) {
+                Ok(result) => {
+                    catalog.set(graph_name, result.updated_store);
+                    json!({"ok": true, "op": op, "data": {
+                        "nodes_updated": result.summary.nodes_updated,
+                        "property_name": result.summary.property_name,
+                        "execution_time_ms": result.summary.execution_time_ms
+                    }})
+                }
                 Err(e) => err(
                     op,
                     "EXECUTION_ERROR",
@@ -172,7 +191,19 @@ pub fn handle_triangle(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
             if let Some(max_deg) = max_degree {
                 facade = facade.max_degree(max_deg);
             }
-            match facade.write() {
+            let property_name = request
+                .get("writeProperty")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .or_else(|| {
+                    request
+                        .get("expectedPropertyName")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+                .unwrap_or_else(|| "triangles".to_string());
+
+            match facade.write(&property_name) {
                 Ok(result) => json!({"ok": true, "op": op, "data": result}),
                 Err(e) => err(
                     op,

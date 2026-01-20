@@ -6,7 +6,7 @@ use crate::algo::spanning_tree::SpanningTreeStorageRuntime;
 use crate::algo::SpanningTreeComputationRuntime;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::Result;
+use crate::procedures::traits::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -30,6 +30,13 @@ pub struct SpanningTreeStats {
     pub effective_node_count: u64,
     pub total_weight: f64,
     pub computation_time_ms: u64,
+}
+
+/// Mutate result for spanning tree: summary + updated store
+#[derive(Debug, Clone)]
+pub struct SpanningTreeMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 /// Spanning tree facade builder.
@@ -287,26 +294,48 @@ impl SpanningTreeBuilder {
         Ok(stats)
     }
 
-    pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
+    pub fn mutate(self, property_name: &str) -> Result<SpanningTreeMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
+        let graph_store = Arc::clone(&self.graph_store);
+        let (rows, stats) = self.compute()?;
 
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "SpanningTree mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let paths: Vec<PathResult> = rows
+            .into_iter()
+            .filter_map(|row| {
+                row.parent.map(|parent| PathResult {
+                    source: parent,
+                    target: row.node,
+                    path: vec![parent, row.node],
+                    cost: row.cost_to_parent,
+                })
+            })
+            .collect();
+
+        let updated_store =
+            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+
+        let summary = MutationResult::new(
+            paths.len() as u64,
+            property_name.to_string(),
+            std::time::Duration::from_millis(stats.computation_time_ms),
+        );
+
+        Ok(SpanningTreeMutateResult {
+            summary,
+            updated_store,
+        })
     }
 
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
-
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "SpanningTree mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     /// Estimate memory requirements for spanning tree execution

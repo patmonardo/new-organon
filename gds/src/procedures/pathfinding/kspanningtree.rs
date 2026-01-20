@@ -7,8 +7,8 @@ use crate::algo::kspanningtree::computation::KSpanningTreeComputationRuntime;
 use crate::algo::kspanningtree::storage::KSpanningTreeStorageRuntime;
 use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::ConfigValidator;
-use crate::procedures::traits::Result;
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::traits::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -30,6 +30,13 @@ pub struct KSpanningTreeStats {
     pub node_count: usize,
     pub total_cost: f64,
     pub execution_time_ms: u64,
+}
+
+/// Mutate result for k-spanning tree: summary + updated store
+#[derive(Debug, Clone)]
+pub struct KSpanningTreeMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 /// K-Spanning Tree algorithm builder
@@ -193,6 +200,50 @@ impl KSpanningTreeBuilder {
             total_cost,
             execution_time_ms: elapsed.as_millis() as u64,
         })
+    }
+
+    /// Mutate mode: writes results back to the graph store
+    pub fn mutate(&self, property_name: &str) -> Result<KSpanningTreeMutateResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        let (parent, cost_to_parent, _total_cost, _root, elapsed) = self.compute()?;
+        let mut paths: Vec<PathResult> = Vec::new();
+
+        for (node_id, &parent_id) in parent.iter().enumerate() {
+            if parent_id >= 0 {
+                let parent_u64 = parent_id as u64;
+                let node_u64 = node_id as u64;
+                paths.push(PathResult {
+                    source: parent_u64,
+                    target: node_u64,
+                    path: vec![parent_u64, node_u64],
+                    cost: cost_to_parent[node_id],
+                });
+            }
+        }
+
+        let updated_store =
+            super::build_path_relationship_store(self.graph_store.as_ref(), property_name, &paths)?;
+
+        let summary = MutationResult::new(paths.len() as u64, property_name.to_string(), elapsed);
+
+        Ok(KSpanningTreeMutateResult {
+            summary,
+            updated_store,
+        })
+    }
+
+    /// Write mode: writes results to external storage
+    pub fn write(&self, property_name: &str) -> Result<WriteResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     /// Estimate memory requirements for k-spanning tree execution.

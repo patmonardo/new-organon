@@ -145,10 +145,29 @@ pub fn handle_scc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
             }
         }
         "mutate" => {
+            let property_name = request
+                .get("mutateProperty")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .or_else(|| {
+                    request
+                        .get("expectedPropertyName")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+                .unwrap_or_else(|| "componentId".to_string());
+
             let facade =
                 SccFacade::new(Arc::clone(graph_resources.store())).concurrency(concurrency_value);
-            match facade.mutate() {
-                Ok(result) => json!({"ok": true, "op": op, "data": result}),
+            match facade.mutate(&property_name) {
+                Ok(result) => {
+                    catalog.set(graph_name, result.updated_store);
+                    json!({"ok": true, "op": op, "data": {
+                        "nodes_updated": result.summary.nodes_updated,
+                        "property_name": result.summary.property_name,
+                        "execution_time_ms": result.summary.execution_time_ms
+                    }})
+                }
                 Err(e) => err(
                     op,
                     "EXECUTION_ERROR",
@@ -157,9 +176,21 @@ pub fn handle_scc(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
             }
         }
         "write" => {
+            let property_name = request
+                .get("writeProperty")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .or_else(|| {
+                    request
+                        .get("expectedPropertyName")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+                .unwrap_or_else(|| "componentId".to_string());
+
             let facade =
                 SccFacade::new(Arc::clone(graph_resources.store())).concurrency(concurrency_value);
-            match facade.write() {
+            match facade.write(&property_name) {
                 Ok(result) => json!({"ok": true, "op": op, "data": result}),
                 Err(e) => err(op, "EXECUTION_ERROR", &format!("SCC write failed: {:?}", e)),
             }

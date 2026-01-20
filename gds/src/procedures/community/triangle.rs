@@ -7,6 +7,7 @@
 //! - `max_degree`: filter to skip high-degree nodes (performance / approximation)
 
 use crate::algo::triangle::{TriangleComputationRuntime, TriangleConfig, TriangleStorageRuntime};
+use crate::collections::backends::vec::VecLong;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, LeafTask, ProgressTracker, TaskProgressTracker, Tasks,
@@ -15,6 +16,10 @@ use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
+use crate::types::properties::node::NodePropertyValues;
+use crate::types::schema::NodeLabel;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -38,6 +43,13 @@ pub struct TriangleFacade {
     graph_store: Arc<DefaultGraphStore>,
     concurrency: usize,
     max_degree: u64,
+}
+
+/// Mutate result for Triangle: summary + updated store
+#[derive(Debug, Clone)]
+pub struct TriangleMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl TriangleFacade {
@@ -87,8 +99,6 @@ impl TriangleFacade {
                 &registry_factory,
             ));
 
-        progress_tracker.begin_subtask_with_volume(node_count);
-
         let config = TriangleConfig {
             concurrency: self.concurrency,
             max_degree: self.max_degree,
@@ -137,23 +147,49 @@ impl TriangleFacade {
     }
 
     /// Mutate mode: writes triangle counts back to the graph store.
-    pub fn mutate(self) -> Result<MutationResult> {
-        // Note: mutation logic is deferred.
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "mutate not yet implemented".to_string(),
-            ),
-        )
+    pub fn mutate(self, property_name: &str) -> Result<TriangleMutateResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        let start = Instant::now();
+        let (local, _global, _elapsed) = self.compute()?;
+
+        let node_count = self.graph_store.node_count();
+        let nodes_updated = node_count as u64;
+
+        // Convert u64 counts to i64 backend
+        let longs: Vec<i64> = local.into_iter().map(|v| v as i64).collect();
+        let backend = VecLong::from(longs);
+        let values = DefaultLongNodePropertyValues::from_collection(backend, node_count);
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+        let mut new_store = self.graph_store.as_ref().clone();
+        let labels_set: HashSet<NodeLabel> = new_store.node_labels();
+        new_store
+            .add_node_property(labels_set, property_name.to_string(), values)
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "Triangle mutate failed to add property: {e}"
+                ))
+            })?;
+
+        let execution_time = start.elapsed();
+        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+
+        Ok(TriangleMutateResult {
+            summary,
+            updated_store: Arc::new(new_store),
+        })
     }
 
     /// Write mode: writes triangle counts to a new graph.
-    pub fn write(self) -> Result<WriteResult> {
-        // Note: write logic is deferred.
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "write not yet implemented".to_string(),
-            ),
-        )
+    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     /// Full result: returns both local and global counts.

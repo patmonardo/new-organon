@@ -7,9 +7,7 @@ use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
-use crate::applications::algorithms::pathfinding::shared::{
-    err, get_str, get_u64, timings_json,
-};
+use crate::applications::algorithms::pathfinding::shared::{err, get_str, get_u64, timings_json};
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
@@ -27,7 +25,10 @@ pub fn handle_astar(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         None => return err(op, "INVALID_REQUEST", "Missing 'graphName' parameter"),
     };
 
-    let mode = request.get("mode").and_then(|v| v.as_str()).unwrap_or("stream");
+    let mode = request
+        .get("mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("stream");
 
     let concurrency_value = request
         .get("concurrency")
@@ -130,9 +131,10 @@ pub fn handle_astar(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 Ok(Some(rows))
             };
 
-            let result_builder = FnStreamResultBuilder::new(
-                |_gr: &GraphResources, rows: Option<Vec<Value>>| rows.unwrap_or_default().into_iter(),
-            );
+            let result_builder =
+                FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<Value>>| {
+                    rows.unwrap_or_default().into_iter()
+                });
 
             match convenience.process_stream(
                 &graph_resources,
@@ -182,11 +184,13 @@ pub fn handle_astar(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 }
 
                 let stats = builder.stats().map_err(|e| e.to_string())?;
-                Ok(Some(serde_json::to_value(stats).map_err(|e| e.to_string())?))
+                Ok(Some(
+                    serde_json::to_value(stats).map_err(|e| e.to_string())?,
+                ))
             };
 
-            let builder = FnStatsResultBuilder(
-                |_gr: &GraphResources, stats: Option<Value>, timings| {
+            let builder =
+                FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<Value>, timings| {
                     json!({
                         "ok": true,
                         "op": op,
@@ -194,8 +198,7 @@ pub fn handle_astar(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                         "data": stats,
                         "timings": timings_json(timings)
                     })
-                },
-            );
+                });
 
             match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
                 Ok(v) => v,
@@ -234,8 +237,75 @@ pub fn handle_astar(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 &format!("Invalid estimate submode '{other}'. Use 'memory'"),
             ),
         },
-        "mutate" => err(op, "NOT_IMPLEMENTED", "A* mutate is not implemented"),
-        "write" => err(op, "NOT_IMPLEMENTED", "A* write is not implemented"),
+        "mutate" => {
+            let property_name = match request.get("mutateProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+
+            let builder = graph_resources
+                .facade()
+                .astar()
+                .source(source)
+                .target(target)
+                .heuristic(heuristic)
+                .weight_property(&weight_property)
+                .direction(&direction)
+                .concurrency(concurrency_value);
+
+            match builder.mutate(property_name) {
+                Ok(result) => {
+                    catalog.set(graph_name, result.updated_store);
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "data": {
+                            "nodes_updated": result.summary.nodes_updated,
+                            "property_name": result.summary.property_name,
+                            "execution_time_ms": result.summary.execution_time_ms
+                        }
+                    })
+                }
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("A* mutate failed: {e:?}")),
+            }
+        }
+        "write" => {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+
+            let builder = graph_resources
+                .facade()
+                .astar()
+                .source(source)
+                .target(target)
+                .heuristic(heuristic)
+                .weight_property(&weight_property)
+                .direction(&direction)
+                .concurrency(concurrency_value);
+
+            match builder.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("A* write failed: {e:?}")),
+            }
+        }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
 }

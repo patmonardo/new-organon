@@ -175,9 +175,35 @@ pub fn handle_leiden(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
             }
         }
         "mutate" => {
-            let facade = LeidenFacade::new(Arc::clone(graph_resources.store()));
-            match facade.mutate() {
-                Ok(result) => json!({"ok": true, "op": op, "data": result}),
+            // Accept mutateProperty or expectedPropertyName fallback
+            let property_name = request
+                .get("mutateProperty")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .or_else(|| {
+                    request
+                        .get("expectedPropertyName")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+                .unwrap_or_else(|| "community".to_string());
+
+            let facade = LeidenFacade::new(Arc::clone(graph_resources.store()))
+                .gamma(gamma)
+                .theta(theta)
+                .tolerance(tolerance)
+                .max_iterations(max_iterations)
+                .random_seed(random_seed);
+
+            match facade.mutate(&property_name) {
+                Ok(result) => {
+                    catalog.set(graph_name, result.updated_store);
+                    json!({"ok": true, "op": op, "data": {
+                        "nodes_updated": result.summary.nodes_updated,
+                        "property_name": result.summary.property_name,
+                        "execution_time_ms": result.summary.execution_time_ms
+                    }})
+                }
                 Err(e) => err(
                     op,
                     "EXECUTION_ERROR",
@@ -186,8 +212,26 @@ pub fn handle_leiden(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
             }
         }
         "write" => {
-            let facade = LeidenFacade::new(Arc::clone(graph_resources.store()));
-            match facade.write() {
+            let property_name = request
+                .get("writeProperty")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .or_else(|| {
+                    request
+                        .get("expectedPropertyName")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+                .unwrap_or_else(|| "community".to_string());
+
+            let facade = LeidenFacade::new(Arc::clone(graph_resources.store()))
+                .gamma(gamma)
+                .theta(theta)
+                .tolerance(tolerance)
+                .max_iterations(max_iterations)
+                .random_seed(random_seed);
+
+            match facade.write(&property_name) {
                 Ok(result) => json!({"ok": true, "op": op, "data": result}),
                 Err(e) => err(
                     op,

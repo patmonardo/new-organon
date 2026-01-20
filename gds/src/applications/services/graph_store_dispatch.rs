@@ -1,5 +1,5 @@
 use crate::applications::services::tsjson_support::{err, ok, FacadeContext};
-use crate::collections::backends::vec::{VecDouble, VecLong};
+use crate::collections::backends::vec::{VecDouble, VecDoubleArray, VecLong};
 use crate::config::GraphStoreConfig;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::SimpleIdMap;
@@ -9,7 +9,8 @@ use crate::types::graph_store::{
     GraphStore,
 };
 use crate::types::properties::node::impls::default_node_property_values::{
-    DefaultDoubleNodePropertyValues, DefaultLongNodePropertyValues,
+    DefaultDoubleArrayNodePropertyValues, DefaultDoubleNodePropertyValues,
+    DefaultLongNodePropertyValues,
 };
 use crate::types::properties::node::NodePropertyValues;
 use crate::types::properties::relationship::impls::default_relationship_property_values::{
@@ -266,42 +267,117 @@ pub(super) fn handle_graph_store(request: &Value, ctx: &FacadeContext) -> Value 
                         );
                     }
 
-                    let mut all_longs = Vec::with_capacity(arr.len());
-                    let mut all_doubles = Vec::with_capacity(arr.len());
-                    let mut is_all_longs = true;
-                    let mut is_all_numbers = true;
+                    let mut saw_array = false;
+                    let mut saw_scalar = false;
                     for v in arr.iter() {
-                        if let Some(i) = v.as_i64() {
-                            all_longs.push(i);
-                            all_doubles.push(i as f64);
-                        } else if let Some(f) = v.as_f64() {
-                            is_all_longs = false;
-                            all_doubles.push(f);
+                        if v.is_array() {
+                            saw_array = true;
+                        } else if v.is_null() || v.is_number() {
+                            saw_scalar = true;
                         } else {
-                            is_all_numbers = false;
-                            break;
+                            saw_scalar = true;
                         }
                     }
-                    if !is_all_numbers {
+
+                    if saw_array && saw_scalar {
                         return err(
                             op,
                             "INVALID_REQUEST",
-                            "snapshot.nodeProperties arrays must contain only numbers",
+                            "snapshot.nodeProperties arrays must contain either only numbers or only number arrays",
                         );
                     }
 
-                    let pv: Arc<dyn NodePropertyValues> = if is_all_longs {
-                        Arc::new(DefaultLongNodePropertyValues::<VecLong>::from_collection(
-                            VecLong::from(all_longs),
-                            node_count,
-                        ))
-                    } else {
+                    let pv: Arc<dyn NodePropertyValues> = if saw_array {
+                        let mut data: Vec<Option<Vec<f64>>> = Vec::with_capacity(arr.len());
+                        let mut dimension: Option<usize> = None;
+                        for v in arr.iter() {
+                            if v.is_null() {
+                                data.push(None);
+                                continue;
+                            }
+
+                            let Some(inner) = v.as_array() else {
+                                return err(
+                                    op,
+                                    "INVALID_REQUEST",
+                                    "snapshot.nodeProperties array entries must be arrays of numbers",
+                                );
+                            };
+
+                            let mut vec = Vec::with_capacity(inner.len());
+                            for elem in inner.iter() {
+                                if let Some(i) = elem.as_i64() {
+                                    vec.push(i as f64);
+                                } else if let Some(f) = elem.as_f64() {
+                                    vec.push(f);
+                                } else {
+                                    return err(
+                                        op,
+                                        "INVALID_REQUEST",
+                                        "snapshot.nodeProperties array entries must contain only numbers",
+                                    );
+                                }
+                            }
+
+                            if let Some(dim) = dimension {
+                                if vec.len() != dim {
+                                    return err(
+                                        op,
+                                        "INVALID_REQUEST",
+                                        "snapshot.nodeProperties array entries must have a consistent length",
+                                    );
+                                }
+                            } else {
+                                dimension = Some(vec.len());
+                            }
+
+                            data.push(Some(vec));
+                        }
+
                         Arc::new(
-                            DefaultDoubleNodePropertyValues::<VecDouble>::from_collection(
-                                VecDouble::from(all_doubles),
+                            DefaultDoubleArrayNodePropertyValues::<VecDoubleArray>::from_collection(
+                                VecDoubleArray::from(data),
                                 node_count,
                             ),
                         )
+                    } else {
+                        let mut all_longs = Vec::with_capacity(arr.len());
+                        let mut all_doubles = Vec::with_capacity(arr.len());
+                        let mut is_all_longs = true;
+                        let mut is_all_numbers = true;
+                        for v in arr.iter() {
+                            if let Some(i) = v.as_i64() {
+                                all_longs.push(i);
+                                all_doubles.push(i as f64);
+                            } else if let Some(f) = v.as_f64() {
+                                is_all_longs = false;
+                                all_doubles.push(f);
+                            } else {
+                                is_all_numbers = false;
+                                break;
+                            }
+                        }
+                        if !is_all_numbers {
+                            return err(
+                                op,
+                                "INVALID_REQUEST",
+                                "snapshot.nodeProperties arrays must contain only numbers",
+                            );
+                        }
+
+                        if is_all_longs {
+                            Arc::new(DefaultLongNodePropertyValues::<VecLong>::from_collection(
+                                VecLong::from(all_longs),
+                                node_count,
+                            ))
+                        } else {
+                            Arc::new(
+                                DefaultDoubleNodePropertyValues::<VecDouble>::from_collection(
+                                    VecDouble::from(all_doubles),
+                                    node_count,
+                                ),
+                            )
+                        }
                     };
 
                     let labels =

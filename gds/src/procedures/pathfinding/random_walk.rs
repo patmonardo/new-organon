@@ -6,7 +6,7 @@
 use crate::algo::random_walk::computation::RandomWalkComputationRuntime;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::Result;
+use crate::procedures::traits::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -32,6 +32,13 @@ pub struct RandomWalkRow {
 pub struct RandomWalkStats {
     pub walk_count: usize,
     pub execution_time_ms: u64,
+}
+
+/// Mutate result for random walk: summary + updated store
+#[derive(Debug, Clone)]
+pub struct RandomWalkMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 /// Random Walk algorithm builder
@@ -272,15 +279,37 @@ impl RandomWalkBuilder {
     /// let result = builder.mutate("walks")?;
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
-    pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
+    pub fn mutate(self, property_name: &str) -> Result<RandomWalkMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
+        let graph_store = Arc::clone(&self.graph_store);
+        let (walks, elapsed) = self.compute()?;
+        let mut paths: Vec<PathResult> = Vec::new();
 
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "RandomWalk mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        for walk in walks {
+            if walk.len() < 2 {
+                continue;
+            }
+            let source = walk[0];
+            let target = *walk.last().unwrap();
+            let cost = (walk.len() - 1) as f64;
+            paths.push(PathResult {
+                source,
+                target,
+                path: walk,
+                cost,
+            });
+        }
+
+        let updated_store =
+            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+
+        let summary = MutationResult::new(paths.len() as u64, property_name.to_string(), elapsed);
+
+        Ok(RandomWalkMutateResult {
+            summary,
+            updated_store,
+        })
     }
 
     /// Write mode: Compute and persist to storage
@@ -297,12 +326,12 @@ impl RandomWalkBuilder {
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
-
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "RandomWalk mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     /// Estimate memory requirements for random walk execution

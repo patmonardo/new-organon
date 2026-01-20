@@ -4,7 +4,9 @@ use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
-use crate::applications::algorithms::pathfinding::shared::{err, timings_json, CommonRequest, Mode};
+use crate::applications::algorithms::pathfinding::shared::{
+    err, timings_json, CommonRequest, Mode,
+};
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
@@ -57,14 +59,18 @@ pub fn handle_dag_longest_path(request: &Value, catalog: Arc<dyn GraphCatalog>) 
                 Ok(Some(rows))
             };
 
-            let result_builder = FnStreamResultBuilder::new(
-                |_gr: &GraphResources, rows: Option<Vec<Value>>| {
+            let result_builder =
+                FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<Value>>| {
                     rows.unwrap_or_default().into_iter()
-                },
-            );
+                });
 
-            match convenience.process_stream(&graph_resources, common.concurrency, task, compute, result_builder)
-            {
+            match convenience.process_stream(
+                &graph_resources,
+                common.concurrency,
+                task,
+                compute,
+                result_builder,
+            ) {
                 Ok(stream) => {
                     let rows: Vec<Value> = stream.collect();
                     json!({
@@ -94,7 +100,10 @@ pub fn handle_dag_longest_path(request: &Value, catalog: Arc<dyn GraphCatalog>) 
             let compute = move |gr: &GraphResources,
                                 _tracker: &mut dyn ProgressTracker,
                                 _termination: &TerminationFlag|
-                  -> Result<Option<crate::procedures::pathfinding::DagLongestPathStats>, String> {
+                  -> Result<
+                Option<crate::procedures::pathfinding::DagLongestPathStats>,
+                String,
+            > {
                 let stats = gr
                     .facade()
                     .dag_longest_path()
@@ -118,8 +127,13 @@ pub fn handle_dag_longest_path(request: &Value, catalog: Arc<dyn GraphCatalog>) 
                 },
             );
 
-            match convenience.process_stats(&graph_resources, common.concurrency, task, compute, builder)
-            {
+            match convenience.process_stats(
+                &graph_resources,
+                common.concurrency,
+                task,
+                compute,
+                builder,
+            ) {
                 Ok(v) => v,
                 Err(e) => err(
                     op,
@@ -128,39 +142,102 @@ pub fn handle_dag_longest_path(request: &Value, catalog: Arc<dyn GraphCatalog>) 
                 ),
             }
         }
-        Mode::Estimate => {
-            match common.estimate_submode.as_deref() {
-                Some("memory") | None => {
-                    let memory = graph_resources
-                        .facade()
-                        .dag_longest_path()
-                        .concurrency(common.concurrency.value())
-                        .estimate_memory();
+        Mode::Estimate => match common.estimate_submode.as_deref() {
+            Some("memory") | None => {
+                let memory = graph_resources
+                    .facade()
+                    .dag_longest_path()
+                    .concurrency(common.concurrency.value())
+                    .estimate_memory();
 
-                    match memory {
-                        Ok(memory) => json!({
-                            "ok": true,
-                            "op": op,
-                            "data": {
-                                "minBytes": memory.min(),
-                                "maxBytes": memory.max()
-                            }
-                        }),
-                        Err(e) => err(
-                            op,
-                            "EXECUTION_ERROR",
-                            &format!("DagLongestPath estimate failed: {e}"),
-                        ),
-                    }
+                match memory {
+                    Ok(memory) => json!({
+                        "ok": true,
+                        "op": op,
+                        "data": {
+                            "minBytes": memory.min(),
+                            "maxBytes": memory.max()
+                        }
+                    }),
+                    Err(e) => err(
+                        op,
+                        "EXECUTION_ERROR",
+                        &format!("DagLongestPath estimate failed: {e}"),
+                    ),
                 }
-                Some(other) => err(
+            }
+            Some(other) => err(
+                op,
+                "INVALID_REQUEST",
+                &format!("Invalid estimate submode '{other}'. Use 'memory'"),
+            ),
+        },
+        Mode::Mutate => {
+            let property_name = match request.get("mutateProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+
+            let builder = graph_resources
+                .facade()
+                .dag_longest_path()
+                .concurrency(common.concurrency.value());
+
+            match builder.mutate(property_name) {
+                Ok(result) => {
+                    catalog.set(&common.graph_name, result.updated_store);
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "data": {
+                            "nodes_updated": result.summary.nodes_updated,
+                            "property_name": result.summary.property_name,
+                            "execution_time_ms": result.summary.execution_time_ms
+                        }
+                    })
+                }
+                Err(e) => err(
                     op,
-                    "INVALID_REQUEST",
-                    &format!("Invalid estimate submode '{other}'. Use 'memory'"),
+                    "EXECUTION_ERROR",
+                    &format!("DagLongestPath mutate failed: {e:?}"),
                 ),
             }
         }
-        Mode::Mutate => err(op, "NOT_IMPLEMENTED", "DagLongestPath mutate is not implemented"),
-        Mode::Write => err(op, "NOT_IMPLEMENTED", "DagLongestPath write is not implemented"),
+        Mode::Write => {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+
+            let builder = graph_resources
+                .facade()
+                .dag_longest_path()
+                .concurrency(common.concurrency.value());
+
+            match builder.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("DagLongestPath write failed: {e:?}"),
+                ),
+            }
+        }
     }
 }

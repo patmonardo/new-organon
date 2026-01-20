@@ -2,8 +2,8 @@ use crate::algo::prize_collecting_steiner_tree::{
     PCSTreeComputationRuntime, PCSTreeConfig, PCSTreeStorageRuntime,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{MutationResult, WriteResult};
-use crate::procedures::traits::Result;
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::traits::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -30,6 +30,13 @@ pub struct PCSTreeStats {
     pub total_cost: f64,
     pub net_value: f64,
     pub computation_time_ms: u64,
+}
+
+/// Mutate result for Prize-Collecting Steiner Tree: summary + updated store
+#[derive(Debug, Clone)]
+pub struct PCSTreeMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 /// Prize-Collecting Steiner Tree algorithm builder
@@ -231,23 +238,48 @@ impl PCSTreeBuilder {
     }
 
     /// Mutate mode: writes results back to the graph store
-    pub fn mutate(self) -> Result<MutationResult> {
-        // Note: mutation logic is deferred.
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "mutate mode not yet implemented".to_string(),
-            ),
-        )
+    pub fn mutate(self, property_name: &str) -> Result<PCSTreeMutateResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+        let graph_store = Arc::clone(&self.graph_store);
+        let (rows, stats) = self.compute()?;
+        let paths: Vec<PathResult> = rows
+            .into_iter()
+            .filter_map(|row| {
+                row.parent.map(|parent| PathResult {
+                    source: parent,
+                    target: row.node,
+                    path: vec![parent, row.node],
+                    cost: row.cost_to_parent,
+                })
+            })
+            .collect();
+
+        let updated_store =
+            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+
+        let summary = MutationResult::new(
+            paths.len() as u64,
+            property_name.to_string(),
+            std::time::Duration::from_millis(stats.computation_time_ms),
+        );
+
+        Ok(PCSTreeMutateResult {
+            summary,
+            updated_store,
+        })
     }
 
     /// Write mode: writes results to external storage
-    pub fn write(self) -> Result<WriteResult> {
-        // Note: write logic is deferred.
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "write mode not yet implemented".to_string(),
-            ),
-        )
+    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     /// Estimate memory usage for the computation

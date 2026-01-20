@@ -194,6 +194,19 @@ pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>)
             }
         }
         "mutate" => {
+            // Accept either explicit mutateProperty, expectedPropertyName, or fall back to a default
+            let property_name = request
+                .get("mutateProperty")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .or_else(|| {
+                    request
+                        .get("expectedPropertyName")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                })
+                .unwrap_or_else(|| "label".to_string());
+
             let mut facade = LabelPropagationFacade::new(Arc::clone(graph_resources.store()))
                 .concurrency(concurrency_value)
                 .max_iterations(max_iterations);
@@ -206,8 +219,15 @@ pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>)
                 facade = facade.seed_property(seed);
             }
 
-            match facade.mutate() {
-                Ok(result) => json!({"ok": true, "op": op, "data": result}),
+            match facade.mutate(&property_name) {
+                Ok(result) => {
+                    catalog.set(graph_name, result.updated_store);
+                    json!({"ok": true, "op": op, "data": {
+                        "nodes_updated": result.summary.nodes_updated,
+                        "property_name": result.summary.property_name,
+                        "execution_time_ms": result.summary.execution_time_ms
+                    }})
+                }
                 Err(e) => err(
                     op,
                     "EXECUTION_ERROR",
@@ -228,7 +248,18 @@ pub fn handle_label_propagation(request: &Value, catalog: Arc<dyn GraphCatalog>)
                 facade = facade.seed_property(seed);
             }
 
-            match facade.write() {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(s) => s.to_string(),
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+
+            match facade.write(&property_name) {
                 Ok(result) => json!({"ok": true, "op": op, "data": result}),
                 Err(e) => err(
                     op,

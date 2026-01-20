@@ -104,6 +104,13 @@ pub struct BfsBuilder {
     delta: usize,
 }
 
+/// Mutate result for BFS: summary + updated store
+#[derive(Debug, Clone)]
+pub struct BfsMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
+}
+
 impl BfsBuilder {
     /// Create a new BFS builder bound to a live graph store.
     ///
@@ -365,15 +372,36 @@ impl BfsBuilder {
     /// let result = builder.mutate("distance")?;
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
-    pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
+    pub fn mutate(self, property_name: &str) -> Result<BfsMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
+        let source = self.source.unwrap_or(0);
+        let graph_store = Arc::clone(&self.graph_store);
+        let traversal_order = self.compute()?;
+        let paths: Vec<PathResult> = traversal_order
+            .into_iter()
+            .enumerate()
+            .map(|(index, node_id)| PathResult {
+                source,
+                target: node_id as u64,
+                path: vec![node_id as u64],
+                cost: index as f64,
+            })
+            .collect();
 
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "BFS mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let updated_store =
+            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+
+        let summary = MutationResult::new(
+            paths.len() as u64,
+            property_name.to_string(),
+            std::time::Duration::from_millis(0),
+        );
+
+        Ok(BfsMutateResult {
+            summary,
+            updated_store,
+        })
     }
 
     /// Write mode: Compute and persist to storage
@@ -391,12 +419,12 @@ impl BfsBuilder {
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
-
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "BFS mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     /// Estimate memory requirements for BFS execution
@@ -586,7 +614,7 @@ mod tests {
         };
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
         let builder = BfsBuilder::new(store).source(0);
-        assert!(builder.mutate("distance").is_err());
+        assert!(builder.mutate("distance").is_ok());
     }
 
     #[test]
@@ -599,7 +627,7 @@ mod tests {
         };
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
         let builder = BfsBuilder::new(store).source(0);
-        assert!(builder.write("bfs_results").is_err());
+        assert!(builder.write("bfs_results").is_ok());
     }
 
     #[test]

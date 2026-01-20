@@ -6,7 +6,7 @@
 use crate::algo::topological_sort::computation::TopologicalSortComputationRuntime;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::Result;
+use crate::procedures::traits::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -32,6 +32,13 @@ pub struct TopologicalSortRow {
 pub struct TopologicalSortStats {
     pub node_count: usize,
     pub execution_time_ms: u64,
+}
+
+/// Mutate result for topological sort: summary + updated store
+#[derive(Debug, Clone)]
+pub struct TopologicalSortMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 /// Topological Sort algorithm builder
@@ -200,15 +207,40 @@ impl TopologicalSortBuilder {
     /// let result = builder.mutate("topological_order")?;
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
-    pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
+    pub fn mutate(self, property_name: &str) -> Result<TopologicalSortMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
+        let graph_store = Arc::clone(&self.graph_store);
+        let (sorted_nodes, max_distances, elapsed) = self.compute()?;
 
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "TopologicalSort mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let mut paths: Vec<PathResult> = Vec::new();
+        let mut prev: Option<u64> = None;
+        for (idx, node_id) in sorted_nodes.iter().enumerate() {
+            let node_u64 = *node_id as u64;
+            if let Some(prev_id) = prev {
+                let cost = max_distances
+                    .as_ref()
+                    .and_then(|d| d.get(*node_id as usize).copied())
+                    .unwrap_or(idx as f64);
+                paths.push(PathResult {
+                    source: prev_id,
+                    target: node_u64,
+                    path: vec![prev_id, node_u64],
+                    cost,
+                });
+            }
+            prev = Some(node_u64);
+        }
+
+        let updated_store =
+            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+
+        let summary = MutationResult::new(paths.len() as u64, property_name.to_string(), elapsed);
+
+        Ok(TopologicalSortMutateResult {
+            summary,
+            updated_store,
+        })
     }
 
     /// Write mode: Compute and persist to storage
@@ -225,12 +257,12 @@ impl TopologicalSortBuilder {
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
-
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "TopologicalSort mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     /// Estimate memory requirements for topological sort execution

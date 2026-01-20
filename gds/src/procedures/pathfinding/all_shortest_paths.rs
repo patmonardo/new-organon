@@ -8,7 +8,7 @@ use crate::algo::all_shortest_paths::{
 };
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::Result;
+use crate::procedures::traits::{PathResult as ProcedurePathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -58,6 +58,13 @@ pub struct AllShortestPathsBuilder {
     /// Progress tracking components
     task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
     user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
+}
+
+/// Mutate result for AllShortestPaths: summary + updated store
+#[derive(Debug, Clone)]
+pub struct AllShortestPathsMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 /// Helper function to convert NodeId to u64
@@ -306,15 +313,34 @@ impl AllShortestPathsBuilder {
     /// let result = builder.mutate("distance")?;
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
-    pub fn mutate(self, property_name: &str) -> Result<MutationResult> {
+    pub fn mutate(self, property_name: &str) -> Result<AllShortestPathsMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
+        let graph_store = Arc::clone(&self.graph_store);
+        let (rows, stats) = self.compute()?;
+        let paths: Vec<ProcedurePathResult> = rows
+            .iter()
+            .map(|row| ProcedurePathResult {
+                source: row.source,
+                target: row.target,
+                path: vec![row.source, row.target],
+                cost: row.distance,
+            })
+            .collect();
 
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "AllShortestPaths mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let updated_store =
+            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+
+        let summary = MutationResult::new(
+            paths.len() as u64,
+            property_name.to_string(),
+            std::time::Duration::from_millis(stats.execution_time_ms),
+        );
+
+        Ok(AllShortestPathsMutateResult {
+            summary,
+            updated_store,
+        })
     }
 
     /// Write mode: Compute and persist to storage
@@ -331,12 +357,12 @@ impl AllShortestPathsBuilder {
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
-
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "AllShortestPaths mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     /// Estimate memory requirements for all-shortest-paths execution

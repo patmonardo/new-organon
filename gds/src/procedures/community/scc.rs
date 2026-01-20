@@ -8,6 +8,7 @@
 //! - `concurrency`: accepted for Java GDS alignment; currently unused.
 
 use crate::algo::scc::{SccComputationRuntime, SccResult, SccStorageRuntime};
+use crate::collections::backends::vec::VecLong;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory, Tasks,
@@ -16,6 +17,10 @@ use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
+use crate::types::properties::node::NodePropertyValues;
+use crate::types::schema::NodeLabel;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 /// Per-node SCC assignment row.
@@ -38,6 +43,13 @@ pub struct SccFacade {
     graph_store: Arc<DefaultGraphStore>,
     concurrency: usize,
     task_registry: Option<TaskRegistry>,
+}
+
+/// Mutate result for SCC: summary + updated store
+#[derive(Debug, Clone)]
+pub struct SccMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl SccFacade {
@@ -121,23 +133,47 @@ impl SccFacade {
     }
 
     /// Mutate mode: writes component assignments back to the graph store.
-    pub fn mutate(self) -> Result<MutationResult> {
-        // Note: mutation logic is deferred.
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "mutate not yet implemented".to_string(),
-            ),
-        )
+    pub fn mutate(self, property_name: &str) -> Result<SccMutateResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        let result = self.compute()?;
+
+        let node_count = self.graph_store.node_count();
+        let nodes_updated = node_count as u64;
+
+        let longs: Vec<i64> = result.components.into_iter().map(|c| c as i64).collect();
+        let backend = VecLong::from(longs);
+        let values = DefaultLongNodePropertyValues::from_collection(backend, node_count);
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+        let mut new_store = self.graph_store.as_ref().clone();
+        let labels_set: HashSet<NodeLabel> = new_store.node_labels();
+        new_store
+            .add_node_property(labels_set, property_name.to_string(), values)
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "SCC mutate failed to add property: {e}"
+                ))
+            })?;
+
+        let execution_time = std::time::Duration::from_millis(result.computation_time_ms as u64);
+        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+
+        Ok(SccMutateResult {
+            summary,
+            updated_store: Arc::new(new_store),
+        })
     }
 
     /// Write mode: writes component assignments to a new graph.
-    pub fn write(self) -> Result<WriteResult> {
-        // Note: write logic is deferred.
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "write not yet implemented".to_string(),
-            ),
-        )
+    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     /// Estimate memory usage.

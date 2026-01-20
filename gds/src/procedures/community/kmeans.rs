@@ -18,11 +18,16 @@ pub use crate::algo::kmeans::KMeansSamplerType;
 use crate::algo::kmeans::{
     KMeansComputationRuntime, KMeansConfig, KMeansResult, KMeansStorageRuntime,
 };
+use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskRegistry, Tasks};
-use crate::procedures::builder_base::ConfigValidator;
+use crate::mem::MemoryRange;
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
+use crate::types::properties::node::NodePropertyValues;
+use crate::types::schema::NodeLabel;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
@@ -50,6 +55,13 @@ pub struct KMeansFacade {
     graph_store: Arc<DefaultGraphStore>,
     config: KMeansConfig,
     task_registry: Option<TaskRegistry>,
+}
+
+/// Mutate result for KMeans: summary + updated store
+#[derive(Debug, Clone)]
+pub struct KMeansMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl KMeansFacade {
@@ -207,6 +219,73 @@ impl KMeansFacade {
             restarts: result.restarts,
             execution_time_ms: elapsed,
         })
+    }
+
+    /// Mutate mode: writes community assignments back to the graph store.
+    pub fn mutate(self, property_name: &str) -> Result<KMeansMutateResult> {
+        self.validate_basic()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+
+        let (result, elapsed_ms) = self.compute()?;
+
+        let node_count = self.graph_store.node_count();
+        let nodes_updated = node_count as u64;
+
+        let longs: Vec<i64> = result.communities.into_iter().map(|c| c as i64).collect();
+        let backend = VecLong::from(longs);
+        let values = DefaultLongNodePropertyValues::from_collection(backend, node_count);
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+        let mut new_store = self.graph_store.as_ref().clone();
+        let labels_set: HashSet<NodeLabel> = new_store.node_labels();
+        new_store
+            .add_node_property(labels_set, property_name.to_string(), values)
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "KMeans mutate failed to add property: {e}"
+                ))
+            })?;
+
+        let summary = MutationResult::new(
+            nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(elapsed_ms),
+        );
+
+        Ok(KMeansMutateResult {
+            summary,
+            updated_store: Arc::new(new_store),
+        })
+    }
+
+    /// Write mode: writes community assignments to a new graph.
+    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
+    }
+
+    /// Estimate memory usage.
+    pub fn estimate_memory(&self) -> Result<MemoryRange> {
+        self.validate_basic()?;
+
+        let node_count = self.graph_store.node_count();
+        let relationship_count = self.graph_store.relationship_count();
+
+        // Per node: feature vector + community assignments + distance tracking.
+        let per_node = 192usize;
+        // Per relationship: traversal overhead (small).
+        let per_relationship = 8usize;
+
+        let base: usize = 64 * 1024;
+        let total = base
+            .saturating_add(node_count.saturating_mul(per_node))
+            .saturating_add(relationship_count.saturating_mul(per_relationship));
+
+        Ok(MemoryRange::of_range(total, total.saturating_mul(3)))
     }
 
     pub fn run(&self) -> Result<KMeansResult> {

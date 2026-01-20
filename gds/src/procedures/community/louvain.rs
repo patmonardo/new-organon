@@ -13,12 +13,17 @@
 use crate::algo::louvain::{
     LouvainComputationRuntime, LouvainConfig, LouvainResult, LouvainStorageRuntime,
 };
+use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
+use crate::types::properties::node::NodePropertyValues;
+use crate::types::schema::NodeLabel;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -43,6 +48,13 @@ pub struct LouvainFacade {
     config: LouvainConfig,
     concurrency: usize,
     task_registry: Option<TaskRegistry>,
+}
+
+/// Mutate result for Louvain: summary + updated graph store
+#[derive(Debug, Clone)]
+pub struct LouvainMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl LouvainFacade {
@@ -93,27 +105,49 @@ impl LouvainFacade {
         })
     }
 
-    pub fn mutate(self, _property_name: &str) -> Result<MutationResult> {
-        let (_result, _elapsed) = self.compute()?;
+    pub fn mutate(self, property_name: &str) -> Result<LouvainMutateResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        // Note: node property mutation is deferred.
-        // For now, return a placeholder result
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "Louvain mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        let start = Instant::now();
+        let (result, _elapsed) = self.compute()?;
+
+        let node_count = self.graph_store.node_count();
+        let nodes_updated = node_count as u64;
+
+        // Convert community ids (u64) into i64 backend for VecLong
+        let longs: Vec<i64> = result.data.into_iter().map(|c| c as i64).collect();
+        let backend = VecLong::from(longs);
+        let values = DefaultLongNodePropertyValues::from_collection(backend, node_count);
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
+
+        let mut new_store = self.graph_store.as_ref().clone();
+        let labels: HashSet<NodeLabel> = new_store.node_labels();
+        new_store
+            .add_node_property(labels, property_name.to_string(), values)
+            .map_err(|e| {
+                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    "Louvain mutate failed to add property: {e}"
+                ))
+            })?;
+
+        let execution_time = start.elapsed();
+        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+
+        Ok(LouvainMutateResult {
+            summary,
+            updated_store: Arc::new(new_store),
+        })
     }
 
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         // For Louvain, write is the same as mutate since it's node properties
-        self.mutate(property_name).map(|_| {
-            WriteResult::new(
-                0, // Note: placeholder count until mutation is wired.
-                property_name.to_string(),
-                std::time::Duration::from_millis(0), // Note: placeholder time until mutation is wired.
-            )
-        })
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     pub fn estimate_memory(&self) -> MemoryRange {

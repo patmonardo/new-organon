@@ -21,7 +21,9 @@ pub mod yens;
 
 mod path_result_mapping;
 
-pub(crate) use path_result_mapping::core_to_procedure_path_result;
+pub(crate) use path_result_mapping::{
+    build_path_relationship_store, core_to_procedure_path_result,
+};
 
 // Re-export for easy access
 pub use all_shortest_paths::{AllShortestPathsBuilder, AllShortestPathsRow, AllShortestPathsStats};

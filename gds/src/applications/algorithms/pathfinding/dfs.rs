@@ -7,9 +7,7 @@ use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
-use crate::applications::algorithms::pathfinding::shared::{
-    err, get_bool, get_u64, timings_json,
-};
+use crate::applications::algorithms::pathfinding::shared::{err, get_bool, get_u64, timings_json};
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
@@ -26,7 +24,10 @@ pub fn handle_dfs(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         None => return err(op, "INVALID_REQUEST", "Missing 'graphName' parameter"),
     };
 
-    let mode = request.get("mode").and_then(|v| v.as_str()).unwrap_or("stream");
+    let mode = request
+        .get("mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("stream");
 
     let concurrency_value = request
         .get("concurrency")
@@ -51,15 +52,14 @@ pub fn handle_dfs(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         None => return err(op, "INVALID_REQUEST", "Missing 'source' parameter"),
     };
 
-    let targets: Vec<u64> = if let Some(t) =
-        get_u64(request, "target").or_else(|| get_u64(request, "targetNode"))
-    {
-        vec![t]
-    } else if let Some(arr) = request.get("targets").and_then(|v| v.as_array()) {
-        arr.iter().filter_map(|v| v.as_u64()).collect()
-    } else {
-        Vec::new()
-    };
+    let targets: Vec<u64> =
+        if let Some(t) = get_u64(request, "target").or_else(|| get_u64(request, "targetNode")) {
+            vec![t]
+        } else if let Some(arr) = request.get("targets").and_then(|v| v.as_array()) {
+            arr.iter().filter_map(|v| v.as_u64()).collect()
+        } else {
+            Vec::new()
+        };
 
     let max_depth = request
         .get("maxDepth")
@@ -115,9 +115,10 @@ pub fn handle_dfs(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 Ok(Some(rows))
             };
 
-            let result_builder = FnStreamResultBuilder::new(
-                |_gr: &GraphResources, rows: Option<Vec<Value>>| rows.unwrap_or_default().into_iter(),
-            );
+            let result_builder =
+                FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<Value>>| {
+                    rows.unwrap_or_default().into_iter()
+                });
 
             match convenience.process_stream(
                 &graph_resources,
@@ -166,11 +167,13 @@ pub fn handle_dfs(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 }
 
                 let stats = builder.stats().map_err(|e| e.to_string())?;
-                Ok(Some(serde_json::to_value(stats).map_err(|e| e.to_string())?))
+                Ok(Some(
+                    serde_json::to_value(stats).map_err(|e| e.to_string())?,
+                ))
             };
 
-            let builder = FnStatsResultBuilder(
-                |_gr: &GraphResources, stats: Option<Value>, timings| {
+            let builder =
+                FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<Value>, timings| {
                     json!({
                         "ok": true,
                         "op": op,
@@ -178,8 +181,7 @@ pub fn handle_dfs(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                         "data": stats,
                         "timings": timings_json(timings)
                     })
-                },
-            );
+                });
 
             match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
                 Ok(v) => v,
@@ -214,8 +216,83 @@ pub fn handle_dfs(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 &format!("Invalid estimate submode '{other}'. Use 'memory'"),
             ),
         },
-        "mutate" => err(op, "NOT_IMPLEMENTED", "DFS mutate is not implemented"),
-        "write" => err(op, "NOT_IMPLEMENTED", "DFS write is not implemented"),
+        "mutate" => {
+            let property_name = match request.get("mutateProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'mutateProperty' parameter for mutate mode",
+                    )
+                }
+            };
+
+            let mut builder = graph_resources
+                .facade()
+                .dfs()
+                .source(source)
+                .track_paths(track_paths)
+                .concurrency(concurrency_value);
+
+            if !targets.is_empty() {
+                builder = builder.targets(targets);
+            }
+            if let Some(max_depth) = max_depth {
+                builder = builder.max_depth(max_depth);
+            }
+
+            match builder.mutate(property_name) {
+                Ok(result) => {
+                    catalog.set(graph_name, result.updated_store);
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "data": {
+                            "nodes_updated": result.summary.nodes_updated,
+                            "property_name": result.summary.property_name,
+                            "execution_time_ms": result.summary.execution_time_ms
+                        }
+                    })
+                }
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("DFS mutate failed: {e:?}")),
+            }
+        }
+        "write" => {
+            let property_name = match request.get("writeProperty").and_then(|v| v.as_str()) {
+                Some(name) => name,
+                None => {
+                    return err(
+                        op,
+                        "INVALID_REQUEST",
+                        "Missing 'writeProperty' parameter for write mode",
+                    )
+                }
+            };
+
+            let mut builder = graph_resources
+                .facade()
+                .dfs()
+                .source(source)
+                .track_paths(track_paths)
+                .concurrency(concurrency_value);
+
+            if !targets.is_empty() {
+                builder = builder.targets(targets);
+            }
+            if let Some(max_depth) = max_depth {
+                builder = builder.max_depth(max_depth);
+            }
+
+            match builder.write(property_name) {
+                Ok(result) => json!({
+                    "ok": true,
+                    "op": op,
+                    "data": result
+                }),
+                Err(e) => err(op, "EXECUTION_ERROR", &format!("DFS write failed: {e:?}")),
+            }
+        }
         _ => err(op, "INVALID_REQUEST", "Invalid mode"),
     }
 }

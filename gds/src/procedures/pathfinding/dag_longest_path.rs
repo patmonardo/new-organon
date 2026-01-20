@@ -5,8 +5,8 @@
 
 use crate::algo::dag_longest_path::computation::DagLongestPathComputationRuntime;
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{MutationResult, WriteResult};
-use crate::procedures::traits::Result;
+use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::traits::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -34,6 +34,13 @@ pub struct DagLongestPathRow {
 pub struct DagLongestPathStats {
     pub path_count: usize,
     pub execution_time_ms: u64,
+}
+
+/// Mutate result for DAG longest path: summary + updated store
+#[derive(Debug, Clone)]
+pub struct DagLongestPathMutateResult {
+    pub summary: MutationResult,
+    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 /// DAG Longest Path algorithm builder
@@ -175,23 +182,42 @@ impl DagLongestPathBuilder {
     }
 
     /// Mutate mode: writes results back to the graph store
-    pub fn mutate(self) -> Result<MutationResult> {
-        // Note: mutation logic is deferred.
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "mutate mode not yet implemented".to_string(),
-            ),
-        )
+    pub fn mutate(self, property_name: &str) -> Result<DagLongestPathMutateResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+        let graph_store = Arc::clone(&self.graph_store);
+        let (rows, elapsed) = self.compute()?;
+        let paths: Vec<PathResult> = rows
+            .into_iter()
+            .map(|row| PathResult {
+                source: row.source_node as u64,
+                target: row.target_node as u64,
+                path: row.node_ids.into_iter().map(|n| n as u64).collect(),
+                cost: row.total_cost,
+            })
+            .collect();
+
+        let updated_store =
+            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+
+        let summary = MutationResult::new(paths.len() as u64, property_name.to_string(), elapsed);
+
+        Ok(DagLongestPathMutateResult {
+            summary,
+            updated_store,
+        })
     }
 
     /// Write mode: writes results to external storage
-    pub fn write(self) -> Result<WriteResult> {
-        // Note: write logic is deferred.
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "write mode not yet implemented".to_string(),
-            ),
-        )
+    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+        self.validate()?;
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
+        let res = self.mutate(property_name)?;
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     /// Estimate memory usage for the computation
