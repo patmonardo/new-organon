@@ -5,7 +5,7 @@ use crate::ml::decision_tree::DecisionTreeTrainerConfig;
 use crate::ml::models::logistic_regression::{
     LogisticRegressionClassifier, LogisticRegressionData,
 };
-use crate::ml::models::neural::{MLPClassifier, MLPClassifierData};
+use crate::ml::models::mlp::{MLPClassifier, MLPClassifierData};
 use crate::ml::models::trees::{RandomForestClassifier, RandomForestClassifierData};
 use crate::ml::models::{Classifier, ClassifierData, TrainingMethod};
 
@@ -137,7 +137,7 @@ impl ClassifierFactory {
             }
             TrainingMethod::MLPClassification => {
                 let mlp_config = (trainer_config as &dyn std::any::Any)
-                    .downcast_ref::<crate::ml::models::neural::MLPClassifierTrainConfig>()
+                    .downcast_ref::<crate::ml::models::mlp::MLPClassifierTrainConfig>()
                     .expect("Invalid config type for MLPClassification");
 
                 let hidden = &mlp_config.hidden_layer_sizes;

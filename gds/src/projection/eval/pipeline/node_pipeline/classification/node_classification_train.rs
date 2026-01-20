@@ -11,7 +11,7 @@ use crate::mem::{MemoryEstimation, MemoryEstimations};
 use crate::ml::core::subgraph::LocalIdMap;
 use crate::ml::metrics::classification::{ClassificationMetric, GlobalAccuracy};
 use crate::ml::metrics::{Metric, ModelCandidateStats, ModelSpecificMetricsHandler};
-use crate::ml::models::neural::MLPClassifierTrainConfig;
+use crate::ml::models::mlp::MLPClassifierTrainConfig;
 use crate::ml::models::{Classifier, ClassifierTrainerFactory, Features};
 use crate::ml::node_prediction::NodeSplitter;
 use crate::ml::splitting::TrainingExamplesSplit;

@@ -1,6 +1,6 @@
 use crate::ml::core::{
     batch::Batch,
-    functions::{weights::Weights, Constant},
+    functions::{Constant, Weights},
     tensor::Matrix,
     variable::VariableRef,
 };

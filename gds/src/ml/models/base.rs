@@ -1,7 +1,6 @@
 use crate::ml::core::tensor::Matrix;
 use crate::ml::models::training_method::TrainingMethod;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -100,31 +99,6 @@ pub trait ModelData: Send + Sync + Debug {
 
     /// Get number of features the model uses
     fn num_features(&self) -> usize;
-}
-
-/// Legacy base model data structure - being phased out
-/// Note: Serialization not supported due to Matrix type
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct LegacyBaseModelData {
-    /// Number of features the model expects
-    pub num_features: usize,
-
-    /// Model-specific parameters stored as a tensor
-    pub weights: Matrix,
-}
-
-impl ModelData for LegacyBaseModelData {
-    fn to_bytes(&self) -> Result<Vec<u8>> {
-        Ok(bincode::serialize(self)?)
-    }
-
-    fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        Ok(bincode::deserialize(bytes)?)
-    }
-
-    fn num_features(&self) -> usize {
-        self.num_features
-    }
 }
 
 /// Classifier trainer trait - 1:1 with ClassifierTrainer.java

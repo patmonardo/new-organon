@@ -1,0 +1,228 @@
+Graph management batch request: [
+  {
+    "kind": "ApplicationForm",
+    "facade": "graph_store",
+    "op": "put",
+    "snapshot": {
+      "nodes": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "nodeProperties": {
+        "score": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "vector": [
+          [
+            1,
+            0
+          ],
+          [
+            0.9,
+            0.1
+          ],
+          [
+            0.8,
+            0.2
+          ],
+          [
+            0.1,
+            0.9
+          ],
+          [
+            0,
+            1
+          ]
+        ]
+      },
+      "relationships": [
+        {
+          "type": "REL",
+          "source": 0,
+          "target": 1,
+          "properties": {
+            "weight": 1
+          }
+        },
+        {
+          "type": "REL",
+          "source": 1,
+          "target": 2,
+          "properties": {
+            "weight": 1
+          }
+        },
+        {
+          "type": "REL",
+          "source": 2,
+          "target": 3,
+          "properties": {
+            "weight": 1
+          }
+        },
+        {
+          "type": "REL",
+          "source": 3,
+          "target": 4,
+          "properties": {
+            "weight": 1
+          }
+        },
+        {
+          "type": "REL",
+          "source": 4,
+          "target": 0,
+          "properties": {
+            "weight": 1
+          }
+        }
+      ]
+    },
+    "user": {
+      "username": "alice",
+      "isAdmin": true
+    },
+    "databaseId": "db1",
+    "graphName": "graph-mgmt-1768914099232"
+  },
+  {
+    "kind": "ApplicationForm",
+    "facade": "algorithms",
+    "op": "scale_properties",
+    "mode": "stats",
+    "user": {
+      "username": "alice",
+      "isAdmin": true
+    },
+    "databaseId": "db1",
+    "graphName": "graph-mgmt-1768914099232",
+    "concurrency": 1,
+    "nodeProperties": [
+      "score",
+      "vector"
+    ],
+    "scaler": "minMax"
+  },
+  {
+    "kind": "ApplicationForm",
+    "facade": "algorithms",
+    "op": "index_inverse",
+    "mode": "stats",
+    "user": {
+      "username": "alice",
+      "isAdmin": true
+    },
+    "databaseId": "db1",
+    "graphName": "graph-mgmt-1768914099232",
+    "concurrency": 1,
+    "relationshipTypes": [
+      "REL"
+    ],
+    "mutateGraphName": "graph-mgmt-1768914099232-index-inverse",
+    "writeGraphName": "graph-mgmt-1768914099232-index-inverse"
+  },
+  {
+    "kind": "ApplicationForm",
+    "facade": "algorithms",
+    "op": "collapse_path",
+    "mode": "stats",
+    "user": {
+      "username": "alice",
+      "isAdmin": true
+    },
+    "databaseId": "db1",
+    "graphName": "graph-mgmt-1768914099232",
+    "concurrency": 1,
+    "pathTemplates": [
+      [
+        "REL",
+        "REL"
+      ]
+    ],
+    "mutateRelationshipType": "collapsed",
+    "mutateGraphName": "graph-mgmt-1768914099232-collapse-path",
+    "writeGraphName": "graph-mgmt-1768914099232-collapse-path"
+  },
+  {
+    "kind": "ApplicationForm",
+    "facade": "algorithms",
+    "op": "to_undirected",
+    "mode": "stats",
+    "user": {
+      "username": "alice",
+      "isAdmin": true
+    },
+    "databaseId": "db1",
+    "graphName": "graph-mgmt-1768914099232",
+    "concurrency": 1,
+    "relationshipType": "REL",
+    "mutateRelationshipType": "undirected",
+    "mutateGraphName": "graph-mgmt-1768914099232-to-undirected",
+    "writeGraphName": "graph-mgmt-1768914099232-to-undirected"
+  }
+]
+   Compiling gds v0.1.0 (/home/pat/VSCode/new-organon/gds)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.18s
+     Running `/home/pat/VSCode/new-organon/target/debug/tsjson_cli '[{"kind":"ApplicationForm","facade":"graph_store","op":"put","snapshot":{"nodes":[0,1,2,3,4],"nodeProperties":{"score":[1,2,3,4,5],"vector":[[1,0],[0.9,0.1],[0.8,0.2],[0.1,0.9],[0,1]]},"relationships":[{"type":"REL","source":0,"target":1,"properties":{"weight":1}},{"type":"REL","source":1,"target":2,"properties":{"weight":1}},{"type":"REL","source":2,"target":3,"properties":{"weight":1}},{"type":"REL","source":3,"target":4,"properties":{"weight":1}},{"type":"REL","source":4,"target":0,"properties":{"weight":1}}]},"user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"graph-mgmt-1768914099232"},{"kind":"ApplicationForm","facade":"algorithms","op":"scale_properties","mode":"stats","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"graph-mgmt-1768914099232","concurrency":1,"nodeProperties":["score","vector"],"scaler":"minMax"},{"kind":"ApplicationForm","facade":"algorithms","op":"index_inverse","mode":"stats","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"graph-mgmt-1768914099232","concurrency":1,"relationshipTypes":["REL"],"mutateGraphName":"graph-mgmt-1768914099232-index-inverse","writeGraphName":"graph-mgmt-1768914099232-index-inverse"},{"kind":"ApplicationForm","facade":"algorithms","op":"collapse_path","mode":"stats","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"graph-mgmt-1768914099232","concurrency":1,"pathTemplates":[["REL","REL"]],"mutateRelationshipType":"collapsed","mutateGraphName":"graph-mgmt-1768914099232-collapse-path","writeGraphName":"graph-mgmt-1768914099232-collapse-path"},{"kind":"ApplicationForm","facade":"algorithms","op":"to_undirected","mode":"stats","user":{"username":"alice","isAdmin":true},"databaseId":"db1","graphName":"graph-mgmt-1768914099232","concurrency":1,"relationshipType":"REL","mutateRelationshipType":"undirected","mutateGraphName":"graph-mgmt-1768914099232-to-undirected","writeGraphName":"graph-mgmt-1768914099232-to-undirected"}]'`
+[INFO] scale_properties::stats - Start
+[PROGRESS] 100% - scale_properties::stats
+[INFO] scale_properties::stats - Finished
+[INFO] to_undirected::stats - Start
+[PROGRESS] 100% - to_undirected::stats
+[INFO] to_undirected::stats - Finished
+
+Graph management stats results:
+scale_properties {
+  "scaler": "MinMax",
+  "stats": {
+    "score": {
+      "max": [
+        5
+      ],
+      "maxMinDiff": [
+        4
+      ],
+      "min": [
+        1
+      ]
+    },
+    "vector": {
+      "max": [
+        1,
+        1
+      ],
+      "maxMinDiff": [
+        1,
+        1
+      ],
+      "min": [
+        0,
+        0
+      ]
+    }
+  }
+}
+index_inverse {
+  "graph_name": "graph-mgmt-1768914099232-index-inverse",
+  "node_count": 5,
+  "relationship_count": 5
+}
+collapse_path {
+  "graph_name": "graph-mgmt-1768914099232-collapse-path",
+  "mutate_relationship_type": "collapsed",
+  "node_count": 5,
+  "relationship_count": 10
+}
+to_undirected {
+  "graph_name": "graph-mgmt-1768914099232-to-undirected",
+  "mutate_relationship_type": "undirected",
+  "node_count": 5,
+  "relationship_count": 15
+}

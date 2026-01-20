@@ -4,7 +4,7 @@
 
 use crate::ml::{
     core::{
-        functions::weights::Weights,
+        functions::Weights,
         tensor::{Matrix, Scalar, Tensor},
     },
     models::{BaseModelData, ModelData, RegressorData},

@@ -1,10 +1,11 @@
 /**
- * Graph management (miscellaneous) examples via a mode-aware runner.
+ * Graph management (miscellaneous) reference via a mode-aware runner.
  *
  * Usage:
- *   node gds-graph-management-modes.ts [mode]
+ *   node gds-graph-management-modes.ts [mode] [op]
  *
  * mode: stream | stats | estimate | mutate | write (default: mutate)
+ * op: optional filter (e.g. scale_properties, index_inverse)
  */
 
 /// <reference types="node" />
@@ -61,6 +62,35 @@ function buildMiscRequests(graphName: string): AlgoRequest[] {
         writeProperty: 'scaled_features',
       },
     },
+    {
+      op: 'index_inverse',
+      graphName,
+      request: {
+        relationshipTypes: ['REL'],
+        mutateGraphName: `${graphName}-index-inverse`,
+        writeGraphName: `${graphName}-index-inverse`,
+      },
+    },
+    {
+      op: 'collapse_path',
+      graphName,
+      request: {
+        pathTemplates: [['REL', 'REL']],
+        mutateRelationshipType: 'collapsed',
+        mutateGraphName: `${graphName}-collapse-path`,
+        writeGraphName: `${graphName}-collapse-path`,
+      },
+    },
+    {
+      op: 'to_undirected',
+      graphName,
+      request: {
+        relationshipType: 'REL',
+        mutateRelationshipType: 'undirected',
+        mutateGraphName: `${graphName}-to-undirected`,
+        writeGraphName: `${graphName}-to-undirected`,
+      },
+    },
   ];
 }
 
@@ -76,6 +106,7 @@ export function graphManagementModesDemo(): void {
   const user = { username: 'alice', isAdmin: true };
   const databaseId = 'db1';
   const mode = (process.argv[2] as Mode) ?? 'mutate';
+  const opFilter = process.argv[3];
 
   const graphName = `graph-mgmt-${Date.now()}`;
 
@@ -88,17 +119,19 @@ export function graphManagementModesDemo(): void {
     },
   ];
 
-  const algos = buildMiscRequests(graphName).map((item) => ({
-    kind: 'ApplicationForm',
-    facade: 'algorithms',
-    op: item.op,
-    mode,
-    user,
-    databaseId,
-    graphName: item.graphName,
-    concurrency: 1,
-    ...addModeProperty(mode, item.request),
-  }));
+  const algos = buildMiscRequests(graphName)
+    .filter((item) => (opFilter ? item.op === opFilter : true))
+    .map((item) => ({
+      kind: 'ApplicationForm',
+      facade: 'algorithms',
+      op: item.op,
+      mode,
+      user,
+      databaseId,
+      graphName: item.graphName,
+      concurrency: 1,
+      ...addModeProperty(mode, item.request),
+    }));
 
   const batch = [...requests, ...algos];
 

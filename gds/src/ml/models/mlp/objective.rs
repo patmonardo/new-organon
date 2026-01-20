@@ -7,9 +7,7 @@ use crate::collections::HugeIntArray;
 use crate::ml::core::{
     batch::Batch,
     functions::{
-        constant::Constant, constant_scale::ConstantScale, cross_entropy_loss::CrossEntropyLoss,
-        element_sum::ElementSum, focal_loss::FocalLoss, l2_norm_squared::L2NormSquared,
-        weights::Weights,
+        Constant, ConstantScale, CrossEntropyLoss, ElementSum, FocalLoss, L2NormSquared, Weights,
     },
     tensor::Vector,
     variable::VariableRef,

@@ -2,9 +2,9 @@
 //!
 //! Translated from `MLPClassifierData.java` from Java GDS.
 
-use crate::ml::core::functions::weights::Weights;
-use crate::ml::core::tensor::{Matrix, Vector};
-use crate::ml::core::variable::Variable;
+use crate::ml::core::Variable;
+use crate::ml::core::Weights;
+use crate::ml::core::{Matrix, Vector};
 use crate::ml::models::{BaseModelData, ClassifierData, TrainingMethod};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};

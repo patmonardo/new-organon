@@ -7,7 +7,7 @@ use crate::ml::metrics::ModelSpecificMetricsHandler;
 use crate::ml::models::logistic_regression::{
     LogisticRegressionTrainConfig, LogisticRegressionTrainer,
 };
-use crate::ml::models::neural::{MLPClassifierTrainConfig, MLPClassifierTrainer};
+use crate::ml::models::mlp::{MLPClassifierTrainConfig, MLPClassifierTrainer};
 use crate::ml::models::trees::{
     RandomForestClassifierTrainer, RandomForestClassifierTrainerConfig,
 };

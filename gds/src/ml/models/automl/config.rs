@@ -6,7 +6,7 @@ use crate::ml::decision_tree::ClassifierImpurityCriterionType;
 use crate::ml::gradient_descent::GradientDescentConfig;
 use crate::ml::models::linear::LinearRegressionTrainConfig;
 use crate::ml::models::logistic_regression::LogisticRegressionTrainConfig;
-use crate::ml::models::neural::MLPClassifierTrainConfig;
+use crate::ml::models::mlp::MLPClassifierTrainConfig;
 use crate::ml::models::trees::{
     RandomForestClassifierTrainerConfig, RandomForestConfig, RandomForestRegressorTrainerConfig,
 };

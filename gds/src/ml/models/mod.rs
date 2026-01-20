@@ -21,15 +21,15 @@ pub mod config;
 pub mod features;
 pub mod linear;
 pub mod logistic_regression;
-pub mod neural;
+pub mod mlp;
 pub mod regression_trainer_factory;
 pub mod training_method;
 pub mod trees;
 
 // Core traits - 1:1 with Java GDS
 pub use base::{
-    BaseModelData, Classifier, ClassifierData, ClassifierTrainer, Features, LegacyBaseModelData,
-    ModelData, Regressor, RegressorData, RegressorTrainer,
+    BaseModelData, Classifier, ClassifierData, ClassifierTrainer, Features, ModelData, Regressor,
+    RegressorData, RegressorTrainer,
 };
 pub use classifier_factory::ClassifierFactory;
 pub use classifier_trainer_factory::ClassifierTrainerFactory;
@@ -42,7 +42,7 @@ pub use training_method::TrainingMethod;
 pub use automl::*;
 pub use linear::{LinearRegressionData, LinearRegressor};
 pub use logistic_regression::{LogisticRegressionClassifier, LogisticRegressionData};
-pub use neural::{
+pub use mlp::{
     MLPClassifier, MLPClassifierData, MLPClassifierObjective, MLPClassifierTrainConfig,
     MLPClassifierTrainer,
 };
