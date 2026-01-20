@@ -2,12 +2,12 @@
 //!
 //! Stores tentative distances and predecessors for longest path computation.
 
-use std::sync::atomic::{AtomicI64, Ordering};
+use std::sync::atomic::{AtomicI64, AtomicUsize, Ordering};
 
 /// Storage for dag longest path computation
 pub struct DagLongestPathStorageRuntime {
     /// In-degree for each node (updated during traversal)
-    pub in_degrees: Vec<AtomicI64>,
+    pub in_degrees: Vec<AtomicUsize>,
     /// Best distances found to each node (stored as bits for atomic f64)
     pub distances: Vec<AtomicI64>,
     /// Predecessor for each node in the longest path
@@ -20,7 +20,7 @@ impl DagLongestPathStorageRuntime {
         let neg_infinity_bits = f64::NEG_INFINITY.to_bits() as i64;
 
         Self {
-            in_degrees: (0..node_count).map(|_| AtomicI64::new(0)).collect(),
+            in_degrees: (0..node_count).map(|_| AtomicUsize::new(0)).collect(),
             distances: (0..node_count)
                 .map(|_| AtomicI64::new(neg_infinity_bits))
                 .collect(),
@@ -36,7 +36,19 @@ impl DagLongestPathStorageRuntime {
     }
 
     pub fn set_distance(&self, node: usize, distance: f64) {
+        self.set_distance_tag(node, distance, "set_distance");
+    }
+
+    pub fn set_distance_tag(&self, node: usize, distance: f64, tag: &'static str) {
         self.distances[node].store(distance.to_bits() as i64, Ordering::SeqCst);
+        #[cfg(test)]
+        {
+            let thread_id = std::thread::current().id();
+            eprintln!(
+                "[dag_longest_path debug] set_distance tag={} thread={:?} node={} distance={}",
+                tag, thread_id, node, distance
+            );
+        }
     }
 
     pub fn compare_and_update_distance(
@@ -60,6 +72,14 @@ impl DagLongestPathStorageRuntime {
                     Ok(_) => {
                         // Successfully updated distance, also set predecessor
                         self.predecessors[node].store(predecessor as i64, Ordering::SeqCst);
+                        #[cfg(test)]
+                        {
+                            let thread_id = std::thread::current().id();
+                            eprintln!(
+                                "[dag_longest_path debug] updated distance tag=compare_and_update thread={:?} node={} dist={} pred={}",
+                                thread_id, node, new_distance, predecessor
+                            );
+                        }
                         return true;
                     }
                     Err(_) => continue,
@@ -80,6 +100,18 @@ impl DagLongestPathStorageRuntime {
     }
 
     pub fn set_predecessor(&self, node: usize, predecessor: usize) {
+        self.set_predecessor_tag(node, predecessor, "set_predecessor");
+    }
+
+    pub fn set_predecessor_tag(&self, node: usize, predecessor: usize, tag: &'static str) {
         self.predecessors[node].store(predecessor as i64, Ordering::SeqCst);
+        #[cfg(test)]
+        {
+            let thread_id = std::thread::current().id();
+            eprintln!(
+                "[dag_longest_path debug] set_predecessor tag={} thread={:?} node={} pred={}",
+                tag, thread_id, node, predecessor
+            );
+        }
     }
 }

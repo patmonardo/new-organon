@@ -44,7 +44,7 @@ impl LongestPathTask {
                 self.storage.in_degrees[target as usize].fetch_sub(1, Ordering::SeqCst);
 
             // If this was the last incoming edge, fork a new task
-            if prev_degree == 1 {
+            if prev_degree == 1_usize {
                 self.pending_tasks.fetch_add(1, Ordering::SeqCst);
 
                 let new_task = LongestPathTask::new(
@@ -107,32 +107,55 @@ impl DagLongestPathComputationRuntime {
             }
         }
 
+        #[cfg(test)]
+        {
+            // Debug: expose in-degrees during tests to help track intermittent failures
+            let indeg: Vec<usize> = self
+                .storage
+                .in_degrees
+                .iter()
+                .map(|a| a.load(Ordering::SeqCst))
+                .collect();
+            eprintln!(
+                "[dag_longest_path debug] in_degrees after init: {:?}",
+                indeg
+            );
+        }
+
         // Phase 2: Create tasks for source nodes (in-degree 0)
+        // Collect source nodes first to avoid race where worker threads decrement
+        // in-degrees before the main thread has inspected all nodes.
         let pending_tasks = Arc::new(AtomicUsize::new(0));
         let mut task_handles = Vec::new();
+        let mut source_nodes: Vec<i64> = Vec::new();
 
         for node_id in 0..(node_count as i64) {
-            if self.storage.in_degrees[node_id as usize].load(Ordering::SeqCst) == 0 {
-                // Initialize source node distance
-                self.storage.set_distance(node_id as usize, 0.0);
-                self.storage
-                    .set_predecessor(node_id as usize, node_id as usize);
-
-                // Create and spawn task
-                pending_tasks.fetch_add(1, Ordering::SeqCst);
-                let task = LongestPathTask::new(
-                    node_id,
-                    Arc::clone(&get_neighbors)
-                        as Arc<dyn Fn(NodeId) -> Vec<(NodeId, f64)> + Send + Sync>,
-                    Arc::clone(&self.storage),
-                    Arc::clone(&pending_tasks),
-                );
-
-                let handle = thread::spawn(move || {
-                    task.execute();
-                });
-                task_handles.push(handle);
+            if self.storage.in_degrees[node_id as usize].load(Ordering::SeqCst) == 0_usize {
+                source_nodes.push(node_id);
             }
+        }
+
+        for node_id in source_nodes {
+            // Initialize source node distance
+            self.storage
+                .set_distance_tag(node_id as usize, 0.0, "source_init");
+            self.storage
+                .set_predecessor_tag(node_id as usize, node_id as usize, "source_init");
+
+            // Create and spawn task
+            pending_tasks.fetch_add(1, Ordering::SeqCst);
+            let task = LongestPathTask::new(
+                node_id,
+                Arc::clone(&get_neighbors)
+                    as Arc<dyn Fn(NodeId) -> Vec<(NodeId, f64)> + Send + Sync>,
+                Arc::clone(&self.storage),
+                Arc::clone(&pending_tasks),
+            );
+
+            let handle = thread::spawn(move || {
+                task.execute();
+            });
+            task_handles.push(handle);
         }
 
         // Wait for all tasks to complete

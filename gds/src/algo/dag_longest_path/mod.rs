@@ -11,3 +11,5 @@ pub mod storage;
 
 #[cfg(test)]
 mod integration_tests;
+#[cfg(test)]
+mod stress_tests;
