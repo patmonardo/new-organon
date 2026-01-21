@@ -1,13 +1,132 @@
-//! Pipelines Procedure Facade (API translation)
+//! Top-level pipeline procedure helpers (condensed Rust forms).
 //!
-//! This module is a mostly-direct translation of Neo4j GDS's Java
-//! `pipelines-facade-api` surface into Rust.
-//!
-//! The goal here is *not* idiomatic Rust yet — it's to make the moving parts
-//! visible so we can later simplify and integrate against the pipeline executor.
+//! These modules mirror the Java pipelines facade layer but remain
+//! strictly within procedures/pipelines as requested.
 
 pub mod facade;
 pub mod types;
 
 pub use facade::*;
 pub use types::*;
+
+// Pipelines
+
+pub mod link_prediction;
+pub mod link_prediction_computation;
+pub mod link_prediction_mutate_metadata;
+pub mod link_prediction_pipeline_estimator;
+pub mod link_prediction_pipeline_mutate_result_builder;
+pub mod link_prediction_pipeline_mutate_step;
+pub mod link_prediction_pipeline_stream_result_builder;
+pub mod link_prediction_predict_pipeline_base_config;
+pub mod link_prediction_predict_pipeline_executor;
+pub mod link_prediction_predict_pipeline_mutate_config;
+pub mod link_prediction_predict_pipeline_stream_config;
+pub mod link_prediction_similarity_computer;
+pub mod link_prediction_train_computation;
+pub mod link_prediction_train_result_renderer;
+pub mod link_prediction_train_side_effects;
+pub mod lp_graph_store_filter;
+pub mod lp_graph_store_filter_factory;
+pub mod lp_node_filter;
+pub mod model_persister;
+pub mod node_classification_pipeline_companion;
+pub mod node_classification_pipeline_result;
+pub mod node_classification_predict_computation;
+pub mod node_classification_predict_config_pre_processor;
+pub mod node_classification_predict_pipeline_base_config;
+pub mod node_classification_predict_pipeline_constants;
+pub mod node_classification_predict_pipeline_estimator;
+pub mod node_classification_predict_pipeline_executor;
+pub mod node_classification_predict_pipeline_mutate_config;
+pub mod node_classification_predict_pipeline_mutate_or_write_config;
+pub mod node_classification_predict_pipeline_mutate_result_builder;
+pub mod node_classification_predict_pipeline_mutate_step;
+pub mod node_classification_predict_pipeline_stream_config;
+pub mod node_classification_predict_pipeline_stream_result_builder;
+pub mod node_classification_predict_pipeline_write_config;
+pub mod node_classification_predict_pipeline_write_result_builder;
+pub mod node_classification_predict_pipeline_write_step;
+pub mod node_classification_train_computation;
+pub mod node_classification_train_result_renderer;
+pub mod node_feature_steps_parser;
+pub mod node_pipeline_info_result_transformer;
+pub mod node_regression_predict_computation;
+pub mod node_regression_predict_pipeline_base_config;
+pub mod node_regression_predict_pipeline_executor;
+pub mod node_regression_predict_pipeline_mutate_config;
+pub mod node_regression_predict_pipeline_mutate_result_builder;
+pub mod node_regression_predict_pipeline_mutate_step;
+pub mod node_regression_predict_pipeline_stream_result_builder;
+pub mod node_regression_train_computation;
+pub mod node_regression_train_result_renderer;
+pub mod node_regression_train_side_effects;
+pub mod pipeline_applications;
+pub mod pipeline_catalog_result_transformer;
+pub mod pipeline_info_result_transformer;
+pub mod pipeline_name;
+pub mod pipeline_repository;
+pub mod predicted_probabilities;
+pub mod trained_lp_pipeline_model;
+pub mod trained_nc_pipeline_model;
+pub mod trained_nr_pipeline_model;
+
+pub use link_prediction::*;
+pub use link_prediction_computation::*;
+pub use link_prediction_mutate_metadata::*;
+pub use link_prediction_pipeline_estimator::*;
+pub use link_prediction_pipeline_mutate_result_builder::*;
+pub use link_prediction_pipeline_mutate_step::*;
+pub use link_prediction_pipeline_stream_result_builder::*;
+pub use link_prediction_predict_pipeline_base_config::*;
+pub use link_prediction_predict_pipeline_executor::*;
+pub use link_prediction_predict_pipeline_mutate_config::*;
+pub use link_prediction_predict_pipeline_stream_config::*;
+pub use link_prediction_similarity_computer::*;
+pub use link_prediction_train_computation::*;
+pub use link_prediction_train_result_renderer::*;
+pub use link_prediction_train_side_effects::*;
+pub use lp_graph_store_filter::*;
+pub use lp_graph_store_filter_factory::*;
+pub use lp_node_filter::*;
+pub use model_persister::*;
+pub use node_classification_pipeline_companion::*;
+pub use node_classification_pipeline_result::*;
+pub use node_classification_predict_computation::*;
+pub use node_classification_predict_config_pre_processor::*;
+pub use node_classification_predict_pipeline_base_config::*;
+pub use node_classification_predict_pipeline_constants::*;
+pub use node_classification_predict_pipeline_estimator::*;
+pub use node_classification_predict_pipeline_executor::*;
+pub use node_classification_predict_pipeline_mutate_config::*;
+pub use node_classification_predict_pipeline_mutate_or_write_config::*;
+pub use node_classification_predict_pipeline_mutate_result_builder::*;
+pub use node_classification_predict_pipeline_mutate_step::*;
+pub use node_classification_predict_pipeline_stream_config::*;
+pub use node_classification_predict_pipeline_stream_result_builder::*;
+pub use node_classification_predict_pipeline_write_config::*;
+pub use node_classification_predict_pipeline_write_result_builder::*;
+pub use node_classification_predict_pipeline_write_step::*;
+pub use node_classification_train_computation::*;
+pub use node_classification_train_result_renderer::*;
+pub use node_feature_steps_parser::*;
+pub use node_pipeline_info_result_transformer::*;
+pub use node_regression_predict_computation::*;
+pub use node_regression_predict_pipeline_base_config::*;
+pub use node_regression_predict_pipeline_executor::*;
+pub use node_regression_predict_pipeline_mutate_config::*;
+pub use node_regression_predict_pipeline_mutate_result_builder::*;
+pub use node_regression_predict_pipeline_mutate_step::*;
+pub use node_regression_predict_pipeline_stream_result_builder::*;
+pub use node_regression_train_computation::*;
+pub use node_regression_train_result_renderer::*;
+pub use node_regression_train_side_effects::*;
+pub use pipeline_applications::*;
+pub use pipeline_catalog_result_transformer::*;
+pub use pipeline_info_result_transformer::*;
+pub use pipeline_name::*;
+pub use pipeline_repository::*;
+pub use predicted_probabilities::*;
+pub use trained_lp_pipeline_model::*;
+pub use trained_nc_pipeline_model::*;
+pub use trained_nr_pipeline_model::*;

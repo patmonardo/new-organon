@@ -7,7 +7,7 @@ use std::sync::{Arc, OnceLock};
 use serde_json::Value;
 
 use crate::mem::MemoryEstimationResult;
-use crate::projection::eval::pipeline::training_pipeline::TrainingPipeline;
+use crate::projection::eval::pipeline::TrainingPipeline;
 use crate::projection::eval::pipeline::{
     link_pipeline::{
         LinkFeatureStepFactory, LinkPredictionSplitConfig, LinkPredictionTrainingPipeline,
@@ -16,6 +16,7 @@ use crate::projection::eval::pipeline::{
     node_pipeline::node_feature_step::NodeFeatureStep,
     node_pipeline::node_property_prediction_split_config::NodePropertyPredictionSplitConfig,
     node_pipeline::node_property_training_pipeline::NodePropertyTrainingPipeline,
+    node_pipeline::regression::node_regression_training_pipeline::NodeRegressionTrainingPipeline,
     AutoTuningConfig, FeatureStep, Pipeline, PipelineCatalog, PipelineCatalogEntry, TrainingMethod,
 };
 use crate::projection::eval::pipeline::{ExecutableNodePropertyStep, NodePropertyStep};
@@ -299,10 +300,7 @@ impl LocalPipelinesProcedureFacade {
                 username.clone(),
                 Arc::clone(&pipeline_catalog),
             ),
-            node_regression: LocalNodeRegressionFacade {
-                _username: username,
-                _pipeline_catalog: pipeline_catalog,
-            },
+            node_regression: LocalNodeRegressionFacade::new(username, pipeline_catalog),
         }
     }
 
@@ -938,56 +936,189 @@ impl NodeClassificationFacade for LocalNodeClassificationFacade {
     }
 }
 
-// Keep regression facade stubbed for now, but make it ready for shared deps.
+// Regression facade mirrors node classification behavior.
 pub struct LocalNodeRegressionFacade {
-    _username: String,
-    _pipeline_catalog: Arc<PipelineCatalog>,
+    username: String,
+    pipeline_catalog: Arc<PipelineCatalog>,
+}
+
+impl LocalNodeRegressionFacade {
+    pub fn new(username: String, pipeline_catalog: Arc<PipelineCatalog>) -> Self {
+        Self {
+            username,
+            pipeline_catalog,
+        }
+    }
+
+    fn pipeline_info(&self, pipeline_name: &str) -> Vec<NodePipelineInfoResult> {
+        let pipeline = self
+            .pipeline_catalog
+            .get_typed::<NodeRegressionTrainingPipeline>(&self.username, pipeline_name)
+            .unwrap_or_else(|e| panic!("{e}"));
+
+        vec![Self::node_pipeline_info_from_pipeline(
+            pipeline_name,
+            pipeline.as_ref(),
+        )]
+    }
+
+    fn node_pipeline_info_from_pipeline(
+        pipeline_name: &str,
+        pipeline: &NodeRegressionTrainingPipeline,
+    ) -> NodePipelineInfoResult {
+        let node_property_steps: AnyMapList = pipeline
+            .node_property_steps()
+            .iter()
+            .map(|step| step.to_map())
+            .collect();
+
+        let feature_properties = pipeline.feature_properties();
+
+        let split_config: AnyMap = pipeline
+            .split_config()
+            .to_map()
+            .into_iter()
+            .map(|(k, v)| (k, Value::String(v)))
+            .collect();
+
+        let auto_tuning_config: AnyMap = pipeline.auto_tuning_config().to_map();
+
+        let parameter_space = pipeline.parameter_space_to_map();
+
+        NodePipelineInfoResult {
+            name: pipeline_name.to_string(),
+            node_property_steps,
+            feature_properties,
+            split_config,
+            auto_tuning_config,
+            parameter_space,
+        }
+    }
+
+    fn parse_split_config(configuration: &RawConfig) -> NodePropertyPredictionSplitConfig {
+        let test_fraction = configuration
+            .get("testFraction")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.3);
+
+        let validation_folds = configuration
+            .get("validationFolds")
+            .and_then(|v| v.as_u64())
+            .map(|v| v as usize)
+            .unwrap_or(3);
+
+        NodePropertyPredictionSplitConfig::new(test_fraction, validation_folds)
+            .unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    fn parse_auto_tuning_config(configuration: &RawConfig) -> AutoTuningConfig {
+        let max_trials = configuration
+            .get("maxTrials")
+            .and_then(|v| v.as_u64())
+            .map(|v| v as usize)
+            .unwrap_or(AutoTuningConfig::MAX_TRIALS);
+
+        AutoTuningConfig::new(max_trials).unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    fn with_pipeline_update(
+        &self,
+        pipeline_name: &str,
+        update: impl FnOnce(&mut NodeRegressionTrainingPipeline),
+    ) -> Vec<NodePipelineInfoResult> {
+        let existing = self
+            .pipeline_catalog
+            .get_typed::<NodeRegressionTrainingPipeline>(&self.username, pipeline_name)
+            .unwrap_or_else(|e| panic!("{e}"));
+
+        let mut next = (*existing).clone();
+        update(&mut next);
+
+        self.pipeline_catalog
+            .replace(&self.username, pipeline_name, Arc::new(next))
+            .unwrap_or_else(|e| panic!("{e}"));
+
+        self.pipeline_info(pipeline_name)
+    }
 }
 
 impl NodeRegressionFacade for LocalNodeRegressionFacade {
     fn add_logistic_regression(
         &self,
-        _pipeline_name: &str,
+        pipeline_name: &str,
         _configuration: RawConfig,
     ) -> Vec<NodePipelineInfoResult> {
-        vec![]
+        self.with_pipeline_update(pipeline_name, |pipeline| {
+            pipeline
+                .training_parameter_space_mut()
+                .entry(TrainingMethod::LinearRegression)
+                .or_default();
+        })
     }
 
     fn add_node_property(
         &self,
-        _pipeline_name: &str,
-        _task_name: &str,
-        _procedure_config: RawConfig,
+        pipeline_name: &str,
+        task_name: &str,
+        procedure_config: RawConfig,
     ) -> Vec<NodePipelineInfoResult> {
-        vec![]
+        self.with_pipeline_update(pipeline_name, |pipeline| {
+            let step = NodePropertyStep::new(task_name.to_string(), procedure_config);
+            let step_box: Box<dyn ExecutableNodePropertyStep> = Box::new(step);
+
+            pipeline
+                .validate_unique_mutate_property(step_box.as_ref())
+                .unwrap_or_else(|e| panic!("{e}"));
+
+            pipeline.add_node_property_step(step_box);
+        })
     }
 
     fn add_random_forest(
         &self,
-        _pipeline_name: &str,
+        pipeline_name: &str,
         _configuration: RawConfig,
     ) -> Vec<NodePipelineInfoResult> {
-        vec![]
+        self.with_pipeline_update(pipeline_name, |pipeline| {
+            pipeline
+                .training_parameter_space_mut()
+                .entry(TrainingMethod::RandomForestRegression)
+                .or_default();
+        })
     }
 
     fn configure_auto_tuning(
         &self,
-        _pipeline_name: &str,
-        _configuration: RawConfig,
+        pipeline_name: &str,
+        configuration: RawConfig,
     ) -> Vec<NodePipelineInfoResult> {
-        vec![]
+        self.with_pipeline_update(pipeline_name, |pipeline| {
+            let cfg = Self::parse_auto_tuning_config(&configuration);
+            pipeline.set_auto_tuning_config(cfg);
+        })
     }
 
     fn configure_split(
         &self,
-        _pipeline_name: &str,
-        _configuration: RawConfig,
+        pipeline_name: &str,
+        configuration: RawConfig,
     ) -> Vec<NodePipelineInfoResult> {
-        vec![]
+        self.with_pipeline_update(pipeline_name, |pipeline| {
+            let cfg = Self::parse_split_config(&configuration);
+            pipeline.set_split_config(cfg);
+        })
     }
 
-    fn create_pipeline(&self, _pipeline_name: &str) -> Vec<NodePipelineInfoResult> {
-        vec![]
+    fn create_pipeline(&self, pipeline_name: &str) -> Vec<NodePipelineInfoResult> {
+        let pipeline = Arc::new(NodeRegressionTrainingPipeline::new());
+        self.pipeline_catalog
+            .set(&self.username, pipeline_name, Arc::clone(&pipeline))
+            .unwrap_or_else(|e| panic!("{e}"));
+
+        vec![Self::node_pipeline_info_from_pipeline(
+            pipeline_name,
+            pipeline.as_ref(),
+        )]
     }
 
     fn mutate(&self, _graph_name: &str, _configuration: RawConfig) -> Vec<PredictMutateResult> {
@@ -1004,10 +1135,50 @@ impl NodeRegressionFacade for LocalNodeRegressionFacade {
 
     fn select_features(
         &self,
-        _pipeline_name: &str,
-        _feature_properties: Value,
+        pipeline_name: &str,
+        feature_properties: Value,
     ) -> Vec<NodePipelineInfoResult> {
-        vec![]
+        let existing = self
+            .pipeline_catalog
+            .get_typed::<NodeRegressionTrainingPipeline>(&self.username, pipeline_name)
+            .unwrap_or_else(|e| panic!("{e}"));
+
+        let steps = match feature_properties {
+            Value::Array(values) => values,
+            _ => panic!("select_features expects a JSON array"),
+        };
+
+        let mut next_steps = Vec::with_capacity(steps.len());
+        for v in steps {
+            let prop = v
+                .as_str()
+                .unwrap_or_else(|| panic!("feature entry must be a string"));
+            next_steps.push(NodeFeatureStep::of(prop));
+        }
+
+        let mut next = NodeRegressionTrainingPipeline::new();
+        for step in existing.node_property_steps() {
+            next.add_node_property_step(step.clone());
+        }
+        for step in next_steps {
+            next.add_feature_step(step);
+        }
+        for (method, configs) in existing.training_parameter_space() {
+            next.training_parameter_space_mut()
+                .insert(*method, configs.iter().cloned().collect());
+        }
+        next.set_auto_tuning_config(existing.auto_tuning_config().clone());
+        next.set_split_config(existing.split_config().clone());
+
+        let next = Arc::new(next);
+        self.pipeline_catalog
+            .replace(&self.username, pipeline_name, Arc::clone(&next))
+            .unwrap_or_else(|e| panic!("{e}"));
+
+        vec![Self::node_pipeline_info_from_pipeline(
+            pipeline_name,
+            next.as_ref(),
+        )]
     }
 
     fn train(

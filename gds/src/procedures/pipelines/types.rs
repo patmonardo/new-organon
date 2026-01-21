@@ -75,7 +75,7 @@ pub struct StreamResult {
 pub struct NodeClassificationStreamResult {
     pub node_id: i64,
     pub predicted_class: i64,
-    pub predicted_probabilities: Vec<f64>,
+    pub predicted_probabilities: Option<Vec<f64>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
