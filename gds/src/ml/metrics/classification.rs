@@ -1,6 +1,6 @@
 use super::metric::{Metric, MetricComparator};
-use crate::collections::long_multiset::LongMultiSet;
 use crate::collections::HugeLongArray;
+use crate::collections::LongMultiSet;
 use crate::ml::core::subgraph::LocalIdMap;
 
 /// Out-of-bag error metric for Random Forest models.

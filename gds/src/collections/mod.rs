@@ -51,30 +51,42 @@ pub mod backends;
 // Extension implementations
 pub mod extensions;
 
-// NOTE: Macro system has been moved to projection/codegen/collections/
-// All collections macros (vec_collections!, huge_collections!, etc.) now live there
-// This prepares for @reality migration as the foundation for data science
-
 // Utilities
 pub mod utils;
 
 // Universal adapter
 pub mod adapter;
 
-// Re-export commonly used types
-#[allow(ambiguous_glob_reexports)]
-pub use adapter::*;
-#[allow(ambiguous_glob_reexports)]
-pub use backends::*;
-#[allow(ambiguous_glob_reexports)]
-pub use extensions::*;
-#[allow(ambiguous_glob_reexports)]
-pub use traits::*;
-#[allow(ambiguous_glob_reexports)]
-pub use utils::*;
+// Re-export commonly used types (explicit to avoid ambiguous glob re-exports)
+pub use adapter::{CollectionFactory, UniversalPropertyValues};
+pub use traits::{
+    AggregationSupport, CachingError, CachingSupport, Collections, CollectionsFactory,
+    CompressionError, CompressionSupport, ComputeError, ComputeKernels, MLComputeKernels,
+    MemoryLayout, NullabilitySupport, ParallelError, ParallelSupport, PerformanceMetrics,
+    PropertyValuesAdapter, StorageDescriptor, StorageOperation, StorageResult,
+    StorageRuntimeIntegration,
+};
 
-// NOTE: Macros are now in projection::codegen::collections
-// Use: `use crate::{vec_collections, huge_collections};` instead
+// Utility modules and their common types (retain legacy paths)
+pub use utils::array_util;
+pub use utils::cursor;
+pub use utils::page_util;
+pub use utils::performance;
+pub use utils::{ArrayUtil, PageUtil};
+
+#[cfg(feature = "arrow")]
+pub use backends::arrow::{
+    ArrowArrayBehavior, ArrowDoubleArray, ArrowFloatArray, ArrowIntArray, ArrowLongArray,
+    ArrowPrimitiveArray,
+};
+pub use backends::huge::{
+    HugeAtomicDoubleArray, HugeAtomicLongArray, HugeBooleanArray, HugeByteArray, HugeCharArray,
+    HugeDoubleArray, HugeFloatArray, HugeIntArray, HugeLongArray, HugeObjectArray, HugeShortArray,
+};
+pub use backends::vec::{
+    EnhancedVec, VecBoolean, VecByte, VecChar, VecDouble, VecDoubleArray, VecFloat, VecFloatArray,
+    VecInt, VecLong, VecLongArray, VecShort,
+};
 
 // Re-export legacy modules for backward compatibility
 pub mod bit_set;
@@ -89,7 +101,11 @@ pub use crate::core::utils::paged::HugeAtomicBitSet;
 
 // Re-export BitSet and HugeSparseLongArray for backward compatibility
 pub use bit_set::BitSet;
-pub use huge_sparse_array::HugeSparseLongArray;
+pub use huge_sparse_array::*;
+pub use huge_sparse_list::*;
+pub use indirect_comparator::*;
+pub use long_multiset::LongMultiSet;
+pub use primitive::*;
 
 // Backend selection
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

@@ -39,4 +39,4 @@ pub use super::adapter::{CollectionFactory, UniversalPropertyValues};
 pub use super::CollectionsBackend;
 
 // Legacy types for backward compatibility
-pub use super::{BitSet, HugeSparseLongArray};
+pub use super::{BitSet, HugeSparseLongArray, LongMultiSet};

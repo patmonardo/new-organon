@@ -5,11 +5,9 @@ pub mod metric;
 pub mod model_specific_handler;
 pub mod regression;
 
-pub use classification::{ClassificationMetric, OutOfBagError};
-pub use classification_specification::ClassificationMetricSpecification;
-pub use metric::{
-    EvaluationScores, Metric, MetricComparator, MetricConsumer, ModelCandidateStats,
-    ModelStatsBuilder,
-};
-pub use model_specific_handler::ModelSpecificMetricsHandler;
-pub use regression::RegressionMetric;
+pub use classification::*;
+pub use classification_specification::*;
+pub use link::*;
+pub use metric::*;
+pub use model_specific_handler::*;
+pub use regression::*;

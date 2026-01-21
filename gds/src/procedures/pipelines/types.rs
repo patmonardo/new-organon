@@ -14,6 +14,7 @@ pub type AnyMap = HashMap<String, Value>;
 pub type AnyMapList = Vec<AnyMap>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PipelineCatalogResult {
     pub pipeline_info: AnyMap,
     pub pipeline_name: String,
@@ -22,6 +23,7 @@ pub struct PipelineCatalogResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PipelineExistsResult {
     pub pipeline_name: String,
     pub pipeline_type: String,
@@ -39,6 +41,7 @@ impl PipelineExistsResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PipelineInfoResult {
     pub name: String,
     pub node_property_steps: AnyMapList,
@@ -49,6 +52,7 @@ pub struct PipelineInfoResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NodePipelineInfoResult {
     pub name: String,
     pub node_property_steps: AnyMapList,
@@ -59,6 +63,7 @@ pub struct NodePipelineInfoResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StreamResult {
     pub node1: i64,
     pub node2: i64,
@@ -66,6 +71,7 @@ pub struct StreamResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NodeClassificationStreamResult {
     pub node_id: i64,
     pub predicted_class: i64,
@@ -73,6 +79,7 @@ pub struct NodeClassificationStreamResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NodeRegressionStreamResult {
     pub node_id: i64,
     pub predicted_value: f64,
@@ -80,6 +87,7 @@ pub struct NodeRegressionStreamResult {
 
 /// Minimal stand-in for the Java `StandardMutateResult` supertype.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StandardMutateResult {
     pub pre_processing_millis: i64,
     pub compute_millis: i64,
@@ -89,6 +97,7 @@ pub struct StandardMutateResult {
 
 /// Minimal stand-in for the Java `StandardWriteResult` supertype.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StandardWriteResult {
     pub pre_processing_millis: i64,
     pub compute_millis: i64,
@@ -97,7 +106,9 @@ pub struct StandardWriteResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MutateResult {
+    #[serde(flatten)]
     pub base: StandardMutateResult,
     pub relationships_written: i64,
     pub probability_distribution: AnyMap,
@@ -105,18 +116,23 @@ pub struct MutateResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PredictMutateResult {
+    #[serde(flatten)]
     pub base: StandardMutateResult,
     pub node_properties_written: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct WriteResult {
+    #[serde(flatten)]
     pub base: StandardWriteResult,
     pub node_properties_written: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MLTrainResult {
     pub train_millis: i64,
     pub model_info: AnyMap,
@@ -124,19 +140,25 @@ pub struct MLTrainResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LinkPredictionTrainResult {
+    #[serde(flatten)]
     pub base: MLTrainResult,
     pub model_selection_stats: AnyMap,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NodeClassificationPipelineTrainResult {
+    #[serde(flatten)]
     pub base: MLTrainResult,
     pub model_selection_stats: AnyMap,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct NodeRegressionPipelineTrainResult {
+    #[serde(flatten)]
     pub base: MLTrainResult,
     pub model_selection_stats: AnyMap,
 }

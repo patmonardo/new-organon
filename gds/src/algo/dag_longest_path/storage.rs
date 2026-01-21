@@ -39,14 +39,14 @@ impl DagLongestPathStorageRuntime {
         self.set_distance_tag(node, distance, "set_distance");
     }
 
-    pub fn set_distance_tag(&self, node: usize, distance: f64, tag: &'static str) {
+    pub fn set_distance_tag(&self, node: usize, distance: f64, _tag: &'static str) {
         self.distances[node].store(distance.to_bits() as i64, Ordering::SeqCst);
         #[cfg(test)]
         {
             let thread_id = std::thread::current().id();
             eprintln!(
                 "[dag_longest_path debug] set_distance tag={} thread={:?} node={} distance={}",
-                tag, thread_id, node, distance
+                _tag, thread_id, node, distance
             );
         }
     }
@@ -103,14 +103,14 @@ impl DagLongestPathStorageRuntime {
         self.set_predecessor_tag(node, predecessor, "set_predecessor");
     }
 
-    pub fn set_predecessor_tag(&self, node: usize, predecessor: usize, tag: &'static str) {
+    pub fn set_predecessor_tag(&self, node: usize, predecessor: usize, _tag: &'static str) {
         self.predecessors[node].store(predecessor as i64, Ordering::SeqCst);
         #[cfg(test)]
         {
             let thread_id = std::thread::current().id();
             eprintln!(
                 "[dag_longest_path debug] set_predecessor tag={} thread={:?} node={} pred={}",
-                tag, thread_id, node, predecessor
+                _tag, thread_id, node, predecessor
             );
         }
     }
