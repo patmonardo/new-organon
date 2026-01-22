@@ -1,4 +1,5 @@
 use crate::collections::long_multiset::LongMultiSet;
+use crate::mem::MemoryEstimation;
 use crate::mem::{MemoryEstimations, MemoryRange};
 use crate::ml::core::subgraph::LocalIdMap;
 
@@ -24,7 +25,7 @@ impl ClassificationMetricSpecification {
         (self.metric_factory)(class_id_map, class_counts)
     }
 
-    pub fn memory_estimation(number_of_classes: usize) -> Box<dyn crate::mem::MemoryEstimation> {
+    pub fn memory_estimation(number_of_classes: usize) -> Box<dyn MemoryEstimation> {
         let size_of_representative_metric = 8 + 8 + 8;
         MemoryEstimations::builder("metrics")
             .fixed_range(

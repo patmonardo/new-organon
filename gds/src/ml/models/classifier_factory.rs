@@ -1,11 +1,15 @@
 //! Classifier Factory - 1:1 translation of ClassifierFactory.java from Java GDS
 
 use crate::mem::{Estimate, MemoryEstimation, MemoryEstimations, MemoryRange};
+use crate::ml::decision_tree::DecisionTreeClassifierTrainer;
 use crate::ml::decision_tree::DecisionTreeTrainerConfig;
+use crate::ml::models::base::TrainerConfigTrait;
 use crate::ml::models::logistic_regression::{
     LogisticRegressionClassifier, LogisticRegressionData,
 };
+use crate::ml::models::mlp::MLPClassifierTrainConfig;
 use crate::ml::models::mlp::{MLPClassifier, MLPClassifierData};
+use crate::ml::models::trees::RandomForestClassifierTrainerConfig;
 use crate::ml::models::trees::{RandomForestClassifier, RandomForestClassifierData};
 use crate::ml::models::{Classifier, ClassifierData, TrainingMethod};
 
@@ -86,7 +90,7 @@ impl ClassifierFactory {
     /// Estimate memory for trained model data.
     /// 1:1 with ClassifierFactory.dataMemoryEstimation() in Java
     pub fn data_memory_estimation(
-        trainer_config: &dyn crate::ml::models::base::TrainerConfigTrait,
+        trainer_config: &dyn TrainerConfigTrait,
         _number_of_training_samples: impl Fn(u64) -> u64 + Send + Sync + 'static,
         _number_of_classes: usize,
         _feature_dimension: MemoryRange,
@@ -111,7 +115,7 @@ impl ClassifierFactory {
             }
             TrainingMethod::RandomForestClassification => {
                 let rf_config = (trainer_config as &dyn std::any::Any)
-                    .downcast_ref::<crate::ml::models::trees::RandomForestClassifierTrainerConfig>()
+                    .downcast_ref::<RandomForestClassifierTrainerConfig>()
                     .expect("Invalid config type for RandomForestClassification");
 
                 let tree_config = DecisionTreeTrainerConfig::builder()
@@ -126,18 +130,17 @@ impl ClassifierFactory {
 
                 MemoryEstimations::of_resident("RandomForestClassifierData", move |dim, _| {
                     let training_samples = _number_of_training_samples(dim.node_count() as u64);
-                    let per_tree =
-                        crate::ml::decision_tree::DecisionTreeClassifierTrainer::memory_estimation(
-                            tree_config.as_ref(),
-                            training_samples as usize,
-                            _number_of_classes,
-                        );
+                    let per_tree = DecisionTreeClassifierTrainer::memory_estimation(
+                        tree_config.as_ref(),
+                        training_samples as usize,
+                        _number_of_classes,
+                    );
                     MemoryRange::of(per_tree.saturating_mul(num_trees))
                 })
             }
             TrainingMethod::MLPClassification => {
                 let mlp_config = (trainer_config as &dyn std::any::Any)
-                    .downcast_ref::<crate::ml::models::mlp::MLPClassifierTrainConfig>()
+                    .downcast_ref::<MLPClassifierTrainConfig>()
                     .expect("Invalid config type for MLPClassification");
 
                 let hidden = &mlp_config.hidden_layer_sizes;

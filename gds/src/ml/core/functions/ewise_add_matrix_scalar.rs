@@ -37,10 +37,11 @@
 //! }
 //! ```
 
+use crate::ml::core::functions::Weights;
 use crate::ml::core::AbstractVariable;
 use crate::ml::core::ComputationContext;
+use crate::ml::core::{variable_id, Variable, VariableRef};
 use crate::ml::core::{Matrix, Scalar, Tensor};
-use crate::ml::core::{Variable, VariableRef};
 use std::any::Any;
 
 /// Element-wise addition of matrix and scalar.
@@ -155,9 +156,7 @@ impl Variable for EWiseAddMatrixScalar {
         } else {
             // Try to extract from Weights variable if it's a Weights wrapper
             let scalar_var = self.scalar_variable();
-            if let Some(weights) =
-                (scalar_var as &dyn Any).downcast_ref::<crate::ml::core::functions::Weights>()
-            {
+            if let Some(weights) = (scalar_var as &dyn Any).downcast_ref::<Weights>() {
                 weights.borrow_scalar().value()
             } else {
                 panic!(
@@ -198,9 +197,9 @@ impl Variable for EWiseAddMatrixScalar {
             .downcast_ref::<Matrix>()
             .expect("Expected Matrix gradient");
 
-        let matrix_id = crate::ml::core::variable_id(self.matrix_variable());
-        let scalar_id = crate::ml::core::variable_id(self.scalar_variable());
-        let parent_id = crate::ml::core::variable_id(parent);
+        let matrix_id = variable_id(self.matrix_variable());
+        let scalar_id = variable_id(self.scalar_variable());
+        let parent_id = variable_id(parent);
 
         if parent_id == matrix_id {
             // Gradient w.r.t. matrix: pass through

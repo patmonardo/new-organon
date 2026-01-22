@@ -2,6 +2,7 @@
 //!
 //! 1:1 translation of RandomForestRegressorTrainer.java from Java GDS.
 
+use crate::collections::BitSet;
 use crate::collections::HugeDoubleArray;
 use crate::concurrency::Concurrency;
 use crate::concurrency::TerminationFlag;
@@ -11,11 +12,13 @@ use crate::ml::decision_tree::{
     DecisionTreeRegressorTrainer, DecisionTreeTrainer, DecisionTreeTrainerConfig, FeatureBagger,
     TreeNode,
 };
+use crate::ml::models::trees::DecisionTreePredictor;
 use crate::ml::models::trees::{
     DatasetBootstrapper, RandomForestRegressor, RandomForestRegressorData,
     RandomForestRegressorTrainerConfig,
 };
 use crate::ml::models::{Features, Regressor, RegressorTrainer};
+use crate::projection::eval::procedure::LogLevel as ProcedureLogLevel;
 use rand::SeedableRng;
 use std::sync::Arc;
 
@@ -39,7 +42,7 @@ impl RandomForestRegressorTrainer {
         random_seed: Option<u64>,
         termination_flag: TerminationFlag,
         progress_tracker: TaskProgressTracker,
-        _message_log_level: crate::projection::eval::procedure::LogLevel,
+        _message_log_level: ProcedureLogLevel,
     ) -> Self {
         Self {
             config,
@@ -70,7 +73,7 @@ impl RandomForestRegressorTrainer {
             } else {
                 rand::rngs::StdRng::from_entropy()
             };
-            let mut bootstrapped_indices = crate::collections::BitSet::new(train_set.len());
+            let mut bootstrapped_indices = BitSet::new(train_set.len());
             let bootstrap_sample = if self.config.forest.num_samples_ratio == 0.0 {
                 for idx in 0..train_set.len() {
                     bootstrapped_indices.set(idx);
@@ -119,9 +122,7 @@ impl RandomForestRegressorTrainer {
                     .map(|&x| x as i64)
                     .collect::<Vec<_>>(),
             );
-            decision_trees.push(
-                Box::new(tree) as Box<dyn crate::ml::models::trees::DecisionTreePredictor<f64>>
-            );
+            decision_trees.push(Box::new(tree) as Box<dyn DecisionTreePredictor<f64>>);
 
             let mut progress_tracker = self.progress_tracker.clone();
             progress_tracker.log_message(

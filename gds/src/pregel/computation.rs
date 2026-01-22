@@ -37,18 +37,18 @@ use super::{PregelRuntimeConfig, PregelSchema};
 ///
 /// impl PregelComputation for PageRank {
 ///     type Config = PageRankConfig;
-///     
+///
 ///     fn init(&mut self, context: &mut InitContext<Self::Config>) {
 ///         let initial_value = 1.0 / context.node_count() as f64;
 ///         context.set_node_value(initial_value);
 ///     }
-///     
+///
 ///     fn compute(&mut self, context: &mut ComputeContext<Self::Config>, messages: Messages) {
 ///         let sum: f64 = messages.iter().sum();
 ///         let new_rank = (1.0 - self.damping_factor) + self.damping_factor * sum;
-///         
+///
 ///         context.set_node_value(new_rank);
-///         
+///
 ///         // Send rank / degree to all neighbors
 ///         let degree = context.degree();
 ///         if degree > 0 {
@@ -98,7 +98,7 @@ pub trait PregelComputation {
     /// fn init(&mut self, context: &mut InitContext<Self::Config>) {
     ///     // Initialize all nodes to 1.0
     ///     context.set_node_value(1.0);
-    ///     
+    ///
     ///     // Or use a node property as initial value
     ///     if let Some(initial) = context.node_property("seed_value") {
     ///         context.set_node_value(initial);
@@ -145,13 +145,13 @@ pub trait PregelComputation {
     ///     messages: &mut Messages<I>
     /// ) {
     ///     let current_component = context.node_value();
-    ///     
+    ///
     ///     // Find minimum component ID from messages
     ///     let min_component = messages
     ///         .map(|msg| msg as i64)
     ///         .min()
     ///         .unwrap_or(current_component);
-    ///     
+    ///
     ///     // If we found a smaller component, propagate it
     ///     if min_component < current_component {
     ///         context.set_node_value(min_component);
@@ -338,6 +338,7 @@ impl<T: PregelComputation> BasePregelComputation for T {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::PregelConfig;
 
     // Simple test computation
     struct TestComputation {
@@ -346,8 +347,6 @@ mod tests {
     }
 
     impl PregelComputation for TestComputation {
-        use crate::config::PregelConfig;
-
         type Config = PregelConfig;
 
         fn schema(&self, _config: &Self::Config) -> PregelSchema {

@@ -4,6 +4,7 @@
 
 use super::{classifier::MLPClassifier, data::MLPClassifierData};
 use crate::collections::HugeIntArray;
+use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::{
     batch::Batch,
     functions::{
@@ -242,7 +243,7 @@ mod tests {
         let loss_variable = objective.loss(&batch, 2);
 
         // Should be able to forward pass
-        let ctx = crate::ml::core::computation_context::ComputationContext::new();
+        let ctx = ComputationContext::new();
         let loss_value = ctx.forward(loss_variable.as_ref());
 
         assert!(loss_value.aggregate_sum() > 0.0);
@@ -287,7 +288,7 @@ mod tests {
         let label_vector = objective.batch_label_vector(&batch);
 
         // Should be able to forward pass
-        let ctx = crate::ml::core::computation_context::ComputationContext::new();
+        let ctx = ComputationContext::new();
         let result = ctx.forward(label_vector.as_ref());
 
         assert_eq!(result.data().len(), 2);
@@ -331,7 +332,7 @@ mod tests {
         let batch = ListBatch::new(vec![3, 1]);
         let label_vector = objective.batch_label_vector(&batch);
 
-        let ctx = crate::ml::core::computation_context::ComputationContext::new();
+        let ctx = ComputationContext::new();
         let result = ctx.forward(label_vector.as_ref());
 
         assert_eq!(result.data(), &[13.0, 11.0]);

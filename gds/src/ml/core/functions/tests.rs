@@ -4,10 +4,10 @@
 
 #[cfg(test)]
 mod constant_tests {
-    use crate::ml::core::ComputationContext;
     use crate::ml::core::functions::Constant;
-    use crate::ml::core::{Scalar, Vector, Matrix, Tensor};
+    use crate::ml::core::ComputationContext;
     use crate::ml::core::Variable;
+    use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
 
     #[test]
     fn test_scalar_constant_creation() {
@@ -117,10 +117,11 @@ mod constant_tests {
 
 #[cfg(test)]
 mod weights_tests {
-    use crate::ml::core::ComputationContext;
     use crate::ml::core::functions::Weights;
-    use crate::ml::core::{Scalar, Vector, Matrix, Tensor};
+    use crate::ml::core::size_in_bytes;
+    use crate::ml::core::ComputationContext;
     use crate::ml::core::Variable;
+    use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
 
     #[test]
     fn test_matrix_weights_creation() {
@@ -214,16 +215,14 @@ mod weights_tests {
 
     #[test]
     fn test_weights_size_estimation() {
-        assert_eq!(
-            Weights::size_in_bytes(10, 20),
-            crate::ml::core::size_in_bytes(&[10, 20])
-        );
+        assert_eq!(Weights::size_in_bytes(10, 20), size_in_bytes(&[10, 20]));
     }
 }
 
 #[cfg(test)]
 mod sigmoid_tests {
     use crate::ml::core::functions::{Constant, Sigmoid};
+    use crate::ml::core::size_in_bytes;
     use crate::ml::core::Variable;
 
     #[test]
@@ -288,10 +287,7 @@ mod sigmoid_tests {
 
     #[test]
     fn test_sigmoid_size_estimation() {
-        assert_eq!(
-            Sigmoid::size_in_bytes(10, 20),
-            crate::ml::core::size_in_bytes(&[10, 20])
-        );
+        assert_eq!(Sigmoid::size_in_bytes(10, 20), size_in_bytes(&[10, 20]));
     }
 }
 
@@ -449,6 +445,7 @@ mod element_sum_tests {
 #[cfg(test)]
 mod l2_norm_squared_tests {
     use crate::ml::core::functions::{Constant, L2NormSquared};
+    use crate::ml::core::size_in_bytes;
     use crate::ml::core::Variable;
 
     #[test]
@@ -471,10 +468,7 @@ mod l2_norm_squared_tests {
 
     #[test]
     fn test_l2_norm_squared_memory_estimation() {
-        assert_eq!(
-            L2NormSquared::size_in_bytes_of_apply(),
-            crate::ml::core::size_in_bytes(&[1])
-        );
+        assert_eq!(L2NormSquared::size_in_bytes_of_apply(), size_in_bytes(&[1]));
     }
 }
 

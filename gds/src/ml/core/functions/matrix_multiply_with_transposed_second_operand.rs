@@ -11,9 +11,10 @@
 //! - This function adds: A, B operands and Ax=b computation logic
 //! - Delegates Variable trait methods to inner AbstractVariable
 
+use crate::ml::core::dimensions::{self, COLUMNS_INDEX, ROWS_INDEX};
+use crate::ml::core::size_in_bytes;
 use crate::ml::core::AbstractVariable;
 use crate::ml::core::ComputationContext;
-use crate::ml::core::dimensions::{self, COLUMNS_INDEX, ROWS_INDEX};
 use crate::ml::core::{Matrix, Tensor};
 use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
@@ -78,7 +79,7 @@ impl MatrixMultiplyWithTransposedSecondOperand {
     /// Calculate size in bytes for result matrix.
     /// Java: `public static long sizeInBytes(int leftMatrixNumRows, int rightMatrixNumRows)`
     pub fn size_in_bytes(left_matrix_num_rows: usize, right_matrix_num_rows: usize) -> usize {
-        crate::ml::core::size_in_bytes(&[left_matrix_num_rows, right_matrix_num_rows])
+        size_in_bytes(&[left_matrix_num_rows, right_matrix_num_rows])
     }
 
     /// Validate that matrices can be multiplied with transpose.

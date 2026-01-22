@@ -1,3 +1,4 @@
+use crate::collections::{HugeDoubleArray, HugeIntArray};
 use crate::ml::core::tensor::Matrix;
 use crate::ml::models::training_method::TrainingMethod;
 use anyhow::Result;
@@ -110,7 +111,7 @@ pub trait ClassifierTrainer: Send + Sync {
     fn train(
         &self,
         features: &dyn Features,
-        labels: &crate::collections::HugeIntArray,
+        labels: &HugeIntArray,
         train_set: &Arc<Vec<u64>>,
     ) -> Box<dyn Classifier>;
 }
@@ -124,7 +125,7 @@ pub trait RegressorTrainer: Send + Sync {
     fn train(
         &self,
         features: &dyn Features,
-        targets: &crate::collections::HugeDoubleArray,
+        targets: &HugeDoubleArray,
         train_set: &Arc<Vec<u64>>,
     ) -> Box<dyn Regressor>;
 }

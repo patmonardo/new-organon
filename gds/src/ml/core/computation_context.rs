@@ -20,7 +20,7 @@
 //! let gradient = ctx.gradient(&weight_variable);
 //! ```
 
-use crate::ml::core::{dimensions, Tensor, Variable};
+use crate::ml::core::{dimensions, variable_id, Tensor, Variable, VariableRef};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -57,7 +57,7 @@ impl ComputationContext {
         let dims = variable.dimensions();
         let dim_str = format!("{:?}", dims);
         // Use process-local identity (allocation address) for unique identification
-        let addr = crate::ml::core::variable_id(variable).0;
+        let addr = variable_id(variable).0;
         format!("{}:{}", addr, dim_str)
     }
 
@@ -217,7 +217,7 @@ impl ComputationContext {
 
 enum VariableNode<'a> {
     Borrowed(&'a dyn Variable),
-    Owned(crate::ml::core::VariableRef),
+    Owned(VariableRef),
 }
 
 impl VariableNode<'_> {
@@ -229,7 +229,7 @@ impl VariableNode<'_> {
     }
 
     fn ptr_usize(&self) -> usize {
-        crate::ml::core::variable_id(self.as_dyn()).0
+        variable_id(self.as_dyn()).0
     }
 }
 
@@ -254,13 +254,13 @@ mod tests {
 
     struct TestLeafVariable {
         dims: Vec<usize>,
-        parents: Vec<crate::ml::core::VariableRef>,
+        parents: Vec<VariableRef>,
     }
 
     impl TestLeafVariable {
         fn new() -> Self {
             Self {
-                dims: crate::ml::core::dimensions::scalar(),
+                dims: dimensions::scalar(),
                 parents: vec![],
             }
         }
@@ -285,7 +285,7 @@ mod tests {
             true
         }
 
-        fn parents(&self) -> &[crate::ml::core::VariableRef] {
+        fn parents(&self) -> &[VariableRef] {
             &self.parents
         }
 

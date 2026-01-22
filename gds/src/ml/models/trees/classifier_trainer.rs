@@ -2,15 +2,18 @@
 //!
 //! 1:1 translation of RandomForestClassifierTrainer.java from Java GDS.
 
+use crate::collections::BitSet;
 use crate::collections::HugeIntArray;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::tasks::{LogLevel, ProgressTracker, TaskProgressTracker};
 use crate::mem::{Estimate, MemoryEstimation, MemoryEstimations, MemoryRange};
+use crate::ml::decision_tree::ImpurityCriterion;
 use crate::ml::decision_tree::{
     ClassifierImpurityCriterionType, DecisionTreeClassifierTrainer, DecisionTreeTrainer,
     DecisionTreeTrainerConfig, Entropy, FeatureBagger, GiniIndex, TreeNode,
 };
 use crate::ml::metrics::{ModelSpecificMetricsHandler, OutOfBagError};
+use crate::ml::models::trees::DecisionTreePredictor;
 use crate::ml::models::trees::{
     DatasetBootstrapper, RandomForestClassifier, RandomForestClassifierData,
     RandomForestClassifierTrainerConfig,
@@ -199,7 +202,7 @@ impl RandomForestClassifierTrainer {
             } else {
                 rand::rngs::StdRng::from_entropy()
             };
-            let mut bootstrapped_indices = crate::collections::BitSet::new(train_set.len());
+            let mut bootstrapped_indices = BitSet::new(train_set.len());
             let bootstrap_sample = if self.config.forest.num_samples_ratio == 0.0 {
                 for idx in 0..train_set.len() {
                     bootstrapped_indices.set(idx);
@@ -240,12 +243,12 @@ impl RandomForestClassifierTrainer {
                     Arc::new(labels.clone()),
                     self.number_of_classes,
                 ))
-                    as Box<dyn crate::ml::decision_tree::ImpurityCriterion>,
+                    as Box<dyn ImpurityCriterion>,
                 ClassifierImpurityCriterionType::Entropy => Box::new(Entropy::new(
                     Arc::new(labels.clone()),
                     self.number_of_classes,
                 ))
-                    as Box<dyn crate::ml::decision_tree::ImpurityCriterion>,
+                    as Box<dyn ImpurityCriterion>,
             };
 
             // Create and train decision tree
@@ -276,10 +279,7 @@ impl RandomForestClassifierTrainer {
                     }
                 }
             }
-            decision_trees.push(std::sync::Arc::new(tree)
-                as std::sync::Arc<
-                    dyn crate::ml::models::trees::DecisionTreePredictor<usize>,
-                >);
+            decision_trees.push(std::sync::Arc::new(tree) as std::sync::Arc<dyn DecisionTreePredictor<usize>>);
 
             let mut progress_tracker = self.progress_tracker.clone();
             progress_tracker.log_message(

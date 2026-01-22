@@ -2,10 +2,11 @@ use super::{
     classifier::LogisticRegressionClassifier, config::LogisticRegressionTrainConfig,
     data::LogisticRegressionData, objective::LogisticRegressionObjective,
 };
+use crate::collections::HugeIntArray;
 use crate::ml::{
     core::batch::consecutive_with_batch_size,
     gradient_descent::{GradientDescentConfig, Training},
-    models::{ClassifierTrainer, Features},
+    models::{Classifier, ClassifierTrainer, Features},
 };
 use parking_lot::RwLock;
 use std::sync::Arc;
@@ -43,9 +44,9 @@ impl ClassifierTrainer for LogisticRegressionTrainer {
     fn train(
         &self,
         features: &dyn Features,
-        labels: &crate::collections::HugeIntArray,
+        labels: &HugeIntArray,
         train_set: &Arc<Vec<u64>>,
-    ) -> Box<dyn crate::ml::models::Classifier> {
+    ) -> Box<dyn Classifier> {
         let data = if self.reduce_class_count {
             LogisticRegressionData::with_reduced_class_count(
                 features.feature_dimension(),

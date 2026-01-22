@@ -3,7 +3,7 @@ use super::edge_splitter::{
 };
 use crate::concurrency::virtual_threads::RunWithConcurrency;
 use crate::concurrency::Concurrency;
-use crate::core::utils::partition::PartitionUtils;
+use crate::core::utils::partition::{DegreeFunction, PartitionUtils};
 use crate::projection::factory::RelationshipsBuilder;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::IdMap;
@@ -80,8 +80,7 @@ impl EdgeSplitter for DirectedEdgeSplitter {
         let relationship_count = graph.relationship_count();
         let degrees = {
             let graph = Graph::concurrent_copy(graph);
-            Box::new(move |node_id: usize| graph.degree(node_id as i64))
-                as Box<dyn crate::core::utils::partition::DegreeFunction>
+            Box::new(move |node_id: usize| graph.degree(node_id as i64)) as Box<dyn DegreeFunction>
         };
 
         // Create tasks for each partition

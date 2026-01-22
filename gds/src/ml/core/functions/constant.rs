@@ -14,8 +14,8 @@
 use crate::ml::core::AbstractVariable;
 use crate::ml::core::ComputationContext;
 use crate::ml::core::NotAFunctionException;
+use crate::ml::core::{size_in_bytes, Variable, VariableRef};
 use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
-use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
 /// A constant tensor value that doesn't depend on any parents.
@@ -70,7 +70,7 @@ impl Constant {
 
     /// Calculate size in bytes for given dimensions.
     pub fn size_in_bytes(dimensions: &[usize]) -> usize {
-        crate::ml::core::size_in_bytes(dimensions)
+        size_in_bytes(dimensions)
     }
 }
 

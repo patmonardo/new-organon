@@ -8,6 +8,7 @@ use crate::ml::core::functions::{
 };
 use crate::ml::core::variable::VariableRef;
 use crate::ml::models::Regressor;
+use crate::ml::models::RegressorData;
 use std::sync::Arc;
 
 use super::data::LinearRegressionData;
@@ -58,7 +59,7 @@ impl LinearRegressor {
 }
 
 impl Regressor for LinearRegressor {
-    fn data(&self) -> &dyn crate::ml::models::RegressorData {
+    fn data(&self) -> &dyn RegressorData {
         &self.data
     }
 

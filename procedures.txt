@@ -1,0 +1,467 @@
+gds/src/procedures/centrality/articulation_points.rs:
+  89:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  98:     pub fn run(&self) -> Result<crate::collections::BitSet> {
+  105:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  111:             return Ok(crate::collections::BitSet::new(0));
+  114:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+  118:             crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+  119:             crate::core::utils::progress::JobId::new(),
+  181:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  188:     fn compute_bitset(&self) -> Result<(crate::collections::BitSet, std::time::Duration)> {
+  197:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  203:             return Ok((crate::collections::BitSet::new(0), start.elapsed()));
+  206:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+  210:             crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+  211:             crate::core::utils::progress::JobId::new(),
+  322:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  342:             crate::projection::eval::procedure::AlgorithmError::Execution(
+  405:             crate::config::GraphStoreConfig::default(),
+
+gds/src/procedures/centrality/betweenness.rs:
+  179:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  187:                     crate::projection::eval::procedure::AlgorithmError::Execution(
+  213:                     crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  219:                     crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  241:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+  245:             crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+  246:             crate::core::utils::progress::JobId::new(),
+  276:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  413:         let values: Arc<dyn crate::types::properties::node::NodePropertyValues> = Arc::new(values);
+  421:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  441:             crate::projection::eval::procedure::AlgorithmError::Execution(
+
+gds/src/procedures/centrality/bridges.rs:
+  80:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  102:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+  106:             crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+  107:             crate::core::utils::progress::JobId::new(),
+  112:         let termination = crate::concurrency::TerminationFlag::running_true();
+  123:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  212:                     crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  250:                     crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  270:             crate::projection::eval::procedure::AlgorithmError::Execution(
+  322:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+  326:             crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+  327:             crate::core::utils::progress::JobId::new(),
+  332:         let termination = crate::concurrency::TerminationFlag::running_true();
+  343:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  410:             crate::config::GraphStoreConfig::default(),
+
+gds/src/procedures/centrality/celf.rs:
+  115:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  278:             crate::config::GraphStoreConfig::default(),
+
+gds/src/procedures/centrality/closeness.rs:
+  113:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  133:         let farness_task = std::sync::Arc::new(crate::core::utils::progress::Task::leaf(
+  137:         let closeness_task = std::sync::Arc::new(crate::core::utils::progress::Task::leaf(
+  143:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+  145:             crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+  146:             crate::core::utils::progress::JobId::new(),
+  175:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  274:         let values: Arc<dyn crate::types::properties::node::NodePropertyValues> = Arc::new(values);
+  282:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/centrality/degree_centrality.rs:
+  154:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  183:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+  187:             crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+  188:             crate::core::utils::progress::JobId::new(),
+  201:         let termination = crate::concurrency::TerminationFlag::default();
+  214:                     crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  355:         let values: Arc<dyn crate::types::properties::node::NodePropertyValues> = Arc::new(values);
+  363:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/centrality/harmonic.rs:
+  105:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  126:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+  130:             crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+  131:             crate::core::utils::progress::JobId::new(),
+  157:                     crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  248:         let values: Arc<dyn crate::types::properties::node::NodePropertyValues> = Arc::new(values);
+  256:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  276:             crate::projection::eval::procedure::AlgorithmError::Execution(
+
+gds/src/procedures/centrality/hits.rs:
+  117:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  141:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+  145:             crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+  146:             crate::core::utils::progress::JobId::new(),
+  185:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+  189:             crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+  190:             crate::core::utils::progress::JobId::new(),
+  213:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+  217:             crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+  218:             crate::core::utils::progress::JobId::new(),
+  261:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/centrality/pagerank.rs:
+  219:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  258:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  275:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+  279:             crate::concurrency::Concurrency::of(self.concurrency.max(1)),
+  280:             crate::core::utils::progress::JobId::new(),
+  419:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/community/approx_max_kcut.rs:
+  128:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  147:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  175:             .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+  223:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  309:             crate::config::GraphStoreConfig::default(),
+
+gds/src/procedures/community/conductance.rs:
+  96:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  126:         let base_task = crate::algo::conductance::progress_task(node_count);
+  135:         let termination_flag = crate::concurrency::TerminationFlag::default();
+  146:             .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+  213:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  246:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/community/k1coloring.rs:
+  66:             batch_size: crate::core::utils::partition::DEFAULT_BATCH_SIZE,
+  129:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  203:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/community/kcore.rs:
+  100:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  148:             crate::projection::eval::procedure::AlgorithmError::Execution(
+  188:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/community/kmeans.rs:
+  167:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  244:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/community/label_propagation.rs:
+  135:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  220:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/community/leiden.rs:
+  145:             crate::core::utils::progress::TaskProgressTracker::new(base_task);
+  210:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/community/louvain.rs:
+  129:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/community/modularity.rs:
+  74:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  146:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  185:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/community/scc.rs:
+  103:             .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+  155:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/community/triangle.rs:
+  118:             .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+  171:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  196:     pub fn run(&self) -> Result<crate::algo::triangle::TriangleResult> {
+  198:         Ok(crate::algo::triangle::TriangleResult {
+
+gds/src/procedures/community/wcc.rs:
+  97:             crate::projection::eval::procedure::AlgorithmError::Execution(
+  137:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  170:     fn compute(&self) -> Result<(crate::algo::wcc::WccResult, u64)> {
+  197:             .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+  200:             crate::algo::wcc::WccResult {
+  225:     pub fn run(&self) -> Result<crate::algo::wcc::WccResult> {
+
+gds/src/procedures/embeddings/gat.rs:
+  116:                 crate::projection::orientation::Orientation::Natural,
+  119:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+
+gds/src/procedures/embeddings/graphsage.rs:
+  76:     pub fn run(self) -> facade::Result<crate::algo::embeddings::GraphSageResult> {
+  81:             crate::algo::embeddings::graphsage::algo::storage::GraphSageStorageRuntime::new();
+  88:                 crate::projection::orientation::Orientation::Natural,
+  94:         let graphsage_config = crate::algo::embeddings::GraphSageConfig {
+
+gds/src/procedures/graph.rs:
+  191:     pub fn node_similarity(&self) -> crate::procedures::similarity::NodeSimilarityBuilder {
+  192:         crate::procedures::similarity::NodeSimilarityBuilder::new(Arc::clone(&self.store))
+
+gds/src/procedures/machine_learning/facade.rs:
+  81:     graph_store: Arc<crate::types::graph_store::DefaultGraphStore>,
+
+gds/src/procedures/machine_learning/kge.rs:
+  88:     fn compute(&self) -> Result<crate::algo::algorithms::machine_learning::kge::KgePredictResult> {
+  103:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/machine_learning/split_relationships.rs:
+  67:     fn relationship_types(&self) -> Option<HashSet<crate::projection::RelationshipType>> {
+  76:                     .map(crate::projection::RelationshipType::of)
+
+gds/src/procedures/miscellaneous/scale_properties.rs:
+  87:     fn compute(&self) -> Result<crate::algo::scale_properties::ScalePropertiesResult> {
+  153:         let labels: HashSet<crate::projection::NodeLabel> = new_store.node_labels();
+
+gds/src/procedures/model_catalog.rs:
+  181:     fn register_listener(&self, listener: Box<dyn crate::core::model::ModelCatalogListener>) {
+  185:     fn unregister_listener(&self, listener: &dyn crate::core::model::ModelCatalogListener) {
+  395:     impl crate::config::Config for DummyConfig {}
+  397:     impl crate::config::BaseConfig for DummyConfig {
+  433:             crate::types::schema::GraphSchema::empty(),
+
+gds/src/procedures/pathfinding/all_shortest_paths.rs:
+  73:         crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  167:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  177:                     crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  188:                     crate::projection::eval::procedure::AlgorithmError::Execution(
+  237:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  249:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/procedures/pathfinding/astar.rs:
+  294:                     crate::projection::eval::procedure::AlgorithmError::Execution(
+  301:                     crate::projection::eval::procedure::AlgorithmError::Execution(
+  311:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  319:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  329:                     crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  343:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  394:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  409:                 crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  439:                 .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+  448:                             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  503:                 crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
+
+gds/src/procedures/pathfinding/bellman_ford.rs:
+  133:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  141:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  151:                     crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  165:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  173:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  192:         let _progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+  221:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  239:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  303:                 crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
+
+gds/src/procedures/pathfinding/bfs.rs:
+  200:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  214:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  239:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  265:                     crate::projection::eval::procedure::AlgorithmError::Execution(
+  272:                     crate::projection::eval::procedure::AlgorithmError::Execution(
+  282:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  291:                     crate::projection::eval::procedure::AlgorithmError::Execution(
+
+gds/src/procedures/pathfinding/dag_longest_path.rs:
+  89:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  109:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  118:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  276:             crate::config::GraphStoreConfig::default(),
+
+gds/src/procedures/pathfinding/delta_stepping.rs:
+  132:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  140:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  148:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  158:                     crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  172:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  180:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  199:         let _progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+  228:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  246:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  304:                 crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
+
+gds/src/procedures/pathfinding/dfs.rs:
+  141:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  158:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  184:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  204:         let paths: Vec<crate::algo::common::result_builders::PathResult> = result
+  211:                 crate::algo::common::result_builders::PathResult {
+  255:                 |e: crate::algo::common::result_builders::ResultBuilderError| {
+  256:                     crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
+  322:                     crate::projection::eval::procedure::AlgorithmError::Execution(
+  329:                     crate::projection::eval::procedure::AlgorithmError::Execution(
+  339:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  348:                     crate::projection::eval::procedure::AlgorithmError::Execution(
+
+gds/src/procedures/pathfinding/dijkstra.rs:
+  150:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  211:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  215:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  228:         let paths: Vec<crate::algo::common::result_builders::PathResult> = result
+  232:             .map(|p| crate::algo::common::result_builders::PathResult {
+  260:                 crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
+  345:                     crate::projection::eval::procedure::AlgorithmError::Execution(
+  352:                     crate::projection::eval::procedure::AlgorithmError::Execution(
+  362:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  370:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  462:         let updated_store = crate::procedures::pathfinding::build_path_relationship_store(
+
+gds/src/procedures/pathfinding/kspanningtree.rs:
+  86:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  96:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  119:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  130:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  137:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+  320:             crate::config::GraphStoreConfig::default(),
+
+gds/src/procedures/pathfinding/path_result_mapping.rs:
+  45:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  65:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/pathfinding/prize_collecting_steiner_tree.rs:
+  105:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  113:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  143:                     crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  149:                     crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  169:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  178:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/procedures/pathfinding/random_walk.rs:
+  129:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  153:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  179:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  188:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  418:             crate::config::GraphStoreConfig::default(),
+
+gds/src/procedures/pathfinding/spanning_tree.rs:
+  148:                     crate::projection::eval::procedure::AlgorithmError::Execution(
+  155:                     crate::projection::eval::procedure::AlgorithmError::Execution(
+  165:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  175:                     crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  199:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  228:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  235:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/procedures/pathfinding/steiner_tree.rs:
+  125:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  133:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  141:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  172:                     crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  178:                     crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  196:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  202:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  212:                     crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+gds/src/procedures/pathfinding/topological_sort.rs:
+  94:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  121:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  130:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  350:             crate::config::GraphStoreConfig::default(),
+
+gds/src/procedures/pathfinding/yens.rs:
+  117:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  125:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  133:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  141:                 crate::projection::eval::procedure::AlgorithmError::Execution(
+  151:                     crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  165:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  173:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  209:                 crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+  229:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  242:         let paths: Vec<crate::algo::common::result_builders::PathResult> = result
+  254:                 Ok(crate::algo::common::result_builders::PathResult {
+  275:         let metadata = crate::algo::common::result_builders::ExecutionMetadata {
+  288:                 |e: crate::algo::common::result_builders::ResultBuilderError| {
+  289:                     crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
+
+gds/src/procedures/pipelines/link_prediction_computation.rs:
+  40:     ) -> Result<Box<dyn crate::ml::link_models::LinkPredictionResult>, PredictPipelineExecutorError>
+  48:             &crate::core::utils::progress::EmptyTaskRegistryFactory,
+
+gds/src/procedures/pipelines/link_prediction_predict_pipeline_executor.rs:
+  55:     ) -> Result<Box<dyn crate::ml::link_models::LinkPredictionResult>, PredictPipelineExecutorError>
+
+gds/src/procedures/pipelines/link_prediction_similarity_computer.rs:
+  118:             crate::types::graph::graph::Graph::concurrent_copy(self.graph.as_ref()),
+
+gds/src/procedures/pipelines/link_prediction_train_result_renderer.rs:
+  23:                 base: crate::procedures::pipelines::types::MLTrainResult {
+
+gds/src/procedures/pipelines/node_classification_predict_computation.rs:
+  38:         crate::projection::eval::pipeline::PredictPipelineExecutorError,
+  42:         let class_id_map = crate::ml::core::subgraph::LocalIdMap::of(&class_ids);
+  52:             &crate::core::utils::progress::EmptyTaskRegistryFactory,
+
+gds/src/procedures/pipelines/node_classification_predict_pipeline_executor.rs:
+  24:     classifier_data: &'a dyn crate::ml::models::ClassifierData,
+  35:         classifier_data: &'a dyn crate::ml::models::ClassifierData,
+
+gds/src/procedures/pipelines/node_classification_predict_pipeline_mutate_result_builder.rs:
+  25:         crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+  35:             crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+
+gds/src/procedures/pipelines/node_classification_predict_pipeline_mutate_step.rs:
+  46:         crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+  53:     ) -> crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten {
+
+gds/src/procedures/pipelines/node_classification_predict_pipeline_write_result_builder.rs:
+  25:         crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+  35:             crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+
+gds/src/procedures/pipelines/node_classification_predict_pipeline_write_step.rs:
+  33:     ) -> std::collections::HashSet<crate::projection::NodeLabel> {
+  40:                 .map(|label| crate::projection::NodeLabel::of(label.clone()))
+  49:         crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+  56:         result_store: Option<&dyn crate::applications::graph_store_catalog::loaders::ResultStore>,
+  59:     ) -> crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten {
+  72:         crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten(
+
+gds/src/procedures/pipelines/node_classification_train_result_renderer.rs:
+  24:                 base: crate::procedures::pipelines::types::MLTrainResult {
+
+gds/src/procedures/pipelines/node_regression_predict_computation.rs:
+  18:     regressor: Arc<dyn crate::ml::models::Regressor>,
+  26:         regressor: Arc<dyn crate::ml::models::Regressor>,
+  40:         crate::collections::HugeDoubleArray,
+  41:         crate::projection::eval::pipeline::PredictPipelineExecutorError,
+  49:             &crate::core::utils::progress::EmptyTaskRegistryFactory,
+
+gds/src/procedures/pipelines/node_regression_predict_pipeline_executor.rs:
+  50: impl<'a> PredictPipelineExecutor<NodePropertyPredictPipeline, crate::collections::HugeDoubleArray>
+  85:     ) -> Result<crate::collections::HugeDoubleArray, PredictPipelineExecutorError> {
+
+gds/src/procedures/pipelines/node_regression_predict_pipeline_mutate_result_builder.rs:
+  21:         crate::collections::HugeDoubleArray,
+  23:         crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+  30:         result: Option<crate::collections::HugeDoubleArray>,
+  33:             crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+
+gds/src/procedures/pipelines/node_regression_predict_pipeline_mutate_step.rs:
+  45:         crate::collections::HugeDoubleArray,
+  46:         crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+  52:         result: &crate::collections::HugeDoubleArray,
+  53:     ) -> crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten {
+
+gds/src/procedures/pipelines/node_regression_predict_pipeline_stream_result_builder.rs:
+  8: impl StreamResultBuilder<crate::collections::HugeDoubleArray, NodeRegressionStreamResult>
+  16:         result: Option<crate::collections::HugeDoubleArray>,
+
+gds/src/procedures/pipelines/node_regression_train_result_renderer.rs:
+  24:                 base: crate::procedures::pipelines::types::MLTrainResult {
+
+gds/src/procedures/pipelines/pipeline_applications.rs:
+  328:         .pipeline_as::<crate::projection::eval::pipeline::link_pipeline::LinkPredictionTrainingPipeline>()
+
+gds/src/procedures/pipelines/trained_nc_pipeline_model.rs:
+  38:         converter.to_model(result, &crate::types::schema::GraphSchema::empty())
+
+gds/src/procedures/similarity/filtered_knn.rs:
+  193:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  354:         crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
+
+gds/src/procedures/similarity/filtered_node_similarity.rs:
+  169:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  177:         let mut source_nodes: Option<HashSet<crate::types::graph::id_map::MappedNodeId>> =
+  184:         let mut target_nodes: Option<HashSet<crate::types::graph::id_map::MappedNodeId>> =
+  213:             crate::algo::similarity::filtered_node_similarity::compute_filtered_node_similarity(
+  310:         crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
+
+gds/src/procedures/similarity/knn.rs:
+  169:         let computation = crate::algo::similarity::knn::KnnComputationRuntime::new();
+  170:         let storage = crate::algo::similarity::knn::KnnStorageRuntime::new(config.concurrency);
+  173:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  328:         crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
+
+gds/src/procedures/similarity/node_similarity.rs:
+  118:         let rel_types: HashSet<crate::projection::RelationshipType> =
+  145:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  153:             crate::algo::similarity::NodeSimilarityStorageRuntime::new(config.concurrency);
+  154:         let computation = crate::algo::similarity::NodeSimilarityComputationRuntime::new();
+  252:         crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
+
+gds/src/procedures/similarity/similarity_result_mapping.rs:
+  30:             crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+  63:                 crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+
+Found 328 occurrence(s) in 69 file(s)

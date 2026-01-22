@@ -3,9 +3,10 @@
 //! Translated from Java GDS ml-core functions FocalLoss.java.
 //! This is a literal 1:1 translation following repository translation policy.
 
+use crate::ml::core::dimensions::scalar as dimensions_scalar;
 use crate::ml::core::AbstractVariable;
 use crate::ml::core::ComputationContext;
-use crate::ml::core::{Scalar, Vector, Matrix, Tensor};
+use crate::ml::core::{Matrix, Scalar, Tensor, Vector};
 use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
@@ -44,7 +45,7 @@ impl FocalLoss {
         class_weights: Vec<f64>,
     ) -> Self {
         let parents = vec![predictions, targets];
-        let dimensions = crate::ml::core::dimensions::scalar();
+        let dimensions = dimensions_scalar();
         let base = AbstractVariable::new(parents, dimensions);
 
         Self {

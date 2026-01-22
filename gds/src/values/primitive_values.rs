@@ -30,6 +30,7 @@ generate_primitive_values_factory!();
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ValueType;
     use serde_json::json;
 
     #[test]

@@ -1,0 +1,352 @@
+gds/src/algo/algorithms/community/companion.rs:
+  53:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  78:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  87:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  96:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  105:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  327:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+  340:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+  349:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+  358:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+  367:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+
+gds/src/algo/algorithms/community/consecutive_values.rs:
+  115:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  133:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  142:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  151:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  160:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  224:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+  237:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+  246:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+  255:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+  264:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+
+gds/src/algo/algorithms/community/incremental_values.rs:
+  107:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  135:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  144:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  153:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  162:             crate::types::properties::PropertyValuesError::UnsupportedType {
+  243:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+  256:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+  265:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+  274:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+  283:                 crate::types::properties::PropertyValuesError::UnsupportedType {
+
+gds/src/algo/all_shortest_paths/integration_tests.rs:
+  50:                 crate::algo::all_shortest_paths::AllShortestPathsResult {
+  52:                         crate::algo::all_shortest_paths::ShortestPathResult {
+  57:                         crate::algo::all_shortest_paths::ShortestPathResult {
+
+gds/src/algo/all_shortest_paths/spec.rs:
+  75:     pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+  78:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  87:                 return Err(crate::config::validation::ConfigError::InvalidParameter {
+  95:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  102:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  207:             let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/articulation_points/integration_tests.rs:
+  48:             crate::config::GraphStoreConfig::default(),
+
+gds/src/algo/articulation_points/spec.rs:
+  31:     pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+  33:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  78:         let tracker = Arc::new(Mutex::new(crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/astar/integration_tests.rs:
+  98:     let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+  99:         crate::core::utils::progress::Tasks::leaf("astar".to_string()),
+  194:     let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+  195:         crate::core::utils::progress::Tasks::leaf("astar".to_string()),
+
+gds/src/algo/astar/spec.rs:
+  78:     pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+  80:             return Err(crate::config::validation::ConfigError::MustBePositive {
+  87:             return Err(crate::config::validation::ConfigError::RequiredParameter {
+  93:             return Err(crate::config::validation::ConfigError::RequiredParameter {
+  160:             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
+  164:             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
+  176:             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
+  204:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  218:             .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+  326:             &crate::projection::eval::procedure::ExecutionContext::new("test"),
+
+gds/src/algo/astar/storage.rs:
+  354:         let mut computation = crate::algo::astar::computation::AStarComputationRuntime::new();
+  355:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+  356:             crate::core::utils::progress::Tasks::leaf("astar".to_string()),
+  380:         let mut computation = crate::algo::astar::computation::AStarComputationRuntime::new();
+  381:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+  382:             crate::core::utils::progress::Tasks::leaf("astar".to_string()),
+
+gds/src/algo/bellman_ford/spec.rs:
+  83:     ) -> Result<(), crate::projection::codegen::config::validation::ConfigError> {
+  86:                 crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+  142:             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+  148:             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+  177:             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+  186:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/bellman_ford/storage.rs:
+  314:             let iter: Box<dyn Iterator<Item = crate::types::properties::relationship::traits::RelationshipCursorBox> + Send> =
+
+gds/src/algo/betweenness/integration_tests.rs:
+  48:             crate::config::GraphStoreConfig::default(),
+
+gds/src/algo/betweenness/spec.rs:
+  126:         let tracker = Arc::new(Mutex::new(crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  132:         let termination = crate::concurrency::TerminationFlag::default();
+
+gds/src/algo/bfs/spec.rs:
+  140:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/bridges/spec.rs:
+  34:     pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+  36:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  79:         let tracker = Arc::new(Mutex::new(crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/closeness/spec.rs:
+  49:     pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+  51:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  100:         let tracker = Arc::new(Mutex::new(crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/common/result_builders.rs:
+  698:     StatisticsError(#[from] crate::algo::common::statistics::StatisticsError),
+
+gds/src/algo/conductance/computation.rs:
+  58:                 let graph_copy = crate::types::graph::Graph::concurrent_copy(graph.as_ref());
+
+gds/src/algo/conductance/integration_tests.rs:
+  31:     let id_map = crate::types::graph::id_map::SimpleIdMap::from_original_ids(
+  41:         crate::config::GraphStoreConfig::default(),
+  75:     let registry_factory = crate::core::utils::progress::EmptyTaskRegistryFactory;
+  79:         crate::core::utils::progress::JobId::new(),
+
+gds/src/algo/degree_centrality/spec.rs:
+  54:     pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+  56:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  62:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  113:         let tracker = Arc::new(Mutex::new(crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/delta_stepping/spec.rs:
+  83:     ) -> Result<(), crate::projection::codegen::config::validation::ConfigError> {
+  86:                 crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+  95:                 crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+  163:             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+  169:             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+  198:             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+  207:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/delta_stepping/storage.rs:
+  266:             let iter: Box<dyn Iterator<Item = crate::types::properties::relationship::traits::RelationshipCursorBox> + Send> =
+
+gds/src/algo/dfs/spec.rs:
+  138:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/dijkstra/integration_tests.rs:
+  207:     let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+  208:         crate::core::utils::progress::Tasks::leaf("dijkstra".to_string()),
+
+gds/src/algo/dijkstra/path_finding_result.rs:
+  171:         let target_nodes: Vec<crate::types::graph::id_map::NodeId> =
+
+gds/src/algo/dijkstra/spec.rs:
+  91:     ) -> Result<(), crate::projection::codegen::config::validation::ConfigError> {
+  94:                 crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+  103:                 crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+  112:                 crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+  183:             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+  189:             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+  225:             .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+  234:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/embeddings/fastrp/storage.rs:
+  41:             crate::ml::core::features::feature_extraction::property_extractors(
+
+gds/src/algo/embeddings/gat/aggregator.rs:
+  20:         graph: &dyn crate::types::graph::Graph,
+
+gds/src/algo/embeddings/gat/layer.rs:
+  21:         graph: &dyn crate::types::graph::Graph,
+
+gds/src/algo/embeddings/gat/spec.rs:
+  39:         Ok(crate::algo::embeddings::gat::storage::GATStorageRuntime::new()
+
+gds/src/algo/embeddings/graphsage/algo/computation.rs:
+  32:         let mut embeddings = crate::collections::HugeObjectArray::new(node_count);
+
+gds/src/algo/embeddings/graphsage/algo/graph_sage.rs:
+  18:         crate::core::model::Model<
+  20:             crate::algo::embeddings::graphsage::types::GraphSageTrainConfig,
+  21:             crate::algo::embeddings::graphsage::graphsage_model_trainer::GraphSageTrainMetrics,
+  35:             crate::core::model::Model<
+  37:                 crate::algo::embeddings::graphsage::types::GraphSageTrainConfig,
+  38:                 crate::algo::embeddings::graphsage::graphsage_model_trainer::GraphSageTrainMetrics,
+
+gds/src/algo/embeddings/graphsage/algo/graph_sage_model.rs:
+  7:     pub layers: Vec<crate::algo::embeddings::graphsage::types::LayerConfig>,
+
+gds/src/algo/embeddings/graphsage/algo/multi_label_graph_sage_train.rs:
+  108:                 .downcast_ref::<crate::ml::core::tensor::Matrix>()
+
+gds/src/algo/embeddings/graphsage/algo/single_label_graph_sage_train.rs:
+  90:     layers: &[Arc<dyn crate::algo::embeddings::graphsage::layer::Layer>],
+  101:                     .downcast_ref::<crate::ml::core::tensor::Matrix>()
+  121:                     .downcast_ref::<crate::ml::core::tensor::Matrix>()
+  125:                     .downcast_ref::<crate::ml::core::tensor::Matrix>()
+  129:                     .downcast_ref::<crate::ml::core::tensor::Matrix>()
+  133:                     .downcast_ref::<crate::ml::core::tensor::Vector>()
+
+gds/src/algo/embeddings/graphsage/algo/spec.rs:
+  68:     pub embeddings: crate::collections::HugeObjectArray<Vec<f64>>,
+
+gds/src/algo/embeddings/graphsage/algo/tests.rs:
+  24:     let train_cfg = crate::algo::embeddings::graphsage::types::GraphSageTrainConfig {
+  27:         concurrency: crate::concurrency::Concurrency::of(1),
+  41:         aggregator: crate::algo::embeddings::graphsage::types::AggregatorType::Mean,
+  43:             crate::algo::embeddings::graphsage::types::ActivationFunctionType::Relu,
+  49:         crate::types::graph::Graph::concurrent_copy(graph.as_ref()),
+  52:         crate::concurrency::TerminationFlag::default(),
+  61:         crate::types::graph::Graph::concurrent_copy(graph.as_ref()),
+  64:         crate::concurrency::Concurrency::of(1),
+  77:     let cfg = crate::algo::embeddings::graphsage::types::GraphSageTrainConfig {
+  80:         concurrency: crate::concurrency::Concurrency::of(4),
+  94:         aggregator: crate::algo::embeddings::graphsage::types::AggregatorType::Mean,
+  96:             crate::algo::embeddings::graphsage::types::ActivationFunctionType::Relu,
+
+gds/src/algo/embeddings/graphsage/graphsage_loss.rs:
+  96:             loss += -weight * (crate::ml::core::functions::Sigmoid::sigmoid(pos_aff)).ln()
+  98:                     * (crate::ml::core::functions::Sigmoid::sigmoid(-neg_aff)).ln();
+
+gds/src/algo/embeddings/graphsage/graphsage_model_trainer.rs:
+  35: impl crate::core::model::ModelCatalogCustomInfo for GraphSageTrainMetrics {
+  404:             ctx.gradient((w.as_ref()) as &dyn crate::ml::core::variable::Variable)
+
+gds/src/algo/embeddings/hashgnn/algo/computation.rs:
+  56:             crate::core::utils::progress::TaskProgressTracker::new(Tasks::leaf_with_volume(
+
+gds/src/algo/embeddings/node2vec/algo/computation.rs:
+  159:         let _progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+
+gds/src/algo/harmonic/spec.rs:
+  61:     pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+  63:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  119:         let tracker = Arc::new(Mutex::new(crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/hits/spec.rs:
+  50:     pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+  52:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  58:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  64:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  100:         let mut tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/hits/storage.rs:
+  36: impl crate::config::Config for HitsPregelRuntimeConfig {}
+  38: impl crate::config::ConcurrencyConfig for HitsPregelRuntimeConfig {
+  44: impl crate::config::IterationsConfig for HitsPregelRuntimeConfig {
+  54: impl crate::config::PregelRuntimeConfig for HitsPregelRuntimeConfig {
+  59:     fn partitioning(&self) -> crate::core::utils::partition::Partitioning {
+  60:         crate::core::utils::partition::Partitioning::Range
+
+gds/src/algo/index_inverse/spec.rs:
+  37:     pub graph_store: crate::types::graph_store::DefaultGraphStore,
+
+gds/src/algo/indirect_exposure/computation.rs:
+  160: impl crate::config::Config for IndirectExposurePregelRuntimeConfig {}
+  162: impl crate::config::ConcurrencyConfig for IndirectExposurePregelRuntimeConfig {
+  168: impl crate::config::IterationsConfig for IndirectExposurePregelRuntimeConfig {
+  183:     fn partitioning(&self) -> crate::core::utils::partition::Partitioning {
+  184:         crate::core::utils::partition::Partitioning::Range
+
+gds/src/algo/indirect_exposure/storage.rs:
+  154:     result: &crate::pregel::PregelResult,
+
+gds/src/algo/k1coloring/integration_tests.rs:
+  49:             crate::config::GraphStoreConfig::default(),
+
+gds/src/algo/k1coloring/spec.rs:
+  34:     crate::core::utils::partition::DEFAULT_BATCH_SIZE
+  48:     pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+  50:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  56:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  62:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+
+gds/src/algo/kcore/integration_tests.rs:
+  50:             crate::config::GraphStoreConfig::default(),
+
+gds/src/algo/label_propagation/integration_tests.rs:
+  54:             crate::config::GraphStoreConfig::default(),
+
+gds/src/algo/louvain/integration_tests.rs:
+  52:             crate::config::GraphStoreConfig::default(),
+
+gds/src/algo/pagerank/integration_tests.rs:
+  49:             crate::config::GraphStoreConfig::default(),
+
+gds/src/algo/scc/integration_tests.rs:
+  52:             crate::config::GraphStoreConfig::default(),
+
+gds/src/algo/scc/spec.rs:
+  63:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  67:         let termination_flag = crate::concurrency::TerminationFlag::default();
+
+gds/src/algo/similarity/filtered_knn/computation.rs:
+  50:         let engine = crate::algo::similarity::knn::KnnComputationRuntime::new();
+
+gds/src/algo/similarity/filtered_knn/spec.rs:
+  178:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/similarity/filtered_knn/storage.rs:
+  236:                 Arc<dyn crate::types::properties::node::NodePropertyValues>,
+
+gds/src/algo/similarity/filtered_node_similarity/mod.rs:
+  44:     let storage = crate::algo::similarity::NodeSimilarityStorageRuntime::new(config.concurrency);
+  45:     let computation = crate::algo::similarity::NodeSimilarityComputationRuntime::new();
+
+gds/src/algo/similarity/knn/spec.rs:
+  171:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/similarity/knn/storage.rs:
+  223:                 Arc<dyn crate::types::properties::node::NodePropertyValues>,
+
+gds/src/algo/spanning_tree/spec.rs:
+  71:     pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+  73:             return Err(crate::config::validation::ConfigError::MustBePositive {
+  80:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  87:             return Err(crate::config::validation::ConfigError::InvalidParameter {
+  322:             crate::projection::eval::procedure::ExecutionMode::Stream,
+  323:             crate::projection::eval::procedure::ExecutionMode::Stats,
+  324:             crate::projection::eval::procedure::ExecutionMode::MutateNodeProperty,
+  325:             crate::projection::eval::procedure::ExecutionMode::WriteNodeProperty,
+
+gds/src/algo/walking/spec.rs:
+  48:     pub graph_store: crate::types::graph_store::DefaultGraphStore,
+
+gds/src/algo/walking/storage.rs:
+  160:         let id_map = crate::types::graph::id_map::SimpleIdMap::from_original_ids([0, 1, 2]);
+
+gds/src/algo/wcc/integration_tests.rs:
+  53:             crate::config::GraphStoreConfig::default(),
+
+gds/src/algo/wcc/spec.rs:
+  59:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  63:         let termination_flag = crate::concurrency::TerminationFlag::default();
+
+gds/src/algo/yens/computation.rs:
+  138:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+  139:                 crate::core::utils::progress::Tasks::leaf("yens".to_string()),
+
+gds/src/algo/yens/integration_tests.rs:
+  24:         let spec = crate::algo::yens::YENSAlgorithmSpec::new("test_graph".to_string());
+  69:         let spec = crate::algo::yens::YENSAlgorithmSpec::new("test_graph".to_string());
+  129:         let mut spec = crate::algo::yens::YENSAlgorithmSpec::new("test_graph".to_string());
+
+gds/src/algo/yens/spec.rs:
+  210:         let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+gds/src/algo/yens/storage.rs:
+  195:             crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+
+Found 209 occurrence(s) in 71 file(s)

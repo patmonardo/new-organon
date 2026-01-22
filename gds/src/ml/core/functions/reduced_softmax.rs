@@ -5,7 +5,7 @@
 
 use crate::ml::core::ComputationContext;
 use crate::ml::core::dimensions::{COLUMNS_INDEX, ROWS_INDEX};
-use crate::ml::core::{Matrix, Tensor};
+use crate::ml::core::{Matrix, Tensor, size_in_bytes};
 use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
@@ -40,7 +40,7 @@ impl ReducedSoftmax {
     }
 
     pub fn size_in_bytes(rows: usize, cols: usize) -> usize {
-        crate::ml::core::size_in_bytes(&[rows, cols - 1])
+        size_in_bytes(&[rows, cols - 1])
     }
 
     fn rescale(result: &mut Matrix) {

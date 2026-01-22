@@ -3,7 +3,10 @@
 use crate::concurrency::Concurrency;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::TaskProgressTracker;
+use crate::ml::models::linear::{LinearRegressionTrainConfig, LinearRegressionTrainer};
+use crate::ml::models::trees::{RandomForestRegressorTrainer, RandomForestRegressorTrainerConfig};
 use crate::ml::models::{base::TrainerConfigTrait, RegressorTrainer, TrainingMethod};
+use crate::projection::eval::procedure::LogLevel as ProcedureLogLevel;
 use parking_lot::RwLock;
 use std::sync::Arc;
 
@@ -25,11 +28,11 @@ impl RegressionTrainerFactory {
             TrainingMethod::LinearRegression => {
                 // Downcast to LinearRegressionTrainConfig
                 let linear_config = (config as &dyn std::any::Any)
-                    .downcast_ref::<crate::ml::models::linear::LinearRegressionTrainConfig>()
+                    .downcast_ref::<LinearRegressionTrainConfig>()
                     .expect("Invalid config type for LinearRegression");
                 // Create dummy termination flag for now (not used in training)
                 let dummy_termination = Arc::new(RwLock::new(false));
-                Box::new(crate::ml::models::linear::LinearRegressionTrainer::new(
+                Box::new(LinearRegressionTrainer::new(
                     concurrency.value(),
                     linear_config.clone(),
                     dummy_termination,
@@ -38,15 +41,15 @@ impl RegressionTrainerFactory {
             TrainingMethod::RandomForestRegression => {
                 // Downcast to RandomForestRegressorTrainerConfig
                 let rf_config = (config as &dyn std::any::Any)
-                    .downcast_ref::<crate::ml::models::trees::RandomForestRegressorTrainerConfig>()
+                    .downcast_ref::<RandomForestRegressorTrainerConfig>()
                     .expect("Invalid config type for RandomForestRegression");
-                Box::new(crate::ml::models::trees::RandomForestRegressorTrainer::new(
+                Box::new(RandomForestRegressorTrainer::new(
                     *concurrency,
                     rf_config.clone(),
                     random_seed,
                     termination_flag.clone(),
                     progress_tracker.clone(),
-                    crate::projection::eval::procedure::LogLevel::Info, // Default log level
+                    ProcedureLogLevel::Info, // Default log level
                 ))
             }
             _ => panic!(

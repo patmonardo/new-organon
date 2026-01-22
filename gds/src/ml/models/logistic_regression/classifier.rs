@@ -11,7 +11,7 @@ use crate::ml::core::{
     variable::VariableRef,
     ComputationContext,
 };
-use crate::ml::models::{Classifier, Features};
+use crate::ml::models::{Classifier, ClassifierData, Features};
 use std::sync::Arc;
 
 /// Logistic Regression classifier implementation
@@ -146,7 +146,7 @@ impl Classifier for LogisticRegressionClassifier {
         Matrix::new(result.data().to_vec(), rows, cols)
     }
 
-    fn data(&self) -> &dyn crate::ml::models::ClassifierData {
+    fn data(&self) -> &dyn ClassifierData {
         &self.data
     }
 }

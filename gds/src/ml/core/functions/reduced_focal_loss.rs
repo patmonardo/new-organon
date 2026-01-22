@@ -6,7 +6,7 @@
 use crate::ml::core::dimensions;
 use crate::ml::core::AbstractVariable;
 use crate::ml::core::ComputationContext;
-use crate::ml::core::{Scalar, Vector, Matrix, Tensor};
+use crate::ml::core::{Scalar, Vector, Matrix, Tensor, size_in_bytes};
 use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
@@ -88,7 +88,7 @@ impl ReducedFocalLoss {
     }
 
     pub fn size_in_bytes() -> usize {
-        crate::ml::core::size_in_bytes(&[1])
+        size_in_bytes(&[1])
     }
 
     fn compute_individual_loss(

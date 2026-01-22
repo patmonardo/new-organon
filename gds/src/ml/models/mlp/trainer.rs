@@ -5,6 +5,7 @@
 use crate::collections::HugeIntArray;
 use crate::ml::core::batch::from_array;
 use crate::ml::gradient_descent::Training;
+use crate::ml::gradient_descent::GradientDescentConfig;
 use crate::ml::models::{Classifier, ClassifierTrainer, Features};
 use parking_lot::RwLock;
 use rand::rngs::StdRng;
@@ -82,7 +83,7 @@ impl MLPClassifierTrainer {
         );
 
         // Create training instance
-        let gradient_config = crate::ml::gradient_descent::GradientDescentConfig::builder()
+        let gradient_config = GradientDescentConfig::builder()
             .batch_size(self.train_config.batch_size)
             .min_epochs(self.train_config.min_epochs)
             .patience(self.train_config.patience)
@@ -156,7 +157,7 @@ impl ClassifierTrainer for MLPClassifierTrainer {
         );
 
         // Create training instance
-        let gradient_config = crate::ml::gradient_descent::GradientDescentConfig::builder()
+        let gradient_config = GradientDescentConfig::builder()
             .batch_size(self.train_config.batch_size)
             .min_epochs(self.train_config.min_epochs)
             .patience(self.train_config.patience)

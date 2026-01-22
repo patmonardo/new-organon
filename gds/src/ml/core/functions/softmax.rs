@@ -13,7 +13,7 @@
 
 use crate::ml::core::AbstractVariable;
 use crate::ml::core::ComputationContext;
-use crate::ml::core::{Matrix, Tensor};
+use crate::ml::core::{Matrix, Tensor, size_in_bytes};
 use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
@@ -58,7 +58,7 @@ impl Softmax {
     /// Calculate size in bytes for matrix softmax output.
     /// Java: `public static long sizeInBytes(int rows, int cols)`
     pub fn size_in_bytes(rows: usize, cols: usize) -> usize {
-        crate::ml::core::size_in_bytes(&[rows, cols])
+        size_in_bytes(&[rows, cols])
     }
 
     /// Rescale softmax output to ensure numerical stability.

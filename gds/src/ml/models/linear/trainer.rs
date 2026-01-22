@@ -6,7 +6,7 @@ use crate::collections::HugeDoubleArray;
 use crate::ml::{
     core::batch::from_array,
     gradient_descent::{Objective, Training},
-    models::{Features, RegressorTrainer},
+    models::{Features, Regressor, RegressorTrainer},
 };
 use parking_lot::RwLock;
 use std::sync::Arc;
@@ -62,7 +62,7 @@ impl RegressorTrainer for LinearRegressionTrainer {
         features: &dyn Features,
         targets: &HugeDoubleArray,
         train_set: &Arc<Vec<u64>>,
-    ) -> Box<dyn crate::ml::models::Regressor> {
+    ) -> Box<dyn Regressor> {
         // Create objective with features, targets, and penalty from config
         let objective =
             LinearRegressionObjective::new(features, targets, self.train_config.penalty());

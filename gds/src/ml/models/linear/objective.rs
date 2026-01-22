@@ -3,6 +3,7 @@
 //! Literal translation of `LinearRegressionObjective.java` from Java GDS.
 
 use crate::collections::HugeDoubleArray;
+use crate::ml::core::batch::Batch;
 use crate::ml::core::functions::{
     constant::Constant, constant_scale::ConstantScale, element_sum::ElementSum,
     l2_norm_squared::L2NormSquared, mean_square_error::MeanSquareError, weights::Weights,
@@ -33,18 +34,14 @@ impl<'a> LinearRegressionObjective<'a> {
         }
     }
 
-    fn penalty_for_batch<B: crate::ml::core::batch::Batch>(
-        &self,
-        batch: &B,
-        train_size: usize,
-    ) -> VariableRef {
+    fn penalty_for_batch<B: Batch>(&self, batch: &B, train_size: usize) -> VariableRef {
         let weights: VariableRef = self.model_data.weights().clone();
         let penalty_variable: VariableRef = Arc::new(L2NormSquared::new_ref(weights));
         let scale = (batch.size() as f64) * self.penalty / (train_size as f64);
         Arc::new(ConstantScale::new_ref(penalty_variable, scale))
     }
 
-    fn batch_targets<B: crate::ml::core::batch::Batch>(&self, batch: &B) -> VariableRef {
+    fn batch_targets<B: Batch>(&self, batch: &B) -> VariableRef {
         let mut batched_targets = Vec::with_capacity(batch.size());
         for element_id in batch.element_ids() {
             batched_targets.push(self.targets.get(element_id as usize));
@@ -67,7 +64,7 @@ impl<'a> Objective for LinearRegressionObjective<'a> {
         ]
     }
 
-    fn loss<B: crate::ml::core::batch::Batch>(&self, batch: &B, train_size: usize) -> VariableRef {
+    fn loss<B: Batch>(&self, batch: &B, train_size: usize) -> VariableRef {
         let batch_features: VariableRef = Arc::new(batch_feature_matrix(batch, self.features));
         let regressor = LinearRegressor::new(self.model_data.clone());
 

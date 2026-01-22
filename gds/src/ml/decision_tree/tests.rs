@@ -403,6 +403,7 @@ mod feature_bagger_tests {
 #[cfg(test)]
 mod mse_impurity_tests {
     use super::*;
+    use crate::mem::Estimate;
 
     #[test]
     fn test_mse_impurity_data_creation() {
@@ -451,7 +452,7 @@ mod mse_impurity_tests {
     fn test_mse_memory_estimation() {
         let estimate = MSEImpurityData::memory_estimation();
         assert!(estimate > 0);
-        assert!(estimate >= crate::mem::Estimate::size_of_instance("MSEImpurityData"));
+        assert!(estimate >= Estimate::size_of_instance("MSEImpurityData"));
     }
 }
 

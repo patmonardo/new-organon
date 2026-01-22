@@ -5,6 +5,7 @@
 
 use super::tensor::Tensor;
 use crate::ml::core::dimensions;
+use crate::ml::core::size_in_bytes;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Scalar {
@@ -46,7 +47,7 @@ impl Scalar {
     /// Calculate size in bytes for scalar.
     /// Java: `public static long sizeInBytes()`
     pub fn size_in_bytes() -> usize {
-        crate::ml::core::size_in_bytes(&dimensions::scalar())
+        size_in_bytes(&dimensions::scalar())
     }
 }
 

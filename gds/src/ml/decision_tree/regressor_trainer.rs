@@ -10,6 +10,7 @@ use crate::ml::decision_tree::{
     MSEImpurityData, SplitMeanSquaredError, TreeNode,
 };
 use crate::ml::models::Features;
+use crate::ml::decision_tree::{Splitter, StackRecord};
 use std::sync::Arc;
 
 pub struct DecisionTreeRegressorTrainer<'a> {
@@ -67,12 +68,12 @@ impl<'a> DecisionTreeRegressorTrainer<'a> {
             .min(1.max(number_of_training_samples.saturating_sub(config.min_split_size()) + 2));
         let max_items_on_stack = 2 * normalized_max_depth;
         let max_stack_size = Estimate::size_of_instance("VecDeque")
-            + std::mem::size_of::<crate::ml::decision_tree::StackRecord<f64>>()
+            + std::mem::size_of::<StackRecord<f64>>()
                 * max_items_on_stack
             + (Estimate::size_of_long_array(number_of_training_samples) / max_items_on_stack)
                 * max_items_on_stack;
 
-        let splitter_estimation = crate::ml::decision_tree::Splitter::memory_estimation(
+        let splitter_estimation = Splitter::memory_estimation(
             number_of_training_samples,
             size_of_impurity_data,
         );

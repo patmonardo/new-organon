@@ -6,7 +6,7 @@
 use crate::ml::core::dimensions;
 use crate::ml::core::AbstractVariable;
 use crate::ml::core::ComputationContext;
-use crate::ml::core::{Scalar, Tensor};
+use crate::ml::core::{size_in_bytes, Scalar, Tensor};
 use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
 
@@ -35,7 +35,7 @@ impl L2NormSquared {
     }
 
     pub fn size_in_bytes_of_apply() -> usize {
-        crate::ml::core::size_in_bytes(&[1])
+        size_in_bytes(&[1])
     }
 
     fn gradient_for_parent(&self, ctx: &ComputationContext) -> Box<dyn Tensor> {

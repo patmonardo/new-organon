@@ -7,6 +7,7 @@ use super::scalar::Scalar;
 use super::tensor::Tensor;
 use super::vector::Vector;
 use crate::ml::core::dimensions;
+use crate::ml::core::size_in_bytes;
 use serde::{Deserialize, Serialize};
 use std::ops::{Index, IndexMut};
 
@@ -59,7 +60,7 @@ impl Matrix {
     /// Calculate size in bytes for matrix.
     /// Java: `public static long sizeInBytes(int rows, int cols)`
     pub fn size_in_bytes(rows: usize, cols: usize) -> usize {
-        crate::ml::core::size_in_bytes(&[rows, cols])
+        size_in_bytes(&[rows, cols])
     }
 
     // ========================================================================
