@@ -91,6 +91,8 @@ impl NodePropertyPipelineBaseTrainConfig for NodeClassificationPipelineTrainConf
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ml::metrics::classification::GlobalAccuracy;
+    use crate::ml::metrics::OutOfBagError;
 
     #[test]
     fn test_new_config() {
@@ -130,8 +132,8 @@ mod tests {
     #[test]
     fn test_classification_metrics_filter() {
         let metrics: Vec<Box<dyn Metric>> = vec![
-            Box::new(crate::ml::metrics::OutOfBagError::new()),
-            Box::new(crate::ml::metrics::classification::GlobalAccuracy::new()),
+            Box::new(OutOfBagError::new()),
+            Box::new(GlobalAccuracy::new()),
         ];
         let filtered = NodeClassificationPipelineTrainConfig::classification_metrics(&metrics);
         assert_eq!(filtered.len(), 1);

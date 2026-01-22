@@ -342,13 +342,18 @@ impl Default for PipelineCatalog {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::projection::eval::pipeline::{
+        AutoTuningConfig, ExecutableNodePropertyStep, FeatureStep, Pipeline,
+        PipelineValidationError, TrainingMethod, TunableTrainerConfig,
+    };
+    use crate::types::graph_store::DefaultGraphStore;
     use std::collections::HashMap;
 
     // Mock FeatureStep for testing
     #[derive(Clone)]
     struct MockFeatureStep;
 
-    impl crate::projection::eval::pipeline::FeatureStep for MockFeatureStep {
+    impl FeatureStep for MockFeatureStep {
         fn name(&self) -> &str {
             "mock"
         }
@@ -374,12 +379,10 @@ mod tests {
         name: String,
     }
 
-    impl crate::projection::eval::pipeline::Pipeline for MockPipeline {
+    impl Pipeline for MockPipeline {
         type FeatureStep = MockFeatureStep;
 
-        fn node_property_steps(
-            &self,
-        ) -> &[Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>] {
+        fn node_property_steps(&self) -> &[Box<dyn ExecutableNodePropertyStep>] {
             &[]
         }
 
@@ -389,8 +392,8 @@ mod tests {
 
         fn specific_validate_before_execution(
             &self,
-            _graph_store: &crate::types::graph_store::DefaultGraphStore,
-        ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError> {
+            _graph_store: &DefaultGraphStore,
+        ) -> Result<(), PipelineValidationError> {
             Ok(())
         }
 
@@ -408,43 +411,26 @@ mod tests {
 
         fn training_parameter_space(
             &self,
-        ) -> &HashMap<
-            crate::projection::eval::pipeline::TrainingMethod,
-            Vec<Box<dyn crate::projection::eval::pipeline::TunableTrainerConfig>>,
-        > {
-            use crate::projection::eval::pipeline::TrainingMethod;
+        ) -> &HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>> {
             use std::sync::OnceLock;
-            static EMPTY: OnceLock<
-                HashMap<
-                    TrainingMethod,
-                    Vec<Box<dyn crate::projection::eval::pipeline::TunableTrainerConfig>>,
-                >,
-            > = OnceLock::new();
+            static EMPTY: OnceLock<HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>>> =
+                OnceLock::new();
             EMPTY.get_or_init(HashMap::new)
         }
 
         fn training_parameter_space_mut(
             &mut self,
-        ) -> &mut HashMap<
-            crate::projection::eval::pipeline::TrainingMethod,
-            Vec<Box<dyn crate::projection::eval::pipeline::TunableTrainerConfig>>,
-        > {
+        ) -> &mut HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>> {
             unreachable!("Not needed for tests")
         }
 
-        fn auto_tuning_config(&self) -> &crate::projection::eval::pipeline::AutoTuningConfig {
+        fn auto_tuning_config(&self) -> &AutoTuningConfig {
             use std::sync::OnceLock;
-            static CONFIG: OnceLock<crate::projection::eval::pipeline::AutoTuningConfig> =
-                OnceLock::new();
-            CONFIG.get_or_init(|| {
-                crate::projection::eval::pipeline::AutoTuningConfig::new(1).unwrap()
-            })
+            static CONFIG: OnceLock<AutoTuningConfig> = OnceLock::new();
+            CONFIG.get_or_init(|| AutoTuningConfig::new(1).unwrap())
         }
 
-        fn set_auto_tuning_config(
-            &mut self,
-            _config: crate::projection::eval::pipeline::AutoTuningConfig,
-        ) {
+        fn set_auto_tuning_config(&mut self, _config: AutoTuningConfig) {
             // Not needed for tests
         }
     }
@@ -453,12 +439,10 @@ mod tests {
     #[derive(Debug)]
     struct OtherPipeline;
 
-    impl crate::projection::eval::pipeline::Pipeline for OtherPipeline {
+    impl Pipeline for OtherPipeline {
         type FeatureStep = MockFeatureStep;
 
-        fn node_property_steps(
-            &self,
-        ) -> &[Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>] {
+        fn node_property_steps(&self) -> &[Box<dyn ExecutableNodePropertyStep>] {
             &[]
         }
 
@@ -468,8 +452,8 @@ mod tests {
 
         fn specific_validate_before_execution(
             &self,
-            _graph_store: &crate::types::graph_store::DefaultGraphStore,
-        ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError> {
+            _graph_store: &DefaultGraphStore,
+        ) -> Result<(), PipelineValidationError> {
             Ok(())
         }
 
@@ -485,43 +469,26 @@ mod tests {
 
         fn training_parameter_space(
             &self,
-        ) -> &HashMap<
-            crate::projection::eval::pipeline::TrainingMethod,
-            Vec<Box<dyn crate::projection::eval::pipeline::TunableTrainerConfig>>,
-        > {
-            use crate::projection::eval::pipeline::TrainingMethod;
+        ) -> &HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>> {
             use std::sync::OnceLock;
-            static EMPTY: OnceLock<
-                HashMap<
-                    TrainingMethod,
-                    Vec<Box<dyn crate::projection::eval::pipeline::TunableTrainerConfig>>,
-                >,
-            > = OnceLock::new();
+            static EMPTY: OnceLock<HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>>> =
+                OnceLock::new();
             EMPTY.get_or_init(HashMap::new)
         }
 
         fn training_parameter_space_mut(
             &mut self,
-        ) -> &mut HashMap<
-            crate::projection::eval::pipeline::TrainingMethod,
-            Vec<Box<dyn crate::projection::eval::pipeline::TunableTrainerConfig>>,
-        > {
+        ) -> &mut HashMap<TrainingMethod, Vec<Box<dyn TunableTrainerConfig>>> {
             unreachable!("Not needed for tests")
         }
 
-        fn auto_tuning_config(&self) -> &crate::projection::eval::pipeline::AutoTuningConfig {
+        fn auto_tuning_config(&self) -> &AutoTuningConfig {
             use std::sync::OnceLock;
-            static CONFIG: OnceLock<crate::projection::eval::pipeline::AutoTuningConfig> =
-                OnceLock::new();
-            CONFIG.get_or_init(|| {
-                crate::projection::eval::pipeline::AutoTuningConfig::new(1).unwrap()
-            })
+            static CONFIG: OnceLock<AutoTuningConfig> = OnceLock::new();
+            CONFIG.get_or_init(|| AutoTuningConfig::new(1).unwrap())
         }
 
-        fn set_auto_tuning_config(
-            &mut self,
-            _config: crate::projection::eval::pipeline::AutoTuningConfig,
-        ) {
+        fn set_auto_tuning_config(&mut self, _config: AutoTuningConfig) {
             // Not needed for tests
         }
     }

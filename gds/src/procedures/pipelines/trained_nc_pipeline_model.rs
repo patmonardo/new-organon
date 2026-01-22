@@ -7,6 +7,7 @@ use crate::projection::eval::pipeline::node_pipeline::classification::node_class
 use crate::projection::eval::pipeline::node_pipeline::classification::node_classification_to_model_converter::NodeClassificationToModelConverter;
 use crate::projection::eval::pipeline::node_pipeline::classification::node_classification_train_result::NodeClassificationTrainResult;
 use crate::projection::eval::pipeline::node_pipeline::classification::node_classification_training_pipeline::NodeClassificationTrainingPipeline;
+use crate::types::schema::GraphSchema;
 
 pub struct TrainedNCPipelineModel {
     model_catalog: Arc<FacadeModelCatalog>,
@@ -35,6 +36,6 @@ impl TrainedNCPipelineModel {
         result: NodeClassificationTrainResult,
     ) -> NodeClassificationModelResult {
         let converter = NodeClassificationToModelConverter::new(pipeline.clone(), config.clone());
-        converter.to_model(result, &crate::types::schema::GraphSchema::empty())
+        converter.to_model(result, &GraphSchema::empty())
     }
 }

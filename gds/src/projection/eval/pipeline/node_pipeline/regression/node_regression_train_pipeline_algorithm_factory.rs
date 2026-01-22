@@ -2,6 +2,7 @@ use crate::core::utils::progress::tasks::progress_tracker::NoopProgressTracker;
 use crate::core::utils::progress::tasks::progress_tracker::ProgressTracker;
 use crate::core::utils::progress::tasks::Task;
 use crate::mem::MemoryEstimation;
+use crate::mem::MemoryEstimations;
 use crate::projection::eval::pipeline::node_pipeline::node_property_pipeline_base_train_config::NodePropertyPipelineBaseTrainConfig;
 use crate::projection::eval::pipeline::node_pipeline::NodeFeatureProducer;
 use crate::projection::eval::pipeline::pipeline_trait::Pipeline;
@@ -170,7 +171,7 @@ impl NodeRegressionTrainPipelineAlgorithmFactory {
         _configuration: &NodeRegressionPipelineTrainConfig,
     ) -> Box<dyn MemoryEstimation> {
         // Placeholder until memory estimations are translated.
-        crate::mem::MemoryEstimations::empty()
+        MemoryEstimations::empty()
     }
 
     /// Creates a progress task for pipeline training.

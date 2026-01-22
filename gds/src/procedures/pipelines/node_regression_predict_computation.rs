@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
+use crate::collections::HugeDoubleArray;
 use crate::concurrency::{Concurrency, TerminationFlag};
-use crate::core::utils::progress::{JobId, TaskProgressTracker};
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, JobId, TaskProgressTracker};
+use crate::ml::models::Regressor;
 use crate::projection::eval::pipeline::node_pipeline::NodePropertyPredictPipeline;
-use crate::projection::eval::pipeline::PredictPipelineExecutor;
+use crate::projection::eval::pipeline::{PredictPipelineExecutor, PredictPipelineExecutorError};
 use crate::types::graph_store::DefaultGraphStore;
 
 use super::{
@@ -15,7 +17,7 @@ pub struct NodeRegressionPredictComputation {
     configuration: NodeRegressionPredictPipelineBaseConfig,
     label: String,
     pipeline: NodePropertyPredictPipeline,
-    regressor: Arc<dyn crate::ml::models::Regressor>,
+    regressor: Arc<dyn Regressor>,
 }
 
 impl NodeRegressionPredictComputation {
@@ -23,7 +25,7 @@ impl NodeRegressionPredictComputation {
         configuration: NodeRegressionPredictPipelineBaseConfig,
         label: String,
         pipeline: NodePropertyPredictPipeline,
-        regressor: Arc<dyn crate::ml::models::Regressor>,
+        regressor: Arc<dyn Regressor>,
     ) -> Self {
         Self {
             configuration,
@@ -36,17 +38,14 @@ impl NodeRegressionPredictComputation {
     pub fn compute(
         &self,
         graph_store: Arc<DefaultGraphStore>,
-    ) -> Result<
-        crate::collections::HugeDoubleArray,
-        crate::projection::eval::pipeline::PredictPipelineExecutorError,
-    > {
+    ) -> Result<HugeDoubleArray, PredictPipelineExecutorError> {
         let task =
             NodeRegressionPredictPipelineExecutor::progress_task(&self.label, graph_store.as_ref());
         let tracker = TaskProgressTracker::with_registry(
             task,
             Concurrency::of(self.configuration.concurrency()),
             JobId::new(),
-            &crate::core::utils::progress::EmptyTaskRegistryFactory,
+            &EmptyTaskRegistryFactory,
         );
 
         let mut executor = NodeRegressionPredictPipelineExecutor::new(

@@ -56,6 +56,8 @@ pub trait NodePropertyTrainingPipeline: TrainingPipeline {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::graph_store::DefaultGraphStore;
+    use crate::projection::eval::pipeline::PipelineValidationError;
     use crate::projection::eval::pipeline::auto_tuning_config::AutoTuningConfig;
     use crate::projection::eval::pipeline::training_pipeline::TunableTrainerConfig;
     use crate::projection::eval::pipeline::{
@@ -113,8 +115,8 @@ mod tests {
 
         fn specific_validate_before_execution(
             &self,
-            _graph_store: &crate::types::graph_store::DefaultGraphStore,
-        ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError> {
+                _graph_store: &DefaultGraphStore,
+            ) -> Result<(), PipelineValidationError> {
             Ok(())
         }
     }

@@ -1,4 +1,5 @@
-use crate::applications::algorithms::machinery::{AlgorithmProcessingTimings, MutateResultBuilder};
+use crate::applications::algorithms::machinery::{AlgorithmProcessingTimings, GraphStoreNodePropertiesWritten, MutateResultBuilder};
+use crate::collections::HugeDoubleArray;
 use crate::core::loading::GraphResources;
 use crate::procedures::pipelines::types::{PredictMutateResult, StandardMutateResult};
 use crate::procedures::pipelines::NodeRegressionPredictPipelineMutateConfig;
@@ -18,19 +19,19 @@ impl NodeRegressionPredictPipelineMutateResultBuilder {
 impl
     MutateResultBuilder<
         NodeRegressionPredictPipelineMutateConfig,
-        crate::collections::HugeDoubleArray,
+        HugeDoubleArray,
         PredictMutateResult,
-        crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+        GraphStoreNodePropertiesWritten,
     > for NodeRegressionPredictPipelineMutateResultBuilder
 {
     fn build(
         &self,
         _graph_resources: &GraphResources,
         configuration: &NodeRegressionPredictPipelineMutateConfig,
-        result: Option<crate::collections::HugeDoubleArray>,
+        result: Option<HugeDoubleArray>,
         timings: AlgorithmProcessingTimings,
         metadata: Option<
-            crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+            GraphStoreNodePropertiesWritten,
         >,
     ) -> PredictMutateResult {
         let node_properties_written = metadata.map(|m| m.0 as i64).unwrap_or(0);

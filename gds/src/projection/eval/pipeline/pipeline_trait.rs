@@ -7,6 +7,7 @@ use std::error::Error as StdError;
 use std::fmt;
 
 use crate::projection::NodeLabel;
+use crate::types::graph_store::DefaultGraphStore;
 use crate::types::graph_store::GraphStore;
 
 use super::executable_node_property_step::ExecutableNodePropertyStep;
@@ -93,7 +94,7 @@ pub trait Pipeline {
     /// ```
     fn validate_before_execution(
         &self,
-        graph_store: &crate::types::graph_store::DefaultGraphStore,
+        graph_store: &DefaultGraphStore,
         node_labels: &[String],
     ) -> Result<(), PipelineValidationError> {
         let mut invalid_properties =
@@ -124,7 +125,7 @@ pub trait Pipeline {
     /// **Java**: `void specificValidateBeforeExecution(GraphStore graphStore)`
     fn specific_validate_before_execution(
         &self,
-        graph_store: &crate::types::graph_store::DefaultGraphStore,
+        graph_store: &DefaultGraphStore,
     ) -> Result<(), PipelineValidationError>;
 
     /// Validate that feature properties exist after node property steps.
@@ -143,7 +144,7 @@ pub trait Pipeline {
     /// ```
     fn validate_feature_properties(
         &self,
-        graph_store: &crate::types::graph_store::DefaultGraphStore,
+        graph_store: &DefaultGraphStore,
         node_labels: &[String],
     ) -> Result<(), PipelineValidationError> {
         let invalid_properties =
@@ -174,7 +175,7 @@ pub trait Pipeline {
     /// ```
     fn feature_properties_missing_from_graph(
         &self,
-        graph_store: &crate::types::graph_store::DefaultGraphStore,
+        graph_store: &DefaultGraphStore,
         node_labels: &[String],
     ) -> HashSet<String> {
         let labels: HashSet<NodeLabel> = node_labels

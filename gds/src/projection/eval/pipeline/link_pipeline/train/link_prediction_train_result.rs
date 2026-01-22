@@ -69,9 +69,12 @@ impl LinkPredictionTrainResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ml::core::tensor::Matrix;
     use crate::ml::metrics::classification::GlobalAccuracy;
+    use crate::ml::metrics::Metric;
     use crate::ml::models::base::{BaseModelData, ClassifierData};
     use crate::ml::models::training_method::TrainingMethod;
+    use crate::ml::models::Features;
     use std::any::Any;
 
     #[test]
@@ -114,15 +117,14 @@ mod tests {
             fn predict_probabilities_batch(
                 &self,
                 batch: &[usize],
-                _features: &dyn crate::ml::models::Features,
-            ) -> crate::ml::core::tensor::Matrix {
-                crate::ml::core::tensor::Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
+                _features: &dyn Features,
+            ) -> Matrix {
+                Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
             }
         }
 
         let classifier = Box::new(TestClassifier);
-        let metrics: Vec<Box<dyn crate::ml::metrics::Metric>> =
-            vec![Box::new(GlobalAccuracy::new())];
+        let metrics: Vec<Box<dyn Metric>> = vec![Box::new(GlobalAccuracy::new())];
         let stats = TrainingStatistics::new(&metrics);
         let result = LinkPredictionTrainResult::new(classifier, stats);
 
@@ -170,14 +172,13 @@ mod tests {
             fn predict_probabilities_batch(
                 &self,
                 batch: &[usize],
-                _features: &dyn crate::ml::models::Features,
-            ) -> crate::ml::core::tensor::Matrix {
-                crate::ml::core::tensor::Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
+                _features: &dyn Features,
+            ) -> Matrix {
+                Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
             }
         }
 
-        let metrics: Vec<Box<dyn crate::ml::metrics::Metric>> =
-            vec![Box::new(GlobalAccuracy::new())];
+        let metrics: Vec<Box<dyn Metric>> = vec![Box::new(GlobalAccuracy::new())];
         let result = LinkPredictionTrainResult::new(
             Box::new(TestClassifier),
             TrainingStatistics::new(&metrics),
@@ -228,14 +229,13 @@ mod tests {
             fn predict_probabilities_batch(
                 &self,
                 batch: &[usize],
-                _features: &dyn crate::ml::models::Features,
-            ) -> crate::ml::core::tensor::Matrix {
-                crate::ml::core::tensor::Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
+                _features: &dyn Features,
+            ) -> Matrix {
+                Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
             }
         }
 
-        let metrics: Vec<Box<dyn crate::ml::metrics::Metric>> =
-            vec![Box::new(GlobalAccuracy::new())];
+        let metrics: Vec<Box<dyn Metric>> = vec![Box::new(GlobalAccuracy::new())];
 
         let results: Vec<LinkPredictionTrainResult> = (0..5)
             .map(|_| {

@@ -1,0 +1,82 @@
+gds/src/procedures/pipelines/link_prediction_computation.rs:
+  40:     ) -> Result<Box<dyn crate::ml::link_models::LinkPredictionResult>, PredictPipelineExecutorError>
+  48:             &crate::core::utils::progress::EmptyTaskRegistryFactory,
+
+gds/src/procedures/pipelines/link_prediction_predict_pipeline_executor.rs:
+  55:     ) -> Result<Box<dyn crate::ml::link_models::LinkPredictionResult>, PredictPipelineExecutorError>
+
+gds/src/procedures/pipelines/link_prediction_similarity_computer.rs:
+  118:             crate::types::graph::graph::Graph::concurrent_copy(self.graph.as_ref()),
+
+gds/src/procedures/pipelines/link_prediction_train_result_renderer.rs:
+  23:                 base: crate::procedures::pipelines::types::MLTrainResult {
+
+gds/src/procedures/pipelines/node_classification_predict_computation.rs:
+  38:         crate::projection::eval::pipeline::PredictPipelineExecutorError,
+  42:         let class_id_map = crate::ml::core::subgraph::LocalIdMap::of(&class_ids);
+  52:             &crate::core::utils::progress::EmptyTaskRegistryFactory,
+
+gds/src/procedures/pipelines/node_classification_predict_pipeline_executor.rs:
+  24:     classifier_data: &'a dyn crate::ml::models::ClassifierData,
+  35:         classifier_data: &'a dyn crate::ml::models::ClassifierData,
+
+gds/src/procedures/pipelines/node_classification_predict_pipeline_mutate_result_builder.rs:
+  25:         crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+  35:             crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+
+gds/src/procedures/pipelines/node_classification_predict_pipeline_mutate_step.rs:
+  46:         crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+  53:     ) -> crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten {
+
+gds/src/procedures/pipelines/node_classification_predict_pipeline_write_result_builder.rs:
+  25:         crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+  35:             crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+
+gds/src/procedures/pipelines/node_classification_predict_pipeline_write_step.rs:
+  33:     ) -> std::collections::HashSet<crate::projection::NodeLabel> {
+  40:                 .map(|label| crate::projection::NodeLabel::of(label.clone()))
+  49:         crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+  56:         result_store: Option<&dyn crate::applications::graph_store_catalog::loaders::ResultStore>,
+  59:     ) -> crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten {
+  72:         crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten(
+
+gds/src/procedures/pipelines/node_classification_train_result_renderer.rs:
+  24:                 base: crate::procedures::pipelines::types::MLTrainResult {
+
+gds/src/procedures/pipelines/node_regression_predict_computation.rs:
+  18:     regressor: Arc<dyn crate::ml::models::Regressor>,
+  26:         regressor: Arc<dyn crate::ml::models::Regressor>,
+  40:         crate::collections::HugeDoubleArray,
+  41:         crate::projection::eval::pipeline::PredictPipelineExecutorError,
+  49:             &crate::core::utils::progress::EmptyTaskRegistryFactory,
+
+gds/src/procedures/pipelines/node_regression_predict_pipeline_executor.rs:
+  50: impl<'a> PredictPipelineExecutor<NodePropertyPredictPipeline, crate::collections::HugeDoubleArray>
+  85:     ) -> Result<crate::collections::HugeDoubleArray, PredictPipelineExecutorError> {
+
+gds/src/procedures/pipelines/node_regression_predict_pipeline_mutate_result_builder.rs:
+  21:         crate::collections::HugeDoubleArray,
+  23:         crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+  30:         result: Option<crate::collections::HugeDoubleArray>,
+  33:             crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+
+gds/src/procedures/pipelines/node_regression_predict_pipeline_mutate_step.rs:
+  45:         crate::collections::HugeDoubleArray,
+  46:         crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+  52:         result: &crate::collections::HugeDoubleArray,
+  53:     ) -> crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten {
+
+gds/src/procedures/pipelines/node_regression_predict_pipeline_stream_result_builder.rs:
+  8: impl StreamResultBuilder<crate::collections::HugeDoubleArray, NodeRegressionStreamResult>
+  16:         result: Option<crate::collections::HugeDoubleArray>,
+
+gds/src/procedures/pipelines/node_regression_train_result_renderer.rs:
+  24:                 base: crate::procedures::pipelines::types::MLTrainResult {
+
+gds/src/procedures/pipelines/pipeline_applications.rs:
+  328:         .pipeline_as::<crate::projection::eval::pipeline::link_pipeline::LinkPredictionTrainingPipeline>()
+
+gds/src/procedures/pipelines/trained_nc_pipeline_model.rs:
+  38:         converter.to_model(result, &crate::types::schema::GraphSchema::empty())
+
+Found 43 occurrence(s) in 19 file(s)

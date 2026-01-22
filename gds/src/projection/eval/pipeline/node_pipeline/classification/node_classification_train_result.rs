@@ -55,6 +55,8 @@ mod tests {
     use super::*;
     use crate::ml::metrics::classification::GlobalAccuracy;
     use crate::ml::metrics::Metric;
+    use crate::ml::models::Features;
+    use crate::ml::core::tensor::Matrix;
     use crate::ml::models::base::{BaseModelData, ClassifierData};
     use crate::ml::models::training_method::TrainingMethod;
     use std::any::Any;
@@ -85,7 +87,7 @@ mod tests {
     #[derive(Debug)]
     struct TestClassifier;
 
-    impl crate::ml::models::Classifier for TestClassifier {
+    impl Classifier for TestClassifier {
         fn data(&self) -> &dyn ClassifierData {
             &TestClassifierData
         }
@@ -97,15 +99,15 @@ mod tests {
         fn predict_probabilities_batch(
             &self,
             batch: &[usize],
-            _features: &dyn crate::ml::models::Features,
-        ) -> crate::ml::core::tensor::Matrix {
-            crate::ml::core::tensor::Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
+            _features: &dyn Features,
+        ) -> Matrix {
+            Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
         }
     }
 
     #[test]
     fn test_new_train_result() {
-        let classifier = Box::new(TestClassifier) as Box<dyn crate::ml::models::Classifier>;
+        let classifier = Box::new(TestClassifier) as Box<dyn Classifier>;
         let metrics: Vec<Box<dyn Metric>> = vec![Box::new(GlobalAccuracy::new())];
         let training_statistics = TrainingStatistics::new(&metrics);
         let class_id_map = LocalIdMap::of(&[0, 1, 2]);
@@ -123,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_accessors() {
-        let classifier = Box::new(TestClassifier) as Box<dyn crate::ml::models::Classifier>;
+        let classifier = Box::new(TestClassifier) as Box<dyn Classifier>;
         let metrics: Vec<Box<dyn Metric>> = vec![Box::new(GlobalAccuracy::new())];
         let training_statistics = TrainingStatistics::new(&metrics);
         let class_id_map = LocalIdMap::of(&[10, 20, 30]);

@@ -1,11 +1,12 @@
 use crate::applications::algorithms::machinery::StreamResultBuilder;
+use crate::collections::HugeDoubleArray;
 use crate::core::loading::GraphResources;
 use crate::procedures::pipelines::types::NodeRegressionStreamResult;
 use crate::types::graph_store::GraphStore;
 
 pub struct NodeRegressionPredictPipelineStreamResultBuilder;
 
-impl StreamResultBuilder<crate::collections::HugeDoubleArray, NodeRegressionStreamResult>
+impl StreamResultBuilder<HugeDoubleArray, NodeRegressionStreamResult>
     for NodeRegressionPredictPipelineStreamResultBuilder
 {
     type Stream = std::vec::IntoIter<NodeRegressionStreamResult>;
@@ -13,7 +14,7 @@ impl StreamResultBuilder<crate::collections::HugeDoubleArray, NodeRegressionStre
     fn build(
         &self,
         graph_resources: &GraphResources,
-        result: Option<crate::collections::HugeDoubleArray>,
+        result: Option<HugeDoubleArray>,
     ) -> Self::Stream {
         let Some(predicted) = result else {
             return Vec::new().into_iter();

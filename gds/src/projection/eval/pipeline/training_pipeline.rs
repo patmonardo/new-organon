@@ -239,6 +239,8 @@ pub trait TrainingPipeline: Pipeline {
 mod tests {
     use super::*;
     use crate::projection::eval::pipeline::FeatureStep;
+    use crate::projection::eval::pipeline::PipelineValidationError;
+    use crate::types::graph_store::DefaultGraphStore;
 
     #[test]
     fn test_training_method_display() {
@@ -358,7 +360,7 @@ mod tests {
     impl ExecutableNodePropertyStep for MockStep {
         fn execute(
             &self,
-            _graph_store: &mut crate::types::graph_store::DefaultGraphStore,
+            _graph_store: &mut DefaultGraphStore,
             _node_labels: &[String],
             _relationship_types: &[String],
             _concurrency: usize,
@@ -427,8 +429,8 @@ mod tests {
 
         fn specific_validate_before_execution(
             &self,
-            _graph_store: &crate::types::graph_store::DefaultGraphStore,
-        ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError> {
+            _graph_store: &DefaultGraphStore,
+        ) -> Result<(), PipelineValidationError> {
             Ok(())
         }
 

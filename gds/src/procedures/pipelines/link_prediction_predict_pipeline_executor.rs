@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{Task, TaskProgressTracker, Tasks};
+use crate::ml::link_models::LinkPredictionResult;
 use crate::ml::models::Classifier;
 use crate::projection::eval::pipeline::link_pipeline::LinkPredictionPredictPipeline;
 use crate::projection::eval::pipeline::PredictPipelineExecutorError;
@@ -52,8 +53,7 @@ impl<'a> LinkPredictionPredictPipelineExecutor<'a> {
 
     pub fn compute(
         &mut self,
-    ) -> Result<Box<dyn crate::ml::link_models::LinkPredictionResult>, PredictPipelineExecutorError>
-    {
+    ) -> Result<Box<dyn LinkPredictionResult>, PredictPipelineExecutorError> {
         let _ = Concurrency::available_cores();
         Err(PredictPipelineExecutorError::ExecutionFailed(
             "LinkPredictionPredictPipelineExecutor not yet implemented".to_string(),

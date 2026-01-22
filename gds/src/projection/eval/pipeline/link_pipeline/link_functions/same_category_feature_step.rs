@@ -3,6 +3,7 @@
 use super::super::{LinkFeatureAppender, LinkFeatureStep};
 use crate::types::graph::Graph;
 use crate::types::properties::node::NodePropertyValues;
+use crate::types::ValueType;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -38,10 +39,10 @@ impl LinkFeatureStep for SameCategoryStep {
                 .unwrap_or_else(|| panic!("Property {} not found", property_name));
 
             let appender: Box<dyn LinkFeatureAppender> = match property.value_type() {
-                crate::types::ValueType::Long => {
+                ValueType::Long => {
                     Box::new(SameCategoryLongAppender { props: property })
                 }
-                crate::types::ValueType::Double => {
+                ValueType::Double => {
                     Box::new(SameCategoryDoubleAppender { props: property })
                 }
                 _ => panic!(

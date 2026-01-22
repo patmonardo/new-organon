@@ -1,7 +1,9 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use crate::applications::algorithms::machinery::{GraphStoreService, MutateStep};
+use crate::applications::algorithms::machinery::{
+    GraphStoreNodePropertiesWritten, GraphStoreService, MutateStep,
+};
 use crate::core::loading::GraphResources;
 use crate::projection::NodeLabel;
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
@@ -40,17 +42,14 @@ impl NodeClassificationPredictPipelineMutateStep {
     }
 }
 
-impl
-    MutateStep<
-        NodeClassificationPipelineResult,
-        crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
-    > for NodeClassificationPredictPipelineMutateStep
+impl MutateStep<NodeClassificationPipelineResult, GraphStoreNodePropertiesWritten>
+    for NodeClassificationPredictPipelineMutateStep
 {
     fn execute(
         &self,
         graph_resources: &GraphResources,
         result: &NodeClassificationPipelineResult,
-    ) -> crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten {
+    ) -> GraphStoreNodePropertiesWritten {
         let mut graph_store = Arc::clone(&graph_resources.graph_store);
         let graph_store_mut = Arc::get_mut(&mut graph_store)
             .expect("Graph store is shared; cannot mutate predicted properties");

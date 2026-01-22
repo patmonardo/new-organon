@@ -96,7 +96,8 @@ impl ResultToModelConverter<NodeRegressionTrainPipelineResult, NodeRegressionTra
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ml::metrics::Metric;
+    use crate::ml::metrics::regression::RegressionMetric;
+    use crate::ml::metrics::{EvaluationScores, Metric, ModelCandidateStats};
     use crate::ml::models::base::{BaseModelData, Regressor, RegressorData};
     use crate::ml::models::training_method::TrainingMethod;
     use crate::ml::training::statistics::TrainingStatistics;
@@ -154,19 +155,15 @@ mod tests {
         let converter = NodeRegressionToModelConverter::new(pipeline, config);
 
         let regressor = Box::new(TestRegressor);
-        let metrics: Vec<Box<dyn crate::ml::metrics::Metric>> = vec![Box::new(
-            crate::ml::metrics::regression::RegressionMetric::MeanSquaredError,
-        )];
+        let metrics: Vec<Box<dyn Metric>> = vec![Box::new(RegressionMetric::MeanSquaredError)];
         let mut stats = TrainingStatistics::new(&metrics);
         let mut training_stats = std::collections::HashMap::new();
         let mut validation_stats = std::collections::HashMap::new();
-        let scores = crate::ml::metrics::EvaluationScores::new(0.0, 0.0, 0.0);
-        let metric_key = crate::ml::metrics::regression::RegressionMetric::MeanSquaredError
-            .name()
-            .to_string();
+        let scores = EvaluationScores::new(0.0, 0.0, 0.0);
+        let metric_key = RegressionMetric::MeanSquaredError.name().to_string();
         training_stats.insert(metric_key.clone(), scores.clone());
         validation_stats.insert(metric_key, scores);
-        stats.add_candidate_stats(crate::ml::metrics::ModelCandidateStats::new(
+        stats.add_candidate_stats(ModelCandidateStats::new(
             serde_json::json!({}),
             training_stats,
             validation_stats,
@@ -185,19 +182,15 @@ mod tests {
         let converter = NodeRegressionToModelConverter::new(pipeline, config);
 
         let regressor = Box::new(TestRegressor);
-        let metrics: Vec<Box<dyn crate::ml::metrics::Metric>> = vec![Box::new(
-            crate::ml::metrics::regression::RegressionMetric::MeanSquaredError,
-        )];
+        let metrics: Vec<Box<dyn Metric>> = vec![Box::new(RegressionMetric::MeanSquaredError)];
         let mut stats = TrainingStatistics::new(&metrics);
         let mut training_stats = std::collections::HashMap::new();
         let mut validation_stats = std::collections::HashMap::new();
-        let scores = crate::ml::metrics::EvaluationScores::new(0.0, 0.0, 0.0);
-        let metric_key = crate::ml::metrics::regression::RegressionMetric::MeanSquaredError
-            .name()
-            .to_string();
+        let scores = EvaluationScores::new(0.0, 0.0, 0.0);
+        let metric_key = RegressionMetric::MeanSquaredError.name().to_string();
         training_stats.insert(metric_key.clone(), scores.clone());
         validation_stats.insert(metric_key, scores);
-        stats.add_candidate_stats(crate::ml::metrics::ModelCandidateStats::new(
+        stats.add_candidate_stats(ModelCandidateStats::new(
             serde_json::json!({}),
             training_stats,
             validation_stats,

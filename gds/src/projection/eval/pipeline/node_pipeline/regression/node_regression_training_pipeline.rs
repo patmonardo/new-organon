@@ -145,7 +145,7 @@ impl Pipeline for NodeRegressionTrainingPipeline {
 
     fn specific_validate_before_execution(
         &self,
-        graph_store: &crate::types::graph_store::DefaultGraphStore,
+        graph_store: &DefaultGraphStore,
     ) -> Result<(), PipelineValidationError> {
         self.specific_validate_before_execution(Arc::new(graph_store.clone()))
     }
@@ -236,6 +236,7 @@ impl NodePropertyTrainingPipeline for NodeRegressionTrainingPipeline {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::random::RandomGraphConfig;
 
     #[test]
     fn test_new_pipeline() {
@@ -274,7 +275,7 @@ mod tests {
     #[test]
     fn test_specific_validation() {
         let pipeline = NodeRegressionTrainingPipeline::new();
-        let config = crate::types::random::RandomGraphConfig {
+        let config = RandomGraphConfig {
             node_count: 10,
             seed: Some(42),
             ..Default::default()

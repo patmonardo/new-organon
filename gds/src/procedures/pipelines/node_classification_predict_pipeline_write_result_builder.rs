@@ -1,4 +1,6 @@
-use crate::applications::algorithms::machinery::{AlgorithmProcessingTimings, WriteResultBuilder};
+use crate::applications::algorithms::machinery::{
+    AlgorithmProcessingTimings, GraphStoreNodePropertiesWritten, WriteResultBuilder,
+};
 use crate::core::loading::GraphResources;
 use crate::procedures::pipelines::types::{StandardWriteResult, WriteResult};
 use crate::procedures::pipelines::{
@@ -22,7 +24,7 @@ impl
         NodeClassificationPredictPipelineWriteConfig,
         NodeClassificationPipelineResult,
         WriteResult,
-        crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
+        GraphStoreNodePropertiesWritten,
     > for NodeClassificationPredictPipelineWriteResultBuilder
 {
     fn build(
@@ -31,9 +33,7 @@ impl
         configuration: &NodeClassificationPredictPipelineWriteConfig,
         result: Option<NodeClassificationPipelineResult>,
         timings: AlgorithmProcessingTimings,
-        metadata: Option<
-            crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
-        >,
+        metadata: Option<GraphStoreNodePropertiesWritten>,
     ) -> WriteResult {
         let node_properties_written = metadata.map(|m| m.0 as i64).unwrap_or(0);
 

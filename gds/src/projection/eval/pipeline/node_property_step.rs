@@ -14,6 +14,7 @@ use crate::projection::eval::pipeline::{
 };
 use std::collections::HashMap;
 use std::error::Error as StdError;
+use crate::types::graph_store::DefaultGraphStore;
 
 /// Configuration key for the mutate property name.
 pub const MUTATE_PROPERTY_KEY: &str = "mutateProperty";
@@ -122,7 +123,7 @@ impl NodePropertyStep {
 impl ExecutableNodePropertyStep for NodePropertyStep {
     fn execute(
         &self,
-        graph_store: &mut crate::types::graph_store::DefaultGraphStore,
+        graph_store: &mut DefaultGraphStore,
         node_labels: &[String],
         relationship_types: &[String],
         concurrency: usize,

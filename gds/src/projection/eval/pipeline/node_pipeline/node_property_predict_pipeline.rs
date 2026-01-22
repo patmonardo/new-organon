@@ -1,4 +1,5 @@
 use super::NodeFeatureStep;
+use crate::projection::eval::pipeline::PipelineValidationError;
 use crate::projection::eval::pipeline::{ExecutableNodePropertyStep, Pipeline};
 use crate::types::graph_store::DefaultGraphStore;
 use dyn_clone::clone_box;
@@ -104,7 +105,7 @@ impl Pipeline for NodePropertyPredictPipeline {
     fn specific_validate_before_execution(
         &self,
         _graph_store: &DefaultGraphStore,
-    ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError> {
+    ) -> Result<(), PipelineValidationError> {
         // No specific validation for predict pipeline
         Ok(())
     }

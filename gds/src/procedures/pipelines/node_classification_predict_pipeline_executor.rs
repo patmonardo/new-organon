@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{Task, TaskProgressTracker, Tasks};
 use crate::ml::core::subgraph::LocalIdMap;
-use crate::ml::models::{ClassifierFactory, FeaturesFactory};
+use crate::ml::models::{ClassifierData, ClassifierFactory, FeaturesFactory};
 use crate::ml::node_classification::NodeClassificationPredict;
 use crate::projection::eval::pipeline::{
     node_pipeline::NodePropertyPredictPipeline, PipelineGraphFilter, PredictPipelineExecutor,
@@ -21,7 +21,7 @@ pub struct NodeClassificationPredictPipelineExecutor<'a> {
     configuration: &'a dyn NodeClassificationPredictPipelineConfig,
     graph_store: Arc<DefaultGraphStore>,
     progress_tracker: TaskProgressTracker,
-    classifier_data: &'a dyn crate::ml::models::ClassifierData,
+    classifier_data: &'a dyn ClassifierData,
     class_id_map: LocalIdMap,
     termination_flag: TerminationFlag,
 }
@@ -32,7 +32,7 @@ impl<'a> NodeClassificationPredictPipelineExecutor<'a> {
         configuration: &'a dyn NodeClassificationPredictPipelineConfig,
         graph_store: Arc<DefaultGraphStore>,
         progress_tracker: TaskProgressTracker,
-        classifier_data: &'a dyn crate::ml::models::ClassifierData,
+        classifier_data: &'a dyn ClassifierData,
         class_id_map: LocalIdMap,
         termination_flag: TerminationFlag,
     ) -> Self {
@@ -61,7 +61,9 @@ impl<'a> PredictPipelineExecutor<NodePropertyPredictPipeline, NodeClassification
         self.pipeline
     }
 
-    fn pipeline_and_graph_store_mut(&mut self) -> (&NodePropertyPredictPipeline, &mut Arc<DefaultGraphStore>) {
+    fn pipeline_and_graph_store_mut(
+        &mut self,
+    ) -> (&NodePropertyPredictPipeline, &mut Arc<DefaultGraphStore>) {
         (self.pipeline, &mut self.graph_store)
     }
 
@@ -85,7 +87,9 @@ impl<'a> PredictPipelineExecutor<NodePropertyPredictPipeline, NodeClassification
         self.configuration.concurrency()
     }
 
-    fn execute(&mut self) -> Result<NodeClassificationPipelineResult, PredictPipelineExecutorError> {
+    fn execute(
+        &mut self,
+    ) -> Result<NodeClassificationPipelineResult, PredictPipelineExecutorError> {
         let graph = self.graph_store.get_graph();
         let features =
             FeaturesFactory::extract_lazy_features(graph, &self.pipeline.feature_properties());
@@ -115,7 +119,10 @@ impl<'a> PredictPipelineExecutor<NodePropertyPredictPipeline, NodeClassification
         );
 
         let result = predict.compute();
-        Ok(NodeClassificationPipelineResult::of(&result, &self.class_id_map))
+        Ok(NodeClassificationPipelineResult::of(
+            &result,
+            &self.class_id_map,
+        ))
     }
 
     fn node_property_step_filter(&self) -> PipelineGraphFilter {

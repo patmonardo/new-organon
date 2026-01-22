@@ -156,6 +156,7 @@ mod tests {
     use super::*;
     use crate::ml::core::batch::ListBatch;
     use crate::ml::core::batch::RangeBatch;
+    use crate::ml::core::ComputationContext;
 
     #[test]
     fn test_mlp_objective_creation() {

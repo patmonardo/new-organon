@@ -83,11 +83,15 @@ impl ResultToModelConverter<NodeClassificationModelResult, NodeClassificationTra
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::collections::long_multiset::LongMultiSet;
     use crate::ml::core::subgraph::LocalIdMap;
+    use crate::ml::core::tensor::Matrix;
     use crate::ml::metrics::classification::GlobalAccuracy;
     use crate::ml::metrics::{EvaluationScores, Metric, ModelCandidateStats};
     use crate::ml::models::base::{BaseModelData, ClassifierData};
     use crate::ml::models::training_method::TrainingMethod;
+    use crate::ml::models::Classifier;
+    use crate::ml::models::Features;
     use crate::ml::training::statistics::TrainingStatistics;
     use crate::types::schema::GraphSchema;
     use serde_json::json;
@@ -120,7 +124,7 @@ mod tests {
     #[derive(Debug)]
     struct TestClassifier;
 
-    impl crate::ml::models::Classifier for TestClassifier {
+    impl Classifier for TestClassifier {
         fn data(&self) -> &dyn ClassifierData {
             &TestClassifierData
         }
@@ -129,12 +133,8 @@ mod tests {
             vec![0.5, 0.5]
         }
 
-        fn predict_probabilities_batch(
-            &self,
-            batch: &[usize],
-            _features: &dyn crate::ml::models::Features,
-        ) -> crate::ml::core::tensor::Matrix {
-            crate::ml::core::tensor::Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
+        fn predict_probabilities_batch(&self, batch: &[usize], _features: &dyn Features) -> Matrix {
+            Matrix::new(vec![0.5; batch.len() * 2], batch.len(), 2)
         }
     }
 
@@ -181,7 +181,7 @@ mod tests {
             Box::new(TestClassifier),
             training_statistics,
             LocalIdMap::of(&[0, 1, 2]),
-            crate::collections::long_multiset::LongMultiSet::new(),
+            LongMultiSet::new(),
         );
         let schema = GraphSchema::empty();
 

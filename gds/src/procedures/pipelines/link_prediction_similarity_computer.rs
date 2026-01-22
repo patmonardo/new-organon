@@ -115,7 +115,7 @@ impl LinkFilterFactory {
 impl NeighborFilterFactory for LinkFilterFactory {
     fn create(&self) -> Box<dyn NeighborFilter> {
         Box::new(LinkFilter::new(
-            crate::types::graph::graph::Graph::concurrent_copy(self.graph.as_ref()),
+            Graph::concurrent_copy(self.graph.as_ref()),
             Arc::clone(&self.source_node_filter),
             Arc::clone(&self.target_node_filter),
         ))

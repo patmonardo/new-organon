@@ -213,6 +213,7 @@ mod tests {
 
     use std::collections::HashMap;
 
+    use crate::config::GraphStoreConfig;
     use crate::projection::NodeLabel;
     use crate::projection::RelationshipType;
     use crate::types::graph::RelationshipTopology;
@@ -221,8 +222,11 @@ mod tests {
     use crate::types::schema::MutableGraphSchema;
 
     use crate::projection::eval::pipeline::node_pipeline::NodeFeatureStep;
+    use crate::projection::eval::pipeline::node_property_step::DEBUG_WRITE_CONSTANT_DOUBLE_MUTATE;
+    use crate::projection::eval::pipeline::ExecutableNodePropertyStep;
     use crate::projection::eval::pipeline::NodePropertyStep;
     use crate::projection::eval::pipeline::PipelineValidationError;
+    use crate::projection::eval::pipeline::MUTATE_PROPERTY_KEY;
 
     use crate::types::graph_store::GraphName;
     use crate::types::graph_store::{Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation};
@@ -288,7 +292,7 @@ mod tests {
             let id_map = SimpleIdMap::from_original_ids(original_ids);
 
             DefaultGraphStore::new(
-                crate::config::GraphStoreConfig::default(),
+                GraphStoreConfig::default(),
                 GraphName::new("g"),
                 DatabaseInfo::new(
                     DatabaseId::new("db"),
@@ -302,18 +306,14 @@ mod tests {
         }
 
         struct SmokePipeline {
-            node_property_steps:
-                Vec<Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>>,
+            node_property_steps: Vec<Box<dyn ExecutableNodePropertyStep>>,
             feature_steps: Vec<NodeFeatureStep>,
         }
 
         impl Pipeline for SmokePipeline {
             type FeatureStep = NodeFeatureStep;
 
-            fn node_property_steps(
-                &self,
-            ) -> &[Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>]
-            {
+            fn node_property_steps(&self) -> &[Box<dyn ExecutableNodePropertyStep>] {
                 &self.node_property_steps
             }
 
@@ -405,7 +405,7 @@ mod tests {
         // Node-property step will create `feat` and feature step will require it.
         let mut config = HashMap::new();
         config.insert(
-            crate::projection::eval::pipeline::MUTATE_PROPERTY_KEY.to_string(),
+            MUTATE_PROPERTY_KEY.to_string(),
             serde_json::Value::String("feat".to_string()),
         );
         config.insert(
@@ -413,11 +413,7 @@ mod tests {
             serde_json::Value::Number(serde_json::Number::from_f64(3.0).unwrap()),
         );
 
-        let step = NodePropertyStep::new(
-            crate::projection::eval::pipeline::node_property_step::DEBUG_WRITE_CONSTANT_DOUBLE_MUTATE
-                .to_string(),
-            config,
-        );
+        let step = NodePropertyStep::new(DEBUG_WRITE_CONSTANT_DOUBLE_MUTATE.to_string(), config);
         let pipeline = SmokePipeline {
             node_property_steps: vec![Box::new(step)],
             feature_steps: vec![NodeFeatureStep::of("feat")],
@@ -439,7 +435,6 @@ mod tests {
 
     #[test]
     fn test_predict_executor_propagates_step_execution_error() {
-        use crate::projection::eval::pipeline::ExecutableNodePropertyStep;
         use crate::types::graph_store::DefaultGraphStore;
         use crate::types::random::random_graph::RandomGraphConfig;
 
@@ -557,7 +552,7 @@ mod tests {
 
         let mut step_config = HashMap::new();
         step_config.insert(
-            crate::projection::eval::pipeline::MUTATE_PROPERTY_KEY.to_string(),
+            MUTATE_PROPERTY_KEY.to_string(),
             serde_json::json!("pagerank"),
         );
 
@@ -595,10 +590,7 @@ mod tests {
         impl Pipeline for FilterPipeline {
             type FeatureStep = NodeFeatureStep;
 
-            fn node_property_steps(
-                &self,
-            ) -> &[Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>]
-            {
+            fn node_property_steps(&self) -> &[Box<dyn ExecutableNodePropertyStep>] {
                 &[]
             }
 

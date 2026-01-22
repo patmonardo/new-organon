@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
 use crate::concurrency::{Concurrency, TerminationFlag};
-use crate::core::utils::progress::{JobId, TaskProgressTracker};
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, JobId, TaskProgressTracker};
+use crate::ml::core::subgraph::LocalIdMap;
 use crate::projection::eval::pipeline::node_pipeline::classification::node_classification_model_result::NodeClassificationModelResult;
-use crate::projection::eval::pipeline::PredictPipelineExecutor;
+use crate::projection::eval::pipeline::{PredictPipelineExecutor, PredictPipelineExecutorError};
 use crate::types::graph_store::DefaultGraphStore;
 
 use super::{
@@ -33,13 +34,10 @@ impl NodeClassificationPredictComputation {
     pub fn compute(
         &self,
         graph_store: Arc<DefaultGraphStore>,
-    ) -> Result<
-        NodeClassificationPipelineResult,
-        crate::projection::eval::pipeline::PredictPipelineExecutorError,
-    > {
+    ) -> Result<NodeClassificationPipelineResult, PredictPipelineExecutorError> {
         let model_info = self.model.model_info();
         let class_ids: Vec<u64> = model_info.classes().iter().map(|id| *id as u64).collect();
-        let class_id_map = crate::ml::core::subgraph::LocalIdMap::of(&class_ids);
+        let class_id_map = LocalIdMap::of(&class_ids);
 
         let task = NodeClassificationPredictPipelineExecutor::progress_task(
             &self.label,
@@ -49,7 +47,7 @@ impl NodeClassificationPredictComputation {
             task,
             Concurrency::of(self.configuration.concurrency()),
             JobId::new(),
-            &crate::core::utils::progress::EmptyTaskRegistryFactory,
+            &EmptyTaskRegistryFactory,
         );
 
         let classifier_data = self.model.classifier().data();

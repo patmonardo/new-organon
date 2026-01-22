@@ -57,7 +57,7 @@ pub(crate) fn execute_node_property_step(
 
             graph_store
                 .add_node_property(labels, mutate_property, values)
-                .map_err(|e: crate::types::graph_store::GraphStoreError| {
+                .map_err(|e| {
                     Box::new(NodePropertyStepError::ExecutionFailed {
                         algorithm: algorithm_name.to_string(),
                         message: e.to_string(),

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::collections::HugeDoubleArray;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{Task, TaskProgressTracker, Tasks};
 use crate::ml::models::{FeaturesFactory, Regressor};
@@ -47,7 +48,7 @@ impl<'a> NodeRegressionPredictPipelineExecutor<'a> {
     }
 }
 
-impl<'a> PredictPipelineExecutor<NodePropertyPredictPipeline, crate::collections::HugeDoubleArray>
+impl<'a> PredictPipelineExecutor<NodePropertyPredictPipeline, HugeDoubleArray>
     for NodeRegressionPredictPipelineExecutor<'a>
 {
     fn pipeline(&self) -> &NodePropertyPredictPipeline {
@@ -80,9 +81,7 @@ impl<'a> PredictPipelineExecutor<NodePropertyPredictPipeline, crate::collections
         self.configuration.concurrency()
     }
 
-    fn execute(
-        &mut self,
-    ) -> Result<crate::collections::HugeDoubleArray, PredictPipelineExecutorError> {
+    fn execute(&mut self) -> Result<HugeDoubleArray, PredictPipelineExecutorError> {
         let graph = self.graph_store.get_graph();
         let features =
             FeaturesFactory::extract_lazy_features(graph, &self.pipeline.feature_properties());

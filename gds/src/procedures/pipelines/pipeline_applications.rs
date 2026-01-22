@@ -4,6 +4,7 @@ use std::sync::Arc;
 use serde_json::Value;
 
 use crate::projection::eval::pipeline::link_pipeline::LinkFeatureStepFactory;
+use crate::projection::eval::pipeline::link_pipeline::LinkPredictionTrainingPipeline;
 use crate::projection::eval::pipeline::node_pipeline::classification::node_classification_training_pipeline::NodeClassificationTrainingPipeline;
 use crate::projection::eval::pipeline::node_pipeline::node_feature_step::NodeFeatureStep;
 use crate::projection::eval::pipeline::node_pipeline::node_property_prediction_split_config::NodePropertyPredictionSplitConfig;
@@ -325,7 +326,7 @@ impl PipelineApplications {
 
 fn pipeline_catalog_entry_to_result(entry: PipelineCatalogEntry) -> PipelineCatalogResult {
     match entry
-        .pipeline_as::<crate::projection::eval::pipeline::link_pipeline::LinkPredictionTrainingPipeline>()
+        .pipeline_as::<LinkPredictionTrainingPipeline>()
     {
         Some(pipeline) => {
             return create_pipeline_catalog_result(pipeline.as_ref(), entry.pipeline_name());

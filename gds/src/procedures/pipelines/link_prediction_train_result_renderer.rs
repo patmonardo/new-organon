@@ -1,6 +1,6 @@
 use crate::applications::algorithms::machinery::{AlgorithmProcessingTimings, ResultRenderer};
 use crate::core::loading::GraphResources;
-use crate::procedures::pipelines::types::LinkPredictionTrainResult;
+use crate::procedures::pipelines::types::{LinkPredictionTrainResult, MLTrainResult};
 use crate::projection::eval::pipeline::link_pipeline::train::LinkPredictionTrainPipelineResult;
 use serde_json::{Map, Value};
 use std::collections::HashMap;
@@ -20,7 +20,7 @@ impl ResultRenderer<LinkPredictionTrainPipelineResult, Vec<LinkPredictionTrainRe
         match result {
             None => vec![],
             Some(_train_result) => vec![LinkPredictionTrainResult {
-                base: crate::procedures::pipelines::types::MLTrainResult {
+                base: MLTrainResult {
                     train_millis: timings.compute_millis,
                     model_info: render_model_info(),
                     configuration: HashMap::new(),

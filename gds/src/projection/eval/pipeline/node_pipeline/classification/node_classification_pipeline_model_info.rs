@@ -1,6 +1,7 @@
 use crate::ml::metrics::ModelCandidateStats;
 use crate::projection::eval::pipeline::node_pipeline::NodePropertyPredictPipeline;
 use crate::projection::eval::pipeline::pipeline_trait::Pipeline;
+use crate::projection::eval::pipeline::TrainingMethod;
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -116,7 +117,7 @@ impl NodeClassificationPipelineModelInfo {
     }
 
     /// Get optional training method.
-    pub fn optional_trainer_method(&self) -> Option<crate::ml::models::TrainingMethod> {
+    pub fn optional_trainer_method(&self) -> Option<TrainingMethod> {
         // TrainerConfig decoding is not yet wired; return None for now.
         None
     }

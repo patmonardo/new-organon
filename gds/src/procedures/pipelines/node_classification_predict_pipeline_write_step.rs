@@ -1,6 +1,10 @@
-use crate::applications::algorithms::machinery::{Label, WriteStep, WriteToDatabase};
+use crate::applications::algorithms::machinery::{
+    GraphStoreNodePropertiesWritten, Label, WriteStep, WriteToDatabase,
+};
+use crate::applications::graph_store_catalog::loaders::ResultStore;
 use crate::core::utils::progress::JobId;
 use crate::procedures::GraphFacade;
+use crate::projection::NodeLabel;
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
 
 use super::{
@@ -30,33 +34,30 @@ impl NodeClassificationPredictPipelineWriteStep {
     fn _resolve_target_labels(
         &self,
         graph_store: &DefaultGraphStore,
-    ) -> std::collections::HashSet<crate::projection::NodeLabel> {
+    ) -> std::collections::HashSet<NodeLabel> {
         let labels = self.configuration.target_node_labels();
         if labels.is_empty() || (labels.len() == 1 && labels[0] == "*") {
             graph_store.node_labels()
         } else {
             labels
                 .iter()
-                .map(|label| crate::projection::NodeLabel::of(label.clone()))
+                .map(|label| NodeLabel::of(label.clone()))
                 .collect()
         }
     }
 }
 
-impl
-    WriteStep<
-        NodeClassificationPipelineResult,
-        crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
-    > for NodeClassificationPredictPipelineWriteStep
+impl WriteStep<NodeClassificationPipelineResult, GraphStoreNodePropertiesWritten>
+    for NodeClassificationPredictPipelineWriteStep
 {
     fn execute(
         &self,
         graph: &GraphFacade,
         graph_store: &DefaultGraphStore,
-        result_store: Option<&dyn crate::applications::graph_store_catalog::loaders::ResultStore>,
+        result_store: Option<&dyn ResultStore>,
         result: &NodeClassificationPipelineResult,
         job_id: &JobId,
-    ) -> crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten {
+    ) -> GraphStoreNodePropertiesWritten {
         let _ = graph;
         let _ = result_store;
         let _ = job_id;
@@ -69,8 +70,6 @@ impl
             self.configuration.predicted_probability_property(),
         );
 
-        crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten(
-            node_properties.len() * graph_store.node_count(),
-        )
+        GraphStoreNodePropertiesWritten(node_properties.len() * graph_store.node_count())
     }
 }

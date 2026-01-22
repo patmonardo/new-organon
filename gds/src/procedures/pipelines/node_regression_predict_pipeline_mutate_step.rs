@@ -1,8 +1,11 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use crate::applications::algorithms::machinery::{GraphStoreService, MutateStep, NodeProperty};
+use crate::applications::algorithms::machinery::{
+    GraphStoreNodePropertiesWritten, GraphStoreService, MutateStep, NodeProperty,
+};
 use crate::collections::backends::vec::VecDouble;
+use crate::collections::HugeDoubleArray;
 use crate::core::loading::GraphResources;
 use crate::projection::NodeLabel;
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
@@ -40,17 +43,14 @@ impl NodeRegressionPredictPipelineMutateStep {
     }
 }
 
-impl
-    MutateStep<
-        crate::collections::HugeDoubleArray,
-        crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten,
-    > for NodeRegressionPredictPipelineMutateStep
+impl MutateStep<HugeDoubleArray, GraphStoreNodePropertiesWritten>
+    for NodeRegressionPredictPipelineMutateStep
 {
     fn execute(
         &self,
         graph_resources: &GraphResources,
-        result: &crate::collections::HugeDoubleArray,
-    ) -> crate::applications::algorithms::machinery::GraphStoreNodePropertiesWritten {
+        result: &HugeDoubleArray,
+    ) -> GraphStoreNodePropertiesWritten {
         let mut graph_store = Arc::clone(&graph_resources.graph_store);
         let graph_store_mut = Arc::get_mut(&mut graph_store)
             .expect("Graph store is shared; cannot mutate predicted properties");

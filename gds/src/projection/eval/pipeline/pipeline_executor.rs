@@ -420,6 +420,7 @@ impl StdError for PipelineExecutorError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::projection::eval::pipeline::{FeatureStep, ExecutableNodePropertyStep, PipelineValidationError};
 
     #[test]
     fn test_dataset_splits_enum() {
@@ -462,7 +463,7 @@ mod tests {
         // Mock FeatureStep for testing
         #[derive(Clone)]
         struct MockFeatureStep;
-        impl crate::projection::eval::pipeline::FeatureStep for MockFeatureStep {
+        impl FeatureStep for MockFeatureStep {
             fn name(&self) -> &str {
                 "mock"
             }
@@ -487,7 +488,7 @@ mod tests {
             type FeatureStep = MockFeatureStep;
             fn node_property_steps(
                 &self,
-            ) -> &[Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>]
+            ) -> &[Box<dyn ExecutableNodePropertyStep>]
             {
                 &[]
             }
@@ -497,7 +498,7 @@ mod tests {
             fn specific_validate_before_execution(
                 &self,
                 _graph_store: &DefaultGraphStore,
-            ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError>
+            ) -> Result<(), PipelineValidationError>
             {
                 Ok(())
             }
@@ -539,7 +540,7 @@ mod tests {
         // Mock FeatureStep for testing
         #[derive(Clone)]
         struct MockFeatureStep;
-        impl crate::projection::eval::pipeline::FeatureStep for MockFeatureStep {
+        impl FeatureStep for MockFeatureStep {
             fn name(&self) -> &str {
                 "mock"
             }
@@ -564,7 +565,7 @@ mod tests {
             type FeatureStep = MockFeatureStep;
             fn node_property_steps(
                 &self,
-            ) -> &[Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>]
+            ) -> &[Box<dyn ExecutableNodePropertyStep>]
             {
                 &[]
             }
@@ -574,7 +575,7 @@ mod tests {
             fn specific_validate_before_execution(
                 &self,
                 _graph_store: &DefaultGraphStore,
-            ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError>
+            ) -> Result<(), PipelineValidationError>
             {
                 Ok(())
             }
@@ -625,7 +626,7 @@ mod tests {
 
         #[derive(Clone)]
         struct MockFeatureStep;
-        impl crate::projection::eval::pipeline::FeatureStep for MockFeatureStep {
+        impl FeatureStep for MockFeatureStep {
             fn name(&self) -> &str {
                 "mock"
             }
@@ -649,7 +650,7 @@ mod tests {
             type FeatureStep = MockFeatureStep;
             fn node_property_steps(
                 &self,
-            ) -> &[Box<dyn crate::projection::eval::pipeline::ExecutableNodePropertyStep>]
+            ) -> &[Box<dyn ExecutableNodePropertyStep>]
             {
                 &[]
             }
@@ -659,7 +660,7 @@ mod tests {
             fn specific_validate_before_execution(
                 &self,
                 _graph_store: &DefaultGraphStore,
-            ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError>
+            ) -> Result<(), PipelineValidationError>
             {
                 Ok(())
             }

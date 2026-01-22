@@ -1,6 +1,6 @@
 use crate::applications::algorithms::machinery::{AlgorithmProcessingTimings, ResultRenderer};
 use crate::core::loading::GraphResources;
-use crate::procedures::pipelines::types::NodeClassificationPipelineTrainResult;
+use crate::procedures::pipelines::types::{MLTrainResult, NodeClassificationPipelineTrainResult};
 use crate::projection::eval::pipeline::node_pipeline::classification::node_classification_model_result::NodeClassificationModelResult;
 use crate::projection::eval::pipeline::node_pipeline::node_property_pipeline_base_train_config::NodePropertyPipelineBaseTrainConfig;
 use serde_json::Value;
@@ -21,7 +21,7 @@ impl ResultRenderer<NodeClassificationModelResult, Vec<NodeClassificationPipelin
         match result {
             None => vec![],
             Some(model_result) => vec![NodeClassificationPipelineTrainResult {
-                base: crate::procedures::pipelines::types::MLTrainResult {
+                base: MLTrainResult {
                     train_millis: timings.compute_millis,
                     model_info: render_model_info(&model_result),
                     configuration: render_train_config(&model_result),

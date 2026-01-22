@@ -5,6 +5,7 @@
 use dyn_clone::DynClone;
 use std::collections::HashMap;
 use std::error::Error as StdError;
+use crate::types::graph_store::DefaultGraphStore;
 
 /// Executable node property step.
 ///
@@ -43,7 +44,7 @@ pub trait ExecutableNodePropertyStep: DynClone + Send + Sync {
     /// ExecutionContext + graphName + Stub pattern.
     fn execute(
         &self,
-        graph_store: &mut crate::types::graph_store::DefaultGraphStore,
+        graph_store: &mut DefaultGraphStore,
         node_labels: &[String],
         relationship_types: &[String],
         concurrency: usize,

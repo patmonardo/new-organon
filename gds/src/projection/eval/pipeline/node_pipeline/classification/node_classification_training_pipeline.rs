@@ -128,7 +128,7 @@ impl Pipeline for NodeClassificationTrainingPipeline {
 
     fn specific_validate_before_execution(
         &self,
-        graph_store: &crate::types::graph_store::DefaultGraphStore,
+        graph_store: &DefaultGraphStore,
     ) -> Result<(), PipelineValidationError> {
         self.specific_validate_before_execution(Arc::new(graph_store.clone()))
     }

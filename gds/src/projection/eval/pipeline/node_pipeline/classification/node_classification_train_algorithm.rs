@@ -3,11 +3,13 @@ use super::node_classification_pipeline_train_config::NodeClassificationPipeline
 use super::node_classification_to_model_converter::NodeClassificationToModelConverter;
 use super::node_classification_train_result::NodeClassificationTrainResult;
 use super::node_classification_training_pipeline::NodeClassificationTrainingPipeline;
+use crate::core::utils::progress::tasks::progress_tracker::ProgressTracker;
 use crate::projection::eval::pipeline::node_pipeline::node_property_pipeline_base_train_config::NodePropertyPipelineBaseTrainConfig;
 use crate::projection::eval::pipeline::pipeline_train_algorithm::{
     PipelineTrainAlgorithm, PipelineTrainAlgorithmError,
 };
 use crate::projection::eval::pipeline::PipelineTrainer;
+use crate::projection::eval::pipeline::ResultToModelConverter;
 use crate::types::graph_store::DefaultGraphStore;
 use std::sync::Arc;
 
@@ -21,8 +23,7 @@ pub struct NodeClassificationTrainAlgorithm {
     converter: NodeClassificationToModelConverter,
     graph_store: Arc<DefaultGraphStore>,
     config: NodeClassificationPipelineTrainConfig,
-    progress_tracker:
-        Box<dyn crate::core::utils::progress::tasks::progress_tracker::ProgressTracker>,
+    progress_tracker: Box<dyn ProgressTracker>,
     node_labels: Vec<String>,
     relationship_types: Vec<String>,
 }
@@ -33,9 +34,7 @@ impl NodeClassificationTrainAlgorithm {
         pipeline: NodeClassificationTrainingPipeline,
         graph_store: Arc<DefaultGraphStore>,
         config: NodeClassificationPipelineTrainConfig,
-        progress_tracker: Box<
-            dyn crate::core::utils::progress::tasks::progress_tracker::ProgressTracker,
-        >,
+        progress_tracker: Box<dyn ProgressTracker>,
     ) -> Self {
         let converter = NodeClassificationToModelConverter::new(pipeline.clone(), config.clone());
         let node_labels = config.node_labels();
@@ -73,9 +72,7 @@ impl NodeClassificationTrainAlgorithm {
         &self.config
     }
 
-    pub fn progress_tracker(
-        &self,
-    ) -> &dyn crate::core::utils::progress::tasks::progress_tracker::ProgressTracker {
+    pub fn progress_tracker(&self) -> &dyn ProgressTracker {
         self.progress_tracker.as_ref()
     }
 
@@ -117,10 +114,8 @@ impl
 
     fn result_to_model_converter(
         &self,
-    ) -> &dyn crate::projection::eval::pipeline::ResultToModelConverter<
-        NodeClassificationModelResult,
-        NodeClassificationTrainResult,
-    > {
+    ) -> &dyn ResultToModelConverter<NodeClassificationModelResult, NodeClassificationTrainResult>
+    {
         &self.converter
     }
 }

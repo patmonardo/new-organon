@@ -1,10 +1,12 @@
 // Phase 4.1: LinkPredictionTrainingPipeline - Training pipeline for link prediction
 
 use super::{LinkFeatureStep, LinkPredictionSplitConfig};
+use crate::projection::eval::pipeline::PipelineValidationError;
 use crate::projection::eval::pipeline::{
     AutoTuningConfig, ExecutableNodePropertyStep, FeatureStep, Pipeline, TrainingMethod,
     TrainingPipeline, TunableTrainerConfig,
 };
+use crate::types::graph_store::DefaultGraphStore;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
@@ -264,12 +266,11 @@ impl Pipeline for LinkPredictionTrainingPipeline {
 
     fn specific_validate_before_execution(
         &self,
-        _graph_store: &crate::types::graph_store::DefaultGraphStore,
-    ) -> Result<(), crate::projection::eval::pipeline::PipelineValidationError> {
+        _graph_store: &DefaultGraphStore,
+    ) -> Result<(), PipelineValidationError> {
         // Reuse the link-specific check for "must have at least one feature".
-        self.validate_before_execution().map_err(|e| {
-            crate::projection::eval::pipeline::PipelineValidationError::Other { message: e }
-        })
+        self.validate_before_execution()
+            .map_err(|e| PipelineValidationError::Other { message: e })
     }
 
     fn to_map(&self) -> HashMap<String, serde_json::Value> {
