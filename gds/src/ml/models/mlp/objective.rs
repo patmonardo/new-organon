@@ -4,7 +4,6 @@
 
 use super::{classifier::MLPClassifier, data::MLPClassifierData};
 use crate::collections::HugeIntArray;
-use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::{
     batch::Batch,
     functions::{
