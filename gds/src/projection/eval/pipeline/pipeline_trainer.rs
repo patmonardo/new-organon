@@ -30,7 +30,7 @@ pub trait PipelineTrainer {
     /// to produce a trained model and metrics.
     ///
     /// Java: `RESULT run()`
-    fn run(&mut self) -> Result<Self::Result, Box<dyn StdError>>;
+    fn run(&mut self) -> Result<Self::Result, Box<dyn StdError + Send + Sync>>;
 
     /// Check if training has been terminated.
     ///
@@ -55,7 +55,7 @@ mod tests {
     impl PipelineTrainer for MockTrainer {
         type Result = String;
 
-        fn run(&mut self) -> Result<Self::Result, Box<dyn StdError>> {
+        fn run(&mut self) -> Result<Self::Result, Box<dyn StdError + Send + Sync>> {
             if self.is_terminated() {
                 return Err("Training terminated".into());
             }

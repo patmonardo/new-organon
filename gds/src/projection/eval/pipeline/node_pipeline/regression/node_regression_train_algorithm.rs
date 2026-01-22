@@ -183,7 +183,7 @@ mod tests {
         impl PipelineTrainer for MockTrainer {
             type Result = NodeRegressionTrainResult;
 
-            fn run(&mut self) -> Result<Self::Result, Box<dyn std::error::Error>> {
+            fn run(&mut self) -> Result<Self::Result, Box<dyn std::error::Error + Send + Sync>> {
                 Err("not implemented".into())
             }
         }
@@ -218,7 +218,7 @@ mod tests {
         impl PipelineTrainer for MockTrainer {
             type Result = NodeRegressionTrainResult;
 
-            fn run(&mut self) -> Result<Self::Result, Box<dyn std::error::Error>> {
+            fn run(&mut self) -> Result<Self::Result, Box<dyn std::error::Error + Send + Sync>> {
                 Err("not implemented".into())
             }
         }

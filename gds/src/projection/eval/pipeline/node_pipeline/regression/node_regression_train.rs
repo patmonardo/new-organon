@@ -118,7 +118,9 @@ impl NodeRegressionTrain {
     }
 
     /// Run the training algorithm.
-    pub fn run(&mut self) -> Result<NodeRegressionTrainResult, Box<dyn std::error::Error>> {
+    pub fn run(
+        &mut self,
+    ) -> Result<NodeRegressionTrainResult, Box<dyn std::error::Error + Send + Sync>> {
         self.progress_tracker.begin_subtask();
 
         let split_config = self.pipeline.split_config();
@@ -155,7 +157,7 @@ impl NodeRegressionTrain {
             .map(|m| Box::new(m) as Box<dyn Metric>)
             .collect();
 
-        let mut training_statistics = TrainingStatistics::new(metric_boxes);
+        let mut training_statistics = TrainingStatistics::new(&metric_boxes);
         training_statistics.add_candidate_stats(ModelCandidateStats::new(
             serde_json::json!({}),
             HashMap::new(),
@@ -190,7 +192,7 @@ impl NodeRegressionTrain {
 impl PipelineTrainer for NodeRegressionTrain {
     type Result = NodeRegressionTrainResult;
 
-    fn run(&mut self) -> Result<Self::Result, Box<dyn std::error::Error>> {
+    fn run(&mut self) -> Result<Self::Result, Box<dyn std::error::Error + Send + Sync>> {
         self.run()
     }
 
@@ -204,7 +206,7 @@ impl NodeRegressionTrain {
         &self,
         split: &TrainingExamplesSplit,
         features: &Box<dyn Features>,
-    ) -> Result<Box<dyn Regressor>, Box<dyn std::error::Error>> {
+    ) -> Result<Box<dyn Regressor>, Box<dyn std::error::Error + Send + Sync>> {
         let train_set = to_u64_arc(split.train_set());
         let trainer_config = LinearRegressionTrainConfig::default();
         let progress =
@@ -224,7 +226,7 @@ impl NodeRegressionTrain {
         &self,
         all_training_examples: &Arc<Vec<i64>>,
         features: &Box<dyn Features>,
-    ) -> Result<Box<dyn Regressor>, Box<dyn std::error::Error>> {
+    ) -> Result<Box<dyn Regressor>, Box<dyn std::error::Error + Send + Sync>> {
         let train_set = to_u64_arc(all_training_examples.clone());
         let trainer_config = LinearRegressionTrainConfig::default();
         let progress =

@@ -154,9 +154,10 @@ mod tests {
         let converter = NodeRegressionToModelConverter::new(pipeline, config);
 
         let regressor = Box::new(TestRegressor);
-        let mut stats = TrainingStatistics::new(vec![Box::new(
+        let metrics: Vec<Box<dyn crate::ml::metrics::Metric>> = vec![Box::new(
             crate::ml::metrics::regression::RegressionMetric::MeanSquaredError,
-        )]);
+        )];
+        let mut stats = TrainingStatistics::new(&metrics);
         let mut training_stats = std::collections::HashMap::new();
         let mut validation_stats = std::collections::HashMap::new();
         let scores = crate::ml::metrics::EvaluationScores::new(0.0, 0.0, 0.0);
@@ -184,9 +185,10 @@ mod tests {
         let converter = NodeRegressionToModelConverter::new(pipeline, config);
 
         let regressor = Box::new(TestRegressor);
-        let mut stats = TrainingStatistics::new(vec![Box::new(
+        let metrics: Vec<Box<dyn crate::ml::metrics::Metric>> = vec![Box::new(
             crate::ml::metrics::regression::RegressionMetric::MeanSquaredError,
-        )]);
+        )];
+        let mut stats = TrainingStatistics::new(&metrics);
         let mut training_stats = std::collections::HashMap::new();
         let mut validation_stats = std::collections::HashMap::new();
         let scores = crate::ml::metrics::EvaluationScores::new(0.0, 0.0, 0.0);

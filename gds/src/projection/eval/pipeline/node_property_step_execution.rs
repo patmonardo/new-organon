@@ -30,11 +30,11 @@ pub(crate) fn execute_node_property_step(
     exec_config: &HashMap<String, serde_json::Value>,
     config_value: &serde_json::Value,
     node_labels: &[String],
-) -> Result<(), Box<dyn StdError>> {
+) -> Result<(), Box<dyn StdError + Send + Sync>> {
     let procedure = ProcedureRegistry::resolve(algorithm_name).ok_or_else(|| {
         Box::new(NodePropertyStepError::AlgorithmNotImplemented {
             algorithm: algorithm_name.to_string(),
-        }) as Box<dyn StdError>
+        }) as Box<dyn StdError + Send + Sync>
     })?;
 
     match procedure {
@@ -61,7 +61,7 @@ pub(crate) fn execute_node_property_step(
                     Box::new(NodePropertyStepError::ExecutionFailed {
                         algorithm: algorithm_name.to_string(),
                         message: e.to_string(),
-                    }) as Box<dyn StdError>
+                    }) as Box<dyn StdError + Send + Sync>
                 })?;
 
             Ok(())
@@ -75,7 +75,7 @@ pub(crate) fn execute_node_property_step(
                 Box::new(NodePropertyStepError::ExecutionFailed {
                     algorithm: algorithm_name.to_string(),
                     message: e.to_string(),
-                }) as Box<dyn StdError>
+                }) as Box<dyn StdError + Send + Sync>
             })?;
 
             Ok(())
@@ -89,7 +89,7 @@ pub(crate) fn execute_node_property_step(
                 Box::new(NodePropertyStepError::ExecutionFailed {
                     algorithm: algorithm_name.to_string(),
                     message: e.to_string(),
-                }) as Box<dyn StdError>
+                }) as Box<dyn StdError + Send + Sync>
             })?;
 
             Ok(())
@@ -103,7 +103,7 @@ pub(crate) fn execute_node_property_step(
                 Box::new(NodePropertyStepError::ExecutionFailed {
                     algorithm: algorithm_name.to_string(),
                     message: e.to_string(),
-                }) as Box<dyn StdError>
+                }) as Box<dyn StdError + Send + Sync>
             })?;
 
             Ok(())
@@ -117,7 +117,7 @@ pub(crate) fn execute_node_property_step(
                 Box::new(NodePropertyStepError::ExecutionFailed {
                     algorithm: algorithm_name.to_string(),
                     message: e.to_string(),
-                }) as Box<dyn StdError>
+                }) as Box<dyn StdError + Send + Sync>
             })?;
 
             Ok(())
@@ -131,7 +131,7 @@ pub(crate) fn execute_node_property_step(
                 Box::new(NodePropertyStepError::ExecutionFailed {
                     algorithm: algorithm_name.to_string(),
                     message: e.to_string(),
-                }) as Box<dyn StdError>
+                }) as Box<dyn StdError + Send + Sync>
             })?;
 
             Ok(())

@@ -455,7 +455,7 @@ mod tests {
                 _node_labels: &[String],
                 _relationship_types: &[String],
                 _concurrency: usize,
-            ) -> Result<(), Box<dyn StdError>> {
+            ) -> Result<(), Box<dyn StdError + Send + Sync>> {
                 Err(Box::new(std::io::Error::new(
                     std::io::ErrorKind::Other,
                     "boom",

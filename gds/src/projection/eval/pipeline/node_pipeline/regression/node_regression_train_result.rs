@@ -99,6 +99,7 @@ impl NodeRegressionTrainPipelineResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ml::metrics::Metric;
     use crate::ml::models::base::{BaseModelData, Regressor, RegressorData};
     use crate::ml::models::training_method::TrainingMethod;
     use crate::projection::eval::pipeline::node_pipeline::NodePropertyPipelineBaseTrainConfig;
@@ -147,7 +148,8 @@ mod tests {
     #[test]
     fn test_train_result_new() {
         let regressor = Box::new(TestRegressor);
-        let stats = TrainingStatistics::new(vec![]);
+        let metrics: Vec<Box<dyn Metric>> = vec![];
+        let stats = TrainingStatistics::new(&metrics);
         let result = NodeRegressionTrainResult::new(regressor, stats);
         assert!(std::ptr::eq(result.regressor().data(), &TestRegressorData));
     }
@@ -160,7 +162,8 @@ mod tests {
             HashMap::new(),
             NodePropertyPredictPipeline::empty(),
         );
-        let training_stats = TrainingStatistics::new(vec![]);
+        let metrics: Vec<Box<dyn Metric>> = vec![];
+        let training_stats = TrainingStatistics::new(&metrics);
 
         let result = NodeRegressionTrainPipelineResult::new(
             Box::new(TestRegressor),
@@ -180,7 +183,8 @@ mod tests {
             HashMap::new(),
             NodePropertyPredictPipeline::empty(),
         );
-        let training_stats = TrainingStatistics::new(vec![]);
+        let metrics: Vec<Box<dyn Metric>> = vec![];
+        let training_stats = TrainingStatistics::new(&metrics);
 
         let result = NodeRegressionTrainPipelineResult::new(
             Box::new(TestRegressor),

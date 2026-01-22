@@ -54,6 +54,7 @@ impl NodeClassificationTrainResult {
 mod tests {
     use super::*;
     use crate::ml::metrics::classification::GlobalAccuracy;
+    use crate::ml::metrics::Metric;
     use crate::ml::models::base::{BaseModelData, ClassifierData};
     use crate::ml::models::training_method::TrainingMethod;
     use std::any::Any;
@@ -105,7 +106,8 @@ mod tests {
     #[test]
     fn test_new_train_result() {
         let classifier = Box::new(TestClassifier) as Box<dyn crate::ml::models::Classifier>;
-        let training_statistics = TrainingStatistics::new(vec![Box::new(GlobalAccuracy::new())]);
+        let metrics: Vec<Box<dyn Metric>> = vec![Box::new(GlobalAccuracy::new())];
+        let training_statistics = TrainingStatistics::new(&metrics);
         let class_id_map = LocalIdMap::of(&[0, 1, 2]);
         let class_counts = LongMultiSet::new();
 
@@ -122,7 +124,8 @@ mod tests {
     #[test]
     fn test_accessors() {
         let classifier = Box::new(TestClassifier) as Box<dyn crate::ml::models::Classifier>;
-        let training_statistics = TrainingStatistics::new(vec![Box::new(GlobalAccuracy::new())]);
+        let metrics: Vec<Box<dyn Metric>> = vec![Box::new(GlobalAccuracy::new())];
+        let training_statistics = TrainingStatistics::new(&metrics);
         let class_id_map = LocalIdMap::of(&[10, 20, 30]);
         let class_counts = LongMultiSet::new();
 

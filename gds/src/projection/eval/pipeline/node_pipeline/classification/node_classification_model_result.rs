@@ -49,6 +49,7 @@ impl NodeClassificationModelResult {
 mod tests {
     use super::*;
     use crate::ml::metrics::classification::GlobalAccuracy;
+    use crate::ml::metrics::Metric;
     use crate::ml::models::base::{BaseModelData, ClassifierData};
     use crate::ml::models::training_method::TrainingMethod;
     use crate::projection::eval::pipeline::node_pipeline::node_property_pipeline_base_train_config::NodePropertyPipelineBaseTrainConfig;
@@ -103,7 +104,8 @@ mod tests {
     #[test]
     fn test_new_model_result() {
         let classifier = Box::new(TestClassifier) as Box<dyn Classifier>;
-        let training_statistics = TrainingStatistics::new(vec![Box::new(GlobalAccuracy::new())]);
+        let metrics: Vec<Box<dyn Metric>> = vec![Box::new(GlobalAccuracy::new())];
+        let training_statistics = TrainingStatistics::new(&metrics);
         let config = NodeClassificationPipelineTrainConfig::default();
         let model_info = NodeClassificationPipelineModelInfo::new(
             serde_json::json!({}),
@@ -123,7 +125,8 @@ mod tests {
     #[test]
     fn test_accessors() {
         let classifier = Box::new(TestClassifier) as Box<dyn Classifier>;
-        let training_statistics = TrainingStatistics::new(vec![Box::new(GlobalAccuracy::new())]);
+        let metrics: Vec<Box<dyn Metric>> = vec![Box::new(GlobalAccuracy::new())];
+        let training_statistics = TrainingStatistics::new(&metrics);
         let config = NodeClassificationPipelineTrainConfig::default();
         let model_info = NodeClassificationPipelineModelInfo::new(
             serde_json::json!({}),

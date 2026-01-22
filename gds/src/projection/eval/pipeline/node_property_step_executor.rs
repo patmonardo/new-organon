@@ -243,7 +243,7 @@ pub enum NodePropertyStepExecutorError {
     StepExecutionFailed {
         step_index: usize,
         step_name: String,
-        source: Box<dyn StdError>,
+        source: Box<dyn StdError + Send + Sync>,
     },
 
     /// Graph store is locked and cannot be mutated.
@@ -294,7 +294,7 @@ impl std::fmt::Display for NodePropertyStepExecutorError {
 impl StdError for NodePropertyStepExecutorError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
-            Self::StepExecutionFailed { source, .. } => Some(&**source),
+            Self::StepExecutionFailed { source, .. } => Some(source.as_ref()),
             _ => None,
         }
     }
@@ -480,7 +480,7 @@ mod tests {
                 node_labels: &[String],
                 relationship_types: &[String],
                 _concurrency: usize,
-            ) -> Result<(), Box<dyn StdError>> {
+            ) -> Result<(), Box<dyn StdError + Send + Sync>> {
                 let mut guard = self.captured.lock().expect("capture lock");
                 *guard = Some((node_labels.to_vec(), relationship_types.to_vec()));
                 Ok(())

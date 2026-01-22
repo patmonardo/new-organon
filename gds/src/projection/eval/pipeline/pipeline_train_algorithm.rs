@@ -126,10 +126,10 @@ pub trait PipelineTrainAlgorithm<RESULT, MODEL, P: TrainingPipeline + ?Sized> {
 #[derive(Debug)]
 pub enum PipelineTrainAlgorithmError {
     /// Pipeline validation failed.
-    ValidationFailed(Box<dyn StdError>),
+    ValidationFailed(Box<dyn StdError + Send + Sync>),
 
     /// Training execution failed.
-    TrainingFailed(Box<dyn StdError>),
+    TrainingFailed(Box<dyn StdError + Send + Sync>),
 
     /// Model conversion failed.
     ConversionFailed(String),
@@ -148,7 +148,7 @@ impl std::fmt::Display for PipelineTrainAlgorithmError {
 impl StdError for PipelineTrainAlgorithmError {
     fn source(&self) -> Option<&(dyn StdError + 'static)> {
         match self {
-            Self::ValidationFailed(e) | Self::TrainingFailed(e) => Some(&**e),
+            Self::ValidationFailed(e) | Self::TrainingFailed(e) => Some(e.as_ref()),
             _ => None,
         }
     }

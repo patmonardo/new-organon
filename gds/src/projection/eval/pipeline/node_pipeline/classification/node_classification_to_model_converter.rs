@@ -85,7 +85,7 @@ mod tests {
     use super::*;
     use crate::ml::core::subgraph::LocalIdMap;
     use crate::ml::metrics::classification::GlobalAccuracy;
-    use crate::ml::metrics::{EvaluationScores, ModelCandidateStats};
+    use crate::ml::metrics::{EvaluationScores, Metric, ModelCandidateStats};
     use crate::ml::models::base::{BaseModelData, ClassifierData};
     use crate::ml::models::training_method::TrainingMethod;
     use crate::ml::training::statistics::TrainingStatistics;
@@ -156,8 +156,8 @@ mod tests {
         let config = NodeClassificationPipelineTrainConfig::default();
         let converter = NodeClassificationToModelConverter::new(pipeline, config);
 
-        let mut training_statistics =
-            TrainingStatistics::new(vec![Box::new(GlobalAccuracy::new())]);
+        let metrics: Vec<Box<dyn Metric>> = vec![Box::new(GlobalAccuracy::new())];
+        let mut training_statistics = TrainingStatistics::new(&metrics);
 
         let mut training_stats = HashMap::new();
         training_stats.insert(

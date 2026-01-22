@@ -47,7 +47,7 @@ pub trait ExecutableNodePropertyStep: DynClone + Send + Sync {
         node_labels: &[String],
         relationship_types: &[String],
         concurrency: usize,
-    ) -> Result<(), Box<dyn StdError>>;
+    ) -> Result<(), Box<dyn StdError + Send + Sync>>;
 
     /// Configuration for this step.
     ///

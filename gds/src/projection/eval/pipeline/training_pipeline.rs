@@ -168,7 +168,7 @@ pub trait TrainingPipeline: Pipeline {
     /// Ensures at least one model candidate exists for training.
     ///
     /// Java: `void validateTrainingParameterSpace()`
-    fn validate_training_parameter_space(&self) -> Result<(), Box<dyn StdError>> {
+    fn validate_training_parameter_space(&self) -> Result<(), Box<dyn StdError + Send + Sync>> {
         if self.number_of_model_selection_trials() == 0 {
             return Err("Need at least one model candidate for training.".into());
         }
@@ -183,7 +183,7 @@ pub trait TrainingPipeline: Pipeline {
     fn validate_unique_mutate_property(
         &self,
         step: &dyn ExecutableNodePropertyStep,
-    ) -> Result<(), Box<dyn StdError>> {
+    ) -> Result<(), Box<dyn StdError + Send + Sync>> {
         for existing_step in self.node_property_steps() {
             let new_property = step.mutate_node_property();
             let existing_property = existing_step.mutate_node_property();
@@ -362,7 +362,7 @@ mod tests {
             _node_labels: &[String],
             _relationship_types: &[String],
             _concurrency: usize,
-        ) -> Result<(), Box<dyn StdError>> {
+        ) -> Result<(), Box<dyn StdError + Send + Sync>> {
             Ok(())
         }
 

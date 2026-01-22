@@ -121,7 +121,9 @@ mod tests {
         }
 
         let classifier = Box::new(TestClassifier);
-        let stats = TrainingStatistics::new(vec![Box::new(GlobalAccuracy::new())]);
+        let metrics: Vec<Box<dyn crate::ml::metrics::Metric>> =
+            vec![Box::new(GlobalAccuracy::new())];
+        let stats = TrainingStatistics::new(&metrics);
         let result = LinkPredictionTrainResult::new(classifier, stats);
 
         let _classifier = result.classifier();
@@ -174,9 +176,11 @@ mod tests {
             }
         }
 
+        let metrics: Vec<Box<dyn crate::ml::metrics::Metric>> =
+            vec![Box::new(GlobalAccuracy::new())];
         let result = LinkPredictionTrainResult::new(
             Box::new(TestClassifier),
-            TrainingStatistics::new(vec![Box::new(GlobalAccuracy::new())]),
+            TrainingStatistics::new(&metrics),
         );
 
         let _ = result.classifier();
@@ -230,11 +234,14 @@ mod tests {
             }
         }
 
+        let metrics: Vec<Box<dyn crate::ml::metrics::Metric>> =
+            vec![Box::new(GlobalAccuracy::new())];
+
         let results: Vec<LinkPredictionTrainResult> = (0..5)
             .map(|_| {
                 LinkPredictionTrainResult::new(
                     Box::new(TestClassifier),
-                    TrainingStatistics::new(vec![Box::new(GlobalAccuracy::new())]),
+                    TrainingStatistics::new(&metrics),
                 )
             })
             .collect();

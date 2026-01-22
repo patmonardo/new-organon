@@ -196,7 +196,7 @@ fn training_method_name(method: TrainingMethod) -> &'static str {
     }
 }
 
-fn create_trainer_config_from_map(
+pub fn create_trainer_config_from_map(
     config_map: HashMap<String, serde_json::Value>,
     method: TrainingMethod,
 ) -> Box<dyn TrainerConfig> {

@@ -19,7 +19,7 @@ pub struct TrainingStatistics {
 
 impl TrainingStatistics {
     /// Creates a new TrainingStatistics with the given metrics
-    pub fn new(metrics: Vec<Box<dyn Metric>>) -> Self {
+    pub fn new(metrics: &[Box<dyn Metric>]) -> Self {
         let metric_specs = metrics
             .iter()
             .map(|m| MetricSpec {
@@ -40,7 +40,7 @@ impl TrainingStatistics {
         &self.metrics.first().expect("No metrics defined").name
     }
 
-    fn evaluation_comparator(&self) -> MetricComparator {
+    pub fn evaluation_comparator(&self) -> MetricComparator {
         self.metrics.first().expect("No metrics defined").comparator
     }
 
@@ -102,28 +102,37 @@ impl TrainingStatistics {
             })
             .collect();
 
+        if scores.is_empty() {
+            return 0;
+        }
+
         let best_score = self.best_trial_score();
         scores
             .iter()
             .position(|&score| (score - best_score).abs() < f64::EPSILON)
-            .expect("Empty validation stats")
+            .unwrap_or(0)
     }
 
     /// Gets the score of the best trial
     pub fn best_trial_score(&self) -> f64 {
         let comparator = self.evaluation_comparator();
-        self.model_candidate_stats
+        let mut iter = self
+            .model_candidate_stats
             .iter()
             .filter_map(|stats| stats.validation_stats.get(self.evaluation_metric()))
-            .map(|s| s.avg)
-            .reduce(|best, candidate| {
-                if comparator.compare(candidate, best) == Ordering::Greater {
-                    candidate
-                } else {
-                    best
-                }
-            })
-            .expect("Empty validation stats")
+            .map(|s| s.avg);
+
+        let Some(first) = iter.next() else {
+            return 0.0;
+        };
+
+        iter.fold(first, |best, candidate| {
+            if comparator.compare(candidate, best) == Ordering::Greater {
+                candidate
+            } else {
+                best
+            }
+        })
     }
 
     /// Gets the best candidate's statistics

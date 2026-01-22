@@ -24,6 +24,7 @@ pub mod labels_and_class_counts_extractor;
 pub mod node_classification_train_pipeline_algorithm_factory;
 
 // Phase 3.3: Training Implementation
+#[path = "node_classification_train_clean.rs"]
 pub mod node_classification_train;
 
 // Re-exports

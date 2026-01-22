@@ -126,7 +126,7 @@ impl ExecutableNodePropertyStep for NodePropertyStep {
         node_labels: &[String],
         relationship_types: &[String],
         concurrency: usize,
-    ) -> Result<(), Box<dyn StdError>> {
+    ) -> Result<(), Box<dyn StdError + Send + Sync>> {
         // Build execution configuration
         let mut exec_config = self.config.clone();
         exec_config.insert(
@@ -155,7 +155,7 @@ impl ExecutableNodePropertyStep for NodePropertyStep {
             Box::new(NodePropertyStepError::ExecutionFailed {
                 algorithm: self.algorithm_name.clone(),
                 message: format!("failed to serialize config: {e}"),
-            }) as Box<dyn StdError>
+            }) as Box<dyn StdError + Send + Sync>
         })?;
 
         execute_node_property_step(

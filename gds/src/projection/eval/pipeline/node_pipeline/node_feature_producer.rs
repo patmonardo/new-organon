@@ -127,10 +127,14 @@ impl<C: NodePropertyPipelineBaseTrainConfig> NodeFeatureProducer<C> {
         &mut self,
         pipeline: &P,
     ) -> Result<Box<dyn Features>, NodeFeatureProducerError> {
+        let has_steps = !pipeline.node_property_steps().is_empty();
+
         // Execute node property steps to compute intermediate properties
-        self.step_executor
-            .execute_node_property_steps(&mut self.graph_store, pipeline.node_property_steps())
-            .map_err(NodeFeatureProducerError::StepExecutionFailed)?;
+        if has_steps {
+            self.step_executor
+                .execute_node_property_steps(&mut self.graph_store, pipeline.node_property_steps())
+                .map_err(NodeFeatureProducerError::StepExecutionFailed)?;
+        }
 
         // Get target node labels
         let mut target_node_labels: Vec<String> = self
@@ -155,10 +159,15 @@ impl<C: NodePropertyPipelineBaseTrainConfig> NodeFeatureProducer<C> {
             FeaturesFactory::extract_lazy_features(target_graph, &pipeline.feature_properties())
         };
 
-        // Cleanup intermediate properties (always executed, like finally block)
-        self.step_executor
-            .cleanup_intermediate_properties(&mut self.graph_store, pipeline.node_property_steps())
-            .map_err(NodeFeatureProducerError::CleanupFailed)?;
+        // Cleanup intermediate properties (only if steps executed)
+        if has_steps {
+            self.step_executor
+                .cleanup_intermediate_properties(
+                    &mut self.graph_store,
+                    pipeline.node_property_steps(),
+                )
+                .map_err(NodeFeatureProducerError::CleanupFailed)?;
+        }
 
         Ok(features)
     }

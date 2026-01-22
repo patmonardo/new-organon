@@ -9,10 +9,16 @@ use crate::core::model::ModelCatalog;
 use crate::core::utils::progress::{ProgressTracker, Task};
 use crate::mem::{MemoryEstimation, MemoryEstimations};
 use crate::ml::core::subgraph::LocalIdMap;
-use crate::ml::metrics::classification::{ClassificationMetric, GlobalAccuracy};
-use crate::ml::metrics::{Metric, ModelCandidateStats, ModelSpecificMetricsHandler};
-use crate::ml::models::mlp::MLPClassifierTrainConfig;
-use crate::ml::models::{Classifier, ClassifierTrainerFactory, Features};
+use crate::ml::metrics::classification::ClassificationMetric;
+use crate::ml::metrics::ClassificationMetricSpecification;
+use crate::ml::metrics::{
+    EvaluationScores, Metric, ModelCandidateStats, ModelSpecificMetricsHandler,
+};
+use crate::ml::models::automl::create_trainer_config_from_map;
+use crate::ml::models::{
+    base::TrainerConfigTrait, Classifier, ClassifierTrainerFactory, Features,
+    TrainingMethod as MlTrainingMethod,
+};
 use crate::ml::node_prediction::NodeSplitter;
 use crate::ml::splitting::TrainingExamplesSplit;
 use crate::ml::training::statistics::TrainingStatistics;
@@ -21,136 +27,8 @@ use crate::projection::eval::pipeline::node_pipeline::node_property_pipeline_bas
 use crate::projection::eval::pipeline::node_pipeline::node_property_training_pipeline::NodePropertyTrainingPipeline;
 use crate::projection::eval::pipeline::node_pipeline::NodeFeatureProducer;
 use crate::projection::eval::pipeline::PipelineTrainer;
-use crate::types::graph::Graph;
-use crate::types::graph_store::DefaultGraphStore;
-use std::collections::HashMap;
-use std::sync::Arc;
-
-pub trait AlgorithmsProcedureFacade: Send + Sync {}
-
-/// Core training algorithm for node classification.
-///
-/// This implements the full training loop:
-/// 1. Extract labels and class counts from target property
-/// 2. Split data into train/test/validation sets
-/// 3. Cross-validation with hyperparameter search (AutoML)
-/// 4. Model selection (find best model candidate)
-/// 5. Evaluate best model on train and test sets
-/// 6. Retrain best model on full training set
-/// 7. Return trained model with statistics
-pub struct NodeClassificationTrain {
-    pipeline: NodeClassificationTrainingPipeline,
-    train_config: NodeClassificationPipelineTrainConfig,
-    targets: HugeIntArray,
-    class_id_map: LocalIdMap,
-    node_graph: Arc<dyn Graph>,
-    class_counts: LongMultiSet,
-    node_feature_producer: NodeFeatureProducer<NodeClassificationPipelineTrainConfig>,
-    progress_tracker: Box<dyn ProgressTracker>,
-    termination_flag: TerminationFlag,
-}
-
-impl NodeClassificationTrain {
-    /// Estimate memory requirements for training.
-    pub fn estimate(
-        _pipeline: &NodeClassificationTrainingPipeline,
-        _configuration: &NodeClassificationPipelineTrainConfig,
-        _model_catalog: &impl ModelCatalog,
-        _algorithms_procedure_facade: &dyn AlgorithmsProcedureFacade,
-    ) -> Box<dyn MemoryEstimation> {
-        // Note: Implement once memory estimation infrastructure is translated.
-        MemoryEstimations::empty()
-    }
-
-    /// Create progress task for training.
-    pub fn progress_task(pipeline: &NodeClassificationTrainingPipeline, node_count: u64) -> Task {
-        // Note: Implement once the Tasks API is translated.
-        // let split_config = pipeline.split_config();
-        // let train_set_size = split_config.train_set_size(node_count);
-        // let test_set_size = split_config.test_set_size(node_count);
-        // let validation_folds = split_config.validation_folds();
-        //
-        // let mut tasks = vec![];
-        // tasks.push(NodePropertyStepExecutor::tasks(pipeline.node_property_steps(), node_count));
-        // tasks.extend(CrossValidation::progress_tasks(
-        //     validation_folds,
-        //     pipeline.number_of_model_selection_trials(),
-        //     train_set_size,
-        // ));
-        // tasks.push(ClassifierTrainer::progress_task("Train best model", 5 * train_set_size));
-        // tasks.push(Tasks::leaf("Evaluate on train data", train_set_size));
-        // tasks.push(Tasks::leaf("Evaluate on test data", test_set_size));
-        // tasks.push(ClassifierTrainer::progress_task("Retrain best model", 5 * node_count));
-        //
-        // Tasks::task("Node Classification Train Pipeline", tasks)
-
-        let _ = (pipeline, node_count);
-        Task::new("Node Classification Train Pipeline".to_string(), vec![])
-    }
-
-    /// Create a new NodeClassificationTrain instance.
-    pub fn create(
-        graph_store: Arc<DefaultGraphStore>,
-        pipeline: NodeClassificationTrainingPipeline,
-        config: NodeClassificationPipelineTrainConfig,
-        node_feature_producer: NodeFeatureProducer<NodeClassificationPipelineTrainConfig>,
-        progress_tracker: Box<dyn ProgressTracker>,
-    ) -> Self {
-        let node_graph = graph_store.get_graph();
-        pipeline
-            .split_config()
-            .validate_min_num_nodes_in_split_sets(node_graph.node_count())
-            .expect("Invalid split configuration for node count");
-
-        let target_node_property = node_graph
-            .node_properties(config.target_property())
-            .expect("Missing target node property for classification");
-
-        let labels_and_class_counts =
-            LabelsAndClassCountsExtractor::extract_labels_and_class_counts(
-                &*target_node_property,
-                node_graph.node_count() as u64,
-            );
-
-        let class_counts = labels_and_class_counts.class_counts().clone();
-        let mut class_ids: Vec<u64> = class_counts
-            .keys()
-            .into_iter()
-            .map(|id| id as u64)
-            .collect();
-        class_ids.sort_unstable();
-        let class_id_map = LocalIdMap::of_sorted(&class_ids);
-
-        let termination_flag = TerminationFlag::running_true();
-
-        Self {
-            pipeline,
-            train_config: config,
-            targets: labels_and_class_counts.labels().clone(),
-            class_id_map,
-            node_graph,
-            class_counts,
-            node_feature_producer,
-            progress_tracker,
-            termination_flag,
-        }
-    }
-
-    /// Set termination flag for early stopping.
-    pub fn set_termination_flag(&mut self, termination_flag: TerminationFlag) {
-        self.termination_flag = termination_flag;
-    }
-
-    /// Run the training algorithm.
-    ///
-    /// Main training loop:
-    /// 1. Split data into train/test/validation
-    /// 2. Extract features
-    /// 3. Cross-validation with AutoML hyperparameter search
-    /// 4. Select best model
-    /// 5. Evaluate on train and test sets
-    /// 6. Retrain on full dataset
-    pub fn run(&mut self) -> Result<NodeClassificationTrainResult, Box<dyn std::error::Error>> {
+use crate::projection::eval::pipeline::{
+    TrainingMethod as PipelineTrainingMethod, TrainingPipeline,
         self.progress_tracker.begin_subtask();
 
         let split_config = self.pipeline.split_config();
@@ -180,63 +58,300 @@ impl NodeClassificationTrain {
             self.progress_tracker.as_mut(),
         );
 
-        let (metrics, classification_metrics) = default_metrics();
-        let mut training_statistics = TrainingStatistics::new(metrics);
-        training_statistics.add_candidate_stats(ModelCandidateStats::new(
-            serde_json::json!({}),
-            HashMap::new(),
-            HashMap::new(),
-        ));
+        let build_metrics = || -> Result<Vec<Box<dyn Metric>>, String> {
+            if self.train_config.metrics_specs().is_empty() {
+                let defaults = vec![
+                    "ACCURACY".to_string(),
+                    "F1_WEIGHTED".to_string(),
+                    "F1_MACRO".to_string(),
+                        use super::*;
+                        use crate::core::model::EmptyModelCatalog;
+
+                        #[test]
+                        fn test_estimate() {
+                            let pipeline = NodeClassificationTrainingPipeline::new();
+                            let config = NodeClassificationPipelineTrainConfig::default();
+                            let model_catalog = EmptyModelCatalog;
+                            struct StubAlgorithmsFacade;
+                            impl AlgorithmsProcedureFacade for StubAlgorithmsFacade {}
+                            let algorithms_facade = StubAlgorithmsFacade;
+
+                            let _est = NodeClassificationTrain::estimate(
+                                &pipeline,
+                                &config,
+                                &model_catalog,
+                                &algorithms_facade,
+                            );
+                        }
+                    }
+impl NodeClassificationTrain {
+    fn train_simple_model(
+        &self,
+        split: &TrainingExamplesSplit,
+        features: &dyn Features,
+        trainer_config: &dyn TrainerConfigTrait,
+    ) -> Result<Box<dyn Classifier>, Box<dyn std::error::Error + Send + Sync>> {
+        let train_set = to_u64_arc(split.train_set());
+        let trainer = ClassifierTrainerFactory::create(
+            trainer_config,
+            self.class_id_map.size(),
+            &self.termination_flag,
+            &*self.progress_tracker,
+            &Concurrency::available_cores(),
+            self.train_config.random_seed(),
+            false,
+            &ModelSpecificMetricsHandler::noop(),
+        );
+
+        Ok(trainer.train(features, &self.targets, &train_set))
+    }
+
+    fn retrain_best_model(
+        &self,
+        all_training_examples: &Arc<Vec<i64>>,
+        features: &dyn Features,
+        trainer_config: &dyn TrainerConfigTrait,
+    ) -> Result<Box<dyn Classifier>, Box<dyn std::error::Error + Send + Sync>> {
+        let train_set = to_u64_arc(all_training_examples.clone());
+        let trainer = ClassifierTrainerFactory::create(
+            trainer_config,
+            self.class_id_map.size(),
+            &self.termination_flag,
+            &*self.progress_tracker,
+            &Concurrency::available_cores(),
+            self.train_config.random_seed(),
+            false,
+            &ModelSpecificMetricsHandler::noop(),
+        );
+
+        Ok(trainer.train(features, &self.targets, &train_set))
+    }
+
+    fn evaluate_model(
+        &self,
+        split: &TrainingExamplesSplit,
+        features: &dyn Features,
+        classifier: &Box<dyn Classifier>,
+        classification_metrics: &[&dyn ClassificationMetric],
+    ) -> (HashMap<String, f64>, HashMap<String, f64>) {
+        let labels_long = labels_as_long(&self.targets);
+        let train_scores = evaluate_metrics(
+            &split.train_set(),
+            classifier.as_ref(),
+            features,
+            &labels_long,
+            classification_metrics,
+        );
+        let test_scores = evaluate_metrics(
+            &split.test_set(),
+            classifier.as_ref(),
+            features,
+            &labels_long,
+            classification_metrics,
+        );
+
+        (train_scores, test_scores)
+    }
+
+    fn collect_candidate_configs(
+        &self,
+    ) -> Vec<(PipelineTrainingMethod, HashMap<String, serde_json::Value>)> {
+        let mut candidates: Vec<(PipelineTrainingMethod, HashMap<String, serde_json::Value>)> =
+            Vec::new();
+
+        for (method, configs) in self.pipeline.training_parameter_space() {
+            if configs.is_empty() {
+                candidates.push((*method, HashMap::<String, serde_json::Value>::new()));
+                continue;
+            }
+
+            for cfg in configs {
+                candidates.push((*method, cfg.to_map()));
+            }
+        }
+
+        if candidates.is_empty() {
+            candidates.push((
+                PipelineTrainingMethod::MLPClassification,
+                HashMap::<String, serde_json::Value>::new(),
+            ));
+        }
+
+        let max_trials = self.pipeline.auto_tuning_config().max_trials();
+        if max_trials > 0 && candidates.len() > max_trials {
+            candidates.truncate(max_trials);
+        }
+
+        candidates
+    }
+}
+
+        let outer_train = node_splits.outer_split().train_set();
+        cv.select_model(
+            outer_train,
+            {
+                let labels_vec = Arc::clone(&labels_vec);
+                move |node_id| labels_vec[node_id as usize]
+            },
+            distinct_targets,
+            &mut training_statistics,
+            candidate_configs_for_cv.into_iter(),
+        );
+
+        let best_idx = training_statistics.best_trial_idx();
+        let best_config = candidate_configs
+            .get(best_idx)
+            .expect("At least one trainer config is required");
+
+        let classifier = self.train_simple_model(
+            node_splits.outer_split(),
+            features.as_ref(),
+            best_config.as_ref(),
+        )?;
+        let (train_scores, test_scores) = self.evaluate_model(
+            node_splits.outer_split(),
+            features.as_ref(),
+            &classifier,
+            &classification_metrics,
+        );
+
+        for (metric, score) in &train_scores {
+            training_statistics.add_outer_train_score(metric.clone(), *score);
+        }
+        for (metric, score) in &test_scores {
+            training_statistics.add_test_score(metric.clone(), *score);
+        }
+
+        let retrained = self.retrain_best_model(
+            node_splits.all_training_examples(),
+            features.as_ref(),
+            best_config.as_ref(),
+        )?;
+    /// 5. Evaluate on train and test sets
+    /// 6. Retrain on full dataset
+    pub fn run(
+        &mut self,
+    ) -> Result<NodeClassificationTrainResult, Box<dyn std::error::Error + Send + Sync>> {
+        self.progress_tracker.begin_subtask();
+
+        let split_config = self.pipeline.split_config();
+        let node_count = self.node_graph.node_count();
+
+        let node_splitter = NodeSplitter::new(
+            Concurrency::available_cores(),
+            node_count,
+            Arc::new({
+                let graph = Arc::clone(&self.node_graph);
+                move |id| graph.to_original_node_id(id as i64).unwrap_or(id as i64)
+            }),
+            Arc::new({
+                let graph = Arc::clone(&self.node_graph);
+                move |id| {
+                    graph
+                        .to_mapped_node_id(id)
+                        .expect("Mapped node id not found") as usize
+                }
+            }),
+        );
+
+        let node_splits = node_splitter.split(
+            split_config.test_fraction(),
+            split_config.validation_folds(),
+            self.train_config.random_seed(),
+            self.progress_tracker.as_mut(),
+        );
+
+        let build_metrics = || -> Result<Vec<Box<dyn Metric>>, String> {
+            if self.train_config.metrics_specs().is_empty() {
+                let defaults = vec![
+                    "ACCURACY".to_string(),
+                    "F1_WEIGHTED".to_string(),
+                    "F1_MACRO".to_string(),
+                    "F1(class=*)".to_string(),
+                    "PRECISION(class=*)".to_string(),
+                    "RECALL(class=*)".to_string(),
+                ];
+                Ok(ClassificationMetricSpecification::parse_list(&defaults)
+                    .map_err(|e| format!("Failed to parse default metrics: {e}"))?
+                    .into_iter()
+                    .flat_map(|spec| spec.create_metrics(&self.class_id_map, &self.class_counts))
+                    .collect())
+            } else {
+                Ok(self
+                    .train_config
+                    .metrics(&self.class_id_map, &self.class_counts))
+            }
+        };
+
+        let metrics = build_metrics().map_err(|e| e.to_string())?;
+        let classification_metrics =
+            NodeClassificationPipelineTrainConfig::classification_metrics(&metrics);
+
+        let mut training_statistics = TrainingStatistics::new(&metrics);
+
+        let metrics_for_cv = build_metrics().map_err(|e| e.to_string())?;
+        let metrics_for_eval = build_metrics().map_err(|e| e.to_string())?;
 
         let features = self
             .node_feature_producer
             .procedure_features(&self.pipeline)
             .map_err(|e| format!("Feature production failed: {e}"))?;
 
-        let classifier = self.train_simple_model(node_splits.outer_split(), &features)?;
-        self.evaluate_model(
-            node_splits.outer_split(),
-            &features,
-            &classifier,
-            &classification_metrics,
-            &mut training_statistics,
-        );
+        let primary_metric = training_statistics.evaluation_metric().to_string();
+        let comparator = training_statistics.evaluation_comparator();
 
-        let retrained = self.retrain_best_model(node_splits.all_training_examples(), &features)?;
+        let mut best_config: Option<Box<dyn TrainerConfigTrait>> = None;
+        let mut best_score: Option<f64> = None;
+        let mut best_train_scores: HashMap<String, f64> = HashMap::new();
+        let mut best_test_scores: HashMap<String, f64> = HashMap::new();
 
-        self.progress_tracker.end_subtask();
+        let candidates = self.collect_candidate_configs();
+        for (method, config_map) in candidates {
+            let ml_method = match method {
+                PipelineTrainingMethod::LogisticRegression => MlTrainingMethod::LogisticRegression,
+                PipelineTrainingMethod::RandomForestClassification => {
+                    MlTrainingMethod::RandomForestClassification
+                }
+                PipelineTrainingMethod::MLPClassification => MlTrainingMethod::MLPClassification,
+                _ => MlTrainingMethod::MLPClassification,
+            };
 
-        Ok(NodeClassificationTrainResult::new(
-            retrained,
-            training_statistics,
-            self.class_id_map.clone(),
-            self.class_counts.clone(),
-        ))
-    }
-}
+            let trainer_config = create_trainer_config_from_map(config_map.clone(), ml_method);
+            let classifier = self.train_simple_model(
+                node_splits.outer_split(),
+                &features,
+                trainer_config.as_ref(),
+            )?;
 
-impl PipelineTrainer for NodeClassificationTrain {
-    type Result = NodeClassificationTrainResult;
+            let (train_scores, test_scores) = self.evaluate_model(
+                node_splits.outer_split(),
+                &features,
+                &classifier,
+                &classification_metrics,
+            );
 
-    fn run(&mut self) -> Result<Self::Result, Box<dyn std::error::Error>> {
-        self.run()
-    }
+            let mut trainer_map = trainer_config.to_map();
+            for (key, value) in &config_map {
+                trainer_map.insert(key.clone(), value.clone());
+            }
 
-    fn is_terminated(&self) -> bool {
-        !self.termination_flag.running()
-    }
-}
+            training_statistics.add_candidate_stats(ModelCandidateStats::new(
+                serde_json::Value::Object(trainer_map.into_iter().collect()),
+                scores_to_eval_scores(train_scores.clone()),
+                scores_to_eval_scores(test_scores.clone()),
+            ));
 
-impl NodeClassificationTrain {
-    fn train_simple_model(
-        &self,
+            let candidate_score = test_scores.get(&primary_metric).copied().unwrap_or(0.0);
+            let is_best = match best_score {
+                None => true,
+                let features = Arc::from(features);
         split: &TrainingExamplesSplit,
         features: &Box<dyn Features>,
-    ) -> Result<Box<dyn Classifier>, Box<dyn std::error::Error>> {
+        trainer_config: &dyn TrainerConfigTrait,
+    ) -> Result<Box<dyn Classifier>, Box<dyn std::error::Error + Send + Sync>> {
         let train_set = to_u64_arc(split.train_set());
-        let trainer_config = MLPClassifierTrainConfig::default();
         let trainer = ClassifierTrainerFactory::create(
-            &trainer_config,
+            trainer_config,
             self.class_id_map.size(),
             &self.termination_flag,
             &*self.progress_tracker,
@@ -253,11 +368,11 @@ impl NodeClassificationTrain {
         &self,
         all_training_examples: &Arc<Vec<i64>>,
         features: &Box<dyn Features>,
-    ) -> Result<Box<dyn Classifier>, Box<dyn std::error::Error>> {
+        trainer_config: &dyn TrainerConfigTrait,
+    ) -> Result<Box<dyn Classifier>, Box<dyn std::error::Error + Send + Sync>> {
         let train_set = to_u64_arc(all_training_examples.clone());
-        let trainer_config = MLPClassifierTrainConfig::default();
         let trainer = ClassifierTrainerFactory::create(
-            &trainer_config,
+            trainer_config,
             self.class_id_map.size(),
             &self.termination_flag,
             &*self.progress_tracker,
@@ -266,25 +381,29 @@ impl NodeClassificationTrain {
             false,
             &ModelSpecificMetricsHandler::noop(),
         );
+        let build_metrics = || -> Result<Vec<Box<dyn Metric>>, String> {
+            if self.train_config.metrics_specs().is_empty() {
+                let defaults = vec![
+                    "ACCURACY".to_string(),
+                    "F1_WEIGHTED".to_string(),
+                    "F1_MACRO".to_string(),
+                    "F1(class=*)".to_string(),
+                    "PRECISION(class=*)".to_string(),
+                    "RECALL(class=*)".to_string(),
+                ];
+                Ok(ClassificationMetricSpecification::parse_list(&defaults)
+                    .map_err(|e| format!("Failed to parse default metrics: {e}"))?
+                    .into_iter()
+                    .flat_map(|spec| spec.create_metrics(&self.class_id_map, &self.class_counts))
+                    .collect())
+            } else {
+                Ok(self
+                    .train_config
+                    .metrics(&self.class_id_map, &self.class_counts))
+            }
+        };
 
-        Ok(trainer.train(features.as_ref(), &self.targets, &train_set))
-    }
-
-    fn evaluate_model(
-        &self,
-        split: &TrainingExamplesSplit,
-        features: &Box<dyn Features>,
-        classifier: &Box<dyn Classifier>,
-        classification_metrics: &[Box<dyn ClassificationMetric>],
-        training_statistics: &mut TrainingStatistics,
-    ) {
-        let labels_long = labels_as_long(&self.targets);
-        let train_scores = evaluate_metrics(
-            &split.train_set(),
-            classifier.as_ref(),
-            features.as_ref(),
-            &labels_long,
-            classification_metrics,
+        let metrics = build_metrics().map_err(|e| e.to_string())?;
         );
         let test_scores = evaluate_metrics(
             &split.test_set(),
@@ -294,20 +413,15 @@ impl NodeClassificationTrain {
             classification_metrics,
         );
 
-        for (metric, score) in train_scores {
-            training_statistics.add_outer_train_score(metric, score);
-        }
-        for (metric, score) in test_scores {
-            training_statistics.add_test_score(metric, score);
-        }
+        (train_scores, test_scores)
     }
 }
 
-fn default_metrics() -> (Vec<Box<dyn Metric>>, Vec<Box<dyn ClassificationMetric>>) {
-    (
-        vec![Box::new(GlobalAccuracy::new())],
-        vec![Box::new(GlobalAccuracy::new())],
-    )
+fn scores_to_eval_scores(scores: HashMap<String, f64>) -> HashMap<String, EvaluationScores> {
+    scores
+        .into_iter()
+        .map(|(metric, score)| (metric, EvaluationScores::new(score, score, score)))
+        .collect()
 }
 
 fn labels_as_long(labels: &HugeIntArray) -> HugeLongArray {
@@ -327,7 +441,7 @@ fn evaluate_metrics(
     classifier: &dyn Classifier,
     features: &dyn Features,
     labels: &HugeLongArray,
-    metrics: &[Box<dyn ClassificationMetric>],
+    metrics: &[&dyn ClassificationMetric],
 ) -> HashMap<String, f64> {
     let eval_ids: Vec<usize> = evaluation_set.iter().map(|v| *v as usize).collect();
     let mut predictions = HugeLongArray::new(eval_ids.len());
@@ -356,6 +470,40 @@ fn evaluate_metrics(
         .collect()
 }
 
+impl NodeClassificationTrain {
+    fn collect_candidate_configs(
+        &self,
+    ) -> Vec<(PipelineTrainingMethod, HashMap<String, serde_json::Value>)> {
+        let mut candidates: Vec<(PipelineTrainingMethod, HashMap<String, serde_json::Value>)> =
+            Vec::new();
+
+        for (method, configs) in self.pipeline.training_parameter_space() {
+            if configs.is_empty() {
+                candidates.push((*method, HashMap::<String, serde_json::Value>::new()));
+                continue;
+            }
+
+            for cfg in configs {
+                candidates.push((*method, cfg.to_map()));
+            }
+        }
+
+        if candidates.is_empty() {
+            candidates.push((
+                PipelineTrainingMethod::MLPClassification,
+                HashMap::<String, serde_json::Value>::new(),
+            ));
+        }
+
+        let max_trials = self.pipeline.auto_tuning_config().max_trials();
+        if max_trials > 0 && candidates.len() > max_trials {
+            candidates.truncate(max_trials);
+        }
+
+        candidates
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -373,33 +521,79 @@ mod tests {
             seed: Some(42),
             ..RandomGraphConfig::default()
         };
-        let graph_store =
-            Arc::new(DefaultGraphStore::random(&config).expect("Failed to generate random graph"));
-        let pipeline = NodeClassificationTrainingPipeline::new();
-        let train_config = NodeClassificationPipelineTrainConfig::default();
-        let node_feature_producer =
-            NodeFeatureProducer::create(graph_store.clone(), train_config.clone());
-        let progress_tracker = Box::new(NoopProgressTracker);
+        let primary_metric = training_statistics.evaluation_metric().to_string();
+        let comparator = training_statistics.evaluation_comparator();
 
-        let _trainer = NodeClassificationTrain::create(
-            graph_store,
-            pipeline,
-            train_config,
-            node_feature_producer,
-            progress_tracker,
-        );
+        let mut best_config: Option<Box<dyn TrainerConfigTrait>> = None;
+        let mut best_score: Option<f64> = None;
+        let mut best_train_scores: HashMap<String, f64> = HashMap::new();
+        let mut best_test_scores: HashMap<String, f64> = HashMap::new();
 
-        // Verify it was created without panicking
-    }
+        let candidates = self.collect_candidate_configs();
+        for (method, config_map) in candidates {
+            let ml_method = match method {
+                TrainingMethod::LogisticRegression => MlTrainingMethod::LogisticRegression,
+                TrainingMethod::RandomForestClassification => {
+                    MlTrainingMethod::RandomForestClassification
+                }
+                TrainingMethod::MLPClassification => MlTrainingMethod::MLPClassification,
+                _ => MlTrainingMethod::MLPClassification,
+            };
 
-    #[test]
-    fn test_progress_task() {
-        let pipeline = NodeClassificationTrainingPipeline::new();
-        let node_count = 1000;
+            let trainer_config = create_trainer_config_from_map(config_map.clone(), ml_method);
+            let classifier = self.train_simple_model(
+                node_splits.outer_split(),
+                &features,
+                trainer_config.as_ref(),
+            )?;
 
-        let _task = NodeClassificationTrain::progress_task(&pipeline, node_count);
+            let (train_scores, test_scores) = self.evaluate_model(
+                node_splits.outer_split(),
+                &features,
+                &classifier,
+                &classification_metrics,
+            );
 
-        // Should return placeholder for now
+            let mut trainer_map = trainer_config.to_map();
+            for (key, value) in &config_map {
+                trainer_map.insert(key.clone(), value.clone());
+            }
+
+            training_statistics.add_candidate_stats(ModelCandidateStats::new(
+                serde_json::Value::Object(trainer_map.into_iter().collect()),
+                scores_to_eval_scores(train_scores.clone()),
+                scores_to_eval_scores(test_scores.clone()),
+            ));
+
+            let candidate_score = test_scores.get(&primary_metric).copied().unwrap_or(0.0);
+            let is_best = match best_score {
+                None => true,
+                Some(best) => comparator.compare(candidate_score, best).is_gt(),
+            };
+
+            if is_best {
+                best_score = Some(candidate_score);
+                best_config = Some(trainer_config);
+                best_train_scores = train_scores;
+                best_test_scores = test_scores;
+            }
+        }
+
+        for (metric, score) in &best_train_scores {
+            training_statistics.add_outer_train_score(metric.clone(), *score);
+        }
+        for (metric, score) in &best_test_scores {
+            training_statistics.add_test_score(metric.clone(), *score);
+        }
+
+        let retrained = self.retrain_best_model(
+            node_splits.all_training_examples(),
+            &features,
+            best_config
+                .as_ref()
+                .expect("At least one trainer config is required")
+                .as_ref(),
+        )?;
     }
 
     #[test]
