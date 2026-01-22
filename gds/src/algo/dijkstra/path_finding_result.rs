@@ -81,6 +81,7 @@ impl PathFindingResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::graph::id_map::NodeId;
 
     #[test]
     fn test_path_finding_result_creation() {
@@ -168,8 +169,7 @@ mod tests {
         }];
 
         let mut result = PathFindingResult::new(paths);
-        let target_nodes: Vec<crate::types::graph::id_map::NodeId> =
-            result.map_paths(|path| path.target_node);
+        let target_nodes: Vec<NodeId> = result.map_paths(|path| path.target_node);
 
         assert_eq!(target_nodes, vec![5]);
     }

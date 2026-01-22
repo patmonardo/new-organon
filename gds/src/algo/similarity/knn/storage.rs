@@ -6,6 +6,7 @@ use crate::core::utils::progress::ProgressTracker;
 use crate::ml::core::samplers::RandomWalkSampler;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph_store::GraphStore;
+use crate::types::properties::node::NodePropertyValues;
 use rand::{RngCore, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::sync::Arc;
@@ -220,7 +221,7 @@ impl KnnStorageRuntime {
 
             let mut props: Vec<(
                 String,
-                Arc<dyn crate::types::properties::node::NodePropertyValues>,
+                Arc<dyn NodePropertyValues>,
                 SimilarityMetric,
             )> = Vec::with_capacity(node_properties.len());
 

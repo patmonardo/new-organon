@@ -3,7 +3,8 @@
 use crate::algo::hits::computation::HitsComputationRuntime;
 use crate::algo::hits::storage::HitsStorageRuntime;
 use crate::collections::backends::vec::VecDouble;
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::config::validation::ConfigError;
+use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use crate::projection::NodeLabel;
@@ -47,21 +48,21 @@ impl Default for HitsConfig {
 }
 
 impl HitsConfig {
-    pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         if self.concurrency == 0 {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "concurrency".to_string(),
                 reason: "concurrency must be positive".to_string(),
             });
         }
         if self.max_iterations == 0 {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "maxIterations".to_string(),
                 reason: "maxIterations must be positive".to_string(),
             });
         }
         if self.tolerance <= 0.0 {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "tolerance".to_string(),
                 reason: "tolerance must be positive".to_string(),
             });
@@ -97,7 +98,7 @@ define_algorithm_spec! {
         let storage = HitsStorageRuntime::with_default_projection(graph_store)?;
         let computation = HitsComputationRuntime::new(parsed.tolerance);
 
-        let mut tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+        let mut tracker = TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("hits".to_string(), parsed.max_iterations),
             parsed.concurrency,
         );

@@ -11,6 +11,7 @@ use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
+use crate::types::properties::relationship::traits::RelationshipCursorBox;
 use std::collections::VecDeque;
 
 /// Bellman-Ford Storage Runtime
@@ -311,12 +312,11 @@ impl BellmanFordStorageRuntime {
     ) -> Vec<(NodeId, f64)> {
         if let Some(g) = graph {
             let fallback: f64 = 1.0;
-            let iter: Box<dyn Iterator<Item = crate::types::properties::relationship::traits::RelationshipCursorBox> + Send> =
-                if direction == 1 {
-                    g.stream_inverse_relationships(node_id, fallback)
-                } else {
-                    g.stream_relationships(node_id, fallback)
-                };
+            let iter: Box<dyn Iterator<Item = RelationshipCursorBox> + Send> = if direction == 1 {
+                g.stream_inverse_relationships(node_id, fallback)
+            } else {
+                g.stream_relationships(node_id, fallback)
+            };
             iter.into_iter()
                 .map(|cursor| (cursor.target_id(), cursor.property()))
                 .collect()

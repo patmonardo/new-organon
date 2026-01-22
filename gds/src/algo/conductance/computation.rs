@@ -55,7 +55,7 @@ impl ConductanceComputationRuntime {
             .into_iter()
             .enumerate()
             .map(|(task_index, partition)| {
-                let graph_copy = crate::types::graph::Graph::concurrent_copy(graph.as_ref());
+                let graph_copy = Graph::concurrent_copy(graph.as_ref());
                 let community_properties = Arc::clone(&community_properties);
                 let slots = Arc::clone(&slots);
                 let termination_flag = termination_flag.clone();

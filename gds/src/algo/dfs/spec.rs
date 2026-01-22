@@ -6,6 +6,7 @@
 
 use super::computation::DfsComputationRuntime;
 use super::storage::DfsStorageRuntime;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::codegen::config::validation::ConfigError;
@@ -135,7 +136,7 @@ define_algorithm_spec! {
             node_count,
         );
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
             Tasks::leaf("DFS".to_string()),
             parsed_config.concurrency,
         );

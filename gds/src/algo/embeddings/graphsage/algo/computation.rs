@@ -1,6 +1,7 @@
 //! GraphSAGE Computation Runtime
 
 use super::spec::{GraphSageConfig, GraphSageResult};
+use crate::collections::HugeObjectArray;
 use crate::types::graph::Graph;
 
 pub struct GraphSageComputationRuntime;
@@ -29,7 +30,7 @@ impl GraphSageComputationRuntime {
         let embedding_dimension = 64; // This should come from the model
 
         // Create dummy embeddings for now
-        let mut embeddings = crate::collections::HugeObjectArray::new(node_count);
+        let mut embeddings = HugeObjectArray::new(node_count);
         for i in 0..node_count {
             let embedding: Vec<f64> = (0..embedding_dimension)
                 .map(|_| rand::random::<f64>() * 2.0 - 1.0)

@@ -2,6 +2,7 @@ use super::computation::{KnnComputationResult, KnnComputationRuntime};
 use super::metrics::{KnnNodePropertySpec, SimilarityMetric};
 use super::storage::KnnSamplerType;
 use super::storage::KnnStorageRuntime;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::AlgorithmError;
@@ -168,7 +169,7 @@ define_algorithm_spec! {
         let storage = KnnStorageRuntime::new(parsed.concurrency);
         let computation = KnnComputationRuntime::new();
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("knn".to_string(), graph_store.node_count()),
             parsed.concurrency,
         );

@@ -1,3 +1,4 @@
+use crate::algo::embeddings::gat::storage::GATStorageRuntime;
 use crate::algo::embeddings::GATConfig;
 use crate::algo::embeddings::GATResult;
 use crate::define_algorithm_spec;
@@ -36,7 +37,7 @@ define_algorithm_spec! {
             .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         // Run computation
-        Ok(crate::algo::embeddings::gat::storage::GATStorageRuntime::new()
+        Ok(GATStorageRuntime::new()
             .compute(graph.as_ref(), &config))
     }
 }

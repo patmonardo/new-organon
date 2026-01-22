@@ -11,7 +11,10 @@ use super::mutable_path_result::MutablePathResult;
 use super::spec::{YensPathResult, YensResult};
 use crate::algo::dijkstra::targets::create_targets;
 use crate::algo::dijkstra::{DijkstraComputationRuntime, DijkstraStorageRuntime};
-use crate::core::utils::progress::{ProgressTracker, Tasks, UNKNOWN_VOLUME};
+use crate::algo::prelude::UNKNOWN_VOLUME;
+use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::TaskProgressTracker;
+use crate::core::utils::progress::Tasks;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
@@ -191,11 +194,10 @@ impl YensStorageRuntime {
         let volume = graph
             .map(|g| g.relationship_count())
             .unwrap_or(UNKNOWN_VOLUME);
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("dijkstra".to_string(), volume),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("dijkstra".to_string(), volume),
+            self.concurrency,
+        );
 
         let result = storage.compute_dijkstra(
             &mut computation,

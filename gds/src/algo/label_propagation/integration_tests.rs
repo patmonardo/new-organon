@@ -5,6 +5,7 @@ mod tests {
     use std::collections::HashMap;
     use std::sync::Arc;
 
+    use crate::config::GraphStoreConfig;
     use crate::procedures::GraphFacade;
     use crate::projection::RelationshipType;
     use crate::types::graph::{RelationshipTopology, SimpleIdMap};
@@ -51,7 +52,7 @@ mod tests {
         let id_map = SimpleIdMap::from_original_ids(original_ids);
 
         DefaultGraphStore::new(
-            crate::config::GraphStoreConfig::default(),
+            GraphStoreConfig::default(),
             GraphName::new("g"),
             DatabaseInfo::new(
                 DatabaseId::new("db"),

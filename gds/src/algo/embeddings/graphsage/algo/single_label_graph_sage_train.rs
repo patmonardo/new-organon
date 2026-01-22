@@ -9,6 +9,7 @@ use crate::algo::embeddings::graphsage::graphsage_helper;
 use crate::algo::embeddings::graphsage::graphsage_model_trainer::{
     GraphSageModelTrainer, GraphSageTrainMetrics,
 };
+use crate::algo::embeddings::graphsage::layer::Layer;
 use crate::algo::embeddings::graphsage::single_label_feature_function::SingleLabelFeatureFunction;
 use crate::algo::embeddings::graphsage::train_config_transformer::TrainConfigTransformer;
 use crate::algo::embeddings::graphsage::types::{
@@ -16,6 +17,7 @@ use crate::algo::embeddings::graphsage::types::{
 };
 use crate::concurrency::TerminationFlag;
 use crate::core::model::Model;
+use crate::ml::core::tensor::{Matrix, Vector};
 use crate::types::graph::Graph;
 use std::sync::Arc;
 
@@ -86,9 +88,7 @@ impl GraphSageTrain for SingleLabelGraphSageTrain {
     }
 }
 
-pub(super) fn serialize_layers(
-    layers: &[Arc<dyn crate::algo::embeddings::graphsage::layer::Layer>],
-) -> Vec<LayerData> {
+pub(super) fn serialize_layers(layers: &[Arc<dyn Layer>]) -> Vec<LayerData> {
     use crate::ml::core::tensor::Tensor;
     let mut out = Vec::with_capacity(layers.len());
     for layer in layers {
@@ -98,7 +98,7 @@ pub(super) fn serialize_layers(
                 let w = agg.weights()[0].snapshot();
                 let m = w
                     .as_any()
-                    .downcast_ref::<crate::ml::core::tensor::Matrix>()
+                    .downcast_ref::<Matrix>()
                     .expect("mean weights must be Matrix");
                 out.push(LayerData::Mean {
                     sample_size: layer.sample_size(),
@@ -116,22 +116,10 @@ pub(super) fn serialize_layers(
                 let sw = ws[1].snapshot();
                 let nw = ws[2].snapshot();
                 let b = ws[3].snapshot();
-                let pw = pw
-                    .as_any()
-                    .downcast_ref::<crate::ml::core::tensor::Matrix>()
-                    .unwrap();
-                let sw = sw
-                    .as_any()
-                    .downcast_ref::<crate::ml::core::tensor::Matrix>()
-                    .unwrap();
-                let nw = nw
-                    .as_any()
-                    .downcast_ref::<crate::ml::core::tensor::Matrix>()
-                    .unwrap();
-                let b = b
-                    .as_any()
-                    .downcast_ref::<crate::ml::core::tensor::Vector>()
-                    .unwrap();
+                let pw = pw.as_any().downcast_ref::<Matrix>().unwrap();
+                let sw = sw.as_any().downcast_ref::<Matrix>().unwrap();
+                let nw = nw.as_any().downcast_ref::<Matrix>().unwrap();
+                let b = b.as_any().downcast_ref::<Vector>().unwrap();
                 out.push(LayerData::Pool {
                     sample_size: layer.sample_size(),
                     activation: agg.activation_function_type(),

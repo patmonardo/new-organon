@@ -3,8 +3,11 @@
 use crate::algo::embeddings::graphsage::algo::graph_sage_result::GraphSageResult;
 use crate::algo::embeddings::graphsage::graphsage_embeddings_generator::GraphSageEmbeddingsGenerator;
 use crate::algo::embeddings::graphsage::graphsage_helper;
+use crate::algo::embeddings::graphsage::graphsage_model_trainer::GraphSageTrainMetrics;
+use crate::algo::embeddings::graphsage::types::GraphSageTrainConfig;
 use crate::collections::HugeObjectArray;
 use crate::concurrency::{Concurrency, TerminationFlag};
+use crate::core::model::Model;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::types::graph::Graph;
 use std::sync::Arc;
@@ -15,10 +18,10 @@ pub const MODEL_TYPE: &str = "graphSage";
 pub struct GraphSage {
     graph: Arc<dyn Graph>,
     model: Arc<
-        crate::core::model::Model<
+        Model<
             super::graph_sage_model_data::GraphSageModelData,
-            crate::algo::embeddings::graphsage::types::GraphSageTrainConfig,
-            crate::algo::embeddings::graphsage::graphsage_model_trainer::GraphSageTrainMetrics,
+            GraphSageTrainConfig,
+            GraphSageTrainMetrics,
         >,
     >,
     concurrency: Concurrency,
@@ -32,10 +35,10 @@ impl GraphSage {
     pub fn new(
         graph: Arc<dyn Graph>,
         model: Arc<
-            crate::core::model::Model<
+            Model<
                 super::graph_sage_model_data::GraphSageModelData,
-                crate::algo::embeddings::graphsage::types::GraphSageTrainConfig,
-                crate::algo::embeddings::graphsage::graphsage_model_trainer::GraphSageTrainMetrics,
+                GraphSageTrainConfig,
+                GraphSageTrainMetrics,
             >,
         >,
         concurrency: Concurrency,

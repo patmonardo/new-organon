@@ -1,3 +1,4 @@
+use crate::algo::similarity::knn::computation::KnnComputationRuntime;
 use crate::algo::similarity::knn::computation::KnnNnDescentConfig;
 use crate::algo::similarity::knn::computation::KnnNnDescentStats;
 use crate::algo::similarity::knn::metrics::SimilarityComputer;
@@ -47,7 +48,7 @@ impl FilteredKnnComputationRuntime {
         source_allowed: Option<Arc<Vec<bool>>>,
         target_allowed: Option<Arc<Vec<bool>>>,
     ) -> (Vec<FilteredKnnComputationResult>, KnnNnDescentStats) {
-        let engine = crate::algo::similarity::knn::KnnComputationRuntime::new();
+        let engine = KnnComputationRuntime::new();
         let (rows, stats) = engine.compute_nn_descent(
             node_count,
             initial_neighbors,

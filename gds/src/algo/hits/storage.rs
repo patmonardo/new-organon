@@ -6,6 +6,8 @@
 //! - (eventually) termination and progress bridging
 
 use crate::algo::hits::computation::HitsComputationRuntime;
+use crate::config::{ConcurrencyConfig, Config, IterationsConfig, PregelRuntimeConfig};
+use crate::core::utils::partition::Partitioning;
 use crate::core::utils::progress::ProgressTracker;
 use crate::pregel::{Pregel, SyncQueueMessenger};
 use crate::projection::eval::procedure::AlgorithmError;
@@ -33,15 +35,15 @@ pub struct HitsPregelRuntimeConfig {
     pub max_iterations: usize,
 }
 
-impl crate::config::Config for HitsPregelRuntimeConfig {}
+impl Config for HitsPregelRuntimeConfig {}
 
-impl crate::config::ConcurrencyConfig for HitsPregelRuntimeConfig {
+impl ConcurrencyConfig for HitsPregelRuntimeConfig {
     fn concurrency(&self) -> usize {
         self.concurrency
     }
 }
 
-impl crate::config::IterationsConfig for HitsPregelRuntimeConfig {
+impl IterationsConfig for HitsPregelRuntimeConfig {
     fn max_iterations(&self) -> usize {
         self.max_iterations
     }
@@ -51,13 +53,13 @@ impl crate::config::IterationsConfig for HitsPregelRuntimeConfig {
     }
 }
 
-impl crate::config::PregelRuntimeConfig for HitsPregelRuntimeConfig {
+impl PregelRuntimeConfig for HitsPregelRuntimeConfig {
     fn is_asynchronous(&self) -> bool {
         false
     }
 
-    fn partitioning(&self) -> crate::core::utils::partition::Partitioning {
-        crate::core::utils::partition::Partitioning::Range
+    fn partitioning(&self) -> Partitioning {
+        Partitioning::Range
     }
 
     fn track_sender(&self) -> bool {

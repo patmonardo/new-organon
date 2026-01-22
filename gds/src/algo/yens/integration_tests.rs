@@ -7,6 +7,7 @@
 use super::computation::YensComputationRuntime;
 use super::spec::{YensConfig, YensResult};
 use super::storage::YensStorageRuntime;
+use crate::algo::yens::YENSAlgorithmSpec;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::projection::eval::procedure::AlgorithmSpec;
 use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor};
@@ -21,7 +22,7 @@ mod tests {
 
     #[test]
     fn test_yens_algorithm_spec_contract() {
-        let spec = crate::algo::yens::YENSAlgorithmSpec::new("test_graph".to_string());
+        let spec = YENSAlgorithmSpec::new("test_graph".to_string());
         assert_eq!(spec.name(), "yens");
         assert_eq!(spec.graph_name(), "test_graph");
     }
@@ -66,7 +67,7 @@ mod tests {
 
     #[test]
     fn test_yens_focused_macro_integration() {
-        let spec = crate::algo::yens::YENSAlgorithmSpec::new("test_graph".to_string());
+        let spec = YENSAlgorithmSpec::new("test_graph".to_string());
         assert_eq!(spec.name(), "yens");
         assert_eq!(spec.graph_name(), "test_graph");
 
@@ -126,7 +127,7 @@ mod tests {
         let context = ExecutionContext::new("test_user");
         let mut executor = ProcedureExecutor::new(context, ExecutionMode::Stream);
 
-        let mut spec = crate::algo::yens::YENSAlgorithmSpec::new("test_graph".to_string());
+        let mut spec = YENSAlgorithmSpec::new("test_graph".to_string());
 
         let config = json!({
             "source_node": 0,

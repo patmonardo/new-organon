@@ -3,6 +3,7 @@
 use crate::collections::HugeObjectArray;
 use crate::concurrency::virtual_threads::RunWithConcurrency;
 use crate::concurrency::TerminationFlag;
+use crate::core::model::ModelCatalogCustomInfo;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::functions::{ConstantScale, ElementSum, L2NormSquared, Weights};
 use crate::ml::core::optimizer::AdamOptimizer;
@@ -11,7 +12,7 @@ use crate::ml::core::relationship_weights::{
     ClosureRelationshipWeights, RelationshipWeights, UNWEIGHTED,
 };
 use crate::ml::core::tensor::{Scalar, Tensor};
-use crate::ml::core::variable::VariableRef;
+use crate::ml::core::variable::{Variable, VariableRef};
 use crate::types::graph::Graph;
 use rand::Rng;
 use rand::SeedableRng;
@@ -32,7 +33,7 @@ pub struct GraphSageTrainMetrics {
     pub did_converge: bool,
 }
 
-impl crate::core::model::ModelCatalogCustomInfo for GraphSageTrainMetrics {
+impl ModelCatalogCustomInfo for GraphSageTrainMetrics {
     fn to_map(&self) -> serde_json::Value {
         serde_json::json!({
             "didConverge": self.did_converge,
@@ -400,10 +401,7 @@ fn run_batch(
     ctx.backward(loss.as_ref());
     let gradients: Vec<Box<dyn Tensor>> = weights
         .iter()
-        .map(|w| {
-            ctx.gradient((w.as_ref()) as &dyn crate::ml::core::variable::Variable)
-                .unwrap()
-        })
+        .map(|w| ctx.gradient((w.as_ref()) as &dyn Variable).unwrap())
         .collect();
 
     BatchResult {

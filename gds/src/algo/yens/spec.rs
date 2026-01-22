@@ -6,6 +6,7 @@
 
 use super::computation::YensComputationRuntime;
 use super::storage::YensStorageRuntime;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::codegen::config::validation::ConfigError;
@@ -207,7 +208,7 @@ define_algorithm_spec! {
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to obtain graph view: {}", e)))?;
 
         // Execute Yen's algorithm
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("yens".to_string(), parsed_config.k),
             parsed_config.concurrency,
         );

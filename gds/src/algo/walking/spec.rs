@@ -4,6 +4,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::types::graph_store::DefaultGraphStore;
+
 /// Configuration for path-collapsing traversal.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CollapsePathConfig {
@@ -45,7 +47,7 @@ pub struct CollapsePathResult {
     /// Relationship count of the output graph.
     pub relationship_count: u64,
     /// Graph store containing the collapsed edges.
-    pub graph_store: crate::types::graph_store::DefaultGraphStore,
+    pub graph_store: DefaultGraphStore,
 }
 
 /// Marker type for executor catalog integration.

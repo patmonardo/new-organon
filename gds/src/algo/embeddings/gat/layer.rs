@@ -1,6 +1,7 @@
 use super::attention::AttentionMechanism;
 use super::config::GATConfig;
 use crate::types::graph::id_map::NodeId;
+use crate::types::graph::Graph;
 use std::collections::HashMap;
 
 pub struct GATLayer {
@@ -16,11 +17,7 @@ impl GATLayer {
         }
     }
 
-    pub fn forward(
-        &mut self,
-        graph: &dyn crate::types::graph::Graph,
-        features: &mut HashMap<NodeId, Vec<f64>>,
-    ) {
+    pub fn forward(&mut self, graph: &dyn Graph, features: &mut HashMap<NodeId, Vec<f64>>) {
         // For each node, compute attention and aggregate
         let nodes: Vec<NodeId> = graph.iter().collect();
 

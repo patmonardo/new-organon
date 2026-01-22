@@ -6,7 +6,8 @@ use crate::algo::degree_centrality::computation::DegreeCentralityComputationRunt
 use crate::algo::degree_centrality::storage::{DegreeCentralityStorageRuntime, Orientation};
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::{ProgressTracker, Tasks};
+use crate::config::validation::ConfigError;
+use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use crate::projection::NodeLabel;
@@ -51,15 +52,15 @@ impl Default for DegreeCentralityConfig {
 }
 
 impl DegreeCentralityConfig {
-    pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         if self.concurrency == 0 {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "concurrency".to_string(),
                 reason: "concurrency must be positive".to_string(),
             });
         }
         if self.orientation.trim().is_empty() {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "orientation".to_string(),
                 reason: "orientation must be non-empty".to_string(),
             });
@@ -110,7 +111,7 @@ define_algorithm_spec! {
 
         let node_count = storage.node_count();
 
-        let tracker = Arc::new(Mutex::new(crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+        let tracker = Arc::new(Mutex::new(TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("degree_centrality".to_string(), node_count),
             parsed.concurrency,
         )));

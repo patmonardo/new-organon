@@ -16,7 +16,7 @@ use crate::algo::embeddings::graphsage::types::{GraphSageTrainConfig, GraphSageT
 use crate::concurrency::TerminationFlag;
 use crate::core::model::Model;
 use crate::ml::core::functions::Weights;
-use crate::ml::core::tensor::Tensor;
+use crate::ml::core::tensor::{Matrix, Tensor};
 use crate::types::graph::Graph;
 use crate::types::schema::NodeLabel;
 use std::collections::HashMap;
@@ -105,7 +105,7 @@ impl GraphSageTrain for MultiLabelGraphSageTrain {
             let t = w.snapshot();
             let m = t
                 .as_any()
-                .downcast_ref::<crate::ml::core::tensor::Matrix>()
+                .downcast_ref::<Matrix>()
                 .expect("label projection weights must be Matrix");
             weights_ser.push((
                 label.name().to_string(),

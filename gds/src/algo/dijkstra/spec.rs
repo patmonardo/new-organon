@@ -10,7 +10,10 @@ use super::computation::DijkstraComputationRuntime;
 use super::path_finding_result::PathFindingResult;
 use super::storage::DijkstraStorageRuntime;
 use super::targets::create_targets;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
+use crate::projection::codegen::config::validation::ConfigError;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -86,34 +89,26 @@ impl DijkstraDirection {
 
 impl DijkstraConfig {
     /// Validate configuration parameters
-    pub fn validate(
-        &self,
-    ) -> Result<(), crate::projection::codegen::config::validation::ConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         if self.source_node < 0 {
-            return Err(
-                crate::projection::codegen::config::validation::ConfigError::FieldValidation {
-                    field: "source_node".to_string(),
-                    message: "Must be >= 0".to_string(),
-                },
-            );
+            return Err(ConfigError::FieldValidation {
+                field: "source_node".to_string(),
+                message: "Must be >= 0".to_string(),
+            });
         }
 
         if let Some(bad) = self.target_nodes.iter().copied().find(|id| *id < 0) {
-            return Err(
-                crate::projection::codegen::config::validation::ConfigError::FieldValidation {
-                    field: "target_nodes".to_string(),
-                    message: format!("All target nodes must be >= 0, got {}", bad),
-                },
-            );
+            return Err(ConfigError::FieldValidation {
+                field: "target_nodes".to_string(),
+                message: format!("All target nodes must be >= 0, got {}", bad),
+            });
         }
 
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::codegen::config::validation::ConfigError::FieldValidation {
-                    field: "concurrency".to_string(),
-                    message: "Must be greater than 0".to_string(),
-                },
-            );
+            return Err(ConfigError::FieldValidation {
+                field: "concurrency".to_string(),
+                message: "Must be greater than 0".to_string(),
+            });
         }
 
         Ok(())
@@ -180,13 +175,13 @@ define_algorithm_spec! {
         use crate::core::utils::progress::Tasks;
         // Parse configuration
         let config: DijkstraConfig = serde_json::from_value(config.clone())
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+            .map_err(|e| AlgorithmError::InvalidGraph(
                 format!("Failed to parse Dijkstra config: {}", e)
             ))?;
 
         // Validate configuration
         config.validate()
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+            .map_err(|e| AlgorithmError::InvalidGraph(
                 format!("Configuration validation failed: {:?}", e)
             ))?;
 
@@ -222,7 +217,7 @@ define_algorithm_spec! {
 
         let graph = graph_store
             .get_graph_with_types_and_orientation(&rel_types, orientation)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+            .map_err(|e| AlgorithmError::InvalidGraph(
                 format!("Failed to obtain graph view: {}", e)
             ))?;
 
@@ -231,7 +226,7 @@ define_algorithm_spec! {
         // Progress tracking: volume is best-effort (relationship count);
         // work units are counted inside the driver loop in storage.
         let volume = graph.relationship_count();
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("dijkstra".to_string(), volume),
             config.concurrency,
         );

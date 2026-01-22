@@ -349,12 +349,13 @@ mod tests {
 
     #[test]
     fn test_astar_path_computation() {
+        use super::super::computation::AStarComputationRuntime;
+        use crate::core::utils::progress::{TaskProgressTracker, Tasks};
+
         let mut storage = AStarStorageRuntime::new(0, 1, "lat".to_string(), "lon".to_string());
 
-        let mut computation = crate::algo::astar::computation::AStarComputationRuntime::new();
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
-            crate::core::utils::progress::Tasks::leaf("astar".to_string()),
-        );
+        let mut computation = AStarComputationRuntime::new();
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("astar".to_string()));
 
         let result = storage
             .compute_astar_path(&mut computation, None, 0, &mut progress_tracker)
@@ -370,6 +371,9 @@ mod tests {
 
     #[test]
     fn test_astar_path_same_source_target() {
+        use super::super::computation::AStarComputationRuntime;
+        use crate::core::utils::progress::{TaskProgressTracker, Tasks};
+
         let mut storage = AStarStorageRuntime::new(
             5,
             5, // Same source and target
@@ -377,10 +381,8 @@ mod tests {
             "lon".to_string(),
         );
 
-        let mut computation = crate::algo::astar::computation::AStarComputationRuntime::new();
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
-            crate::core::utils::progress::Tasks::leaf("astar".to_string()),
-        );
+        let mut computation = AStarComputationRuntime::new();
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("astar".to_string()));
 
         let result = storage
             .compute_astar_path(&mut computation, None, 0, &mut progress_tracker)

@@ -5,6 +5,7 @@
 //! This module contains integration tests for A* algorithm with the executor runtime.
 
 use super::*;
+use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::projection::eval::procedure::{
     AlgorithmSpec, ExecutionContext, ExecutionMode, ProcedureExecutor,
 };
@@ -95,9 +96,7 @@ fn test_astar_storage_computation_integration() {
         AStarStorageRuntime::new(0, 1, "latitude".to_string(), "longitude".to_string());
 
     let mut computation = AStarComputationRuntime::new();
-    let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
-        crate::core::utils::progress::Tasks::leaf("astar".to_string()),
-    );
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("astar".to_string()));
 
     let result = storage
         .compute_astar_path(&mut computation, None, 0, &mut progress_tracker)
@@ -191,9 +190,7 @@ fn test_astar_algorithm_completeness() {
     // Test computation runtime
     let mut computation = AStarComputationRuntime::new();
 
-    let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
-        crate::core::utils::progress::Tasks::leaf("astar".to_string()),
-    );
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("astar".to_string()));
 
     // Test integration
     let result = storage

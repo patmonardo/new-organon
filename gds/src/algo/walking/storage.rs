@@ -135,6 +135,7 @@ fn build_outgoing(
 mod tests {
     use super::*;
     use crate::config::GraphStoreConfig;
+    use crate::types::graph::id_map::SimpleIdMap;
     use crate::types::graph::RelationshipTopology;
     use crate::types::graph_store::{Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation};
     use crate::types::schema::{GraphSchema, MutableGraphSchema, NodeLabel};
@@ -157,7 +158,7 @@ mod tests {
             .add_relationship_type(rel.clone(), Direction::Directed);
         let schema: GraphSchema = schema.build();
 
-        let id_map = crate::types::graph::id_map::SimpleIdMap::from_original_ids([0, 1, 2]);
+        let id_map = SimpleIdMap::from_original_ids([0, 1, 2]);
 
         let outgoing = vec![vec![1], vec![2], vec![]];
         let mut topologies = HashMap::new();

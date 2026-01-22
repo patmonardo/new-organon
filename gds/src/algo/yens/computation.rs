@@ -8,6 +8,8 @@ use super::mutable_path_result::MutablePathResult;
 use super::relationship_filterer::RelationshipFilterer;
 use super::spec::YensResult;
 use super::storage::YensStorageRuntime;
+use crate::core::utils::progress::TaskProgressTracker;
+use crate::core::utils::progress::Tasks;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use std::collections::HashMap;
@@ -134,11 +136,10 @@ impl YensComputationRuntime {
 
         // Create a dummy progress tracker
         // In a real implementation, this would be passed in
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                crate::core::utils::progress::Tasks::leaf("yens".to_string()),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf("yens".to_string()),
+            self.concurrency,
+        );
 
         // Run the algorithm
         storage

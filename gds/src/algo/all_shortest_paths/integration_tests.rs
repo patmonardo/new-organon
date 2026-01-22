@@ -6,6 +6,7 @@
 #[cfg(test)]
 mod tests {
     use crate::algo::all_shortest_paths::ALL_SHORTEST_PATHSAlgorithmSpec;
+    use crate::algo::all_shortest_paths::{AllShortestPathsResult, ShortestPathResult};
     use crate::projection::eval::procedure::{
         AlgorithmSpec, ComputationResult, ExecutionContext, ExecutionMode, ProcedureExecutor,
         ProjectionHint,
@@ -47,14 +48,14 @@ mod tests {
         // Create mock computation results for each test
         let create_result = || {
             ComputationResult::new(
-                crate::algo::all_shortest_paths::AllShortestPathsResult {
+                AllShortestPathsResult {
                     results: vec![
-                        crate::algo::all_shortest_paths::ShortestPathResult {
+                        ShortestPathResult {
                             source: 0 as NodeId,
                             target: 1 as NodeId,
                             distance: 2.0,
                         },
-                        crate::algo::all_shortest_paths::ShortestPathResult {
+                        ShortestPathResult {
                             source: 0 as NodeId,
                             target: 2 as NodeId,
                             distance: 4.0,

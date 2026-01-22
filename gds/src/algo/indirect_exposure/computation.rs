@@ -2,6 +2,8 @@
 //! Translation source: `org.neo4j.gds.indirectExposure.IndirectExposureComputation`.
 
 use crate::collections::{HugeAtomicBitSet, HugeAtomicLongArray};
+use crate::config::{ConcurrencyConfig, Config, IterationsConfig};
+use crate::core::utils::partition::Partitioning;
 use crate::pregel::{
     ComputeContext, DefaultValue, InitContext, Messages, PregelRuntimeConfig, PregelSchema,
     PregelSchemaBuilder, Reducer, ReducingMessageIterator, Visibility,
@@ -157,15 +159,15 @@ pub struct IndirectExposurePregelRuntimeConfig {
     pub max_iterations: usize,
 }
 
-impl crate::config::Config for IndirectExposurePregelRuntimeConfig {}
+impl Config for IndirectExposurePregelRuntimeConfig {}
 
-impl crate::config::ConcurrencyConfig for IndirectExposurePregelRuntimeConfig {
+impl ConcurrencyConfig for IndirectExposurePregelRuntimeConfig {
     fn concurrency(&self) -> usize {
         self.concurrency
     }
 }
 
-impl crate::config::IterationsConfig for IndirectExposurePregelRuntimeConfig {
+impl IterationsConfig for IndirectExposurePregelRuntimeConfig {
     fn max_iterations(&self) -> usize {
         self.max_iterations
     }
@@ -180,8 +182,8 @@ impl PregelRuntimeConfig for IndirectExposurePregelRuntimeConfig {
         false
     }
 
-    fn partitioning(&self) -> crate::core::utils::partition::Partitioning {
-        crate::core::utils::partition::Partitioning::Range
+    fn partitioning(&self) -> Partitioning {
+        Partitioning::Range
     }
 
     fn track_sender(&self) -> bool {

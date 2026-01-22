@@ -1,6 +1,7 @@
 //! IndexInverse specification and configuration.
 //! Mirrors the Java `InverseRelationshipsConfig`/parameters.
 
+use crate::types::graph_store::DefaultGraphStore;
 use serde::{Deserialize, Serialize};
 
 /// Configuration for building inverse relationship indices.
@@ -34,7 +35,7 @@ pub struct IndexInverseResult {
     /// Relationship count of the output graph.
     pub relationship_count: u64,
     /// Graph store containing inverse indices.
-    pub graph_store: crate::types::graph_store::DefaultGraphStore,
+    pub graph_store: DefaultGraphStore,
 }
 
 /// Catalog marker for executor wiring.

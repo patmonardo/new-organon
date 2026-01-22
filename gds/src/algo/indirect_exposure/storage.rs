@@ -8,7 +8,7 @@
 
 use super::computation::{IndirectExposureComputationRuntime, IndirectExposurePregelRuntimeConfig};
 use super::spec::{IndirectExposureConfig, IndirectExposureResult};
-use crate::pregel::{Pregel, ReducingMessenger};
+use crate::pregel::{Pregel, PregelResult, ReducingMessenger};
 use crate::projection::{Orientation, RelationshipType};
 use crate::types::graph::Graph;
 use crate::types::prelude::GraphStore;
@@ -150,10 +150,7 @@ impl IndirectExposureStorageRuntime {
     }
 }
 
-fn materialize_result(
-    result: &crate::pregel::PregelResult,
-    node_count: usize,
-) -> IndirectExposureResult {
+fn materialize_result(result: &PregelResult, node_count: usize) -> IndirectExposureResult {
     let mut exposures = Vec::with_capacity(node_count);
     let mut roots = Vec::with_capacity(node_count);
     let mut parents = Vec::with_capacity(node_count);

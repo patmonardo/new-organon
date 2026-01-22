@@ -3,7 +3,7 @@
 //! This is the **Subtle pole**: ephemeral computation state for HashGNN.
 
 use crate::concurrency::{Concurrency, TerminationFlag};
-use crate::core::utils::progress::Tasks;
+use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::Graph;
 use std::sync::Arc;
@@ -53,10 +53,7 @@ impl HashGNNComputationRuntime {
         let algo = super::super::hash_gnn::HashGNN::new(
             graph,
             params,
-            crate::core::utils::progress::TaskProgressTracker::new(Tasks::leaf_with_volume(
-                "HashGNN".to_string(),
-                1,
-            )),
+            TaskProgressTracker::new(Tasks::leaf_with_volume("HashGNN".to_string(), 1)),
             TerminationFlag::default(),
         );
 

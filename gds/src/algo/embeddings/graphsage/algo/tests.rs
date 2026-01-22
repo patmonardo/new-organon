@@ -1,8 +1,13 @@
 use super::*;
+use crate::algo::embeddings::graphsage::types::{
+    ActivationFunctionType, AggregatorType, GraphSageTrainConfig,
+};
+use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::graph_dimensions::ConcreteGraphDimensions;
 use crate::core::model::{InMemoryModelCatalog, ModelCatalog};
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::mem::MemoryEstimation;
+use crate::types::graph::Graph;
 use crate::types::graph_store::DefaultGraphStore;
 use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 
@@ -21,10 +26,10 @@ fn graphsage_train_then_infer_via_catalog() {
     .unwrap();
     let graph = store.graph();
 
-    let train_cfg = crate::algo::embeddings::graphsage::types::GraphSageTrainConfig {
+    let train_cfg = GraphSageTrainConfig {
         model_user: "alice".to_string(),
         model_name: "m1".to_string(),
-        concurrency: crate::concurrency::Concurrency::of(1),
+        concurrency: Concurrency::of(1),
         batch_size: 10,
         max_iterations: 2,
         search_depth: 2,
@@ -38,18 +43,17 @@ fn graphsage_train_then_infer_via_catalog() {
         feature_properties: vec!["random_score".to_string()],
         maybe_batch_sampling_ratio: None,
         random_seed: Some(42),
-        aggregator: crate::algo::embeddings::graphsage::types::AggregatorType::Mean,
-        activation_function:
-            crate::algo::embeddings::graphsage::types::ActivationFunctionType::Relu,
+        aggregator: AggregatorType::Mean,
+        activation_function: ActivationFunctionType::Relu,
         is_multi_label: true,
         projected_feature_dimension: Some(4),
     };
 
     let train = GraphSageTrainAlgorithmFactory::new("1.0.0".to_string()).build(
-        crate::types::graph::Graph::concurrent_copy(graph.as_ref()),
+        Graph::concurrent_copy(graph.as_ref()),
         train_cfg.clone(),
         TaskProgressTracker::new(Tasks::leaf_with_volume("GraphSageTrain".to_string(), 1)),
-        crate::concurrency::TerminationFlag::default(),
+        TerminationFlag::default(),
     );
     let model = train.compute();
 
@@ -58,10 +62,10 @@ fn graphsage_train_then_infer_via_catalog() {
 
     let factory = GraphSageAlgorithmFactory::new(std::sync::Arc::new(catalog));
     let algo = factory.build(
-        crate::types::graph::Graph::concurrent_copy(graph.as_ref()),
+        Graph::concurrent_copy(graph.as_ref()),
         "alice",
         "m1",
-        crate::concurrency::Concurrency::of(1),
+        Concurrency::of(1),
         10,
         TaskProgressTracker::new(Tasks::leaf_with_volume("GraphSage".to_string(), 1)),
     );
@@ -74,10 +78,10 @@ fn graphsage_train_then_infer_via_catalog() {
 #[test]
 fn graphsage_memory_estimation_smoke() {
     let dims = ConcreteGraphDimensions::of(1000, 5000);
-    let cfg = crate::algo::embeddings::graphsage::types::GraphSageTrainConfig {
+    let cfg = GraphSageTrainConfig {
         model_user: "alice".to_string(),
         model_name: "m1".to_string(),
-        concurrency: crate::concurrency::Concurrency::of(4),
+        concurrency: Concurrency::of(4),
         batch_size: 100,
         max_iterations: 10,
         search_depth: 2,
@@ -91,9 +95,8 @@ fn graphsage_memory_estimation_smoke() {
         feature_properties: vec!["f".to_string()],
         maybe_batch_sampling_ratio: None,
         random_seed: Some(42),
-        aggregator: crate::algo::embeddings::graphsage::types::AggregatorType::Mean,
-        activation_function:
-            crate::algo::embeddings::graphsage::types::ActivationFunctionType::Relu,
+        aggregator: AggregatorType::Mean,
+        activation_function: ActivationFunctionType::Relu,
         is_multi_label: false,
         projected_feature_dimension: None,
     };

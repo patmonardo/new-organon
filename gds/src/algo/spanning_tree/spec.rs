@@ -6,6 +6,7 @@
 //! using our focused macro system.
 
 use super::storage::SpanningTreeStorageRuntime;
+use crate::config::validation::ConfigError;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -68,23 +69,23 @@ impl SpanningTreeConfig {
     /// # Returns
     ///
     /// A `Result` indicating success or failure with details.
-    pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         if self.concurrency == 0 {
-            return Err(crate::config::validation::ConfigError::MustBePositive {
+            return Err(ConfigError::MustBePositive {
                 name: "concurrency".to_string(),
                 value: self.concurrency as f64,
             });
         }
 
         if self.weight_property.trim().is_empty() {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "weight_property".to_string(),
                 reason: "Weight property must be non-empty".to_string(),
             });
         }
 
         if self.direction.trim().is_empty() {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "direction".to_string(),
                 reason: "Direction must be non-empty".to_string(),
             });
@@ -256,6 +257,7 @@ mod tests {
     use crate::algo::spanning_tree::SpanningTree;
     use crate::projection::eval::procedure::AlgorithmSpec;
     use crate::projection::eval::procedure::ExecutionContext;
+    use crate::projection::eval::procedure::ExecutionMode;
     use serde_json::json;
 
     #[test]
@@ -319,10 +321,10 @@ mod tests {
 
         // Test all execution modes
         let _modes = vec![
-            crate::projection::eval::procedure::ExecutionMode::Stream,
-            crate::projection::eval::procedure::ExecutionMode::Stats,
-            crate::projection::eval::procedure::ExecutionMode::MutateNodeProperty,
-            crate::projection::eval::procedure::ExecutionMode::WriteNodeProperty,
+            ExecutionMode::Stream,
+            ExecutionMode::Stats,
+            ExecutionMode::MutateNodeProperty,
+            ExecutionMode::WriteNodeProperty,
         ];
 
         // Test that the algorithm can be created

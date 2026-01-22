@@ -6,6 +6,7 @@
 //! This spec exposes a canonical config/result surface and delegates execution
 //! to the computation runtime.
 
+use crate::collections::HugeObjectArray;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -65,7 +66,7 @@ impl Default for GraphSageConfig {
 
 /// GraphSAGE result containing node embeddings.
 pub struct GraphSageResult {
-    pub embeddings: crate::collections::HugeObjectArray<Vec<f64>>,
+    pub embeddings: HugeObjectArray<Vec<f64>>,
     pub embedding_dimension: usize,
     pub node_count: usize,
 }

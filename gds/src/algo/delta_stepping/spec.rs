@@ -8,7 +8,10 @@
 
 use super::computation::DeltaSteppingComputationRuntime;
 use super::storage::DeltaSteppingStorageRuntime;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
+use crate::projection::codegen::config::validation::ConfigError;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -80,10 +83,10 @@ impl DeltaSteppingConfig {
     /// Validate configuration parameters
     pub fn validate(
         &self,
-    ) -> Result<(), crate::projection::codegen::config::validation::ConfigError> {
+    ) -> Result<(), ConfigError> {
         if self.concurrency == 0 {
             return Err(
-                crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+                ConfigError::FieldValidation {
                     field: "concurrency".to_string(),
                     message: "Must be greater than 0".to_string(),
                 },
@@ -92,7 +95,7 @@ impl DeltaSteppingConfig {
 
         if self.delta <= 0.0 {
             return Err(
-                crate::projection::codegen::config::validation::ConfigError::FieldValidation {
+                ConfigError::FieldValidation {
                     field: "delta".to_string(),
                     message: "Must be greater than 0.0".to_string(),
                 },
@@ -160,13 +163,13 @@ define_algorithm_spec! {
         use crate::core::utils::progress::Tasks;
         // Parse configuration
         let config: DeltaSteppingConfig = serde_json::from_value(config.clone())
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+            .map_err(|e| AlgorithmError::InvalidGraph(
                 format!("Failed to parse Delta Stepping config: {}", e)
             ))?;
 
         // Validate configuration
         config.validate()
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+            .map_err(|e| AlgorithmError::InvalidGraph(
                 format!("Configuration validation failed: {:?}", e)
             ))?;
 
@@ -195,7 +198,7 @@ define_algorithm_spec! {
         };
         let graph = graph_store
             .get_graph_with_types_and_orientation(&rel_types, orientation)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::InvalidGraph(
+            .map_err(|e| AlgorithmError::InvalidGraph(
                 format!("Failed to obtain graph view: {}", e)
             ))?;
 
@@ -204,7 +207,7 @@ define_algorithm_spec! {
         // Progress tracking: best-effort volume (relationship count);
         // work units are counted inside the driver loop in storage.
         let volume = graph.relationship_count();
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("delta_stepping".to_string(), volume),
             config.concurrency,
         );

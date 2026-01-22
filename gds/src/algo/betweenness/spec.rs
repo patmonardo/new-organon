@@ -1,7 +1,9 @@
 //! Betweenness Centrality specification
 
 use crate::algo::betweenness::BetweennessCentralityComputationRuntime;
+use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
@@ -123,13 +125,13 @@ define_algorithm_spec! {
 
         let mut computation = BetweennessCentralityComputationRuntime::new(node_count);
 
-        let tracker = Arc::new(Mutex::new(crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+        let tracker = Arc::new(Mutex::new(TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("betweenness".to_string(), sources.len()),
             parsed.concurrency,
         )));
         tracker.lock().unwrap().begin_subtask_with_volume(sources.len());
 
-        let termination = crate::concurrency::TerminationFlag::default();
+        let termination = TerminationFlag::default();
         let on_done = {
             let tracker = Arc::clone(&tracker);
             Arc::new(move || {

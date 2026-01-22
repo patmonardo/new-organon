@@ -4,7 +4,10 @@
 //!
 //! This module defines the A* algorithm specification using focused macros.
 
+use crate::config::validation::ConfigError;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use serde::{Deserialize, Serialize};
@@ -75,22 +78,22 @@ impl AStarDirection {
 
 impl AStarConfig {
     /// Validate configuration parameters
-    pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         if self.concurrency == 0 {
-            return Err(crate::config::validation::ConfigError::MustBePositive {
+            return Err(ConfigError::MustBePositive {
                 name: "concurrency".to_string(),
                 value: 0.0,
             });
         }
 
         if self.latitude_property.is_empty() {
-            return Err(crate::config::validation::ConfigError::RequiredParameter {
+            return Err(ConfigError::RequiredParameter {
                 name: "latitude_property".to_string(),
             });
         }
 
         if self.longitude_property.is_empty() {
-            return Err(crate::config::validation::ConfigError::RequiredParameter {
+            return Err(ConfigError::RequiredParameter {
                 name: "longitude_property".to_string(),
             });
         }
@@ -157,11 +160,11 @@ define_algorithm_spec! {
 
         // Parse config
         let parsed_config: AStarConfig = serde_json::from_value(config.clone())
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
 
         // Validate config
         parsed_config.validate()
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
 
         // Build filtered/oriented graph view via overloads
         let rel_types: HashSet<RelationshipType> = if !parsed_config.relationship_types.is_empty() {
@@ -173,7 +176,7 @@ define_algorithm_spec! {
         };
         let graph = graph_store
             .get_graph_with_types_and_orientation(&rel_types, orientation)
-            .map_err(|e| crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string()))?;
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
         let lat_values = graph.node_properties(&parsed_config.latitude_property);
         let lon_values = graph.node_properties(&parsed_config.longitude_property);
 
@@ -201,7 +204,7 @@ define_algorithm_spec! {
         // Progress tracking: A* volume is best-effort (relationship count);
         // work units are counted inside the driver loop in storage.
         let volume = graph.relationship_count();
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("astar".to_string(), volume),
             parsed_config.concurrency,
         );
@@ -215,7 +218,7 @@ define_algorithm_spec! {
                 direction as u8,
                 &mut progress_tracker,
             )
-            .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+            .map_err(AlgorithmError::Execution)?;
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
@@ -314,6 +317,8 @@ mod tests {
 
     #[test]
     fn test_astar_focused_macro_integration() {
+        use crate::projection::eval::procedure::ExecutionContext;
+
         let spec = ASTARAlgorithmSpec::new("test_graph".to_string());
         let _config = AStarConfig::default();
 
@@ -322,9 +327,7 @@ mod tests {
         assert_eq!(spec.graph_name(), "test_graph");
 
         // Test config validation through spec
-        let validation_config = spec.validation_config(
-            &crate::projection::eval::procedure::ExecutionContext::new("test"),
-        );
+        let validation_config = spec.validation_config(&ExecutionContext::new("test"));
         assert!(validation_config.validate_before_load(&json!({})).is_ok());
     }
 }

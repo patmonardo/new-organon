@@ -1,9 +1,9 @@
 //! Java: `GraphSageModel` (record).
 
-use crate::algo::embeddings::graphsage::types::GraphSageTrainConfig;
+use crate::algo::embeddings::graphsage::types::{GraphSageTrainConfig, LayerConfig};
 
 #[derive(Debug, Clone)]
 pub struct GraphSageModel {
-    pub layers: Vec<crate::algo::embeddings::graphsage::types::LayerConfig>,
+    pub layers: Vec<LayerConfig>,
     pub config: GraphSageTrainConfig,
 }

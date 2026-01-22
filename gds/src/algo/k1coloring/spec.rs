@@ -3,6 +3,8 @@
 use crate::algo::k1coloring::storage::K1ColoringStorageRuntime;
 use crate::algo::k1coloring::K1ColoringComputationRuntime;
 use crate::concurrency::TerminationFlag;
+use crate::config::validation::ConfigError;
+use crate::core::utils::partition::DEFAULT_BATCH_SIZE;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
@@ -31,7 +33,7 @@ fn default_max_iterations() -> u64 {
 }
 
 fn default_min_batch_size() -> usize {
-    crate::core::utils::partition::DEFAULT_BATCH_SIZE
+    DEFAULT_BATCH_SIZE
 }
 
 impl Default for K1ColoringConfig {
@@ -45,21 +47,21 @@ impl Default for K1ColoringConfig {
 }
 
 impl K1ColoringConfig {
-    pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         if self.concurrency == 0 {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "concurrency".to_string(),
                 reason: "concurrency must be positive".to_string(),
             });
         }
         if self.max_iterations == 0 {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "maxIterations".to_string(),
                 reason: "Must iterate at least 1 time".to_string(),
             });
         }
         if self.min_batch_size == 0 {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "minBatchSize".to_string(),
                 reason: "minBatchSize must be positive".to_string(),
             });

@@ -3,6 +3,7 @@
 use crate::ml::core::abstract_variable::AbstractVariable;
 use crate::ml::core::computation_context::ComputationContext;
 use crate::ml::core::dimensions;
+use crate::ml::core::functions::Sigmoid;
 use crate::ml::core::relationship_weights::{RelationshipWeights, DEFAULT_VALUE};
 use crate::ml::core::tensor::{Matrix, Scalar, Tensor};
 use crate::ml::core::variable::{Variable, VariableRef};
@@ -93,9 +94,8 @@ impl Variable for GraphSageLoss {
 
             let weight = self
                 .relationship_weight_factor(self.batch[bucket_idx], self.batch[positive_node_idx]);
-            loss += -weight * (crate::ml::core::functions::Sigmoid::sigmoid(pos_aff)).ln()
-                - (self.negative_sampling_factor as f64)
-                    * (crate::ml::core::functions::Sigmoid::sigmoid(-neg_aff)).ln();
+            loss += -weight * (Sigmoid::sigmoid(pos_aff)).ln()
+                - (self.negative_sampling_factor as f64) * (Sigmoid::sigmoid(-neg_aff)).ln();
         }
 
         Box::new(Scalar::new(loss / bucket_size.max(1) as f64))

@@ -4,8 +4,12 @@ use super::storage::ConductanceStorageRuntime;
 use crate::algo::conductance::progress_task;
 use crate::concurrency::Concurrency;
 use crate::concurrency::TerminationFlag;
+use crate::config::GraphStoreConfig;
+use crate::core::utils::progress::EmptyTaskRegistryFactory;
+use crate::core::utils::progress::JobId;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::projection::RelationshipType;
+use crate::types::graph::id_map::SimpleIdMap;
 use crate::types::graph::RelationshipTopology;
 use crate::types::graph_store::Capabilities;
 use crate::types::graph_store::{DatabaseId, DatabaseInfo, DatabaseLocation, GraphName};
@@ -28,7 +32,7 @@ fn make_store(outgoing: Vec<Vec<i64>>) -> DefaultGraphStore {
     let capabilities = Capabilities::default();
 
     // Simple id_map with nodes 0..node_count.
-    let id_map = crate::types::graph::id_map::SimpleIdMap::from_original_ids(
+    let id_map = SimpleIdMap::from_original_ids(
         (0..node_count as i64).collect::<Vec<_>>(),
     );
 
@@ -38,7 +42,7 @@ fn make_store(outgoing: Vec<Vec<i64>>) -> DefaultGraphStore {
     relationship_topologies.insert(RelationshipType::of("R"), topology);
 
     DefaultGraphStore::new(
-        crate::config::GraphStoreConfig::default(),
+        GraphStoreConfig::default(),
         graph_name,
         database_info,
         schema,
@@ -72,11 +76,11 @@ fn conductance_matches_expected_small_graph() {
     let mut runtime = ConductanceComputationRuntime::new();
 
     let base_task = progress_task(store.node_count());
-    let registry_factory = crate::core::utils::progress::EmptyTaskRegistryFactory;
+    let registry_factory = EmptyTaskRegistryFactory;
     let mut progress = TaskProgressTracker::with_registry(
         base_task,
         Concurrency::of(config.concurrency.max(1)),
-        crate::core::utils::progress::JobId::new(),
+        JobId::new(),
         &registry_factory,
     );
     let result = storage

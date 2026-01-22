@@ -7,6 +7,8 @@
 //! **Complexity**: O(V²) for unweighted, O(V² log V) for weighted
 //! **Use Case**: Network analysis, centrality measures, graph connectivity
 
+use crate::config::validation::ConfigError;
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use crate::projection::orientation::Orientation;
@@ -72,10 +74,10 @@ impl AllShortestPathsConfig {
         "weight".to_string()
     }
 
-    pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         // Validate concurrency
         if self.concurrency == 0 {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "concurrency".to_string(),
                 reason: "Concurrency must be greater than 0".to_string(),
             });
@@ -84,7 +86,7 @@ impl AllShortestPathsConfig {
         // Validate max_results
         if let Some(max) = self.max_results {
             if max == 0 {
-                return Err(crate::config::validation::ConfigError::InvalidParameter {
+                return Err(ConfigError::InvalidParameter {
                     parameter: "max_results".to_string(),
                     reason: "Max results must be greater than 0".to_string(),
                 });
@@ -92,14 +94,14 @@ impl AllShortestPathsConfig {
         }
 
         if self.direction.trim().is_empty() {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "direction".to_string(),
                 reason: "Direction must be non-empty".to_string(),
             });
         }
 
         if self.weight_property.trim().is_empty() {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "weight_property".to_string(),
                 reason: "Weight property must be non-empty".to_string(),
             });
@@ -204,7 +206,7 @@ define_algorithm_spec! {
 
         if stream_results {
             // Streaming mode: Process results as they come
-            let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            let mut progress_tracker = TaskProgressTracker::with_concurrency(
                 Tasks::leaf_with_volume("all_shortest_paths".to_string(), node_count),
                 concurrency,
             );

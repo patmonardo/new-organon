@@ -1,4 +1,7 @@
-use crate::algo::similarity::{NodeSimilarityConfig, NodeSimilarityResult};
+use crate::algo::similarity::{
+    NodeSimilarityComputationRuntime, NodeSimilarityConfig, NodeSimilarityResult,
+    NodeSimilarityStorageRuntime,
+};
 use crate::types::graph::graph::Graph;
 use crate::types::graph::MappedNodeId;
 use std::collections::HashSet;
@@ -41,8 +44,8 @@ pub fn compute_filtered_node_similarity(
         _ => target_nodes.is_none(),
     };
 
-    let storage = crate::algo::similarity::NodeSimilarityStorageRuntime::new(config.concurrency);
-    let computation = crate::algo::similarity::NodeSimilarityComputationRuntime::new();
+    let storage = NodeSimilarityStorageRuntime::new(config.concurrency);
+    let computation = NodeSimilarityComputationRuntime::new();
 
     let computed = storage.compute_with_filters(
         &computation,

@@ -1,6 +1,7 @@
 use super::config::GATConfig;
 use super::layer::GATLayer;
 use crate::types::graph::id_map::NodeId;
+use crate::types::graph::Graph;
 use std::collections::HashMap;
 
 pub struct GATAggregator {
@@ -17,7 +18,7 @@ impl GATAggregator {
 
     pub fn aggregate(
         &mut self,
-        graph: &dyn crate::types::graph::Graph,
+        graph: &dyn Graph,
         initial_features: HashMap<NodeId, Vec<f64>>,
     ) -> HashMap<NodeId, Vec<f64>> {
         let mut features = initial_features;

@@ -2,7 +2,7 @@
 //!
 //! This is the **Gross pole**: obtaining graph views and property-backed feature extractors.
 
-use crate::ml::core::features::feature_extraction::AnyFeatureExtractor;
+use crate::ml::core::features::feature_extraction::{property_extractors, AnyFeatureExtractor};
 use crate::types::graph::Graph;
 
 /// FastRP storage runtime.
@@ -37,12 +37,7 @@ impl FastRPStorageRuntime {
         }
 
         // Now safe to use the translated helper.
-        extractors.extend(
-            crate::ml::core::features::feature_extraction::property_extractors(
-                graph,
-                feature_properties,
-            ),
-        );
+        extractors.extend(property_extractors(graph, feature_properties));
 
         Ok(extractors)
     }

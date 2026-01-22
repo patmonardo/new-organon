@@ -22,7 +22,7 @@
 //! where needed, but the returned matrix is aligned to the projected graph's node order.
 
 use crate::concurrency::{Concurrency, TerminationFlag};
-use crate::core::utils::progress::Tasks;
+use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::ml::core::samplers::RandomWalkSampler;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::Graph;
@@ -156,9 +156,10 @@ impl Node2VecComputationRuntime {
                 .unwrap_or(mapped)
         };
 
-        let _progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
-            Tasks::leaf_with_volume("Node2Vec".to_string(), config.iterations),
-        );
+        let _progress_tracker = TaskProgressTracker::new(Tasks::leaf_with_volume(
+            "Node2Vec".to_string(),
+            config.iterations,
+        ));
 
         let model = Node2VecModel::new(
             node_count,

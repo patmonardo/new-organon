@@ -8,7 +8,7 @@
 
 use crate::algo::common::scaling::Scaler;
 use crate::algo::common::statistics::{
-    Histogram, StatisticalSummary, StatisticsConfig, StatisticsEngine,
+    Histogram, StatisticalSummary, StatisticsConfig, StatisticsEngine, StatisticsError,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -695,7 +695,7 @@ impl ResultBuilder<SimilarityResult> for SimilarityResultBuilder {
 #[derive(Debug, thiserror::Error)]
 pub enum ResultBuilderError {
     #[error("Statistics computation failed: {0}")]
-    StatisticsError(#[from] crate::algo::common::statistics::StatisticsError),
+    StatisticsError(#[from] StatisticsError),
 
     #[error("Invalid result data: {0}")]
     InvalidData(String),
