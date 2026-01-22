@@ -635,6 +635,7 @@ mod tests {
     use super::*;
     use crate::types::graph_store::default_graph_store::DefaultGraphStore;
 
+    use crate::config::GraphStoreConfig;
     use crate::types::graph::id_map::SimpleIdMap;
     use crate::types::graph::RelationshipTopology;
     use crate::types::graph_store::{DatabaseId, DatabaseLocation, GraphName};
@@ -658,7 +659,7 @@ mod tests {
         relationship_topologies.insert(RelationshipType::of("KNOWS"), topology);
 
         DefaultGraphStore::new(
-            crate::config::GraphStoreConfig::default(),
+            GraphStoreConfig::default(),
             graph_name,
             database_info,
             schema,

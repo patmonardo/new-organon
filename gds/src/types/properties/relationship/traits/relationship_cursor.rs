@@ -1,5 +1,7 @@
 use crate::types::graph::id_map::NodeId;
+use crate::values::traits::{FromGdsValue, GdsValue};
 use std::fmt::Debug;
+use std::sync::Arc;
 
 /// Represents a relationship between two nodes with an associated property value.
 pub trait RelationshipCursor: Debug {
@@ -91,7 +93,7 @@ pub trait TypedRelationshipCursor: Debug {
     /// - `Value::String(String)` - String values
     /// - `Value::Bytes { data: Vec<u8>, mime_type: Option<String> }` - Binary data with MIME
     /// - `Value::Null` - Null values
-    fn value(&self) -> std::sync::Arc<dyn crate::values::traits::GdsValue>;
+    fn value(&self) -> Arc<dyn GdsValue>;
 
     /// Smart converter: Get property value as type T with automatic conversion.
     ///
@@ -102,7 +104,7 @@ pub trait TypedRelationshipCursor: Debug {
     /// - `String` ↔ `i64`/`f64` (string parsing)
     ///
     /// Returns `Err(ValueError)` for incompatible conversions.
-    fn get<T: crate::values::traits::FromGdsValue>(&self) -> Result<T, String>;
+    fn get<T: FromGdsValue>(&self) -> Result<T, String>;
 }
 
 /// Mutable variant of the typed relationship cursor for iterator implementations.
@@ -116,13 +118,13 @@ pub trait ModifiableTypedRelationshipCursor: TypedRelationshipCursor {
     /// Sets the property value as a `GdsValue`.
     ///
     /// This method accepts the full `GdsValue` trait object, supporting all types.
-    fn set_value(&mut self, value: std::sync::Arc<dyn crate::values::traits::GdsValue>);
+    fn set_value(&mut self, value: Arc<dyn GdsValue>);
 
     /// Smart setter: Set property value from type T with automatic conversion.
     ///
     /// This method provides type-safe setting with automatic conversions.
     /// Returns `Err(ValueError)` for incompatible conversions.
-    fn set<T: crate::values::traits::FromGdsValue>(&mut self, value: T) -> Result<(), String>;
+    fn set<T: FromGdsValue>(&mut self, value: T) -> Result<(), String>;
 }
 
 /// Convenient alias for passing typed cursor trait objects around.
@@ -131,6 +133,8 @@ pub type TypedRelationshipCursorBox = Box<dyn TypedRelationshipCursor + Send>;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::ValueType;
+    use crate::values::PrimitiveValues;
 
     #[derive(Debug, Default, Clone, Copy)]
     struct SimpleCursor {
@@ -251,7 +255,7 @@ mod tests {
     struct TypedCursor {
         source: NodeId,
         target: NodeId,
-        value: std::sync::Arc<dyn crate::values::traits::GdsValue>,
+        value: Arc<dyn GdsValue>,
     }
 
     impl std::fmt::Debug for TypedCursor {
@@ -269,7 +273,7 @@ mod tests {
             Self {
                 source: 0,
                 target: 0,
-                value: crate::values::PrimitiveValues::long_value(0),
+                value: PrimitiveValues::long_value(0),
             }
         }
     }
@@ -283,11 +287,11 @@ mod tests {
             self.target
         }
 
-        fn value(&self) -> std::sync::Arc<dyn crate::values::traits::GdsValue> {
+        fn value(&self) -> Arc<dyn GdsValue> {
             self.value.clone()
         }
 
-        fn get<T: crate::values::traits::FromGdsValue>(&self) -> Result<T, String> {
+        fn get<T: FromGdsValue>(&self) -> Result<T, String> {
             T::from_gds_value(self.value.as_ref())
         }
     }
@@ -301,11 +305,11 @@ mod tests {
             self.target = target_id;
         }
 
-        fn set_value(&mut self, value: std::sync::Arc<dyn crate::values::traits::GdsValue>) {
+        fn set_value(&mut self, value: Arc<dyn GdsValue>) {
             self.value = value;
         }
 
-        fn set<T: crate::values::traits::FromGdsValue>(&mut self, _value: T) -> Result<(), String> {
+        fn set<T: FromGdsValue>(&mut self, _value: T) -> Result<(), String> {
             // Not used in these tests; provide a conservative error to avoid generic lifetime issues
             let _ = std::any::type_name::<T>();
             Err("set<T>() not implemented in test stub".to_string())
@@ -317,7 +321,7 @@ mod tests {
         let mut cursor = TypedCursor::default();
         cursor.set_source_id(1);
         cursor.set_target_id(2);
-        let long_value = crate::values::PrimitiveValues::long_value(42);
+        let long_value = PrimitiveValues::long_value(42);
         cursor.set_value(long_value.clone());
 
         assert_eq!(cursor.source_id(), 1);
@@ -327,7 +331,7 @@ mod tests {
 
     #[test]
     fn typed_cursor_smart_converter_works() {
-        let long_value = crate::values::PrimitiveValues::long_value(42);
+        let long_value = PrimitiveValues::long_value(42);
         let cursor = TypedCursor {
             source: 1,
             target: 2,
@@ -350,19 +354,10 @@ mod tests {
     #[test]
     fn typed_cursor_supports_all_value_types() {
         let test_cases = vec![
-            (crate::values::PrimitiveValues::long_value(42), "Long"),
-            (
-                crate::values::PrimitiveValues::floating_point_value(3.0),
-                "Double",
-            ),
-            (
-                crate::values::PrimitiveValues::boolean_value(true),
-                "Boolean",
-            ),
-            (
-                crate::values::PrimitiveValues::string_value("hello".to_string()),
-                "String",
-            ),
+            (PrimitiveValues::long_value(42), "Long"),
+            (PrimitiveValues::floating_point_value(3.0), "Double"),
+            (PrimitiveValues::boolean_value(true), "Boolean"),
+            (PrimitiveValues::string_value("hello".to_string()), "String"),
         ];
 
         for (value, type_name) in test_cases {
@@ -386,24 +381,19 @@ mod tests {
         let mut cursor = TypedCursor::default();
 
         // i64
-        cursor.set_value(crate::values::PrimitiveValues::long_value(42));
-        assert_eq!(cursor.value().value_type(), crate::types::ValueType::Long);
+        cursor.set_value(PrimitiveValues::long_value(42));
+        assert_eq!(cursor.value().value_type(), ValueType::Long);
 
         // f64
-        cursor.set_value(crate::values::PrimitiveValues::floating_point_value(3.0));
-        assert_eq!(cursor.value().value_type(), crate::types::ValueType::Double);
+        cursor.set_value(PrimitiveValues::floating_point_value(3.0));
+        assert_eq!(cursor.value().value_type(), ValueType::Double);
 
         // bool
-        cursor.set_value(crate::values::PrimitiveValues::boolean_value(true));
-        assert_eq!(
-            cursor.value().value_type(),
-            crate::types::ValueType::Boolean
-        );
+        cursor.set_value(PrimitiveValues::boolean_value(true));
+        assert_eq!(cursor.value().value_type(), ValueType::Boolean);
 
         // String
-        cursor.set_value(crate::values::PrimitiveValues::string_value(
-            "hello".to_string(),
-        ));
-        assert_eq!(cursor.value().value_type(), crate::types::ValueType::String);
+        cursor.set_value(PrimitiveValues::string_value("hello".to_string()));
+        assert_eq!(cursor.value().value_type(), ValueType::String);
     }
 }

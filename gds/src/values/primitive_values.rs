@@ -35,7 +35,7 @@ mod tests {
     #[test]
     fn test_null_value() {
         let val = PrimitiveValues::of(&json!(null)).unwrap();
-        assert_eq!(val.value_type(), crate::types::ValueType::Unknown);
+        assert_eq!(val.value_type(), ValueType::Unknown);
     }
 
     #[test]

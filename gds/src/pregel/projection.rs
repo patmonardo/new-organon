@@ -208,15 +208,15 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::collections::backends::vec::VecLong;
     use crate::types::properties::node::DefaultLongNodePropertyValues;
+    use crate::values::{DefaultFloatingPointValue, DefaultLongValue};
 
     #[test]
     fn test_project_long_property() {
         // Create a simple PropertyValues column
-        let props = DefaultLongNodePropertyValues::from_collection(
-            crate::collections::backends::vec::VecLong::from(vec![10, 20, 30]),
-            3,
-        );
+        let props =
+            DefaultLongNodePropertyValues::from_collection(VecLong::from(vec![10, 20, 30]), 3);
 
         // Project into Pregel DefaultValue
         let value = DefaultValue::from_property(&props, 0).unwrap();
@@ -229,10 +229,8 @@ mod tests {
 
     #[test]
     fn test_project_missing_property() {
-        let props = DefaultLongNodePropertyValues::from_collection(
-            crate::collections::backends::vec::VecLong::from(vec![10, 20, 30]),
-            3,
-        );
+        let props =
+            DefaultLongNodePropertyValues::from_collection(VecLong::from(vec![10, 20, 30]), 3);
 
         // Out of bounds
         let value = DefaultValue::from_property(&props, 999);
@@ -255,7 +253,7 @@ mod tests {
         // Extract back via FloatingPointValue trait
         if let Some(fp) = gds_value
             .as_any()
-            .downcast_ref::<crate::values::DefaultFloatingPointValue>()
+            .downcast_ref::<DefaultFloatingPointValue>()
         {
             assert!((fp.double_value() - 3.0).abs() < 0.001);
         } else {
@@ -280,10 +278,7 @@ mod tests {
             values.into_iter(),
             |_key, node_id, gds_value| {
                 // Mock write function - downcast to DefaultLongValue
-                if let Some(v) = gds_value
-                    .as_any()
-                    .downcast_ref::<crate::values::DefaultLongValue>()
-                {
+                if let Some(v) = gds_value.as_any().downcast_ref::<DefaultLongValue>() {
                     written.push((node_id, v.long_value()));
                     Ok(())
                 } else {

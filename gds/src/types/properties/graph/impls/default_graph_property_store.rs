@@ -4,6 +4,7 @@ use crate::collections::backends::factory::{
     LongCollection,
 };
 use crate::collections::backends::vec::{VecDouble, VecLong};
+use crate::config::CollectionsConfig;
 use crate::types::properties::graph::impls::default_graph_property_values::{
     DefaultDoubleGraphPropertyValues, DefaultLongGraphPropertyValues,
 };
@@ -163,7 +164,7 @@ impl DefaultGraphPropertyStoreBuilder {
     /// Create and put a Long graph property using CollectionsConfig for backend selection.
     pub fn put_long_with_config(
         mut self,
-        config: &crate::config::CollectionsConfig<i64>,
+        config: &CollectionsConfig<i64>,
         key: impl Into<String>,
         values: Vec<i64>,
     ) -> Self {
@@ -179,14 +180,14 @@ impl DefaultGraphPropertyStoreBuilder {
     /// Convenience: create and put Long graph property from Vec using Vec-backed defaults.
     pub fn put_long_from_vec(self, key: impl Into<String>, values: Vec<i64>) -> Self {
         // Default to Vec backend
-        let default_config = crate::config::CollectionsConfig::<i64>::default();
+        let default_config = CollectionsConfig::<i64>::default();
         self.put_long_with_config(&default_config, key, values)
     }
 
     /// Create and put a Double graph property using CollectionsConfig for backend selection.
     pub fn put_double_with_config(
         mut self,
-        config: &crate::config::CollectionsConfig<f64>,
+        config: &CollectionsConfig<f64>,
         key: impl Into<String>,
         values: Vec<f64>,
     ) -> Self {
@@ -202,7 +203,7 @@ impl DefaultGraphPropertyStoreBuilder {
     /// Convenience: create and put Double graph property from Vec using Vec-backed defaults.
     pub fn put_double_from_vec(self, key: impl Into<String>, values: Vec<f64>) -> Self {
         // Default to Vec backend
-        let default_config = crate::config::CollectionsConfig::<f64>::default();
+        let default_config = CollectionsConfig::<f64>::default();
         self.put_double_with_config(&default_config, key, values)
     }
 }

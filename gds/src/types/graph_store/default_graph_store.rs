@@ -15,6 +15,7 @@ use crate::config::GraphStoreConfig;
 use crate::projection::orientation::Orientation;
 use crate::projection::{NodeLabel, RelationshipType};
 use crate::types::graph::id_map::{MappedNodeId, OriginalNodeId};
+use crate::types::graph::GraphResult;
 use crate::types::graph::{
     id_map::{IdMap, SimpleIdMap},
     DefaultGraph, Graph, GraphCharacteristics, GraphCharacteristicsBuilder, RelationshipTopology,
@@ -23,6 +24,9 @@ use crate::types::properties::graph::impls::default_graph_property_values::{
     DefaultDoubleGraphPropertyValues, DefaultLongGraphPropertyValues,
 };
 use crate::types::properties::graph::GraphPropertyValues;
+use crate::types::properties::node::impls::default_node_property_values::{
+    DefaultDoubleArrayNodePropertyValues, DefaultLongArrayNodePropertyValues,
+};
 use crate::types::properties::node::impls::default_node_property_values::{
     DefaultDoubleNodePropertyValues, DefaultFloatNodePropertyValues, DefaultIntNodePropertyValues,
     DefaultLongNodePropertyValues,
@@ -1518,7 +1522,7 @@ impl GraphStore for DefaultGraphStore {
     fn get_graph_with_types(
         &self,
         relationship_types: &HashSet<RelationshipType>,
-    ) -> crate::types::graph::GraphResult<Arc<dyn Graph>> {
+    ) -> GraphResult<Arc<dyn Graph>> {
         self.graph()
             .relationship_type_filtered_graph(relationship_types)
     }
@@ -1527,7 +1531,7 @@ impl GraphStore for DefaultGraphStore {
         &self,
         relationship_types: &HashSet<RelationshipType>,
         relationship_property_selectors: &HashMap<RelationshipType, String>,
-    ) -> crate::types::graph::GraphResult<Arc<dyn Graph>> {
+    ) -> GraphResult<Arc<dyn Graph>> {
         // Build a DefaultGraph then let it select properties based on provided selectors
         let selectors = relationship_property_selectors.clone();
 
@@ -1618,7 +1622,7 @@ impl GraphStore for DefaultGraphStore {
         &self,
         relationship_types: &HashSet<RelationshipType>,
         _orientation: Orientation,
-    ) -> crate::types::graph::GraphResult<Arc<dyn Graph>> {
+    ) -> GraphResult<Arc<dyn Graph>> {
         // Orientation informs traversal; return a filtered view by types.
         self.graph()
             .relationship_type_filtered_graph(relationship_types)
@@ -1629,7 +1633,7 @@ impl GraphStore for DefaultGraphStore {
         relationship_types: &HashSet<RelationshipType>,
         relationship_property_selectors: &HashMap<RelationshipType, String>,
         orientation: Orientation,
-    ) -> crate::types::graph::GraphResult<Arc<dyn Graph>> {
+    ) -> GraphResult<Arc<dyn Graph>> {
         let view = self.get_graph_with_types_and_selectors(
             relationship_types,
             relationship_property_selectors,
@@ -1710,9 +1714,9 @@ fn build_node_double_array_property_values(
     node_count: usize,
 ) -> Arc<dyn NodePropertyValues> {
     Arc::new(
-        crate::types::properties::node::impls::default_node_property_values::DefaultDoubleArrayNodePropertyValues::<
-            VecDoubleArray,
-        >::from_collection(backend, node_count),
+        DefaultDoubleArrayNodePropertyValues::<VecDoubleArray>::from_collection(
+            backend, node_count,
+        ),
     )
 }
 
@@ -1721,9 +1725,7 @@ fn build_node_long_array_property_values(
     node_count: usize,
 ) -> Arc<dyn NodePropertyValues> {
     Arc::new(
-        crate::types::properties::node::impls::default_node_property_values::DefaultLongArrayNodePropertyValues::<
-            VecLongArray,
-        >::from_collection(backend, node_count),
+        DefaultLongArrayNodePropertyValues::<VecLongArray>::from_collection(backend, node_count),
     )
 }
 
@@ -1843,13 +1845,14 @@ fn relationship_prefix_offsets(topology: &RelationshipTopology) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::GraphStoreConfig;
     use crate::types::graph::degrees::Degrees;
     use crate::types::graph::Graph;
     use crate::types::graph_store::{DatabaseId, DatabaseLocation};
     use crate::types::properties::relationship::impls::default_relationship_property_values::DefaultRelationshipPropertyValues;
     use std::sync::Arc;
 
-    fn store_with_config(config: crate::config::GraphStoreConfig) -> DefaultGraphStore {
+    fn store_with_config(config: GraphStoreConfig) -> DefaultGraphStore {
         let graph_name = GraphName::new("g");
         let database_info = DatabaseInfo::new(
             DatabaseId::new("db"),
@@ -1876,7 +1879,7 @@ mod tests {
     }
 
     fn sample_store() -> DefaultGraphStore {
-        store_with_config(crate::config::GraphStoreConfig::default())
+        store_with_config(GraphStoreConfig::default())
     }
 
     #[test]
@@ -1952,7 +1955,7 @@ mod tests {
 
     #[test]
     fn vec_only_config_keeps_node_properties_vec_backed() {
-        let mut store = store_with_config(crate::config::GraphStoreConfig::vec_only());
+        let mut store = store_with_config(GraphStoreConfig::vec_only());
         store
             .add_node_property_i64("score".to_string(), vec![10, 20, 30])
             .expect("add node property via vec-only config");

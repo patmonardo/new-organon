@@ -12,6 +12,7 @@ use crate::pregel::{
     ComputeContext, InitContext, MessageIterator, Messages, Messenger, NodeValue, Partition,
     PregelRuntimeConfig,
 };
+use crate::types::graph::Graph;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 
@@ -77,7 +78,7 @@ pub struct ForkJoinComputeStep<C: PregelRuntimeConfig, I: MessageIterator> {
     node_value: Arc<parking_lot::RwLock<NodeValue>>,
 
     /// Graph topology (for contexts to query)
-    graph: Arc<dyn crate::types::graph::Graph>,
+    graph: Arc<dyn Graph>,
 
     /// Messenger for sending/receiving messages
     messenger: Arc<dyn Messenger<I>>,
@@ -130,7 +131,7 @@ impl<C: PregelRuntimeConfig + Clone, I: MessageIterator> ForkJoinComputeStep<C, 
         init_fn: InitFn<C>,
         compute_fn: ComputeFn<C, I>,
         config: C,
-        graph: Arc<dyn crate::types::graph::Graph>,
+        graph: Arc<dyn Graph>,
         node_batch: Partition,
         node_value: Arc<parking_lot::RwLock<NodeValue>>,
         messenger: Arc<dyn Messenger<I>>,

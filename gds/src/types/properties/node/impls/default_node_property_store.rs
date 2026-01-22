@@ -12,6 +12,7 @@ use crate::collections::backends::factory::{
     LongCollection,
 };
 use crate::collections::backends::vec::{VecDouble, VecLong};
+use crate::config::CollectionsConfig;
 use crate::types::properties::node::impls::default_node_property_values::{
     DefaultDoubleNodePropertyValues, DefaultLongNodePropertyValues,
 };
@@ -167,7 +168,7 @@ impl DefaultNodePropertyStoreBuilder {
     /// Create and put a Long property using CollectionsConfig for backend selection.
     pub fn put_long_with_config(
         mut self,
-        config: &crate::config::CollectionsConfig<i64>,
+        config: &CollectionsConfig<i64>,
         key: impl Into<String>,
         values: Vec<i64>,
     ) -> Self {
@@ -182,14 +183,14 @@ impl DefaultNodePropertyStoreBuilder {
     /// Convenience: create and put a Long property from a Vec using Vec-backed defaults.
     pub fn put_long_from_vec(self, key: impl Into<String>, values: Vec<i64>) -> Self {
         // Default to Vec backend
-        let default_config = crate::config::CollectionsConfig::<i64>::default();
+        let default_config = CollectionsConfig::<i64>::default();
         self.put_long_with_config(&default_config, key, values)
     }
 
     /// Create and put a Double property using CollectionsConfig for backend selection.
     pub fn put_double_with_config(
         mut self,
-        config: &crate::config::CollectionsConfig<f64>,
+        config: &CollectionsConfig<f64>,
         key: impl Into<String>,
         values: Vec<f64>,
     ) -> Self {
@@ -204,7 +205,7 @@ impl DefaultNodePropertyStoreBuilder {
     /// Convenience: create and put a Double property from a Vec using Vec-backed defaults.
     pub fn put_double_from_vec(self, key: impl Into<String>, values: Vec<f64>) -> Self {
         // Default to Vec backend
-        let default_config = crate::config::CollectionsConfig::<f64>::default();
+        let default_config = CollectionsConfig::<f64>::default();
         self.put_double_with_config(&default_config, key, values)
     }
 }
@@ -268,11 +269,9 @@ mod tests {
         use crate::types::properties::PropertyValues;
         use std::sync::Arc;
 
-        let values: Arc<dyn NodePropertyValues> =
-            Arc::new(DefaultLongNodePropertyValues::from_collection(
-                crate::collections::backends::vec::VecLong::from(vec![1, 2, 3]),
-                3,
-            ));
+        let values: Arc<dyn NodePropertyValues> = Arc::new(
+            DefaultLongNodePropertyValues::from_collection(VecLong::from(vec![1, 2, 3]), 3),
+        );
         let default_value = DefaultValue::of(values.value_type());
         NodeProperty::with_default(
             key.to_string(),

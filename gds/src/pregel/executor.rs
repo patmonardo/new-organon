@@ -9,8 +9,8 @@ use crate::concurrency::Concurrency;
 use crate::core::utils::progress::tasks::LeafTask;
 use crate::pregel::{
     projection::PropertyProjection, ComputeFn, DefaultValue, ForkJoinComputer, InitFn,
-    MasterComputeContext, Messenger, NodeValue, PregelComputer, PregelResult, PregelRuntimeConfig,
-    PregelSchema,
+    MasterComputeContext, MessageIterator, Messenger, NodeValue, PregelComputer, PregelResult,
+    PregelRuntimeConfig, PregelSchema,
 };
 use crate::types::graph::Graph;
 use std::sync::Arc;
@@ -40,7 +40,7 @@ type MasterComputeFn<C> = Arc<dyn Fn(&mut MasterComputeContext<C>) -> bool + Sen
 ///     println!("Converged after {} iterations", result.ran_iterations);
 /// }
 /// ```
-pub struct Pregel<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> {
+pub struct Pregel<C: PregelRuntimeConfig + Clone, I: MessageIterator> {
     /// Configuration for this computation
     config: C,
 
@@ -65,7 +65,7 @@ pub struct Pregel<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageItera
     progress_task: Option<Arc<LeafTask>>,
 }
 
-impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> Pregel<C, I> {
+impl<C: PregelRuntimeConfig + Clone, I: MessageIterator> Pregel<C, I> {
     /// Create a new Pregel executor.
     ///
     /// This is the main entry point for running Pregel computations.
@@ -292,7 +292,7 @@ impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> Pregel<C
 }
 
 /// Builder for creating Pregel instances with a fluent API.
-pub struct PregelBuilder<C: PregelRuntimeConfig, I: crate::pregel::MessageIterator> {
+pub struct PregelBuilder<C: PregelRuntimeConfig, I: MessageIterator> {
     graph: Option<Arc<dyn Graph>>,
     config: Option<C>,
     schema: Option<PregelSchema>,
@@ -303,7 +303,7 @@ pub struct PregelBuilder<C: PregelRuntimeConfig, I: crate::pregel::MessageIterat
     progress_task: Option<Arc<LeafTask>>,
 }
 
-impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> PregelBuilder<C, I> {
+impl<C: PregelRuntimeConfig + Clone, I: MessageIterator> PregelBuilder<C, I> {
     /// Create a new builder.
     pub fn new() -> Self {
         Self {
@@ -393,9 +393,7 @@ impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> PregelBu
     }
 }
 
-impl<C: PregelRuntimeConfig + Clone, I: crate::pregel::MessageIterator> Default
-    for PregelBuilder<C, I>
-{
+impl<C: PregelRuntimeConfig + Clone, I: MessageIterator> Default for PregelBuilder<C, I> {
     fn default() -> Self {
         Self::new()
     }

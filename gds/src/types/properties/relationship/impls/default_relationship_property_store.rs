@@ -7,6 +7,8 @@ use crate::types::properties::relationship::{
 use crate::types::properties::PropertyStore;
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::config::CollectionsConfig;
+use crate::collections::backends::factory::create_double_backend_from_config;
 
 /// Default implementation of RelationshipPropertyStore.
 #[derive(Debug, Clone)]
@@ -158,7 +160,7 @@ impl DefaultRelationshipPropertyStoreBuilder {
     /// Create and put a Double relationship property using CollectionsConfig for backend selection.
     pub fn put_double_with_config(
         mut self,
-        config: &crate::config::CollectionsConfig<f64>,
+        config: &CollectionsConfig<f64>,
         key: impl Into<String>,
         values: Vec<f64>,
         default_value: f64,
@@ -166,9 +168,7 @@ impl DefaultRelationshipPropertyStoreBuilder {
         let element_count = values.len();
 
         // Use config to select backend
-        let backend = crate::collections::backends::factory::create_double_backend_from_config(
-            config, values,
-        );
+        let backend = create_double_backend_from_config(config, values);
 
         // Create property values with selected backend
         let pv: Arc<dyn RelationshipPropertyValues> =
@@ -193,7 +193,7 @@ impl DefaultRelationshipPropertyStoreBuilder {
         default_value: f64,
     ) -> Self {
         // Default to Vec backend
-        let default_config = crate::config::CollectionsConfig::<f64>::default();
+        let default_config = CollectionsConfig::<f64>::default();
         self.put_double_with_config(&default_config, key, values, default_value)
     }
 }

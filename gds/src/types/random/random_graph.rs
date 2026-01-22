@@ -1,4 +1,5 @@
 use crate::collections::backends::vec::VecDouble;
+use crate::config::GraphStoreConfig;
 use crate::projection::{NodeLabel, RelationshipType};
 use crate::types::graph::{IdMap, RelationshipTopology, SimpleIdMap};
 use crate::types::graph_store::{
@@ -327,7 +328,7 @@ impl Randomizable<RandomGraphConfig> for DefaultGraphStore {
         );
 
         // Use DefaultGraphStore::new() with the SimpleIdMap we built
-        let graph_store_config = crate::config::GraphStoreConfig::default();
+        let graph_store_config = GraphStoreConfig::default();
         let mut store = DefaultGraphStore::new(
             graph_store_config,
             graph_name,
@@ -371,9 +372,9 @@ impl Randomizable<RandomGraphConfig> for DefaultGraphStore {
         } else {
             total_relationships as f64 / max_edges as f64
         };
-        let graph_property_values = Arc::new(DefaultDoubleGraphPropertyValues::<
-            crate::collections::backends::vec::VecDouble,
-        >::singleton(density));
+        let graph_property_values = Arc::new(DefaultDoubleGraphPropertyValues::<VecDouble>::singleton(
+            density,
+        ));
         store.add_graph_property("edge_density", graph_property_values)?;
 
         // Add per-relationship weights.

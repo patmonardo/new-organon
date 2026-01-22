@@ -3,7 +3,8 @@
 //! Provides the complete API for vertices to interact with the Pregel framework
 //! during the compute phase of each superstep.
 
-use crate::pregel::{NodeValue, PregelRuntimeConfig};
+use crate::collections::HugeAtomicBitSet;
+use crate::pregel::{MessageIterator, Messenger, NodeValue, PregelRuntimeConfig};
 use crate::types::graph::Graph;
 use parking_lot::RwLock;
 use std::sync::Arc;
@@ -41,15 +42,15 @@ use std::sync::Arc;
 ///                MutableInt iteration, Optional<MutableBoolean> hasSendMessage,
 ///                ProgressTracker progressTracker)
 /// ```
-pub struct ComputeContext<C: PregelRuntimeConfig, I: crate::pregel::MessageIterator> {
+pub struct ComputeContext<C: PregelRuntimeConfig, I: MessageIterator> {
     base: super::NodeCentricContext<C>,
     iteration: usize,
-    messenger: Arc<dyn crate::pregel::Messenger<I>>,
-    vote_bits: Arc<crate::collections::HugeAtomicBitSet>,
+    messenger: Arc<dyn Messenger<I>>,
+    vote_bits: Arc<HugeAtomicBitSet>,
     has_sent_message: Arc<std::sync::atomic::AtomicBool>,
 }
 
-impl<C: PregelRuntimeConfig, I: crate::pregel::MessageIterator> ComputeContext<C, I> {
+impl<C: PregelRuntimeConfig, I: MessageIterator> ComputeContext<C, I> {
     /// Create a new compute context.
     ///
     /// # Arguments
@@ -66,8 +67,8 @@ impl<C: PregelRuntimeConfig, I: crate::pregel::MessageIterator> ComputeContext<C
         config: C,
         node_value: Arc<RwLock<NodeValue>>,
         iteration: usize,
-        messenger: Arc<dyn crate::pregel::Messenger<I>>,
-        vote_bits: Arc<crate::collections::HugeAtomicBitSet>,
+        messenger: Arc<dyn Messenger<I>>,
+        vote_bits: Arc<HugeAtomicBitSet>,
         has_sent_message: Arc<std::sync::atomic::AtomicBool>,
     ) -> Self {
         Self {

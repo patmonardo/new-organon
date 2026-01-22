@@ -90,14 +90,14 @@ impl Property for DefaultGraphProperty {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::collections::backends::vec::VecLong;
     use crate::types::properties::graph::impls::default_graph_property_values::DefaultLongGraphPropertyValues;
     use crate::types::properties::PropertyValues;
 
     #[test]
     fn default_graph_property_creation() {
-        let values: Arc<dyn GraphPropertyValues> = Arc::new(DefaultLongGraphPropertyValues::<
-            crate::collections::backends::vec::VecLong,
-        >::singleton(42));
+        let values: Arc<dyn GraphPropertyValues> =
+            Arc::new(DefaultLongGraphPropertyValues::<VecLong>::singleton(42));
         let property = DefaultGraphProperty::of("node_count", values.clone());
 
         assert_eq!(property.key(), "node_count");

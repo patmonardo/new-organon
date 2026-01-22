@@ -76,11 +76,12 @@ impl Property for DefaultProperty {
 mod tests {
     use super::*;
     use crate::types::properties::node::DefaultLongNodePropertyValues;
+    use crate::collections::backends::vec::VecLong;
 
     #[test]
     fn test_property_creation() {
         let values = DefaultLongNodePropertyValues::from_collection(
-            crate::collections::backends::vec::VecLong::from(vec![1, 2, 3]),
+            VecLong::from(vec![1, 2, 3]),
             3,
         );
         let schema = PropertySchema::new(

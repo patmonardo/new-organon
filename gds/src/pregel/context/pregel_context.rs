@@ -110,16 +110,17 @@ impl<C: PregelRuntimeConfig> PregelContext<C> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::PregelConfig;
 
     #[test]
     fn test_pregel_context_creation() {
-        let _ctx: PregelContext<crate::config::PregelConfig> = PregelContext::stub();
+        let _ctx: PregelContext<PregelConfig> = PregelContext::stub();
         // Just verify it compiles
     }
 
     #[test]
     fn test_graph_statistics() {
-        let ctx: PregelContext<crate::config::PregelConfig> = PregelContext::stub();
+        let ctx: PregelContext<PregelConfig> = PregelContext::stub();
         assert!(!ctx.is_multi_graph());
         assert_eq!(ctx.node_count(), 0);
         assert_eq!(ctx.relationship_count(), 0);

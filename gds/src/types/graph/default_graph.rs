@@ -1,7 +1,10 @@
 use super::{Graph, GraphCharacteristics, GraphResult, RelationshipTopology};
+use crate::concurrency::Concurrency;
 use crate::config::GraphStoreConfig;
 use crate::projection::RelationshipType;
 use crate::types::graph::characteristics::GraphCharacteristicsBuilder;
+use crate::types::graph::degrees::Degrees;
+use crate::types::graph::id_map::NodeLabelConsumer;
 use crate::types::graph::id_map::{
     BatchNodeIterable, FilteredIdMap, IdMap, MappedNodeId, NodeConsumer, NodeIdBatch,
     NodeIdIterator, NodeIterator, OriginalNodeId, PartialIdMap, SimpleIdMap,
@@ -580,7 +583,7 @@ impl IdMap for DefaultGraph {
     fn for_each_node_label(
         &self,
         mapped_node_id: MappedNodeId,
-        consumer: &mut dyn crate::types::graph::id_map::NodeLabelConsumer,
+        consumer: &mut dyn NodeLabelConsumer,
     ) {
         self.id_map.for_each_node_label(mapped_node_id, consumer)
     }
@@ -608,13 +611,13 @@ impl IdMap for DefaultGraph {
     fn with_filtered_labels(
         &self,
         node_labels: &HashSet<NodeLabel>,
-        concurrency: crate::concurrency::Concurrency,
+        concurrency: Concurrency,
     ) -> Option<Box<dyn FilteredIdMap>> {
         self.id_map.with_filtered_labels(node_labels, concurrency)
     }
 }
 
-impl crate::types::graph::degrees::Degrees for DefaultGraph {
+impl Degrees for DefaultGraph {
     fn degree(&self, node_id: MappedNodeId) -> usize {
         self.ordered_types
             .iter()
@@ -836,7 +839,7 @@ mod tests {
         topologies.insert(rel_type.clone(), Arc::new(topology));
 
         DefaultGraph::new(
-            Arc::new(crate::config::GraphStoreConfig::default()),
+            Arc::new(GraphStoreConfig::default()),
             schema,
             id_map,
             GraphCharacteristicsBuilder::new().directed().build(),

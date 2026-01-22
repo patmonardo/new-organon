@@ -1,6 +1,7 @@
 use crate::types::schema::{
     Direction, MutableNodeSchema, MutableRelationshipSchema, NodeLabel, NodeSchema, PropertySchema,
-    PropertySchemaTrait, RelationshipSchema, RelationshipType, SchemaError, SchemaResult,
+    PropertySchemaTrait, RelationshipPropertySchema, RelationshipSchema, RelationshipType,
+    SchemaError, SchemaResult,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -303,7 +304,7 @@ fn properties_to_map(properties: &HashMap<String, PropertySchema>) -> serde_json
 
 /// Helper to convert relationship properties to a map.
 fn relationship_properties_to_map(
-    properties: &HashMap<String, crate::types::schema::RelationshipPropertySchema>,
+    properties: &HashMap<String, RelationshipPropertySchema>,
 ) -> serde_json::Value {
     let mut map = serde_json::Map::new();
     for (key, schema) in properties {

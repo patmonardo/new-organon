@@ -6,7 +6,7 @@
 //! 2. **AsyncQueueMessenger**: Single-buffered queues for asynchronous message passing
 //! 3. **ReducingMessenger**: Atomic double arrays with reducers for aggregated message passing
 
-use crate::collections::{HugeAtomicDoubleArray, HugeAtomicLongArray};
+use crate::collections::{HugeAtomicDoubleArray, HugeAtomicLongArray, HugeObjectArray};
 use crate::pregel::AsyncDoubleQueues;
 use crate::pregel::{MessageIterator, MessageReducer, Messenger};
 
@@ -19,7 +19,7 @@ use crate::pregel::{MessageIterator, MessageReducer, Messenger};
 /// Stores a copy of messages and provides iteration over them.
 /// This iterator is reused across multiple nodes for efficiency.
 pub struct SyncQueueMessageIterator {
-    queues: Option<std::sync::Arc<crate::collections::HugeObjectArray<Vec<f64>>>>,
+    queues: Option<std::sync::Arc<HugeObjectArray<Vec<f64>>>>,
     node_id: usize,
     index: usize,
 }
@@ -35,11 +35,7 @@ impl SyncQueueMessageIterator {
     }
 
     /// Initialize the iterator for a specific node's messages
-    fn init(
-        &mut self,
-        queues: std::sync::Arc<crate::collections::HugeObjectArray<Vec<f64>>>,
-        node_id: usize,
-    ) {
+    fn init(&mut self, queues: std::sync::Arc<HugeObjectArray<Vec<f64>>>, node_id: usize) {
         self.queues = Some(queues);
         self.node_id = node_id;
         self.index = 0;
@@ -109,15 +105,15 @@ pub struct SyncQueueMessenger {
 
 struct SyncQueueMessengerState {
     node_count: usize,
-    read_queues: std::sync::Arc<crate::collections::HugeObjectArray<Vec<f64>>>,
-    write_queues: crate::collections::HugeObjectArray<Vec<f64>>,
+    read_queues: std::sync::Arc<HugeObjectArray<Vec<f64>>>,
+    write_queues: HugeObjectArray<Vec<f64>>,
 }
 
 impl SyncQueueMessenger {
     /// Create a new synchronous messenger for the given number of nodes.
     pub fn new(node_count: usize) -> Self {
-        let write_queues = crate::collections::HugeObjectArray::new(node_count);
-        let read_queues = std::sync::Arc::new(crate::collections::HugeObjectArray::new(node_count));
+        let write_queues = HugeObjectArray::new(node_count);
+        let read_queues = std::sync::Arc::new(HugeObjectArray::new(node_count));
         Self {
             state: parking_lot::RwLock::new(SyncQueueMessengerState {
                 node_count,
@@ -138,7 +134,7 @@ impl Messenger<SyncQueueMessageIterator> for SyncQueueMessenger {
         // Safety invariant: at superstep boundaries, no iterators should still be alive.
         let old_read = std::mem::replace(
             &mut state.read_queues,
-            std::sync::Arc::new(crate::collections::HugeObjectArray::new(node_count)),
+            std::sync::Arc::new(HugeObjectArray::new(node_count)),
         );
 
         let mut new_write = match std::sync::Arc::try_unwrap(old_read) {
@@ -756,7 +752,7 @@ mod tests {
     fn test_message_iterator_traits() {
         // Test that iterators implement MessageIterator properly
         let mut sync_iter = SyncQueueMessageIterator::new();
-        let mut snapshot = crate::collections::HugeObjectArray::new(1);
+        let mut snapshot = HugeObjectArray::new(1);
         snapshot.set(0, vec![1.0, 2.0, 3.0]);
         sync_iter.init(std::sync::Arc::new(snapshot), 0);
 

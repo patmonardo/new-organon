@@ -346,7 +346,9 @@ mod tests {
     }
 
     impl PregelComputation for TestComputation {
-        type Config = crate::config::PregelConfig;
+        use crate::config::PregelConfig;
+
+        type Config = PregelConfig;
 
         fn schema(&self, _config: &Self::Config) -> PregelSchema {
             use crate::pregel::Visibility;
