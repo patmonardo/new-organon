@@ -62,7 +62,7 @@ mod tests {
     fn path_graph_middle_is_bridge_node() {
         // 0-1-2
         let store = store_from_undirected_edges(3, &[(0, 1), (1, 2)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph
             .betweenness()

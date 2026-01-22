@@ -339,7 +339,7 @@ mod tests {
                 (3, 2),
             ],
         );
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph
             .approx_max_kcut()
@@ -361,7 +361,7 @@ mod tests {
     #[test]
     fn facade_computes_stats() {
         let store = store_from_edges(4, &[(0, 1), (1, 2), (2, 3)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let stats = graph.approx_max_kcut().k(2).iterations(3).stats().unwrap();
 
@@ -389,7 +389,7 @@ mod tests {
                 (3, 2),
             ],
         );
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let mutation_result = graph
             .approx_max_kcut()

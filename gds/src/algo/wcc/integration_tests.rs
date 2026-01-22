@@ -67,7 +67,7 @@ mod tests {
     fn wcc_chain_is_single_component() {
         // 0 - 1 - 2 - 3
         let store = store_from_outgoing(vec![vec![1], vec![2], vec![3], vec![]]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.wcc().run().unwrap();
         assert_eq!(result.component_count, 1);
@@ -81,7 +81,7 @@ mod tests {
     fn wcc_two_components() {
         // 0 - 1 and 2 - 3
         let store = store_from_outgoing(vec![vec![1], vec![], vec![3], vec![]]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.wcc().run().unwrap();
         assert_eq!(result.component_count, 2);
@@ -94,7 +94,7 @@ mod tests {
     #[test]
     fn wcc_isolated_nodes_each_form_component() {
         let store = store_from_outgoing(vec![vec![], vec![], vec![]]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.wcc().run().unwrap();
         assert_eq!(result.component_count, 3);
@@ -106,7 +106,7 @@ mod tests {
     #[test]
     fn wcc_empty_graph_has_no_components() {
         let store = store_from_outgoing(vec![]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.wcc().run().unwrap();
         assert_eq!(result.component_count, 0);

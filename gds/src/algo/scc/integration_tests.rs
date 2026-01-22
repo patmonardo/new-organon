@@ -66,7 +66,7 @@ mod tests {
     fn scc_single_cycle_is_one_component() {
         // 0 -> 1 -> 2 -> 0
         let store = store_from_outgoing(vec![vec![1], vec![2], vec![0]]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.scc().run().unwrap();
         assert_eq!(result.component_count, 1);
@@ -79,7 +79,7 @@ mod tests {
     fn scc_two_disjoint_cycles_are_two_components() {
         // (0 <-> 1) and (2 <-> 3)
         let store = store_from_outgoing(vec![vec![1], vec![0], vec![3], vec![2]]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.scc().run().unwrap();
         assert_eq!(result.component_count, 2);
@@ -93,7 +93,7 @@ mod tests {
     fn scc_directed_chain_has_each_node_its_own_component() {
         // 0 -> 1 -> 2 -> 3
         let store = store_from_outgoing(vec![vec![1], vec![2], vec![3], vec![]]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.scc().run().unwrap();
         assert_eq!(result.component_count, 4);
@@ -106,7 +106,7 @@ mod tests {
     #[test]
     fn scc_isolated_nodes_each_form_component() {
         let store = store_from_outgoing(vec![vec![], vec![], vec![]]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.scc().run().unwrap();
         assert_eq!(result.component_count, 3);
@@ -118,7 +118,7 @@ mod tests {
     #[test]
     fn scc_empty_graph_has_no_components() {
         let store = store_from_outgoing(vec![]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.scc().run().unwrap();
         assert_eq!(result.component_count, 0);

@@ -235,14 +235,16 @@ impl DagLongestPathBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::procedures::GraphFacade;
+
     use crate::projection::RelationshipType;
-    use crate::types::graph::{RelationshipTopology, SimpleIdMap};
     use crate::types::graph_store::{
         Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
     };
     use crate::types::schema::{Direction, MutableGraphSchema};
+    use crate::RelationshipTopology;
+    use crate::SimpleIdMap;
     use std::collections::HashMap;
+    use std::sync::Arc;
 
     fn store_from_directed_edges(node_count: usize, edges: &[(usize, usize)]) -> DefaultGraphStore {
         let mut outgoing: Vec<Vec<i64>> = vec![Vec::new(); node_count];
@@ -287,10 +289,9 @@ mod tests {
     #[test]
     fn facade_computes_longest_paths() {
         // Simple DAG: 0 -> 1 -> 2
-        let store = store_from_directed_edges(3, &[(0, 1), (1, 2)]);
-        let graph = Graph::new(Arc::new(store));
-
-        let rows: Vec<_> = graph.dag_longest_path().stream().unwrap().collect();
+        let store = Arc::new(store_from_directed_edges(3, &[(0, 1), (1, 2)]));
+        let builder = DagLongestPathBuilder::new(Arc::clone(&store));
+        let rows: Vec<DagLongestPathRow> = builder.stream().unwrap().collect();
 
         assert!(!rows.is_empty());
 
@@ -302,10 +303,10 @@ mod tests {
 
     #[test]
     fn facade_computes_stats() {
-        let store = store_from_directed_edges(3, &[(0, 1), (1, 2)]);
-        let graph = Graph::new(Arc::new(store));
-
-        let stats = graph.dag_longest_path().stats().unwrap();
+        let store = Arc::new(store_from_directed_edges(3, &[(0, 1), (1, 2)]));
+        let stats = DagLongestPathBuilder::new(Arc::clone(&store))
+            .stats()
+            .unwrap();
 
         assert!(stats.path_count > 0);
         assert!(stats.execution_time_ms < 1000);
@@ -315,10 +316,12 @@ mod tests {
     fn facade_finds_longest_path_in_diamond() {
         // Diamond: 0 -> 1 -> 3
         //           \-> 2 ->/
-        let store = store_from_directed_edges(4, &[(0, 1), (0, 2), (1, 3), (2, 3)]);
-        let graph = Graph::new(Arc::new(store));
-
-        let rows: Vec<_> = graph.dag_longest_path().stream().unwrap().collect();
+        let store = Arc::new(store_from_directed_edges(
+            4,
+            &[(0, 1), (0, 2), (1, 3), (2, 3)],
+        ));
+        let builder = DagLongestPathBuilder::new(Arc::clone(&store));
+        let rows: Vec<DagLongestPathRow> = builder.stream().unwrap().collect();
 
         // Find path to node 3
         let path_to_3 = rows.iter().find(|r| r.target_node == 3).unwrap();

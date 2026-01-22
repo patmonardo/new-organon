@@ -293,7 +293,7 @@ mod tests {
         // 0 -> 1, 0 -> 2, 0 -> 3
         // Node 0 is the hub with maximum influence
         let store = store_from_directed_edges(4, &[(0, 1), (0, 2), (0, 3)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph
             .celf()
@@ -311,7 +311,7 @@ mod tests {
     #[test]
     fn facade_respects_seed_set_size() {
         let store = store_from_directed_edges(5, &[(0, 1), (1, 2), (2, 3), (3, 4)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph
             .celf()
@@ -328,7 +328,7 @@ mod tests {
     #[test]
     fn mutate_adds_seed_spread_property() {
         let store = store_from_directed_edges(4, &[(0, 1), (0, 2), (0, 3)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph
             .celf()

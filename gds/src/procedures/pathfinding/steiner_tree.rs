@@ -333,6 +333,7 @@ impl SteinerTreeBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::procedures::GraphFacade;
     use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 
     fn store() -> Arc<DefaultGraphStore> {
@@ -358,7 +359,7 @@ mod tests {
     #[test]
     fn test_stream_smoke() {
         let store = store();
-        let rows: Vec<_> = crate::procedures::GraphFacade::Graph::new(store)
+        let rows: Vec<_> = GraphFacade::new(store)
             .steiner_tree()
             .source_node(0)
             .target_nodes(vec![5, 7])
@@ -372,7 +373,7 @@ mod tests {
     #[test]
     fn test_stats_smoke() {
         let store = store();
-        let stats = crate::procedures::GraphFacade::Graph::new(store)
+        let stats = GraphFacade::new(store)
             .steiner_tree()
             .source_node(0)
             .target_nodes(vec![5, 7])

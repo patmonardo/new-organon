@@ -62,7 +62,7 @@ mod tests {
     fn finds_articulation_points_in_path() {
         // Path 0-1-2-3-4 => internal nodes are articulation points.
         let store = store_from_undirected_edges(5, &[(0, 1), (1, 2), (2, 3), (3, 4)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph.articulation_points().stream().unwrap().collect();
         let ids: Vec<u64> = rows.into_iter().map(|r| r.node_id).collect();
@@ -75,7 +75,7 @@ mod tests {
     #[test]
     fn cycle_has_no_articulation_points() {
         let store = store_from_undirected_edges(4, &[(0, 1), (1, 2), (2, 3), (3, 0)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph.articulation_points().stream().unwrap().collect();
         assert!(rows.is_empty());
@@ -84,7 +84,7 @@ mod tests {
     #[test]
     fn star_center_is_articulation_point() {
         let store = store_from_undirected_edges(5, &[(0, 1), (0, 2), (0, 3), (0, 4)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph.articulation_points().stream().unwrap().collect();
         let ids: Vec<u64> = rows.into_iter().map(|r| r.node_id).collect();

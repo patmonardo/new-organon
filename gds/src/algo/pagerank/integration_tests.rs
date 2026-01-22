@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn pagerank_empty_edges_is_uniform_and_converges() {
         let store = store_from_outgoing(vec![vec![], vec![], vec![]]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let stats = graph
             .pagerank()
@@ -97,7 +97,7 @@ mod tests {
     fn pagerank_chain_orders_sink_highest() {
         // 0 -> 1 -> 2 (2 is dangling)
         let store = store_from_outgoing(vec![vec![1], vec![2], vec![]]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let scores: Vec<f64> = graph
             .pagerank()

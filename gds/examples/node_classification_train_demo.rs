@@ -28,9 +28,9 @@ mod enabled {
         TrainingPipeline, TunableTrainerConfig,
     };
     use gds::types::graph_store::{DefaultGraphStore, GraphStore};
-    use gds::types::properties::{
-        DefaultDoubleNodePropertyValues, DefaultLongNodePropertyValues, NodePropertyValues,
-    };
+    use gds::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+    use gds::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
+    use gds::types::properties::node::NodePropertyValues;
     use gds::types::random::{RandomGraphConfig, RandomRelationshipConfig};
     use gds::types::user::User;
     use serde_json::{json, Value};

@@ -74,7 +74,7 @@ mod tests {
             vec![(2, 1.0)],
         ];
         let store = store_from_outgoing(outgoing);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.label_propagation().max_iterations(20).run().unwrap();
 
@@ -93,7 +93,7 @@ mod tests {
         // With identity init labels, node 0 sees labels {1,2} equal weight -> picks 1.
         let outgoing = vec![vec![(1, 1.0), (2, 1.0)], vec![(0, 1.0)], vec![(0, 1.0)]];
         let store = store_from_outgoing(outgoing);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.label_propagation().max_iterations(1).run().unwrap();
         assert_eq!(result.labels[0], 1);

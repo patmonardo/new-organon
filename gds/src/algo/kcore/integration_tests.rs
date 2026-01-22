@@ -104,7 +104,7 @@ mod tests {
     fn kcore_triangle_is_2_core() {
         let outgoing = vec![vec![1, 2], vec![0, 2], vec![0, 1]];
         let store = store_from_outgoing(outgoing);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.kcore().run().unwrap();
 
@@ -116,7 +116,7 @@ mod tests {
     fn kcore_path_is_1_core() {
         let outgoing = vec![vec![1], vec![0, 2], vec![1, 3], vec![2]];
         let store = store_from_outgoing(outgoing);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.kcore().run().unwrap();
 
@@ -128,7 +128,7 @@ mod tests {
     fn kcore_isolated_node_is_0_core() {
         let outgoing = vec![vec![]];
         let store = store_from_outgoing(outgoing);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.kcore().run().unwrap();
 

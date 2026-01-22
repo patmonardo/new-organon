@@ -360,6 +360,7 @@ impl AlgorithmRunner for ArticulationPointsFacade {
 mod tests {
     use super::*;
     use crate::procedures::GraphFacade;
+
     use crate::projection::RelationshipType;
     use crate::types::graph::{RelationshipTopology, SimpleIdMap};
     use crate::types::graph_store::{
@@ -418,7 +419,7 @@ mod tests {
     fn facade_finds_articulation_points_on_path() {
         // 0-1-2-3-4 => 1,2,3
         let store = store_from_undirected_edges(5, &[(0, 1), (1, 2), (2, 3), (3, 4)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph.articulation_points().stream().unwrap().collect();
         let ids: Vec<u64> = rows.into_iter().map(|r| r.node_id).collect();
@@ -434,7 +435,7 @@ mod tests {
     fn facade_cycle_has_no_articulation_points() {
         // 0-1-2-3-0
         let store = store_from_undirected_edges(4, &[(0, 1), (1, 2), (2, 3), (3, 0)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph.articulation_points().stream().unwrap().collect();
         assert!(rows.is_empty());
@@ -443,7 +444,7 @@ mod tests {
     #[test]
     fn mutate_adds_articulation_point_property() {
         let store = store_from_undirected_edges(5, &[(0, 1), (1, 2), (2, 3), (3, 4)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph
             .articulation_points()

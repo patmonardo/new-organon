@@ -384,6 +384,7 @@ impl SpanningTreeBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::procedures::GraphFacade;
     use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 
     fn store() -> Arc<DefaultGraphStore> {
@@ -410,7 +411,7 @@ mod tests {
     #[test]
     fn test_stream_smoke() {
         let store = store();
-        let rows: Vec<_> = crate::procedures::GraphFacade::Graph::new(store)
+        let rows: Vec<_> = GraphFacade::new(store)
             .spanning_tree()
             .start_node(0)
             .compute_minimum(true)
@@ -424,7 +425,7 @@ mod tests {
     #[test]
     fn test_stats_smoke() {
         let store = store();
-        let stats = crate::procedures::GraphFacade::Graph::new(store)
+        let stats = GraphFacade::new(store)
             .spanning_tree()
             .start_node(0)
             .compute_minimum(true)

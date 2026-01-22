@@ -79,7 +79,7 @@ mod tests {
         // Triangle (undirected modeled as symmetric directed edges)
         let outgoing = vec![vec![1, 2], vec![0, 2], vec![0, 1]];
         let store = store_from_outgoing(outgoing.clone());
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.k1coloring().max_iterations(20).run().unwrap();
         assert!(result.did_converge);
@@ -96,7 +96,7 @@ mod tests {
         // Path 0-1-2-3
         let outgoing = vec![vec![1], vec![0, 2], vec![1, 3], vec![2]];
         let store = store_from_outgoing(outgoing.clone());
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.k1coloring().max_iterations(20).run().unwrap();
         assert_valid_coloring(&outgoing, &result.colors);

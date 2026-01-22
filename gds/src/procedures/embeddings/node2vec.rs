@@ -342,7 +342,7 @@ mod tests {
 
     #[test]
     fn facade_run_returns_expected_shape() {
-        let graph = Graph::new(store());
+        let graph = GraphFacade::new(store());
 
         let result = graph
             .node2vec()
@@ -364,7 +364,7 @@ mod tests {
 
     #[test]
     fn facade_stream_yields_one_row_per_node() {
-        let graph = Graph::new(store());
+        let graph = GraphFacade::new(store());
 
         let rows: Vec<_> = graph
             .node2vec()
@@ -386,7 +386,7 @@ mod tests {
 
     #[test]
     fn facade_run_with_print_emits_summary_without_embeddings() {
-        let graph = Graph::new(store());
+        let graph = GraphFacade::new(store());
 
         let (result, print) = graph
             .node2vec()

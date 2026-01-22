@@ -17,9 +17,9 @@ Run: cargo run -p gds --example gnn_pipeline_demo --features ml"
 #[cfg(feature = "ml")]
 mod enabled {
     use gds::algo::embeddings::{hashgnn::GenerateFeaturesConfig, HashGNNEmbeddings};
-    use gds::procedures::Graph;
     use gds::types::graph_store::{DefaultGraphStore, GraphStore};
     use gds::types::random::{RandomGraphConfig, RandomRelationshipConfig};
+    use gds::GraphFacade;
     use std::sync::Arc;
 
     pub fn main() {
@@ -36,7 +36,7 @@ mod enabled {
         };
 
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
-        let graph = Graph::new(store.clone());
+        let graph = GraphFacade::new(store.clone());
 
         println!("Created graph with {} nodes", store.node_count());
         println!(

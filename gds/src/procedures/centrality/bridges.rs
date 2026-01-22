@@ -6,6 +6,7 @@ use crate::algo::bridges::computation::{Bridge, BridgesComputationRuntime};
 use crate::algo::bridges::storage::BridgesStorageRuntime;
 use crate::core::utils::progress::ProgressTracker;
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
+
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
@@ -423,7 +424,7 @@ mod tests {
     fn facade_finds_bridge_on_path() {
         // 0-1-2-3 => all edges are bridges
         let store = store_from_undirected_edges(4, &[(0, 1), (1, 2), (2, 3)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph.bridges().stream().unwrap().collect();
 
@@ -444,7 +445,7 @@ mod tests {
     fn facade_cycle_has_no_bridges() {
         // 0-1-2-3-0 => no bridges (all edges in cycle)
         let store = store_from_undirected_edges(4, &[(0, 1), (1, 2), (2, 3), (3, 0)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph.bridges().stream().unwrap().collect();
         assert!(rows.is_empty());
@@ -457,7 +458,7 @@ mod tests {
             6,
             &[(0, 1), (1, 2), (2, 0), (2, 3), (3, 4), (4, 5), (5, 3)],
         );
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph.bridges().stream().unwrap().collect();
 
@@ -469,7 +470,7 @@ mod tests {
     #[test]
     fn mutate_adds_bridge_property() {
         let store = store_from_undirected_edges(4, &[(0, 1), (1, 2), (2, 3)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.bridges().mutate("is_bridge").unwrap();
         let rel_type = RelationshipType::of("REL");

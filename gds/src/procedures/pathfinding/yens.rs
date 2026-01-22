@@ -393,6 +393,7 @@ impl YensBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::procedures::GraphFacade;
     use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 
     #[test]
@@ -429,7 +430,7 @@ mod tests {
         };
 
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
-        let graph = crate::procedures::GraphFacade::new(store);
+        let graph = GraphFacade::new(store);
 
         let _rows: Vec<_> = graph
             .yens()

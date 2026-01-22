@@ -276,6 +276,7 @@ impl KSpanningTreeBuilder {
 mod tests {
     use super::*;
     use crate::procedures::GraphFacade;
+
     use crate::projection::RelationshipType;
     use crate::types::graph::{RelationshipTopology, SimpleIdMap};
     use crate::types::graph_store::{
@@ -333,7 +334,7 @@ mod tests {
     fn facade_computes_spanning_tree() {
         // Simple path: 0-1-2-3
         let store = store_from_undirected_edges(4, &[(0, 1), (1, 2), (2, 3)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let stats = graph.kspanning_tree().source_node(0).k(4).stats().unwrap();
 
@@ -350,7 +351,7 @@ mod tests {
     fn facade_limits_to_k_nodes() {
         // 5-node path: 0-1-2-3-4, limit to k=3
         let store = store_from_undirected_edges(5, &[(0, 1), (1, 2), (2, 3), (3, 4)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph
             .kspanning_tree()

@@ -379,6 +379,7 @@ impl RandomWalkBuilder {
 mod tests {
     use super::*;
     use crate::procedures::GraphFacade;
+
     use crate::projection::RelationshipType;
     use crate::types::graph::{RelationshipTopology, SimpleIdMap};
     use crate::types::graph_store::{
@@ -431,7 +432,7 @@ mod tests {
     fn facade_generates_walks() {
         // Simple path: 0 -> 1 -> 2
         let store = store_from_directed_edges(3, &[(0, 1), (1, 2)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let walks: Vec<_> = graph
             .random_walk()
@@ -450,7 +451,7 @@ mod tests {
     #[test]
     fn facade_computes_stats() {
         let store = store_from_directed_edges(3, &[(0, 1), (1, 2)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let stats = graph
             .random_walk()
@@ -468,7 +469,7 @@ mod tests {
     fn facade_walks_from_all_nodes() {
         // Triangle
         let store = store_from_directed_edges(3, &[(0, 1), (1, 2), (2, 0)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let stats = graph
             .random_walk()

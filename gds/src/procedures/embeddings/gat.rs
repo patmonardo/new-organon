@@ -146,8 +146,10 @@ impl GATBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::procedures::GraphFacade;
+
     use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
+
+    use crate::procedures::GraphFacade;
 
     fn store() -> Arc<DefaultGraphStore> {
         let config = RandomGraphConfig {
@@ -162,7 +164,7 @@ mod tests {
 
     #[test]
     fn facade_run_produces_embeddings() {
-        let graph = Graph::new(store());
+        let graph = GraphFacade::new(store());
 
         let result = graph
             .gat()

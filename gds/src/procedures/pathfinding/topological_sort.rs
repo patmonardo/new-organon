@@ -311,6 +311,7 @@ impl TopologicalSortBuilder {
 mod tests {
     use super::*;
     use crate::procedures::GraphFacade;
+
     use crate::projection::RelationshipType;
     use crate::types::graph::{RelationshipTopology, SimpleIdMap};
     use crate::types::graph_store::{
@@ -363,7 +364,7 @@ mod tests {
     fn facade_computes_topological_order() {
         // Simple DAG: 0 -> 1 -> 2
         let store = store_from_directed_edges(3, &[(0, 1), (1, 2)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph.topological_sort().stream().unwrap().collect();
 
@@ -376,7 +377,7 @@ mod tests {
     #[test]
     fn facade_computes_stats() {
         let store = store_from_directed_edges(3, &[(0, 1), (1, 2)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let stats = graph.topological_sort().stats().unwrap();
 
@@ -388,7 +389,7 @@ mod tests {
     fn facade_computes_max_distances() {
         // Diamond DAG
         let store = store_from_directed_edges(4, &[(0, 1), (0, 2), (1, 3), (2, 3)]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let rows: Vec<_> = graph
             .topological_sort()

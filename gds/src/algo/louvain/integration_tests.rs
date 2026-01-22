@@ -66,7 +66,7 @@ mod tests {
     fn louvain_splits_isolated_nodes() {
         // 0--1 connected, 2 isolated => expect two communities.
         let store = store_from_outgoing(vec![vec![1], vec![0], vec![]]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.louvain().run().unwrap();
         assert_eq!(result.data.len(), 3);
@@ -80,7 +80,7 @@ mod tests {
     #[test]
     fn louvain_empty_graph_is_empty() {
         let store = store_from_outgoing(vec![]);
-        let graph = Graph::new(Arc::new(store));
+        let graph = GraphFacade::new(Arc::new(store));
 
         let result = graph.louvain().run().unwrap();
         assert!(result.data.is_empty());
