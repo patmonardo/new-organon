@@ -15,6 +15,7 @@ use crate::procedures::community::approx_max_kcut::ApproxMaxKCutFacade;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
+use crate::core::loading::GraphResources;
 
 /// Handle ApproxMaxKCut requests
 pub fn handle_approx_max_kcut(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
@@ -100,7 +101,7 @@ pub fn handle_approx_max_kcut(request: &Value, catalog: Arc<dyn GraphCatalog>) -
                 .clone();
             let min_sizes = min_community_sizes.clone();
 
-            let compute = move |gr: &crate::core::loading::GraphResources,
+            let compute = move |gr: &GraphResources,
                                 _tracker: &mut dyn ProgressTracker,
                                 _termination: &TerminationFlag|
                   -> Result<Option<Vec<Value>>, String> {
@@ -125,9 +126,7 @@ pub fn handle_approx_max_kcut(request: &Value, catalog: Arc<dyn GraphCatalog>) -
             };
 
             let result_builder = FnStreamResultBuilder::new(
-                |_gr: &crate::core::loading::GraphResources, rows: Option<Vec<Value>>| {
-                    rows.unwrap_or_default().into_iter()
-                },
+                |_gr: &GraphResources, rows: Option<Vec<Value>>| rows.unwrap_or_default().into_iter(),
             );
 
             match convenience.process_stream(
@@ -164,7 +163,7 @@ pub fn handle_approx_max_kcut(request: &Value, catalog: Arc<dyn GraphCatalog>) -
                 .clone();
             let min_sizes = min_community_sizes.clone();
 
-            let compute = move |gr: &crate::core::loading::GraphResources,
+            let compute = move |gr: &GraphResources,
                                 _tracker: &mut dyn ProgressTracker,
                                 _termination: &TerminationFlag|
                   -> Result<Option<Value>, String> {
@@ -186,17 +185,15 @@ pub fn handle_approx_max_kcut(request: &Value, catalog: Arc<dyn GraphCatalog>) -
                 Ok(Some(stats_value))
             };
 
-            let builder = FnStatsResultBuilder(
-                |_gr: &crate::core::loading::GraphResources, stats: Option<Value>, timings| {
-                    json!({
-                        "ok": true,
-                        "op": op,
-                        "mode": "stats",
-                        "data": stats,
-                        "timings": timings_json(timings)
-                    })
-                },
-            );
+            let builder = FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<Value>, timings| {
+                json!({
+                    "ok": true,
+                    "op": op,
+                    "mode": "stats",
+                    "data": stats,
+                    "timings": timings_json(timings)
+                })
+            });
 
             match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
                 Ok(response) => response,

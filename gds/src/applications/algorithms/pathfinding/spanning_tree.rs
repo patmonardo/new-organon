@@ -1,8 +1,9 @@
 //! Spanning Tree algorithm dispatch handler.
 
 use crate::applications::algorithms::machinery::{
-    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
-    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
+    AlgorithmProcessingTemplateConvenience, AlgorithmProcessingTimings,
+    DefaultAlgorithmProcessingTemplate, FnStatsResultBuilder, FnStreamResultBuilder,
+    ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::applications::algorithms::pathfinding::shared::{
     err, get_bool, get_str, get_u64, timings_json,
@@ -191,7 +192,7 @@ pub fn handle_spanning_tree(request: &Value, catalog: Arc<dyn GraphCatalog>) -> 
             let builder = FnStatsResultBuilder(
                 |_gr: &GraphResources,
                  stats: Option<SpanningTreeStats>,
-                 timings: crate::applications::algorithms::machinery::AlgorithmProcessingTimings| {
+                 timings: AlgorithmProcessingTimings| {
                     let stats = stats.unwrap_or(SpanningTreeStats {
                         effective_node_count: 0,
                         total_weight: 0.0,

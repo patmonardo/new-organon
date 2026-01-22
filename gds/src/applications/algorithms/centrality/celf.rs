@@ -10,6 +10,7 @@ use crate::applications::algorithms::machinery::{
 };
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::CatalogLoader;
+use crate::core::loading::GraphResources;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
 use crate::procedures::centrality::celf::CELFFacade;
 use crate::types::catalog::GraphCatalog;
@@ -92,7 +93,7 @@ pub fn handle_celf(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         "stream" => {
             let task = Tasks::leaf("celf::stream".to_string()).base().clone();
 
-            let compute = |_gr: &crate::core::loading::GraphResources,
+            let compute = |_gr: &GraphResources,
                            _tracker: &mut dyn ProgressTracker,
                            _termination: &TerminationFlag|
              -> Result<Option<Vec<Value>>, String> {
@@ -113,11 +114,10 @@ pub fn handle_celf(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 Ok(Some(rows))
             };
 
-            let result_builder = FnStreamResultBuilder::new(
-                |_gr: &crate::core::loading::GraphResources, rows: Option<Vec<Value>>| {
+            let result_builder =
+                FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<Value>>| {
                     rows.unwrap_or_default().into_iter()
-                },
-            );
+                });
 
             match convenience.process_stream(
                 &graph_resources,
@@ -150,7 +150,7 @@ pub fn handle_celf(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         "stats" => {
             let task = Tasks::leaf("celf::stats".to_string()).base().clone();
 
-            let compute = |_gr: &crate::core::loading::GraphResources,
+            let compute = |_gr: &GraphResources,
                            _tracker: &mut dyn ProgressTracker,
                            _termination: &TerminationFlag|
              -> Result<Option<Value>, String> {
@@ -169,8 +169,8 @@ pub fn handle_celf(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 Ok(Some(stats_value))
             };
 
-            let builder = FnStatsResultBuilder(
-                |_gr: &crate::core::loading::GraphResources, stats: Option<Value>, timings| {
+            let builder =
+                FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<Value>, timings| {
                     json!({
                         "ok": true,
                         "op": op,
@@ -178,8 +178,7 @@ pub fn handle_celf(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                         "data": stats,
                         "timings": timings_json(timings)
                     })
-                },
-            );
+                });
 
             match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
                 Ok(v) => v,

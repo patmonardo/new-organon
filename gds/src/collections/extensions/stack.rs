@@ -4,7 +4,8 @@
 //! This provides stack capabilities as extensions to any Collections implementation.
 
 use crate::collections::traits::Collections;
-use crate::config::Extension;
+use crate::config::{CollectionsBackend, Extension};
+use crate::types::ValueType;
 use crate::core::utils::paged::{HugeLongArrayStack, PagedLongStack};
 use std::marker::PhantomData;
 
@@ -204,19 +205,19 @@ where
         self.inner.default_value()
     }
 
-    fn backend(&self) -> crate::config::CollectionsBackend {
+    fn backend(&self) -> CollectionsBackend {
         self.inner.backend()
     }
 
-    fn features(&self) -> &[crate::config::Extension] {
+    fn features(&self) -> &[Extension] {
         &[Extension::Stack]
     }
 
-    fn extensions(&self) -> &[crate::config::Extension] {
+    fn extensions(&self) -> &[Extension] {
         &[Extension::Stack]
     }
 
-    fn value_type(&self) -> crate::types::ValueType {
+    fn value_type(&self) -> ValueType {
         self.inner.value_type()
     }
 

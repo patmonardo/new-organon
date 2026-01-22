@@ -215,19 +215,19 @@ where
         self.default_value.clone()
     }
 
-    fn backend(&self) -> crate::config::CollectionsBackend {
+    fn backend(&self) -> CollectionsBackend {
         self.collection.backend()
     }
 
-    fn features(&self) -> &[crate::config::Extension] {
+    fn features(&self) -> &[Extension] {
         self.collection.features()
     }
 
-    fn extensions(&self) -> &[crate::config::Extension] {
+    fn extensions(&self) -> &[Extension] {
         self.collection.extensions()
     }
 
-    fn value_type(&self) -> crate::types::ValueType {
+    fn value_type(&self) -> ValueType {
         self.value_type
     }
 

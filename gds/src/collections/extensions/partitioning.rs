@@ -4,11 +4,12 @@
 //! This provides sophisticated parallel processing capabilities for ML workloads.
 
 use crate::collections::traits::Collections;
-use crate::config::Extension;
+use crate::config::{CollectionsBackend, Extension};
 use crate::core::utils::partition::{
     DegreeFunction, DegreePartition, IteratorPartition, LazyDegreePartitionIterator, Partition,
     PartitionUtils, Partitioning,
 };
+use crate::types::ValueType;
 use std::marker::PhantomData;
 
 /// Partitioning strategy for ML Collections
@@ -301,19 +302,19 @@ where
         self.inner.default_value()
     }
 
-    fn backend(&self) -> crate::config::CollectionsBackend {
+    fn backend(&self) -> CollectionsBackend {
         self.inner.backend()
     }
 
-    fn features(&self) -> &[crate::config::Extension] {
+    fn features(&self) -> &[Extension] {
         &[Extension::Partitioning]
     }
 
-    fn extensions(&self) -> &[crate::config::Extension] {
+    fn extensions(&self) -> &[Extension] {
         &[Extension::Partitioning]
     }
 
-    fn value_type(&self) -> crate::types::ValueType {
+    fn value_type(&self) -> ValueType {
         self.inner.value_type()
     }
 

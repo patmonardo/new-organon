@@ -141,6 +141,7 @@ impl PoolSizesService {
 mod tests {
     use super::super::PoolSizes;
     use super::*;
+    use crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY;
 
     #[test]
     fn test_license_state_variants() {
@@ -153,14 +154,8 @@ mod tests {
     fn test_provider_get_open() {
         let provider = PoolSizesProvider;
         let pool = provider.get(LicenseState::Open);
-        assert_eq!(
-            pool.core_pool_size(),
-            crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
-        );
-        assert_eq!(
-            pool.max_pool_size(),
-            crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
-        );
+        assert_eq!(pool.core_pool_size(), OPEN_GDS_DEFAULT_CONCURRENCY);
+        assert_eq!(pool.max_pool_size(), OPEN_GDS_DEFAULT_CONCURRENCY);
     }
 
     #[test]
@@ -168,14 +163,8 @@ mod tests {
         let provider = PoolSizesProvider;
         // Currently returns same for enterprise
         let pool = provider.get(LicenseState::Enterprise);
-        assert_eq!(
-            pool.core_pool_size(),
-            crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
-        );
-        assert_eq!(
-            pool.max_pool_size(),
-            crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
-        );
+        assert_eq!(pool.core_pool_size(), OPEN_GDS_DEFAULT_CONCURRENCY);
+        assert_eq!(pool.max_pool_size(), OPEN_GDS_DEFAULT_CONCURRENCY);
     }
 
     #[test]
@@ -188,23 +177,14 @@ mod tests {
     fn test_provider_default() {
         let provider = PoolSizesProvider::default();
         let pool = provider.get(LicenseState::Open);
-        assert_eq!(
-            pool.core_pool_size(),
-            crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
-        );
+        assert_eq!(pool.core_pool_size(), OPEN_GDS_DEFAULT_CONCURRENCY);
     }
 
     #[test]
     fn test_service_pool_sizes() {
         let pool = PoolSizesService::pool_sizes();
-        assert_eq!(
-            pool.core_pool_size(),
-            crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
-        );
-        assert_eq!(
-            pool.max_pool_size(),
-            crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
-        );
+        assert_eq!(pool.core_pool_size(), OPEN_GDS_DEFAULT_CONCURRENCY);
+        assert_eq!(pool.max_pool_size(), OPEN_GDS_DEFAULT_CONCURRENCY);
     }
 
     #[test]

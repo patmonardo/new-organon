@@ -132,6 +132,7 @@ impl TaskMemoryContainer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::utils::progress::Task;
 
     #[test]
     fn test_reserve_task() {
@@ -171,7 +172,7 @@ mod tests {
         let task = UserTask::new(
             "alice".to_string(),
             job1.clone(),
-            crate::core::utils::progress::Task::new("t".to_string(), vec![]),
+            Task::new("t".to_string(), vec![]),
         );
         let total = container.remove_task(&task);
 
@@ -189,7 +190,7 @@ mod tests {
         let task = UserTask::new(
             "alice".to_string(),
             JobId::from("nonexistent"),
-            crate::core::utils::progress::Task::new("t".to_string(), vec![]),
+            Task::new("t".to_string(), vec![]),
         );
         let total = container.remove_task(&task);
 

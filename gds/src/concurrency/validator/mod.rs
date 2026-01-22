@@ -76,7 +76,7 @@ impl ConcurrencyValidatorService {
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    use crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY;
     #[test]
     fn test_service_validator() {
         let validator = ConcurrencyValidatorService::validator();
@@ -87,7 +87,7 @@ mod tests {
     fn test_service_max_concurrency() {
         assert_eq!(
             ConcurrencyValidatorService::max_concurrency(),
-            crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
+            OPEN_GDS_DEFAULT_CONCURRENCY
         );
     }
 
@@ -95,7 +95,7 @@ mod tests {
     fn test_service_default_limit() {
         assert_eq!(
             ConcurrencyValidatorService::DEFAULT_CONCURRENCY_LIMIT,
-            crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
+            OPEN_GDS_DEFAULT_CONCURRENCY
         );
     }
 }

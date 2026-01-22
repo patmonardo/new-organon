@@ -4,7 +4,8 @@
 //! This provides random generation and shuffling capabilities as extensions to any Collections implementation.
 
 use crate::collections::traits::Collections;
-use crate::config::Extension;
+use crate::config::{CollectionsBackend, Extension};
+use crate::types::ValueType;
 use crate::core::utils::shuffle::{Random, SplittableRandom};
 use std::marker::PhantomData;
 
@@ -197,19 +198,19 @@ where
         self.inner.default_value()
     }
 
-    fn backend(&self) -> crate::config::CollectionsBackend {
+    fn backend(&self) -> CollectionsBackend {
         self.inner.backend()
     }
 
-    fn features(&self) -> &[crate::config::Extension] {
+    fn features(&self) -> &[Extension] {
         &[Extension::Random]
     }
 
-    fn extensions(&self) -> &[crate::config::Extension] {
+    fn extensions(&self) -> &[Extension] {
         &[Extension::Random]
     }
 
-    fn value_type(&self) -> crate::types::ValueType {
+    fn value_type(&self) -> ValueType {
         self.inner.value_type()
     }
 

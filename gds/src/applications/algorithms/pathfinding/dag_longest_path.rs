@@ -10,6 +10,7 @@ use crate::applications::algorithms::pathfinding::shared::{
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
+use crate::procedures::pathfinding::DagLongestPathStats;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -100,10 +101,7 @@ pub fn handle_dag_longest_path(request: &Value, catalog: Arc<dyn GraphCatalog>) 
             let compute = move |gr: &GraphResources,
                                 _tracker: &mut dyn ProgressTracker,
                                 _termination: &TerminationFlag|
-                  -> Result<
-                Option<crate::procedures::pathfinding::DagLongestPathStats>,
-                String,
-            > {
+                  -> Result<Option<DagLongestPathStats>, String> {
                 let stats = gr
                     .facade()
                     .dag_longest_path()
@@ -114,9 +112,7 @@ pub fn handle_dag_longest_path(request: &Value, catalog: Arc<dyn GraphCatalog>) 
             };
 
             let builder = FnStatsResultBuilder(
-                |_gr: &GraphResources,
-                 stats: Option<crate::procedures::pathfinding::DagLongestPathStats>,
-                 timings| {
+                |_gr: &GraphResources, stats: Option<DagLongestPathStats>, timings| {
                     json!({
                         "ok": true,
                         "op": op,

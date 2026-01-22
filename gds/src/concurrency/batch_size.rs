@@ -1,3 +1,4 @@
+use crate::concurrency::Concurrency;
 use std::fmt;
 use std::num::NonZeroUsize;
 
@@ -156,10 +157,7 @@ impl BatchSize {
     /// let batch = BatchSize::for_parallel_work(total_work, concurrency);
     /// println!("Using batch size: {}", batch.value());
     /// ```
-    pub fn for_parallel_work(
-        total_work: usize,
-        concurrency: crate::concurrency::Concurrency,
-    ) -> Self {
+    pub fn for_parallel_work(total_work: usize, concurrency: Concurrency) -> Self {
         if total_work == 0 {
             return Self::new(1);
         }

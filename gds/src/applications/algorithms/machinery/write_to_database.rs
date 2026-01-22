@@ -12,7 +12,9 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
 
+use crate::applications::graph_store_catalog::loaders::ResultStore;
 use crate::applications::services::logging::Log;
+use crate::concurrency::Concurrency;
 use crate::core::utils::progress::JobId;
 use crate::procedures::GraphFacade;
 use crate::projection::NodeLabel;
@@ -26,14 +28,12 @@ use super::{
 
 /// Minimal adapter trait to keep Java parameter-shape without importing procedure-only configs.
 pub trait WriteConfigLike {
-    fn write_concurrency(&self) -> crate::concurrency::Concurrency;
+    fn write_concurrency(&self) -> Concurrency;
 
     fn resolve_result_store<'a>(
         &self,
-        result_store: Option<
-            &'a dyn crate::applications::graph_store_catalog::loaders::ResultStore,
-        >,
-    ) -> Option<&'a dyn crate::applications::graph_store_catalog::loaders::ResultStore> {
+        result_store: Option<&'a dyn ResultStore>,
+    ) -> Option<&'a dyn ResultStore> {
         result_store
     }
 }
@@ -74,7 +74,7 @@ impl WriteToDatabase {
         &self,
         graph: &GraphFacade,
         graph_store: &mut S,
-        result_store: Option<&dyn crate::applications::graph_store_catalog::loaders::ResultStore>,
+        result_store: Option<&dyn ResultStore>,
         write_configuration: &dyn WriteConfigLike,
         write_property_configuration: &dyn WritePropertyConfigLike,
         label: &dyn Label,
@@ -106,7 +106,7 @@ impl WriteToDatabase {
         &self,
         graph: &GraphFacade,
         graph_store: &mut S,
-        result_store: Option<&dyn crate::applications::graph_store_catalog::loaders::ResultStore>,
+        result_store: Option<&dyn ResultStore>,
         write_configuration: &dyn WriteConfigLike,
         label: &dyn Label,
         job_id: &JobId,

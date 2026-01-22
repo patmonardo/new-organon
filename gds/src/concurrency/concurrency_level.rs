@@ -35,6 +35,8 @@ pub struct Concurrency {
     value: NonZeroUsize,
 }
 
+pub const OPEN_GDS_DEFAULT_CONCURRENCY: usize = 4;
+
 impl Concurrency {
     /// Creates a new Concurrency with the specified value.
     ///

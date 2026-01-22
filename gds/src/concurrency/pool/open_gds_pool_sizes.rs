@@ -1,4 +1,5 @@
 use super::PoolSizes;
+use crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY;
 
 /// Open GDS pool sizes - default implementation.
 ///
@@ -30,11 +31,11 @@ pub struct OpenGdsPoolSizes;
 
 impl PoolSizes for OpenGdsPoolSizes {
     fn core_pool_size(&self) -> usize {
-        crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
+        OPEN_GDS_DEFAULT_CONCURRENCY
     }
 
     fn max_pool_size(&self) -> usize {
-        crate::concurrency::OPEN_GDS_DEFAULT_CONCURRENCY
+        OPEN_GDS_DEFAULT_CONCURRENCY
     }
 }
 

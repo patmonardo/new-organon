@@ -6,7 +6,7 @@
 //! - a `Task` tree
 //! - request-scoped dependencies (job id + task registry)
 
-use crate::concurrency::Concurrency;
+use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{ProgressTracker, Task, TaskProgressTracker};
 
 use super::RequestScopedDependencies;
@@ -47,7 +47,7 @@ impl ProgressTrackerCreator {
         &self.request_scoped_dependencies
     }
 
-    pub fn termination_flag(&self) -> &crate::concurrency::TerminationFlag {
+    pub fn termination_flag(&self) -> &TerminationFlag {
         &self.request_scoped_dependencies.termination_flag
     }
 }

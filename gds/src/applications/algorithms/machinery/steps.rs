@@ -1,5 +1,6 @@
 //! MutateStep / WriteStep (Java parity).
 
+use crate::applications::graph_store_catalog::loaders::ResultStore;
 use crate::core::loading::GraphResources;
 use crate::core::utils::progress::JobId;
 use crate::procedures::GraphFacade;
@@ -15,7 +16,7 @@ pub trait WriteStep<ResultFromAlgorithm, Metadata> {
         &self,
         graph: &GraphFacade,
         graph_store: &DefaultGraphStore,
-        result_store: Option<&dyn crate::applications::graph_store_catalog::loaders::ResultStore>,
+        result_store: Option<&dyn ResultStore>,
         result: &ResultFromAlgorithm,
         job_id: &JobId,
     ) -> Metadata;

@@ -1,6 +1,8 @@
 //! Enhanced Vec implementation for Collections
 
 use crate::collections::traits::Collections;
+use crate::config::{CollectionsBackend, Extension};
+use crate::types::ValueType;
 use std::iter::Sum;
 
 /// Enhanced Vec implementation with Collections API
@@ -157,17 +159,17 @@ where
     fn default_value(&self) -> T {
         T::default()
     }
-    fn backend(&self) -> crate::config::CollectionsBackend {
-        crate::config::CollectionsBackend::Vec
+    fn backend(&self) -> CollectionsBackend {
+        CollectionsBackend::Vec
     }
-    fn features(&self) -> &[crate::config::Extension] {
+    fn features(&self) -> &[Extension] {
         &[]
     }
-    fn extensions(&self) -> &[crate::config::Extension] {
+    fn extensions(&self) -> &[Extension] {
         &[]
     }
-    fn value_type(&self) -> crate::types::ValueType {
-        crate::types::ValueType::Long // Generic fallback
+    fn value_type(&self) -> ValueType {
+        ValueType::Long // Generic fallback
     }
     fn with_capacity(capacity: usize) -> Self {
         Self {
