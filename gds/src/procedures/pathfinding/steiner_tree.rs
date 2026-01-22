@@ -18,7 +18,9 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 // Import upgraded systems
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{TaskRegistryFactory, Tasks};
+use crate::projection::eval::procedure::AlgorithmError;
 
 /// Result row for Steiner tree stream mode
 #[derive(Debug, Clone, serde::Serialize)]
@@ -121,27 +123,19 @@ impl SteinerTreeBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.target_nodes.is_empty() {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "target_nodes must not be empty".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "target_nodes must not be empty".to_string(),
+            ));
         }
 
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be > 0".to_string(),
+            ));
         }
 
         if self.delta <= 0.0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "delta must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution("delta must be > 0".to_string()));
         }
 
         ConfigValidator::in_range(self.delta, 0.0, 100.0, "delta")?;
@@ -168,15 +162,11 @@ impl SteinerTreeBuilder {
                     &selectors,
                     Orientation::Undirected,
                 )
-                .map_err(|e| {
-                    crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-                })?
+                .map_err(|e| AlgorithmError::Graph(e.to_string()))?
         } else {
             self.graph_store
                 .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-                .map_err(|e| {
-                    crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-                })?
+                .map_err(|e| AlgorithmError::Graph(e.to_string()))?
         };
 
         let node_count = graph_view.node_count();
@@ -192,14 +182,13 @@ impl SteinerTreeBuilder {
             ));
         }
 
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("steiner_tree".to_string(), node_count),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("steiner_tree".to_string(), node_count),
+            self.concurrency,
+        );
 
         let source_node: NodeId = NodeId::try_from(self.source_node).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+            AlgorithmError::Execution(format!(
                 "source_node must fit into i64 (got {})",
                 self.source_node
             ))
@@ -209,9 +198,7 @@ impl SteinerTreeBuilder {
             .iter()
             .map(|&t| {
                 NodeId::try_from(t).map_err(|_| {
-                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                        "target_nodes must fit into i64 (got {t})"
-                    ))
+                    AlgorithmError::Execution(format!("target_nodes must fit into i64 (got {t})"))
                 })
             })
             .collect::<Result<Vec<_>>>()?;

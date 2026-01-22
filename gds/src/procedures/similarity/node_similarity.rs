@@ -1,4 +1,7 @@
-use crate::algo::similarity::{NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult};
+use crate::algo::similarity::{
+    NodeSimilarityComputationRuntime, NodeSimilarityConfig, NodeSimilarityMetric,
+    NodeSimilarityResult, NodeSimilarityStorageRuntime,
+};
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
@@ -6,11 +9,16 @@ use crate::procedures::similarity::build_similarity_relationship_store;
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
+use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
+
+// Additional imports for progress tracking and similarity stats
+use crate::algo::common::result::similarity::similarity_stats;
+use crate::core::utils::progress::TaskProgressTracker;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeSimilarityStats {
@@ -115,8 +123,7 @@ impl NodeSimilarityBuilder {
         // Assuming Orientation::Natural for Similarity.
         // Empty set = all relationship types in the default graph view.
 
-        let rel_types: HashSet<crate::projection::RelationshipType> =
-            self.graph_store.relationship_types();
+        let rel_types: HashSet<RelationshipType> = self.graph_store.relationship_types();
 
         let graph = if let Some(prop) = self.weight_property.as_ref() {
             // Provide an explicit selector for every relationship type so DefaultGraph
@@ -141,17 +148,15 @@ impl NodeSimilarityBuilder {
         };
 
         let node_count = graph.node_count();
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("node_similarity".to_string(), node_count),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("node_similarity".to_string(), node_count),
+            self.concurrency,
+        );
         progress_tracker.begin_subtask_with_volume(node_count);
 
         let config = self.build_config();
-        let storage =
-            crate::algo::similarity::NodeSimilarityStorageRuntime::new(config.concurrency);
-        let computation = crate::algo::similarity::NodeSimilarityComputationRuntime::new();
+        let storage = NodeSimilarityStorageRuntime::new(config.concurrency);
+        let computation = NodeSimilarityComputationRuntime::new();
 
         let results = storage.compute(&computation, graph.as_ref(), &config);
 
@@ -248,8 +253,7 @@ fn build_stats(results: &[NodeSimilarityResult]) -> NodeSimilarityStats {
         })
         .collect();
 
-    let stats =
-        crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
+    let stats = similarity_stats(|| tuples.into_iter(), true);
 
     NodeSimilarityStats {
         nodes_compared: sources.len() as u64,

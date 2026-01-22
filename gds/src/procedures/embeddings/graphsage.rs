@@ -1,8 +1,11 @@
 //! GraphSAGE facade (builder API).
 
+use crate::algo::embeddings::graphsage::algo::storage::GraphSageStorageRuntime;
+use crate::algo::embeddings::{GraphSageConfig, GraphSageResult};
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits as facade;
 use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::orientation::Orientation;
 use crate::types::DefaultGraphStore;
 use crate::types::GraphStore;
 use serde::{Deserialize, Serialize};
@@ -73,25 +76,24 @@ impl GraphSageBuilder {
         Ok(())
     }
 
-    pub fn run(self) -> facade::Result<crate::algo::embeddings::GraphSageResult> {
+    pub fn run(self) -> facade::Result<GraphSageResult> {
         self.validate()?;
 
         // Directly call the storage runtime
-        let storage =
-            crate::algo::embeddings::graphsage::algo::storage::GraphSageStorageRuntime::new();
+        let storage = GraphSageStorageRuntime::new();
         let rel_types = std::collections::HashSet::new();
         let graph = self
             .graph_store
             .get_graph_with_types_selectors_and_orientation(
                 &rel_types,
                 &std::collections::HashMap::new(),
-                crate::projection::orientation::Orientation::Natural,
+                Orientation::Natural,
             )
             .map_err(|e: Box<dyn std::error::Error + Send + Sync>| {
                 AlgorithmError::Graph(e.to_string())
             })?;
 
-        let graphsage_config = crate::algo::embeddings::GraphSageConfig {
+        let graphsage_config = GraphSageConfig {
             model_user: self.model_user,
             model_name: self.model_name,
             batch_size: self.batch_size,

@@ -6,6 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::config::base_types::ConcurrencyConfig;
+use crate::config::validation::ConfigError;
 use crate::define_config;
 
 define_config!(
@@ -13,14 +14,14 @@ define_config!(
     pub struct GraphDropNodePropertiesConfig {
         validate = |cfg: &GraphDropNodePropertiesConfig| {
             if cfg.node_properties.is_empty() {
-                return Err(crate::config::validation::ConfigError::InvalidParameter {
+                return Err(ConfigError::InvalidParameter {
                     parameter: "nodeProperties".to_string(),
                     reason: "must not be empty".to_string(),
                 });
             }
             for prop in &cfg.node_properties {
                 if prop.trim().is_empty() {
-                    return Err(crate::config::validation::ConfigError::InvalidParameter {
+                    return Err(ConfigError::InvalidParameter {
                         parameter: "nodeProperties".to_string(),
                         reason: "must not contain empty strings".to_string(),
                     });
@@ -152,7 +153,7 @@ mod tests {
         assert!(config.is_err());
         let err = config.unwrap_err();
         match err {
-            crate::config::validation::ConfigError::InvalidParameter { parameter, .. } => {
+            ConfigError::InvalidParameter { parameter, .. } => {
                 assert_eq!(parameter, "nodeProperties");
             }
             _ => panic!("Expected InvalidParameter error"),

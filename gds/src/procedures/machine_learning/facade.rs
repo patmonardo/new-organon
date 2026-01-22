@@ -12,6 +12,7 @@ use crate::procedures::machine_learning::{
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::catalog::GraphCatalog;
+use crate::types::graph_store::DefaultGraphStore;
 use crate::types::user::User;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -78,7 +79,7 @@ impl LocalMachineLearningProcedureFacade {
 }
 
 fn build_kge_facade(
-    graph_store: Arc<crate::types::graph_store::DefaultGraphStore>,
+    graph_store: Arc<DefaultGraphStore>,
     configuration: &AnyMap,
 ) -> Result<KgePredictFacade> {
     let node_embedding_property = configuration

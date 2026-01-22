@@ -14,7 +14,8 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
+use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks, TaskProgressTracker};
+use crate::projection::eval::procedure::AlgorithmError;
 
 /// Per-node spanning tree row.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -144,38 +145,30 @@ impl SpanningTreeBuilder {
     fn validate(&self) -> Result<()> {
         match self.start_node {
             None => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        "start_node must be specified".to_string(),
-                    ),
-                )
+                return Err(AlgorithmError::Execution(
+                    "start_node must be specified".to_string(),
+                ))
             }
             Some(id) if id == u64::MAX => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        "start_node ID cannot be u64::MAX".to_string(),
-                    ),
-                )
+                return Err(AlgorithmError::Execution(
+                    "start_node ID cannot be u64::MAX".to_string(),
+                ))
             }
             _ => {}
         }
 
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be > 0".to_string(),
+            ));
         }
 
         match self.direction.to_ascii_lowercase().as_str() {
             "outgoing" | "incoming" | "undirected" => {}
             other => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                        "direction must be 'outgoing', 'incoming', or 'undirected' (got '{other}')"
-                    )),
-                );
+                return Err(AlgorithmError::Execution(format!(
+                    "direction must be 'outgoing', 'incoming', or 'undirected' (got '{other}')"
+                )));
             }
         }
 
@@ -196,7 +189,7 @@ impl SpanningTreeBuilder {
             .unwrap_or_else(|| Box::new(EmptyTaskRegistryFactory));
 
         let start_node_id: u32 = u32::try_from(self.start_node.unwrap()).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+            AlgorithmError::Execution(format!(
                 "start_node must fit into u32 (got {})",
                 self.start_node.unwrap()
             ))
@@ -225,14 +218,14 @@ impl SpanningTreeBuilder {
             .graph_store
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+                AlgorithmError::Graph(e.to_string())
             })?;
 
         let storage =
             SpanningTreeStorageRuntime::new(start_node_id, self.compute_minimum, self.concurrency);
 
         let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            TaskProgressTracker::with_concurrency(
                 Tasks::leaf_with_volume(
                     "spanning_tree".to_string(),
                     graph_view.relationship_count(),

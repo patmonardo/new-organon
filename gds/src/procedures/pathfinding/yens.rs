@@ -5,9 +5,11 @@
 //! This facade runs the translated Yen's runtime against a live `DefaultGraphStore`.
 
 use crate::algo::common::prelude::{PathFindingResult, PathResultBuilder};
-use crate::algo::common::result_builders::ResultBuilder;
+use crate::algo::common::result_builders::{
+    ExecutionMetadata, PathResult as AlgoPathResult, ResultBuilder, ResultBuilderError,
+};
 use crate::algo::yens::{YensComputationRuntime, YensStorageRuntime};
-use crate::core::utils::progress::Tasks;
+use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{PathResult, Result};
@@ -17,6 +19,9 @@ use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+// Additional import for error handling
+use crate::projection::eval::procedure::AlgorithmError;
 
 /// Statistics about Yen's execution
 #[derive(Debug, Clone, serde::Serialize)]
@@ -113,45 +118,33 @@ impl YensBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.source.is_none() {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "source node must be specified".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "source node must be specified".to_string(),
+            ));
         }
 
         if self.target.is_none() {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "target node must be specified".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "target node must be specified".to_string(),
+            ));
         }
 
         if self.k == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "k must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution("k must be > 0".to_string()));
         }
 
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be > 0".to_string(),
+            ));
         }
 
         match self.direction.to_ascii_lowercase().as_str() {
             "outgoing" | "incoming" => {}
             other => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                        "direction must be 'outgoing' or 'incoming' (got '{other}')"
-                    )),
-                );
+                return Err(AlgorithmError::Execution(format!(
+                    "direction must be 'outgoing' or 'incoming' (got '{other}')"
+                )));
             }
         }
 
@@ -162,15 +155,13 @@ impl YensBuilder {
 
     fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
         NodeId::try_from(value).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "{field} must fit into i64 (got {value})",
-            ))
+            AlgorithmError::Execution(format!("{field} must fit into i64 (got {value})",))
         })
     }
 
     fn checked_u64(value: NodeId, context: &str) -> Result<u64> {
         u64::try_from(value).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+            AlgorithmError::Execution(format!(
                 "Yen's returned invalid node id for {context}: {value}",
             ))
         })
@@ -205,9 +196,7 @@ impl YensBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         let storage = YensStorageRuntime::new(
             source_node,
@@ -225,11 +214,10 @@ impl YensBuilder {
             self.concurrency,
         );
 
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("yens".to_string(), self.k),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("yens".to_string(), self.k),
+            self.concurrency,
+        );
 
         let start = std::time::Instant::now();
         let result = storage.compute_yens(
@@ -239,7 +227,7 @@ impl YensBuilder {
             &mut progress_tracker,
         )?;
 
-        let paths: Vec<crate::algo::common::result_builders::PathResult> = result
+        let paths: Vec<AlgoPathResult> = result
             .paths
             .into_iter()
             .map(|p| {
@@ -251,7 +239,7 @@ impl YensBuilder {
                     .map(|node_id| Self::checked_u64(node_id, "path"))
                     .collect::<Result<Vec<_>>>()?;
 
-                Ok(crate::algo::common::result_builders::PathResult {
+                Ok(AlgoPathResult {
                     source,
                     target,
                     path,
@@ -272,7 +260,7 @@ impl YensBuilder {
             self.track_relationships.to_string(),
         );
 
-        let metadata = crate::algo::common::result_builders::ExecutionMetadata {
+        let metadata = ExecutionMetadata {
             execution_time: start.elapsed(),
             iterations: None,
             converged: None,
@@ -284,11 +272,7 @@ impl YensBuilder {
             .with_paths(paths)
             .with_metadata(metadata)
             .build()
-            .map_err(
-                |e: crate::algo::common::result_builders::ResultBuilderError| {
-                    crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
-                },
-            )?;
+            .map_err(|e: ResultBuilderError| AlgorithmError::Execution(e.to_string()))?;
 
         Ok(path_result)
     }

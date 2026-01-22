@@ -12,16 +12,20 @@
 use crate::algo::closeness::computation::ClosenessCentralityComputationRuntime;
 use crate::algo::closeness::ClosenessCentralityStorageRuntime;
 use crate::collections::backends::vec::VecDouble;
-use crate::concurrency::TerminationFlag;
+use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::ProgressTracker;
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, JobId, Task, TaskProgressTracker, TaskRegistryFactory, Tasks,
+};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::NodeLabel;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+use crate::types::properties::node::NodePropertyValues;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
@@ -109,11 +113,9 @@ impl ClosenessCentralityFacade {
     /// Returns an error if concurrency is not positive
     pub fn validate(&self) -> Result<()> {
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be positive".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be positive".to_string(),
+            ));
         }
         Ok(())
     }
@@ -130,20 +132,16 @@ impl ClosenessCentralityFacade {
 
         let computation = ClosenessCentralityComputationRuntime::new();
 
-        let farness_task = std::sync::Arc::new(crate::core::utils::progress::Task::leaf(
-            "Farness computation".to_string(),
-            node_count,
-        ));
-        let closeness_task = std::sync::Arc::new(crate::core::utils::progress::Task::leaf(
-            "Closeness computation".to_string(),
-            node_count,
-        ));
+        let farness_task =
+            std::sync::Arc::new(Task::leaf("Farness computation".to_string(), node_count));
+        let closeness_task =
+            std::sync::Arc::new(Task::leaf("Closeness computation".to_string(), node_count));
         let root_task = Tasks::task("closeness".to_string(), vec![farness_task, closeness_task]);
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+        let mut progress_tracker = TaskProgressTracker::with_registry(
             root_task,
-            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
-            crate::core::utils::progress::JobId::new(),
+            Concurrency::of(self.concurrency.max(1)),
+            JobId::new(),
             self.task_registry.as_ref(),
         );
 
@@ -171,11 +169,7 @@ impl ClosenessCentralityFacade {
                 on_sources_done,
                 on_closeness_done,
             )
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Closeness terminated: {e}"
-                ))
-            })?;
+            .map_err(|e| AlgorithmError::Execution(format!("Closeness terminated: {e}")))?;
 
         progress_tracker.end_subtask_with_description("Farness computation");
 
@@ -271,7 +265,7 @@ impl ClosenessCentralityFacade {
         let node_count = scores.len();
         let backend = VecDouble::from(scores);
         let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
-        let values: Arc<dyn crate::types::properties::node::NodePropertyValues> = Arc::new(values);
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
 
         // Clone store, add property, and return updated store
         let mut new_store = self.graph_store.as_ref().clone();
@@ -279,9 +273,7 @@ impl ClosenessCentralityFacade {
         new_store
             .add_node_property(labels, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Closeness mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("Closeness mutate failed to add property: {e}"))
             })?;
 
         let execution_time = start_time.elapsed();

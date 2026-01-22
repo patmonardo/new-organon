@@ -6,28 +6,32 @@
 // as `define_config!`. This file invokes that macro at crate level to produce
 // a struct, builder, Default, and validation bridge.
 
+use crate::config::base_types::AlgoBaseConfig;
+use crate::config::validation::ConfigValidation;
+use crate::config::{ConcurrencyConfig, IterationsConfig};
+use crate::core::utils::partition::Partitioning;
 use crate::define_config;
 
 define_config!(
     pub struct PregelConfig {
         validate = |cfg: &PregelConfig| {
-            crate::config::validation::ConfigValidation::validate_positive(cfg.base.concurrency as f64, "concurrency")?;
-            crate::config::validation::ConfigValidation::validate_positive(cfg.max_iterations as f64, "maxIterations")?;
+            ConfigValidation::validate_positive(cfg.base.concurrency as f64, "concurrency")?;
+            ConfigValidation::validate_positive(cfg.max_iterations as f64, "maxIterations")?;
             if let Some(tol) = cfg.tolerance {
-                crate::config::validation::ConfigValidation::validate_positive(tol, "tolerance")?;
+                ConfigValidation::validate_positive(tol, "tolerance")?;
             }
             Ok(())
         },
-        base: crate::config::base_types::AlgoBaseConfig = crate::config::base_types::AlgoBaseConfig::default(),
+        base: AlgoBaseConfig = AlgoBaseConfig::default(),
         max_iterations: usize = 20,
         tolerance: Option<f64> = None,
         is_asynchronous: bool = false,
-        partitioning: crate::core::utils::partition::Partitioning = crate::core::utils::partition::Partitioning::Range,
+        partitioning: Partitioning = Partitioning::Range,
         track_sender: bool = false,
     }
 );
 
-impl crate::config::IterationsConfig for PregelConfig {
+impl IterationsConfig for PregelConfig {
     fn max_iterations(&self) -> usize {
         self.max_iterations
     }
@@ -37,25 +41,20 @@ impl crate::config::IterationsConfig for PregelConfig {
     }
 }
 
-impl crate::config::ConcurrencyConfig for PregelConfig {
+impl ConcurrencyConfig for PregelConfig {
     fn concurrency(&self) -> usize {
         self.base.concurrency
     }
 }
 
 /// Common interface for Pregel runtime configuration.
-pub trait PregelRuntimeConfig:
-    crate::config::IterationsConfig + crate::config::ConcurrencyConfig + Clone + Send + Sync
-{
+pub trait PregelRuntimeConfig: IterationsConfig + ConcurrencyConfig + Clone + Send + Sync {
     fn is_asynchronous(&self) -> bool;
-    fn partitioning(&self) -> crate::core::utils::partition::Partitioning;
+    fn partitioning(&self) -> Partitioning;
     fn track_sender(&self) -> bool;
 
     fn use_fork_join(&self) -> bool {
-        matches!(
-            self.partitioning(),
-            crate::core::utils::partition::Partitioning::Auto
-        )
+        matches!(self.partitioning(), Partitioning::Auto)
     }
 }
 
@@ -64,7 +63,7 @@ impl PregelRuntimeConfig for PregelConfig {
         self.is_asynchronous
     }
 
-    fn partitioning(&self) -> crate::core::utils::partition::Partitioning {
+    fn partitioning(&self) -> Partitioning {
         self.partitioning
     }
 

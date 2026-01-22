@@ -12,10 +12,12 @@ use crate::algo::k1coloring::{
 };
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::{TaskRegistry, Tasks};
+use crate::core::utils::partition::DEFAULT_BATCH_SIZE;
+use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -63,7 +65,7 @@ impl K1ColoringFacade {
             graph_store,
             concurrency: 4,
             max_iterations: 10,
-            batch_size: crate::core::utils::partition::DEFAULT_BATCH_SIZE,
+            batch_size: DEFAULT_BATCH_SIZE,
             task_registry: None,
         }
     }
@@ -126,10 +128,7 @@ impl K1ColoringFacade {
         let base_task =
             Tasks::leaf_with_volume("k1coloring".to_string(), self.max_iterations as usize);
         let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                base_task,
-                self.concurrency,
-            );
+            TaskProgressTracker::with_concurrency(base_task, self.concurrency);
 
         let termination_flag = TerminationFlag::default();
 
@@ -200,9 +199,7 @@ impl K1ColoringFacade {
         new_store
             .add_node_property(labels_set, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "K1Coloring mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("K1Coloring mutate failed to add property: {e}"))
             })?;
 
         let summary = MutationResult::new(

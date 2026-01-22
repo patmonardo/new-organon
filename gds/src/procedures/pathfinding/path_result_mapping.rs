@@ -9,6 +9,9 @@ use crate::types::properties::relationship::RelationshipPropertyValues;
 use crate::types::schema::Direction;
 use std::sync::Arc;
 
+// Additional import for error handling
+use crate::projection::eval::procedure::AlgorithmError;
+
 pub(crate) fn core_to_procedure_path_result(path: CorePathResult) -> ProcedurePathResult {
     ProcedurePathResult {
         source: path.source,
@@ -41,11 +44,7 @@ pub(crate) fn build_path_relationship_store(
 
     let mut updated = graph_store
         .with_added_relationship_type_preserve_name(rel_type.clone(), outgoing, Direction::Directed)
-        .map_err(|e| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "Failed to add path relationships: {e}"
-            ))
-        })?;
+        .map_err(|e| AlgorithmError::Execution(format!("Failed to add path relationships: {e}")))?;
 
     let mut flat_costs: Vec<f64> = Vec::new();
     for costs in costs_by_source {
@@ -62,7 +61,7 @@ pub(crate) fn build_path_relationship_store(
     updated
         .add_relationship_property(rel_type, "totalCost".to_string(), pv)
         .map_err(|e| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+            AlgorithmError::Execution(format!(
                 "Failed to add totalCost relationship property: {e}"
             ))
         })?;

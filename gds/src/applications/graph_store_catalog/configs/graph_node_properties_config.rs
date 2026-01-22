@@ -6,6 +6,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+use crate::config::validation::ConfigError;
 use crate::define_config;
 
 define_config!(
@@ -15,7 +16,7 @@ define_config!(
             // Node labels can be empty (defaults to ["*"]) or contain valid strings
             for label in &cfg.node_labels {
                 if label.trim().is_empty() && label != "*" {
-                    return Err(crate::config::validation::ConfigError::InvalidParameter {
+                    return Err(ConfigError::InvalidParameter {
                         parameter: "nodeLabels".to_string(),
                         reason: "must not contain empty strings (except '*' wildcard)".to_string(),
                     });

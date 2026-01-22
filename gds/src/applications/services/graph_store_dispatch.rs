@@ -1,7 +1,7 @@
 use crate::applications::services::tsjson_support::{err, ok, FacadeContext};
 use crate::collections::backends::vec::{VecDouble, VecDoubleArray, VecLong};
 use crate::config::GraphStoreConfig;
-use crate::projection::RelationshipType;
+use crate::projection::{NodeLabel, RelationshipType};
 use crate::types::graph::id_map::SimpleIdMap;
 use crate::types::graph::RelationshipTopology;
 use crate::types::graph_store::{
@@ -380,10 +380,7 @@ pub(super) fn handle_graph_store(request: &Value, ctx: &FacadeContext) -> Value 
                         }
                     };
 
-                    let labels =
-                        std::collections::HashSet::from(
-                            [crate::projection::NodeLabel::all_nodes()],
-                        );
+                    let labels = std::collections::HashSet::from([NodeLabel::all_nodes()]);
                     if let Err(e) = store.add_node_property(labels, key.to_string(), pv) {
                         return err(
                             op,

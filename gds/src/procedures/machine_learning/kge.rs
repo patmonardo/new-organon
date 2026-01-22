@@ -8,9 +8,12 @@
 //! - The compute kernel lives in `crate::algo::algorithms::machine_learning::kge`.
 
 pub use crate::algo::algorithms::machine_learning::kge::ScoreFunction;
-use crate::algo::algorithms::machine_learning::kge::{compute_kge_predict, KgePredictParameters};
+use crate::algo::algorithms::machine_learning::kge::{
+    compute_kge_predict, KgePredictParameters, KgePredictResult,
+};
 use crate::concurrency::TerminationFlag;
 use crate::procedures::traits::Result;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::IdMap;
 use crate::types::prelude::DefaultGraphStore;
 use std::sync::Arc;
@@ -85,7 +88,7 @@ impl KgePredictFacade {
         self
     }
 
-    fn compute(&self) -> Result<crate::algo::algorithms::machine_learning::kge::KgePredictResult> {
+    fn compute(&self) -> Result<KgePredictResult> {
         let graph = self.graph_store.graph();
 
         let params = KgePredictParameters {
@@ -99,11 +102,8 @@ impl KgePredictFacade {
 
         let termination_flag = TerminationFlag::running_true();
 
-        compute_kge_predict(graph.as_ref(), &params, &termination_flag).map_err(|e| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "KGE failed: {e}"
-            ))
-        })
+        compute_kge_predict(graph.as_ref(), &params, &termination_flag)
+            .map_err(|e| AlgorithmError::Execution(format!("KGE failed: {e}")))
     }
 
     /// Stream mode: per-(source,target) predicted link score.

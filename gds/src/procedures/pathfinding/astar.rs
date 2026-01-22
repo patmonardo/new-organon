@@ -38,9 +38,11 @@
 //! ```
 
 use crate::algo::astar::{AStarComputationRuntime, AStarStorageRuntime};
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{PathResult as ProcedurePathResult, Result};
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -290,46 +292,36 @@ impl AStarBuilder {
     fn validate(&self) -> Result<()> {
         match self.source {
             None => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        "source node must be specified".to_string(),
-                    ),
-                )
+                return Err(AlgorithmError::Execution(
+                    "source node must be specified".to_string(),
+                ))
             }
             Some(id) if id == u64::MAX => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        "source node ID cannot be u64::MAX".to_string(),
-                    ),
-                )
+                return Err(AlgorithmError::Execution(
+                    "source node ID cannot be u64::MAX".to_string(),
+                ))
             }
             _ => {}
         }
 
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be > 0".to_string(),
+            ));
         }
 
         if self.targets.is_empty() {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "at least one target node must be specified for A*".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "at least one target node must be specified for A*".to_string(),
+            ));
         }
 
         match self.direction.to_ascii_lowercase().as_str() {
             "outgoing" | "incoming" => {}
             other => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                        "direction must be 'outgoing' or 'incoming' (got '{other}')"
-                    )),
-                );
+                return Err(AlgorithmError::Execution(format!(
+                    "direction must be 'outgoing' or 'incoming' (got '{other}')"
+                )));
             }
         }
 
@@ -340,10 +332,7 @@ impl AStarBuilder {
 
     fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
         NodeId::try_from(value).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "{} must fit into i64 (got {})",
-                field, value
-            ))
+            AlgorithmError::Execution(format!("{} must fit into i64 (got {})", field, value))
         })
     }
 
@@ -390,9 +379,7 @@ impl AStarBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         let lat_values = graph_view.node_properties("latitude");
         let lon_values = graph_view.node_properties("longitude");
@@ -405,11 +392,10 @@ impl AStarBuilder {
             // Create a fresh progress tracker per target run.
             // Reusing a single leaf task across multiple runs would attempt to re-start
             // a Finished task and panic.
-            let mut progress_tracker =
-                crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                    Tasks::leaf_with_volume("A*".to_string(), relationship_count),
-                    self.concurrency,
-                );
+            let mut progress_tracker = TaskProgressTracker::with_concurrency(
+                Tasks::leaf_with_volume("A*".to_string(), relationship_count),
+                self.concurrency,
+            );
 
             let mut storage = match (&lat_values, &lon_values) {
                 (Some(lat), Some(lon)) => AStarStorageRuntime::new_with_values(
@@ -436,7 +422,7 @@ impl AStarBuilder {
                     direction_byte,
                     &mut progress_tracker,
                 )
-                .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+                .map_err(AlgorithmError::Execution)?;
 
             nodes_visited_total += result.nodes_explored as u64;
 
@@ -445,7 +431,7 @@ impl AStarBuilder {
                     .into_iter()
                     .map(|node_id| {
                         u64::try_from(node_id).map_err(|_| {
-                            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                            AlgorithmError::Execution(format!(
                                 "A* returned invalid node id in path: {node_id}"
                             ))
                         })
@@ -499,9 +485,7 @@ impl AStarBuilder {
             .with_paths(paths)
             .with_metadata(metadata)
             .build()
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
 
         Ok(path_result)
     }

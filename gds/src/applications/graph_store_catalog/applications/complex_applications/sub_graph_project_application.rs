@@ -1,8 +1,8 @@
 use crate::applications::graph_store_catalog::loaders::GraphStoreCatalogService;
 use crate::applications::graph_store_catalog::results::GraphFilterResult;
 use crate::applications::services::logging::Log;
-use crate::types::graph_store::GraphName;
-use crate::types::graph_store::GraphStore;
+use crate::core::User;
+use crate::types::graph_store::{DatabaseId, GraphName, GraphStore};
 
 use rand::rngs::StdRng;
 use rand::{seq::SliceRandom, SeedableRng};
@@ -32,8 +32,8 @@ impl SubGraphProjectApplication {
     #[allow(clippy::too_many_arguments)]
     pub fn compute(
         &self,
-        user: &dyn crate::core::User,
-        database_id: &crate::types::graph_store::DatabaseId,
+        user: &dyn User,
+        database_id: &DatabaseId,
         graph_name: &str,
         origin_graph_name: &str,
         node_filter: &str,

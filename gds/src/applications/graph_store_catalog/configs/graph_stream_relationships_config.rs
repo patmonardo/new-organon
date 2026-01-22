@@ -3,6 +3,7 @@
 //! Mirrors Java GraphStreamRelationshipsConfig interface and integrates with the Rust config system.
 //! Similar pattern to GraphNodePropertiesConfig but for relationships.
 
+use crate::config::validation::ConfigError;
 use crate::define_config;
 
 define_config!(
@@ -11,7 +12,7 @@ define_config!(
             // Relationship types can be empty (defaults to ["*"]) or contain valid strings
             for rel_type in &cfg.relationship_types {
                 if rel_type.trim().is_empty() && rel_type != "*" {
-                    return Err(crate::config::validation::ConfigError::InvalidParameter {
+                    return Err(ConfigError::InvalidParameter {
                         parameter: "relationshipTypes".to_string(),
                         reason: "must not contain empty strings (except '*' wildcard)".to_string(),
                     });

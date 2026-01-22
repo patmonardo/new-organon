@@ -8,10 +8,11 @@ use crate::algo::approx_max_kcut::spec::ApproxMaxKCutConfig;
 use crate::algo::approx_max_kcut::storage::ApproxMaxKCutStorageRuntime;
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::{TaskRegistry, Tasks};
+use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -124,13 +125,11 @@ impl ApproxMaxKCutFacade {
         ConfigValidator::in_range(self.concurrency as f64, 1.0, 1024.0, "concurrency")?;
 
         if self.min_community_sizes.len() != self.k as usize {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "min_community_sizes length ({}) must equal k ({})",
-                    self.min_community_sizes.len(),
-                    self.k
-                )),
-            );
+            return Err(AlgorithmError::Execution(format!(
+                "min_community_sizes length ({}) must equal k ({})",
+                self.min_community_sizes.len(),
+                self.k
+            )));
         }
 
         Ok(())
@@ -143,14 +142,13 @@ impl ApproxMaxKCutFacade {
             return Ok((Vec::new(), 0.0, 0));
         }
 
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume(
-                    "approx_max_kcut".to_string(),
-                    node_count.saturating_add(self.iterations),
-                ),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume(
+                "approx_max_kcut".to_string(),
+                node_count.saturating_add(self.iterations),
+            ),
+            self.concurrency,
+        );
         let termination_flag = TerminationFlag::default();
 
         let config = ApproxMaxKCutConfig {
@@ -172,7 +170,7 @@ impl ApproxMaxKCutFacade {
                 &mut progress_tracker,
                 &termination_flag,
             )
-            .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+            .map_err(AlgorithmError::Execution)?;
 
         Ok((result.communities, result.cut_cost, node_count))
     }
@@ -220,7 +218,7 @@ impl ApproxMaxKCutFacade {
         new_store
             .add_node_property(labels_set, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                AlgorithmError::Execution(format!(
                     "ApproxMaxKCut mutate failed to add property: {e}"
                 ))
             })?;
@@ -270,6 +268,7 @@ impl ApproxMaxKCutFacade {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::GraphStoreConfig;
     use crate::procedures::GraphFacade;
     use crate::projection::RelationshipType;
     use crate::types::graph::{RelationshipTopology, SimpleIdMap};
@@ -306,7 +305,7 @@ mod tests {
         let id_map = SimpleIdMap::from_original_ids(original_ids);
 
         DefaultGraphStore::new(
-            crate::config::GraphStoreConfig::default(),
+            GraphStoreConfig::default(),
             GraphName::new("g"),
             DatabaseInfo::new(
                 DatabaseId::new("db"),

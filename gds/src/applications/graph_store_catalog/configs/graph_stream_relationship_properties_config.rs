@@ -2,9 +2,8 @@
 //!
 //! Mirrors Java GraphStreamRelationshipPropertiesConfig interface and integrates with the Rust config system.
 
-// Type alias for cleaner code
-type GraphStreamRelationshipsConfig =
-    crate::applications::graph_store_catalog::configs::GraphStreamRelationshipsConfig;
+use crate::applications::graph_store_catalog::configs::GraphStreamRelationshipsConfig;
+use crate::config::validation::ConfigError;
 
 #[derive(Debug, Clone, Default)]
 pub struct GraphStreamRelationshipPropertiesConfig {
@@ -16,20 +15,20 @@ pub struct GraphStreamRelationshipPropertiesConfig {
 
 impl GraphStreamRelationshipPropertiesConfig {
     /// Validate the configuration
-    pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         // Validate base relationships config
         self.relationships_config.validate()?;
 
         // Additional validation for relationship properties
         if self.relationship_properties.is_empty() {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "relationshipProperties".to_string(),
                 reason: "must not be empty".to_string(),
             });
         }
         for prop in &self.relationship_properties {
             if prop.trim().is_empty() {
-                return Err(crate::config::validation::ConfigError::InvalidParameter {
+                return Err(ConfigError::InvalidParameter {
                     parameter: "relationshipProperties".to_string(),
                     reason: "must not contain empty strings".to_string(),
                 });

@@ -10,10 +10,11 @@ use crate::algo::kcore::{
 };
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::{TaskRegistry, Tasks};
+use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -97,10 +98,7 @@ impl KCoreFacade {
 
         let base_task = Tasks::leaf_with_volume("kcore".to_string(), node_count);
         let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                base_task,
-                self.concurrency,
-            );
+            TaskProgressTracker::with_concurrency(base_task, self.concurrency);
 
         let termination_flag = TerminationFlag::default();
 
@@ -144,11 +142,9 @@ impl KCoreFacade {
     /// Mutate mode: writes core values back to the graph store.
     pub fn mutate(self) -> Result<MutationResult> {
         // Implement mutate returning updated store
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "Use mutate_with_store() for KCore (internal)".to_string(),
-            ),
-        )
+        Err(AlgorithmError::Execution(
+            "Use mutate_with_store() for KCore (internal)".to_string(),
+        ))
     }
 
     /// Write mode: writes core values to a new graph.
@@ -185,9 +181,7 @@ impl KCoreFacade {
         new_store
             .add_node_property(labels_set, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "KCore mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("KCore mutate failed to add property: {e}"))
             })?;
 
         let execution_time = start.elapsed();

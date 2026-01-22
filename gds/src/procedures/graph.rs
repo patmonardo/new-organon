@@ -28,6 +28,8 @@ use super::miscellaneous::{
     CollapsePathFacade, IndexInverseFacade, ScalePropertiesFacade, ToUndirectedFacade,
 };
 
+use super::similarity::NodeSimilarityBuilder;
+
 /// User-facing graph handle for running algorithms against a live `DefaultGraphStore`.
 ///
 /// This is the main entrypoint for the facade layer.
@@ -188,8 +190,8 @@ impl GraphFacade {
     }
 
     /// Node Similarity (Jaccard, Cosine, Overlap).
-    pub fn node_similarity(&self) -> crate::procedures::similarity::NodeSimilarityBuilder {
-        crate::procedures::similarity::NodeSimilarityBuilder::new(Arc::clone(&self.store))
+    pub fn node_similarity(&self) -> NodeSimilarityBuilder {
+        NodeSimilarityBuilder::new(Arc::clone(&self.store))
     }
 
     /// Triangle Count (per-node triangles + global triangle count).

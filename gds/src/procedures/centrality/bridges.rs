@@ -4,12 +4,15 @@
 
 use crate::algo::bridges::computation::{Bridge, BridgesComputationRuntime};
 use crate::algo::bridges::storage::BridgesStorageRuntime;
+use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::ProgressTracker;
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
-
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
+};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::relationship::impls::default_relationship_property_values::DefaultRelationshipPropertyValues;
 use crate::types::properties::relationship::RelationshipPropertyValues;
@@ -76,11 +79,9 @@ impl BridgesFacade {
     /// Returns an error if concurrency is not positive
     pub fn validate(&self) -> Result<()> {
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be positive".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be positive".to_string(),
+            ));
         }
         Ok(())
     }
@@ -99,17 +100,17 @@ impl BridgesFacade {
             return Ok(Vec::new());
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+        let mut progress_tracker = TaskProgressTracker::with_registry(
             Tasks::leaf_with_volume("bridges".to_string(), node_count)
                 .base()
                 .clone(),
-            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
-            crate::core::utils::progress::JobId::new(),
+            Concurrency::of(self.concurrency.max(1)),
+            JobId::new(),
             self.task_registry.as_ref(),
         );
         progress_tracker.begin_subtask_with_volume(node_count);
 
-        let termination = crate::concurrency::TerminationFlag::running_true();
+        let termination = TerminationFlag::running_true();
         let progress_handle = progress_tracker.clone();
         let on_node_scanned = Arc::new(move || {
             let mut tracker = progress_handle.clone();
@@ -119,11 +120,7 @@ impl BridgesFacade {
         // Call storage.compute_bridges() - Applications talk only to procedures
         let result = storage
             .compute_bridges(&mut computation, &termination, on_node_scanned)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Bridges terminated: {e}"
-                ))
-            })?;
+            .map_err(|e| AlgorithmError::Execution(format!("Bridges terminated: {e}")))?;
 
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();
@@ -209,7 +206,7 @@ impl BridgesFacade {
                 .graph_store
                 .get_graph_with_types(&rel_types)
                 .map_err(|e| {
-                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                    AlgorithmError::Execution(format!(
                         "Bridges mutate failed to read relationships: {e}"
                     ))
                 })?;
@@ -247,9 +244,7 @@ impl BridgesFacade {
             new_store
                 .add_relationship_property(rel_type, property_name, pv)
                 .map_err(|e| {
-                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                        "Bridges mutate failed to add property: {e}"
-                    ))
+                    AlgorithmError::Execution(format!("Bridges mutate failed to add property: {e}"))
                 })?;
         }
 
@@ -266,11 +261,9 @@ impl BridgesFacade {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "Bridges mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        Err(AlgorithmError::Execution(
+            "Bridges mutate/write is not implemented yet".to_string(),
+        ))
     }
 
     /// Estimate memory requirements for bridges computation.
@@ -319,17 +312,17 @@ impl BridgesFacade {
             return Ok((Vec::new(), start.elapsed()));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+        let mut progress_tracker = TaskProgressTracker::with_registry(
             Tasks::leaf_with_volume("bridges".to_string(), node_count)
                 .base()
                 .clone(),
-            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
-            crate::core::utils::progress::JobId::new(),
+            Concurrency::of(self.concurrency.max(1)),
+            JobId::new(),
             self.task_registry.as_ref(),
         );
         progress_tracker.begin_subtask_with_volume(node_count);
 
-        let termination = crate::concurrency::TerminationFlag::running_true();
+        let termination = TerminationFlag::running_true();
         let progress_handle = progress_tracker.clone();
         let on_node_scanned = Arc::new(move || {
             let mut tracker = progress_handle.clone();
@@ -339,11 +332,7 @@ impl BridgesFacade {
         // Call storage.compute_bridges() - Applications talk only to procedures
         let result = storage
             .compute_bridges(&mut computation, &termination, on_node_scanned)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Bridges terminated: {e}"
-                ))
-            })?;
+            .map_err(|e| AlgorithmError::Execution(format!("Bridges terminated: {e}")))?;
 
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();
@@ -365,6 +354,7 @@ impl AlgorithmRunner for BridgesFacade {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::GraphStoreConfig;
     use crate::procedures::GraphFacade;
     use crate::projection::RelationshipType;
     use crate::types::graph::{RelationshipTopology, SimpleIdMap};
@@ -407,7 +397,7 @@ mod tests {
         let id_map = SimpleIdMap::from_original_ids(original_ids);
 
         DefaultGraphStore::new(
-            crate::config::GraphStoreConfig::default(),
+            GraphStoreConfig::default(),
             GraphName::new("g"),
             DatabaseInfo::new(
                 DatabaseId::new("db"),

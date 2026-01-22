@@ -2,9 +2,8 @@
 //!
 //! Mirrors Java GraphWriteNodePropertiesConfig interface and integrates with the Rust config system.
 
-// Type alias for cleaner code
-type GraphNodePropertiesConfig =
-    crate::applications::graph_store_catalog::configs::GraphNodePropertiesConfig;
+use crate::applications::graph_store_catalog::configs::GraphNodePropertiesConfig;
+use crate::config::validation::ConfigError;
 
 #[derive(Debug, Clone, Default)]
 pub struct GraphWriteNodePropertiesConfig {
@@ -16,20 +15,20 @@ pub struct GraphWriteNodePropertiesConfig {
 
 impl GraphWriteNodePropertiesConfig {
     /// Validate the configuration
-    pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         // Validate base node properties config
         self.node_config.validate()?;
 
         // Additional validation for write-specific fields
         if self.node_properties.is_empty() {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "nodeProperties".to_string(),
                 reason: "must not be empty".to_string(),
             });
         }
         for prop in &self.node_properties {
             if prop.node_property_name.trim().is_empty() {
-                return Err(crate::config::validation::ConfigError::InvalidParameter {
+                return Err(ConfigError::InvalidParameter {
                     parameter: "nodeProperties".to_string(),
                     reason: "must not contain empty property names".to_string(),
                 });

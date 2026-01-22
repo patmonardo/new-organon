@@ -11,11 +11,16 @@ use crate::algo::articulation_points::computation::{
 };
 use crate::algo::articulation_points::storage::ArticulationPointsStorageRuntime;
 use crate::collections::backends::vec::VecDouble;
+use crate::collections::BitSet;
+use crate::concurrency::Concurrency;
 use crate::core::utils::progress::ProgressTracker;
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
+};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -85,38 +90,34 @@ impl ArticulationPointsFacade {
     /// Returns an error if concurrency is not positive
     pub fn validate(&self) -> Result<()> {
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be positive".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be positive".to_string(),
+            ));
         }
         Ok(())
     }
 
     /// Run the algorithm and return the articulation points as a bitset
-    pub fn run(&self) -> Result<crate::collections::BitSet> {
+    pub fn run(&self) -> Result<BitSet> {
         // Articulation points are defined on undirected connectivity.
         let rel_types: HashSet<RelationshipType> = HashSet::new();
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         let node_count = graph_view.node_count();
         let _relationship_count = graph_view.relationship_count();
         if node_count == 0 {
-            return Ok(crate::collections::BitSet::new(0));
+            return Ok(BitSet::new(0));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+        let mut progress_tracker = TaskProgressTracker::with_registry(
             Tasks::leaf_with_volume("articulation_points".to_string(), node_count)
                 .base()
                 .clone(),
-            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
-            crate::core::utils::progress::JobId::new(),
+            Concurrency::of(self.concurrency.max(1)),
+            JobId::new(),
             self.task_registry.as_ref(),
         );
         progress_tracker.begin_subtask_with_volume(node_count);
@@ -178,14 +179,11 @@ impl ArticulationPointsFacade {
 
     fn checked_node_id(value: usize) -> Result<NodeId> {
         NodeId::try_from(value as i64).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "node_id must fit into i64 (got {})",
-                value
-            ))
+            AlgorithmError::Execution(format!("node_id must fit into i64 (got {})", value))
         })
     }
 
-    fn compute_bitset(&self) -> Result<(crate::collections::BitSet, std::time::Duration)> {
+    fn compute_bitset(&self) -> Result<(BitSet, std::time::Duration)> {
         let start = Instant::now();
 
         // Articulation points are defined on undirected connectivity.
@@ -193,22 +191,20 @@ impl ArticulationPointsFacade {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         let node_count = graph_view.node_count();
         let relationship_count = graph_view.relationship_count();
         if node_count == 0 {
-            return Ok((crate::collections::BitSet::new(0), start.elapsed()));
+            return Ok((BitSet::new(0), start.elapsed()));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+        let mut progress_tracker = TaskProgressTracker::with_registry(
             Tasks::leaf_with_volume("articulation_points".to_string(), node_count)
                 .base()
                 .clone(),
-            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
-            crate::core::utils::progress::JobId::new(),
+            Concurrency::of(self.concurrency.max(1)),
+            JobId::new(),
             self.task_registry.as_ref(),
         );
         progress_tracker.begin_subtask_with_volume(node_count);
@@ -319,7 +315,7 @@ impl ArticulationPointsFacade {
         new_store
             .add_node_property(labels, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                AlgorithmError::Execution(format!(
                     "Articulation Points mutate failed to add property: {e}"
                 ))
             })?;
@@ -338,11 +334,9 @@ impl ArticulationPointsFacade {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "Articulation Points mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        Err(AlgorithmError::Execution(
+            "Articulation Points mutate/write is not implemented yet".to_string(),
+        ))
     }
 }
 
@@ -359,6 +353,7 @@ impl AlgorithmRunner for ArticulationPointsFacade {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::GraphStoreConfig;
     use crate::procedures::GraphFacade;
 
     use crate::projection::RelationshipType;
@@ -402,7 +397,7 @@ mod tests {
         let id_map = SimpleIdMap::from_original_ids(original_ids);
 
         DefaultGraphStore::new(
-            crate::config::GraphStoreConfig::default(),
+            GraphStoreConfig::default(),
             GraphName::new("g"),
             DatabaseInfo::new(
                 DatabaseId::new("db"),

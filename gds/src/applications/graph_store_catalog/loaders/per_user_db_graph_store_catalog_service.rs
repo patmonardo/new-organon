@@ -5,7 +5,7 @@ use crate::core::User;
 use crate::types::catalog::{
     CatalogError, Dropped, GraphCatalog, GraphMemoryUsage, InMemoryGraphCatalog, ListEntry,
 };
-use crate::types::graph_store::DatabaseId;
+use crate::types::graph_store::{DatabaseId, DefaultGraphStore};
 
 use super::GraphStoreCatalogService;
 
@@ -102,11 +102,11 @@ impl MergedDbCatalog {
 }
 
 impl GraphCatalog for MergedDbCatalog {
-    fn set(&self, name: &str, store: Arc<crate::types::graph_store::DefaultGraphStore>) {
+    fn set(&self, name: &str, store: Arc<DefaultGraphStore>) {
         self.owner_catalog().set(name, store);
     }
 
-    fn get(&self, name: &str) -> Option<Arc<crate::types::graph_store::DefaultGraphStore>> {
+    fn get(&self, name: &str) -> Option<Arc<DefaultGraphStore>> {
         let map = self.catalogs.read().ok()?;
         for ((_, db), catalog) in map.iter() {
             if db.as_str() != self.database_id.database_name() {

@@ -20,10 +20,11 @@ use crate::algo::kmeans::{
 };
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::{TaskRegistry, Tasks};
+use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -163,11 +164,10 @@ impl KMeansFacade {
         let config = self.config.clone();
         let node_count = self.graph_store.node_count();
 
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("kmeans".to_string(), node_count),
-                config.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("kmeans".to_string(), node_count),
+            config.concurrency,
+        );
 
         let termination_flag = TerminationFlag::default();
         let storage = KMeansStorageRuntime::new();
@@ -241,9 +241,7 @@ impl KMeansFacade {
         new_store
             .add_node_property(labels_set, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "KMeans mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("KMeans mutate failed to add property: {e}"))
             })?;
 
         let summary = MutationResult::new(

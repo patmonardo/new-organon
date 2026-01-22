@@ -7,6 +7,7 @@ use crate::algo::dag_longest_path::computation::DagLongestPathComputationRuntime
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{PathResult, Result};
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -16,7 +17,9 @@ use std::sync::Arc;
 use std::time::Instant;
 
 // Import upgraded systems
-use crate::core::utils::progress::{ProgressTracker, TaskRegistryFactory, Tasks};
+use crate::core::utils::progress::{
+    ProgressTracker, TaskProgressTracker, TaskRegistryFactory, Tasks,
+};
 
 /// Result row for longest path stream mode
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
@@ -85,11 +88,9 @@ impl DagLongestPathBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be > 0".to_string(),
+            ));
         }
 
         Ok(())
@@ -105,20 +106,17 @@ impl DagLongestPathBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
             return Ok((Vec::new(), start.elapsed()));
         }
 
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("dag_longest_path".to_string(), node_count),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("dag_longest_path".to_string(), node_count),
+            self.concurrency,
+        );
         progress_tracker.begin_subtask_with_volume(node_count);
 
         let fallback = graph_view.default_property_value();
@@ -235,6 +233,7 @@ impl DagLongestPathBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::GraphStoreConfig;
 
     use crate::projection::RelationshipType;
     use crate::types::graph_store::{
@@ -273,7 +272,7 @@ mod tests {
         let id_map = SimpleIdMap::from_original_ids(original_ids);
 
         DefaultGraphStore::new(
-            crate::config::GraphStoreConfig::default(),
+            GraphStoreConfig::default(),
             GraphName::new("g"),
             DatabaseInfo::new(
                 DatabaseId::new("db"),

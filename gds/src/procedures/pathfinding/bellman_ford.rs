@@ -9,6 +9,7 @@ use crate::algo::bellman_ford::{BellmanFordComputationRuntime, BellmanFordStorag
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{PathResult as ProcedurePathResult, Result};
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -21,7 +22,9 @@ use crate::algo::common::result_builders::{
     ExecutionMetadata, PathFindingResult, PathResult as CorePathResult, PathResultBuilder,
     ResultBuilder,
 };
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, TaskProgressTracker, TaskRegistryFactory, Tasks,
+};
 
 /// Statistics about Bellman-Ford execution
 #[derive(Debug, Clone, serde::Serialize)]
@@ -129,29 +132,23 @@ impl BellmanFordBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.source.is_none() {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "source node must be specified".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "source node must be specified".to_string(),
+            ));
         }
 
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be > 0".to_string(),
+            ));
         }
 
         match self.direction.to_ascii_lowercase().as_str() {
             "outgoing" | "incoming" => {}
             other => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                        "direction must be 'outgoing' or 'incoming' (got '{other}')"
-                    )),
-                );
+                return Err(AlgorithmError::Execution(format!(
+                    "direction must be 'outgoing' or 'incoming' (got '{other}')"
+                )));
             }
         }
 
@@ -162,15 +159,13 @@ impl BellmanFordBuilder {
 
     fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
         NodeId::try_from(value).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "{field} must fit into i64 (got {value})",
-            ))
+            AlgorithmError::Execution(format!("{field} must fit into i64 (got {value})",))
         })
     }
 
     fn checked_u64(value: NodeId, context: &str) -> Result<u64> {
         u64::try_from(value).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+            AlgorithmError::Execution(format!(
                 "Bellman-Ford returned invalid node id for {context}: {value}",
             ))
         })
@@ -189,9 +184,10 @@ impl BellmanFordBuilder {
 
         // Create progress tracker for Bellman-Ford execution
         let node_count = self.graph_store.node_count();
-        let _progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
-            Tasks::leaf_with_volume("BellmanFord".to_string(), node_count),
-        );
+        let _progress_tracker = TaskProgressTracker::new(Tasks::leaf_with_volume(
+            "BellmanFord".to_string(),
+            node_count,
+        ));
 
         let source_u64 = self.source.expect("validate ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -217,9 +213,7 @@ impl BellmanFordBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         let mut storage = BellmanFordStorageRuntime::new(
             source_node,
@@ -235,14 +229,10 @@ impl BellmanFordBuilder {
             self.concurrency,
         );
 
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume(
-                    "bellman_ford".to_string(),
-                    graph_view.relationship_count(),
-                ),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("bellman_ford".to_string(), graph_view.relationship_count()),
+            self.concurrency,
+        );
 
         let start = std::time::Instant::now();
         let result = storage.compute_bellman_ford(
@@ -299,9 +289,7 @@ impl BellmanFordBuilder {
             .with_paths(paths)
             .with_metadata(metadata)
             .build()
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
 
         Ok(path_result)
     }

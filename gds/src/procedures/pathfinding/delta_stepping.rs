@@ -22,6 +22,8 @@ use crate::algo::common::result_builders::{
     ResultBuilder,
 };
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
+use crate::projection::eval::procedure::AlgorithmError;
+use crate::core::utils::progress::TaskProgressTracker;
 
 /// Statistics about Delta Stepping execution
 #[derive(Debug, Clone, serde::Serialize)]
@@ -128,37 +130,29 @@ impl DeltaSteppingBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.source.is_none() {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "source node must be specified".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "source node must be specified".to_string(),
+            ));
         }
 
         if self.delta <= 0.0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "delta must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "delta must be > 0".to_string(),
+            ));
         }
 
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be > 0".to_string(),
+            ));
         }
 
         match self.direction.to_ascii_lowercase().as_str() {
             "outgoing" | "incoming" => {}
             other => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                        "direction must be 'outgoing' or 'incoming' (got '{other}')"
-                    )),
-                );
+                return Err(AlgorithmError::Execution(format!(
+                    "direction must be 'outgoing' or 'incoming' (got '{other}')"
+                )));
             }
         }
 
@@ -169,7 +163,7 @@ impl DeltaSteppingBuilder {
 
     fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
         NodeId::try_from(value).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+            AlgorithmError::Execution(format!(
                 "{field} must fit into i64 (got {value})",
             ))
         })
@@ -177,7 +171,7 @@ impl DeltaSteppingBuilder {
 
     fn checked_u64(value: NodeId, context: &str) -> Result<u64> {
         u64::try_from(value).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+            AlgorithmError::Execution(format!(
                 "Delta Stepping returned invalid node id for {context}: {value}",
             ))
         })
@@ -196,7 +190,7 @@ impl DeltaSteppingBuilder {
 
         // Create progress tracker for Delta Stepping execution
         let node_count = self.graph_store.node_count();
-        let _progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
+        let _progress_tracker = TaskProgressTracker::new(
             Tasks::leaf_with_volume("DeltaStepping".to_string(), node_count),
         );
 
@@ -225,7 +219,7 @@ impl DeltaSteppingBuilder {
             .graph_store
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+                AlgorithmError::Graph(e.to_string())
             })?;
 
         let mut storage = DeltaSteppingStorageRuntime::new(
@@ -243,7 +237,7 @@ impl DeltaSteppingBuilder {
         );
 
         let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
+            TaskProgressTracker::with_concurrency(
                 Tasks::leaf_with_volume(
                     "delta_stepping".to_string(),
                     graph_view.relationship_count(),
@@ -301,7 +295,7 @@ impl DeltaSteppingBuilder {
             .with_metadata(metadata)
             .build()
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
+                AlgorithmError::Execution(e.to_string())
             })?;
 
         Ok(path_result)

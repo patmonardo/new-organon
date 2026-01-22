@@ -11,19 +11,20 @@
 use crate::algo::label_propagation::{
     LabelPropComputationRuntime, LabelPropConfig, LabelPropResult, LabelPropStorageRuntime,
 };
+use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::{TaskRegistry, Tasks};
+use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use std::collections::HashSet;
-use std::sync::Arc;
-use std::time::Instant;
-use crate::collections::backends::vec::VecLong;
 use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
 use crate::types::schema::NodeLabel;
+use std::collections::HashSet;
+use std::sync::Arc;
+use std::time::Instant;
 
 /// Per-node label assignment row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
@@ -132,10 +133,7 @@ impl LabelPropagationFacade {
             node_count.saturating_add(self.max_iterations as usize),
         );
         let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                base_task,
-                self.concurrency,
-            );
+            TaskProgressTracker::with_concurrency(base_task, self.concurrency);
 
         let termination_flag = TerminationFlag::default();
 
@@ -217,7 +215,7 @@ impl LabelPropagationFacade {
         new_store
             .add_node_property(labels_set, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                AlgorithmError::Execution(format!(
                     "Label Propagation mutate failed to add property: {e}"
                 ))
             })?;
@@ -234,7 +232,11 @@ impl LabelPropagationFacade {
     /// Write mode: writes labels to a new graph.
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         let res = self.mutate(property_name)?;
-        Ok(WriteResult::new(res.summary.nodes_updated, property_name.to_string(), std::time::Duration::from_millis(res.summary.execution_time_ms)))
+        Ok(WriteResult::new(
+            res.summary.nodes_updated,
+            property_name.to_string(),
+            std::time::Duration::from_millis(res.summary.execution_time_ms),
+        ))
     }
 
     /// Estimate memory usage.

@@ -13,6 +13,7 @@ use crate::ml::splitting::{
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::RelationshipType;
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -64,7 +65,7 @@ impl SplitRelationshipsFacade {
         self.config.to_parameters(self.concurrency)
     }
 
-    fn relationship_types(&self) -> Option<HashSet<crate::projection::RelationshipType>> {
+    fn relationship_types(&self) -> Option<HashSet<RelationshipType>> {
         if self.config.relationship_types.is_empty() {
             None
         } else {
@@ -73,7 +74,7 @@ impl SplitRelationshipsFacade {
                     .relationship_types
                     .iter()
                     .cloned()
-                    .map(crate::projection::RelationshipType::of)
+                    .map(RelationshipType::of)
                     .collect(),
             )
         }

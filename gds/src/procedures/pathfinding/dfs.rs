@@ -30,18 +30,24 @@
 //! ```
 
 use crate::algo::common::prelude::{PathFindingResult, PathResultBuilder};
-use crate::algo::common::result_builders::{ExecutionMetadata, ResultBuilder};
+use crate::algo::common::result_builders::{
+    ExecutionMetadata, PathResult, ResultBuilder, ResultBuilderError,
+};
 use crate::algo::dfs::{DfsComputationRuntime, DfsStorageRuntime};
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::{PathResult, Result};
+use crate::procedures::traits::{PathResult as ProcedurePathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
 use std::sync::Arc;
+
+// Additional imports for error handling and progress tracking
+use crate::core::utils::progress::TaskProgressTracker;
+use crate::projection::eval::procedure::AlgorithmError;
 
 // ============================================================================
 // Statistics Type
@@ -138,10 +144,7 @@ impl DfsBuilder {
 
     fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
         NodeId::try_from(value).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "{} must fit into i64 (got {})",
-                field, value
-            ))
+            AlgorithmError::Execution(format!("{} must fit into i64 (got {})", field, value))
         })
     }
 
@@ -154,11 +157,7 @@ impl DfsBuilder {
         // Create progress tracker for DFS execution.
         // We track progress in terms of relationships examined.
         let task = Tasks::leaf("DFS".to_string());
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                task,
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(task, self.concurrency);
 
         let source_u64 = self.source.expect("validate() ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -180,9 +179,7 @@ impl DfsBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         let node_count = graph_view.node_count() as usize;
 
@@ -201,14 +198,14 @@ impl DfsBuilder {
 
         let all_targets_reached = false; // Simplified
 
-        let paths: Vec<crate::algo::common::result_builders::PathResult> = result
+        let paths: Vec<PathResult> = result
             .visited_nodes
             .iter()
             .enumerate()
             .map(|(index, &node_id)| {
                 let target = node_id as u64;
                 let path = vec![target]; // Single node path
-                crate::algo::common::result_builders::PathResult {
+                PathResult {
                     source: source_u64,
                     target,
                     path,
@@ -251,11 +248,7 @@ impl DfsBuilder {
             .with_paths(paths)
             .with_metadata(metadata)
             .build()
-            .map_err(
-                |e: crate::algo::common::result_builders::ResultBuilderError| {
-                    crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
-                },
-            )?;
+            .map_err(|e: ResultBuilderError| AlgorithmError::Execution(e.to_string()))?;
 
         Ok(path_result)
     }
@@ -318,37 +311,29 @@ impl DfsBuilder {
     fn validate(&self) -> Result<()> {
         match self.source {
             None => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        "source node must be specified".to_string(),
-                    ),
-                )
+                return Err(AlgorithmError::Execution(
+                    "source node must be specified".to_string(),
+                ))
             }
             Some(id) if id == u64::MAX => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        "source node ID cannot be u64::MAX".to_string(),
-                    ),
-                )
+                return Err(AlgorithmError::Execution(
+                    "source node ID cannot be u64::MAX".to_string(),
+                ))
             }
             _ => {}
         }
 
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be > 0".to_string(),
+            ));
         }
 
         if let Some(depth) = self.max_depth {
             if depth == 0 {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        "max_depth must be > 0 or None".to_string(),
-                    ),
-                );
+                return Err(AlgorithmError::Execution(
+                    "max_depth must be > 0 or None".to_string(),
+                ));
             }
         }
 
@@ -449,15 +434,10 @@ impl DfsBuilder {
         ConfigValidator::non_empty_string(property_name, "property_name")?;
         let graph_store = Arc::clone(&self.graph_store);
         let result = self.compute()?;
-        let paths: Vec<PathResult> = result
+        let paths: Vec<ProcedurePathResult> = result
             .paths
             .into_iter()
-            .map(|path| PathResult {
-                source: path.source,
-                target: path.target,
-                path: path.path,
-                cost: path.cost,
-            })
+            .map(super::core_to_procedure_path_result)
             .collect();
 
         let updated_store =

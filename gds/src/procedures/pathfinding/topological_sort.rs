@@ -16,9 +16,11 @@ use std::sync::Arc;
 use std::time::Instant;
 
 // Import upgraded systems
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
 };
+use crate::projection::eval::procedure::AlgorithmError;
 
 /// Result row for topological sort stream mode
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
@@ -90,11 +92,9 @@ impl TopologicalSortBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be > 0".to_string(),
+            ));
         }
         Ok(())
     }
@@ -117,20 +117,17 @@ impl TopologicalSortBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
             return Ok((Vec::new(), None, start.elapsed()));
         }
 
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("topological_sort".to_string(), node_count),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("topological_sort".to_string(), node_count),
+            self.concurrency,
+        );
         progress_tracker.begin_subtask_with_volume(node_count);
 
         let fallback = graph_view.default_property_value();
@@ -310,6 +307,7 @@ impl TopologicalSortBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::GraphStoreConfig;
     use crate::procedures::GraphFacade;
 
     use crate::projection::RelationshipType;
@@ -347,7 +345,7 @@ mod tests {
         let id_map = SimpleIdMap::from_original_ids(original_ids);
 
         DefaultGraphStore::new(
-            crate::config::GraphStoreConfig::default(),
+            GraphStoreConfig::default(),
             GraphName::new("g"),
             DatabaseInfo::new(
                 DatabaseId::new("db"),

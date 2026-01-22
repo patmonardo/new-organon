@@ -12,7 +12,9 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 // Import upgraded systems
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{TaskRegistryFactory, Tasks};
+use crate::projection::eval::procedure::AlgorithmError;
 
 /// Result row for Prize-Collecting Steiner Tree stream mode
 #[derive(Debug, Clone, serde::Serialize)]
@@ -101,19 +103,15 @@ impl PCSTreeBuilder {
     }
     fn validate(&self) -> Result<()> {
         if self.prizes.is_empty() {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "prizes must be provided and non-empty".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "prizes must be provided and non-empty".to_string(),
+            ));
         }
 
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be > 0".to_string(),
+            ));
         }
 
         Ok(())
@@ -139,15 +137,11 @@ impl PCSTreeBuilder {
                     &selectors,
                     Orientation::Undirected,
                 )
-                .map_err(|e| {
-                    crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-                })?
+                .map_err(|e| AlgorithmError::Graph(e.to_string()))?
         } else {
             self.graph_store
                 .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-                .map_err(|e| {
-                    crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-                })?
+                .map_err(|e| AlgorithmError::Graph(e.to_string()))?
         };
 
         let node_count = graph_view.node_count();
@@ -165,20 +159,17 @@ impl PCSTreeBuilder {
         }
 
         if self.prizes.len() != node_count {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Prize vector length ({}) must match node count ({})",
-                    self.prizes.len(),
-                    node_count
-                )),
-            );
+            return Err(AlgorithmError::Execution(format!(
+                "Prize vector length ({}) must match node count ({})",
+                self.prizes.len(),
+                node_count
+            )));
         }
 
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("prize_collecting_steiner_tree".to_string(), node_count),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("prize_collecting_steiner_tree".to_string(), node_count),
+            self.concurrency,
+        );
 
         // Build config + runtimes.
         // Storage runtime owns graph access and drives the algorithm.

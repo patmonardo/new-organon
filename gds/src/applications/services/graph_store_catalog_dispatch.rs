@@ -17,8 +17,8 @@ use crate::applications::graph_store_catalog::applications::write_applications::
     WriteRelationshipPropertiesApplication, WriteRelationshipsApplication,
 };
 use crate::applications::graph_store_catalog::configs::{
-    GraphGenerationConfig, GraphGenerationRelationshipConfig, NativeProjectionConfig,
-    SamplingConfig,
+    GraphGenerationConfig, GraphGenerationRelationshipConfig, MutateLabelConfig,
+    NativeProjectionConfig, SamplingConfig,
 };
 use crate::applications::graph_store_catalog::loaders::graph_store_loader::GraphStoreCatalogService;
 use crate::applications::graph_store_catalog::services::progress_tracker_factory::{
@@ -331,7 +331,7 @@ fn handle_drop_relationships(op: &str, request: &Value, user: &dyn User, db: &Da
         Err(e) => return e,
     };
 
-    if !store.has_relationship_type(&crate::projection::RelationshipType::of(relationship_type)) {
+    if !store.has_relationship_type(&RelationshipType::of(relationship_type)) {
         return err(
             op,
             "NOT_FOUND",
@@ -424,13 +424,10 @@ fn handle_mutate_label(op: &str, request: &Value, user: &dyn User, db: &Database
         None => return err(op, "INVALID_REQUEST", "mutateLabelConfig missing"),
     };
 
-    let config =
-        match crate::applications::graph_store_catalog::configs::MutateLabelConfig::from_json(
-            cfg_value,
-        ) {
-            Ok(c) => c,
-            Err(e) => return err(op, "INVALID_REQUEST", e),
-        };
+    let config = match MutateLabelConfig::from_json(cfg_value) {
+        Ok(c) => c,
+        Err(e) => return err(op, "INVALID_REQUEST", e),
+    };
 
     let store = match resolve_graph_store(op, user, db, graph_name) {
         Ok(s) => s,

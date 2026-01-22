@@ -4,16 +4,17 @@
 //! that cross community boundaries.
 
 use crate::algo::conductance::{
-    ConductanceComputationRuntime, ConductanceConfig, ConductanceStorageRuntime,
+    progress_task, ConductanceComputationRuntime, ConductanceConfig, ConductanceStorageRuntime,
 };
 use crate::collections::backends::vec::VecDouble;
-use crate::concurrency::Concurrency;
+use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory,
 };
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -92,11 +93,9 @@ impl ConductanceFacade {
 
     fn validate(&self) -> Result<()> {
         if self.community_property.is_empty() {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "community_property cannot be empty".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "community_property cannot be empty".to_string(),
+            ));
         }
         ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
         ConfigValidator::in_range(
@@ -123,7 +122,7 @@ impl ConductanceFacade {
             community_property: self.community_property.clone(),
         };
 
-        let base_task = crate::algo::conductance::progress_task(node_count);
+        let base_task = progress_task(node_count);
         let registry_factory = self.registry_factory();
         let mut progress_tracker = TaskProgressTracker::with_registry(
             base_task,
@@ -132,7 +131,7 @@ impl ConductanceFacade {
             registry_factory.as_ref(),
         );
 
-        let termination_flag = crate::concurrency::TerminationFlag::default();
+        let termination_flag = TerminationFlag::default();
         let storage = ConductanceStorageRuntime::new();
         let mut runtime = ConductanceComputationRuntime::new();
         let result = storage
@@ -143,7 +142,7 @@ impl ConductanceFacade {
                 &mut progress_tracker,
                 &termination_flag,
             )
-            .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+            .map_err(AlgorithmError::Execution)?;
 
         Ok((
             result.community_conductances,
@@ -210,7 +209,7 @@ impl ConductanceFacade {
             .graph_store
             .node_property_values(&self.community_property)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                AlgorithmError::Execution(format!(
                     "Conductance mutate failed to load community property: {e}"
                 ))
             })?;
@@ -243,9 +242,7 @@ impl ConductanceFacade {
         new_store
             .add_node_property(labels_set, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Conductance mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("Conductance mutate failed to add property: {e}"))
             })?;
 
         let summary =

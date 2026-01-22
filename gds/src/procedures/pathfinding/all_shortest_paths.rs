@@ -9,6 +9,7 @@ use crate::algo::all_shortest_paths::{
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{PathResult as ProcedurePathResult, Result};
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -17,7 +18,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, TaskProgressTracker, TaskRegistryFactory, Tasks,
+};
 
 /// A single all-pairs shortest path distance row.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -70,7 +73,7 @@ pub struct AllShortestPathsMutateResult {
 /// Helper function to convert NodeId to u64
 fn checked_u64(value: NodeId, context: &str) -> Result<u64> {
     u64::try_from(value).map_err(|_| {
-        crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+        AlgorithmError::Execution(format!(
             "AllShortestPaths returned invalid node id for {context}: {value}",
         ))
     })
@@ -163,32 +166,26 @@ impl AllShortestPathsBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be > 0".to_string(),
+            ));
         }
 
         match self.direction.to_ascii_lowercase().as_str() {
             "outgoing" | "incoming" | "undirected" => {}
             other => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                        "direction must be 'outgoing', 'incoming', or 'undirected' (got '{other}')"
-                    )),
-                );
+                return Err(AlgorithmError::Execution(format!(
+                    "direction must be 'outgoing', 'incoming', or 'undirected' (got '{other}')"
+                )));
             }
         }
 
         ConfigValidator::non_empty_string(&self.weight_property, "weight_property")?;
         if let Some(max) = self.max_results {
             if max == 0 {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        "max_results must be > 0".to_string(),
-                    ),
-                );
+                return Err(AlgorithmError::Execution(
+                    "max_results must be > 0".to_string(),
+                ));
             }
         }
         Ok(())
@@ -233,9 +230,7 @@ impl AllShortestPathsBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         let storage = AllShortestPathsStorageRuntime::with_settings(
             graph_view.as_ref(),
@@ -245,11 +240,10 @@ impl AllShortestPathsBuilder {
 
         let mut computation = AllShortestPathsComputationRuntime::new();
 
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("all_shortest_paths".to_string(), graph_view.node_count()),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("all_shortest_paths".to_string(), graph_view.node_count()),
+            self.concurrency,
+        );
 
         let start = std::time::Instant::now();
         let receiver = storage.compute_all_shortest_paths_streaming(

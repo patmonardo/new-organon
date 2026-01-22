@@ -2,13 +2,14 @@
 //!
 //! Mirrors Java WriteLabelConfig interface and integrates with the Rust config system.
 
+use crate::config::validation::ConfigError;
 use crate::define_config;
 
 define_config!(
     pub struct WriteLabelConfig {
         validate = |cfg: &WriteLabelConfig| {
             if cfg.node_filter.trim().is_empty() {
-                return Err(crate::config::validation::ConfigError::InvalidParameter {
+                return Err(ConfigError::InvalidParameter {
                     parameter: "nodeFilter".to_string(),
                     reason: "must not be empty".to_string(),
                 });

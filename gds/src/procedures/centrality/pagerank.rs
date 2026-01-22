@@ -31,11 +31,17 @@ use crate::algo::pagerank::{
     computation::PageRankComputationRuntime, storage::PageRankStorageRuntime,
 };
 use crate::collections::backends::vec::VecDouble;
+use crate::concurrency::Concurrency;
 use crate::config::base_types::AlgoBaseConfig;
 use crate::config::PageRankConfig;
+use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
+};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
@@ -44,10 +50,6 @@ use crate::types::schema::NodeLabel;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
-
-// Import upgraded systems
-use crate::core::utils::progress::ProgressTracker;
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 
 // ============================================================================
 // Statistics Type
@@ -215,11 +217,9 @@ impl PageRankFacade {
     /// Validate configuration before execution
     pub fn validate(&self) -> Result<()> {
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be greater than 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be greater than 0".to_string(),
+            ));
         }
         ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
         ConfigValidator::iterations(self.iterations, "iterations")?;
@@ -254,11 +254,7 @@ impl PageRankFacade {
             .damping_factor(self.damping_factor)
             .tolerance(self.tolerance)
             .build()
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "PageRankConfig invalid: {e}"
-                ))
-            })?;
+            .map_err(|e| AlgorithmError::Execution(format!("PageRankConfig invalid: {e}")))?;
 
         let source_set = self
             .source_nodes
@@ -272,12 +268,12 @@ impl PageRankFacade {
             source_set,
         );
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+        let mut progress_tracker = TaskProgressTracker::with_registry(
             Tasks::leaf_with_volume("pagerank".to_string(), self.iterations as usize)
                 .base()
                 .clone(),
-            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
-            crate::core::utils::progress::JobId::new(),
+            Concurrency::of(self.concurrency.max(1)),
+            JobId::new(),
             self.task_registry.as_ref(),
         );
         progress_tracker.begin_subtask_with_volume(self.iterations as usize);
@@ -416,9 +412,7 @@ impl PageRankFacade {
         new_store
             .add_node_property(labels, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "PageRank mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("PageRank mutate failed to add property: {e}"))
             })?;
 
         let execution_time = start_time.elapsed();

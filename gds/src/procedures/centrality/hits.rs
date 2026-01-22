@@ -2,10 +2,14 @@
 
 use crate::algo::hits::{computation::HitsComputationRuntime, HitsStorageRuntime};
 use crate::collections::backends::vec::VecDouble;
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
+use crate::concurrency::Concurrency;
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
+};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -113,11 +117,9 @@ impl HitsCentralityFacade {
     /// Returns an error if concurrency is not positive
     pub fn validate(&self) -> Result<()> {
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be positive".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be positive".to_string(),
+            ));
         }
         Ok(())
     }
@@ -138,12 +140,12 @@ impl HitsCentralityFacade {
         self.validate()?;
         let storage = HitsStorageRuntime::with_default_projection(self.graph_store.as_ref())?;
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+        let mut progress_tracker = TaskProgressTracker::with_registry(
             Tasks::leaf_with_volume("hits".to_string(), self.max_iterations)
                 .base()
                 .clone(),
-            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
-            crate::core::utils::progress::JobId::new(),
+            Concurrency::of(self.concurrency.max(1)),
+            JobId::new(),
             self.task_registry.as_ref(),
         );
         let computation = HitsComputationRuntime::new(self.tolerance);
@@ -182,12 +184,12 @@ impl HitsCentralityFacade {
 
         let storage = HitsStorageRuntime::with_default_projection(self.graph_store.as_ref())?;
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+        let mut progress_tracker = TaskProgressTracker::with_registry(
             Tasks::leaf_with_volume("hits".to_string(), self.max_iterations)
                 .base()
                 .clone(),
-            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
-            crate::core::utils::progress::JobId::new(),
+            Concurrency::of(self.concurrency.max(1)),
+            JobId::new(),
             self.task_registry.as_ref(),
         );
         let computation = HitsComputationRuntime::new(self.tolerance);
@@ -210,12 +212,12 @@ impl HitsCentralityFacade {
     pub fn run(&self) -> Result<(Vec<f64>, Vec<f64>)> {
         let storage = HitsStorageRuntime::with_default_projection(self.graph_store.as_ref())?;
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+        let mut progress_tracker = TaskProgressTracker::with_registry(
             Tasks::leaf_with_volume("hits".to_string(), self.max_iterations)
                 .base()
                 .clone(),
-            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
-            crate::core::utils::progress::JobId::new(),
+            Concurrency::of(self.concurrency.max(1)),
+            JobId::new(),
             self.task_registry.as_ref(),
         );
         let computation = HitsComputationRuntime::new(self.tolerance);
@@ -258,9 +260,7 @@ impl HitsCentralityFacade {
         new_store
             .add_node_property(labels, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "HITS mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("HITS mutate failed to add property: {e}"))
             })?;
 
         let execution_time = start_time.elapsed();

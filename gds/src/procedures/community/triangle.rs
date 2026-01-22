@@ -6,7 +6,7 @@
 //! - `concurrency`: reserved for future parallel implementation
 //! - `max_degree`: filter to skip high-degree nodes (performance / approximation)
 
-use crate::algo::triangle::{TriangleComputationRuntime, TriangleConfig, TriangleStorageRuntime};
+use crate::algo::triangle::{TriangleComputationRuntime, TriangleConfig, TriangleResult, TriangleStorageRuntime};
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{
@@ -15,6 +15,7 @@ use crate::core::utils::progress::{
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::DefaultLongNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -115,7 +116,7 @@ impl TriangleFacade {
                 progress_tracker.as_mut(),
                 &termination_flag,
             )
-            .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+            .map_err(AlgorithmError::Execution)?;
 
         Ok((
             result.local_triangles,
@@ -168,7 +169,7 @@ impl TriangleFacade {
         new_store
             .add_node_property(labels_set, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                AlgorithmError::Execution(format!(
                     "Triangle mutate failed to add property: {e}"
                 ))
             })?;
@@ -193,9 +194,9 @@ impl TriangleFacade {
     }
 
     /// Full result: returns both local and global counts.
-    pub fn run(&self) -> Result<crate::algo::triangle::TriangleResult> {
+    pub fn run(&self) -> Result<TriangleResult> {
         let (local, global, _elapsed) = self.compute()?;
-        Ok(crate::algo::triangle::TriangleResult {
+        Ok(TriangleResult {
             local_triangles: local,
             global_triangles: global,
         })

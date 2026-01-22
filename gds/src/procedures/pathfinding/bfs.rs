@@ -29,10 +29,11 @@
 
 use crate::algo::bfs::{BfsComputationRuntime, BfsStorageRuntime};
 use crate::applications::algorithms::pathfinding::shared::TraversalResult;
-use crate::core::utils::progress::Tasks;
+use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{PathResult, Result};
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -197,10 +198,7 @@ impl BfsBuilder {
 
     fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
         NodeId::try_from(value).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "{} must fit into i64 (got {})",
-                field, value
-            ))
+            AlgorithmError::Execution(format!("{} must fit into i64 (got {})", field, value))
         })
     }
 
@@ -210,11 +208,7 @@ impl BfsBuilder {
         // Create progress tracker for BFS execution.
         // We track progress in terms of relationships examined.
         let task = Tasks::leaf("BFS".to_string());
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                task,
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(task, self.concurrency);
 
         let source_u64 = self.source.expect("validate() ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -235,9 +229,7 @@ impl BfsBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Natural)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         let node_count = graph_view.node_count() as usize;
         let mut computation =
@@ -261,37 +253,29 @@ impl BfsBuilder {
     fn validate(&self) -> Result<()> {
         match self.source {
             None => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        "source node must be specified".to_string(),
-                    ),
-                )
+                return Err(AlgorithmError::Execution(
+                    "source node must be specified".to_string(),
+                ))
             }
             Some(id) if id == u64::MAX => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        "source node ID cannot be u64::MAX".to_string(),
-                    ),
-                )
+                return Err(AlgorithmError::Execution(
+                    "source node ID cannot be u64::MAX".to_string(),
+                ))
             }
             _ => {}
         }
 
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be > 0".to_string(),
+            ));
         }
 
         if let Some(depth) = self.max_depth {
             if depth == 0 {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        "max_depth must be > 0 or None".to_string(),
-                    ),
-                );
+                return Err(AlgorithmError::Execution(
+                    "max_depth must be > 0 or None".to_string(),
+                ));
             }
         }
 

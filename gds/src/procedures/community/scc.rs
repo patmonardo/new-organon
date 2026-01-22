@@ -16,6 +16,7 @@ use crate::core::utils::progress::{
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -100,7 +101,7 @@ impl SccFacade {
                 &mut progress_tracker,
                 &termination_flag,
             )
-            .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+            .map_err(AlgorithmError::Execution)?;
 
         Ok(SccResult::new(
             result.components,
@@ -152,7 +153,7 @@ impl SccFacade {
         new_store
             .add_node_property(labels_set, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                AlgorithmError::Execution(format!(
                     "SCC mutate failed to add property: {e}"
                 ))
             })?;

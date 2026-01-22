@@ -30,20 +30,22 @@ use crate::algo::degree_centrality::{
     DegreeCentralityComputationRuntime, DegreeCentralityStorageRuntime,
 };
 use crate::collections::backends::vec::VecDouble;
+use crate::concurrency::{Concurrency, TerminationFlag};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, JobId, ProgressTracker, TaskProgressTracker, TaskRegistryFactory,
+    Tasks,
+};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::NodeLabel;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+use crate::types::properties::node::NodePropertyValues;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
-
-// Import upgraded systems
-use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
-};
 
 // ============================================================================
 // Statistics Type
@@ -150,11 +152,9 @@ impl DegreeCentralityFacade {
 
     fn validate(&self) -> Result<()> {
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be > 0".to_string(),
+            ));
         }
 
         Ok(())
@@ -180,12 +180,12 @@ impl DegreeCentralityFacade {
             None => &empty_factory,
         };
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+        let mut progress_tracker = TaskProgressTracker::with_registry(
             Tasks::leaf_with_volume("degree_centrality".to_string(), node_count)
                 .base()
                 .clone(),
-            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
-            crate::core::utils::progress::JobId::new(),
+            Concurrency::of(self.concurrency.max(1)),
+            JobId::new(),
             registry_factory,
         );
         progress_tracker.begin_subtask_with_volume(node_count);
@@ -198,7 +198,7 @@ impl DegreeCentralityFacade {
             })
         };
 
-        let termination = crate::concurrency::TerminationFlag::default();
+        let termination = TerminationFlag::default();
         let computation = DegreeCentralityComputationRuntime::new();
 
         let mut scores = match storage.compute_parallel(
@@ -210,11 +210,9 @@ impl DegreeCentralityFacade {
             Ok(scores) => scores,
             Err(e) => {
                 tracker.lock().unwrap().end_subtask_with_failure();
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                        "Degree centrality terminated: {e}"
-                    )),
-                );
+                return Err(AlgorithmError::Execution(format!(
+                    "Degree centrality terminated: {e}"
+                )));
             }
         };
 
@@ -352,7 +350,7 @@ impl DegreeCentralityFacade {
         let node_count = scores.len();
         let backend = VecDouble::from(scores);
         let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
-        let values: Arc<dyn crate::types::properties::node::NodePropertyValues> = Arc::new(values);
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
 
         // Clone store, add property, and return updated store
         let mut new_store = self.graph_store.as_ref().clone();
@@ -360,7 +358,7 @@ impl DegreeCentralityFacade {
         new_store
             .add_node_property(labels, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                AlgorithmError::Execution(format!(
                     "Degree centrality mutate failed to add property: {e}"
                 ))
             })?;

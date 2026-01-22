@@ -1,4 +1,5 @@
 use crate::procedures::traits::Result;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph_store::GraphStore;
 use crate::types::prelude::DefaultGraphStore;
 use crate::types::properties::relationship::impls::default_relationship_property_values::DefaultRelationshipPropertyValues;
@@ -27,7 +28,7 @@ pub(crate) fn build_similarity_relationship_store(
         rel_types.insert(rel_type.clone());
 
         let graph = graph_store.get_graph_with_types(&rel_types).map_err(|e| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+            AlgorithmError::Execution(format!(
                 "Similarity mutate failed to read relationships: {e}"
             ))
         })?;
@@ -60,9 +61,7 @@ pub(crate) fn build_similarity_relationship_store(
         new_store
             .add_relationship_property(rel_type, property_name, pv)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Similarity mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("Similarity mutate failed to add property: {e}"))
             })?;
     }
 

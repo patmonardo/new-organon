@@ -2,9 +2,8 @@
 //!
 //! Mirrors Java GraphRemoveGraphPropertiesConfig interface and integrates with the Rust config system.
 
-// Type alias for cleaner code
-type GraphAccessGraphPropertiesConfig =
-    crate::applications::graph_store_catalog::configs::GraphAccessGraphPropertiesConfig;
+use crate::applications::graph_store_catalog::configs::GraphAccessGraphPropertiesConfig;
+use crate::config::validation::ConfigError;
 
 #[derive(Debug, Clone, Default)]
 pub struct GraphRemoveGraphPropertiesConfig {
@@ -14,7 +13,7 @@ pub struct GraphRemoveGraphPropertiesConfig {
 
 impl GraphRemoveGraphPropertiesConfig {
     /// Validate the configuration
-    pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         self.access_config.validate()
     }
 

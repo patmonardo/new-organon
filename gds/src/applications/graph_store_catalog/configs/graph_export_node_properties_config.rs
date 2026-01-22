@@ -2,9 +2,8 @@
 //!
 //! Mirrors Java GraphExportNodePropertiesConfig interface and integrates with the Rust config system.
 
-// Type alias for cleaner code
-type GraphNodePropertiesConfig =
-    crate::applications::graph_store_catalog::configs::GraphNodePropertiesConfig;
+use crate::applications::graph_store_catalog::configs::GraphNodePropertiesConfig;
+use crate::config::validation::ConfigError;
 
 #[derive(Debug, Clone, Default)]
 pub struct GraphExportNodePropertiesConfig {
@@ -18,20 +17,20 @@ pub struct GraphExportNodePropertiesConfig {
 
 impl GraphExportNodePropertiesConfig {
     /// Validate the configuration
-    pub fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         // Validate base node properties config
         self.node_config.validate()?;
 
         // Additional validation for export-specific fields
         if self.node_properties.is_empty() {
-            return Err(crate::config::validation::ConfigError::InvalidParameter {
+            return Err(ConfigError::InvalidParameter {
                 parameter: "nodeProperties".to_string(),
                 reason: "must not be empty".to_string(),
             });
         }
         for prop in &self.node_properties {
             if prop.trim().is_empty() {
-                return Err(crate::config::validation::ConfigError::InvalidParameter {
+                return Err(ConfigError::InvalidParameter {
                     parameter: "nodeProperties".to_string(),
                     reason: "must not contain empty strings".to_string(),
                 });

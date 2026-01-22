@@ -11,7 +11,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::core::model::{
-    InMemoryModelCatalog, Model, ModelCatalog, ModelCatalogCustomInfo, ModelConfig, ModelData,
+    InMemoryModelCatalog, Model, ModelCatalog, ModelCatalogCustomInfo, ModelCatalogListener,
+    ModelConfig, ModelData,
 };
 use crate::types::user::User;
 
@@ -178,11 +179,11 @@ fn value_to_map(value: Value) -> AnyMap {
 }
 
 impl ModelCatalog for FacadeModelCatalog {
-    fn register_listener(&self, listener: Box<dyn crate::core::model::ModelCatalogListener>) {
+    fn register_listener(&self, listener: Box<dyn ModelCatalogListener>) {
         self.inner.register_listener(listener)
     }
 
-    fn unregister_listener(&self, listener: &dyn crate::core::model::ModelCatalogListener) {
+    fn unregister_listener(&self, listener: &dyn ModelCatalogListener) {
         self.inner.unregister_listener(listener)
     }
 
@@ -366,6 +367,8 @@ impl ModelCatalogProcedureFacade for LocalModelCatalogProcedureFacade {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::{BaseConfig, Config};
+    use crate::types::schema::GraphSchema;
     use serde_json::json;
 
     #[derive(Debug, Clone, Serialize)]
@@ -392,9 +395,9 @@ mod tests {
         model_user: String,
     }
 
-    impl crate::config::Config for DummyConfig {}
+    impl Config for DummyConfig {}
 
-    impl crate::config::BaseConfig for DummyConfig {
+    impl BaseConfig for DummyConfig {
         fn parameters(&self) -> AnyMap {
             AnyMap::from([
                 (
@@ -430,7 +433,7 @@ mod tests {
             "alice".to_string(),
             "m1".to_string(),
             "DummyAlgo".to_string(),
-            crate::types::schema::GraphSchema::empty(),
+            GraphSchema::empty(),
             Some(DummyData),
             DummyConfig {
                 model_name: "m1".to_string(),

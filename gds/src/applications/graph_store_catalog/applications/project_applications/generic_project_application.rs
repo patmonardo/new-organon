@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use crate::applications::graph_store_catalog::configs::GenericProjectionConfig;
-use crate::applications::graph_store_catalog::results::ProjectionResult;
 use crate::applications::graph_store_catalog::loaders::GraphStoreCatalogService;
+use crate::applications::graph_store_catalog::results::ProjectionResult;
 use crate::core::User;
 use crate::projection::{NodeLabel, RelationshipType};
 use crate::types::graph_store::{DatabaseId, DefaultGraphStore, GraphStore as _};
-use crate::types::random::{RandomGraphConfig, Randomizable};
+use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig, Randomizable};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
@@ -45,9 +45,7 @@ impl GenericProjectApplication {
                     graph_name: cfg.graph_name.clone(),
                     database_name: database_id.to_string(),
                     node_count: 64,
-                    relationships: vec![crate::types::random::RandomRelationshipConfig::new(
-                        "REL", 0.1,
-                    )],
+                    relationships: vec![RandomRelationshipConfig::new("REL", 0.1)],
                     ..Default::default()
                 };
                 let mut rng = StdRng::seed_from_u64(0);

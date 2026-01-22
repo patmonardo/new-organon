@@ -12,6 +12,7 @@ use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -70,11 +71,9 @@ impl ModularityFacade {
 
     fn validate(&self) -> Result<()> {
         if self.community_property.is_empty() {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "community_property cannot be empty".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "community_property cannot be empty".to_string(),
+            ));
         }
         Ok(())
     }
@@ -143,7 +142,7 @@ impl ModularityFacade {
             .graph_store
             .node_property_values(&self.community_property)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                AlgorithmError::Execution(format!(
                     "Modularity mutate failed to load community property: {e}"
                 ))
             })?;
@@ -182,9 +181,7 @@ impl ModularityFacade {
         new_store
             .add_node_property(labels_set, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Modularity mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("Modularity mutate failed to add property: {e}"))
             })?;
 
         let summary =

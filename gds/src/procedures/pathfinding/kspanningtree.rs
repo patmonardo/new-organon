@@ -16,6 +16,10 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
+// Additional imports for error handling and progress tracking
+use crate::core::utils::progress::TaskProgressTracker;
+use crate::projection::eval::procedure::AlgorithmError;
+
 /// Result row for k-spanning tree stream mode
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct KSpanningTreeRow {
@@ -82,22 +86,18 @@ impl KSpanningTreeBuilder {
 
     fn validate(&self) -> Result<()> {
         if self.source_node.is_none() {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "source_node is required".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "source_node is required".to_string(),
+            ));
         }
 
         ConfigValidator::in_range(self.k as f64, 1.0, 1_000_000.0, "k")?;
 
         if self.objective != "min" && self.objective != "max" {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "objective must be 'min' or 'max', got '{}'",
-                    self.objective
-                )),
-            );
+            return Err(AlgorithmError::Execution(format!(
+                "objective must be 'min' or 'max', got '{}'",
+                self.objective
+            )));
         }
 
         Ok(())
@@ -115,9 +115,7 @@ impl KSpanningTreeBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_and_orientation(&rel_types, Orientation::Undirected)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
@@ -126,17 +124,16 @@ impl KSpanningTreeBuilder {
 
         // Check source node exists
         if source as usize >= node_count {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "source_node {} out of range [0, {})",
-                    source, node_count
-                )),
-            );
+            return Err(AlgorithmError::Execution(format!(
+                "source_node {} out of range [0, {})",
+                source, node_count
+            )));
         }
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::new(
-            Tasks::leaf_with_volume("kspanningtree".to_string(), node_count),
-        );
+        let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf_with_volume(
+            "kspanningtree".to_string(),
+            node_count,
+        ));
 
         // Create storage runtime (Gross pole - controller)
         let storage =
@@ -275,6 +272,7 @@ impl KSpanningTreeBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::GraphStoreConfig;
     use crate::procedures::GraphFacade;
 
     use crate::projection::RelationshipType;
@@ -317,7 +315,7 @@ mod tests {
         let id_map = SimpleIdMap::from_original_ids(original_ids);
 
         DefaultGraphStore::new(
-            crate::config::GraphStoreConfig::default(),
+            GraphStoreConfig::default(),
             GraphName::new("g"),
             DatabaseInfo::new(
                 DatabaseId::new("db"),

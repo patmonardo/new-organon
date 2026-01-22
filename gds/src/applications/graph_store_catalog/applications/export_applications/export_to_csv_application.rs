@@ -1,5 +1,6 @@
 use crate::applications::graph_store_catalog::results::ExportResult;
 use crate::projection::RelationshipType;
+use crate::types::graph::DefaultGraph;
 use crate::types::graph::Graph as _;
 use crate::types::graph::IdMap as _;
 use crate::types::graph_store::DefaultGraphStore;
@@ -94,7 +95,7 @@ impl ExportToCsvApplication {
 
     fn write_relationships_for_type(
         &self,
-        graph: &crate::types::graph::DefaultGraph,
+        graph: &DefaultGraph,
         rel_type: &RelationshipType,
         export_root: &Path,
     ) -> Result<u64, String> {

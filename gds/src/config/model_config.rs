@@ -3,16 +3,17 @@
 //! Translated from Java GDS ModelConfig.java in model-catalog-api.
 //! Adapted to Rust config system following repository patterns.
 
+use crate::config::validation::{ConfigError, ConfigValidation};
 use crate::define_config;
 
 define_config!(
     pub struct ModelConfig {
         validate = |cfg: &ModelConfig| {
-            crate::config::validation::ConfigValidation::validate_non_empty_string(&cfg.model_name, "modelName")?;
-            crate::config::validation::ConfigValidation::validate_non_empty_string(&cfg.model_user, "modelUser")?;
+            ConfigValidation::validate_non_empty_string(&cfg.model_name, "modelName")?;
+            ConfigValidation::validate_non_empty_string(&cfg.model_user, "modelUser")?;
             // Model name cannot contain whitespace
             if cfg.model_name.chars().any(|c| c.is_whitespace()) {
-                return Err(crate::config::validation::ConfigError::InvalidParameter {
+                return Err(ConfigError::InvalidParameter {
                     parameter: "modelName".to_string(),
                     reason: "Model name cannot contain whitespace".to_string(),
                 });

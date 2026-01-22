@@ -5,7 +5,7 @@
 //! Parameters (Java GDS aligned):
 //! - `concurrency`: accepted for parity; current runtime is single-threaded.
 
-use crate::algo::wcc::{WccComputationRuntime, WccStorageRuntime};
+use crate::algo::wcc::{WccComputationRuntime, WccResult, WccStorageRuntime};
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{
@@ -14,6 +14,7 @@ use crate::core::utils::progress::{
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -94,7 +95,7 @@ impl WccFacade {
     pub fn mutate(self, _property_name: &str) -> Result<MutationResult> {
         // Implemented below in the long-form mutate returning updated store
         Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
+            AlgorithmError::Execution(
                 "Use mutate_with_store() for WCC (internal)".to_string(),
             ),
         )
@@ -134,7 +135,7 @@ impl WccFacade {
         new_store
             .add_node_property(labels, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
+                AlgorithmError::Execution(format!(
                     "WCC mutate failed to add property: {e}"
                 ))
             })?;
@@ -167,7 +168,7 @@ impl WccFacade {
         Ok(())
     }
 
-    fn compute(&self) -> Result<(crate::algo::wcc::WccResult, u64)> {
+    fn compute(&self) -> Result<(WccResult, u64)> {
         self.validate()?;
         let start = Instant::now();
 
@@ -194,10 +195,10 @@ impl WccFacade {
                 &mut progress_tracker,
                 &termination_flag,
             )
-            .map_err(crate::projection::eval::procedure::AlgorithmError::Execution)?;
+            .map_err(AlgorithmError::Execution)?;
 
         Ok((
-            crate::algo::wcc::WccResult {
+            WccResult {
                 components: result.components,
                 component_count: result.component_count,
             },
@@ -222,7 +223,7 @@ impl WccFacade {
     }
 
     /// Full result: returns the procedure-level WCC result.
-    pub fn run(&self) -> Result<crate::algo::wcc::WccResult> {
+    pub fn run(&self) -> Result<WccResult> {
         let (result, _elapsed) = self.compute()?;
         Ok(result)
     }

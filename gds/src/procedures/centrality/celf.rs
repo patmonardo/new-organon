@@ -7,7 +7,7 @@ use crate::algo::celf::spec::CELFConfig;
 use crate::algo::celf::storage::CELFStorageRuntime;
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
+use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{MutationResult, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
@@ -111,11 +111,10 @@ impl CELFFacade {
             return Ok((HashMap::new(), start.elapsed()));
         }
 
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("celf".to_string(), self.config.seed_set_size),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("celf".to_string(), self.config.seed_set_size),
+            self.concurrency,
+        );
         progress_tracker.begin_subtask_with_volume(self.config.seed_set_size);
 
         let runtime = CELFComputationRuntime::new(self.config.clone(), node_count);
@@ -238,6 +237,7 @@ impl AlgorithmRunner for CELFFacade {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::GraphStoreConfig;
     use crate::procedures::GraphFacade;
     use crate::projection::RelationshipType;
     use crate::types::graph::{RelationshipTopology, SimpleIdMap};
@@ -275,7 +275,7 @@ mod tests {
         let id_map = SimpleIdMap::from_original_ids(original_ids);
 
         DefaultGraphStore::new(
-            crate::config::GraphStoreConfig::default(),
+            GraphStoreConfig::default(),
             GraphName::new("g"),
             DatabaseInfo::new(
                 DatabaseId::new("db"),

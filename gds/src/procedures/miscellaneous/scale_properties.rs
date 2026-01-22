@@ -4,14 +4,15 @@
 //! and exposes stream/stats surfaces. Mutate/write are intentionally unimplemented.
 
 use crate::algo::scale_properties::{
-    ScalePropertiesComputationRuntime, ScalePropertiesConfig, ScalePropertiesScaler,
-    ScalePropertiesStorageRuntime,
+    ScalePropertiesComputationRuntime, ScalePropertiesConfig, ScalePropertiesResult,
+    ScalePropertiesScaler, ScalePropertiesStorageRuntime,
 };
 use crate::collections::backends::vec::VecDoubleArray;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::NodeLabel;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleArrayNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -84,7 +85,7 @@ impl ScalePropertiesFacade {
         Ok(())
     }
 
-    fn compute(&self) -> Result<crate::algo::scale_properties::ScalePropertiesResult> {
+    fn compute(&self) -> Result<ScalePropertiesResult> {
         self.validate()?;
 
         let config = ScalePropertiesConfig {
@@ -150,7 +151,7 @@ impl ScalePropertiesFacade {
         let values: Arc<dyn NodePropertyValues> = Arc::new(values);
 
         let mut new_store = self.graph_store.as_ref().clone();
-        let labels: HashSet<crate::projection::NodeLabel> = new_store.node_labels();
+        let labels: HashSet<NodeLabel> = new_store.node_labels();
         new_store
             .add_node_property(labels, property_name.to_string(), values)
             .map_err(|e| {

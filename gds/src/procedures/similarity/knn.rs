@@ -1,6 +1,8 @@
 use crate::algo::similarity::knn::storage::KnnSamplerType;
 use crate::algo::similarity::knn::KnnNnDescentStats;
-use crate::algo::similarity::knn::{KnnConfig, KnnResultRow};
+use crate::algo::similarity::knn::{
+    KnnComputationRuntime, KnnConfig, KnnResultRow, KnnStorageRuntime,
+};
 pub use crate::algo::similarity::knn::{KnnNodePropertySpec, SimilarityMetric};
 use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
@@ -11,6 +13,10 @@ use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+// Additional imports for progress tracking and similarity stats
+use crate::algo::common::result::similarity::similarity_stats;
+use crate::core::utils::progress::TaskProgressTracker;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KnnStats {
@@ -166,14 +172,13 @@ impl KnnBuilder {
 
     fn compute_rows_and_nn_stats(self) -> Result<(Vec<KnnResultRow>, KnnNnDescentStats)> {
         let config = self.build_config();
-        let computation = crate::algo::similarity::knn::KnnComputationRuntime::new();
-        let storage = crate::algo::similarity::knn::KnnStorageRuntime::new(config.concurrency);
+        let computation = KnnComputationRuntime::new();
+        let storage = KnnStorageRuntime::new(config.concurrency);
 
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("knn".to_string(), self.graph_store.node_count()),
-                config.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("knn".to_string(), self.graph_store.node_count()),
+            config.concurrency,
+        );
 
         let (results, nn_stats) = if config.node_properties.is_empty() {
             storage.compute_single_with_stats(
@@ -324,8 +329,7 @@ fn build_stats(rows: &[KnnResultRow], nn_stats: &KnnNnDescentStats) -> KnnStats 
         })
         .collect();
 
-    let stats =
-        crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
+    let stats = similarity_stats(|| tuples.into_iter(), true);
 
     KnnStats {
         nodes_compared: sources.len() as u64,

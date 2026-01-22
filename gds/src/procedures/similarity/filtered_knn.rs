@@ -16,6 +16,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+// Additional imports for progress tracking and similarity stats
+use crate::algo::common::result::similarity::similarity_stats;
+use crate::core::utils::progress::TaskProgressTracker;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilteredKnnStats {
     #[serde(rename = "nodesCompared")]
@@ -189,11 +193,10 @@ impl FilteredKnnBuilder {
         let computation = FilteredKnnComputationRuntime::new();
         let storage = FilteredKnnStorageRuntime::new(config.concurrency);
 
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("filteredknn".to_string(), self.graph_store.node_count()),
-                config.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("filteredknn".to_string(), self.graph_store.node_count()),
+            config.concurrency,
+        );
 
         let (results, nn_stats) = if config.node_properties.is_empty() {
             storage.compute_single_with_stats(
@@ -350,8 +353,7 @@ fn build_stats(rows: &[FilteredKnnResultRow], nn_stats: &KnnNnDescentStats) -> F
         })
         .collect();
 
-    let stats =
-        crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
+    let stats = similarity_stats(|| tuples.into_iter(), true);
 
     FilteredKnnStats {
         nodes_compared: sources.len() as u64,

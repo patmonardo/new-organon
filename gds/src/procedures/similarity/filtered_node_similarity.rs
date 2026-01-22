@@ -1,3 +1,5 @@
+use crate::algo::common::result::similarity::similarity_stats;
+use crate::algo::similarity::filtered_node_similarity::compute_filtered_node_similarity;
 use crate::algo::similarity::{NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult};
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::mem::MemoryRange;
@@ -11,6 +13,10 @@ use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+
+// Additional imports for progress tracking and node ID mapping
+use crate::core::utils::progress::TaskProgressTracker;
+use crate::types::graph::id_map::MappedNodeId;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FilteredNodeSimilarityStats {
@@ -165,23 +171,22 @@ impl FilteredNodeSimilarityBuilder {
                 .map_err(|e| AlgorithmError::InvalidGraph(e.to_string()))?
         };
 
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("filtered_node_similarity".to_string(), graph.node_count()),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("filtered_node_similarity".to_string(), graph.node_count()),
+            self.concurrency,
+        );
         progress_tracker.begin_subtask_with_volume(graph.node_count());
 
         let id_map = GraphStore::nodes(self.graph_store.as_ref());
 
-        let mut source_nodes: Option<HashSet<crate::types::graph::id_map::MappedNodeId>> =
+        let mut source_nodes: Option<HashSet<MappedNodeId>> =
             self.source_node_label.as_ref().map(|label| {
                 let mut labels = HashSet::new();
                 labels.insert(label.clone());
                 id_map.iter_with_labels(&labels).collect()
             });
 
-        let mut target_nodes: Option<HashSet<crate::types::graph::id_map::MappedNodeId>> =
+        let mut target_nodes: Option<HashSet<MappedNodeId>> =
             self.target_node_label.as_ref().map(|label| {
                 let mut labels = HashSet::new();
                 labels.insert(label.clone());
@@ -209,13 +214,12 @@ impl FilteredNodeSimilarityBuilder {
         }
 
         let config = self.build_config();
-        let results =
-            crate::algo::similarity::filtered_node_similarity::compute_filtered_node_similarity(
-                graph.as_ref(),
-                &config,
-                source_nodes.as_ref(),
-                target_nodes.as_ref(),
-            );
+        let results = compute_filtered_node_similarity(
+            graph.as_ref(),
+            &config,
+            source_nodes.as_ref(),
+            target_nodes.as_ref(),
+        );
 
         progress_tracker.log_progress(graph.node_count());
         progress_tracker.end_subtask();
@@ -306,8 +310,7 @@ fn build_stats(results: &[NodeSimilarityResult]) -> FilteredNodeSimilarityStats 
         })
         .collect();
 
-    let stats =
-        crate::algo::common::result::similarity::similarity_stats(|| tuples.into_iter(), true);
+    let stats = similarity_stats(|| tuples.into_iter(), true);
 
     FilteredNodeSimilarityStats {
         nodes_compared: sources.len() as u64,

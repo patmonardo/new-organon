@@ -4,6 +4,7 @@ use crate::algo::embeddings::GATResult;
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits as facade;
 use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::orientation::Orientation;
 use crate::types::DefaultGraphStore;
 use crate::types::GraphStore;
 use serde::{Deserialize, Serialize};
@@ -113,10 +114,10 @@ impl GATBuilder {
             .get_graph_with_types_selectors_and_orientation(
                 &rel_types,
                 &HashMap::new(),
-                crate::projection::orientation::Orientation::Natural,
+                Orientation::Natural,
             )
             .map_err(|e: Box<dyn std::error::Error + Send + Sync>| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
+                AlgorithmError::Graph(e.to_string())
             })?;
         Ok(storage.compute(graph.as_ref(), &self.config))
     }

@@ -31,17 +31,21 @@
 use crate::algo::betweenness::storage::BetweennessCentralityStorageRuntime;
 use crate::algo::betweenness::BetweennessCentralityComputationRuntime;
 use crate::collections::backends::vec::VecDouble;
-use crate::concurrency::TerminationFlag;
+use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::ProgressTracker;
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
+};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::NodeLabel;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+use crate::types::properties::node::NodePropertyValues;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -175,19 +179,15 @@ impl BetweennessCentralityFacade {
     /// Returns an error if concurrency is not positive
     pub fn validate(&self) -> Result<()> {
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be positive".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be positive".to_string(),
+            ));
         }
         if let Some(size) = self.sampling_size {
             if size == 0 {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        "sampling_size must be positive".to_string(),
-                    ),
-                );
+                return Err(AlgorithmError::Execution(
+                    "sampling_size must be positive".to_string(),
+                ));
             }
         }
         Ok(())
@@ -209,15 +209,11 @@ impl BetweennessCentralityFacade {
                     &selectors,
                     self.orientation(),
                 )
-                .map_err(|e| {
-                    crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-                })?
+                .map_err(|e| AlgorithmError::Graph(e.to_string()))?
         } else {
             self.graph_store
                 .get_graph_with_types_and_orientation(&rel_types, self.orientation())
-                .map_err(|e| {
-                    crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-                })?
+                .map_err(|e| AlgorithmError::Graph(e.to_string()))?
         };
 
         let node_count = graph_view.node_count();
@@ -238,12 +234,12 @@ impl BetweennessCentralityFacade {
             storage.select_sources(&self.sampling_strategy, Some(requested), self.random_seed)
         };
 
-        let mut progress_tracker = crate::core::utils::progress::TaskProgressTracker::with_registry(
+        let mut progress_tracker = TaskProgressTracker::with_registry(
             Tasks::leaf_with_volume("betweenness".to_string(), sources.len())
                 .base()
                 .clone(),
-            crate::concurrency::Concurrency::of(self.concurrency.max(1)),
-            crate::core::utils::progress::JobId::new(),
+            Concurrency::of(self.concurrency.max(1)),
+            JobId::new(),
             self.task_registry.as_ref(),
         );
         progress_tracker.begin_subtask_with_volume(sources.len());
@@ -272,11 +268,7 @@ impl BetweennessCentralityFacade {
                 &termination,
                 on_source_done,
             )
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Betweenness terminated: {e}"
-                ))
-            })?;
+            .map_err(|e| AlgorithmError::Execution(format!("Betweenness terminated: {e}")))?;
 
         progress_tracker.end_subtask();
 
@@ -410,7 +402,7 @@ impl BetweennessCentralityFacade {
         let node_count = scores.len();
         let backend = VecDouble::from(scores);
         let values = DefaultDoubleNodePropertyValues::from_collection(backend, node_count);
-        let values: Arc<dyn crate::types::properties::node::NodePropertyValues> = Arc::new(values);
+        let values: Arc<dyn NodePropertyValues> = Arc::new(values);
 
         // Clone store, add property, and return updated store
         let mut new_store = self.graph_store.as_ref().clone();
@@ -418,9 +410,7 @@ impl BetweennessCentralityFacade {
         new_store
             .add_node_property(labels, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Betweenness mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("Betweenness mutate failed to add property: {e}"))
             })?;
 
         let execution_time = start_time.elapsed();
@@ -437,11 +427,9 @@ impl BetweennessCentralityFacade {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(
-            crate::projection::eval::procedure::AlgorithmError::Execution(
-                "BetweennessCentrality mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        Err(AlgorithmError::Execution(
+            "BetweennessCentrality mutate/write is not implemented yet".to_string(),
+        ))
     }
 
     /// Estimate memory requirements for betweenness centrality computation.

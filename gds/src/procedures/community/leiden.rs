@@ -15,10 +15,11 @@ use crate::algo::leiden::{
 };
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::{TaskRegistry, Tasks};
+use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
+use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -141,8 +142,7 @@ impl LeidenFacade {
             "leiden".to_string(),
             node_count.saturating_add(self.config.max_iterations),
         );
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::new(base_task);
+        let mut progress_tracker = TaskProgressTracker::new(base_task);
 
         let termination_flag = TerminationFlag::default();
 
@@ -207,9 +207,7 @@ impl LeidenFacade {
         new_store
             .add_node_property(labels_set, property_name.to_string(), values)
             .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "Leiden mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("Leiden mutate failed to add property: {e}"))
             })?;
 
         let execution_time = start.elapsed();

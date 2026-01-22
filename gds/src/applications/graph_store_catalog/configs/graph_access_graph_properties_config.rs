@@ -5,6 +5,7 @@
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+use crate::config::validation::ConfigError;
 use crate::define_config;
 
 define_config!(
@@ -12,7 +13,7 @@ define_config!(
     pub struct GraphAccessGraphPropertiesConfig {
         validate = |cfg: &GraphAccessGraphPropertiesConfig| {
             if cfg.graph_property.trim().is_empty() {
-                return Err(crate::config::validation::ConfigError::InvalidParameter {
+                return Err(ConfigError::InvalidParameter {
                     parameter: "graphProperty".to_string(),
                     reason: "must not be empty".to_string(),
                 });

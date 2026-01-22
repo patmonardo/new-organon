@@ -31,7 +31,7 @@ use crate::algo::dijkstra::targets::create_targets;
 use crate::algo::dijkstra::{DijkstraComputationRuntime, DijkstraStorageRuntime};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::{PathResult, Result};
+use crate::procedures::traits::{PathResult as ProcedurePathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -42,8 +42,10 @@ use std::sync::Arc;
 
 // Import upgraded systems
 use crate::algo::common::prelude::{PathFindingResult, PathResultBuilder};
-use crate::algo::common::result_builders::{ExecutionMetadata, ResultBuilder};
+use crate::algo::common::result_builders::{ExecutionMetadata, PathResult, ResultBuilder};
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
+use crate::projection::eval::procedure::AlgorithmError;
 
 // ============================================================================
 // Statistics Type
@@ -147,10 +149,7 @@ impl DijkstraBuilder {
 
     fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
         NodeId::try_from(value).map_err(|_| {
-            crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                "{} must fit into i64 (got {})",
-                field, value
-            ))
+            AlgorithmError::Execution(format!("{} must fit into i64 (got {})", field, value))
         })
     }
 
@@ -207,15 +206,12 @@ impl DijkstraBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Graph(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
-        let mut progress_tracker =
-            crate::core::utils::progress::TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume("dijkstra".to_string(), graph_view.relationship_count()),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume("dijkstra".to_string(), graph_view.relationship_count()),
+            self.concurrency,
+        );
 
         let result = storage.compute_dijkstra(
             &mut computation,
@@ -225,11 +221,11 @@ impl DijkstraBuilder {
             &mut progress_tracker,
         )?;
 
-        let paths: Vec<crate::algo::common::result_builders::PathResult> = result
+        let paths: Vec<PathResult> = result
             .path_finding_result
             .paths()
             .filter(|p| p.source_node >= 0 && p.target_node >= 0)
-            .map(|p| crate::algo::common::result_builders::PathResult {
+            .map(|p| PathResult {
                 source: p.source_node as u64,
                 target: p.target_node as u64,
                 path: p
@@ -256,9 +252,7 @@ impl DijkstraBuilder {
             .with_paths(paths)
             .with_metadata(metadata)
             .build()
-            .map_err(|e| {
-                crate::projection::eval::procedure::AlgorithmError::Execution(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
 
         Ok(path_result)
     }
@@ -341,37 +335,29 @@ impl DijkstraBuilder {
     fn validate(&self) -> Result<()> {
         match self.source {
             None => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        "source node must be specified".to_string(),
-                    ),
-                )
+                return Err(AlgorithmError::Execution(
+                    "source node must be specified".to_string(),
+                ))
             }
             Some(id) if id == u64::MAX => {
-                return Err(
-                    crate::projection::eval::procedure::AlgorithmError::Execution(
-                        "source node ID cannot be u64::MAX".to_string(),
-                    ),
-                )
+                return Err(AlgorithmError::Execution(
+                    "source node ID cannot be u64::MAX".to_string(),
+                ))
             }
             _ => {}
         }
 
         if self.concurrency == 0 {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(
-                    "concurrency must be > 0".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be > 0".to_string(),
+            ));
         }
 
         if !["incoming", "outgoing", "both"].contains(&self.direction.as_str()) {
-            return Err(
-                crate::projection::eval::procedure::AlgorithmError::Execution(format!(
-                    "direction must be 'incoming', 'outgoing', or 'both', got '{}'",
-                    self.direction
-                )),
-            );
+            return Err(AlgorithmError::Execution(format!(
+                "direction must be 'incoming', 'outgoing', or 'both', got '{}'",
+                self.direction
+            )));
         }
 
         ConfigValidator::non_empty_string(&self.weight_property, "weight_property")?;
@@ -448,22 +434,14 @@ impl DijkstraBuilder {
         ConfigValidator::non_empty_string(property_name, "property_name")?;
         let graph_store = Arc::clone(&self.graph_store);
         let result = self.compute()?;
-        let paths: Vec<PathResult> = result
+        let paths: Vec<ProcedurePathResult> = result
             .paths
             .into_iter()
-            .map(|path| PathResult {
-                source: path.source,
-                target: path.target,
-                path: path.path,
-                cost: path.cost,
-            })
+            .map(super::core_to_procedure_path_result)
             .collect();
 
-        let updated_store = crate::procedures::pathfinding::build_path_relationship_store(
-            graph_store.as_ref(),
-            property_name,
-            &paths,
-        )?;
+        let updated_store =
+            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
 
         let summary = MutationResult::new(
             paths.len() as u64,

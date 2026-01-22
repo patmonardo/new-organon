@@ -2,18 +2,21 @@
 ///
 /// Mirrors Java GraphStoreLoader interface.
 /// Base trait with 4 methods for graph loading operations.
+use crate::core::{GraphDimensions, User};
+use crate::types::catalog::GraphCatalog;
+use crate::types::graph_store::{DatabaseId, DefaultGraphStore};
 pub trait GraphStoreLoader {
     /// Returns the graph project configuration.
     fn graph_project_config(&self) -> Box<dyn GraphProjectConfig>;
 
     /// Returns the loaded graph store.
-    fn graph_store(&self) -> crate::types::graph_store::DefaultGraphStore;
+    fn graph_store(&self) -> DefaultGraphStore;
 
     /// Returns the result store for the operation.
     fn result_store(&self) -> Box<dyn ResultStore>;
 
     /// Returns the graph dimensions.
-    fn graph_dimensions(&self) -> Box<dyn crate::core::GraphDimensions>;
+    fn graph_dimensions(&self) -> Box<dyn GraphDimensions>;
 }
 
 /// Placeholder for GraphProjectConfig trait.
@@ -45,17 +48,17 @@ pub trait GraphStoreCatalogService: Send + Sync {
     /// for per-user/per-db scoping later.
     fn graph_catalog(
         &self,
-        user: &dyn crate::core::User,
-        database_id: &crate::types::graph_store::DatabaseId,
-    ) -> std::sync::Arc<dyn crate::types::catalog::GraphCatalog>;
+        user: &dyn User,
+        database_id: &DatabaseId,
+    ) -> std::sync::Arc<dyn GraphCatalog>;
 
     /// Resolve a named graph store from the catalog.
     fn get_graph_store(
         &self,
-        user: &dyn crate::core::User,
-        database_id: &crate::types::graph_store::DatabaseId,
+        user: &dyn User,
+        database_id: &DatabaseId,
         graph_name: &str,
-    ) -> Result<std::sync::Arc<crate::types::graph_store::DefaultGraphStore>, String> {
+    ) -> Result<std::sync::Arc<DefaultGraphStore>, String> {
         self.graph_catalog(user, database_id)
             .get(graph_name)
             .ok_or_else(|| format!("Graph not found: {graph_name}"))
