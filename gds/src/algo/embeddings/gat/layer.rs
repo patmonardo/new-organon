@@ -18,7 +18,7 @@ impl GATLayer {
 
     pub fn forward(
         &mut self,
-        graph: &dyn crate::graph::Graph,
+        graph: &dyn crate::types::graph::Graph,
         features: &mut HashMap<NodeId, Vec<f64>>,
     ) {
         // For each node, compute attention and aggregate

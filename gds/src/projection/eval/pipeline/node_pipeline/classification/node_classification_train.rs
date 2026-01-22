@@ -22,7 +22,7 @@ use crate::ml::models::{
 use crate::ml::node_prediction::NodeSplitter;
 use crate::ml::splitting::TrainingExamplesSplit;
 use crate::ml::training::statistics::TrainingStatistics;
-use crate::prelude::GraphStore;
+use crate::types::GraphStore;
 use crate::projection::eval::pipeline::node_pipeline::node_property_pipeline_base_train_config::NodePropertyPipelineBaseTrainConfig;
 use crate::projection::eval::pipeline::node_pipeline::node_property_training_pipeline::NodePropertyTrainingPipeline;
 use crate::projection::eval::pipeline::node_pipeline::NodeFeatureProducer;

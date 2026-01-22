@@ -14,7 +14,7 @@ pub use node_iterator::{NodeConsumer, NodeIdIterator, NodeIterator, NodeIterator
 pub use partial_id_map::{EmptyPartialIdMap, PartialIdMap};
 pub use simple::SimpleIdMap;
 
-pub use crate::types::concurrency::Concurrency;
+pub use crate::concurrency::Concurrency;
 
 // =============================================================================
 // JAVA GDS ALIGNMENT: Everything is i64 (matches Java Long)

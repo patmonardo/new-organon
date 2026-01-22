@@ -1,10 +1,10 @@
 //! GraphSAGE facade (builder API).
 
-use crate::prelude::DefaultGraphStore;
-use crate::prelude::GraphStore;
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits as facade;
 use crate::projection::eval::procedure::AlgorithmError;
+use crate::types::DefaultGraphStore;
+use crate::types::GraphStore;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Instant;

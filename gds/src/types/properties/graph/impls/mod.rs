@@ -5,4 +5,5 @@ pub mod default_graph_property_values;
 
 pub use default_graph_property::DefaultGraphProperty;
 pub use default_graph_property_store::*;
+pub use default_graph_property_values::*;
 // pub use values::*; // Removed - using macro-generated implementations instead

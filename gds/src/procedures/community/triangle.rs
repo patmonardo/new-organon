@@ -16,7 +16,7 @@ use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
+use crate::types::properties::node::DefaultLongNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
 use crate::types::schema::NodeLabel;
 use std::collections::HashSet;

@@ -608,7 +608,7 @@ impl IdMap for DefaultGraph {
     fn with_filtered_labels(
         &self,
         node_labels: &HashSet<NodeLabel>,
-        concurrency: crate::types::concurrency::Concurrency,
+        concurrency: crate::concurrency::Concurrency,
     ) -> Option<Box<dyn FilteredIdMap>> {
         self.id_map.with_filtered_labels(node_labels, concurrency)
     }

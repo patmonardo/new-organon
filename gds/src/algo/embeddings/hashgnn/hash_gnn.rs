@@ -232,8 +232,8 @@ mod tests {
     use super::super::hash_gnn_parameters::GenerateFeaturesConfig;
     use super::*;
     use crate::collections::backends::vec::VecLong;
+    use crate::concurrency::Concurrency;
     use crate::core::utils::progress::{TaskProgressTracker, Tasks};
-    use crate::types::concurrency::Concurrency;
     use crate::types::graph_store::DefaultGraphStore;
     use crate::types::graph_store::GraphStore;
     use crate::types::properties::node::DefaultLongNodePropertyValues;

@@ -8,11 +8,11 @@ use crate::algo::celf::storage::CELFStorageRuntime;
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{ProgressTracker, TaskRegistry, Tasks};
-use crate::graph_store::GraphStore;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{MutationResult, WriteResult};
 use crate::procedures::traits::{AlgorithmRunner, Result};
 use crate::projection::eval::procedure::AlgorithmError;
+use crate::types::graph_store::GraphStore;
 use crate::types::prelude::DefaultGraphStore;
 use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
@@ -238,7 +238,7 @@ impl AlgorithmRunner for CELFFacade {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::procedures::Graph;
+    use crate::procedures::GraphFacade;
     use crate::projection::RelationshipType;
     use crate::types::graph::{RelationshipTopology, SimpleIdMap};
     use crate::types::graph_store::{

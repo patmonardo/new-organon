@@ -1,11 +1,11 @@
 use crate::algo::embeddings::gat::storage::GATStorageRuntime;
 use crate::algo::embeddings::GATConfig;
 use crate::algo::embeddings::GATResult;
-use crate::prelude::DefaultGraphStore;
-use crate::prelude::GraphStore;
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::traits as facade;
 use crate::projection::eval::procedure::AlgorithmError;
+use crate::types::DefaultGraphStore;
+use crate::types::GraphStore;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -146,7 +146,7 @@ impl GATBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::procedures::Graph;
+    use crate::procedures::GraphFacade;
     use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 
     fn store() -> Arc<DefaultGraphStore> {

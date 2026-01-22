@@ -1,17 +1,5 @@
 //! Pipeline module - Java GDS ML Pipeline translation
 //!
-//! **Module Organization**: 1:1 mapping to Java `org.neo4j.gds.ml.pipeline` package.
-//!
-//! ```
-//! Java:                                    Rust:
-//! org.neo4j.gds.ml.pipeline/              src/projection/native/ml/pipeline/
-//! ├── Pipeline.java                  →    ├── pipeline_trait.rs
-//! ├── FeatureStep.java               →    ├── feature_step.rs
-//! ├── ExecutableNodePropertyStep.java →   ├── executable_node_property_step.rs
-//! ├── PipelineExecutor.java          →    ├── pipeline_executor.rs
-//! ├── NodePropertyStep.java          →    ├── node_property_step.rs
-//! └── ...                                  └── ...
-//! ```
 
 pub mod auto_tuning_config;
 pub mod executable_node_property_step;
@@ -70,3 +58,6 @@ pub use predict_pipeline_executor::{PredictPipelineExecutor, PredictPipelineExec
 pub use procedure_registry::{ProcedureKind, ProcedureRegistry};
 pub use result_to_model_converter::ResultToModelConverter;
 pub use training_pipeline::{TrainingMethod, TrainingPipeline, TrainingType, TunableTrainerConfig};
+
+pub use link_pipeline::*;
+pub use node_pipeline::*;

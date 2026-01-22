@@ -235,7 +235,7 @@ impl DagLongestPathBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::procedures::Graph;
+    use crate::procedures::GraphFacade;
     use crate::projection::RelationshipType;
     use crate::types::graph::{RelationshipTopology, SimpleIdMap};
     use crate::types::graph_store::{

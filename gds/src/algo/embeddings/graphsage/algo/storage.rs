@@ -2,7 +2,7 @@
 
 use super::computation::GraphSageComputationRuntime;
 use super::spec::{GraphSageConfig, GraphSageResult};
-use crate::graph::Graph;
+use crate::types::graph::Graph;
 
 pub struct GraphSageStorageRuntime;
 

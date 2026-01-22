@@ -429,7 +429,7 @@ mod tests {
         };
 
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
-        let graph = crate::procedures::Graph::new(store);
+        let graph = crate::procedures::GraphFacade::new(store);
 
         let _rows: Vec<_> = graph
             .yens()

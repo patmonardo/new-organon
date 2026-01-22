@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
-use crate::types::{concurrency::Concurrency, schema::NodeLabel};
+use crate::concurrency::Concurrency;
+use crate::types::schema::NodeLabel;
 
 use super::{
     batch_node_iterable::BatchNodeIterable, filtered_id_map::FilteredIdMap,

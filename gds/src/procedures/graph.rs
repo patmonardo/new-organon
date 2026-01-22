@@ -32,11 +32,11 @@ use super::miscellaneous::{
 ///
 /// This is the main entrypoint for the facade layer.
 #[derive(Clone)]
-pub struct Graph {
+pub struct GraphFacade {
     store: Arc<DefaultGraphStore>,
 }
 
-impl Graph {
+impl GraphFacade {
     /// Create a new facade graph handle from an in-memory graph store.
     pub fn new(store: Arc<DefaultGraphStore>) -> Self {
         Self { store }

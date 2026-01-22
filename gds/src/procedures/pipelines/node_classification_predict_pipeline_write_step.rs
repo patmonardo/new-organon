@@ -1,6 +1,6 @@
 use crate::applications::algorithms::machinery::{Label, WriteStep, WriteToDatabase};
 use crate::core::utils::progress::JobId;
-use crate::procedures::Graph;
+use crate::procedures::GraphFacade;
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
 
 use super::{
@@ -51,7 +51,7 @@ impl
 {
     fn execute(
         &self,
-        graph: &Graph,
+        graph: &GraphFacade,
         graph_store: &DefaultGraphStore,
         result_store: Option<&dyn crate::applications::graph_store_catalog::loaders::ResultStore>,
         result: &NodeClassificationPipelineResult,

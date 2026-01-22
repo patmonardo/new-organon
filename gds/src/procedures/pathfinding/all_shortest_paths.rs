@@ -436,7 +436,7 @@ mod tests {
     #[test]
     fn test_stream_smoke() {
         let store = store();
-        let rows: Vec<_> = crate::procedures::graph::Graph::new(store)
+        let rows: Vec<_> = crate::procedures::GraphFacade::Graph::new(store)
             .all_shortest_paths()
             .weighted(false)
             .max_results(50)
@@ -450,7 +450,7 @@ mod tests {
     #[test]
     fn test_stats_smoke() {
         let store = store();
-        let stats = crate::procedures::graph::Graph::new(store)
+        let stats = crate::procedures::GraphFacade::Graph::new(store)
             .all_shortest_paths()
             .weighted(true)
             .max_results(50)

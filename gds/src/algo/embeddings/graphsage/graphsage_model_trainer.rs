@@ -56,7 +56,7 @@ mod tests {
     use crate::algo::embeddings::graphsage::types::{
         ActivationFunctionType, AggregatorType, GraphSageTrainConfig,
     };
-    use crate::types::concurrency::Concurrency;
+    use crate::concurrency::Concurrency;
     use crate::types::graph_store::DefaultGraphStore;
     use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
     use crate::types::schema::NodeLabel;

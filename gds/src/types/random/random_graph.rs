@@ -5,9 +5,9 @@ use crate::types::graph_store::{
     Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
     GraphStore, GraphStoreError,
 };
-use crate::types::properties::graph::impls::default_graph_property_values::DefaultDoubleGraphPropertyValues;
-use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
-use crate::types::properties::relationship::impls::default_relationship_property_values::DefaultRelationshipPropertyValues;
+use crate::types::properties::graph::DefaultDoubleGraphPropertyValues;
+use crate::types::properties::node::DefaultDoubleNodePropertyValues;
+use crate::types::properties::relationship::DefaultRelationshipPropertyValues;
 use crate::types::properties::relationship::RelationshipPropertyValues;
 use crate::types::schema::{Direction, MutableGraphSchema};
 use crate::types::ValueType;

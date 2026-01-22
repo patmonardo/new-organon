@@ -16,7 +16,7 @@
 //! ```rust,no_run
 //! # use std::sync::Arc;
 //! # use gds::types::graph_store::DefaultGraphStore;
-//! # use gds::procedures::Graph;
+//! # use gds::procedures::GraphFacade;
 //! # let store = Arc::new(DefaultGraphStore::empty());
 //! let graph = Graph::new(store);
 //! let rows: Vec<_> = graph
@@ -326,7 +326,7 @@ impl Node2VecBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::procedures::Graph;
+    use crate::procedures::GraphFacade;
     use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 
     fn store() -> Arc<DefaultGraphStore> {

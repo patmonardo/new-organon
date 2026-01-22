@@ -33,7 +33,7 @@ pub use types::*;
 pub use values::*;
 
 // User-facing facade entrypoint (live-by-default).
-pub use procedures::Graph;
+pub use procedures::GraphFacade;
 
 // Re-export procedure macros for procedures module
 #[cfg(feature = "procedures")]

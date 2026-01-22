@@ -23,9 +23,11 @@ pub mod classification;
 pub mod regression;
 
 // Re-exports for convenience
-pub use node_feature_producer::{NodeFeatureProducer, NodeFeatureProducerError};
-pub use node_feature_step::NodeFeatureStep;
-pub use node_property_pipeline_base_train_config::NodePropertyPipelineBaseTrainConfig;
-pub use node_property_predict_pipeline::NodePropertyPredictPipeline;
-pub use node_property_prediction_split_config::NodePropertyPredictionSplitConfig;
-pub use node_property_training_pipeline::NodePropertyTrainingPipeline;
+pub use classification::*;
+pub use node_feature_producer::*;
+pub use node_feature_step::*;
+pub use node_property_pipeline_base_train_config::*;
+pub use node_property_predict_pipeline::*;
+pub use node_property_prediction_split_config::*;
+pub use node_property_training_pipeline::*;
+pub use regression::*;

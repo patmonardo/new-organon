@@ -1,7 +1,7 @@
 //! GraphSAGE Computation Runtime
 
 use super::spec::{GraphSageConfig, GraphSageResult};
-use crate::graph::Graph;
+use crate::types::graph::Graph;
 
 pub struct GraphSageComputationRuntime;
 

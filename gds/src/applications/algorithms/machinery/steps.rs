@@ -2,7 +2,7 @@
 
 use crate::core::loading::GraphResources;
 use crate::core::utils::progress::JobId;
-use crate::procedures::Graph;
+use crate::procedures::GraphFacade;
 use crate::types::graph_store::DefaultGraphStore;
 
 pub trait MutateStep<ResultFromAlgorithm, Metadata> {
@@ -13,7 +13,7 @@ pub trait WriteStep<ResultFromAlgorithm, Metadata> {
     /// Java parity: timings belong on the outside.
     fn execute(
         &self,
-        graph: &Graph,
+        graph: &GraphFacade,
         graph_store: &DefaultGraphStore,
         result_store: Option<&dyn crate::applications::graph_store_catalog::loaders::ResultStore>,
         result: &ResultFromAlgorithm,

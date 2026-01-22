@@ -17,7 +17,7 @@ impl GATAggregator {
 
     pub fn aggregate(
         &mut self,
-        graph: &dyn crate::graph::Graph,
+        graph: &dyn crate::types::graph::Graph,
         initial_features: HashMap<NodeId, Vec<f64>>,
     ) -> HashMap<NodeId, Vec<f64>> {
         let mut features = initial_features;

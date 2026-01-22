@@ -228,7 +228,7 @@ impl FastRPBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::procedures::Graph;
+    use crate::procedures::GraphFacade;
     use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 
     fn store() -> Arc<DefaultGraphStore> {

@@ -1,7 +1,7 @@
 use super::aggregator::GATAggregator;
 use super::config::GATConfig;
 use super::types::GATResult;
-use crate::graph::Graph;
+use crate::types::graph::Graph;
 use std::collections::HashMap;
 
 pub struct GATComputationRuntime;

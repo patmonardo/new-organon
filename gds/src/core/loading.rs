@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 
-use crate::procedures::Graph as FacadeGraph;
+use crate::procedures::GraphFacade as FacadeGraph;
 use crate::types::catalog::GraphCatalog;
 use crate::types::graph_store::DefaultGraphStore;
 

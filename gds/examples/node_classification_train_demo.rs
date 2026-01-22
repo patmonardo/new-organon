@@ -23,16 +23,14 @@ mod enabled {
     use gds::procedures::pipelines::{
         NodeClassificationTrainComputation, PipelineName, PipelineRepository,
     };
-    use gds::projection::eval::pipeline::node_pipeline::classification::node_classification_pipeline_train_config::NodeClassificationPipelineTrainConfig;
-    use gds::projection::eval::pipeline::node_pipeline::node_feature_step::NodeFeatureStep;
     use gds::projection::eval::pipeline::{
-        PipelineCatalog, TrainingMethod, TrainingPipeline, TunableTrainerConfig,
+        NodeClassificationPipelineTrainConfig, NodeFeatureStep, PipelineCatalog, TrainingMethod,
+        TrainingPipeline, TunableTrainerConfig,
     };
     use gds::types::graph_store::{DefaultGraphStore, GraphStore};
-    use gds::types::properties::node::impls::default_node_property_values::{
-        DefaultDoubleNodePropertyValues, DefaultLongNodePropertyValues,
+    use gds::types::properties::{
+        DefaultDoubleNodePropertyValues, DefaultLongNodePropertyValues, NodePropertyValues,
     };
-    use gds::types::properties::node::NodePropertyValues;
     use gds::types::random::{RandomGraphConfig, RandomRelationshipConfig};
     use gds::types::user::User;
     use serde_json::{json, Value};

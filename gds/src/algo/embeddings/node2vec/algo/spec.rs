@@ -17,7 +17,7 @@
 //! ```rust,no_run
 //! # use std::sync::Arc;
 //! # use gds::types::graph_store::DefaultGraphStore;
-//! # use gds::procedures::Graph;
+//! # use gds::procedures::GraphFacade;
 //! # let store = Arc::new(DefaultGraphStore::empty());
 //! let graph = Graph::new(store);
 //! let result = graph

@@ -14,7 +14,7 @@ use std::sync::Arc;
 
 use crate::applications::services::logging::Log;
 use crate::core::utils::progress::JobId;
-use crate::procedures::Graph;
+use crate::procedures::GraphFacade;
 use crate::projection::NodeLabel;
 use crate::types::graph_store::{GraphStore, GraphStoreResult};
 use crate::types::properties::node::NodePropertyValues;
@@ -72,7 +72,7 @@ impl WriteToDatabase {
     #[allow(unused_variables)]
     pub fn perform_single_property<S: GraphStore>(
         &self,
-        graph: &Graph,
+        graph: &GraphFacade,
         graph_store: &mut S,
         result_store: Option<&dyn crate::applications::graph_store_catalog::loaders::ResultStore>,
         write_configuration: &dyn WriteConfigLike,
@@ -104,7 +104,7 @@ impl WriteToDatabase {
     #[allow(unused_variables)]
     pub fn perform_property_map<S: GraphStore>(
         &self,
-        graph: &Graph,
+        graph: &GraphFacade,
         graph_store: &mut S,
         result_store: Option<&dyn crate::applications::graph_store_catalog::loaders::ResultStore>,
         write_configuration: &dyn WriteConfigLike,
