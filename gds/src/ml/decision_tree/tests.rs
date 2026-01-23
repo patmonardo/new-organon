@@ -2,11 +2,9 @@
 //!
 //! Phase 1 unit tests - no external dependencies required.
 
-use crate::ml::decision_tree::TreeNode;
-
 #[cfg(test)]
 mod tree_node_tests {
-    use super::*;
+    use crate::ml::decision_tree::TreeNode;
 
     #[test]
     fn test_leaf_node_creation() {
@@ -111,14 +109,10 @@ mod tree_node_tests {
     }
 }
 
-use crate::ml::decision_tree::predictor::DecisionTreePredictor;
-use crate::ml::decision_tree::ClassifierImpurityCriterionType;
-use crate::ml::decision_tree::DecisionTreeTrainerConfig;
-use crate::ml::decision_tree::{FeatureBagger, ImpurityData, MSEImpurityData};
-
 #[cfg(test)]
 mod predictor_tests {
-    use super::*;
+    use crate::ml::decision_tree::DecisionTreePredictor;
+    use crate::ml::decision_tree::TreeNode;
 
     #[test]
     fn test_predict_leaf_only() {
@@ -217,7 +211,7 @@ mod predictor_tests {
 
 #[cfg(test)]
 mod config_tests {
-    use super::*;
+    use crate::ml::decision_tree::DecisionTreeTrainerConfig;
 
     #[test]
     fn test_config_default() {
@@ -312,7 +306,7 @@ mod config_tests {
 
 #[cfg(test)]
 mod feature_bagger_tests {
-    use super::*;
+    use crate::ml::decision_tree::FeatureBagger;
 
     #[test]
     fn test_feature_bagger_deterministic() {
@@ -402,8 +396,9 @@ mod feature_bagger_tests {
 
 #[cfg(test)]
 mod mse_impurity_tests {
-    use super::*;
     use crate::mem::Estimate;
+    use crate::ml::decision_tree::ImpurityData;
+    use crate::ml::decision_tree::MSEImpurityData;
 
     #[test]
     fn test_mse_impurity_data_creation() {
@@ -458,7 +453,7 @@ mod mse_impurity_tests {
 
 #[cfg(test)]
 mod types_tests {
-    use super::*;
+    use crate::ml::decision_tree::ClassifierImpurityCriterionType;
 
     #[test]
     fn test_criterion_type_parse_gini() {

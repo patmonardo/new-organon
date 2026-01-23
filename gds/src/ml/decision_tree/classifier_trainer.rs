@@ -6,9 +6,10 @@
 use crate::collections::HugeIntArray;
 use crate::mem::Estimate;
 use crate::ml::decision_tree::{
-    DecisionTreeTrainer, DecisionTreeTrainerConfig, FeatureBagger, Features, GiniImpurityData,
-    Group, ImpurityCriterion, TreeNode,
+    DecisionTreeTrainer, DecisionTreeTrainerConfig, FeatureBagger, GiniImpurityData, Group,
+    ImpurityCriterion, TreeNode,
 };
+use crate::ml::Features;
 use std::sync::Arc;
 
 pub struct DecisionTreeClassifierTrainer<'a> {
