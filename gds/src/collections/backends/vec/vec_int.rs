@@ -1,6 +1,6 @@
 //! VecInt: Vec-based i32 Collections implementation
 #[allow(unused_imports)]
-use crate::collections::traits::Collections;
+use crate::collections::Collections;
 
 /// Vec-based i32 Collections implementation
 #[derive(Debug, Clone)]
@@ -45,7 +45,7 @@ vec_collections!(
     kind = Ord
 );
 
-use crate::collections::traits::PropertyValuesAdapter;
+use crate::collections::PropertyValuesAdapter;
 
 // Implement PropertyValuesAdapter (marker trait)
 impl PropertyValuesAdapter<i32> for VecInt {}

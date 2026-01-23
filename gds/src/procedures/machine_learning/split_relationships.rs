@@ -11,7 +11,7 @@ use crate::ml::splitting::{
     SplitRelationshipsEstimateDefinition, SplitRelationshipsParameters,
 };
 use crate::procedures::builder_base::ConfigValidator;
-use crate::procedures::traits::Result;
+use crate::procedures::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::RelationshipType;
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};

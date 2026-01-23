@@ -1,4 +1,4 @@
-use crate::procedures::traits::Result;
+use crate::procedures::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph_store::GraphStore;
 use crate::types::prelude::DefaultGraphStore;

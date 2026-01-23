@@ -25,7 +25,7 @@ vec_collections!(
     kind = Ord
 );
 
-use crate::collections::traits::PropertyValuesAdapter;
+use crate::collections::PropertyValuesAdapter;
 
 // Implement PropertyValuesAdapter (marker trait)
 impl PropertyValuesAdapter<i16> for VecShort {}

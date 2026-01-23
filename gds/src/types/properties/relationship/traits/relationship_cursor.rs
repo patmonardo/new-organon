@@ -1,5 +1,5 @@
 use crate::types::graph::id_map::NodeId;
-use crate::values::traits::{FromGdsValue, GdsValue};
+use crate::values::{FromGdsValue, GdsValue};
 use std::fmt::Debug;
 use std::sync::Arc;
 

@@ -1,6 +1,6 @@
 //! VecDoubleArray: Vec-based Option<Vec<f64>> Collections implementation
 
-use crate::collections::traits::{Collections, PropertyValuesAdapter};
+use crate::collections::{Collections, PropertyValuesAdapter};
 use crate::config::{CollectionsBackend, Extension};
 use crate::types::ValueType;
 

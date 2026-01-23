@@ -164,11 +164,11 @@ impl NodeProjectionBuilder {
 }
 
 /// Type alias for a collection of node projections.
-pub type NodeProjections = crate::projection::traits::Projections<NodeLabel, Arc<NodeProjection>>;
+pub type NodeProjections = crate::projection::Projections<NodeLabel, Arc<NodeProjection>>;
 
 /// Type alias for a builder of node projections.
 pub type NodeProjectionsBuilder =
-    crate::projection::traits::ProjectionsBuilder<NodeLabel, Arc<NodeProjection>>;
+    crate::projection::ProjectionsBuilder<NodeLabel, Arc<NodeProjection>>;
 
 #[cfg(test)]
 mod tests {

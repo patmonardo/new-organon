@@ -12,7 +12,7 @@ use crate::algo::algorithms::machine_learning::kge::{
     compute_kge_predict, KgePredictParameters, KgePredictResult,
 };
 use crate::concurrency::TerminationFlag;
-use crate::procedures::traits::Result;
+use crate::procedures::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::IdMap;
 use crate::types::prelude::DefaultGraphStore;

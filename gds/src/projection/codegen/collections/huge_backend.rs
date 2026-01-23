@@ -25,7 +25,7 @@ macro_rules! huge_collections {
         $extensions:expr,
         $doc_desc:expr
     ) => {
-        impl $crate::collections::traits::Collections<$element_type> for $type_name {
+        impl $crate::collections::Collections<$element_type> for $type_name {
             fn get(&self, index: usize) -> Option<$element_type> {
                 if index < self.size() {
                     Some(self.get(index))
@@ -196,7 +196,7 @@ macro_rules! huge_collections {
             }
         }
 
-        impl $crate::collections::traits::CollectionsFactory<$element_type> for $type_name {
+        impl $crate::collections::CollectionsFactory<$element_type> for $type_name {
             fn new() -> Self {
                 Self::new(0)
             }
@@ -239,7 +239,7 @@ macro_rules! huge_collections {
         $extensions:expr,
         $doc_desc:expr
     ) => {
-        impl $crate::collections::traits::Collections<$element_type> for $type_name {
+        impl $crate::collections::Collections<$element_type> for $type_name {
             fn get(&self, index: usize) -> Option<$element_type> {
                 if index < self.size() {
                     Some(self.get(index))
@@ -407,7 +407,7 @@ macro_rules! huge_collections {
             }
         }
 
-        impl $crate::collections::traits::CollectionsFactory<$element_type> for $type_name {
+        impl $crate::collections::CollectionsFactory<$element_type> for $type_name {
             fn new() -> Self {
                 Self::new(0)
             }
@@ -449,7 +449,7 @@ macro_rules! huge_collections {
         $extensions:expr,
         $doc_desc:expr
     ) => {
-        impl $crate::collections::traits::Collections<$element_type> for $type_name {
+        impl $crate::collections::Collections<$element_type> for $type_name {
             fn get(&self, index: usize) -> Option<$element_type> {
                 if index < self.size() {
                     Some(self.get(index))
@@ -566,7 +566,7 @@ macro_rules! huge_collections {
             }
         }
 
-        impl $crate::collections::traits::CollectionsFactory<$element_type> for $type_name {
+        impl $crate::collections::CollectionsFactory<$element_type> for $type_name {
             fn new() -> Self {
                 Self::new(0)
             }

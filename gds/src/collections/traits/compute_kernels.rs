@@ -4,7 +4,7 @@
 //! operations compatible with Arrow compute kernels, extending our Collections
 //! system into a unified compute platform.
 
-use crate::collections::traits::Collections;
+use crate::collections::Collections;
 use std::iter::Sum;
 
 /// Arrow-compatible compute kernels trait

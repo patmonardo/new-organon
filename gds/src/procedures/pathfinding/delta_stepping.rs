@@ -8,7 +8,7 @@
 use crate::algo::delta_stepping::{DeltaSteppingComputationRuntime, DeltaSteppingStorageRuntime};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::{PathResult as ProcedurePathResult, Result};
+use crate::procedures::{PathResult as ProcedurePathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -21,9 +21,9 @@ use crate::algo::common::result_builders::{
     ExecutionMetadata, PathFindingResult, PathResult as CorePathResult, PathResultBuilder,
     ResultBuilder,
 };
+use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 use crate::projection::eval::procedure::AlgorithmError;
-use crate::core::utils::progress::TaskProgressTracker;
 
 /// Statistics about Delta Stepping execution
 #[derive(Debug, Clone, serde::Serialize)]
@@ -136,9 +136,7 @@ impl DeltaSteppingBuilder {
         }
 
         if self.delta <= 0.0 {
-            return Err(AlgorithmError::Execution(
-                "delta must be > 0".to_string(),
-            ));
+            return Err(AlgorithmError::Execution("delta must be > 0".to_string()));
         }
 
         if self.concurrency == 0 {
@@ -163,9 +161,7 @@ impl DeltaSteppingBuilder {
 
     fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
         NodeId::try_from(value).map_err(|_| {
-            AlgorithmError::Execution(format!(
-                "{field} must fit into i64 (got {value})",
-            ))
+            AlgorithmError::Execution(format!("{field} must fit into i64 (got {value})",))
         })
     }
 
@@ -190,9 +186,10 @@ impl DeltaSteppingBuilder {
 
         // Create progress tracker for Delta Stepping execution
         let node_count = self.graph_store.node_count();
-        let _progress_tracker = TaskProgressTracker::new(
-            Tasks::leaf_with_volume("DeltaStepping".to_string(), node_count),
-        );
+        let _progress_tracker = TaskProgressTracker::new(Tasks::leaf_with_volume(
+            "DeltaStepping".to_string(),
+            node_count,
+        ));
 
         let source_u64 = self.source.expect("validate ensures source is set");
         let source_node = Self::checked_node_id(source_u64, "source")?;
@@ -218,9 +215,7 @@ impl DeltaSteppingBuilder {
         let graph_view = self
             .graph_store
             .get_graph_with_types_selectors_and_orientation(&rel_types, &selectors, orientation)
-            .map_err(|e| {
-                AlgorithmError::Graph(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         let mut storage = DeltaSteppingStorageRuntime::new(
             source_node,
@@ -236,14 +231,13 @@ impl DeltaSteppingBuilder {
             self.store_predecessors,
         );
 
-        let mut progress_tracker =
-            TaskProgressTracker::with_concurrency(
-                Tasks::leaf_with_volume(
-                    "delta_stepping".to_string(),
-                    graph_view.relationship_count(),
-                ),
-                self.concurrency,
-            );
+        let mut progress_tracker = TaskProgressTracker::with_concurrency(
+            Tasks::leaf_with_volume(
+                "delta_stepping".to_string(),
+                graph_view.relationship_count(),
+            ),
+            self.concurrency,
+        );
 
         let start = std::time::Instant::now();
         let result = storage.compute_delta_stepping(
@@ -294,9 +288,7 @@ impl DeltaSteppingBuilder {
             .with_paths(paths)
             .with_metadata(metadata)
             .build()
-            .map_err(|e| {
-                AlgorithmError::Execution(e.to_string())
-            })?;
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
 
         Ok(path_result)
     }

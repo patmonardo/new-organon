@@ -4,7 +4,7 @@
 //! seamless integration between PropertyValues and Collections, providing
 //! a unified interface for all Collections backends.
 
-use crate::collections::traits::{Collections, PropertyValuesAdapter};
+use crate::collections::{Collections, PropertyValuesAdapter};
 use crate::config::{CollectionsBackend, Extension};
 use crate::types::properties::property_values::PropertyValues;
 use crate::types::ValueType;

@@ -30,8 +30,8 @@ macro_rules! node_universal_adapter {
             #[derive(Debug)]
             pub struct [<Default $value_type NodePropertyValues>]<C>
             where
-                C: $crate::collections::traits::Collections<$rust_type>
-                    + $crate::collections::traits::PropertyValuesAdapter<$rust_type>
+                C: $crate::collections::Collections<$rust_type>
+                    + $crate::collections::PropertyValuesAdapter<$rust_type>
                     + Send + Sync + std::fmt::Debug,
             {
                 #[allow(dead_code)]  // Used via trait methods, not direct field access
@@ -41,8 +41,8 @@ macro_rules! node_universal_adapter {
 
             impl<C> [<Default $value_type NodePropertyValues>]<C>
             where
-                C: $crate::collections::traits::Collections<$rust_type>
-                    + $crate::collections::traits::PropertyValuesAdapter<$rust_type>
+                C: $crate::collections::Collections<$rust_type>
+                    + $crate::collections::PropertyValuesAdapter<$rust_type>
                     + Send + Sync + std::fmt::Debug,
             {
                 pub fn new(
@@ -145,8 +145,8 @@ macro_rules! relationship_universal_adapter {
             #[derive(Debug)]
             pub struct [<Default $value_type RelationshipPropertyValues>]<C>
             where
-                C: $crate::collections::traits::Collections<$rust_type>
-                    + $crate::collections::traits::PropertyValuesAdapter<$rust_type>
+                C: $crate::collections::Collections<$rust_type>
+                    + $crate::collections::PropertyValuesAdapter<$rust_type>
                     + Send + Sync + std::fmt::Debug,
             {
                 #[allow(dead_code)]  // Used via trait methods, not direct field access
@@ -156,8 +156,8 @@ macro_rules! relationship_universal_adapter {
 
             impl<C> [<Default $value_type RelationshipPropertyValues>]<C>
             where
-                C: $crate::collections::traits::Collections<$rust_type>
-                    + $crate::collections::traits::PropertyValuesAdapter<$rust_type>
+                C: $crate::collections::Collections<$rust_type>
+                    + $crate::collections::PropertyValuesAdapter<$rust_type>
                     + Send + Sync + std::fmt::Debug,
             {
                 pub fn new(
@@ -256,8 +256,8 @@ macro_rules! graph_universal_adapter {
             #[derive(Debug)]
             pub struct [<Default $value_type GraphPropertyValues>]<C>
             where
-                C: $crate::collections::traits::Collections<$rust_type>
-                    + $crate::collections::traits::PropertyValuesAdapter<$rust_type>
+                C: $crate::collections::Collections<$rust_type>
+                    + $crate::collections::PropertyValuesAdapter<$rust_type>
                     + Send + Sync + std::fmt::Debug,
             {
                 #[allow(dead_code)]  // Used via trait methods, not direct field access
@@ -266,8 +266,8 @@ macro_rules! graph_universal_adapter {
 
             impl<C> [<Default $value_type GraphPropertyValues>]<C>
             where
-                C: $crate::collections::traits::Collections<$rust_type>
-                    + $crate::collections::traits::PropertyValuesAdapter<$rust_type>
+                C: $crate::collections::Collections<$rust_type>
+                    + $crate::collections::PropertyValuesAdapter<$rust_type>
                     + Send + Sync + std::fmt::Debug,
             {
                 pub fn new(
@@ -297,8 +297,8 @@ macro_rules! graph_universal_adapter {
             // Implement PropertyValues manually for graph (no count field)
             impl<C> $crate::types::properties::PropertyValues for [<Default $value_type GraphPropertyValues>]<C>
             where
-                C: $crate::collections::traits::Collections<$rust_type>
-                    + $crate::collections::traits::PropertyValuesAdapter<$rust_type>
+                C: $crate::collections::Collections<$rust_type>
+                    + $crate::collections::PropertyValuesAdapter<$rust_type>
                     + Send + Sync + std::fmt::Debug,
             {
                 fn value_type(&self) -> $crate::types::ValueType {
@@ -307,7 +307,7 @@ macro_rules! graph_universal_adapter {
 
                 fn element_count(&self) -> usize {
                     #[allow(unused_imports)]
-                    use $crate::collections::traits::Collections;
+                    use $crate::collections::Collections;
                     self.universal.collection().len()
                 }
             }

@@ -1,6 +1,6 @@
 //! VecDouble: Vec-based f64 Collections implementation
 #[allow(unused_imports)]
-use crate::collections::traits::Collections;
+use crate::collections::Collections;
 
 /// Vec-based f64 Collections implementation
 #[derive(Debug, Clone)]
@@ -40,7 +40,7 @@ impl From<Vec<f64>> for VecDouble {
     }
 }
 
-use crate::collections::traits::PropertyValuesAdapter;
+use crate::collections::PropertyValuesAdapter;
 use crate::types::ValueType;
 use crate::vec_collections;
 

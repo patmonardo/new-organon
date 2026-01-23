@@ -7,7 +7,7 @@ use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTimings, MutateResultBuilder, StatsResultBuilder, StreamResultBuilder,
 };
 use crate::core::loading::GraphResources;
-use crate::procedures::traits::PathResult;
+use crate::procedures::PathResult;
 use serde_json::Value;
 
 /// Raw algorithm result for traversal algorithms (BFS, DFS)

@@ -11,7 +11,7 @@ use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
-use crate::types::properties::relationship::traits::RelationshipCursorBox;
+use crate::types::properties::relationship::RelationshipCursorBox;
 use std::collections::VecDeque;
 
 /// Bellman-Ford Storage Runtime

@@ -11,7 +11,7 @@ use crate::core::utils::progress::{
 };
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::{AlgorithmRunner, Result};
+use crate::procedures::{AlgorithmRunner, Result};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::relationship::DefaultRelationshipPropertyValues;

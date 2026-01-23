@@ -13,7 +13,7 @@ use crate::collections::backends::huge::{
 use crate::collections::backends::vec::{
     VecBoolean, VecByte, VecChar, VecDouble, VecFloat, VecInt, VecLong, VecShort,
 };
-use crate::collections::traits::{Collections, CollectionsFactory as CollectionsFactoryTrait};
+use crate::collections::{Collections, CollectionsFactory as CollectionsFactoryTrait};
 use crate::config::{CollectionsBackend, CollectionsConfig};
 
 /// Factory for creating Collections instances from config

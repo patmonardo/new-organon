@@ -8,7 +8,7 @@ use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::similarity::build_similarity_relationship_store;
-use crate::procedures::traits::Result;
+use crate::procedures::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

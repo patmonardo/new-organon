@@ -18,7 +18,7 @@ use crate::types::ValueType;
 use crate::vec_collections;
 vec_collections!(VecBoolean, bool, ValueType::Boolean, false, kind = OrdNoAgg);
 
-use crate::collections::traits::PropertyValuesAdapter;
+use crate::collections::PropertyValuesAdapter;
 
 // Implement PropertyValuesAdapter (marker trait)
 impl PropertyValuesAdapter<bool> for VecBoolean {}

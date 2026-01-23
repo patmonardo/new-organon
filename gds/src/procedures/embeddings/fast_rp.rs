@@ -5,7 +5,7 @@ use crate::algo::embeddings::fastrp::{
 };
 use crate::prints::{PrintEnvelope, PrintKind, PrintProvenance};
 use crate::procedures::builder_base::ConfigValidator;
-use crate::procedures::traits::Result;
+use crate::procedures::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;

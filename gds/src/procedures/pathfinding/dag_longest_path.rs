@@ -6,7 +6,7 @@
 use crate::algo::dag_longest_path::computation::DagLongestPathComputationRuntime;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::{PathResult, Result};
+use crate::procedures::{PathResult, Result};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;

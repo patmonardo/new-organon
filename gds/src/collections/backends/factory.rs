@@ -6,7 +6,7 @@
 use crate::collections::backends::arrow::{ArrowDoubleArray, ArrowLongArray};
 use crate::collections::backends::huge::{HugeDoubleArray, HugeLongArray};
 use crate::collections::backends::vec::*;
-use crate::collections::traits::Collections;
+use crate::collections::Collections;
 use crate::config::{CollectionsBackend, CollectionsConfig};
 
 /// Long collection backend variants produced by this factory

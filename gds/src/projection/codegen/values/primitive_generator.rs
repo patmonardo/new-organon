@@ -6,7 +6,7 @@
 macro_rules! generate_primitive_values {
     () => {
         use std::sync::Arc;
-        use $crate::values::traits::*;
+        use $crate::values::*;
 
         // Import the other macros
         use $crate::gds_value_array_convert;

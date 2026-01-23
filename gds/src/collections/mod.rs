@@ -59,13 +59,7 @@ pub mod adapter;
 
 // Re-export commonly used types (explicit to avoid ambiguous glob re-exports)
 pub use adapter::{CollectionFactory, UniversalPropertyValues};
-pub use traits::{
-    AggregationSupport, CachingError, CachingSupport, Collections, CollectionsFactory,
-    CompressionError, CompressionSupport, ComputeError, ComputeKernels, MLComputeKernels,
-    MemoryLayout, NullabilitySupport, ParallelError, ParallelSupport, PerformanceMetrics,
-    PropertyValuesAdapter, StorageDescriptor, StorageOperation, StorageResult,
-    StorageRuntimeIntegration,
-};
+pub use traits::*;
 
 // Utility modules and their common types (retain legacy paths)
 pub use utils::array_util;

@@ -9,7 +9,7 @@
 use crate::procedures::machine_learning::{
     KgePredictFacade, KgePredictStats, KgeStreamResult, ScoreFunction,
 };
-use crate::procedures::traits::Result;
+use crate::procedures::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::catalog::GraphCatalog;
 use crate::types::graph_store::DefaultGraphStore;

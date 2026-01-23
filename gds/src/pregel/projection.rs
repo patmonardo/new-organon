@@ -20,7 +20,7 @@ use crate::pregel::schema::DefaultValue;
 // use crate::projection::eval::form_processor::FormProcessorError;  // Form processor dependency
 use crate::types::properties::node::NodePropertyValues;
 use crate::types::ValueType;
-use crate::values::traits::GdsValue;
+use crate::values::GdsValue;
 use std::sync::Arc;
 
 // Temporary error type until form_processor is re-enabled
@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn test_default_value_roundtrip() {
-        use crate::values::traits::FloatingPointValue;
+        use crate::values::FloatingPointValue;
 
         // Create DefaultValue
         let original = DefaultValue::Double(3.0);
@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn test_materialize_values() {
-        use crate::values::traits::IntegralValue;
+        use crate::values::IntegralValue;
 
         let values = vec![
             (0, DefaultValue::Long(100)),

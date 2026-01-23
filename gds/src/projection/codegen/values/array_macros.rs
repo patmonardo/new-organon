@@ -33,13 +33,13 @@ macro_rules! gds_value_array_direct {
             }
         }
 
-        impl $crate::values::traits::Array for $name {
+        impl $crate::values::Array for $name {
             fn length(&self) -> usize {
                 self.data.len()
             }
         }
 
-        impl $crate::values::traits::GdsValue for $name {
+        impl $crate::values::GdsValue for $name {
             fn value_type(&self) -> $crate::types::ValueType {
                 $crate::types::ValueType::$value_type
             }
@@ -89,13 +89,13 @@ macro_rules! gds_value_array_convert {
             }
         }
 
-        impl $crate::values::traits::Array for $name {
+        impl $crate::values::Array for $name {
             fn length(&self) -> usize {
                 self.data.len()
             }
         }
 
-        impl $crate::values::traits::GdsValue for $name {
+        impl $crate::values::GdsValue for $name {
             fn value_type(&self) -> $crate::types::ValueType {
                 $crate::types::ValueType::$value_type
             }

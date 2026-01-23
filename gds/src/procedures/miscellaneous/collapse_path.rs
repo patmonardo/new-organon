@@ -8,7 +8,7 @@
 use crate::algo::walking::{
     CollapsePathComputationRuntime, CollapsePathConfig, CollapsePathStorageRuntime,
 };
-use crate::procedures::traits::Result;
+use crate::procedures::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde::Serialize;

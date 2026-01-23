@@ -298,11 +298,11 @@ impl RelationshipProjectionBuilder {
 
 /// Type alias for a collection of relationship projections.
 pub type RelationshipProjections =
-    crate::projection::traits::Projections<RelationshipType, Arc<RelationshipProjection>>;
+    crate::projection::Projections<RelationshipType, Arc<RelationshipProjection>>;
 
 /// Type alias for a builder of relationship projections.
 pub type RelationshipProjectionsBuilder =
-    crate::projection::traits::ProjectionsBuilder<RelationshipType, Arc<RelationshipProjection>>;
+    crate::projection::ProjectionsBuilder<RelationshipType, Arc<RelationshipProjection>>;
 
 #[cfg(test)]
 mod tests {

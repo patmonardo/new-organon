@@ -2,7 +2,7 @@ use crate::applications::graph_store_catalog::results::GraphStreamNodeProperties
 use crate::projection::NodeLabel;
 use crate::types::graph::id_map::IdMap;
 use crate::types::graph_store::DefaultGraphStore;
-use crate::types::properties::node::traits::node_property_container::NodePropertyContainer;
+use crate::types::properties::node::node_property_container::NodePropertyContainer;
 use crate::types::properties::node::NodePropertyValues;
 use crate::types::properties::PropertyValues;
 use crate::types::ValueType;

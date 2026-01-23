@@ -3,7 +3,7 @@
 //! Repackages GDS Partitioning utilities as Collections Extensions for the Collections First approach.
 //! This provides sophisticated parallel processing capabilities for ML workloads.
 
-use crate::collections::traits::Collections;
+use crate::collections::Collections;
 use crate::config::{CollectionsBackend, Extension};
 use crate::core::utils::partition::{
     DegreeFunction, DegreePartition, IteratorPartition, LazyDegreePartitionIterator, Partition,

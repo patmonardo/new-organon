@@ -37,7 +37,7 @@ use crate::core::utils::progress::{
 };
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::{CentralityScore, Result};
+use crate::procedures::{CentralityScore, Result};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::NodeLabel;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};

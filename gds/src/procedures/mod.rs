@@ -78,5 +78,7 @@ pub mod similarity;
 
 pub use builder_base::*;
 pub use graph::*;
+pub use graph_catalog::*;
 pub use memory::*;
 pub use operations::*;
+pub use traits::*;

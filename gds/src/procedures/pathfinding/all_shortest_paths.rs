@@ -8,7 +8,7 @@ use crate::algo::all_shortest_paths::{
 };
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::{PathResult as ProcedurePathResult, Result};
+use crate::procedures::{PathResult as ProcedurePathResult, Result};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;

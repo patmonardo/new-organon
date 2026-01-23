@@ -1,7 +1,7 @@
 use crate::types::properties::{PropertyValues, PropertyValuesResult};
 use crate::types::ValueType;
 // Note: GdsValue and Arc are used in the trait definitions but not in the module itself
-// use crate::values::traits::GdsValue;
+// use crate::values::GdsValue;
 // use std::sync::Arc;
 
 /// Interface for accessing property values for nodes in a graph.

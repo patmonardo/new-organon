@@ -6,7 +6,9 @@
 //! - `concurrency`: reserved for future parallel implementation
 //! - `max_degree`: filter to skip high-degree nodes (performance / approximation)
 
-use crate::algo::triangle::{TriangleComputationRuntime, TriangleConfig, TriangleResult, TriangleStorageRuntime};
+use crate::algo::triangle::{
+    TriangleComputationRuntime, TriangleConfig, TriangleResult, TriangleStorageRuntime,
+};
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{
@@ -14,7 +16,7 @@ use crate::core::utils::progress::{
 };
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::traits::Result;
+use crate::procedures::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::DefaultLongNodePropertyValues;
@@ -169,9 +171,7 @@ impl TriangleFacade {
         new_store
             .add_node_property(labels_set, property_name.to_string(), values)
             .map_err(|e| {
-                AlgorithmError::Execution(format!(
-                    "Triangle mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("Triangle mutate failed to add property: {e}"))
             })?;
 
         let execution_time = start.elapsed();

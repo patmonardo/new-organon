@@ -1,7 +1,7 @@
 //! Parameter types and shared traits for KGE prediction.
 
 use crate::types::graph::graph::Graph;
-use crate::types::properties::relationship::traits::RelationshipPredicate;
+use crate::types::properties::relationship::RelationshipPredicate;
 use serde::{Deserialize, Serialize};
 
 /// Graph capabilities required by KGE prediction.

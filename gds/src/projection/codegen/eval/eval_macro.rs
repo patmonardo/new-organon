@@ -62,7 +62,7 @@ macro_rules! eval_value_type_table {
                 use $crate::projection::eval::form_processor;
                 use $crate::projection::codegen::functors::{GrossToSubtle, SubtleToGross};
                 use $crate::types::ValueType;
-                use $crate::values::traits::GdsValue;
+                use $crate::values::GdsValue;
                 use std::sync::Arc;
 
                 lazy_static::lazy_static! {

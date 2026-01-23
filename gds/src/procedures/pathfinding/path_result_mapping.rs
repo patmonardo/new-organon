@@ -1,6 +1,6 @@
 use crate::algo::common::result_builders::PathResult as CorePathResult;
 use crate::collections::backends::vec::VecDouble;
-use crate::procedures::traits::{PathResult as ProcedurePathResult, Result};
+use crate::procedures::{PathResult as ProcedurePathResult, Result};
 use crate::projection::RelationshipType;
 use crate::types::graph_store::GraphStore;
 use crate::types::prelude::DefaultGraphStore;

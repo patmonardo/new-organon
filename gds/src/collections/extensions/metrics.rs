@@ -3,7 +3,7 @@
 //! Provides metrics and telemetry capabilities as Collections Extensions for the Collections First approach.
 //! This enables performance tracking and OpenTelemetry integration for any Collections implementation.
 
-use crate::collections::traits::Collections;
+use crate::collections::Collections;
 use crate::config::{CollectionsBackend, Extension};
 use crate::types::ValueType;
 use std::collections::HashMap;

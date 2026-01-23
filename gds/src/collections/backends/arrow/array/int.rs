@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use arrow2::array::{Array, MutablePrimitiveArray, PrimitiveArray};
 
-use crate::collections::traits::{
+use crate::collections::{
     AggregationSupport, Collections, NullabilitySupport, PropertyValuesAdapter,
 };
 use crate::config::{CollectionsBackend, Extension};
@@ -362,7 +362,7 @@ impl PropertyValuesAdapter<i32> for ArrowIntArray {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::collections::traits::{AggregationSupport, Collections, NullabilitySupport};
+    use crate::collections::{AggregationSupport, Collections, NullabilitySupport};
 
     #[test]
     fn basic_operations() {

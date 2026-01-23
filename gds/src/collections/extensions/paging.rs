@@ -3,7 +3,7 @@
 //! Repackages GDS Paged Utils as Collections Extensions for the Collections First approach.
 //! This provides paging capabilities as extensions to any Collections implementation.
 
-use crate::collections::traits::Collections;
+use crate::collections::Collections;
 use crate::config::{CollectionsBackend, Extension};
 use crate::types::ValueType;
 use std::marker::PhantomData;

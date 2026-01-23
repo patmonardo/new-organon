@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use arrow2::array::PrimitiveArray;
 
-use crate::collections::traits::CollectionsFactory;
+use crate::collections::CollectionsFactory;
 use crate::types::ValueType;
 
 use super::array::ArrowPrimitiveArray;

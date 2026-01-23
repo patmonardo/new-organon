@@ -3,7 +3,7 @@
 //! Provides compression capabilities as Collections Extensions for the Collections First approach.
 //! This enables compression for any Collections implementation.
 
-use crate::collections::traits::Collections;
+use crate::collections::Collections;
 use crate::config::{CollectionsBackend, Extension};
 use crate::types::ValueType;
 use std::marker::PhantomData;

@@ -1,6 +1,6 @@
 //! Enhanced Vec implementation for Collections
 
-use crate::collections::traits::Collections;
+use crate::collections::Collections;
 use crate::config::{CollectionsBackend, Extension};
 use crate::types::ValueType;
 use std::iter::Sum;

@@ -22,7 +22,7 @@ macro_rules! vec_collections {
         $default_value:expr,
         kind = Float
     ) => {
-        impl $crate::collections::traits::Collections<$element_type> for $type_name {
+        impl $crate::collections::Collections<$element_type> for $type_name {
             fn get(&self, index: usize) -> Option<$element_type> {
                 self.data.get(index).cloned()
             }
@@ -176,7 +176,7 @@ macro_rules! vec_collections {
             }
         }
 
-        impl $crate::collections::traits::CollectionsFactory<$element_type> for $type_name {
+        impl $crate::collections::CollectionsFactory<$element_type> for $type_name {
             fn new() -> Self {
                 Self { data: Vec::new() }
             }
@@ -208,7 +208,7 @@ macro_rules! vec_collections {
         $default_value:expr,
         kind = OrdNoAgg
     ) => {
-        impl $crate::collections::traits::Collections<$element_type> for $type_name {
+        impl $crate::collections::Collections<$element_type> for $type_name {
             fn get(&self, index: usize) -> Option<$element_type> {
                 self.data.get(index).cloned()
             }
@@ -316,7 +316,7 @@ macro_rules! vec_collections {
             }
         }
 
-        impl $crate::collections::traits::CollectionsFactory<$element_type> for $type_name {
+        impl $crate::collections::CollectionsFactory<$element_type> for $type_name {
             fn new() -> Self {
                 Self { data: Vec::new() }
             }
@@ -349,7 +349,7 @@ macro_rules! vec_collections {
         to_f64 = $to_f64:expr,       // e.g., |x: i32| x as f64
         kind = Ord                   // comparison kind (currently Ord only)
     ) => {
-        impl $crate::collections::traits::Collections<$element_type> for $type_name {
+        impl $crate::collections::Collections<$element_type> for $type_name {
             fn get(&self, index: usize) -> Option<$element_type> {
                 self.data.get(index).cloned()
             }
@@ -526,7 +526,7 @@ macro_rules! vec_collections {
             }
         }
 
-        impl $crate::collections::traits::CollectionsFactory<$element_type> for $type_name {
+        impl $crate::collections::CollectionsFactory<$element_type> for $type_name {
             fn new() -> Self {
                 Self { data: Vec::new() }
             }

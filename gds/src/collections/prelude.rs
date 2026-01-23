@@ -8,7 +8,7 @@
 //! ```
 
 // Core traits - define the universal interface
-pub use super::traits::{
+pub use super::{
     AggregationSupport, CachingSupport, Collections, CollectionsFactory, CompressionSupport,
     NullabilitySupport, ParallelSupport, PropertyValuesAdapter,
 };

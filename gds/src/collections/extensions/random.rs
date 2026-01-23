@@ -3,7 +3,7 @@
 //! Repackages GDS Random utilities as Collections Extensions for the Collections First approach.
 //! This provides random generation and shuffling capabilities as extensions to any Collections implementation.
 
-use crate::collections::traits::Collections;
+use crate::collections::Collections;
 use crate::config::{CollectionsBackend, Extension};
 use crate::types::ValueType;
 use crate::core::utils::shuffle::{Random, SplittableRandom};

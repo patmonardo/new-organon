@@ -3,7 +3,7 @@
 //! Provides common types and patterns used across all facade builders,
 //! reducing boilerplate while maintaining consistency.
 
-use super::traits::Result;
+use super::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use serde::Serialize;
 use std::time::{Duration, Instant};

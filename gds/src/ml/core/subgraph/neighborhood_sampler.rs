@@ -6,7 +6,7 @@
 use crate::ml::core::relationship_weights::DEFAULT_VALUE;
 use crate::ml::core::samplers::{UniformSampler, WeightedUniformSampler};
 use crate::types::graph::Graph;
-use crate::types::properties::relationship::traits::{
+use crate::types::properties::relationship::{
     RelationshipCursorBox, WeightedRelationshipCursorBox,
 };
 

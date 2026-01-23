@@ -10,7 +10,7 @@ use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{MutationResult, WriteResult};
-use crate::procedures::traits::{AlgorithmRunner, Result};
+use crate::procedures::{AlgorithmRunner, Result};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph_store::GraphStore;
 use crate::types::prelude::DefaultGraphStore;

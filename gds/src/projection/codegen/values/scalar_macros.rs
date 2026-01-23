@@ -18,7 +18,7 @@ macro_rules! gds_value_scalar {
             }
         }
 
-        impl $crate::values::traits::GdsValue for $name {
+        impl $crate::values::GdsValue for $name {
             fn value_type(&self) -> $crate::types::ValueType {
                 $crate::types::ValueType::$value_type
             }

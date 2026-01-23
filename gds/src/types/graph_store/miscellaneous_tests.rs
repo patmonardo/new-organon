@@ -15,7 +15,7 @@ mod tests {
     use rand::SeedableRng;
 
     use crate::types::graph::degrees::Degrees;
-    use crate::types::properties::relationship::traits::{
+    use crate::types::properties::relationship::{
         RelationshipIterator, RelationshipPredicate,
     };
 

@@ -3,7 +3,7 @@
 //! Repackages GDS Memory Estimation utilities as Collections Extensions for the Collections First approach.
 //! This provides memory estimation capabilities as extensions to any Collections implementation.
 
-use crate::collections::traits::Collections;
+use crate::collections::Collections;
 use crate::config::{CollectionsBackend, Extension};
 use crate::mem::Estimate;
 use crate::types::ValueType;

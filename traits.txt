@@ -1,0 +1,2 @@
+   Compiling gds v0.1.0 (/home/pat/VSCode/new-organon/gds)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.84s

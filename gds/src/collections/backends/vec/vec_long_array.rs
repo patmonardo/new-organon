@@ -1,6 +1,6 @@
 //! VecLongArray: Vec-based Option<Vec<i64>> Collections implementation
 
-use crate::collections::traits::{Collections, PropertyValuesAdapter};
+use crate::collections::{Collections, PropertyValuesAdapter};
 use crate::config::{CollectionsBackend, Extension};
 use crate::types::ValueType;
 

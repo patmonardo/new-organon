@@ -1,6 +1,6 @@
 //! VecLong: Vec-based i64 Collections implementation
 #[allow(unused_imports)]
-use crate::collections::traits::Collections;
+use crate::collections::Collections;
 
 /// Vec-based i64 Collections implementation
 #[derive(Debug, Clone)]
@@ -40,7 +40,7 @@ impl From<Vec<i64>> for VecLong {
     }
 }
 
-use crate::collections::traits::PropertyValuesAdapter;
+use crate::collections::PropertyValuesAdapter;
 use crate::types::ValueType;
 use crate::vec_collections;
 

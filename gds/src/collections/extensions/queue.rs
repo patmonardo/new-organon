@@ -3,7 +3,7 @@
 //! Repackages GDS Queue utilities as Collections Extensions for the Collections First approach.
 //! This provides queue capabilities as extensions to any Collections implementation.
 
-use crate::collections::traits::Collections;
+use crate::collections::Collections;
 use crate::config::{CollectionsBackend, Extension};
 use crate::core::utils::queue::{BoundedLongPriorityQueue, HugeLongPriorityQueue};
 use crate::types::ValueType;

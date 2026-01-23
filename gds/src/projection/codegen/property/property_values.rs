@@ -468,8 +468,8 @@ macro_rules! impl_property_values_universal {
     ($struct_name:ty, $value_type:ident, $count_field:ident, $element_type:ty) => {
         impl<C> $crate::types::properties::PropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<$element_type>
-                + $crate::collections::traits::PropertyValuesAdapter<$element_type>
+            C: $crate::collections::Collections<$element_type>
+                + $crate::collections::PropertyValuesAdapter<$element_type>
                 + Send
                 + Sync
                 + std::fmt::Debug,
@@ -499,8 +499,8 @@ macro_rules! impl_node_property_values_universal {
     ($struct_name:ty, $element_type:ty) => {
         impl<C> $crate::types::properties::node::NodePropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<$element_type>
-                + $crate::collections::traits::PropertyValuesAdapter<$element_type>
+            C: $crate::collections::Collections<$element_type>
+                + $crate::collections::PropertyValuesAdapter<$element_type>
                 + Send
                 + Sync
                 + std::fmt::Debug,
@@ -589,7 +589,7 @@ macro_rules! impl_node_property_values_universal {
                 node_id: u64,
             ) -> $crate::types::properties::PropertyValuesResult<Box<dyn std::any::Any>> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 self.universal
                     .collection()
                     .get(node_id as usize)
@@ -624,8 +624,8 @@ macro_rules! impl_typed_node_property_values_universal {
         // Implement NodePropertyValues with proper long_value/double_value
         impl<C> $crate::types::properties::node::NodePropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<$element_type>
-                + $crate::collections::traits::PropertyValuesAdapter<$element_type>
+            C: $crate::collections::Collections<$element_type>
+                + $crate::collections::PropertyValuesAdapter<$element_type>
                 + Send
                 + Sync
                 + std::fmt::Debug,
@@ -635,7 +635,7 @@ macro_rules! impl_typed_node_property_values_universal {
                 node_id: u64,
             ) -> $crate::types::properties::PropertyValuesResult<i64> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 self.universal
                     .collection()
                     .get(node_id as usize)
@@ -721,15 +721,15 @@ macro_rules! impl_typed_node_property_values_universal {
         // Implement the specific Long trait
         impl<C> $crate::types::properties::node::LongNodePropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<$element_type>
-                + $crate::collections::traits::PropertyValuesAdapter<$element_type>
+            C: $crate::collections::Collections<$element_type>
+                + $crate::collections::PropertyValuesAdapter<$element_type>
                 + Send
                 + Sync
                 + std::fmt::Debug,
         {
             fn long_value_unchecked(&self, node_id: u64) -> i64 {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 self.universal
                     .collection()
                     .get(node_id as usize)
@@ -744,8 +744,8 @@ macro_rules! impl_typed_node_property_values_universal {
         // Implement NodePropertyValues with proper double_value/long_value
         impl<C> $crate::types::properties::node::NodePropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<$element_type>
-                + $crate::collections::traits::PropertyValuesAdapter<$element_type>
+            C: $crate::collections::Collections<$element_type>
+                + $crate::collections::PropertyValuesAdapter<$element_type>
                 + Send
                 + Sync
                 + std::fmt::Debug,
@@ -755,7 +755,7 @@ macro_rules! impl_typed_node_property_values_universal {
                 node_id: u64,
             ) -> $crate::types::properties::PropertyValuesResult<f64> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 self.universal
                     .collection()
                     .get(node_id as usize)
@@ -841,15 +841,15 @@ macro_rules! impl_typed_node_property_values_universal {
         // Implement the specific Double trait
         impl<C> $crate::types::properties::node::DoubleNodePropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<$element_type>
-                + $crate::collections::traits::PropertyValuesAdapter<$element_type>
+            C: $crate::collections::Collections<$element_type>
+                + $crate::collections::PropertyValuesAdapter<$element_type>
                 + Send
                 + Sync
                 + std::fmt::Debug,
         {
             fn double_value_unchecked(&self, node_id: u64) -> f64 {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 self.universal
                     .collection()
                     .get(node_id as usize)
@@ -864,8 +864,8 @@ macro_rules! impl_typed_node_property_values_universal {
         // Implement NodePropertyValues with proper array accessors
         impl<C> $crate::types::properties::node::NodePropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<$element_type>
-                + $crate::collections::traits::PropertyValuesAdapter<$element_type>
+            C: $crate::collections::Collections<$element_type>
+                + $crate::collections::PropertyValuesAdapter<$element_type>
                 + Send
                 + Sync
                 + std::fmt::Debug,
@@ -875,7 +875,7 @@ macro_rules! impl_typed_node_property_values_universal {
                 node_id: u64,
             ) -> $crate::types::properties::PropertyValuesResult<Vec<i64>> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 // For arrays: get() returns Option<Option<Vec<T>>>
                 // Convert element type to i64
                 match self.universal.collection().get(node_id as usize) {
@@ -912,7 +912,7 @@ macro_rules! impl_typed_node_property_values_universal {
 
             fn has_value(&self, node_id: u64) -> bool {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 node_id < self.node_count as u64
                     && self
                         .universal
@@ -955,7 +955,7 @@ macro_rules! impl_typed_node_property_values_universal {
             fn dimension(&self) -> Option<usize> {
                 // Calculate dimension by checking first non-null array
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 for i in 0..self.node_count {
                     if let Some(Some(arr)) = self.universal.collection().get(i) {
                         return Some(arr.len());
@@ -976,15 +976,15 @@ macro_rules! impl_typed_node_property_values_universal {
         // Implement the specific LongArray trait
         impl<C> $crate::types::properties::node::LongArrayNodePropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<$element_type>
-                + $crate::collections::traits::PropertyValuesAdapter<$element_type>
+            C: $crate::collections::Collections<$element_type>
+                + $crate::collections::PropertyValuesAdapter<$element_type>
                 + Send
                 + Sync
                 + std::fmt::Debug,
         {
             fn long_array_value_unchecked(&self, node_id: u64) -> Option<Vec<i64>> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 // For arrays: get() returns Option<Option<Vec<T>>>
                 // Convert element type to i64
                 self.universal
@@ -1001,8 +1001,8 @@ macro_rules! impl_typed_node_property_values_universal {
         // Implement NodePropertyValues with proper array accessors
         impl<C> $crate::types::properties::node::NodePropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<$element_type>
-                + $crate::collections::traits::PropertyValuesAdapter<$element_type>
+            C: $crate::collections::Collections<$element_type>
+                + $crate::collections::PropertyValuesAdapter<$element_type>
                 + Send
                 + Sync
                 + std::fmt::Debug,
@@ -1012,7 +1012,7 @@ macro_rules! impl_typed_node_property_values_universal {
                 node_id: u64,
             ) -> $crate::types::properties::PropertyValuesResult<Vec<f64>> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 // For arrays: get() returns Option<Option<Vec<T>>>
                 // Convert f32/f64 to f64 and unwrap
                 match self.universal.collection().get(node_id as usize) {
@@ -1028,7 +1028,7 @@ macro_rules! impl_typed_node_property_values_universal {
                 node_id: u64,
             ) -> $crate::types::properties::PropertyValuesResult<Vec<f32>> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 // For arrays: get() returns Option<Option<Vec<T>>>
                 // Convert f32/f64 to f32 and unwrap
                 match self.universal.collection().get(node_id as usize) {
@@ -1074,7 +1074,7 @@ macro_rules! impl_typed_node_property_values_universal {
 
             fn has_value(&self, node_id: u64) -> bool {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 node_id < self.node_count as u64
                     && self
                         .universal
@@ -1099,7 +1099,7 @@ macro_rules! impl_typed_node_property_values_universal {
             fn dimension(&self) -> Option<usize> {
                 // Calculate dimension by checking first non-null array
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 for i in 0..self.node_count {
                     if let Some(Some(arr)) = self.universal.collection().get(i) {
                         return Some(arr.len());
@@ -1120,15 +1120,15 @@ macro_rules! impl_typed_node_property_values_universal {
         // Implement the specific DoubleArray trait
         impl<C> $crate::types::properties::node::DoubleArrayNodePropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<$element_type>
-                + $crate::collections::traits::PropertyValuesAdapter<$element_type>
+            C: $crate::collections::Collections<$element_type>
+                + $crate::collections::PropertyValuesAdapter<$element_type>
                 + Send
                 + Sync
                 + std::fmt::Debug,
         {
             fn double_array_value_unchecked(&self, node_id: u64) -> Option<Vec<f64>> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 // For arrays: get() returns Option<Option<Vec<T>>>
                 self.universal
                     .collection()
@@ -1141,15 +1141,15 @@ macro_rules! impl_typed_node_property_values_universal {
         // Also implement FloatArray trait for completeness
         impl<C> $crate::types::properties::node::FloatArrayNodePropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<$element_type>
-                + $crate::collections::traits::PropertyValuesAdapter<$element_type>
+            C: $crate::collections::Collections<$element_type>
+                + $crate::collections::PropertyValuesAdapter<$element_type>
                 + Send
                 + Sync
                 + std::fmt::Debug,
         {
             fn float_array_value_unchecked(&self, node_id: u64) -> Option<Vec<f32>> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 // For arrays: get() returns Option<Option<Vec<T>>>
                 self.universal
                     .collection()
@@ -1212,13 +1212,13 @@ macro_rules! impl_relationship_property_values_universal {
     (@impl $struct_name:ty, $element_type:ty, $to_double:expr, $to_default:expr) => {
         impl<C> $crate::types::properties::relationship::RelationshipPropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<$element_type>
-                + $crate::collections::traits::PropertyValuesAdapter<$element_type>
+            C: $crate::collections::Collections<$element_type>
+                + $crate::collections::PropertyValuesAdapter<$element_type>
                 + Send + Sync + std::fmt::Debug,
         {
             fn double_value(&self, rel_index: u64) -> $crate::types::properties::PropertyValuesResult<f64> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 let convert = $to_double;
                 self.universal
                     .collection()
@@ -1331,13 +1331,13 @@ macro_rules! impl_graph_property_values_universal {
     (@impl_scalar $struct_name:ty, $element_type:ty) => {
         impl<C> $crate::types::properties::graph::GraphPropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<$element_type>
-                + $crate::collections::traits::PropertyValuesAdapter<$element_type>
+            C: $crate::collections::Collections<$element_type>
+                + $crate::collections::PropertyValuesAdapter<$element_type>
                 + Send + Sync + std::fmt::Debug,
         {
             fn double_values(&self) -> Box<dyn Iterator<Item = f64> + '_> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).map(|v| v as f64)
                 }))
@@ -1345,7 +1345,7 @@ macro_rules! impl_graph_property_values_universal {
 
             fn long_values(&self) -> Box<dyn Iterator<Item = i64> + '_> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).map(|v| v as i64)
                 }))
@@ -1365,7 +1365,7 @@ macro_rules! impl_graph_property_values_universal {
 
             fn objects(&self) -> Box<dyn Iterator<Item = Box<dyn std::any::Any>> + '_> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).map(|v| Box::new(v) as Box<dyn std::any::Any>)
                 }))
@@ -1377,8 +1377,8 @@ macro_rules! impl_graph_property_values_universal {
     (@impl_integral_array $struct_name:ty, $inner_type:ty) => {
         impl<C> $crate::types::properties::graph::GraphPropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<Option<Vec<$inner_type>>>
-                + $crate::collections::traits::PropertyValuesAdapter<Option<Vec<$inner_type>>>
+            C: $crate::collections::Collections<Option<Vec<$inner_type>>>
+                + $crate::collections::PropertyValuesAdapter<Option<Vec<$inner_type>>>
                 + Send + Sync + std::fmt::Debug,
         {
             fn double_values(&self) -> Box<dyn Iterator<Item = f64> + '_> {
@@ -1391,7 +1391,7 @@ macro_rules! impl_graph_property_values_universal {
 
             fn double_array_values(&self) -> Box<dyn Iterator<Item = Vec<f64>> + '_> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).flatten().map(|arr| {
                         arr.into_iter().map(|v| v as f64).collect()
@@ -1401,7 +1401,7 @@ macro_rules! impl_graph_property_values_universal {
 
             fn float_array_values(&self) -> Box<dyn Iterator<Item = Vec<f32>> + '_> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).flatten().map(|arr| {
                         arr.into_iter().map(|v| v as f32).collect()
@@ -1411,7 +1411,7 @@ macro_rules! impl_graph_property_values_universal {
 
             fn long_array_values(&self) -> Box<dyn Iterator<Item = Vec<i64>> + '_> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).flatten().map(|arr| {
                         arr.into_iter().map(|v| v as i64).collect()
@@ -1421,7 +1421,7 @@ macro_rules! impl_graph_property_values_universal {
 
             fn objects(&self) -> Box<dyn Iterator<Item = Box<dyn std::any::Any>> + '_> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).map(|v| Box::new(v) as Box<dyn std::any::Any>)
                 }))
@@ -1433,8 +1433,8 @@ macro_rules! impl_graph_property_values_universal {
     (@impl_float_array $struct_name:ty, $inner_type:ty) => {
         impl<C> $crate::types::properties::graph::GraphPropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<Option<Vec<$inner_type>>>
-                + $crate::collections::traits::PropertyValuesAdapter<Option<Vec<$inner_type>>>
+            C: $crate::collections::Collections<Option<Vec<$inner_type>>>
+                + $crate::collections::PropertyValuesAdapter<Option<Vec<$inner_type>>>
                 + Send + Sync + std::fmt::Debug,
         {
             fn double_values(&self) -> Box<dyn Iterator<Item = f64> + '_> {
@@ -1447,7 +1447,7 @@ macro_rules! impl_graph_property_values_universal {
 
             fn double_array_values(&self) -> Box<dyn Iterator<Item = Vec<f64>> + '_> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).flatten().map(|arr| {
                         arr.into_iter().map(|v| v as f64).collect()
@@ -1457,7 +1457,7 @@ macro_rules! impl_graph_property_values_universal {
 
             fn float_array_values(&self) -> Box<dyn Iterator<Item = Vec<f32>> + '_> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).flatten().map(|arr| {
                         arr.into_iter().map(|v| v as f32).collect()
@@ -1467,7 +1467,7 @@ macro_rules! impl_graph_property_values_universal {
 
             fn long_array_values(&self) -> Box<dyn Iterator<Item = Vec<i64>> + '_> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).flatten().map(|arr| {
                         arr.into_iter().map(|v| v as i64).collect()
@@ -1477,7 +1477,7 @@ macro_rules! impl_graph_property_values_universal {
 
             fn objects(&self) -> Box<dyn Iterator<Item = Box<dyn std::any::Any>> + '_> {
                 #[allow(unused_imports)]
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).map(|v| Box::new(v) as Box<dyn std::any::Any>)
                 }))
@@ -1489,8 +1489,8 @@ macro_rules! impl_graph_property_values_universal {
     (@impl_bool_array $struct_name:ty) => {
         impl<C> $crate::types::properties::graph::GraphPropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<Option<Vec<bool>>>
-                + $crate::collections::traits::PropertyValuesAdapter<Option<Vec<bool>>>
+            C: $crate::collections::Collections<Option<Vec<bool>>>
+                + $crate::collections::PropertyValuesAdapter<Option<Vec<bool>>>
                 + Send + Sync + std::fmt::Debug,
         {
             fn double_values(&self) -> Box<dyn Iterator<Item = f64> + '_> {
@@ -1502,7 +1502,7 @@ macro_rules! impl_graph_property_values_universal {
             }
 
             fn double_array_values(&self) -> Box<dyn Iterator<Item = Vec<f64>> + '_> {
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).flatten().map(|arr| {
                         arr.into_iter().map(|v| if v { 1.0 } else { 0.0 }).collect()
@@ -1511,7 +1511,7 @@ macro_rules! impl_graph_property_values_universal {
             }
 
             fn float_array_values(&self) -> Box<dyn Iterator<Item = Vec<f32>> + '_> {
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).flatten().map(|arr| {
                         arr.into_iter().map(|v| if v { 1.0 } else { 0.0 }).collect()
@@ -1520,7 +1520,7 @@ macro_rules! impl_graph_property_values_universal {
             }
 
             fn long_array_values(&self) -> Box<dyn Iterator<Item = Vec<i64>> + '_> {
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).flatten().map(|arr| {
                         arr.into_iter().map(|v| if v { 1 } else { 0 }).collect()
@@ -1529,7 +1529,7 @@ macro_rules! impl_graph_property_values_universal {
             }
 
             fn objects(&self) -> Box<dyn Iterator<Item = Box<dyn std::any::Any>> + '_> {
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).map(|v| Box::new(v) as Box<dyn std::any::Any>)
                 }))
@@ -1541,8 +1541,8 @@ macro_rules! impl_graph_property_values_universal {
     (@impl_char_array $struct_name:ty) => {
         impl<C> $crate::types::properties::graph::GraphPropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<Option<Vec<char>>>
-                + $crate::collections::traits::PropertyValuesAdapter<Option<Vec<char>>>
+            C: $crate::collections::Collections<Option<Vec<char>>>
+                + $crate::collections::PropertyValuesAdapter<Option<Vec<char>>>
                 + Send + Sync + std::fmt::Debug,
         {
             fn double_values(&self) -> Box<dyn Iterator<Item = f64> + '_> {
@@ -1554,7 +1554,7 @@ macro_rules! impl_graph_property_values_universal {
             }
 
             fn double_array_values(&self) -> Box<dyn Iterator<Item = Vec<f64>> + '_> {
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).flatten().map(|arr| {
                         arr.into_iter().map(|v| v as u32 as f64).collect()
@@ -1563,7 +1563,7 @@ macro_rules! impl_graph_property_values_universal {
             }
 
             fn float_array_values(&self) -> Box<dyn Iterator<Item = Vec<f32>> + '_> {
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).flatten().map(|arr| {
                         arr.into_iter().map(|v| v as u32 as f32).collect()
@@ -1572,7 +1572,7 @@ macro_rules! impl_graph_property_values_universal {
             }
 
             fn long_array_values(&self) -> Box<dyn Iterator<Item = Vec<i64>> + '_> {
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).flatten().map(|arr| {
                         arr.into_iter().map(|v| v as u32 as i64).collect()
@@ -1581,7 +1581,7 @@ macro_rules! impl_graph_property_values_universal {
             }
 
             fn objects(&self) -> Box<dyn Iterator<Item = Box<dyn std::any::Any>> + '_> {
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).map(|v| Box::new(v) as Box<dyn std::any::Any>)
                 }))
@@ -1593,8 +1593,8 @@ macro_rules! impl_graph_property_values_universal {
     (@impl_string_array $struct_name:ty) => {
         impl<C> $crate::types::properties::graph::GraphPropertyValues for $struct_name
         where
-            C: $crate::collections::traits::Collections<Option<Vec<String>>>
-                + $crate::collections::traits::PropertyValuesAdapter<Option<Vec<String>>>
+            C: $crate::collections::Collections<Option<Vec<String>>>
+                + $crate::collections::PropertyValuesAdapter<Option<Vec<String>>>
                 + Send + Sync + std::fmt::Debug,
         {
             fn double_values(&self) -> Box<dyn Iterator<Item = f64> + '_> {
@@ -1619,7 +1619,7 @@ macro_rules! impl_graph_property_values_universal {
             }
 
             fn objects(&self) -> Box<dyn Iterator<Item = Box<dyn std::any::Any>> + '_> {
-                use $crate::collections::traits::Collections;
+                use $crate::collections::Collections;
                 Box::new((0..self.universal.collection().len()).filter_map(move |i| {
                     self.universal.collection().get(i).map(|v| Box::new(v) as Box<dyn std::any::Any>)
                 }))
