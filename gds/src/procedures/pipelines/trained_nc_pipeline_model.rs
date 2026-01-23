@@ -1,20 +1,20 @@
 use std::sync::Arc;
 
 use crate::core::model::{Model, ModelCatalog, ModelCatalogCustomInfo, ModelConfig, ModelData};
-use crate::procedures::model_catalog::FacadeModelCatalog;
-use crate::projection::eval::pipeline::node_pipeline::classification::node_classification_model_result::NodeClassificationModelResult;
-use crate::projection::eval::pipeline::node_pipeline::classification::node_classification_pipeline_train_config::NodeClassificationPipelineTrainConfig;
-use crate::projection::eval::pipeline::node_pipeline::classification::node_classification_to_model_converter::NodeClassificationToModelConverter;
-use crate::projection::eval::pipeline::node_pipeline::classification::node_classification_train_result::NodeClassificationTrainResult;
-use crate::projection::eval::pipeline::node_pipeline::classification::node_classification_training_pipeline::NodeClassificationTrainingPipeline;
+use crate::procedures::model_catalog::ModelCatalogFacade;
+use crate::projection::eval::pipeline::NodeClassificationModelResult;
+use crate::projection::eval::pipeline::NodeClassificationPipelineTrainConfig;
+use crate::projection::eval::pipeline::NodeClassificationToModelConverter;
+use crate::projection::eval::pipeline::NodeClassificationTrainResult;
+use crate::projection::eval::pipeline::NodeClassificationTrainingPipeline;
 use crate::types::schema::GraphSchema;
 
 pub struct TrainedNCPipelineModel {
-    model_catalog: Arc<FacadeModelCatalog>,
+    model_catalog: Arc<ModelCatalogFacade>,
 }
 
 impl TrainedNCPipelineModel {
-    pub fn new(model_catalog: Arc<FacadeModelCatalog>) -> Self {
+    pub fn new(model_catalog: Arc<ModelCatalogFacade>) -> Self {
         Self { model_catalog }
     }
 

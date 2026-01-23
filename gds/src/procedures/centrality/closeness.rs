@@ -24,7 +24,7 @@ use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::NodeLabel;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+use crate::types::properties::node::DefaultDoubleNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
 use std::collections::HashSet;
 use std::sync::Arc;

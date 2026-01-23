@@ -4,7 +4,7 @@ use crate::procedures::traits::{PathResult as ProcedurePathResult, Result};
 use crate::projection::RelationshipType;
 use crate::types::graph_store::GraphStore;
 use crate::types::prelude::DefaultGraphStore;
-use crate::types::properties::relationship::impls::default_relationship_property_values::DefaultDoubleRelationshipPropertyValues;
+use crate::types::properties::relationship::DefaultDoubleRelationshipPropertyValues;
 use crate::types::properties::relationship::RelationshipPropertyValues;
 use crate::types::schema::Direction;
 use std::sync::Arc;

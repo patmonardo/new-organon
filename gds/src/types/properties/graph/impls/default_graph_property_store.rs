@@ -5,11 +5,11 @@ use crate::collections::backends::factory::{
 };
 use crate::collections::backends::vec::{VecDouble, VecLong};
 use crate::config::CollectionsConfig;
-use crate::types::properties::graph::impls::default_graph_property_values::{
-    DefaultDoubleGraphPropertyValues, DefaultLongGraphPropertyValues,
-};
 use crate::types::properties::graph::GraphProperty;
 use crate::types::properties::graph::GraphPropertyValues;
+use crate::types::properties::graph::{
+    DefaultDoubleGraphPropertyValues, DefaultLongGraphPropertyValues,
+};
 use crate::types::properties::graph::{GraphPropertyStore, GraphPropertyStoreBuilder};
 use crate::types::properties::PropertyStore;
 use std::collections::HashMap;

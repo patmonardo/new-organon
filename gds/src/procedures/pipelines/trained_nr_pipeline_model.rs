@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
 use crate::core::model::ModelCatalog;
-use crate::procedures::model_catalog::FacadeModelCatalog;
+use crate::procedures::model_catalog::ModelCatalogFacade;
 
 pub struct TrainedNRPipelineModel {
-    model_catalog: Arc<FacadeModelCatalog>,
+    model_catalog: Arc<ModelCatalogFacade>,
 }
 
 impl TrainedNRPipelineModel {
-    pub fn new(model_catalog: Arc<FacadeModelCatalog>) -> Self {
+    pub fn new(model_catalog: Arc<ModelCatalogFacade>) -> Self {
         Self { model_catalog }
     }
 

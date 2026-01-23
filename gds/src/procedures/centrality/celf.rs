@@ -14,7 +14,7 @@ use crate::procedures::traits::{AlgorithmRunner, Result};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph_store::GraphStore;
 use crate::types::prelude::DefaultGraphStore;
-use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+use crate::types::properties::node::DefaultDoubleNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
 use crate::types::schema::NodeLabel;
 use std::collections::{HashMap, HashSet};

@@ -9,7 +9,7 @@ use crate::collections::HugeDoubleArray;
 use crate::core::loading::GraphResources;
 use crate::projection::NodeLabel;
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
-use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+use crate::types::properties::node::DefaultDoubleNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
 
 use super::{NodeRegressionPredictPipelineConfig, NodeRegressionPredictPipelineMutateConfig};

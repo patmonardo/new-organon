@@ -4,7 +4,7 @@ use crate::applications::algorithms::machinery::NodeProperty;
 use crate::collections::backends::vec::VecDoubleArray;
 use crate::collections::backends::vec::VecLong;
 use crate::procedures::pipelines::NodeClassificationPipelineResult;
-use crate::types::properties::node::impls::default_node_property_values::{
+use crate::types::properties::node::{
     DefaultDoubleArrayNodePropertyValues, DefaultLongNodePropertyValues,
 };
 use crate::types::properties::node::NodePropertyValues;

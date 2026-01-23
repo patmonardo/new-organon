@@ -13,7 +13,7 @@ use crate::collections::backends::factory::{
 };
 use crate::collections::backends::vec::{VecDouble, VecLong};
 use crate::config::CollectionsConfig;
-use crate::types::properties::node::impls::default_node_property_values::{
+use crate::types::properties::node::{
     DefaultDoubleNodePropertyValues, DefaultLongNodePropertyValues,
 };
 use std::collections::HashMap;

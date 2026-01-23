@@ -4,7 +4,7 @@ use super::hyperparameter::{
 use super::parameter_parser::{parse_concrete_parameters, parse_range_parameters};
 use crate::ml::decision_tree::ClassifierImpurityCriterionType;
 use crate::ml::gradient_descent::GradientDescentConfig;
-use crate::ml::models::linear::LinearRegressionTrainConfig;
+use crate::ml::models::linear_regression::LinearRegressionTrainConfig;
 use crate::ml::models::logistic_regression::LogisticRegressionTrainConfig;
 use crate::ml::models::mlp::MLPClassifierTrainConfig;
 use crate::ml::models::trees::{

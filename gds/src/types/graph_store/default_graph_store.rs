@@ -20,25 +20,25 @@ use crate::types::graph::{
     id_map::{IdMap, SimpleIdMap},
     DefaultGraph, Graph, GraphCharacteristics, GraphCharacteristicsBuilder, RelationshipTopology,
 };
-use crate::types::properties::graph::impls::default_graph_property_values::{
+use crate::types::properties::graph::GraphPropertyValues;
+use crate::types::properties::graph::{
     DefaultDoubleGraphPropertyValues, DefaultLongGraphPropertyValues,
 };
-use crate::types::properties::graph::GraphPropertyValues;
-use crate::types::properties::node::impls::default_node_property_values::{
+use crate::types::properties::node::NodePropertyValues;
+use crate::types::properties::node::{
     DefaultDoubleArrayNodePropertyValues, DefaultLongArrayNodePropertyValues,
 };
-use crate::types::properties::node::impls::default_node_property_values::{
+use crate::types::properties::node::{
     DefaultDoubleNodePropertyValues, DefaultFloatNodePropertyValues, DefaultIntNodePropertyValues,
     DefaultLongNodePropertyValues,
 };
-use crate::types::properties::node::NodePropertyValues;
 use crate::types::properties::relationship::default_relationship_property_store::DefaultRelationshipPropertyStore;
-use crate::types::properties::relationship::impls::default_relationship_property_values::{
+use crate::types::properties::relationship::relationship_property::RelationshipProperty;
+use crate::types::properties::relationship::RelationshipPropertyValues;
+use crate::types::properties::relationship::{
     DefaultDoubleRelationshipPropertyValues, DefaultIntRelationshipPropertyValues,
     DefaultLongRelationshipPropertyValues,
 };
-use crate::types::properties::relationship::relationship_property::RelationshipProperty;
-use crate::types::properties::relationship::RelationshipPropertyValues;
 use crate::types::properties::relationship::{
     RelationshipPropertyStore, RelationshipPropertyStoreBuilder,
 };
@@ -1849,7 +1849,7 @@ mod tests {
     use crate::types::graph::degrees::Degrees;
     use crate::types::graph::Graph;
     use crate::types::graph_store::{DatabaseId, DatabaseLocation};
-    use crate::types::properties::relationship::impls::default_relationship_property_values::DefaultRelationshipPropertyValues;
+    use crate::types::properties::relationship::DefaultRelationshipPropertyValues;
     use std::sync::Arc;
 
     fn store_with_config(config: GraphStoreConfig) -> DefaultGraphStore {

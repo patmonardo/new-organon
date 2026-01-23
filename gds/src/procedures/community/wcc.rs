@@ -16,7 +16,7 @@ use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResu
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
+use crate::types::properties::node::DefaultLongNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
 use crate::types::schema::NodeLabel;
 use std::collections::HashSet;
@@ -94,11 +94,9 @@ impl WccFacade {
 
     pub fn mutate(self, _property_name: &str) -> Result<MutationResult> {
         // Implemented below in the long-form mutate returning updated store
-        Err(
-            AlgorithmError::Execution(
-                "Use mutate_with_store() for WCC (internal)".to_string(),
-            ),
-        )
+        Err(AlgorithmError::Execution(
+            "Use mutate_with_store() for WCC (internal)".to_string(),
+        ))
     }
 
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
@@ -135,9 +133,7 @@ impl WccFacade {
         new_store
             .add_node_property(labels, property_name.to_string(), values)
             .map_err(|e| {
-                AlgorithmError::Execution(format!(
-                    "WCC mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("WCC mutate failed to add property: {e}"))
             })?;
 
         let execution_time = start.elapsed();

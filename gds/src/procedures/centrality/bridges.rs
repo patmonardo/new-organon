@@ -14,7 +14,7 @@ use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResu
 use crate::procedures::traits::{AlgorithmRunner, Result};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use crate::types::properties::relationship::impls::default_relationship_property_values::DefaultRelationshipPropertyValues;
+use crate::types::properties::relationship::DefaultRelationshipPropertyValues;
 use crate::types::properties::relationship::RelationshipPropertyValues;
 use std::collections::HashSet;
 use std::sync::Arc;

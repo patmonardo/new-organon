@@ -18,7 +18,7 @@ use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResu
 use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
+use crate::types::properties::node::DefaultLongNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
 use crate::types::schema::NodeLabel;
 use std::collections::HashSet;
@@ -153,9 +153,7 @@ impl SccFacade {
         new_store
             .add_node_property(labels_set, property_name.to_string(), values)
             .map_err(|e| {
-                AlgorithmError::Execution(format!(
-                    "SCC mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("SCC mutate failed to add property: {e}"))
             })?;
 
         let execution_time = std::time::Duration::from_millis(result.computation_time_ms as u64);

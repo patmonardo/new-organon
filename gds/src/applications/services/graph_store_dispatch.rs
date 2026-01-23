@@ -8,15 +8,15 @@ use crate::types::graph_store::{
     Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
     GraphStore,
 };
-use crate::types::properties::node::impls::default_node_property_values::{
+use crate::types::properties::node::NodePropertyValues;
+use crate::types::properties::node::{
     DefaultDoubleArrayNodePropertyValues, DefaultDoubleNodePropertyValues,
     DefaultLongNodePropertyValues,
 };
-use crate::types::properties::node::NodePropertyValues;
-use crate::types::properties::relationship::impls::default_relationship_property_values::{
+use crate::types::properties::relationship::RelationshipPropertyValues;
+use crate::types::properties::relationship::{
     DefaultDoubleRelationshipPropertyValues, DefaultLongRelationshipPropertyValues,
 };
-use crate::types::properties::relationship::RelationshipPropertyValues;
 use crate::types::schema::GraphSchema;
 
 use serde_json::Value;

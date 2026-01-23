@@ -639,7 +639,7 @@ mod tests {
     use crate::types::graph::id_map::SimpleIdMap;
     use crate::types::graph::RelationshipTopology;
     use crate::types::graph_store::{DatabaseId, DatabaseLocation, GraphName};
-    use crate::types::properties::relationship::impls::default_relationship_property_values::DefaultRelationshipPropertyValues;
+    use crate::types::properties::relationship::DefaultRelationshipPropertyValues;
     use std::collections::HashMap;
     use std::sync::Arc;
 

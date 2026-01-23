@@ -3,7 +3,7 @@
 use crate::concurrency::Concurrency;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::TaskProgressTracker;
-use crate::ml::models::linear::{LinearRegressionTrainConfig, LinearRegressionTrainer};
+use crate::ml::models::linear_regression::{LinearRegressionTrainConfig, LinearRegressionTrainer};
 use crate::ml::models::trees::{RandomForestRegressorTrainer, RandomForestRegressorTrainerConfig};
 use crate::ml::models::{base::TrainerConfigTrait, RegressorTrainer, TrainingMethod};
 use crate::projection::eval::procedure::LogLevel as ProcedureLogLevel;

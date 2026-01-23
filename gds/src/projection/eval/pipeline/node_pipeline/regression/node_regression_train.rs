@@ -8,7 +8,7 @@ use crate::core::utils::progress::{LeafTask, ProgressTracker, Task, TaskProgress
 use crate::mem::{MemoryEstimation, MemoryEstimations};
 use crate::ml::metrics::regression::RegressionMetric;
 use crate::ml::metrics::{Metric, ModelCandidateStats};
-use crate::ml::models::linear::LinearRegressionTrainConfig;
+use crate::ml::models::linear_regression::LinearRegressionTrainConfig;
 use crate::ml::models::{Features, RegressionTrainerFactory, Regressor};
 use crate::ml::node_prediction::NodeSplitter;
 use crate::ml::splitting::TrainingExamplesSplit;

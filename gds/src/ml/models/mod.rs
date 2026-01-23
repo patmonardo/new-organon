@@ -19,7 +19,7 @@ pub mod classifier_factory;
 pub mod classifier_trainer_factory;
 pub mod config;
 pub mod features;
-pub mod linear;
+pub mod linear_regression;
 pub mod logistic_regression;
 pub mod mlp;
 pub mod regression_trainer_factory;
@@ -40,7 +40,7 @@ pub use training_method::TrainingMethod;
 
 // Model implementations
 pub use automl::*;
-pub use linear::{LinearRegressionData, LinearRegressor};
+pub use linear_regression::{LinearRegressionData, LinearRegressor};
 pub use logistic_regression::{LogisticRegressionClassifier, LogisticRegressionData};
 pub use mlp::{
     MLPClassifier, MLPClassifierData, MLPClassifierObjective, MLPClassifierTrainConfig,

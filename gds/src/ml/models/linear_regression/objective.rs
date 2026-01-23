@@ -10,7 +10,9 @@ use crate::ml::core::functions::{
 };
 use crate::ml::core::variable::VariableRef;
 use crate::ml::gradient_descent::{batch_feature_matrix, Objective};
-use crate::ml::models::linear::{data::LinearRegressionData, regressor::LinearRegressor};
+use crate::ml::models::linear_regression::{
+    data::LinearRegressionData, regressor::LinearRegressor,
+};
 use crate::ml::models::Features;
 use std::sync::Arc;
 

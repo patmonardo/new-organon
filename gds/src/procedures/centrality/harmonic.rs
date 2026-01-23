@@ -14,7 +14,9 @@ use crate::algo::harmonic::{HarmonicComputationRuntime, HarmonicStorageRuntime};
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::ProgressTracker;
-use crate::core::utils::progress::{EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks};
+use crate::core::utils::progress::{
+    EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
+};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::traits::{CentralityScore, Result};
@@ -22,7 +24,7 @@ use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::NodeLabel;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use crate::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+use crate::types::properties::node::DefaultDoubleNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
@@ -103,11 +105,9 @@ impl HarmonicCentralityFacade {
     /// Returns an error if concurrency is not positive
     pub fn validate(&self) -> Result<()> {
         if self.concurrency == 0 {
-            return Err(
-                AlgorithmError::Execution(
-                    "concurrency must be positive".to_string(),
-                ),
-            );
+            return Err(AlgorithmError::Execution(
+                "concurrency must be positive".to_string(),
+            ));
         }
         Ok(())
     }
@@ -155,11 +155,9 @@ impl HarmonicCentralityFacade {
             Ok(scores) => scores,
             Err(e) => {
                 tracker.lock().unwrap().end_subtask_with_failure();
-                return Err(
-                    AlgorithmError::Execution(format!(
-                        "Harmonic terminated: {e}"
-                    )),
-                );
+                return Err(AlgorithmError::Execution(format!(
+                    "Harmonic terminated: {e}"
+                )));
             }
         };
 
@@ -255,9 +253,7 @@ impl HarmonicCentralityFacade {
         new_store
             .add_node_property(labels, property_name.to_string(), values)
             .map_err(|e| {
-                AlgorithmError::Execution(format!(
-                    "Harmonic mutate failed to add property: {e}"
-                ))
+                AlgorithmError::Execution(format!("Harmonic mutate failed to add property: {e}"))
             })?;
 
         let execution_time = start_time.elapsed();
@@ -274,11 +270,9 @@ impl HarmonicCentralityFacade {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        Err(
-            AlgorithmError::Execution(
-                "HarmonicCentrality mutate/write is not implemented yet".to_string(),
-            ),
-        )
+        Err(AlgorithmError::Execution(
+            "HarmonicCentrality mutate/write is not implemented yet".to_string(),
+        ))
     }
 
     /// Estimate memory requirements for harmonic centrality computation.

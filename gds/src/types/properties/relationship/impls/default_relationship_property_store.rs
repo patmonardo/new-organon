@@ -1,5 +1,7 @@
-use crate::types::properties::relationship::impls::default_relationship_property_values::DefaultRelationshipPropertyValues;
+use crate::collections::backends::factory::create_double_backend_from_config;
+use crate::config::CollectionsConfig;
 use crate::types::properties::relationship::relationship_property::RelationshipProperty;
+use crate::types::properties::relationship::DefaultRelationshipPropertyValues;
 use crate::types::properties::relationship::{
     relationship_property_store::{RelationshipPropertyStore, RelationshipPropertyStoreBuilder},
     relationship_property_values::RelationshipPropertyValues,
@@ -7,8 +9,6 @@ use crate::types::properties::relationship::{
 use crate::types::properties::PropertyStore;
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::config::CollectionsConfig;
-use crate::collections::backends::factory::create_double_backend_from_config;
 
 /// Default implementation of RelationshipPropertyStore.
 #[derive(Debug, Clone)]

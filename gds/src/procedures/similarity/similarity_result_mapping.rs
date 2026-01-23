@@ -2,7 +2,7 @@ use crate::procedures::traits::Result;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph_store::GraphStore;
 use crate::types::prelude::DefaultGraphStore;
-use crate::types::properties::relationship::impls::default_relationship_property_values::DefaultRelationshipPropertyValues;
+use crate::types::properties::relationship::DefaultRelationshipPropertyValues;
 use crate::types::properties::relationship::RelationshipPropertyValues;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;

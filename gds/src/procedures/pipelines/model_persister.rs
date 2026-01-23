@@ -1,14 +1,14 @@
 use crate::applications::services::logging::Log;
 use crate::core::model::{Model, ModelCatalog, ModelCatalogCustomInfo, ModelConfig, ModelData};
-use crate::procedures::model_catalog::FacadeModelCatalog;
+use crate::procedures::model_catalog::ModelCatalogFacade;
 
 pub struct ModelPersister {
     log: Log,
-    model_catalog: std::sync::Arc<FacadeModelCatalog>,
+    model_catalog: std::sync::Arc<ModelCatalogFacade>,
 }
 
 impl ModelPersister {
-    pub fn new(log: Log, model_catalog: std::sync::Arc<FacadeModelCatalog>) -> Self {
+    pub fn new(log: Log, model_catalog: std::sync::Arc<ModelCatalogFacade>) -> Self {
         Self { log, model_catalog }
     }
 

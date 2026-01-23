@@ -91,7 +91,7 @@ impl Property for DefaultGraphProperty {
 mod tests {
     use super::*;
     use crate::collections::backends::vec::VecLong;
-    use crate::types::properties::graph::impls::default_graph_property_values::DefaultLongGraphPropertyValues;
+    use crate::types::properties::graph::DefaultLongGraphPropertyValues;
     use crate::types::properties::PropertyValues;
 
     #[test]

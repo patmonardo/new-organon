@@ -96,7 +96,7 @@ impl LabelsAndClassCountsExtractor {
 mod tests {
     use super::*;
     use crate::collections::backends::vec::VecLong;
-    use crate::types::properties::node::impls::default_node_property_values::DefaultLongNodePropertyValues;
+    use crate::types::properties::node::DefaultLongNodePropertyValues;
 
     #[test]
     fn test_labels_and_class_counts_new() {

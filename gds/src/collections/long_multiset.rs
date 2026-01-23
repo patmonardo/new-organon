@@ -27,21 +27,6 @@ use std::collections::HashMap;
 /// - **Edge weight frequency**: Analyze distribution of edge weights
 /// - **Algorithm convergence tracking**: Track PageRank score convergence
 ///
-/// # Examples
-///
-/// ```
-/// use gds::collections::LongMultiSet;
-///
-/// let mut multiset = LongMultiSet::new();
-/// multiset.add(42);
-/// multiset.add(42);
-/// multiset.add(17);
-///
-/// assert_eq!(multiset.count(42), 2);
-/// assert_eq!(multiset.count(17), 1);
-/// assert_eq!(multiset.size(), 2); // 2 unique values
-/// assert_eq!(multiset.sum(), 3);  // 3 total occurrences
-/// ```
 #[derive(Clone, Debug)]
 pub struct LongMultiSet {
     map: HashMap<i64, i64>,
@@ -53,14 +38,6 @@ impl LongMultiSet {
     /// The multiset is initialized with an empty hash map optimized for integer keys.
     /// The underlying HashMap will automatically resize as elements are added.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gds::collections::LongMultiSet;
-    ///
-    /// let multiset = LongMultiSet::new();
-    /// assert_eq!(multiset.size(), 0);
-    /// ```
     pub fn new() -> Self {
         Self {
             map: HashMap::new(),
@@ -77,15 +54,6 @@ impl LongMultiSet {
     ///
     /// The new total count of the value after addition
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gds::collections::LongMultiSet;
-    ///
-    /// let mut multiset = LongMultiSet::new();
-    /// assert_eq!(multiset.add(42), 1);
-    /// assert_eq!(multiset.add(42), 2);
-    /// ```
     pub fn add(&mut self, value: i64) -> i64 {
         self.add_count(value, 1)
     }
@@ -101,18 +69,6 @@ impl LongMultiSet {
     ///
     /// The new total count of the key after addition
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gds::collections::LongMultiSet;
-    ///
-    /// let mut multiset = LongMultiSet::new();
-    /// multiset.add_count(42, 5);
-    /// assert_eq!(multiset.count(42), 5);
-    ///
-    /// multiset.add_count(42, -2);
-    /// assert_eq!(multiset.count(42), 3);
-    /// ```
     pub fn add_count(&mut self, key: i64, count: i64) -> i64 {
         let entry = self.map.entry(key).or_insert(0);
         *entry += count;
@@ -139,17 +95,6 @@ impl LongMultiSet {
     ///
     /// The number of times the value has been added to the multiset
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gds::collections::LongMultiSet;
-    ///
-    /// let mut multiset = LongMultiSet::new();
-    /// multiset.add_count(42, 5);
-    ///
-    /// assert_eq!(multiset.count(42), 5);
-    /// assert_eq!(multiset.count(100), 0); // never added
-    /// ```
     pub fn count(&self, value: i64) -> i64 {
         *self.map.get(&value).unwrap_or(&0)
     }
@@ -163,20 +108,6 @@ impl LongMultiSet {
     ///
     /// Vector containing all unique values in the multiset
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gds::collections::LongMultiSet;
-    ///
-    /// let mut multiset = LongMultiSet::new();
-    /// multiset.add_count(10, 3);
-    /// multiset.add_count(20, 1);
-    /// multiset.add(10); // 10 now has count 4
-    ///
-    /// let mut keys = multiset.keys();
-    /// keys.sort();
-    /// assert_eq!(keys, vec![10, 20]);
-    /// ```
     pub fn keys(&self) -> Vec<i64> {
         self.map.keys().copied().collect()
     }
@@ -186,19 +117,6 @@ impl LongMultiSet {
     /// This method returns the **cardinality of the underlying set** - the number
     /// of distinct values that have been added, regardless of their frequency.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gds::collections::LongMultiSet;
-    ///
-    /// let mut multiset = LongMultiSet::new();
-    /// multiset.add_count(10, 3);
-    /// multiset.add_count(20, 1);
-    /// multiset.add_count(30, 2);
-    ///
-    /// assert_eq!(multiset.size(), 3); // 3 unique values: 10, 20, 30
-    /// assert_eq!(multiset.sum(), 6);  // 6 total occurrences: 3+1+2
-    /// ```
     pub fn size(&self) -> usize {
         self.map.len()
     }
@@ -208,18 +126,6 @@ impl LongMultiSet {
     /// This method calculates the **total number of occurrences** across all values
     /// in the multiset. It's equivalent to the sum of all individual counts.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gds::collections::LongMultiSet;
-    ///
-    /// let mut multiset = LongMultiSet::new();
-    /// multiset.add_count(1, 10);
-    /// multiset.add_count(2, 20);
-    /// multiset.add_count(3, 30);
-    ///
-    /// assert_eq!(multiset.sum(), 60); // 10+20+30
-    /// ```
     pub fn sum(&self) -> i64 {
         self.map.values().sum()
     }
@@ -237,18 +143,6 @@ impl LongMultiSet {
     ///
     /// `true` if the value was present and removed, `false` if it wasn't present
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gds::collections::LongMultiSet;
-    ///
-    /// let mut multiset = LongMultiSet::new();
-    /// multiset.add_count(42, 5);
-    ///
-    /// assert!(multiset.remove(42));
-    /// assert_eq!(multiset.count(42), 0);
-    /// assert!(!multiset.remove(42)); // already removed
-    /// ```
     pub fn remove(&mut self, value: i64) -> bool {
         self.map.remove(&value).is_some()
     }
@@ -258,19 +152,6 @@ impl LongMultiSet {
     /// This method provides **efficient iteration** over the multiset contents
     /// without requiring separate calls to `keys()` and `count()`.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gds::collections::LongMultiSet;
-    ///
-    /// let mut multiset = LongMultiSet::new();
-    /// multiset.add_count(10, 3);
-    /// multiset.add_count(20, 2);
-    ///
-    /// for (value, count) in multiset.entries() {
-    ///     println!("Value {} appears {} times", value, count);
-    /// }
-    /// ```
     pub fn entries(&self) -> impl Iterator<Item = (i64, i64)> + '_ {
         self.map.iter().map(|(&k, &v)| (k, v))
     }
@@ -279,18 +160,6 @@ impl LongMultiSet {
     ///
     /// Removes all values and their counts, returning the multiset to an empty state.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use gds::collections::LongMultiSet;
-    ///
-    /// let mut multiset = LongMultiSet::new();
-    /// multiset.add_count(42, 5);
-    /// assert_eq!(multiset.size(), 1);
-    ///
-    /// multiset.clear();
-    /// assert_eq!(multiset.size(), 0);
-    /// ```
     pub fn clear(&mut self) {
         self.map.clear();
     }

@@ -31,9 +31,9 @@ mod enabled {
     use gds::types::graph_store::{
         Capabilities, DatabaseId, DatabaseInfo, DatabaseLocation, DefaultGraphStore, GraphName,
     };
-    use gds::types::properties::graph::impls::default_graph_property_values::DefaultDoubleGraphPropertyValues;
+    use gds::types::properties::graph::DefaultDoubleGraphPropertyValues;
     use gds::types::properties::graph::GraphPropertyValues;
-    use gds::types::properties::node::impls::default_node_property_values::DefaultDoubleNodePropertyValues;
+    use gds::types::properties::node::DefaultDoubleNodePropertyValues;
     use gds::types::properties::node::NodePropertyValues;
     use gds::types::schema::{Direction, MutableGraphSchema};
     use gds::types::ValueType;

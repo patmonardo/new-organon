@@ -90,12 +90,12 @@ impl ModelMeta {
 /// This lets algorithm code use the `ModelCatalog` trait, while the facade can
 /// render results without downcasting models.
 #[derive(Default)]
-pub struct FacadeModelCatalog {
+pub struct ModelCatalogFacade {
     inner: InMemoryModelCatalog,
     meta: parking_lot::RwLock<HashMap<(String, String), ModelMeta>>,
 }
 
-impl FacadeModelCatalog {
+impl ModelCatalogFacade {
     pub fn new() -> Self {
         Self::default()
     }
@@ -178,7 +178,7 @@ fn value_to_map(value: Value) -> AnyMap {
     }
 }
 
-impl ModelCatalog for FacadeModelCatalog {
+impl ModelCatalog for ModelCatalogFacade {
     fn register_listener(&self, listener: Box<dyn ModelCatalogListener>) {
         self.inner.register_listener(listener)
     }
@@ -274,12 +274,12 @@ impl ModelCatalog for FacadeModelCatalog {
 /// Local, request-scoped facade implementation.
 pub struct LocalModelCatalogProcedureFacade {
     username: String,
-    model_catalog: Arc<FacadeModelCatalog>,
+    model_catalog: Arc<ModelCatalogFacade>,
 }
 
-fn shared_in_memory_model_catalog() -> Arc<FacadeModelCatalog> {
-    static CATALOG: OnceLock<Arc<FacadeModelCatalog>> = OnceLock::new();
-    Arc::clone(CATALOG.get_or_init(|| Arc::new(FacadeModelCatalog::new())))
+fn shared_in_memory_model_catalog() -> Arc<ModelCatalogFacade> {
+    static CATALOG: OnceLock<Arc<ModelCatalogFacade>> = OnceLock::new();
+    Arc::clone(CATALOG.get_or_init(|| Arc::new(ModelCatalogFacade::new())))
 }
 
 impl Default for LocalModelCatalogProcedureFacade {
@@ -289,7 +289,7 @@ impl Default for LocalModelCatalogProcedureFacade {
 }
 
 impl LocalModelCatalogProcedureFacade {
-    pub fn new(user: User, model_catalog: Arc<FacadeModelCatalog>) -> Self {
+    pub fn new(user: User, model_catalog: Arc<ModelCatalogFacade>) -> Self {
         Self {
             username: user.username().to_string(),
             model_catalog,
@@ -316,8 +316,8 @@ impl ModelCatalogProcedureFacade for LocalModelCatalogProcedureFacade {
         // Our catalog drop removes metadata, so capture it first.
         let meta = self.exists_impl(model_name);
 
-        // Drop from the underlying catalog; metadata is removed by FacadeModelCatalog::drop.
-        <FacadeModelCatalog as ModelCatalog>::drop(
+        // Drop from the underlying catalog; metadata is removed by ModelCatalogFacade::drop.
+        <ModelCatalogFacade as ModelCatalog>::drop(
             self.model_catalog.as_ref(),
             &self.username,
             model_name,
@@ -424,7 +424,7 @@ mod tests {
 
     #[test]
     fn model_catalog_facade_list_exists_drop() {
-        let catalog = Arc::new(FacadeModelCatalog::new());
+        let catalog = Arc::new(ModelCatalogFacade::new());
         let facade =
             LocalModelCatalogProcedureFacade::new(User::from("alice"), Arc::clone(&catalog));
 
