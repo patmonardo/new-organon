@@ -7,7 +7,7 @@ use rand::prelude::*;
 use std::sync::Arc;
 
 /// ReadOnlyHugeLongArray type alias for shared read-only arrays
-pub type ReadOnlyHugeLongArray = Arc<Vec<u64>>;
+type ReadOnlyHugeLongArray = Arc<Vec<u64>>;
 
 /// Utility for bootstrapping training datasets in random forests.
 /// 1:1 translation of DatasetBootstrapper.java from Java GDS.
