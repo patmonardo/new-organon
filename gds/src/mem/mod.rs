@@ -1,34 +1,3 @@
-//! Memory estimation and tracking system
-//!
-//! This module provides sophisticated memory estimation, tracking, and management
-//! capabilities for graph data structures and algorithms.
-//!
-//! ## Core Components
-//!
-//! - **BitUtil** - Bit manipulation utilities (power of two, alignment, leading zeros)
-//! - **Estimate** - Memory size calculations for data structures
-//! - **MemoryRange** - Min/max byte ranges with arithmetic operations
-//! - **MemoryEstimation** - Trait for components that can estimate memory usage
-//! - **MemoryTree** - Tree-shaped memory descriptions for hierarchical estimation
-//! - **Containers** - Track memory usage per user for graphs and tasks
-//!
-//! ## Example Usage
-//!
-//! ```rust,ignore
-//! use gds::mem::*;
-//!
-//! // Calculate memory for an array
-//! let array_size = Estimate::size_of_long_array(1_000_000);
-//! println!("Array needs: {}", Estimate::human_readable(array_size));
-//!
-//! // Create a memory range
-//! let range = MemoryRange::of_range(1024, 2048);
-//! let doubled = range.times(2);
-//!
-//! // Track graph memory per user
-//! let mut container = GraphStoreMemoryContainer::new();
-//! container.add_graph("alice", "my-graph", 1024 * 1024 * 100);
-//! ```
 
 pub mod bit_util;
 pub mod estimate;
@@ -45,20 +14,18 @@ pub mod task_memory_container;
 pub mod user_entity_memory;
 pub mod user_memory_summary;
 
-// Re-export public API
-pub use bit_util::BitUtil;
-pub use estimate::Estimate;
-pub use graph_store_memory_container::{
-    GraphStoreAddedEvent, GraphStoreMemoryContainer, GraphStoreRemovedEvent,
-};
-pub use memest::MemoryEstimationResult;
-pub use memory_estimation::{MemoryEstimation, MemoryEstimationWithDimensions};
-pub use memory_estimations::{Builder as MemoryEstimationsBuilder, MemoryEstimations};
-pub use memory_range::MemoryRange;
-pub use memory_reservation_exception::MemoryReservationExceededException;
-pub use memory_resident::MemoryResident;
-pub use memory_tracker::MemoryTracker;
-pub use memory_tree::{MemoryTree, MemoryTreeWithDimensions};
-pub use task_memory_container::TaskMemoryContainer;
-pub use user_entity_memory::UserEntityMemory;
-pub use user_memory_summary::UserMemorySummary;
+pub use bit_util::*;
+pub use estimate::*;
+pub use graph_store_memory_container::*;
+pub use memest::*;
+pub use memory_estimation::*;
+pub use memory_estimations::*;
+pub use memory_range::*;
+pub use memory_reservation_exception::*;
+pub use memory_resident::*;
+pub use memory_tracker::*;
+pub use memory_tree::*;
+pub use task_memory_container::*;
+pub use user_entity_memory::*;
+pub use user_memory_summary::*;
+

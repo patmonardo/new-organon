@@ -15,6 +15,3 @@ pub use default_relationship_property_store::*;
 
 // Re-export macro-generated relationship property values
 pub use default_relationship_property_values::*;
-
-// Re-export all value types from macro-generated implementations
-// pub use values::*; // Removed - using macro-generated implementations

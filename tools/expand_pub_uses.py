@@ -8,6 +8,8 @@ Usage:
 - With --apply writes changes in-place and makes a .bak file next to modified files.
 - --recursive will process subdirectories containing Rust files.
 - Will skip modules with nested wildcard re-exports to avoid ambiguity.
+- NOTE: By default this tool **excludes** `mod.rs` files (they often contain code and hand-maintained re-exports).
+  Use `--include-mods` to override and include `mod.rs` files deliberately.
 
 Heuristic parsing only — review changes and run cargo check after applying.
 """
@@ -136,7 +138,7 @@ def process_file(path: str, apply: bool, max_items: int) -> Optional[str]:
     return None
 
 
-def walk_and_process(target: str, apply: bool, recursive: bool, max_items: int) -> List[str]:
+def walk_and_process(target: str, apply: bool, recursive: bool, max_items: int, include_mods: bool) -> List[str]:
     results = []
     if os.path.isdir(target):
         for root, dirs, files in os.walk(target):
@@ -146,11 +148,18 @@ def walk_and_process(target: str, apply: bool, recursive: bool, max_items: int) 
             for name in sorted(files):
                 if not name.endswith('.rs'):
                     continue
+                # Skip `mod.rs` by default to avoid touching files that commonly contain code
+                if name == 'mod.rs' and not include_mods:
+                    continue
                 path = os.path.join(root, name)
                 res = process_file(path, apply, max_items)
                 if res:
                     results.append(res)
     elif os.path.isfile(target) and target.endswith('.rs'):
+        # If a single file path is given and it's a mod.rs, respect include_mods flag
+        if os.path.basename(target) == 'mod.rs' and not include_mods:
+            print(f'Skipping mod.rs (use --include-mods to include): {target}')
+            return results
         res = process_file(target, apply, max_items)
         if res:
             results.append(res)
@@ -165,9 +174,10 @@ def main():
     p.add_argument('--apply', action='store_true', help='write changes')
     p.add_argument('--recursive', action='store_true', help='recurse into subdirs')
     p.add_argument('--max-items', type=int, default=50, help='skip modules with more public items')
+    p.add_argument('--include-mods', action='store_true', help='include `mod.rs` files (disabled by default)')
     args = p.parse_args()
 
-    results = walk_and_process(args.target, args.apply, args.recursive, args.max_items)
+    results = walk_and_process(args.target, args.apply, args.recursive, args.max_items, args.include_mods)
     if not results:
         print('No changes proposed or applied.')
         return

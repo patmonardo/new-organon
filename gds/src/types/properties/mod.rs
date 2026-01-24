@@ -12,8 +12,3 @@ pub mod relationship;
 pub use property::*;
 pub use property_store::*;
 pub use property_values::*;
-
-// Note: avoid glob re-exporting `graph::*`, `node::*`, or `relationship::*` here
-// because those submodules expose internal `impls`/`traits` submodules which
-// can collide when re-exported into the parent namespace. Consumers should
-// use the full module path, e.g. `crate::types::properties::graph::...`.

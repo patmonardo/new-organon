@@ -8,7 +8,7 @@ use std::fmt;
 ///
 /// # Examples
 /// ```
-/// use create::core::utils::miscoptional::Optional;
+/// use crate::core::utils::miscoptional::Optional;
 ///
 /// let some = Optional::of(42);
 /// assert!(some.is_present());

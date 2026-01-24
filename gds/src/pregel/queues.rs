@@ -15,32 +15,6 @@ use crate::pregel::MessageIterator;
 /// This ensures proper BSP semantics where messages sent in iteration N are only
 /// visible in iteration N+1.
 ///
-/// # Memory Layout
-///
-/// ```text
-/// Iteration 0:  Read: []          Write: [msg1, msg2, ...]
-///              ↓ swap
-/// Iteration 1:  Read: [msg1, ...]  Write: [msg3, msg4, ...]
-///              ↓ swap
-/// Iteration 2:  Read: [msg3, ...]  Write: [msg5, msg6, ...]
-/// ```
-///
-/// # Example
-///
-/// ```ignore
-/// use gds::pregel::SyncDoubleQueues;
-///
-/// let mut queues = SyncDoubleQueues::new(node_count);
-///
-/// // Iteration 0: send messages
-/// queues.push(target_node, 42.0);
-///
-/// // Swap queues before next iteration
-/// queues.swap();
-///
-/// // Iteration 1: read messages from previous iteration
-/// let messages = queues.messages(node_id);
-/// ```
 pub struct SyncDoubleQueues {
     /// Current queues for writing messages
     write_queues: HugeObjectArray<Vec<f64>>,
@@ -54,12 +28,7 @@ impl SyncDoubleQueues {
     /// # Arguments
     ///
     /// * `node_count` - Total number of nodes in the graph
-    ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// let queues = SyncDoubleQueues::new(1_000_000);
-    /// ```
+
     pub fn new(node_count: usize) -> Self {
         Self {
             write_queues: HugeObjectArray::new(node_count),
@@ -77,11 +46,7 @@ impl SyncDoubleQueues {
     /// * `node_id` - Target node to receive the message
     /// * `message` - Message value to send
     ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// queues.push(target_node, 42.0);
-    /// ```
+
     pub fn push(&mut self, node_id: usize, message: f64) {
         self.write_queues.get_mut(node_id).push(message);
     }
@@ -95,13 +60,6 @@ impl SyncDoubleQueues {
     /// - The write queues become the new read queues
     /// - The old read queues are cleared and become the new write queues
     ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// // End of iteration
-    /// queues.swap();
-    /// // Start of next iteration - can now read messages
-    /// ```
     pub fn swap(&mut self) {
         // Swap the queues
         std::mem::swap(&mut self.read_queues, &mut self.write_queues);
@@ -124,14 +82,6 @@ impl SyncDoubleQueues {
     ///
     /// A slice containing all messages sent to this node in the previous iteration
     ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// let messages = queues.messages(node_id);
-    /// for &msg in messages {
-    ///     println!("Received: {}", msg);
-    /// }
-    /// ```
     pub fn messages(&self, node_id: usize) -> &[f64] {
         self.read_queues.get(node_id)
     }
@@ -317,38 +267,11 @@ mod tests {
 /// pointers. Messages can be consumed while new messages are being sent, making them
 /// suitable for asynchronous computation models.
 ///
-/// # Memory Layout
-///
-/// ```text
-/// Queue: [msg1, msg2, msg3, msg4, ...]
-///         ↑                    ↑
-///        head                 tail
-///         (read)              (write)
-/// ```
-///
 /// # Compaction
 ///
 /// When a queue's head pointer moves past 25% of its capacity, the queue is
 /// compacted to reclaim space and prevent unbounded growth.
 ///
-/// # Example
-///
-/// ```ignore
-/// use gds::pregel::AsyncDoubleQueues;
-///
-/// let mut queues = AsyncDoubleQueues::new(node_count);
-///
-/// // Send and read messages in the same iteration
-/// queues.push(target_node, 42.0);
-///
-/// while !queues.is_empty(source_node) {
-///     let msg = queues.pop(source_node);
-///     // Process message...
-/// }
-///
-/// // Compact periodically to reclaim space
-/// queues.compact();
-/// ```
 pub struct AsyncDoubleQueues {
     /// Message queues with head/tail tracking
     queues: HugeObjectArray<AsyncQueue>,

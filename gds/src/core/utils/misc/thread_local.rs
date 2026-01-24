@@ -18,7 +18,7 @@ use std::cell::RefCell;
 use std::error::Error as StdError;
 use std::sync::{Arc, Mutex};
 
-use create::core::utils::miscAutoCloseable;
+use crate::core::utils::miscAutoCloseable;
 
 /// Thread-local storage with explicit cleanup capability.
 ///

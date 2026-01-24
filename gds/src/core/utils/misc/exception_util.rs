@@ -9,7 +9,7 @@
 use std::error::Error as StdError;
 use std::fmt;
 
-use create::core::utils::misc{CheckedConsumer, CheckedFunction, CheckedRunnable, CheckedSupplier};
+use crate::core::utils::misc{CheckedConsumer, CheckedFunction, CheckedRunnable, CheckedSupplier};
 
 /// Exception handling utilities matching Java patterns.
 ///
@@ -25,7 +25,7 @@ impl ExceptionUtil {
     ///
     /// # Examples
     /// ```
-    /// use create::core::utils::miscexception_util::ExceptionUtil;
+    /// use crate::core::utils::miscexception_util::ExceptionUtil;
     /// use std::io;
     ///
     /// let inner = io::Error::new(io::ErrorKind::NotFound, "file not found");
@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     fn test_unchecked_conversion() {
-        use create::core::utils::miscchecked_runnable;
+        use crate::core::utils::miscchecked_runnable;
         let runnable = checked_runnable(|| Ok::<(), io::Error>(()));
         let plain = ExceptionUtil::unchecked(runnable);
         plain(); // Should not panic
@@ -331,7 +331,7 @@ mod tests {
 
     #[test]
     fn test_supply() {
-        use create::core::utils::miscchecked_supplier;
+        use crate::core::utils::miscchecked_supplier;
         let supplier = checked_supplier(|| Ok::<i32, io::Error>(42));
         let value = ExceptionUtil::supply(supplier);
         assert_eq!(value, 42);
@@ -339,7 +339,7 @@ mod tests {
 
     #[test]
     fn test_apply() {
-        use create::core::utils::miscchecked_function;
+        use crate::core::utils::miscchecked_function;
         let function = checked_function(|x: i32| Ok::<i32, io::Error>(x * 2));
         let result = ExceptionUtil::apply(function, 21);
         assert_eq!(result, 42);
