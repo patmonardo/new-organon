@@ -7,8 +7,8 @@ use crate::ml::{
         functions::Weights,
         tensor::{Matrix, Scalar, Tensor},
     },
+    models::TrainingMethod,
     models::{BaseModelData, ModelData, RegressorData},
-    TrainingMethod,
 };
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};

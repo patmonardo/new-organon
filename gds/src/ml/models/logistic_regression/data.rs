@@ -1,7 +1,7 @@
 use crate::ml::{
     core::functions::weights::Weights,
+    models::TrainingMethod,
     models::{BaseModelData, ClassifierData},
-    TrainingMethod,
 };
 use std::sync::Arc;
 

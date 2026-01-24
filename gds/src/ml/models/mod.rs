@@ -14,15 +14,11 @@ pub mod random_forest;
 pub mod regression_trainer_factory;
 pub mod training_method;
 
-pub use automl::*;
 pub use base::*;
 pub use classifier_factory::*;
 pub use classifier_trainer_factory::*;
 pub use config::*;
 pub use features::*;
-pub use linear_regression::*;
-pub use logistic_regression::*;
-pub use mlp::*;
 pub use random_forest::*;
 pub use regression_trainer_factory::*;
 pub use training_method::*;
