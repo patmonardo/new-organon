@@ -9,8 +9,8 @@ use crate::ml::models::logistic_regression::{
 };
 use crate::ml::models::mlp::MLPClassifierTrainConfig;
 use crate::ml::models::mlp::{MLPClassifier, MLPClassifierData};
-use crate::ml::models::trees::RandomForestClassifierTrainerConfig;
-use crate::ml::models::trees::{RandomForestClassifier, RandomForestClassifierData};
+use crate::ml::models::random_forest::RandomForestClassifierTrainerConfig;
+use crate::ml::models::random_forest::{RandomForestClassifier, RandomForestClassifierData};
 use crate::ml::models::{Classifier, ClassifierData, TrainingMethod};
 
 /// Factory for creating classifiers from trained model data.

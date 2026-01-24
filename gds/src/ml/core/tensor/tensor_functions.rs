@@ -40,16 +40,6 @@ pub fn average_tensors_with_batches(
     mean_tensors
 }
 
-/// Check if any element in vector matches predicate.
-///
-/// Java: copy of FloatVectorOperations.anyMatch for double[]
-pub fn any_match<F>(vector: &[f64], predicate: F) -> bool
-where
-    F: Fn(f64) -> bool,
-{
-    vector.iter().any(|&v| predicate(v))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -66,12 +56,5 @@ mod tests {
             .downcast_ref::<Scalar>()
             .expect("Expected Scalar");
         assert_eq!(scalar.value(), 2.0);
-    }
-
-    #[test]
-    fn test_any_match() {
-        let data = vec![1.0, 2.0, 3.0];
-        assert!(any_match(&data, |v| v > 2.0));
-        assert!(!any_match(&data, |v| v > 10.0));
     }
 }

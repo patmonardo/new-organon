@@ -4,7 +4,6 @@
 //! This is a literal 1:1 translation following repository translation policy.
 
 use crate::ml::decision_tree::TreeNode;
-use crate::ml::models::trees::DecisionTreePredictor as TreesDecisionTreePredictor;
 
 #[derive(Debug)]
 pub struct DecisionTreePredictor<P> {
@@ -33,12 +32,6 @@ impl<P: Clone> DecisionTreePredictor<P> {
         }
 
         node.prediction().unwrap()
-    }
-}
-
-impl<P: Send + Sync + Clone> TreesDecisionTreePredictor<P> for DecisionTreePredictor<P> {
-    fn predict(&self, features: &[f64]) -> &P {
-        self.predict(features)
     }
 }
 

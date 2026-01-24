@@ -119,6 +119,14 @@ impl NodeClassificationPredict {
 
         NodeClassificationPredictResult::new(Arc::new(predicted_classes), predicted_probabilities)
     }
+
+    /// Progress task (Java: NodeClassificationPredict.progressTask)
+    pub fn progress_task(node_count: u64) -> LeafTask {
+        Tasks::leaf_with_volume(
+            "Node classification predict".to_string(),
+            node_count as usize,
+        )
+    }
 }
 
 /// Memory estimation for node classification prediction
@@ -192,12 +200,4 @@ pub fn estimate_predict_memory_with_derived_batch_size(
             )
         })
         .build()
-}
-
-/// Progress task (Java: NodeClassificationPredict.progressTask)
-pub fn progress_task(node_count: u64) -> LeafTask {
-    Tasks::leaf_with_volume(
-        "Node classification predict".to_string(),
-        node_count as usize,
-    )
 }

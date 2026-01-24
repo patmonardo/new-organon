@@ -3,18 +3,13 @@
 //! 1:1 translation of RandomForestClassifier.java from Java GDS.
 
 use crate::ml::core::tensor::Matrix;
+use crate::ml::decision_tree::DecisionTreePredictor;
 use crate::ml::models::{BaseModelData, Classifier, ClassifierData, Features, TrainingMethod};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::sync::Arc;
 
 use super::config::RandomForestConfig;
-
-/// Trait for decision tree predictors.
-/// 1:1 translation of DecisionTreePredictor<T> interface from Java GDS.
-pub trait DecisionTreePredictor<T>: Send + Sync {
-    fn predict(&self, features: &[f64]) -> &T;
-}
 
 /// Random forest classifier model.
 /// 1:1 translation of RandomForestClassifier.java from Java GDS.
@@ -93,7 +88,7 @@ impl Classifier for RandomForestClassifier {
 /// NOTE: Serialization deferred - trait objects require special handling
 #[derive(Clone)]
 pub struct RandomForestClassifierData {
-    pub decision_trees: Vec<Arc<dyn DecisionTreePredictor<usize>>>,
+    pub decision_trees: Vec<Arc<DecisionTreePredictor<usize>>>,
     pub num_classes: usize,
     pub num_features: usize,
 }

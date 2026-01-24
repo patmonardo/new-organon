@@ -31,7 +31,7 @@ impl Metric for OutOfBagError {
     }
 }
 
-pub const EPSILON: f64 = 1e-8;
+const EPSILON: f64 = 1e-8;
 
 pub trait ClassificationMetric: Metric {
     fn compute(&self, targets: &HugeLongArray, predictions: &HugeLongArray) -> f64;

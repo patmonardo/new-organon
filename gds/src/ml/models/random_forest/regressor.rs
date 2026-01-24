@@ -2,11 +2,11 @@
 //!
 //! 1:1 translation of RandomForestRegressor.java from Java GDS.
 
+use crate::ml::decision_tree::DecisionTreePredictor;
 use crate::ml::models::{BaseModelData, Regressor, RegressorData, TrainingMethod};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-use super::classifier::DecisionTreePredictor;
 use super::config::RandomForestConfig;
 
 /// Random forest regressor model.
@@ -54,7 +54,7 @@ impl Regressor for RandomForestRegressor {
 /// Random Forest Regressor Data.
 /// 1:1 translation of RandomForestRegressorData.java from Java GDS.
 pub struct RandomForestRegressorData {
-    pub decision_trees: Vec<Box<dyn DecisionTreePredictor<f64>>>,
+    pub decision_trees: Vec<Box<DecisionTreePredictor<f64>>>,
     pub num_features: usize,
 }
 

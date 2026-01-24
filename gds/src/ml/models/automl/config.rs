@@ -7,13 +7,13 @@ use crate::ml::gradient_descent::GradientDescentConfig;
 use crate::ml::models::linear_regression::LinearRegressionTrainConfig;
 use crate::ml::models::logistic_regression::LogisticRegressionTrainConfig;
 use crate::ml::models::mlp::MLPClassifierTrainConfig;
-use crate::ml::models::trees::{
+use crate::ml::models::random_forest::{
     RandomForestClassifierTrainerConfig, RandomForestConfig, RandomForestRegressorTrainerConfig,
 };
 use crate::ml::models::{TrainerConfig, TrainingMethod};
 use std::collections::{HashMap, HashSet};
 
-pub const EPSILON: f64 = 1e-8;
+const EPSILON: f64 = 1e-8;
 pub const LOG_SCALE_PARAMETERS: &[&str] =
     &["penalty", "learningRate", "learning_rate", "tolerance"];
 

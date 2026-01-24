@@ -13,8 +13,7 @@ use crate::ml::decision_tree::{
     DecisionTreeTrainerConfig, Entropy, FeatureBagger, GiniIndex, TreeNode,
 };
 use crate::ml::metrics::{ModelSpecificMetricsHandler, OutOfBagError};
-use crate::ml::models::trees::DecisionTreePredictor;
-use crate::ml::models::trees::{
+use crate::ml::models::random_forest::{
     DatasetBootstrapper, RandomForestClassifier, RandomForestClassifierData,
     RandomForestClassifierTrainerConfig,
 };
@@ -279,7 +278,7 @@ impl RandomForestClassifierTrainer {
                     }
                 }
             }
-            decision_trees.push(std::sync::Arc::new(tree) as std::sync::Arc<dyn DecisionTreePredictor<usize>>);
+            decision_trees.push(Arc::new(tree));
 
             let mut progress_tracker = self.progress_tracker.clone();
             progress_tracker.log_message(

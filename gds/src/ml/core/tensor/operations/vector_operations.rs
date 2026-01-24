@@ -97,9 +97,9 @@ pub fn l2_normalize(array: &mut [f64]) {
 }
 
 /// Check if any element in vector matches predicate.
-pub fn any_match<F>(vector: &[f64], predicate: F) -> bool
+pub fn any_match<F>(vector: &[f64], mut predicate: F) -> bool
 where
-    F: Fn(f64) -> bool,
+    F: FnMut(f64) -> bool,
 {
     vector.iter().any(|&v| predicate(v))
 }

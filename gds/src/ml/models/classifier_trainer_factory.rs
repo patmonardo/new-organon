@@ -8,7 +8,7 @@ use crate::ml::models::logistic_regression::{
     LogisticRegressionTrainConfig, LogisticRegressionTrainer,
 };
 use crate::ml::models::mlp::{MLPClassifierTrainConfig, MLPClassifierTrainer};
-use crate::ml::models::trees::{
+use crate::ml::models::random_forest::{
     RandomForestClassifierTrainer, RandomForestClassifierTrainerConfig,
 };
 use crate::ml::models::{base::TrainerConfigTrait, ClassifierTrainer, TrainingMethod};

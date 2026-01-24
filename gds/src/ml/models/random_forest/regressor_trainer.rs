@@ -12,8 +12,7 @@ use crate::ml::decision_tree::{
     DecisionTreeRegressorTrainer, DecisionTreeTrainer, DecisionTreeTrainerConfig, FeatureBagger,
     TreeNode,
 };
-use crate::ml::models::trees::DecisionTreePredictor;
-use crate::ml::models::trees::{
+use crate::ml::models::random_forest::{
     DatasetBootstrapper, RandomForestRegressor, RandomForestRegressorData,
     RandomForestRegressorTrainerConfig,
 };
@@ -122,7 +121,7 @@ impl RandomForestRegressorTrainer {
                     .map(|&x| x as i64)
                     .collect::<Vec<_>>(),
             );
-            decision_trees.push(Box::new(tree) as Box<dyn DecisionTreePredictor<f64>>);
+            decision_trees.push(Box::new(tree));
 
             let mut progress_tracker = self.progress_tracker.clone();
             progress_tracker.log_message(

@@ -77,9 +77,9 @@ impl NodeRegressionPredict {
 
         predicted_targets
     }
-}
 
-/// Progress task for regression prediction
-pub fn progress_task(node_count: u64) -> LeafTask {
-    Tasks::leaf_with_volume("Predict".to_string(), node_count as usize)
+    /// Progress task for regression prediction
+    pub fn progress_task(node_count: u64) -> LeafTask {
+        Tasks::leaf_with_volume("Predict".to_string(), node_count as usize)
+    }
 }

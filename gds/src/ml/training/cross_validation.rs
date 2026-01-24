@@ -15,7 +15,7 @@ use super::statistics::TrainingStatistics;
 
 /// ReadOnlyHugeLongArray - simple wrapper for array of node IDs
 /// This is a simplified version matching Java's ReadOnlyHugeLongArray
-pub type ReadOnlyHugeLongArray = Arc<Vec<i64>>;
+type ReadOnlyHugeLongArray = Arc<Vec<i64>>;
 
 /// Cross validation for model selection
 pub struct CrossValidation<MODEL> {
