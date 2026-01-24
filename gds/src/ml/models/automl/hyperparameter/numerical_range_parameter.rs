@@ -1,8 +1,3 @@
-//! Numerical Range Parameter trait
-//!
-//! Translated from NumericalRangeParameter.java
-//! Base trait for numerical range parameters.
-
 use serde::Serialize;
 use std::collections::HashMap;
 

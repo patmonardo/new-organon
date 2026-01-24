@@ -1,8 +1,3 @@
-//! Concrete Parameter trait
-//!
-//! Translated from ConcreteParameter.java
-//! Base trait for concrete (non-range) parameter values.
-
 use dyn_clone::DynClone;
 
 /// Concrete parameter values as a tagged enum for type-safe handling.

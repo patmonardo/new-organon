@@ -4,15 +4,17 @@
 
 use crate::collections::HugeDoubleArray;
 use crate::ml::core::batch::Batch;
-use crate::ml::core::functions::{
-    constant::Constant, constant_scale::ConstantScale, element_sum::ElementSum,
-    l2_norm_squared::L2NormSquared, mean_square_error::MeanSquareError, weights::Weights,
-};
+use crate::ml::core::functions::constant::Constant;
+use crate::ml::core::functions::constant_scale::ConstantScale;
+use crate::ml::core::functions::element_sum::ElementSum;
+use crate::ml::core::functions::l2_norm_squared::L2NormSquared;
+use crate::ml::core::functions::mean_square_error::MeanSquareError;
+use crate::ml::core::functions::weights::Weights;
 use crate::ml::core::variable::VariableRef;
-use crate::ml::gradient_descent::{batch_feature_matrix, Objective};
-use crate::ml::models::linear_regression::{
-    data::LinearRegressionData, regressor::LinearRegressor,
-};
+use crate::ml::gradient_descent::batch_feature_matrix;
+use crate::ml::gradient_descent::Objective;
+use crate::ml::models::linear_regression::data::LinearRegressionData;
+use crate::ml::models::linear_regression::regressor::LinearRegressor;
 use crate::ml::models::Features;
 use std::sync::Arc;
 

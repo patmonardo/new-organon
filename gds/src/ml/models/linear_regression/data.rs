@@ -2,16 +2,18 @@
 //!
 //! 1:1 translation of `LinearRegressionData.java` from Java GDS.
 
-use crate::ml::{
-    core::{
-        functions::Weights,
-        tensor::{Matrix, Scalar, Tensor},
-    },
-    models::TrainingMethod,
-    models::{BaseModelData, ModelData, RegressorData},
-};
-use anyhow::{anyhow, Result};
-use serde::{Deserialize, Serialize};
+use crate::ml::core::functions::Weights;
+use crate::ml::core::tensor::Matrix;
+use crate::ml::core::tensor::Scalar;
+use crate::ml::core::tensor::Tensor;
+use crate::ml::models::BaseModelData;
+use crate::ml::models::ModelData;
+use crate::ml::models::RegressorData;
+use crate::ml::models::TrainingMethod;
+use anyhow::anyhow;
+use anyhow::Result;
+use serde::Deserialize;
+use serde::Serialize;
 use std::sync::Arc;
 
 /// Stored parameters for a trained linear regression model.

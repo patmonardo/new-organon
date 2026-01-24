@@ -1,8 +1,14 @@
-use super::config::{is_log_scale_parameter, non_numeric_parameter_type, NonNumericParameterType};
-use super::hyperparameter::{
-    ConcreteParameter, DoubleParameter, DoubleRangeParameter, IntegerParameter,
-    IntegerRangeParameter, ListParameter, ListParameterValue, StringParameter,
-};
+use super::config::is_log_scale_parameter;
+use super::config::non_numeric_parameter_type;
+use super::config::NonNumericParameterType;
+use super::hyperparameter::ConcreteParameter;
+use super::hyperparameter::DoubleParameter;
+use super::hyperparameter::DoubleRangeParameter;
+use super::hyperparameter::IntegerParameter;
+use super::hyperparameter::IntegerRangeParameter;
+use super::hyperparameter::ListParameter;
+use super::hyperparameter::ListParameterValue;
+use super::hyperparameter::StringParameter;
 use crate::core::utils::format_with_locale;
 use std::collections::HashMap;
 

@@ -3,13 +3,15 @@ use super::edge_splitter::{
 };
 use crate::concurrency::virtual_threads::RunWithConcurrency;
 use crate::concurrency::Concurrency;
-use crate::core::utils::partition::{DegreeFunction, PartitionUtils};
+use crate::core::utils::partition::DegreeFunction;
+use crate::core::utils::partition::PartitionUtils;
 use crate::projection::factory::RelationshipsBuilder;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::IdMap;
 use crate::types::graph::Graph;
 use std::collections::HashSet;
-use std::sync::{atomic::AtomicUsize, Arc};
+use std::sync::atomic::AtomicUsize;
+use std::sync::Arc;
 
 /// Splits an undirected graph into two relationship sets:
 /// 1. A holdout set represented as a directed graph

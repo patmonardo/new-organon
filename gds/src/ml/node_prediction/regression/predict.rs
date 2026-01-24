@@ -1,13 +1,18 @@
 //! Node regression prediction
 //! 1:1 translation of NodeRegressionPredict.java
 
-use crate::{
-    collections::HugeDoubleArray,
-    concurrency::{parallel_util::parallel_for_each_node, Concurrency, TerminationFlag},
-    core::utils::progress::{LeafTask, ProgressTracker, TaskProgressTracker, Tasks},
-    ml::models::{Features, Regressor},
-};
-use std::sync::{Arc, Mutex};
+use crate::collections::HugeDoubleArray;
+use crate::concurrency::parallel_util::parallel_for_each_node;
+use crate::concurrency::Concurrency;
+use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::LeafTask;
+use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::TaskProgressTracker;
+use crate::core::utils::progress::Tasks;
+use crate::ml::models::Features;
+use crate::ml::models::Regressor;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 /// Performs regression prediction on nodes
 /// 1:1 with NodeRegressionPredict.java

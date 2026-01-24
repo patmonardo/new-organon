@@ -1,5 +1,7 @@
-use crate::ml::models::{TrainerConfig, TrainingMethod};
-use serde::{Deserialize, Serialize};
+use crate::ml::models::TrainerConfig;
+use crate::ml::models::TrainingMethod;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 
 /// Configuration for logistic regression training

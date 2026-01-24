@@ -1,7 +1,12 @@
-use super::{NegativeSampler, NEGATIVE};
-use crate::projection::{factory::RelationshipsBuilder, NodeLabel};
-use crate::types::graph::{id_map::MappedNodeId, Graph};
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use super::NegativeSampler;
+use super::NEGATIVE;
+use crate::projection::factory::RelationshipsBuilder;
+use crate::projection::NodeLabel;
+use crate::types::graph::id_map::MappedNodeId;
+use crate::types::graph::Graph;
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
 use std::collections::HashSet;
 use std::sync::Arc;
 

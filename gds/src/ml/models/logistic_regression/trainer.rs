@@ -1,13 +1,14 @@
-use super::{
-    classifier::LogisticRegressionClassifier, config::LogisticRegressionTrainConfig,
-    data::LogisticRegressionData, objective::LogisticRegressionObjective,
-};
+use super::classifier::LogisticRegressionClassifier;
+use super::config::LogisticRegressionTrainConfig;
+use super::data::LogisticRegressionData;
+use super::objective::LogisticRegressionObjective;
 use crate::collections::HugeIntArray;
-use crate::ml::{
-    core::batch::consecutive_with_batch_size,
-    gradient_descent::{GradientDescentConfig, Training},
-    models::{Classifier, ClassifierTrainer, Features},
-};
+use crate::ml::core::batch::consecutive_with_batch_size;
+use crate::ml::gradient_descent::GradientDescentConfig;
+use crate::ml::gradient_descent::Training;
+use crate::ml::models::Classifier;
+use crate::ml::models::ClassifierTrainer;
+use crate::ml::models::Features;
 use parking_lot::RwLock;
 use std::sync::Arc;
 

@@ -1,22 +1,26 @@
-//! Random Forest Regressor Trainer implementation.
-//!
-//! 1:1 translation of RandomForestRegressorTrainer.java from Java GDS.
-
 use crate::collections::BitSet;
 use crate::collections::HugeDoubleArray;
 use crate::concurrency::Concurrency;
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::progress::tasks::{LogLevel, ProgressTracker, TaskProgressTracker};
-use crate::mem::{Estimate, MemoryEstimation, MemoryEstimations, MemoryRange};
-use crate::ml::decision_tree::{
-    DecisionTreeRegressorTrainer, DecisionTreeTrainer, DecisionTreeTrainerConfig, FeatureBagger,
-    TreeNode,
-};
-use crate::ml::models::random_forest::{
-    DatasetBootstrapper, RandomForestRegressor, RandomForestRegressorData,
-    RandomForestRegressorTrainerConfig,
-};
-use crate::ml::models::{Features, Regressor, RegressorTrainer};
+use crate::core::utils::progress::tasks::LogLevel;
+use crate::core::utils::progress::tasks::ProgressTracker;
+use crate::core::utils::progress::tasks::TaskProgressTracker;
+use crate::mem::Estimate;
+use crate::mem::MemoryEstimation;
+use crate::mem::MemoryEstimations;
+use crate::mem::MemoryRange;
+use crate::ml::decision_tree::DecisionTreeRegressorTrainer;
+use crate::ml::decision_tree::DecisionTreeTrainer;
+use crate::ml::decision_tree::DecisionTreeTrainerConfig;
+use crate::ml::decision_tree::FeatureBagger;
+use crate::ml::decision_tree::TreeNode;
+use crate::ml::models::random_forest::DatasetBootstrapper;
+use crate::ml::models::random_forest::RandomForestRegressor;
+use crate::ml::models::random_forest::RandomForestRegressorData;
+use crate::ml::models::random_forest::RandomForestRegressorTrainerConfig;
+use crate::ml::models::Features;
+use crate::ml::models::Regressor;
+use crate::ml::models::RegressorTrainer;
 use crate::projection::eval::procedure::LogLevel as ProcedureLogLevel;
 use rand::SeedableRng;
 use std::sync::Arc;

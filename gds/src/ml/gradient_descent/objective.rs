@@ -1,9 +1,8 @@
-use crate::ml::core::{
-    batch::Batch,
-    functions::{Constant, Weights},
-    tensor::Matrix,
-    variable::VariableRef,
-};
+use crate::ml::core::batch::Batch;
+use crate::ml::core::functions::Constant;
+use crate::ml::core::functions::Weights;
+use crate::ml::core::tensor::Matrix;
+use crate::ml::core::variable::VariableRef;
 use crate::ml::models::Features;
 use std::sync::Arc;
 

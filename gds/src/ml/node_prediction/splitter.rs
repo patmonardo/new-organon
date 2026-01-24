@@ -1,12 +1,10 @@
-//! Node splitting utilities for train/test splits
-//! 1:1 translation of NodeSplitter.java
-
-use crate::{
-    collections::HugeLongArray,
-    concurrency::Concurrency,
-    core::utils::{paged::HugeMergeSort, progress::ProgressTracker, shuffle::ShuffleUtil},
-    ml::splitting::{FractionSplitter, TrainingExamplesSplit},
-};
+use crate::collections::HugeLongArray;
+use crate::concurrency::Concurrency;
+use crate::core::utils::paged::HugeMergeSort;
+use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::shuffle::ShuffleUtil;
+use crate::ml::splitting::FractionSplitter;
+use crate::ml::splitting::TrainingExamplesSplit;
 use std::sync::Arc;
 
 /// Result of splitting nodes into training and test sets

@@ -2,11 +2,11 @@
 //!
 //! Translation of `LinearRegressionTrainConfig.java` from Java GDS.
 
-use crate::ml::{
-    gradient_descent::GradientDescentConfig,
-    models::{TrainerConfig, TrainingMethod},
-};
-use serde::{Deserialize, Serialize};
+use crate::ml::gradient_descent::GradientDescentConfig;
+use crate::ml::models::TrainerConfig;
+use crate::ml::models::TrainingMethod;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 
 /// Configuration container for linear regression training.

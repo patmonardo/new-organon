@@ -4,12 +4,15 @@
 
 use crate::collections::HugeIntArray;
 use crate::ml::core::batch::from_array;
-use crate::ml::gradient_descent::Training;
 use crate::ml::gradient_descent::GradientDescentConfig;
-use crate::ml::models::{Classifier, ClassifierTrainer, Features};
+use crate::ml::gradient_descent::Training;
+use crate::ml::models::Classifier;
+use crate::ml::models::ClassifierTrainer;
+use crate::ml::models::Features;
 use parking_lot::RwLock;
 use rand::rngs::StdRng;
-use rand::{RngCore, SeedableRng};
+use rand::RngCore;
+use rand::SeedableRng;
 use std::sync::Arc;
 
 use super::{

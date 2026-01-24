@@ -5,7 +5,8 @@
 use crate::ml::models::base::TrainerConfigTrait;
 use crate::ml::models::TrainingMethod;
 use derive_builder::Builder;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Configuration for MLP Classifier training
 ///

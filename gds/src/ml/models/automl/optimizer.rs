@@ -1,7 +1,12 @@
 use super::config::TunableTrainerConfig;
-use super::hyperparameter::{DoubleRangeParameter, IntegerRangeParameter, NumericalRangeParameter};
-use crate::ml::models::{TrainerConfig, TrainingMethod};
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use super::hyperparameter::DoubleRangeParameter;
+use super::hyperparameter::IntegerRangeParameter;
+use super::hyperparameter::NumericalRangeParameter;
+use crate::ml::models::TrainerConfig;
+use crate::ml::models::TrainingMethod;
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
 use std::collections::HashMap;
 
 /// HyperParameterOptimizer defines a strategy for searching through a hyperparameter space

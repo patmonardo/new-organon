@@ -1,5 +1,3 @@
-//! Classifier Factory - 1:1 translation of ClassifierFactory.java from Java GDS
-
 use crate::mem::{Estimate, MemoryEstimation, MemoryEstimations, MemoryRange};
 use crate::ml::decision_tree::DecisionTreeClassifierTrainer;
 use crate::ml::decision_tree::DecisionTreeTrainerConfig;

@@ -1,8 +1,7 @@
-use crate::ml::{
-    core::functions::weights::Weights,
-    models::TrainingMethod,
-    models::{BaseModelData, ClassifierData},
-};
+use crate::ml::core::functions::weights::Weights;
+use crate::ml::models::BaseModelData;
+use crate::ml::models::ClassifierData;
+use crate::ml::models::TrainingMethod;
 use std::sync::Arc;
 
 /// Data structure holding the parameters of a logistic regression model

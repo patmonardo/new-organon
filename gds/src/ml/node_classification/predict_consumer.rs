@@ -1,13 +1,13 @@
-//! Consumer for node classification predictions
-//! 1:1 translation of NodeClassificationPredictConsumer.java
-
-use crate::{
-    collections::{HugeLongArray, HugeObjectArray},
-    core::utils::progress::{ProgressTracker, TaskProgressTracker},
-    ml::core::batch::{Batch, BatchTransformer},
-    ml::models::{Classifier, Features},
-};
-use std::sync::{Arc, Mutex};
+use crate::collections::HugeLongArray;
+use crate::collections::HugeObjectArray;
+use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::TaskProgressTracker;
+use crate::ml::core::batch::Batch;
+use crate::ml::core::batch::BatchTransformer;
+use crate::ml::models::Classifier;
+use crate::ml::models::Features;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 /// Consumer for node classification predictions
 /// 1:1 translation of NodeClassificationPredictConsumer.java

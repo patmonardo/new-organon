@@ -1,7 +1,9 @@
-use super::hyperparameter::{
-    ConcreteParameter, DoubleRangeParameter, IntegerRangeParameter, NumericalRangeParameter,
-};
-use super::parameter_parser::{parse_concrete_parameters, parse_range_parameters};
+use super::hyperparameter::ConcreteParameter;
+use super::hyperparameter::DoubleRangeParameter;
+use super::hyperparameter::IntegerRangeParameter;
+use super::hyperparameter::NumericalRangeParameter;
+use super::parameter_parser::parse_concrete_parameters;
+use super::parameter_parser::parse_range_parameters;
 use crate::ml::decision_tree::ClassifierImpurityCriterionType;
 use crate::ml::gradient_descent::GradientDescentConfig;
 use crate::ml::models::linear_regression::LinearRegressionTrainConfig;

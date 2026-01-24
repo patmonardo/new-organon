@@ -1,5 +1,6 @@
 use crate::collections::HugeDoubleArray;
-use crate::ml::metrics::{Metric, MetricComparator};
+use crate::ml::metrics::Metric;
+use crate::ml::metrics::MetricComparator;
 
 #[derive(Debug, Clone, Copy)]
 pub enum RegressionMetric {

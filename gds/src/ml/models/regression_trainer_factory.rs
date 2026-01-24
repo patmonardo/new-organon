@@ -1,5 +1,3 @@
-//! Regression Trainer Factory - 1:1 translation of RegressionTrainerFactory.java from Java GDS
-
 use crate::concurrency::Concurrency;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::TaskProgressTracker;

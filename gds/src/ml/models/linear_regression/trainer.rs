@@ -3,11 +3,12 @@
 //! Direct translation of `LinearRegressionTrainer.java` from Java GDS.
 
 use crate::collections::HugeDoubleArray;
-use crate::ml::{
-    core::batch::from_array,
-    gradient_descent::{Objective, Training},
-    models::{Features, Regressor, RegressorTrainer},
-};
+use crate::ml::core::batch::from_array;
+use crate::ml::gradient_descent::Objective;
+use crate::ml::gradient_descent::Training;
+use crate::ml::models::Features;
+use crate::ml::models::Regressor;
+use crate::ml::models::RegressorTrainer;
 use parking_lot::RwLock;
 use std::sync::Arc;
 

@@ -1,4 +1,5 @@
-use super::metric::{Metric, MetricComparator};
+use super::metric::Metric;
+use super::metric::MetricComparator;
 use crate::collections::HugeLongArray;
 use crate::collections::LongMultiSet;
 use crate::ml::core::subgraph::LocalIdMap;

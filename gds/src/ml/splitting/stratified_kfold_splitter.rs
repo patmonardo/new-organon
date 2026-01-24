@@ -1,5 +1,7 @@
 use super::training_examples_split::{ReadOnlyHugeLongArray, TrainingExamplesSplit};
-use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
+use rand::prelude::SliceRandom;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
 use std::collections::BTreeSet;
 use std::sync::Arc;
 

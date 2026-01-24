@@ -11,7 +11,9 @@ use crate::ml::core::{
     variable::VariableRef,
     ComputationContext,
 };
-use crate::ml::models::{Classifier, ClassifierData, Features};
+use crate::ml::models::Classifier;
+use crate::ml::models::ClassifierData;
+use crate::ml::models::Features;
 use std::sync::Arc;
 
 /// Logistic Regression classifier implementation

@@ -1,8 +1,3 @@
-//! Features module - 1:1 translation of Features.java and FeaturesFactory.java
-//!
-//! The Features trait is the core interface for accessing feature data.
-//! Moved from NodeId-based API to index-based API to match Java.
-
 use crate::collections::HugeObjectArray;
 use crate::ml::core::features::{
     extract, extract_graph, feature_count, property_extractors, AnyFeatureExtractor,

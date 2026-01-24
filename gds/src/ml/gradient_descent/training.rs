@@ -1,14 +1,14 @@
-use super::{
-    config::GradientDescentConfig,
-    objective::Objective,
-    stopper::{factory, TrainingStopper},
-};
-use crate::ml::core::{
-    batch::{AnyBatch, Batch, BatchQueue},
-    computation_context::ComputationContext,
-    optimizer::{AdamOptimizer, Updater},
-    tensor::Tensor,
-};
+use super::config::GradientDescentConfig;
+use super::objective::Objective;
+use super::stopper::factory;
+use super::stopper::TrainingStopper;
+use crate::ml::core::batch::AnyBatch;
+use crate::ml::core::batch::Batch;
+use crate::ml::core::batch::BatchQueue;
+use crate::ml::core::computation_context::ComputationContext;
+use crate::ml::core::optimizer::AdamOptimizer;
+use crate::ml::core::optimizer::Updater;
+use crate::ml::core::tensor::Tensor;
 use parking_lot::RwLock;
 use std::sync::Arc;
 

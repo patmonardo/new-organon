@@ -1,7 +1,3 @@
-//! NegativeSampler trait definition.
-//!
-//! 1:1 translation of NegativeSampler.java interface from Java GDS.
-
 use crate::projection::factory::RelationshipsBuilder;
 
 /// Constant value for negative samples

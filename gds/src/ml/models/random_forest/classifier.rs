@@ -1,11 +1,12 @@
-//! Random Forest Classifier implementation.
-//!
-//! 1:1 translation of RandomForestClassifier.java from Java GDS.
-
 use crate::ml::core::tensor::Matrix;
 use crate::ml::decision_tree::DecisionTreePredictor;
-use crate::ml::models::{BaseModelData, Classifier, ClassifierData, Features, TrainingMethod};
-use serde::{Deserialize, Serialize};
+use crate::ml::models::BaseModelData;
+use crate::ml::models::Classifier;
+use crate::ml::models::ClassifierData;
+use crate::ml::models::Features;
+use crate::ml::models::TrainingMethod;
+use serde::Deserialize;
+use serde::Serialize;
 use std::fmt;
 use std::sync::Arc;
 

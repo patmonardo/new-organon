@@ -1,4 +1,7 @@
-use crate::ml::metrics::{EvaluationScores, Metric, MetricComparator, ModelCandidateStats};
+use crate::ml::metrics::EvaluationScores;
+use crate::ml::metrics::Metric;
+use crate::ml::metrics::MetricComparator;
+use crate::ml::metrics::ModelCandidateStats;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 

@@ -1,9 +1,3 @@
-//! Training method enumeration for ML models.
-//!
-//! This enum represents the different machine learning training methods
-//! available in the GDS ML system. Each variant corresponds to a specific
-//! algorithm that can be trained on graph data.
-
 use serde::{Deserialize, Serialize};
 use std::fmt;
 

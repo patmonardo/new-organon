@@ -1,15 +1,14 @@
-use crate::ml::{
-    metrics::{
-        Metric, MetricConsumer, ModelCandidateStats, ModelSpecificMetricsHandler, ModelStatsBuilder,
-    },
-    models::TrainerConfig,
-    splitting::StratifiedKFoldSplitter,
-};
+use crate::ml::metrics::Metric;
+use crate::ml::metrics::MetricConsumer;
+use crate::ml::metrics::ModelCandidateStats;
+use crate::ml::metrics::ModelSpecificMetricsHandler;
+use crate::ml::metrics::ModelStatsBuilder;
+use crate::ml::models::TrainerConfig;
+use crate::ml::splitting::StratifiedKFoldSplitter;
 use parking_lot::RwLock;
-use std::{
-    collections::BTreeSet,
-    sync::{Arc, Mutex},
-};
+use std::collections::BTreeSet;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use super::statistics::TrainingStatistics;
 

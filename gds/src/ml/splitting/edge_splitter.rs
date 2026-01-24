@@ -4,7 +4,9 @@ use crate::projection::RelationshipType;
 use crate::types::graph::id_map::IdMap;
 use crate::types::graph::Graph;
 use crate::types::schema::Direction;
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::rngs::StdRng;
+use rand::Rng;
+use rand::SeedableRng;
 use std::sync::Arc;
 
 pub const POSITIVE: f64 = 1.0;

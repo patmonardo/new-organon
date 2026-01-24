@@ -1,6 +1,8 @@
 use crate::ml::decision_tree::ClassifierImpurityCriterionType;
-use crate::ml::models::{TrainerConfig, TrainingMethod};
-use serde::{Deserialize, Serialize};
+use crate::ml::models::TrainerConfig;
+use crate::ml::models::TrainingMethod;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 
 /// Shared configuration for random forest models

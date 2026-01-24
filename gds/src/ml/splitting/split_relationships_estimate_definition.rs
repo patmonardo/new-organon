@@ -1,6 +1,9 @@
 use super::SplitRelationshipsEstimateParameters;
 use crate::core::graph_dimensions::GraphDimensions;
-use crate::mem::{MemoryEstimation, MemoryEstimations, MemoryRange, MemoryTree};
+use crate::mem::MemoryEstimation;
+use crate::mem::MemoryEstimations;
+use crate::mem::MemoryRange;
+use crate::mem::MemoryTree;
 
 /// Java: `SplitRelationshipsEstimateDefinition`.
 #[derive(Debug, Clone)]
@@ -38,8 +41,7 @@ impl MemoryEstimation for SplitRelationshipsEstimateDefinition {
             move |graph_dimensions, _threads| {
                 let total = graph_dimensions.relationship_count() as f64;
                 let positive_rel_count = total * holdout_fraction;
-                let negative_rel_count =
-                    positive_rel_count * negative_sampling_ratio;
+                let negative_rel_count = positive_rel_count * negative_sampling_ratio;
                 let selected_rel_count = (positive_rel_count + negative_rel_count) as usize;
                 let min = selected_rel_count / 2;
                 let max = selected_rel_count;

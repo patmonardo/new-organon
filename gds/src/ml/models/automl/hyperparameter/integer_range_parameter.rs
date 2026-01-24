@@ -1,9 +1,6 @@
-//! Integer Range Parameter
-//!
-//! Translated from IntegerRangeParameter.java
-
 use super::numerical_range_parameter::NumericalRangeParameter;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 
 /// Integer range parameter
@@ -43,4 +40,3 @@ impl NumericalRangeParameter<i32> for IntegerRangeParameter {
         map
     }
 }
-

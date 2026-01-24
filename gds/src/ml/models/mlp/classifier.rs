@@ -15,7 +15,9 @@ use crate::ml::core::{
     variable::VariableRef,
 };
 use crate::ml::gradient_descent::batch_feature_matrix;
-use crate::ml::models::{Classifier, ClassifierData, Features};
+use crate::ml::models::Classifier;
+use crate::ml::models::ClassifierData;
+use crate::ml::models::Features;
 use std::sync::Arc;
 
 /// Multi-Layer Perceptron Classifier

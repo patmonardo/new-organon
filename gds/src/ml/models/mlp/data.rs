@@ -2,12 +2,16 @@
 //!
 //! Translated from `MLPClassifierData.java` from Java GDS.
 
+use crate::ml::core::Matrix;
 use crate::ml::core::Variable;
+use crate::ml::core::Vector;
 use crate::ml::core::Weights;
-use crate::ml::core::{Matrix, Vector};
-use crate::ml::models::{BaseModelData, ClassifierData, TrainingMethod};
+use crate::ml::models::BaseModelData;
+use crate::ml::models::ClassifierData;
+use crate::ml::models::TrainingMethod;
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::Rng;
+use rand::SeedableRng;
 use std::sync::Arc;
 
 /// Data structure for MLP Classifier

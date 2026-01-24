@@ -1,17 +1,22 @@
-//! Node classification prediction
-//! 1:1 translation of NodeClassificationPredict.java
-
-use crate::{
-    collections::{HugeLongArray, HugeObjectArray},
-    concurrency::{Concurrency, TerminationFlag},
-    core::utils::progress::{LeafTask, ProgressTracker, TaskProgressTracker, Tasks},
-    mem::{Estimate, MemoryEstimation, MemoryEstimations, MemoryRange},
-    ml::{
-        core::batch::compute_batch_size,
-        models::{Classifier, ClassifierFactory, Features, TrainingMethod},
-    },
-};
-use std::{fmt, sync::Arc};
+use crate::collections::HugeLongArray;
+use crate::collections::HugeObjectArray;
+use crate::concurrency::Concurrency;
+use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::LeafTask;
+use crate::core::utils::progress::ProgressTracker;
+use crate::core::utils::progress::TaskProgressTracker;
+use crate::core::utils::progress::Tasks;
+use crate::mem::Estimate;
+use crate::mem::MemoryEstimation;
+use crate::mem::MemoryEstimations;
+use crate::mem::MemoryRange;
+use crate::ml::core::batch::compute_batch_size;
+use crate::ml::models::Classifier;
+use crate::ml::models::ClassifierFactory;
+use crate::ml::models::Features;
+use crate::ml::models::TrainingMethod;
+use std::fmt;
+use std::sync::Arc;
 
 /// Result of node classification prediction
 /// 1:1 with NodeClassificationResult in Java

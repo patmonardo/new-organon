@@ -1,9 +1,7 @@
-//! String Parameter
-//!
-//! Translated from StringParameter.java
-
-use super::concrete_parameter::{ConcreteParameter, ConcreteParameterValue};
-use serde::{Deserialize, Serialize};
+use super::concrete_parameter::ConcreteParameter;
+use super::concrete_parameter::ConcreteParameterValue;
+use serde::Deserialize;
+use serde::Serialize;
 
 /// String parameter value
 ///

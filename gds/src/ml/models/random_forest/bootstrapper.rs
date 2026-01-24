@@ -1,7 +1,3 @@
-//! Dataset bootstrapping for random forests.
-//!
-//! 1:1 translation of DatasetBootstrapper.java from Java GDS.
-
 use crate::collections::BitSet;
 use rand::prelude::*;
 use std::sync::Arc;

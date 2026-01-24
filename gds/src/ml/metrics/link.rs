@@ -1,4 +1,6 @@
-use crate::ml::metrics::{Metric, MetricComparator, OutOfBagError};
+use crate::ml::metrics::Metric;
+use crate::ml::metrics::MetricComparator;
+use crate::ml::metrics::OutOfBagError;
 
 #[derive(Debug, Clone, Copy)]
 pub enum LinkMetric {

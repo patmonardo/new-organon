@@ -1,17 +1,17 @@
-use super::{classifier::LogisticRegressionClassifier, data::LogisticRegressionData};
-use crate::ml::{
-    core::{
-        batch::Batch,
-        functions::{
-            constant::Constant, constant_scale::ConstantScale, element_sum::ElementSum,
-            l2_norm_squared::L2NormSquared, reduced_cross_entropy_loss::ReducedCrossEntropyLoss,
-            reduced_focal_loss::ReducedFocalLoss, weights::Weights,
-        },
-        variable::VariableRef,
-    },
-    gradient_descent::{batch_feature_matrix, Objective},
-    models::Features,
-};
+use super::classifier::LogisticRegressionClassifier;
+use super::data::LogisticRegressionData;
+use crate::ml::core::batch::Batch;
+use crate::ml::core::functions::constant::Constant;
+use crate::ml::core::functions::constant_scale::ConstantScale;
+use crate::ml::core::functions::element_sum::ElementSum;
+use crate::ml::core::functions::l2_norm_squared::L2NormSquared;
+use crate::ml::core::functions::reduced_cross_entropy_loss::ReducedCrossEntropyLoss;
+use crate::ml::core::functions::reduced_focal_loss::ReducedFocalLoss;
+use crate::ml::core::functions::weights::Weights;
+use crate::ml::core::variable::VariableRef;
+use crate::ml::gradient_descent::batch_feature_matrix;
+use crate::ml::gradient_descent::Objective;
+use crate::ml::models::Features;
 use parking_lot::RwLock;
 use std::sync::Arc;
 

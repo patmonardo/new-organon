@@ -1,8 +1,11 @@
 use super::config::SplitRelationshipsParameters;
 use super::directed_edge_splitter::DirectedEdgeSplitter;
-use super::edge_splitter::{EdgeSplitter, RelationshipsBuilderFactory, SplitResult};
+use super::edge_splitter::EdgeSplitter;
+use super::edge_splitter::RelationshipsBuilderFactory;
+use super::edge_splitter::SplitResult;
 use super::undirected_edge_splitter::UndirectedEdgeSplitter;
-use crate::ml::sampling::negative::{NegativeSampler, RandomNegativeSampler};
+use crate::ml::sampling::negative::NegativeSampler;
+use crate::ml::sampling::negative::RandomNegativeSampler;
 use crate::projection::factory::RelationshipsBuilder;
 use crate::types::graph::id_map::IdMap;
 use crate::types::graph::Graph;

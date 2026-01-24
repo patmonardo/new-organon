@@ -2,10 +2,8 @@
 //!
 //! Direct translation of `LinearRegressor.java` from Java GDS.
 
-use crate::ml::core::functions::{
-    ewise_add_matrix_scalar::EWiseAddMatrixScalar,
-    matrix_multiply_with_transposed_second_operand::MatrixMultiplyWithTransposedSecondOperand,
-};
+use crate::ml::core::functions::ewise_add_matrix_scalar::EWiseAddMatrixScalar;
+use crate::ml::core::functions::matrix_multiply_with_transposed_second_operand::MatrixMultiplyWithTransposedSecondOperand;
 use crate::ml::core::variable::VariableRef;
 use crate::ml::models::Regressor;
 use crate::ml::models::RegressorData;

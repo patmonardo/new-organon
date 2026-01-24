@@ -1,5 +1,3 @@
-//! Classifier Trainer Factory - 1:1 translation of ClassifierTrainerFactory.java from Java GDS
-
 use crate::concurrency::Concurrency;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, Tasks};

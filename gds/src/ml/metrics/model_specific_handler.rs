@@ -85,7 +85,8 @@ impl ModelSpecificMetricsHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::{Arc, Mutex};
+    use std::sync::Arc;
+    use std::sync::Mutex;
 
     #[test]
     fn test_noop_handler() {

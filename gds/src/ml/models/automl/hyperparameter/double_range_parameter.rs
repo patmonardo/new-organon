@@ -1,9 +1,6 @@
-//! Double Range Parameter
-//!
-//! Translated from DoubleRangeParameter.java
-
 use super::numerical_range_parameter::NumericalRangeParameter;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 
 /// Double range parameter with optional log scale
@@ -28,7 +25,11 @@ impl DoubleRangeParameter {
     ///
     /// Java: `static DoubleRangeParameter of(double min, double max, boolean logScale)`
     pub fn of_with_log_scale(min: f64, max: f64, log_scale: bool) -> Self {
-        Self { min, max, log_scale }
+        Self {
+            min,
+            max,
+            log_scale,
+        }
     }
 
     /// Get log scale flag
@@ -58,4 +59,3 @@ impl NumericalRangeParameter<f64> for DoubleRangeParameter {
         map
     }
 }
-

@@ -1,10 +1,10 @@
-//! Factory method for creating NegativeSampler instances.
-//!
-//! 1:1 translation of NegativeSampler.of() static factory method from Java GDS.
-
-use super::{NegativeSampler, RandomNegativeSampler, UserInputNegativeSampler};
-use crate::projection::{NodeLabel, RelationshipType};
-use crate::types::graph::{Graph, IdMap};
+use super::NegativeSampler;
+use super::RandomNegativeSampler;
+use super::UserInputNegativeSampler;
+use crate::projection::NodeLabel;
+use crate::projection::RelationshipType;
+use crate::types::graph::Graph;
+use crate::types::graph::IdMap;
 use crate::types::graph_store::GraphStore;
 use std::collections::HashSet;
 use std::sync::Arc;

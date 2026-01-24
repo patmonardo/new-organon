@@ -1,11 +1,17 @@
 use crate::collections::long_multiset::LongMultiSet;
 use crate::mem::MemoryEstimation;
-use crate::mem::{MemoryEstimations, MemoryRange};
+use crate::mem::MemoryEstimations;
+use crate::mem::MemoryRange;
 use crate::ml::core::subgraph::LocalIdMap;
 
-use super::classification::{
-    Accuracy, F1Macro, F1Score, F1Weighted, GlobalAccuracy, OutOfBagError, Precision, Recall,
-};
+use super::classification::Accuracy;
+use super::classification::F1Macro;
+use super::classification::F1Score;
+use super::classification::F1Weighted;
+use super::classification::GlobalAccuracy;
+use super::classification::OutOfBagError;
+use super::classification::Precision;
+use super::classification::Recall;
 use super::metric::Metric;
 use std::collections::HashSet;
 

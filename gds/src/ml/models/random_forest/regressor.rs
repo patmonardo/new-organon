@@ -1,10 +1,10 @@
-//! Random Forest Regressor implementation.
-//!
-//! 1:1 translation of RandomForestRegressor.java from Java GDS.
-
 use crate::ml::decision_tree::DecisionTreePredictor;
-use crate::ml::models::{BaseModelData, Regressor, RegressorData, TrainingMethod};
-use serde::{Deserialize, Serialize};
+use crate::ml::models::BaseModelData;
+use crate::ml::models::Regressor;
+use crate::ml::models::RegressorData;
+use crate::ml::models::TrainingMethod;
+use serde::Deserialize;
+use serde::Serialize;
 use std::fmt;
 
 use super::config::RandomForestConfig;

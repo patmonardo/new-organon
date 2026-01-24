@@ -1,23 +1,32 @@
-//! Random Forest Classifier Trainer implementation.
-//!
-//! 1:1 translation of RandomForestClassifierTrainer.java from Java GDS.
-
 use crate::collections::BitSet;
 use crate::collections::HugeIntArray;
-use crate::concurrency::{Concurrency, TerminationFlag};
-use crate::core::utils::progress::tasks::{LogLevel, ProgressTracker, TaskProgressTracker};
-use crate::mem::{Estimate, MemoryEstimation, MemoryEstimations, MemoryRange};
+use crate::concurrency::Concurrency;
+use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::tasks::LogLevel;
+use crate::core::utils::progress::tasks::ProgressTracker;
+use crate::core::utils::progress::tasks::TaskProgressTracker;
+use crate::mem::Estimate;
+use crate::mem::MemoryEstimation;
+use crate::mem::MemoryEstimations;
+use crate::mem::MemoryRange;
+use crate::ml::decision_tree::ClassifierImpurityCriterionType;
+use crate::ml::decision_tree::DecisionTreeClassifierTrainer;
+use crate::ml::decision_tree::DecisionTreeTrainer;
+use crate::ml::decision_tree::DecisionTreeTrainerConfig;
+use crate::ml::decision_tree::Entropy;
+use crate::ml::decision_tree::FeatureBagger;
+use crate::ml::decision_tree::GiniIndex;
 use crate::ml::decision_tree::ImpurityCriterion;
-use crate::ml::decision_tree::{
-    ClassifierImpurityCriterionType, DecisionTreeClassifierTrainer, DecisionTreeTrainer,
-    DecisionTreeTrainerConfig, Entropy, FeatureBagger, GiniIndex, TreeNode,
-};
-use crate::ml::metrics::{ModelSpecificMetricsHandler, OutOfBagError};
-use crate::ml::models::random_forest::{
-    DatasetBootstrapper, RandomForestClassifier, RandomForestClassifierData,
-    RandomForestClassifierTrainerConfig,
-};
-use crate::ml::models::{Classifier, ClassifierTrainer, Features};
+use crate::ml::decision_tree::TreeNode;
+use crate::ml::metrics::ModelSpecificMetricsHandler;
+use crate::ml::metrics::OutOfBagError;
+use crate::ml::models::random_forest::DatasetBootstrapper;
+use crate::ml::models::random_forest::RandomForestClassifier;
+use crate::ml::models::random_forest::RandomForestClassifierData;
+use crate::ml::models::random_forest::RandomForestClassifierTrainerConfig;
+use crate::ml::models::Classifier;
+use crate::ml::models::ClassifierTrainer;
+use crate::ml::models::Features;
 use rand::SeedableRng;
 use std::sync::Arc;
 

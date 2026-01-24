@@ -2,17 +2,21 @@
 //!
 //! Translated from `MLPClassifierObjective.java` from Java GDS.
 
-use super::{classifier::MLPClassifier, data::MLPClassifierData};
+use super::classifier::MLPClassifier;
+use super::data::MLPClassifierData;
 use crate::collections::HugeIntArray;
-use crate::ml::core::{
-    batch::Batch,
-    functions::{
-        Constant, ConstantScale, CrossEntropyLoss, ElementSum, FocalLoss, L2NormSquared, Weights,
-    },
-    tensor::Vector,
-    variable::VariableRef,
-};
-use crate::ml::gradient_descent::{batch_feature_matrix, Objective};
+use crate::ml::core::batch::Batch;
+use crate::ml::core::functions::Constant;
+use crate::ml::core::functions::ConstantScale;
+use crate::ml::core::functions::CrossEntropyLoss;
+use crate::ml::core::functions::ElementSum;
+use crate::ml::core::functions::FocalLoss;
+use crate::ml::core::functions::L2NormSquared;
+use crate::ml::core::functions::Weights;
+use crate::ml::core::tensor::Vector;
+use crate::ml::core::variable::VariableRef;
+use crate::ml::gradient_descent::batch_feature_matrix;
+use crate::ml::gradient_descent::Objective;
 use crate::ml::models::Features;
 use std::sync::Arc;
 

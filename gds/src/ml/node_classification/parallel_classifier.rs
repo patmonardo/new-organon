@@ -1,14 +1,16 @@
-//! Parallel node classifier for batch prediction
-//! 1:1 translation of ParallelNodeClassifier.java
-
-use crate::{
-    collections::{HugeLongArray, HugeObjectArray},
-    concurrency::{virtual_threads::RunWithConcurrency, Concurrency, TerminationFlag},
-    core::utils::progress::TaskProgressTracker,
-    ml::core::batch::{BatchTransformer, IdentityBatchTransformer, RangeBatch},
-    ml::models::{Classifier, Features},
-};
-use std::sync::{Arc, Mutex};
+use crate::collections::HugeLongArray;
+use crate::collections::HugeObjectArray;
+use crate::concurrency::virtual_threads::RunWithConcurrency;
+use crate::concurrency::Concurrency;
+use crate::concurrency::TerminationFlag;
+use crate::core::utils::progress::TaskProgressTracker;
+use crate::ml::core::batch::BatchTransformer;
+use crate::ml::core::batch::IdentityBatchTransformer;
+use crate::ml::core::batch::RangeBatch;
+use crate::ml::models::Classifier;
+use crate::ml::models::Features;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use super::predict_consumer::NodeClassificationPredictConsumer;
 

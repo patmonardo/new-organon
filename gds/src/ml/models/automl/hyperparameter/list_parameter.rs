@@ -1,9 +1,7 @@
-//! List Parameter
-//!
-//! Translated from ListParameter.java
-
-use super::concrete_parameter::{ConcreteParameter, ConcreteParameterValue};
-use serde::{Deserialize, Serialize};
+use super::concrete_parameter::ConcreteParameter;
+use super::concrete_parameter::ConcreteParameterValue;
+use serde::Deserialize;
+use serde::Serialize;
 
 /// List parameter value (for integer or double lists)
 ///
@@ -51,4 +49,3 @@ impl ConcreteParameter for ListParameter {
         }
     }
 }
-
