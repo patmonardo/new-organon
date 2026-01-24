@@ -1,4 +1,4 @@
-use super::computation::{ModularityOptimizationComputationRuntime, ModularityOptimizationInput};
+use super::{ModularityOptimizationComputationRuntime, ModularityOptimizationInput};
 use super::spec::ModularityOptimizationConfig;
 
 #[test]

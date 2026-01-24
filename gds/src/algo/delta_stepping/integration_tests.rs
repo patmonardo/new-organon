@@ -5,7 +5,7 @@
 //! This module contains integration tests for the Delta Stepping algorithm
 //! with the core executor runtime, demonstrating the three-layer architecture.
 
-use super::computation::DeltaSteppingComputationRuntime;
+use super::DeltaSteppingComputationRuntime;
 use super::spec::{DELTA_STEPPINGAlgorithmSpec, DeltaSteppingConfig, DeltaSteppingResult};
 use super::storage::DeltaSteppingStorageRuntime;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};

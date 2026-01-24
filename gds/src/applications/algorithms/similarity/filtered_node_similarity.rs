@@ -1,4 +1,4 @@
-use crate::algo::similarity::{NodeSimilarityMetric, NodeSimilarityResult};
+use crate::algo::similarity::node_similarity::{NodeSimilarityMetric, NodeSimilarityResult};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,

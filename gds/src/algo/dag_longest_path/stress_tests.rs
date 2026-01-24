@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod stress {
-    use crate::algo::dag_longest_path::computation::DagLongestPathComputationRuntime;
+    use crate::algo::dag_longest_path::DagLongestPathComputationRuntime;
     use rand::{rngs::StdRng, Rng, SeedableRng};
 
     // Compute longest path distances serially using DP (topological order by node id)

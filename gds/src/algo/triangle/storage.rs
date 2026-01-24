@@ -1,5 +1,5 @@
-use super::computation::TriangleComputationRuntime;
 use super::spec::{TriangleConfig, TriangleResult};
+use super::TriangleComputationRuntime;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
 use crate::projection::orientation::Orientation;

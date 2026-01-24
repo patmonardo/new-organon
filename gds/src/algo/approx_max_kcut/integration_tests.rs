@@ -1,4 +1,4 @@
-use super::computation::ApproxMaxKCutComputationRuntime;
+use super::ApproxMaxKCutComputationRuntime;
 use super::spec::ApproxMaxKCutConfig;
 
 #[test]

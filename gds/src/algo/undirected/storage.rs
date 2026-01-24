@@ -5,8 +5,8 @@
 //! Builds a graph view for the requested relationship type and invokes the
 //! computation runtime to produce an undirected projection.
 
-use super::computation::ToUndirectedComputationRuntime;
 use super::spec::{ToUndirectedConfig, ToUndirectedResult};
+use super::ToUndirectedComputationRuntime;
 use crate::projection::{Orientation, RelationshipType};
 use crate::types::graph::id_map::MappedNodeId;
 use crate::types::graph_store::{GraphName, GraphStore};

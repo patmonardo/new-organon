@@ -1,6 +1,8 @@
 use crate::algo::common::result::similarity::similarity_stats;
 use crate::algo::similarity::filtered_node_similarity::compute_filtered_node_similarity;
-use crate::algo::similarity::{NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult};
+use crate::algo::similarity::node_similarity::{
+    NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult,
+};
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};

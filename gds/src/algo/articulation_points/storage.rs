@@ -3,7 +3,7 @@
 //! Articulation points are defined on undirected connectivity; this storage layer
 //! always projects an undirected graph view and exposes a neighbor callback.
 
-use crate::algo::articulation_points::computation::{
+use crate::algo::articulation_points::{
     ArticulationPointsComputationResult, ArticulationPointsComputationRuntime, StackEvent,
 };
 use crate::core::utils::progress::ProgressTracker;

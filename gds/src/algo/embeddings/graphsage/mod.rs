@@ -1,49 +1,58 @@
-//! GraphSAGE embeddings (Java: `org.neo4j.gds.embeddings.graphsage`).
-//!
-//! This module is a close translation of the Java Graph Data Science implementation.
-//! The design follows the same "support layer" + "algorithm layer" split:
-//! - Sampling (`BatchSampler`)
-//! - Feature initialization (`GraphSageHelper`)
-//! - Embeddings generation (`GraphSageEmbeddingsGenerator`)
-//! - Training (`GraphSageModelTrainer`, `GraphSageLoss`)
-
-pub mod types;
 
 pub mod activation_function;
 pub mod activation_function_factory;
 pub mod activation_function_wrapper;
-pub mod relu_wrapper;
-pub mod sigmoid_wrapper;
-
 pub mod aggregator;
 pub mod aggregator_memory_estimator;
+pub mod algo;
 pub mod batch_sampler;
 pub mod feature_function;
 pub mod graphsage_embeddings_generator;
 pub mod graphsage_helper;
 pub mod graphsage_loss;
 pub mod graphsage_model_trainer;
-
 pub mod layer;
 pub mod layer_config;
 pub mod layer_factory;
-
+pub mod max_pool_aggregating_layer;
+pub mod max_pooling_aggregator;
 pub mod mean_aggregating_layer;
 pub mod mean_aggregator;
 pub mod mean_aggregator_memory_estimator;
-
-pub mod max_pool_aggregating_layer;
-pub mod max_pooling_aggregator;
-pub mod pool_aggregator_memory_estimator;
-
-pub mod algo;
-
 pub mod model_data;
 pub mod multi_label_feature_function;
+pub mod pool_aggregator_memory_estimator;
+pub mod relu_wrapper;
+pub mod sigmoid_wrapper;
 pub mod single_label_feature_function;
 pub mod train_config_transformer;
+pub mod types;
 
-// Re-export the main surface
-pub use graphsage_embeddings_generator::GraphSageEmbeddingsGenerator;
-pub use graphsage_model_trainer::GraphSageModelTrainer;
+pub use activation_function::*;
+pub use activation_function_factory::*;
+pub use activation_function_wrapper::*;
+pub use aggregator::*;
+pub use aggregator_memory_estimator::*;
+pub use algo::*;
+pub use batch_sampler::*;
+pub use feature_function::*;
+pub use graphsage_embeddings_generator::*;
+pub use graphsage_helper::*;
+pub use graphsage_loss::*;
+pub use graphsage_model_trainer::*;
+pub use layer::*;
+pub use layer_factory::*;
+pub use max_pool_aggregating_layer::*;
+pub use max_pooling_aggregator::*;
+pub use mean_aggregating_layer::*;
+pub use mean_aggregator::*;
+pub use mean_aggregator_memory_estimator::*;
+pub use model_data::*;
+pub use multi_label_feature_function::*;
+pub use pool_aggregator_memory_estimator::*;
+pub use relu_wrapper::*;
+pub use sigmoid_wrapper::*;
+pub use single_label_feature_function::*;
+pub use train_config_transformer::*;
 pub use types::*;
+

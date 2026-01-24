@@ -4,7 +4,7 @@
 //! feature vectors from the configured node property, wires progress, enforces
 //! termination, and delegates pure computation to `KMeansComputationRuntime`.
 
-use super::computation::KMeansComputationRuntime;
+use super::KMeansComputationRuntime;
 use super::spec::{KMeansConfig, KMeansResult};
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;

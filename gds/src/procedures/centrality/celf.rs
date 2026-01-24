@@ -2,7 +2,7 @@
 //!
 //! Live wiring for Cost-Effective Lazy Forward influence maximization.
 
-use crate::algo::celf::computation::CELFComputationRuntime;
+use crate::algo::celf::CELFComputationRuntime;
 use crate::algo::celf::spec::CELFConfig;
 use crate::algo::celf::storage::CELFStorageRuntime;
 use crate::collections::backends::vec::VecDouble;

@@ -5,7 +5,7 @@
 //! This module contains integration tests for the Bellman-Ford algorithm
 //! with the core executor runtime, demonstrating the three-layer architecture.
 
-use super::computation::BellmanFordComputationRuntime;
+use super::BellmanFordComputationRuntime;
 use super::spec::{BELLMAN_FORDAlgorithmSpec, BellmanFordConfig, BellmanFordResult};
 use super::storage::BellmanFordStorageRuntime;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};

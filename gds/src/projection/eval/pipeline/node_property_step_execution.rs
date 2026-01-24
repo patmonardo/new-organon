@@ -3,11 +3,11 @@
 //! Extracted from `node_property_step.rs` to keep `NodePropertyStep` thin
 //! and aligned with the Java implementation (config assembly + delegation).
 
-use crate::algo::degree_centrality::DegreeCentralityAlgorithmSpec;
+use crate::algo::degree_centrality::DEGREE_CENTRALITYAlgorithmSpec as DegreeCentralityAlgorithmSpec;
 use crate::algo::embeddings::fastrp::FastRPAlgorithmSpec;
-use crate::algo::harmonic::HarmonicAlgorithmSpec;
+use crate::algo::harmonic::HARMONICAlgorithmSpec as HarmonicAlgorithmSpec;
 use crate::algo::hits::HITSAlgorithmSpec;
-use crate::algo::pagerank::PageRankAlgorithmSpec;
+use crate::algo::pagerank::PAGERANKAlgorithmSpec as PageRankAlgorithmSpec;
 use crate::collections::backends::vec::VecDouble;
 use crate::projection::eval::pipeline::node_property_step::{
     NodePropertyStepError, MUTATE_PROPERTY_KEY,

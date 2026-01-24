@@ -9,7 +9,7 @@
 //! - Centrality formula: `componentSize / farness`
 //! - Optional Wasserman–Faust normalization
 
-use crate::algo::closeness::computation::ClosenessCentralityComputationRuntime;
+use crate::algo::closeness::ClosenessCentralityComputationRuntime;
 use crate::algo::closeness::ClosenessCentralityStorageRuntime;
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::{Concurrency, TerminationFlag};

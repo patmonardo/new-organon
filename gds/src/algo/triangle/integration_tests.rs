@@ -1,4 +1,4 @@
-use super::computation::TriangleComputationRuntime;
+use super::TriangleComputationRuntime;
 
 #[test]
 fn triangle_empty() {

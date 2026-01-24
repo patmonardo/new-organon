@@ -6,9 +6,9 @@
 //! handling persistent data access and the main algorithm orchestration.
 //! This is the core of the Algorithmic Virtual Machine.
 
-use super::computation::DijkstraComputationRuntime;
 use super::spec::{DijkstraPathResult, DijkstraResult};
 use super::targets::Targets;
+use super::DijkstraComputationRuntime;
 use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
@@ -323,8 +323,8 @@ impl DijkstraStorageRuntime {
 
 #[cfg(test)]
 mod tests {
-    use super::super::computation::DijkstraComputationRuntime;
     use super::super::targets::{AllTargets, ManyTargets, SingleTarget};
+    use super::super::DijkstraComputationRuntime;
     use super::*;
     use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 

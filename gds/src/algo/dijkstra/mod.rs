@@ -1,12 +1,3 @@
-//! Dijkstra Algorithm Module
-//!
-//! **Translation Source**: `org.neo4j.gds.paths.dijkstra.Dijkstra`
-//!
-//! This module implements the Dijkstra algorithm as a configurable Algorithmic Virtual Machine
-//! with polymorphic target system, traversal state management, and stream-based result handling.
-//! The algorithm supports single-target, many-targets, and all-targets modes with composable
-//! relationship filters and heuristic functions.
-
 pub mod computation;
 #[cfg(test)]
 pub mod integration_tests;
@@ -16,10 +7,9 @@ pub mod storage;
 pub mod targets;
 pub mod traversal_state;
 
-// Re-export main types for easy access
-pub use computation::DijkstraComputationRuntime;
-pub use path_finding_result::PathFindingResult;
-pub use spec::{DIJKSTRAAlgorithmSpec, DijkstraConfig, DijkstraResult};
-pub use storage::DijkstraStorageRuntime;
-pub use targets::{AllTargets, ManyTargets, SingleTarget, Targets};
-pub use traversal_state::TraversalState;
+pub use computation::*;
+pub use path_finding_result::*;
+pub use spec::*;
+pub use storage::*;
+pub use targets::*;
+pub use traversal_state::*;

@@ -40,7 +40,7 @@ use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use serde::{Deserialize, Serialize};
 
-use super::computation::Node2VecComputationRuntime;
+use super::Node2VecComputationRuntime;
 use super::storage::Node2VecStorageRuntime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

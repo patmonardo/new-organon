@@ -4,7 +4,7 @@ use rayon::prelude::*;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::computation::{NodeSimilarityComputationResult, NodeSimilarityComputationRuntime};
+use super::{NodeSimilarityComputationResult, NodeSimilarityComputationRuntime};
 
 pub struct NodeSimilarityStorageRuntime {
     concurrency: usize,

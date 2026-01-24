@@ -5,7 +5,7 @@
 //! This module implements the "Gross pole" for spanning tree algorithms,
 //! handling persistent data access and orchestrating the Prim's algorithm execution.
 
-use super::computation::{SpanningTree, SpanningTreeComputationRuntime};
+use super::{SpanningTree, SpanningTreeComputationRuntime};
 use crate::core::utils::progress::ProgressTracker;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::Graph;

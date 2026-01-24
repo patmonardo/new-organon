@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::time::{Duration, Instant};
 
-use super::computation::LabelPropComputationRuntime;
+use super::LabelPropComputationRuntime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LabelPropConfig {

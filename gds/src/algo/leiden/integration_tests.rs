@@ -1,4 +1,4 @@
-use super::computation::{AdjacencyGraph, LeidenComputationRuntime};
+use super::{AdjacencyGraph, LeidenComputationRuntime};
 use super::spec::LeidenConfig;
 use crate::concurrency::TerminationFlag;
 

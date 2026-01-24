@@ -9,8 +9,8 @@ use crate::types::prelude::GraphStore;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::computation::LouvainComputationRuntime;
 use super::spec::LouvainResult;
+use super::LouvainComputationRuntime;
 
 #[derive(Clone)]
 pub struct LouvainStorageRuntime {

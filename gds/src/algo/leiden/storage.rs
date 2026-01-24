@@ -5,7 +5,7 @@
 //! - build adjacency lists (weight fallback 1.0) with progress/termination
 //! - call the pure computation runtime
 
-use super::computation::{AdjacencyGraph, LeidenComputationRuntime};
+use super::{AdjacencyGraph, LeidenComputationRuntime};
 use super::spec::{LeidenConfig, LeidenResult};
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;

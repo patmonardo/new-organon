@@ -2,7 +2,7 @@
 //!
 //! Live wiring for bridge edge detection in undirected graphs.
 
-use crate::algo::bridges::computation::{Bridge, BridgesComputationRuntime};
+use crate::algo::bridges::{Bridge, BridgesComputationRuntime};
 use crate::algo::bridges::storage::BridgesStorageRuntime;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::ProgressTracker;

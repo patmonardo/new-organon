@@ -3,7 +3,7 @@
 //! This module contains integration tests that verify the spanning tree algorithm
 //! works correctly with the ProcedureExecutor runtime.
 
-use super::computation::SpanningTreeComputationRuntime;
+use super::SpanningTreeComputationRuntime;
 use super::spec::{SPANNING_TREEAlgorithmSpec, SpanningTreeResult};
 use super::storage::SpanningTreeStorageRuntime;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
@@ -156,7 +156,7 @@ fn test_spanning_tree_storage_computation_integration() {
 
 #[test]
 fn test_spanning_tree_result_serialization() {
-    let spanning_tree = super::computation::SpanningTree::new(
+    let spanning_tree = super::SpanningTree::new(
         0,                        // head
         4,                        // node_count
         4,                        // effective_node_count

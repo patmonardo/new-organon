@@ -6,7 +6,7 @@
 //! handling persistent data access and the main algorithm orchestration.
 //! Delta Stepping uses a sophisticated binning strategy for efficient frontier management.
 
-use super::computation::DeltaSteppingComputationRuntime;
+use super::DeltaSteppingComputationRuntime;
 use super::spec::{DeltaSteppingPathResult, DeltaSteppingResult};
 use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::AlgorithmError;

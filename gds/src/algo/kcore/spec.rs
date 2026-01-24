@@ -7,7 +7,7 @@ use crate::projection::eval::procedure::*;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 
-use super::computation::KCoreComputationRuntime;
+use super::KCoreComputationRuntime;
 use super::storage::KCoreStorageRuntime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

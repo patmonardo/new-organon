@@ -1,10 +1,9 @@
 pub mod computation;
+#[cfg(test)]
+pub mod integration_tests;
 pub mod spec;
 pub mod storage;
 
-#[cfg(test)]
-mod integration_tests;
-
-pub use computation::SteinerTreeComputationRuntime;
-pub use spec::{SteinerTreeConfig, SteinerTreeResult, PRUNED, ROOT_NODE};
-pub use storage::SteinerTreeStorageRuntime;
+pub use computation::*;
+pub use spec::*;
+pub use storage::*;

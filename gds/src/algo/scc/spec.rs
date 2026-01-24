@@ -7,7 +7,7 @@ use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::AlgorithmError;
 use serde::{Deserialize, Serialize};
 
-use super::computation::SccComputationRuntime;
+use super::SccComputationRuntime;
 use super::storage::SccStorageRuntime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

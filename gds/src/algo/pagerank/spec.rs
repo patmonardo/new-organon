@@ -14,7 +14,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use super::computation::PageRankComputationRuntime;
+use super::PageRankComputationRuntime;
 use super::storage::PageRankStorageRuntime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

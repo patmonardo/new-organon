@@ -4,7 +4,7 @@
 //!
 //! This module defines the BFS algorithm specification, configuration, and result types.
 
-use super::computation::BfsComputationRuntime;
+use super::BfsComputationRuntime;
 use super::storage::BfsStorageRuntime;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;

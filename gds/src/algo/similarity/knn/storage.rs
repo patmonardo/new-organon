@@ -1,4 +1,4 @@
-use super::computation::{
+use super::{
     KnnComputationResult, KnnComputationRuntime, KnnNnDescentConfig, KnnNnDescentStats,
 };
 use super::metrics::{KnnNodePropertySpec, SimilarityComputer, SimilarityMetric};

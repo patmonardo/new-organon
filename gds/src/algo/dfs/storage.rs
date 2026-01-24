@@ -5,7 +5,7 @@
 //! This module implements the "Gross pole" for DFS algorithm - persistent data access
 //! and algorithm orchestration.
 
-use super::computation::DfsComputationRuntime;
+use super::DfsComputationRuntime;
 use super::spec::DfsResult;
 use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::AlgorithmError;

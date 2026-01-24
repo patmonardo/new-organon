@@ -3,7 +3,7 @@
 //! Generates random walks from nodes in the graph using biased sampling.
 //! Supports node2vec-style exploration with configurable return and in-out factors.
 
-use crate::algo::random_walk::computation::RandomWalkComputationRuntime;
+use crate::algo::random_walk::RandomWalkComputationRuntime;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::{PathResult, Result};

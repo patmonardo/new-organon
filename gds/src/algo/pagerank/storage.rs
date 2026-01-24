@@ -2,7 +2,7 @@
 //!
 //! Storage owns graph access and orchestration; computation remains pure state.
 
-use crate::algo::pagerank::computation::{PageRankComputationRuntime, PageRankRunResult};
+use crate::algo::pagerank::{PageRankComputationRuntime, PageRankRunResult};
 use crate::core::utils::progress::ProgressTracker;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::{Orientation, RelationshipType};

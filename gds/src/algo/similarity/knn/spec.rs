@@ -1,4 +1,4 @@
-use super::computation::{KnnComputationResult, KnnComputationRuntime};
+use super::{KnnComputationResult, KnnComputationRuntime};
 use super::metrics::{KnnNodePropertySpec, SimilarityMetric};
 use super::storage::KnnSamplerType;
 use super::storage::KnnStorageRuntime;

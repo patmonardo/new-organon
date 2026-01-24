@@ -101,7 +101,7 @@ impl SpanningTreeConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SpanningTreeResult {
     /// The computed spanning tree
-    pub spanning_tree: super::computation::SpanningTree,
+    pub spanning_tree: super::SpanningTree,
 
     /// Computation time in milliseconds
     pub computation_time_ms: u64,
@@ -127,7 +127,7 @@ impl SpanningTreeResult {
     /// # Returns
     ///
     /// A new `SpanningTreeResult` instance.
-    pub fn new(spanning_tree: super::computation::SpanningTree, computation_time_ms: u64) -> Self {
+    pub fn new(spanning_tree: super::SpanningTree, computation_time_ms: u64) -> Self {
         Self {
             total_weight: spanning_tree.total_weight(),
             effective_node_count: spanning_tree.effective_node_count(),
@@ -142,7 +142,7 @@ impl SpanningTreeResult {
     /// # Returns
     ///
     /// A reference to the spanning tree.
-    pub fn spanning_tree(&self) -> &super::computation::SpanningTree {
+    pub fn spanning_tree(&self) -> &super::SpanningTree {
         &self.spanning_tree
     }
 

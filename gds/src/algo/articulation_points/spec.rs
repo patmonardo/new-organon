@@ -7,7 +7,7 @@ use crate::projection::eval::procedure::*;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use super::computation::ArticulationPointsComputationRuntime;
+use super::ArticulationPointsComputationRuntime;
 use super::storage::ArticulationPointsStorageRuntime;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

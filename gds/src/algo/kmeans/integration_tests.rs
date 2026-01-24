@@ -1,4 +1,4 @@
-use super::computation::KMeansComputationRuntime;
+use super::KMeansComputationRuntime;
 use super::spec::{KMeansConfig, KMeansSamplerType};
 
 #[test]

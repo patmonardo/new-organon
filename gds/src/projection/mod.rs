@@ -61,7 +61,7 @@ pub mod codegen;
 // pub use codegen::descriptors::property;  // Moved to Reality
 
 // That's it! Everything else stays under codegen::, factory::, or eval::.
-// If you need ComputationDescriptor, use: crate::projection::codegen::descriptors::computation::ComputationDescriptor
+// If you need ComputationDescriptor, use: crate::projection::codegen::descriptors::ComputationDescriptor
 // If you need StorageDescriptor, use: crate::projection::codegen::descriptors::storage::StorageDescriptor
 // If you need form_processor, use: crate::projection::eval::form_processor
 // If you need ArrowNativeFactory, use: crate::projection::factory::arrow::ArrowNativeFactory

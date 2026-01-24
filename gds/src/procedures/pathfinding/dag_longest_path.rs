@@ -3,7 +3,7 @@
 //! Finds longest paths in a directed acyclic graph using topological ordering
 //! and dynamic programming.
 
-use crate::algo::dag_longest_path::computation::DagLongestPathComputationRuntime;
+use crate::algo::dag_longest_path::DagLongestPathComputationRuntime;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::{PathResult, Result};

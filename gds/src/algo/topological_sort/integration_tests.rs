@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::algo::topological_sort::computation::TopologicalSortComputationRuntime;
+    use crate::algo::topological_sort::TopologicalSortComputationRuntime;
     use crate::types::graph::id_map::NodeId;
 
     #[test]

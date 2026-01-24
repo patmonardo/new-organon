@@ -1,4 +1,5 @@
-use super::similarity_metric::{Cosine, Jaccard, Overlap, SimilarityMetric};
+#[cfg(test)]
+use super::{Cosine, Jaccard, Overlap, SimilarityMetric};
 
 #[test]
 fn test_jaccard_similarity() {

@@ -6,7 +6,7 @@
 //! - Precompute sanctioned mask and total transfers (degree or weighted degree).
 //! - Wire Pregel executor with reducer/sender tracking.
 
-use super::computation::{IndirectExposureComputationRuntime, IndirectExposurePregelRuntimeConfig};
+use super::{IndirectExposureComputationRuntime, IndirectExposurePregelRuntimeConfig};
 use super::spec::{IndirectExposureConfig, IndirectExposureResult};
 use crate::pregel::{Pregel, PregelResult, ReducingMessenger};
 use crate::projection::{Orientation, RelationshipType};

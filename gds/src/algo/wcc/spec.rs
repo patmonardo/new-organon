@@ -1,6 +1,6 @@
 //! WCC Algorithm Specification (executor integration)
 
-use super::computation::WccComputationRuntime;
+use super::WccComputationRuntime;
 use super::storage::WccStorageRuntime;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::TaskProgressTracker;

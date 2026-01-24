@@ -129,7 +129,23 @@ impl ProgressTracker for TaskProgressTracker {
             inner.base_task.clone()
         };
 
-        next_task.start();
+        // Only start the task if it has not already been started. In some edge
+        // cases (e.g., when there are no pending subtasks for a running task) we
+        // may end up re-selecting the base task which can already be in the
+        // Running state; calling `start()` on a running task panics, so guard
+        // against that.
+        if next_task.status() == Status::Pending {
+            next_task.start();
+        } else {
+            inner
+                .task_progress_logger
+                .log_warning(&format!(
+                    ":: Attempted to start task '{}' but it is already {:?}",
+                    next_task.description(),
+                    next_task.status()
+                ));
+        }
+
         inner
             .task_progress_logger
             .log_begin_subtask(&next_task, parent_task.as_ref());

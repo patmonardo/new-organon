@@ -20,7 +20,7 @@ use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use super::computation::HarmonicComputationRuntime;
+use super::HarmonicComputationRuntime;
 use super::storage::HarmonicStorageRuntime;
 
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]

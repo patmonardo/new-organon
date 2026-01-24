@@ -1,4 +1,4 @@
-use super::computation::GATComputationRuntime;
+use super::GATComputationRuntime;
 use super::config::GATConfig;
 use super::types::GATResult;
 use crate::types::graph::Graph;

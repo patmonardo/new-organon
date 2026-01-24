@@ -5,7 +5,7 @@
 //! This module implements the "Gross pole" of the Bellman-Ford algorithm,
 //! handling persistent data access and the main algorithm execution.
 
-use super::computation::BellmanFordComputationRuntime;
+use super::BellmanFordComputationRuntime;
 use super::spec::{BellmanFordResult, PathResult};
 use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::projection::eval::procedure::AlgorithmError;

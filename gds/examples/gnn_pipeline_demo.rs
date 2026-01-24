@@ -16,7 +16,8 @@ Run: cargo run -p gds --example gnn_pipeline_demo --features ml"
 
 #[cfg(feature = "ml")]
 mod enabled {
-    use gds::algo::embeddings::{hashgnn::GenerateFeaturesConfig, HashGNNEmbeddings};
+    use gds::algo::embeddings::hashgnn::GenerateFeaturesConfig;
+    use gds::procedures::embeddings::HashGNNEmbeddings;
     use gds::types::graph_store::{DefaultGraphStore, GraphStore};
     use gds::types::random::{RandomGraphConfig, RandomRelationshipConfig};
     use gds::GraphFacade;

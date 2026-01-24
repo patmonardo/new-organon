@@ -13,8 +13,8 @@ use crate::projection::Orientation;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use super::computation::ClosenessCentralityComputationRuntime;
 use super::storage::ClosenessCentralityStorageRuntime;
+use super::ClosenessCentralityComputationRuntime;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ClosenessCentralityConfig {

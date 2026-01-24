@@ -1,4 +1,4 @@
-use super::computation::ModularityComputationRuntime;
+use super::ModularityComputationRuntime;
 
 #[test]
 fn modularity_empty_is_zero() {

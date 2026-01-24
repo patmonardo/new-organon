@@ -12,7 +12,7 @@ use crate::types::prelude::GraphStore;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::computation::{Bridge, BridgesComputationResult, BridgesComputationRuntime};
+use super::{Bridge, BridgesComputationResult, BridgesComputationRuntime};
 
 pub struct BridgesStorageRuntime<'a, G: GraphStore> {
     graph_store: &'a G,

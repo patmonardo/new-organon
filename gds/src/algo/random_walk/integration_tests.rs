@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::algo::random_walk::computation::RandomWalkComputationRuntime;
+    use crate::algo::random_walk::RandomWalkComputationRuntime;
 
     #[test]
     fn test_simple_walk() {

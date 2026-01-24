@@ -4,7 +4,7 @@
 //! adjacency once, tracks progress, and hands neighbors to the computation
 //! runtime.
 
-use super::computation::ApproxMaxKCutComputationRuntime;
+use super::ApproxMaxKCutComputationRuntime;
 use super::spec::{ApproxMaxKCutConfig, ApproxMaxKCutResult};
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;

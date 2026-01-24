@@ -1,4 +1,4 @@
-use super::computation::{FilteredKnnComputationResult, FilteredKnnComputationRuntime};
+use super::{FilteredKnnComputationResult, FilteredKnnComputationRuntime};
 use super::storage::FilteredKnnStorageRuntime;
 use crate::algo::similarity::knn::metrics::{KnnNodePropertySpec, SimilarityMetric};
 use crate::algo::similarity::knn::storage::KnnSamplerType;

@@ -6,12 +6,12 @@
 //! with the core executor runtime, demonstrating the Algorithmic Virtual Machine
 //! architecture with polymorphic target system and stream-based results.
 
-use super::computation::DijkstraComputationRuntime;
 use super::path_finding_result::PathFindingResult;
 use super::spec::{DIJKSTRAAlgorithmSpec, DijkstraConfig, DijkstraResult};
 use super::storage::DijkstraStorageRuntime;
 use super::targets::{create_targets, AllTargets, ManyTargets, SingleTarget, Targets};
 use super::traversal_state::TraversalState;
+use super::DijkstraComputationRuntime;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::projection::eval::procedure::{
     AlgorithmSpec, ExecutionContext, ExecutionMode, ProcedureExecutor,
@@ -205,9 +205,7 @@ fn test_dijkstra_storage_computation_integration() {
     let mut storage = DijkstraStorageRuntime::new(0, false, 4, false);
     let mut computation = DijkstraComputationRuntime::new(0, false, 4, false);
     let targets = Box::new(SingleTarget::new(3));
-    let mut progress_tracker = TaskProgressTracker::new(
-        Tasks::leaf("dijkstra".to_string()),
-    );
+    let mut progress_tracker = TaskProgressTracker::new(Tasks::leaf("dijkstra".to_string()));
 
     // Test integration between storage and computation
     let result =

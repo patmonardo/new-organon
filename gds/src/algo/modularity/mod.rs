@@ -1,15 +1,11 @@
-//! Modularity quality metric.
-//!
-//! This module computes modularity scores for an existing community assignment.
-//! It does **not** find communities; see Louvain/Leiden for modularity optimization.
 
 pub mod computation;
+#[cfg(test)]
+pub mod integration_tests;
 pub mod spec;
 pub mod storage;
 
-#[cfg(test)]
-mod integration_tests;
+pub use computation::*;
+pub use spec::*;
+pub use storage::*;
 
-pub use computation::ModularityComputationRuntime;
-pub use spec::{CommunityModularity, ModularityResult};
-pub use storage::ModularityStorageRuntime;

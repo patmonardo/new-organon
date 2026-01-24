@@ -9,7 +9,7 @@ use crate::types::prelude::GraphStore;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::computation::ModularityComputationRuntime;
+use super::ModularityComputationRuntime;
 use super::spec::ModularityResult;
 
 #[derive(Clone)]

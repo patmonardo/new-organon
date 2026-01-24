@@ -1,6 +1,6 @@
-use crate::algo::similarity::knn::computation::KnnComputationRuntime;
-use crate::algo::similarity::knn::computation::KnnNnDescentConfig;
-use crate::algo::similarity::knn::computation::KnnNnDescentStats;
+use crate::algo::similarity::knn::KnnComputationRuntime;
+use crate::algo::similarity::knn::KnnNnDescentConfig;
+use crate::algo::similarity::knn::KnnNnDescentStats;
 use crate::algo::similarity::knn::metrics::SimilarityComputer;
 use std::sync::Arc;
 

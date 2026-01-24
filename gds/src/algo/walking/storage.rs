@@ -5,7 +5,7 @@
 //! Responsible for constructing per-relationship-type graph views and invoking
 //! the computation runtime.
 
-use super::computation::CollapsePathComputationRuntime;
+use super::CollapsePathComputationRuntime;
 use super::spec::{CollapsePathConfig, CollapsePathResult};
 use crate::projection::{Orientation, RelationshipType};
 use crate::types::graph::id_map::MappedNodeId;

@@ -4,7 +4,7 @@
 //!
 //! This module contains integration tests for Yen's algorithm with the executor runtime.
 
-use super::computation::YensComputationRuntime;
+use super::YensComputationRuntime;
 use super::spec::{YensConfig, YensResult};
 use super::storage::YensStorageRuntime;
 use crate::algo::yens::YENSAlgorithmSpec;

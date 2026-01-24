@@ -3,7 +3,7 @@
 //! Orders nodes in a directed acyclic graph (DAG) such that for every edge (u, v),
 //! u appears before v. Optionally computes longest path distances.
 
-use crate::algo::topological_sort::computation::TopologicalSortComputationRuntime;
+use crate::algo::topological_sort::TopologicalSortComputationRuntime;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::{PathResult, Result};

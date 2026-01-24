@@ -4,7 +4,7 @@
 //!
 //! This module implements the storage runtime for A* algorithm - the "Gross pole" for persistent data access.
 
-use super::computation::AStarComputationResult;
+use super::AStarComputationResult;
 use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
@@ -73,7 +73,7 @@ impl AStarStorageRuntime {
     /// Translation of: `AStar.compute()` (lines 92-94) and `HaversineHeuristic`
     pub fn compute_astar_path(
         &mut self,
-        computation: &mut super::computation::AStarComputationRuntime,
+        computation: &mut super::AStarComputationRuntime,
         graph: Option<&dyn Graph>,
         direction: u8,
         progress_tracker: &mut dyn ProgressTracker,
@@ -349,7 +349,7 @@ mod tests {
 
     #[test]
     fn test_astar_path_computation() {
-        use super::super::computation::AStarComputationRuntime;
+        use super::super::AStarComputationRuntime;
         use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 
         let mut storage = AStarStorageRuntime::new(0, 1, "lat".to_string(), "lon".to_string());
@@ -371,7 +371,7 @@ mod tests {
 
     #[test]
     fn test_astar_path_same_source_target() {
-        use super::super::computation::AStarComputationRuntime;
+        use super::super::AStarComputationRuntime;
         use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 
         let mut storage = AStarStorageRuntime::new(

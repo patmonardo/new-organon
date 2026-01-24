@@ -6,7 +6,7 @@
 //! This facade is the "live wiring" layer: it binds the algorithm runtime to a
 //! `DefaultGraphStore` graph view.
 
-use crate::algo::articulation_points::computation::{
+use crate::algo::articulation_points::{
     ArticulationPointsComputationRuntime, STACK_EVENT_SIZE_BYTES,
 };
 use crate::algo::articulation_points::storage::ArticulationPointsStorageRuntime;

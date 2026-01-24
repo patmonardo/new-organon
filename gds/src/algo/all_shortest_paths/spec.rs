@@ -16,7 +16,7 @@ use crate::projection::relationship_type::RelationshipType;
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
 
-use super::computation::AllShortestPathsComputationRuntime;
+use super::AllShortestPathsComputationRuntime;
 use super::storage::{AlgorithmType, AllShortestPathsStorageRuntime, ShortestPathResult};
 
 // ============================================================================

@@ -12,7 +12,7 @@ use crate::types::prelude::GraphStore;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use crate::algo::betweenness::computation::{
+use crate::algo::betweenness::{
     BetweennessCentralityComputationResult, BetweennessCentralityComputationRuntime,
 };
 

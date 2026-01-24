@@ -3,7 +3,7 @@
 //! Storage owns graph access, orientation, and concurrency orchestration. Computation
 //! remains state-only.
 
-use crate::algo::harmonic::computation::HarmonicComputationRuntime;
+use crate::algo::harmonic::HarmonicComputationRuntime;
 use crate::algo::msbfs::{AggregatedNeighborProcessingMsBfs, OMEGA};
 use crate::concurrency::virtual_threads::{Executor, WorkerContext};
 use crate::concurrency::{Concurrency, TerminatedException, TerminationFlag};

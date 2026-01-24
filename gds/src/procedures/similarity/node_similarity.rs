@@ -1,4 +1,4 @@
-use crate::algo::similarity::{
+use crate::algo::similarity::node_similarity::{
     NodeSimilarityComputationRuntime, NodeSimilarityConfig, NodeSimilarityMetric,
     NodeSimilarityResult, NodeSimilarityStorageRuntime,
 };

@@ -3,7 +3,7 @@
 //! Partitions nodes into k communities to maximize (or minimize) the
 //! weight of edges crossing between communities using GRASP.
 
-use crate::algo::approx_max_kcut::computation::ApproxMaxKCutComputationRuntime;
+use crate::algo::approx_max_kcut::ApproxMaxKCutComputationRuntime;
 use crate::algo::approx_max_kcut::spec::ApproxMaxKCutConfig;
 use crate::algo::approx_max_kcut::storage::ApproxMaxKCutStorageRuntime;
 use crate::collections::backends::vec::VecLong;

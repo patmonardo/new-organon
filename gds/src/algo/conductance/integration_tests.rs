@@ -1,7 +1,8 @@
-use super::computation::ConductanceComputationRuntime;
 use super::spec::ConductanceConfig;
 use super::storage::ConductanceStorageRuntime;
-use crate::algo::conductance::progress_task;
+use super::ConductanceComputationRuntime;
+// progress_task helper removed; construct a local base task when needed
+// use crate::algo::conductance::progress_task;
 use crate::concurrency::Concurrency;
 use crate::concurrency::TerminationFlag;
 use crate::config::GraphStoreConfig;
@@ -13,8 +14,7 @@ use crate::types::graph::id_map::SimpleIdMap;
 use crate::types::graph::RelationshipTopology;
 use crate::types::graph_store::Capabilities;
 use crate::types::graph_store::{DatabaseId, DatabaseInfo, DatabaseLocation, GraphName};
-use crate::types::prelude::DefaultGraphStore;
-use crate::types::prelude::GraphStore;
+use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::schema::GraphSchema;
 use std::collections::HashMap;
 
@@ -32,9 +32,7 @@ fn make_store(outgoing: Vec<Vec<i64>>) -> DefaultGraphStore {
     let capabilities = Capabilities::default();
 
     // Simple id_map with nodes 0..node_count.
-    let id_map = SimpleIdMap::from_original_ids(
-        (0..node_count as i64).collect::<Vec<_>>(),
-    );
+    let id_map = SimpleIdMap::from_original_ids((0..node_count as i64).collect::<Vec<_>>());
 
     let topology = RelationshipTopology::new(outgoing, None);
 
@@ -75,7 +73,28 @@ fn conductance_matches_expected_small_graph() {
     let storage = ConductanceStorageRuntime::new();
     let mut runtime = ConductanceComputationRuntime::new();
 
-    let base_task = progress_task(store.node_count());
+    use crate::core::utils::progress::tasks::{Task, Tasks};
+    use std::sync::Arc;
+
+    // Construct a hierarchical base task matching the expected subtasks that
+    // `compute_conductance` drives. The previous helper that did this was
+    // removed during cleanups; recreate the minimal structure here.
+    let count_task = Arc::new(Task::leaf(
+        "count relationships".to_string(),
+        store.node_count(),
+    ));
+    let accumulate_task = Arc::new(Task::new("accumulate counts".to_string(), vec![]));
+    let compute_task = Arc::new(Task::new(
+        "perform conductance computations".to_string(),
+        vec![],
+    ));
+
+    let base = Tasks::task(
+        "Conductance".to_string(),
+        vec![count_task, accumulate_task, compute_task],
+    );
+
+    let base_task = base;
     let registry_factory = EmptyTaskRegistryFactory;
     let mut progress = TaskProgressTracker::with_registry(
         base_task,

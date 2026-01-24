@@ -12,7 +12,7 @@ use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use std::sync::mpsc;
 
-use super::computation::AllShortestPathsComputationRuntime;
+use super::AllShortestPathsComputationRuntime;
 
 /// Algorithm type for All Shortest Paths
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]

@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::algo::dag_longest_path::computation::DagLongestPathComputationRuntime;
+    use crate::algo::dag_longest_path::DagLongestPathComputationRuntime;
 
     #[test]
     fn test_simple_dag() {

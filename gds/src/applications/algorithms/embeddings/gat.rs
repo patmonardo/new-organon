@@ -3,7 +3,7 @@
 //! Handles JSON requests for GAT embedding operations,
 //! delegating to the facade layer for execution.
 
-use crate::procedures::embeddings::GATBuilder;
+use crate::procedures::embeddings::gat::GATBuilder;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

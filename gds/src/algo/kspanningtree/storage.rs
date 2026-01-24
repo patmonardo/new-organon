@@ -1,6 +1,7 @@
 //! KSpanningTree Storage Runtime
 
-use super::computation::{KSpanningTreeComputationRuntime, KSpanningTreeResult};
+use super::computation::KSpanningTreeComputationRuntime;
+use super::spec::KSpanningTreeResult;
 use crate::core::utils::progress::ProgressTracker;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::types::graph::id_map::NodeId;

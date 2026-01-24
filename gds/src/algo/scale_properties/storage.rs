@@ -5,7 +5,7 @@
 //! core scaler implementations and returns scaled values plus per-property
 //! statistics.
 
-use super::computation::{
+use super::{
     ElementScaler, PropertyFn, PropertyScaler, ScalePropertiesComputationRuntime,
     ScalePropertiesPlan,
 };

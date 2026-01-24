@@ -6,8 +6,8 @@
 //! Delta Stepping uses a sophisticated binning strategy to manage the frontier
 //! efficiently in parallel shortest path computation.
 
-use super::computation::DeltaSteppingComputationRuntime;
 use super::storage::DeltaSteppingStorageRuntime;
+use super::DeltaSteppingComputationRuntime;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
 use crate::projection::codegen::config::validation::ConfigError;
@@ -81,25 +81,19 @@ impl DeltaDirection {
 
 impl DeltaSteppingConfig {
     /// Validate configuration parameters
-    pub fn validate(
-        &self,
-    ) -> Result<(), ConfigError> {
+    pub fn validate(&self) -> Result<(), ConfigError> {
         if self.concurrency == 0 {
-            return Err(
-                ConfigError::FieldValidation {
-                    field: "concurrency".to_string(),
-                    message: "Must be greater than 0".to_string(),
-                },
-            );
+            return Err(ConfigError::FieldValidation {
+                field: "concurrency".to_string(),
+                message: "Must be greater than 0".to_string(),
+            });
         }
 
         if self.delta <= 0.0 {
-            return Err(
-                ConfigError::FieldValidation {
-                    field: "delta".to_string(),
-                    message: "Must be greater than 0.0".to_string(),
-                },
-            );
+            return Err(ConfigError::FieldValidation {
+                field: "delta".to_string(),
+                message: "Must be greater than 0.0".to_string(),
+            });
         }
 
         Ok(())

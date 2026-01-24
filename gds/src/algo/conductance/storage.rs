@@ -1,4 +1,4 @@
-use super::computation::ConductanceComputationRuntime;
+use super::ConductanceComputationRuntime;
 use super::spec::{ConductanceConfig, ConductanceResult};
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;

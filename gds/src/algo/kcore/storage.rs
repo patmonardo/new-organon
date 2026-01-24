@@ -3,7 +3,7 @@
 //! Controller: owns the undirected graph view, drives progress, and delegates
 //! stateful work to the computation runtime.
 
-use super::computation::{KCoreComputationResult, KCoreComputationRuntime};
+use super::{KCoreComputationResult, KCoreComputationRuntime};
 use super::spec::KCoreConfig;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;

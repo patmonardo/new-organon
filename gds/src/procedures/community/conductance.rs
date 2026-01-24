@@ -4,7 +4,7 @@
 //! that cross community boundaries.
 
 use crate::algo::conductance::{
-    progress_task, ConductanceComputationRuntime, ConductanceConfig, ConductanceStorageRuntime,
+    ConductanceComputationRuntime, ConductanceConfig, ConductanceStorageRuntime,
 };
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::{Concurrency, TerminationFlag};
@@ -122,7 +122,12 @@ impl ConductanceFacade {
             community_property: self.community_property.clone(),
         };
 
-        let base_task = progress_task(node_count);
+        let base_task = crate::core::utils::progress::Tasks::leaf_with_volume(
+            "conductance".to_string(),
+            node_count,
+        )
+        .base()
+        .clone();
         let registry_factory = self.registry_factory();
         let mut progress_tracker = TaskProgressTracker::with_registry(
             base_task,

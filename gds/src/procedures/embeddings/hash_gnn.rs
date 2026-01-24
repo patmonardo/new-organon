@@ -1,10 +1,10 @@
 //! HashGNN facade (builder API).
 
-pub use crate::algo::embeddings::hashgnn::{
-    BinarizeFeaturesConfig, GenerateFeaturesConfig, HashGNNEmbeddings,
+pub use crate::algo::embeddings::hashgnn::spec::{
+    BinarizeFeaturesConfig, GenerateFeaturesConfig, HashGNNEmbeddings, HashGNNResult,
 };
-use crate::algo::embeddings::hashgnn::{
-    HashGNNComputationRuntime, HashGNNConfig, HashGNNResult, HashGNNStorageRuntime,
+use crate::algo::embeddings::hashgnn::algo::{
+    HashGNNComputationRuntime, HashGNNStorageRuntime, HashGNNConfig,
 };
 use crate::prints::{PrintEnvelope, PrintKind, PrintProvenance};
 use crate::procedures::builder_base::ConfigValidator;

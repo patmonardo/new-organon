@@ -4,7 +4,7 @@
 //!
 //! This module defines the DFS algorithm specification, configuration, and result types.
 
-use super::computation::DfsComputationRuntime;
+use super::DfsComputationRuntime;
 use super::storage::DfsStorageRuntime;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;

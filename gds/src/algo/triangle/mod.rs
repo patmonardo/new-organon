@@ -1,13 +1,11 @@
-//! Triangle-related utilities.
-
 pub mod computation;
+#[cfg(test)]
+pub mod integration_tests;
 pub mod intersect;
 pub mod spec;
 pub mod storage;
 
-#[cfg(test)]
-mod integration_tests;
-
-pub use computation::TriangleComputationRuntime;
-pub use spec::{TriangleAlgorithmSpec, TriangleConfig, TriangleResult};
-pub use storage::TriangleStorageRuntime;
+pub use computation::*;
+pub use intersect::*;
+pub use spec::*;
+pub use storage::*;

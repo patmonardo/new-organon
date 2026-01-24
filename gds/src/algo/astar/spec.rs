@@ -153,7 +153,7 @@ define_algorithm_spec! {
 
     execute: |_self, graph_store, config, _context| {
         use super::storage::AStarStorageRuntime;
-        use super::computation::AStarComputationRuntime;
+        use super::AStarComputationRuntime;
         use crate::core::utils::progress::Tasks;
 
         let start_time = std::time::Instant::now();

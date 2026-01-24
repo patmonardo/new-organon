@@ -1,4 +1,4 @@
-use super::computation::{NodeSimilarityComputationResult, NodeSimilarityComputationRuntime};
+use super::{NodeSimilarityComputationResult, NodeSimilarityComputationRuntime};
 use super::similarity_metric::NodeSimilarityMetric;
 use super::storage::NodeSimilarityStorageRuntime;
 use crate::define_algorithm_spec;

@@ -4,7 +4,7 @@
 //!
 //! This module defines the Yen's algorithm specification, configuration, and result types.
 
-use super::computation::YensComputationRuntime;
+use super::YensComputationRuntime;
 use super::storage::YensStorageRuntime;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;

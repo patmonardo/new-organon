@@ -6,7 +6,7 @@
 //! and algorithm orchestration.
 
 use super::candidate_queue::CandidatePathsPriorityQueue;
-use super::computation::YensComputationRuntime;
+use super::YensComputationRuntime;
 use super::mutable_path_result::MutablePathResult;
 use super::spec::{YensPathResult, YensResult};
 use crate::algo::dijkstra::targets::create_targets;

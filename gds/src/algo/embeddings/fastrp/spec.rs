@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::computation::FastRPComputationRuntime;
+use super::FastRPComputationRuntime;
 use super::storage::FastRPStorageRuntime;
 
 // ============================================================================

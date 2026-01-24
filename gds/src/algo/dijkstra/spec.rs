@@ -6,10 +6,10 @@
 //! Dijkstra is implemented as a configurable Algorithmic Virtual Machine with
 //! polymorphic target system, traversal state management, and stream-based results.
 
-use super::computation::DijkstraComputationRuntime;
 use super::path_finding_result::PathFindingResult;
 use super::storage::DijkstraStorageRuntime;
 use super::targets::create_targets;
+use super::DijkstraComputationRuntime;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
 use crate::projection::codegen::config::validation::ConfigError;

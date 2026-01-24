@@ -1,14 +1,25 @@
-use super::*;
-use crate::algo::embeddings::graphsage::types::{
-    ActivationFunctionType, AggregatorType, GraphSageTrainConfig,
+#[cfg(test)]
+use crate::algo::embeddings::graphsage::{
+    ActivationFunctionType, AggregatorType, GraphSageAlgorithmFactory,
+    GraphSageMemoryEstimateDefinition, GraphSageTrainAlgorithmFactory, GraphSageTrainConfig,
 };
+#[cfg(test)]
 use crate::concurrency::{Concurrency, TerminationFlag};
-use crate::core::graph_dimensions::ConcreteGraphDimensions;
-use crate::core::model::{InMemoryModelCatalog, ModelCatalog};
+#[cfg(test)]
+use crate::core::model::InMemoryModelCatalog;
+#[cfg(test)]
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
-use crate::mem::MemoryEstimation;
-use crate::types::graph::Graph;
+#[cfg(test)]
+use crate::core::ConcreteGraphDimensions;
+#[cfg(test)]
+use crate::core::ModelCatalog;
+#[cfg(test)]
+use crate::mem::memory_estimation::MemoryEstimation;
+#[cfg(test)]
+use crate::types::graph::graph::Graph;
+#[cfg(test)]
 use crate::types::graph_store::DefaultGraphStore;
+#[cfg(test)]
 use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
 
 #[test]

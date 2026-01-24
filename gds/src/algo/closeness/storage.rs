@@ -16,7 +16,7 @@ use crate::types::prelude::GraphStore;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::computation::ClosenessCentralityComputationRuntime;
+use super::ClosenessCentralityComputationRuntime;
 
 pub struct ClosenessCentralityStorageRuntime<'a, G: GraphStore> {
     graph_store: &'a G,

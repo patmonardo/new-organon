@@ -1,10 +1,11 @@
+
 pub mod computation;
+#[cfg(test)]
+pub mod integration_tests;
 pub mod spec;
 pub mod storage;
 
-#[cfg(test)]
-mod integration_tests;
+pub use computation::*;
+pub use spec::*;
+pub use storage::*;
 
-pub use computation::PCSTreeComputationRuntime;
-pub use spec::{PCSTreeConfig, PCSTreeResult, PRUNED, ROOT_NODE};
-pub use storage::PCSTreeStorageRuntime;

@@ -8,9 +8,9 @@
 //! - `node_weight_property`: optional node weight property (defaults to 1.0).
 //! - `seed_property`: optional seed labels property.
 
-use crate::algo::label_propagation::{
-    LabelPropComputationRuntime, LabelPropConfig, LabelPropResult, LabelPropStorageRuntime,
-};
+use crate::algo::label_propagation::computation::LabelPropComputationRuntime;
+use crate::algo::label_propagation::spec::{LabelPropConfig, LabelPropResult};
+use crate::algo::label_propagation::storage::LabelPropStorageRuntime;
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};

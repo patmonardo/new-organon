@@ -13,7 +13,7 @@ use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use serde::{Deserialize, Serialize};
 
-use super::computation::HashGNNComputationRuntime;
+use super::HashGNNComputationRuntime;
 use super::storage::HashGNNStorageRuntime;
 
 // ============================================================================

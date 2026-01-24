@@ -5,7 +5,7 @@ use crate::projection::eval::procedure::AlgorithmSpec;
 mod tests {
     use super::*;
 
-    use crate::algo::hits::computation::HitsComputationRuntime;
+    use crate::algo::hits::HitsComputationRuntime;
     use crate::algo::hits::HitsStorageRuntime;
     use crate::config::GraphStoreConfig;
     use crate::core::utils::progress::tasks::NoopProgressTracker;

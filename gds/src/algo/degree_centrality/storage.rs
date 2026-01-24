@@ -6,7 +6,7 @@
 //! - termination checks
 //! - progress callbacks
 
-use crate::algo::degree_centrality::computation::DegreeCentralityComputationRuntime;
+use crate::algo::degree_centrality::DegreeCentralityComputationRuntime;
 use crate::collections::HugeAtomicDoubleArray;
 use crate::concurrency::virtual_threads::Executor;
 use crate::concurrency::{Concurrency, TerminatedException, TerminationFlag};

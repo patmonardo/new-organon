@@ -2,7 +2,7 @@
 //!
 //! Internal data structures for CELF computation.
 
-use super::computation::CELFComputationRuntime;
+use super::CELFComputationRuntime;
 use crate::collections::BitSet;
 use crate::collections::HugeDoubleArray;
 use crate::concurrency::{TerminatedException, TerminationFlag};
