@@ -2,8 +2,8 @@
 //!
 //! Computes a minimum or maximum spanning tree rooted at a start node.
 
+use crate::algo::spanning_tree::SpanningTreeComputationRuntime;
 use crate::algo::spanning_tree::SpanningTreeStorageRuntime;
-use crate::algo::SpanningTreeComputationRuntime;
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::{PathResult, Result};

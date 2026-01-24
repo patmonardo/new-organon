@@ -1,7 +1,3 @@
-//! Community detection algorithm facades
-//!
-//! Identifies groups of related nodes within graphs.
-//! Algorithms in this module find dense subgraphs or communities.
 
 pub mod approx_max_kcut;
 pub mod conductance;
@@ -16,18 +12,16 @@ pub mod scc;
 pub mod triangle;
 pub mod wcc;
 
-pub use triangle::{TriangleFacade, TriangleRow, TriangleStats};
+pub use approx_max_kcut::*;
+pub use conductance::*;
+pub use k1coloring::*;
+pub use kcore::*;
+pub use kmeans::*;
+pub use label_propagation::*;
+pub use leiden::*;
+pub use louvain::*;
+pub use modularity::*;
+pub use scc::*;
+pub use triangle::*;
+pub use wcc::*;
 
-pub use scc::{SccFacade, SccRow, SccStats};
-
-pub use label_propagation::{LabelPropagationFacade, LabelPropagationRow, LabelPropagationStats};
-
-pub use approx_max_kcut::{ApproxMaxKCutFacade, ApproxMaxKCutRow, ApproxMaxKCutStats};
-pub use conductance::{ConductanceFacade, ConductanceRow, ConductanceStats};
-pub use k1coloring::{K1ColoringFacade, K1ColoringRow, K1ColoringStats};
-pub use kcore::{KCoreFacade, KCoreRow, KCoreStats};
-pub use kmeans::{KMeansFacade, KMeansRow, KMeansStats};
-pub use leiden::{LeidenFacade, LeidenRow, LeidenStats};
-pub use louvain::{LouvainFacade, LouvainRow, LouvainStats};
-pub use modularity::{ModularityFacade, ModularityRow, ModularityStats};
-pub use wcc::{WccFacade, WccRow, WccStats};

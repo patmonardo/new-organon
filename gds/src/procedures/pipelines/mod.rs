@@ -1,16 +1,4 @@
-//! Top-level pipeline procedure helpers (condensed Rust forms).
-//!
-//! These modules mirror the Java pipelines facade layer but remain
-//! strictly within procedures/pipelines as requested.
-
 pub mod facade;
-pub mod types;
-
-pub use facade::*;
-pub use types::*;
-
-// Pipelines
-
 pub mod link_prediction;
 pub mod link_prediction_computation;
 pub mod link_prediction_mutate_metadata;
@@ -49,6 +37,7 @@ pub mod node_classification_predict_pipeline_write_result_builder;
 pub mod node_classification_predict_pipeline_write_step;
 pub mod node_classification_train_computation;
 pub mod node_classification_train_result_renderer;
+pub mod node_classification_train_side_effects;
 pub mod node_feature_steps_parser;
 pub mod node_pipeline_info_result_transformer;
 pub mod node_regression_predict_computation;
@@ -70,7 +59,9 @@ pub mod predicted_probabilities;
 pub mod trained_lp_pipeline_model;
 pub mod trained_nc_pipeline_model;
 pub mod trained_nr_pipeline_model;
+pub mod types;
 
+pub use facade::*;
 pub use link_prediction::*;
 pub use link_prediction_computation::*;
 pub use link_prediction_mutate_metadata::*;
@@ -109,6 +100,7 @@ pub use node_classification_predict_pipeline_write_result_builder::*;
 pub use node_classification_predict_pipeline_write_step::*;
 pub use node_classification_train_computation::*;
 pub use node_classification_train_result_renderer::*;
+pub use node_classification_train_side_effects::*;
 pub use node_feature_steps_parser::*;
 pub use node_pipeline_info_result_transformer::*;
 pub use node_regression_predict_computation::*;
@@ -130,3 +122,4 @@ pub use predicted_probabilities::*;
 pub use trained_lp_pipeline_model::*;
 pub use trained_nc_pipeline_model::*;
 pub use trained_nr_pipeline_model::*;
+pub use types::*;
