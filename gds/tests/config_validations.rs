@@ -299,6 +299,20 @@ fn gradient_and_trainer_config_validations() {
         .build();
     assert!(builder_err.is_err());
 
+    // Decision tree validation upper bounds (builder accepts large values; ValidatedConfig should reject)
+    let big_depth = DecisionTreeTrainerConfig::builder()
+        .max_depth(100_000)
+        .build()
+        .unwrap();
+    assert!(ValidatedConfig::validate(&big_depth).is_err());
+
+    let big_leaf = DecisionTreeTrainerConfig::builder()
+        .min_leaf_size(2_000_000)
+        .min_split_size(2_000_001)
+        .build()
+        .unwrap();
+    assert!(ValidatedConfig::validate(&big_leaf).is_err());
+
     // RandomForest numeric edge cases
     let mut rf_nan = rf.clone();
     rf_nan.num_samples_ratio = f64::NAN;

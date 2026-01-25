@@ -217,7 +217,8 @@ mod config_tests {
     fn test_config_default() {
         let config = DecisionTreeTrainerConfig::default();
 
-        assert_eq!(config.max_depth(), usize::MAX);
+        // 0 == unlimited (harmonized with RandomForestConfig)
+        assert_eq!(config.max_depth(), 0);
         assert_eq!(config.min_split_size(), 2);
         assert_eq!(config.min_leaf_size(), 1);
     }
@@ -282,9 +283,12 @@ mod config_tests {
     }
 
     #[test]
-    #[should_panic(expected = "maxDepth must be at least 1")]
-    fn test_config_max_depth_zero_panics() {
-        let _ = DecisionTreeTrainerConfig::builder().max_depth(0).build();
+    fn test_config_max_depth_zero_allowed() {
+        let config = DecisionTreeTrainerConfig::builder()
+            .max_depth(0)
+            .build()
+            .expect("max depth 0 should be allowed and means unlimited");
+        assert_eq!(config.max_depth(), 0);
     }
 
     #[test]

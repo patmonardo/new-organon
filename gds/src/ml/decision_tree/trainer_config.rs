@@ -1,5 +1,9 @@
 //! Configuration for decision tree trainers.
 //!
+//! Note: the `max_depth` configuration uses `0` to mean "unlimited". This is
+//! harmonized with `RandomForestConfig` semantics and reflected across validation
+//! and runtime logic in the repository.
+//!
 //! Translated from Java GDS ml-algo DecisionTreeTrainerConfig.java.
 //! This is a literal 1:1 translation following repository translation policy.
 
@@ -42,7 +46,8 @@ impl DecisionTreeTrainerConfig {
 impl Default for DecisionTreeTrainerConfig {
     fn default() -> Self {
         Self {
-            max_depth: usize::MAX,
+            // 0 now means unlimited (harmonized with RandomForest)
+            max_depth: 0,
             min_split_size: 2,
             min_leaf_size: 1,
         }
@@ -58,7 +63,11 @@ pub struct DecisionTreeTrainerConfigBuilder {
 
 impl DecisionTreeTrainerConfigBuilder {
     pub fn max_depth(mut self, max_depth: usize) -> Self {
-        assert!(max_depth >= 1, "maxDepth must be at least 1");
+        // allow 0 as 'unlimited' to be consistent with RandomForestConfig
+        assert!(
+            crate::ml::decision_tree::is_unlimited_depth(max_depth) || max_depth >= 1,
+            "maxDepth must be 0 (unlimited) or >= 1"
+        );
         self.max_depth = Some(max_depth);
         self
     }
@@ -77,7 +86,7 @@ impl DecisionTreeTrainerConfigBuilder {
 
     pub fn build(self) -> Result<DecisionTreeTrainerConfig, String> {
         let config = DecisionTreeTrainerConfig {
-            max_depth: self.max_depth.unwrap_or(usize::MAX),
+            max_depth: self.max_depth.unwrap_or(0),
             min_split_size: self.min_split_size.unwrap_or(2),
             min_leaf_size: self.min_leaf_size.unwrap_or(1),
         };

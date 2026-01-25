@@ -13,6 +13,12 @@ pub mod trainer_config;
 pub mod tree_node;
 pub mod types;
 
+/// Helper: treat 0 as "unlimited" for max depth across tree training configs.
+/// Use `is_unlimited_depth(max_depth)` for clearer checks.
+pub(crate) fn is_unlimited_depth(max_depth: usize) -> bool {
+    max_depth == 0
+}
+
 pub use classifier_trainer::*;
 pub use entropy::*;
 pub use feature_bagger::*;

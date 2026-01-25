@@ -725,7 +725,7 @@ impl crate::config::ValidatedConfig for crate::ml::models::random_forest::Random
         }
 
         // maxDepth: 0 means unlimited, otherwise must be >= 1 and not unreasonably large
-        if self.max_depth != 0 {
+        if !crate::ml::decision_tree::is_unlimited_depth(self.max_depth) {
             if self.max_depth < 1 {
                 return Err(RootConfigError::InvalidParameter {
                     parameter: "maxDepth".to_string(),
@@ -793,7 +793,36 @@ impl crate::config::ValidatedConfig
     for crate::ml::decision_tree::trainer_config::DecisionTreeTrainerConfig
 {
     fn validate(&self) -> Result<(), RootConfigError> {
-        // Inline the same validation logic to avoid ambiguous resolution with the trait method
+        // max_depth: 0 means unlimited; otherwise enforce reasonable bounds
+        if !crate::ml::decision_tree::is_unlimited_depth(self.max_depth()) {
+            if self.max_depth() < 1 {
+                return Err(RootConfigError::InvalidParameter {
+                    parameter: "maxDepth".to_string(),
+                    reason: "maxDepth must be >= 1 when set explicitly".to_string(),
+                });
+            }
+            if self.max_depth() > 10_000 {
+                return Err(RootConfigError::InvalidParameter {
+                    parameter: "maxDepth".to_string(),
+                    reason: "maxDepth must be in [1, 10_000] when set explicitly".to_string(),
+                });
+            }
+        }
+
+        if self.min_split_size() < 2 || self.min_split_size() > 1_000_000 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "minSplitSize".to_string(),
+                reason: "minSplitSize must be >= 2 and <= 1_000_000".to_string(),
+            });
+        }
+        if self.min_leaf_size() < 1 || self.min_leaf_size() > 1_000_000 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "minLeafSize".to_string(),
+                reason: "minLeafSize must be >= 1 and <= 1_000_000".to_string(),
+            });
+        }
+
+        // Ensure per-tree split/leaf sizes are consistent
         if self.min_leaf_size() >= self.min_split_size() {
             return Err(RootConfigError::InvalidParameter {
                 parameter: "minLeafSize".to_string(),

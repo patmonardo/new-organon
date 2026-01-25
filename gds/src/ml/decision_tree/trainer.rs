@@ -1,5 +1,9 @@
 //! Base decision tree trainer.
 //!
+//! Note: `max_depth == 0` is treated as "unlimited" (no explicit depth cap). This
+//! matches the convention used by `RandomForest` configs and is used by the
+//! estimation and training logic.
+//!
 //! Translated from Java GDS ml-algo DecisionTreeTrainer.java.
 //! This is a literal 1:1 translation following repository translation policy.
 
@@ -28,9 +32,15 @@ pub trait DecisionTreeTrainer<P: Clone> {
         let predictor_estimation =
             Self::estimate_tree_memory(config, number_of_training_samples, leaf_node_size_in_bytes);
 
-        let normalized_max_depth = config
-            .max_depth()
-            .min(1.max(number_of_training_samples.saturating_sub(config.min_split_size()) + 2));
+        // If max_depth == 0, treat as unlimited and use a computed normalized depth; otherwise cap.
+        let normalized_max_depth =
+            if crate::ml::decision_tree::is_unlimited_depth(config.max_depth()) {
+                1.max(number_of_training_samples.saturating_sub(config.min_split_size()) + 2)
+            } else {
+                config.max_depth().min(
+                    1.max(number_of_training_samples.saturating_sub(config.min_split_size()) + 2),
+                )
+            };
         let max_items_on_stack = 2 * normalized_max_depth;
         let max_stack_size = Estimate::size_of_instance("VecDeque")
             + std::mem::size_of::<StackRecord<P>>() * max_items_on_stack
@@ -52,7 +62,12 @@ pub trait DecisionTreeTrainer<P: Clone> {
             return 0;
         }
 
-        let max_num_leaf_nodes = (2.0_f64.powi(config.max_depth() as i32))
+        let pow_depth = if crate::ml::decision_tree::is_unlimited_depth(config.max_depth()) {
+            f64::INFINITY
+        } else {
+            2.0_f64.powi(config.max_depth() as i32)
+        };
+        let max_num_leaf_nodes = pow_depth
             .min((number_of_training_samples as f64) / (config.min_leaf_size() as f64))
             .min(2.0 * (number_of_training_samples as f64) / (config.min_split_size() as f64))
             .ceil() as usize;
@@ -109,13 +124,19 @@ pub trait DecisionTreeTrainer<P: Clone> {
             let groups = split.into_groups();
             let (left_group, right_group) = groups.into_parts();
 
-            let left_child = if depth >= max_depth || left_group.size() < min_split_size {
+            let left_child = if (!crate::ml::decision_tree::is_unlimited_depth(max_depth)
+                && depth >= max_depth)
+                || left_group.size() < min_split_size
+            {
                 TreeNode::new_leaf(self.to_terminal(&left_group))
             } else {
                 self.split_and_push(&mut stack, &mut splitter, &left_group, depth + 1)
             };
 
-            let right_child = if depth >= max_depth || right_group.size() < min_split_size {
+            let right_child = if (!crate::ml::decision_tree::is_unlimited_depth(max_depth)
+                && depth >= max_depth)
+                || right_group.size() < min_split_size
+            {
                 TreeNode::new_leaf(self.to_terminal(&right_group))
             } else {
                 self.split_and_push(&mut stack, &mut splitter, &right_group, depth + 1)

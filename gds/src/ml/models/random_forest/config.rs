@@ -6,6 +6,8 @@ use serde::Serialize;
 use std::collections::HashMap;
 
 /// Shared configuration for random forest models
+/// Note: `max_depth == 0` means "unlimited" for consistency with DecisionTree
+/// trainer semantics; this file's defaults and validation follow that convention.
 /// 1:1 with RandomForestTrainerConfig.java interface from Java GDS
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RandomForestConfig {
