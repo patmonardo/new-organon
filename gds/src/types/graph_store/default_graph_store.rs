@@ -52,7 +52,7 @@ use chrono::{DateTime, Utc};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use crate::algo::common::scaling::{MinMaxScaler, Scaler};
+use crate::algo::algorithms::scaling::{MinMaxScaler, Scaler};
 
 /// In-memory [`GraphStore`] backed by [`SimpleIdMap`] and [`RelationshipTopology`].
 #[derive(Debug, Clone)]

@@ -3,7 +3,7 @@
 //! Owns the scaling loop and statistics aggregation. Storage prepares the
 //! plan (validated property scalers) and delegates execution here.
 
-use crate::algo::common::scaling::Scaler;
+use crate::algo::algorithms::scaling::Scaler;
 use crate::algo::scale_properties::spec::ScalePropertiesResult;
 use std::collections::HashMap;
 use std::sync::Arc;

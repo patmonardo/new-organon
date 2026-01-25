@@ -41,8 +41,10 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::algo::common::prelude::{PathFindingResult, PathResultBuilder};
-use crate::algo::common::result_builders::{ExecutionMetadata, PathResult, ResultBuilder};
+use crate::algo::algorithms::result_builders::{
+    ExecutionMetadata, PathFindingResult, PathResult, PathResultBuilder, ResultBuilder,
+    ResultBuilderError,
+};
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 use crate::projection::eval::algorithm::AlgorithmError;
@@ -252,7 +254,7 @@ impl DijkstraBuilder {
             .with_paths(paths)
             .with_metadata(metadata)
             .build()
-            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
+            .map_err(|e: ResultBuilderError| AlgorithmError::Execution(e.to_string()))?;
 
         Ok(path_result)
     }

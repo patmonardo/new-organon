@@ -29,9 +29,9 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
-use crate::algo::common::prelude::{PathFindingResult, PathResultBuilder};
-use crate::algo::common::result_builders::{
-    ExecutionMetadata, PathResult, ResultBuilder, ResultBuilderError,
+use crate::algo::algorithms::result_builders::{
+    ExecutionMetadata, PathFindingResult, PathResult, PathResultBuilder, ResultBuilder,
+    ResultBuilderError,
 };
 use crate::algo::dfs::{DfsComputationRuntime, DfsStorageRuntime};
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
@@ -384,19 +384,19 @@ impl DfsBuilder {
             .metadata
             .additional
             .get("nodes_visited")
-            .and_then(|s| s.parse().ok())
+            .and_then(|s| s.parse::<u64>().ok())
             .unwrap_or(0);
         let max_depth_reached = result
             .metadata
             .additional
             .get("max_depth_reached")
-            .and_then(|s| s.parse().ok())
+            .and_then(|s| s.parse::<u64>().ok())
             .unwrap_or(0);
         let targets_found = result
             .metadata
             .additional
             .get("targets_found")
-            .and_then(|s| s.parse().ok())
+            .and_then(|s| s.parse::<u64>().ok())
             .unwrap_or(0);
         let all_targets_reached = result
             .metadata

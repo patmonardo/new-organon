@@ -5,12 +5,12 @@
 //! core scaler implementations and returns scaled values plus per-property
 //! statistics.
 
+use super::spec::{ScalePropertiesConfig, ScalePropertiesResult, ScalePropertiesScaler};
 use super::{
     ElementScaler, PropertyFn, PropertyScaler, ScalePropertiesComputationRuntime,
     ScalePropertiesPlan,
 };
-use super::spec::{ScalePropertiesConfig, ScalePropertiesResult, ScalePropertiesScaler};
-use crate::algo::common::scaling::{
+use crate::algo::algorithms::scaling::{
     CenterScaler, LogScaler, MaxScaler, MeanScaler, MinMaxScaler, NoneScaler, Scaler,
     StdScoreScaler,
 };

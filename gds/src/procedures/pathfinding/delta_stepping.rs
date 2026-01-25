@@ -17,7 +17,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::algo::common::result_builders::{
+use crate::algo::algorithms::result_builders::{
     ExecutionMetadata, PathFindingResult, PathResult as CorePathResult, PathResultBuilder,
     ResultBuilder,
 };

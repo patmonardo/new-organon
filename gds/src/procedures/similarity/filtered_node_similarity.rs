@@ -1,4 +1,4 @@
-use crate::algo::common::result::similarity::similarity_stats;
+use crate::algo::algorithms::result::similarity::similarity_stats;
 use crate::algo::similarity::filtered_node_similarity::compute_filtered_node_similarity;
 use crate::algo::similarity::node_similarity::{
     NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult,

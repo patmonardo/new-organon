@@ -4,9 +4,9 @@
 //!
 //! This facade runs the translated Yen's runtime against a live `DefaultGraphStore`.
 
-use crate::algo::common::prelude::{PathFindingResult, PathResultBuilder};
-use crate::algo::common::result_builders::{
-    ExecutionMetadata, PathResult as AlgoPathResult, ResultBuilder, ResultBuilderError,
+use crate::algo::algorithms::result_builders::{
+    ExecutionMetadata, PathFindingResult, PathResult as AlgoPathResult, PathResultBuilder,
+    ResultBuilder, ResultBuilderError,
 };
 use crate::algo::yens::{YensComputationRuntime, YensStorageRuntime};
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
@@ -294,7 +294,7 @@ impl YensBuilder {
             .metadata
             .additional
             .get("computation_time_ms")
-            .and_then(|s| s.parse().ok())
+            .and_then(|s| s.parse::<u64>().ok())
             .unwrap_or(0);
 
         Ok(YensStats {

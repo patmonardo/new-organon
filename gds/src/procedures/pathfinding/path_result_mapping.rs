@@ -1,4 +1,4 @@
-use crate::algo::common::result_builders::PathResult as CorePathResult;
+use crate::algo::algorithms::result_builders::PathResult as CorePathResult;
 use crate::collections::backends::vec::VecDouble;
 use crate::procedures::{PathResult as ProcedurePathResult, Result};
 use crate::projection::RelationshipType;

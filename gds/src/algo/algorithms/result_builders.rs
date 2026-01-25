@@ -6,8 +6,8 @@
 //! This module provides result building capabilities for different algorithm types,
 //! integrating with our statistics and progress tracking modules.
 
-use crate::algo::common::scaling::Scaler;
-use crate::algo::common::statistics::{
+use crate::algo::algorithms::scaling::Scaler;
+use crate::algo::algorithms::statistics::{
     Histogram, StatisticalSummary, StatisticsConfig, StatisticsEngine, StatisticsError,
 };
 use serde::{Deserialize, Serialize};

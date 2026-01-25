@@ -17,7 +17,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 // Additional imports for progress tracking and similarity stats
-use crate::algo::common::result::similarity::similarity_stats;
+use crate::algo::algorithms::result::similarity::similarity_stats;
 use crate::core::utils::progress::TaskProgressTracker;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
