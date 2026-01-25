@@ -18,7 +18,7 @@ use std::time::Instant;
 
 // Additional imports for error handling and progress tracking
 use crate::core::utils::progress::TaskProgressTracker;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 
 /// Result row for k-spanning tree stream mode
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]

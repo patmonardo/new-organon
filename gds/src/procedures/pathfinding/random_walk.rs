@@ -20,7 +20,7 @@ use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, ProgressTracker, TaskRegistryFactory, Tasks,
 };
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 
 /// Result row for random walk stream mode
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]

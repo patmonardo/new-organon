@@ -1,5 +1,5 @@
 use crate::algo::closeness::CLOSENESSAlgorithmSpec;
-use crate::projection::eval::procedure::AlgorithmSpec;
+use crate::projection::eval::algorithm::AlgorithmSpec;
 
 #[cfg(test)]
 mod tests {

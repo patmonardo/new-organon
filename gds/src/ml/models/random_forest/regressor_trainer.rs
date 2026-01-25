@@ -21,7 +21,7 @@ use crate::ml::models::random_forest::RandomForestRegressorTrainerConfig;
 use crate::ml::models::Features;
 use crate::ml::models::Regressor;
 use crate::ml::models::RegressorTrainer;
-use crate::projection::eval::procedure::LogLevel as ProcedureLogLevel;
+use crate::projection::eval::algorithm::LogLevel as ProcedureLogLevel;
 use rand::SeedableRng;
 use std::sync::Arc;
 

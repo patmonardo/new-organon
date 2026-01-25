@@ -6,7 +6,7 @@
 
 use super::*;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
-use crate::projection::eval::procedure::{
+use crate::projection::eval::algorithm::{
     AlgorithmSpec, ExecutionContext, ExecutionMode, ProcedureExecutor,
 };
 use serde_json::json;

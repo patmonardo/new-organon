@@ -5,10 +5,10 @@
 //! This module implements the "Gross pole" for BFS algorithm - persistent data access
 //! and algorithm orchestration using the Java GDS parallel BFS architecture.
 
-use super::BfsComputationRuntime;
 use super::spec::BfsResult;
+use super::BfsComputationRuntime;
 use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 

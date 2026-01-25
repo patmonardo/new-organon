@@ -7,7 +7,7 @@ use crate::collections::BitSet;
 use crate::collections::HugeDoubleArray;
 use crate::concurrency::{TerminatedException, TerminationFlag};
 use crate::core::utils::paged::HugeLongArrayStack;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::{Orientation, RelationshipType};
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;

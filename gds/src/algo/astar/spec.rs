@@ -7,7 +7,7 @@
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use serde::{Deserialize, Serialize};
@@ -240,7 +240,7 @@ define_algorithm_spec! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::projection::eval::procedure::AlgorithmSpec; // bring trait methods into scope
+    use crate::projection::eval::algorithm::AlgorithmSpec; // bring trait methods into scope
     use serde_json::json; // macro for tests
 
     #[test]
@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     fn test_astar_focused_macro_integration() {
-        use crate::projection::eval::procedure::ExecutionContext;
+        use crate::projection::eval::algorithm::ExecutionContext;
 
         let spec = ASTARAlgorithmSpec::new("test_graph".to_string());
         let _config = AStarConfig::default();

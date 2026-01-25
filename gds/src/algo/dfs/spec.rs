@@ -10,7 +10,7 @@ use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::codegen::config::validation::ConfigError;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -162,7 +162,7 @@ define_algorithm_spec! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::projection::eval::procedure::{AlgorithmSpec, ExecutionContext};
+    use crate::projection::eval::algorithm::{AlgorithmSpec, ExecutionContext};
     use serde_json::json;
 
     #[test]

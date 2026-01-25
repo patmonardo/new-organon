@@ -4,7 +4,7 @@ use crate::concurrency::TerminationFlag;
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::define_algorithm_spec;
-use crate::projection::eval::procedure::*;
+use crate::projection::eval::algorithm::*;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 

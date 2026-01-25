@@ -6,10 +6,10 @@
 //! handling persistent data access and the main algorithm orchestration.
 //! Delta Stepping uses a sophisticated binning strategy for efficient frontier management.
 
-use super::DeltaSteppingComputationRuntime;
 use super::spec::{DeltaSteppingPathResult, DeltaSteppingResult};
+use super::DeltaSteppingComputationRuntime;
 use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use crate::types::properties::relationship::RelationshipCursorBox;
@@ -264,12 +264,11 @@ impl DeltaSteppingStorageRuntime {
     ) -> Vec<(NodeId, f64)> {
         if let Some(g) = graph {
             let fallback: f64 = 1.0;
-            let iter: Box<dyn Iterator<Item = RelationshipCursorBox> + Send> =
-                if direction == 1 {
-                    g.stream_inverse_relationships(node_id, fallback)
-                } else {
-                    g.stream_relationships(node_id, fallback)
-                };
+            let iter: Box<dyn Iterator<Item = RelationshipCursorBox> + Send> = if direction == 1 {
+                g.stream_inverse_relationships(node_id, fallback)
+            } else {
+                g.stream_relationships(node_id, fallback)
+            };
             iter.into_iter()
                 .map(|cursor| (cursor.target_id(), cursor.property()))
                 .collect()

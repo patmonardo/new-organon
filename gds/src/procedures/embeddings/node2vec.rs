@@ -30,7 +30,7 @@
 //!     .random_seed(Some(42))
 //!     .stream()?
 //!     .collect();
-//! # Ok::<(), gds::projection::eval::procedure::AlgorithmError>(())
+//! # Ok::<(), gds::projection::eval::algorithm::AlgorithmError>(())
 //! ```
 
 use crate::algo::embeddings::node2vec::{
@@ -40,7 +40,7 @@ use crate::algo::embeddings::node2vec::{
 use crate::prints::{PrintEnvelope, PrintKind, PrintProvenance};
 use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::Result;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};

@@ -53,7 +53,7 @@ macro_rules! define_algorithm_spec {
                 }
             }
 
-            impl $crate::projection::eval::procedure::AlgorithmSpec for [<$name:upper AlgorithmSpec>] {
+            impl $crate::projection::eval::algorithm::AlgorithmSpec for [<$name:upper AlgorithmSpec>] {
                 type Output = $output_type;
 
                 fn name(&self) -> &str {
@@ -64,26 +64,26 @@ macro_rules! define_algorithm_spec {
                     &self.graph_name
                 }
 
-                fn projection_hint(&self) -> $crate::projection::eval::procedure::ProjectionHint {
-                    $crate::projection::eval::procedure::ProjectionHint::$hint
+                fn projection_hint(&self) -> $crate::projection::eval::algorithm::ProjectionHint {
+                    $crate::projection::eval::algorithm::ProjectionHint::$hint
                 }
 
-                fn parse_config(&self, input: &serde_json::Value) -> Result<serde_json::Value, $crate::projection::eval::procedure::ConfigError> {
+                fn parse_config(&self, input: &serde_json::Value) -> Result<serde_json::Value, $crate::projection::eval::algorithm::ConfigError> {
                     // For now, just pass through the input
                     // Individual algorithms can handle their own config parsing
                     Ok(input.clone())
                 }
 
-                fn validation_config(&self, _context: &$crate::projection::eval::procedure::ExecutionContext) -> $crate::projection::eval::procedure::ValidationConfiguration {
-                    $crate::projection::eval::procedure::ValidationConfiguration::empty()
+                fn validation_config(&self, _context: &$crate::projection::eval::algorithm::ExecutionContext) -> $crate::projection::eval::algorithm::ValidationConfiguration {
+                    $crate::projection::eval::algorithm::ValidationConfiguration::empty()
                 }
 
                 fn execute<G: $crate::types::prelude::GraphStore>(
                     &self,
                     $graph_store_param: &G,
                     $config_param: &serde_json::Value,
-                    $context_param: &$crate::projection::eval::procedure::ExecutionContext,
-                ) -> Result<$crate::projection::eval::procedure::ComputationResult<Self::Output>, $crate::projection::eval::procedure::AlgorithmError> {
+                    $context_param: &$crate::projection::eval::algorithm::ExecutionContext,
+                ) -> Result<$crate::projection::eval::algorithm::ComputationResult<Self::Output>, $crate::projection::eval::algorithm::AlgorithmError> {
                     let timer = std::time::Instant::now();
 
                     // Call the manual execute implementation
@@ -92,19 +92,19 @@ macro_rules! define_algorithm_spec {
                     }?;
 
                     let elapsed = timer.elapsed();
-                    Ok($crate::projection::eval::procedure::ComputationResult::new(result, elapsed))
+                    Ok($crate::projection::eval::algorithm::ComputationResult::new(result, elapsed))
                 }
 
                 fn consume_result(
                     &self,
-                    result: $crate::projection::eval::procedure::ComputationResult<Self::Output>,
-                    mode: &$crate::projection::eval::procedure::ExecutionMode,
-                ) -> Result<Self::Output, $crate::projection::eval::procedure::ConsumerError> {
+                    result: $crate::projection::eval::algorithm::ComputationResult<Self::Output>,
+                    mode: &$crate::projection::eval::algorithm::ExecutionMode,
+                ) -> Result<Self::Output, $crate::projection::eval::algorithm::ConsumerError> {
                     match mode {
                         $(
-                            $crate::projection::eval::procedure::ExecutionMode::$mode => Ok(result.into_result()),
+                            $crate::projection::eval::algorithm::ExecutionMode::$mode => Ok(result.into_result()),
                         )*
-                        other => Err($crate::projection::eval::procedure::ConsumerError::UnsupportedMode(*other)),
+                        other => Err($crate::projection::eval::algorithm::ConsumerError::UnsupportedMode(*other)),
                     }
                 }
             }
@@ -138,7 +138,7 @@ macro_rules! define_algorithm_spec {
                 }
             }
 
-            impl $crate::projection::eval::procedure::AlgorithmSpec for [<$name:upper AlgorithmSpec>] {
+            impl $crate::projection::eval::algorithm::AlgorithmSpec for [<$name:upper AlgorithmSpec>] {
                 type Output = $output_type;
 
                 fn name(&self) -> &str {
@@ -149,26 +149,26 @@ macro_rules! define_algorithm_spec {
                     &self.graph_name
                 }
 
-                fn projection_hint(&self) -> $crate::projection::eval::procedure::ProjectionHint {
-                    $crate::projection::eval::procedure::ProjectionHint::$hint
+                fn projection_hint(&self) -> $crate::projection::eval::algorithm::ProjectionHint {
+                    $crate::projection::eval::algorithm::ProjectionHint::$hint
                 }
 
-                fn parse_config(&self, input: &serde_json::Value) -> Result<serde_json::Value, $crate::projection::eval::procedure::ConfigError> {
+                fn parse_config(&self, input: &serde_json::Value) -> Result<serde_json::Value, $crate::projection::eval::algorithm::ConfigError> {
                     // For now, just pass through the input
                     // Individual algorithms can handle their own config parsing
                     Ok(input.clone())
                 }
 
-                fn validation_config(&self, _context: &$crate::projection::eval::procedure::ExecutionContext) -> $crate::projection::eval::procedure::ValidationConfiguration {
-                    $crate::projection::eval::procedure::ValidationConfiguration::empty()
+                fn validation_config(&self, _context: &$crate::projection::eval::algorithm::ExecutionContext) -> $crate::projection::eval::algorithm::ValidationConfiguration {
+                    $crate::projection::eval::algorithm::ValidationConfiguration::empty()
                 }
 
                 fn execute<G: $crate::types::prelude::GraphStore>(
                     &self,
                     $graph_store_param: &G,
                     $config_param: &serde_json::Value,
-                    $context_param: &$crate::projection::eval::procedure::ExecutionContext,
-                ) -> Result<$crate::projection::eval::procedure::ComputationResult<Self::Output>, $crate::projection::eval::procedure::AlgorithmError> {
+                    $context_param: &$crate::projection::eval::algorithm::ExecutionContext,
+                ) -> Result<$crate::projection::eval::algorithm::ComputationResult<Self::Output>, $crate::projection::eval::algorithm::AlgorithmError> {
                     let timer = std::time::Instant::now();
 
                     // Call the manual execute implementation
@@ -177,7 +177,7 @@ macro_rules! define_algorithm_spec {
                     }?;
 
                     let elapsed = timer.elapsed();
-                    Ok($crate::projection::eval::procedure::ComputationResult::new(result, elapsed))
+                    Ok($crate::projection::eval::algorithm::ComputationResult::new(result, elapsed))
                 }
 
                 fn mutate_node_property<G: $crate::types::prelude::GraphStore>(
@@ -185,21 +185,21 @@ macro_rules! define_algorithm_spec {
                     $mut_graph_store_param: &mut G,
                     $mut_config_param: &serde_json::Value,
                     $mut_result_param: &Self::Output,
-                ) -> Result<usize, $crate::projection::eval::procedure::AlgorithmError> {
+                ) -> Result<usize, $crate::projection::eval::algorithm::AlgorithmError> {
                     let $mut_self_param = self;
                     $mutate_fn
                 }
 
                 fn consume_result(
                     &self,
-                    result: $crate::projection::eval::procedure::ComputationResult<Self::Output>,
-                    mode: &$crate::projection::eval::procedure::ExecutionMode,
-                ) -> Result<Self::Output, $crate::projection::eval::procedure::ConsumerError> {
+                    result: $crate::projection::eval::algorithm::ComputationResult<Self::Output>,
+                    mode: &$crate::projection::eval::algorithm::ExecutionMode,
+                ) -> Result<Self::Output, $crate::projection::eval::algorithm::ConsumerError> {
                     match mode {
                         $(
-                            $crate::projection::eval::procedure::ExecutionMode::$mode => Ok(result.into_result()),
+                            $crate::projection::eval::algorithm::ExecutionMode::$mode => Ok(result.into_result()),
                         )*
-                        other => Err($crate::projection::eval::procedure::ConsumerError::UnsupportedMode(*other)),
+                        other => Err($crate::projection::eval::algorithm::ConsumerError::UnsupportedMode(*other)),
                     }
                 }
             }
@@ -249,7 +249,7 @@ macro_rules! define_storage_runtime {
 
             impl<'a, $graph_store_type: $crate::types::prelude::GraphStore> [<$name StorageRuntime>]<'a, $graph_store_type> {
                 /// Create a new storage runtime
-                pub fn new(graph_store: &'a $graph_store_type) -> Result<Self, $crate::projection::eval::procedure::AlgorithmError> {
+                pub fn new(graph_store: &'a $graph_store_type) -> Result<Self, $crate::projection::eval::algorithm::AlgorithmError> {
                     Ok(Self { graph_store })
                 }
 

@@ -6,7 +6,7 @@ use crate::algo::similarity::knn::metrics::{
 };
 use crate::algo::similarity::knn::storage::{KnnSamplerType, KnnStorageRuntime};
 use crate::core::utils::progress::ProgressTracker;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::NodeLabel;
 use crate::types::graph_store::GraphStore;
 use crate::types::properties::node::NodePropertyValues;

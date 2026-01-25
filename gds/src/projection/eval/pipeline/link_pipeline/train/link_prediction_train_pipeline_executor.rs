@@ -75,12 +75,12 @@ impl LinkPredictionTrainPipelineExecutor {
 impl LinkPredictionTrainPipelineExecutor {
     /// Generate dataset split graph filters.
     ///
-    /// Each split is a `PipelineGraphFilter` with:
+    /// Each split is a `LinkPredictionPipelineGraphFilter` with:
     /// - Node labels from config
     /// - Relationship types from split config
     pub fn generate_dataset_split_graph_filters(
         &self,
-    ) -> Result<HashMap<DatasetSplit, PipelineGraphFilter>, String> {
+    ) -> Result<HashMap<DatasetSplit, LinkPredictionPipelineGraphFilter>, String> {
         // TODO: implement dataset split graph filters.
         // 1. Get split config from pipeline
         // 2. Create TRAIN filter (trainRelationshipType)
@@ -116,7 +116,7 @@ impl LinkPredictionTrainPipelineExecutor {
     ///
     pub fn execute(
         &self,
-        _data_splits: HashMap<DatasetSplit, PipelineGraphFilter>,
+        _data_splits: HashMap<DatasetSplit, LinkPredictionPipelineGraphFilter>,
     ) -> Result<LinkPredictionTrainPipelineResult, String> {
         // TODO: implement pipeline execution.
         // 1. Validate training parameter space
@@ -148,7 +148,7 @@ impl LinkPredictionTrainPipelineExecutor {
     /// Removes split relationships from the graph store after training completes.
     pub fn additional_graph_store_cleanup(
         &mut self,
-        _datasets: &HashMap<DatasetSplit, PipelineGraphFilter>,
+        _datasets: &HashMap<DatasetSplit, LinkPredictionPipelineGraphFilter>,
     ) -> Result<(), String> {
         // TODO: implement graph store cleanup.
         // 1. Collect all relationship types from datasets
@@ -220,9 +220,9 @@ pub enum DatasetSplit {
     FeatureInput,
 }
 
-/// Pipeline graph filter.
+/// Pipeline graph filter for link prediction training.
 #[derive(Debug, Clone)]
-pub struct PipelineGraphFilter {
+pub struct LinkPredictionPipelineGraphFilter {
     /// Node labels to include
     pub node_labels: Vec<String>,
     /// Relationship types to include

@@ -11,7 +11,7 @@ use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, TaskReg
 use crate::mem::MemoryRange;
 use crate::procedures::builder_base::{MutationResult, WriteResult};
 use crate::procedures::{AlgorithmRunner, Result};
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph_store::GraphStore;
 use crate::types::prelude::DefaultGraphStore;
 use crate::types::properties::node::DefaultDoubleNodePropertyValues;

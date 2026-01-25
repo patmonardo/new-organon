@@ -10,7 +10,7 @@ use crate::config::{ConcurrencyConfig, Config, IterationsConfig, PregelRuntimeCo
 use crate::core::utils::partition::Partitioning;
 use crate::core::utils::progress::ProgressTracker;
 use crate::pregel::{Pregel, SyncQueueMessenger};
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::{Orientation, RelationshipType};
 use crate::types::graph::Graph;
 use crate::types::prelude::GraphStore;

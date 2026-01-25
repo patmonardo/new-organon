@@ -4,7 +4,7 @@
 //! reducing boilerplate while maintaining consistency.
 
 use super::Result;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use serde::Serialize;
 use std::time::{Duration, Instant};
 

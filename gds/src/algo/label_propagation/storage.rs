@@ -6,7 +6,7 @@ use super::computation::{
 use super::spec::LabelPropConfig;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::default_value::LONG_DEFAULT_FALLBACK;

@@ -3,11 +3,11 @@
 //! The algorithm operates over an undirected graph view; storage is a thin adapter
 //! that provides neighbor iteration helpers.
 
-use super::{K1ColoringComputationRuntime, K1IterationProgress};
 use super::spec::{K1ColoringConfig, K1ColoringResult};
+use super::{K1ColoringComputationRuntime, K1IterationProgress};
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::GraphStore;

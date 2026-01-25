@@ -13,7 +13,7 @@ use crate::projection::eval::pipeline::node_property_step::{
     NodePropertyStepError, MUTATE_PROPERTY_KEY,
 };
 use crate::projection::eval::pipeline::procedure_registry::{ProcedureKind, ProcedureRegistry};
-use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor};
+use crate::projection::eval::algorithm::{ExecutionContext, ExecutionMode, ProcedureExecutor};
 use crate::projection::NodeLabel;
 use crate::types::graph_store::DefaultGraphStore;
 use crate::types::graph_store::GraphStore;

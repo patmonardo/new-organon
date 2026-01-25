@@ -4,7 +4,7 @@ use super::{
 use super::metrics::{KnnNodePropertySpec, SimilarityComputer, SimilarityMetric};
 use crate::core::utils::progress::ProgressTracker;
 use crate::ml::core::samplers::RandomWalkSampler;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph_store::GraphStore;
 use crate::types::properties::node::NodePropertyValues;
 use rand::{RngCore, SeedableRng};

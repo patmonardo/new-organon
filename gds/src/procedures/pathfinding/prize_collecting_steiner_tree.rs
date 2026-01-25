@@ -14,7 +14,7 @@ use std::sync::Arc;
 // Import upgraded systems
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{TaskRegistryFactory, Tasks};
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 
 /// Result row for Prize-Collecting Steiner Tree stream mode
 #[derive(Debug, Clone, serde::Serialize)]

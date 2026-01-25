@@ -2,7 +2,7 @@
 //!
 //! This is the **Gross pole**: concerns around graph/property validation and view selection.
 
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph::Graph;
 
 #[derive(Debug, Default, Clone)]

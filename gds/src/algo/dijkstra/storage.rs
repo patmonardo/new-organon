@@ -10,7 +10,7 @@ use super::spec::{DijkstraPathResult, DijkstraResult};
 use super::targets::Targets;
 use super::DijkstraComputationRuntime;
 use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use std::time::Instant;

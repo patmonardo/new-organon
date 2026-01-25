@@ -23,7 +23,7 @@ use crate::algo::common::result_builders::{
 };
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 
 /// Statistics about Delta Stepping execution
 #[derive(Debug, Clone, serde::Serialize)]

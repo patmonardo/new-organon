@@ -7,7 +7,7 @@ use crate::core::utils::partition::Partitioning;
 use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::define_config;
-use crate::projection::eval::procedure::*;
+use crate::projection::eval::algorithm::*;
 use crate::projection::NodeLabel;
 use crate::projection::Orientation;
 use crate::types::properties::node::{DefaultDoubleNodePropertyValues, NodePropertyValues};

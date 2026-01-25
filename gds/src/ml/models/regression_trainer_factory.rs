@@ -6,7 +6,7 @@ use crate::ml::models::random_forest::{
     RandomForestRegressorTrainer, RandomForestRegressorTrainerConfig,
 };
 use crate::ml::models::{base::TrainerConfigTrait, RegressorTrainer, TrainingMethod};
-use crate::projection::eval::procedure::LogLevel as ProcedureLogLevel;
+use crate::projection::eval::algorithm::LogLevel as ProcedureLogLevel;
 use parking_lot::RwLock;
 use std::sync::Arc;
 

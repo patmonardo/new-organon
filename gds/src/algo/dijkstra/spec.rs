@@ -13,7 +13,7 @@ use super::DijkstraComputationRuntime;
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -252,8 +252,8 @@ define_algorithm_spec! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::projection::eval::procedure::AlgorithmSpec;
-    use crate::projection::eval::procedure::ExecutionContext;
+    use crate::projection::eval::algorithm::AlgorithmSpec;
+    use crate::projection::eval::algorithm::ExecutionContext;
     use serde_json::json;
 
     #[test]

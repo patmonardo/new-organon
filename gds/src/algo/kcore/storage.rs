@@ -3,11 +3,11 @@
 //! Controller: owns the undirected graph view, drives progress, and delegates
 //! stateful work to the computation runtime.
 
-use super::{KCoreComputationResult, KCoreComputationRuntime};
 use super::spec::KCoreConfig;
+use super::{KCoreComputationResult, KCoreComputationRuntime};
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::GraphStore;

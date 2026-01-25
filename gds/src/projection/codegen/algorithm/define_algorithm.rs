@@ -126,7 +126,7 @@ macro_rules! define_algorithm {
                 }
             }
 
-            impl $crate::projection::eval::procedure::AlgorithmSpec for [<$name:upper AlgorithmSpec>] {
+            impl $crate::projection::eval::algorithm::AlgorithmSpec for [<$name:upper AlgorithmSpec>] {
                 type Output = $result_name;
 
                 fn name(&self) -> &str {
@@ -137,19 +137,19 @@ macro_rules! define_algorithm {
                     &self.graph_name
                 }
 
-                fn projection_hint(&self) -> $crate::projection::eval::procedure::ProjectionHint {
-                    $crate::projection::eval::procedure::ProjectionHint::$hint
+                fn projection_hint(&self) -> $crate::projection::eval::algorithm::ProjectionHint {
+                    $crate::projection::eval::algorithm::ProjectionHint::$hint
                 }
 
-                fn parse_config(&self, input: &serde_json::Value) -> Result<serde_json::Value, $crate::projection::eval::procedure::ConfigError> {
+                fn parse_config(&self, input: &serde_json::Value) -> Result<serde_json::Value, $crate::projection::eval::algorithm::ConfigError> {
                     let config: [<$name:upper Config>] = serde_json::from_value(input.clone())
-                        .map_err(|e| $crate::projection::eval::procedure::ConfigError::InvalidValue {
+                        .map_err(|e| $crate::projection::eval::algorithm::ConfigError::InvalidValue {
                             param: "config".to_string(),
                             message: format!("JSON parsing failed: {}", e),
                         })?;
 
                     config.validate()
-                        .map_err(|e| $crate::projection::eval::procedure::ConfigError::InvalidValue {
+                        .map_err(|e| $crate::projection::eval::algorithm::ConfigError::InvalidValue {
                             param: "config".to_string(),
                             message: format!("Validation failed: {}", e),
                         })?;
@@ -157,18 +157,18 @@ macro_rules! define_algorithm {
                     Ok(serde_json::to_value(config).unwrap())
                 }
 
-                fn validation_config(&self, _context: &$crate::projection::eval::procedure::ExecutionContext) -> $crate::projection::eval::procedure::ValidationConfiguration {
-                    $crate::projection::eval::procedure::ValidationConfiguration::empty()
+                fn validation_config(&self, _context: &$crate::projection::eval::algorithm::ExecutionContext) -> $crate::projection::eval::algorithm::ValidationConfiguration {
+                    $crate::projection::eval::algorithm::ValidationConfiguration::empty()
                 }
 
                 fn execute<G: $crate::types::prelude::GraphStore>(
                     &self,
                     _graph_store: &G,
                     config: &serde_json::Value,
-                    _context: &$crate::projection::eval::procedure::ExecutionContext,
-                ) -> Result<$crate::projection::eval::procedure::ComputationResult<Self::Output>, $crate::projection::eval::procedure::AlgorithmError> {
+                    _context: &$crate::projection::eval::algorithm::ExecutionContext,
+                ) -> Result<$crate::projection::eval::algorithm::ComputationResult<Self::Output>, $crate::projection::eval::algorithm::AlgorithmError> {
                     let _parsed_config: [<$name:upper Config>] = serde_json::from_value(config.clone())
-                        .map_err(|e| $crate::projection::eval::procedure::AlgorithmError::Execution(format!("Config parsing failed: {}", e)))?;
+                        .map_err(|e| $crate::projection::eval::algorithm::AlgorithmError::Execution(format!("Config parsing failed: {}", e)))?;
 
                     let timer = std::time::Instant::now();
 
@@ -176,19 +176,19 @@ macro_rules! define_algorithm {
                     let result = $execute_fn?;
 
                     let elapsed = timer.elapsed();
-                    Ok($crate::projection::eval::procedure::ComputationResult::new(result, elapsed))
+                    Ok($crate::projection::eval::algorithm::ComputationResult::new(result, elapsed))
                 }
 
                 fn consume_result(
                     &self,
-                    result: $crate::projection::eval::procedure::ComputationResult<Self::Output>,
-                    mode: &$crate::projection::eval::procedure::ExecutionMode,
-                ) -> Result<Self::Output, $crate::projection::eval::procedure::ConsumerError> {
+                    result: $crate::projection::eval::algorithm::ComputationResult<Self::Output>,
+                    mode: &$crate::projection::eval::algorithm::ExecutionMode,
+                ) -> Result<Self::Output, $crate::projection::eval::algorithm::ConsumerError> {
                     match mode {
                         $(
-                            $crate::projection::eval::procedure::ExecutionMode::$mode => Ok(result.into_result()),
+                            $crate::projection::eval::algorithm::ExecutionMode::$mode => Ok(result.into_result()),
                         )*
-                        other => Err($crate::projection::eval::procedure::ConsumerError::UnsupportedMode(*other)),
+                        other => Err($crate::projection::eval::algorithm::ConsumerError::UnsupportedMode(*other)),
                     }
                 }
             }

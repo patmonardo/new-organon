@@ -67,7 +67,7 @@ mod tests {
 
     #[test]
     fn test_pagerank_algorithm_spec() {
-        use crate::projection::eval::procedure::{AlgorithmSpec, ProjectionHint};
+        use crate::projection::eval::algorithm::{AlgorithmSpec, ProjectionHint};
         let spec = PAGERANKAlgorithmSpec::new("test_graph".to_string(), PAGERANKConfig::default());
         assert_eq!(spec.name(), "pagerank");
         assert_eq!(spec.graph_name(), "test_graph");

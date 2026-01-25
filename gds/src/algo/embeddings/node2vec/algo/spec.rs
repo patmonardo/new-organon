@@ -31,12 +31,12 @@
 //!     .random_seed(Some(42))
 //!     .run()?;
 //! assert_eq!(result.embeddings[0].len(), 64);
-//! # Ok::<(), gds::projection::eval::procedure::AlgorithmError>(())
+//! # Ok::<(), gds::projection::eval::algorithm::AlgorithmError>(())
 //! ```
 
 use crate::config::validation::ConfigError;
 use crate::define_algorithm_spec;
-use crate::projection::eval::procedure::{AlgorithmError, LogLevel};
+use crate::projection::eval::algorithm::{AlgorithmError, LogLevel};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use serde::{Deserialize, Serialize};

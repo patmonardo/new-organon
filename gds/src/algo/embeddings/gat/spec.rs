@@ -2,7 +2,7 @@ use crate::algo::embeddings::gat::storage::GATStorageRuntime;
 use crate::algo::embeddings::gat::GATConfig;
 use crate::algo::embeddings::gat::GATResult;
 use crate::define_algorithm_spec;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use serde_json;
 

@@ -15,7 +15,7 @@ use crate::algo::prelude::UNKNOWN_VOLUME;
 use crate::core::utils::progress::ProgressTracker;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use std::collections::HashSet;

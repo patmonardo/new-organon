@@ -13,7 +13,7 @@ use super::targets::{create_targets, AllTargets, ManyTargets, SingleTarget, Targ
 use super::traversal_state::TraversalState;
 use super::DijkstraComputationRuntime;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
-use crate::projection::eval::procedure::{
+use crate::projection::eval::algorithm::{
     AlgorithmSpec, ExecutionContext, ExecutionMode, ProcedureExecutor,
 };
 use serde_json::json;

@@ -7,7 +7,7 @@ use crate::algo::index_inverse::{
     IndexInverseComputationRuntime, IndexInverseConfig, IndexInverseStorageRuntime,
 };
 use crate::procedures::Result;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph_store::GraphName;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde::Serialize;

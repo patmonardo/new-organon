@@ -4,7 +4,7 @@
 //! orientation and optional relationship weight property.
 
 use crate::concurrency::{TerminatedException, TerminationFlag};
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::{Orientation, RelationshipType};
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;

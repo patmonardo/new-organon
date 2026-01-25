@@ -6,7 +6,7 @@ use crate::algo::undirected::{
     ToUndirectedComputationRuntime, ToUndirectedConfig, ToUndirectedStorageRuntime,
 };
 use crate::procedures::Result;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::DefaultGraphStore;
 use serde::Serialize;
 use std::sync::Arc;

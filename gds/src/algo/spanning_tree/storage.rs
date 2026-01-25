@@ -7,7 +7,7 @@
 
 use super::{SpanningTree, SpanningTreeComputationRuntime};
 use crate::core::utils::progress::ProgressTracker;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph::Graph;
 
 /// Spanning Tree Storage Runtime

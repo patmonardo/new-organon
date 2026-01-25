@@ -4,7 +4,7 @@
 
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph::Graph;
 use std::sync::Arc;
 

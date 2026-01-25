@@ -1,6 +1,6 @@
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -9,8 +9,8 @@ use crate::types::prelude::GraphStore;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::ModularityComputationRuntime;
 use super::spec::ModularityResult;
+use super::ModularityComputationRuntime;
 
 #[derive(Clone)]
 pub struct ModularityStorageRuntime {

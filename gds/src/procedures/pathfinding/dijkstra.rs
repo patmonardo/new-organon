@@ -45,7 +45,7 @@ use crate::algo::common::prelude::{PathFindingResult, PathResultBuilder};
 use crate::algo::common::result_builders::{ExecutionMetadata, PathResult, ResultBuilder};
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 
 // ============================================================================
 // Statistics Type

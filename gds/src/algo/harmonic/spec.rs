@@ -12,7 +12,7 @@ use crate::concurrency::TerminationFlag;
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, Tasks};
 use crate::define_algorithm_spec;
-use crate::projection::eval::procedure::*;
+use crate::projection::eval::algorithm::*;
 use crate::projection::NodeLabel;
 use crate::projection::Orientation;
 use crate::types::properties::node::{DefaultDoubleNodePropertyValues, NodePropertyValues};
@@ -20,8 +20,8 @@ use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use super::HarmonicComputationRuntime;
 use super::storage::HarmonicStorageRuntime;
+use super::HarmonicComputationRuntime;
 
 #[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]

@@ -8,7 +8,7 @@
 use super::storage::SpanningTreeStorageRuntime;
 use crate::config::validation::ConfigError;
 use crate::define_algorithm_spec;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use serde::{Deserialize, Serialize};
@@ -261,9 +261,9 @@ define_algorithm_spec! {
 mod tests {
     use super::*;
     use crate::algo::spanning_tree::SpanningTree;
-    use crate::projection::eval::procedure::AlgorithmSpec;
-    use crate::projection::eval::procedure::ExecutionContext;
-    use crate::projection::eval::procedure::ExecutionMode;
+    use crate::projection::eval::algorithm::AlgorithmSpec;
+    use crate::projection::eval::algorithm::ExecutionContext;
+    use crate::projection::eval::algorithm::ExecutionMode;
     use serde_json::json;
 
     #[test]

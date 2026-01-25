@@ -13,7 +13,7 @@ use crate::algo::algorithms::machine_learning::kge::{
 };
 use crate::concurrency::TerminationFlag;
 use crate::procedures::Result;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph::id_map::IdMap;
 use crate::types::prelude::DefaultGraphStore;
 use std::sync::Arc;

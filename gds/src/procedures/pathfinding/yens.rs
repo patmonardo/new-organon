@@ -21,7 +21,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Additional import for error handling
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 
 /// Statistics about Yen's execution
 #[derive(Debug, Clone, serde::Serialize)]

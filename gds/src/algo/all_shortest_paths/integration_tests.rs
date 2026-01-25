@@ -7,7 +7,7 @@
 mod tests {
     use crate::algo::all_shortest_paths::ALL_SHORTEST_PATHSAlgorithmSpec;
     use crate::algo::all_shortest_paths::{AllShortestPathsResult, ShortestPathResult};
-    use crate::projection::eval::procedure::{
+    use crate::projection::eval::algorithm::{
         AlgorithmSpec, ComputationResult, ExecutionContext, ExecutionMode, ProcedureExecutor,
         ProjectionHint,
     };

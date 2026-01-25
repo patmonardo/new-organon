@@ -10,7 +10,7 @@ use crate::types::schema::Direction;
 use std::sync::Arc;
 
 // Additional import for error handling
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 
 pub(crate) fn core_to_procedure_path_result(path: CorePathResult) -> ProcedurePathResult {
     ProcedurePathResult {

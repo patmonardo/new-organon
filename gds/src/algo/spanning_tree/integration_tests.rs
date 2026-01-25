@@ -3,11 +3,11 @@
 //! This module contains integration tests that verify the spanning tree algorithm
 //! works correctly with the ProcedureExecutor runtime.
 
-use super::SpanningTreeComputationRuntime;
 use super::spec::{SPANNING_TREEAlgorithmSpec, SpanningTreeResult};
 use super::storage::SpanningTreeStorageRuntime;
+use super::SpanningTreeComputationRuntime;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
-use crate::projection::eval::procedure::{
+use crate::projection::eval::algorithm::{
     AlgorithmSpec, ExecutionContext, ExecutionMode, ProcedureExecutor,
 };
 use serde_json::json;

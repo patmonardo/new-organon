@@ -7,7 +7,7 @@ use crate::algo::articulation_points::{
     ArticulationPointsComputationResult, ArticulationPointsComputationRuntime, StackEvent,
 };
 use crate::core::utils::progress::ProgressTracker;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::{Orientation, RelationshipType};
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;

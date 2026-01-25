@@ -4,12 +4,12 @@
 //!
 //! This module contains integration tests for BFS algorithm with the executor runtime.
 
-use super::BfsComputationRuntime;
 use super::spec::{BFSAlgorithmSpec, BfsConfig, BfsResult};
 use super::storage::BfsStorageRuntime;
+use super::BfsComputationRuntime;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
-use crate::projection::eval::procedure::AlgorithmSpec;
-use crate::projection::eval::procedure::{ExecutionContext, ExecutionMode, ProcedureExecutor};
+use crate::projection::eval::algorithm::AlgorithmSpec;
+use crate::projection::eval::algorithm::{ExecutionContext, ExecutionMode, ProcedureExecutor};
 use serde_json::json;
 
 #[test]

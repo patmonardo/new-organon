@@ -7,7 +7,7 @@
 //! **Key Features**: Multi-source parallelization, weighted/unweighted support, streaming results
 
 use crate::core::utils::progress::ProgressTracker;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use std::sync::mpsc;

@@ -7,7 +7,7 @@ use crate::algo::harmonic::HarmonicComputationRuntime;
 use crate::algo::msbfs::{AggregatedNeighborProcessingMsBfs, OMEGA};
 use crate::concurrency::virtual_threads::{Executor, WorkerContext};
 use crate::concurrency::{Concurrency, TerminatedException, TerminationFlag};
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::{Orientation, RelationshipType};
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;

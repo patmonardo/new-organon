@@ -1,7 +1,7 @@
 use crate::algo::steiner_tree::SteinerTreeComputationRuntime;
 use crate::algo::steiner_tree::spec::{SteinerTreeConfig, SteinerTreeResult, PRUNED};
 use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
 use std::collections::HashSet;

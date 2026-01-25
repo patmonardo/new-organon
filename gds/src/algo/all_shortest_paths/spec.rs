@@ -10,7 +10,7 @@
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
-use crate::projection::eval::procedure::*;
+use crate::projection::eval::algorithm::*;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use std::collections::{HashMap, HashSet};

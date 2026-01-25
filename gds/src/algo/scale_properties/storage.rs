@@ -14,7 +14,7 @@ use crate::algo::common::scaling::{
     CenterScaler, LogScaler, MaxScaler, MeanScaler, MinMaxScaler, NoneScaler, Scaler,
     StdScoreScaler,
 };
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph::id_map::IdMap;
 use crate::types::prelude::GraphStore;
 use crate::types::properties::node::NodePropertyValues;

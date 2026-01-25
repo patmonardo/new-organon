@@ -47,7 +47,7 @@ use std::sync::Arc;
 
 // Additional imports for error handling and progress tracking
 use crate::core::utils::progress::TaskProgressTracker;
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 
 // ============================================================================
 // Statistics Type

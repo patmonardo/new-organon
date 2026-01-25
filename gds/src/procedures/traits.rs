@@ -4,7 +4,7 @@
 //! ensuring consistent API across all algorithms while allowing
 //! algorithms to customize their behavior.
 
-use crate::projection::eval::procedure::AlgorithmError;
+use crate::projection::eval::algorithm::AlgorithmError;
 use serde::Serialize;
 
 /// Result type for facade operations
