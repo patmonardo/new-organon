@@ -1,3 +1,4 @@
+pub mod algorithms;
 pub mod builder_base;
 pub mod centrality;
 pub mod community;
@@ -14,6 +15,7 @@ pub mod pipelines;
 pub mod similarity;
 pub mod traits;
 
+pub use algorithms::*;
 pub use builder_base::*;
 pub use graph::*;
 pub use graph_catalog::*;

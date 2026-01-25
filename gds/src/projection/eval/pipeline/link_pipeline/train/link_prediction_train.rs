@@ -2,7 +2,6 @@
 
 use super::{FeaturesAndLabels, LinkPredictionTrainConfig, LinkPredictionTrainResult};
 use crate::core::utils::progress::{LeafTask, Tasks};
-use crate::mem::{MemoryRange, MemoryTree};
 use crate::projection::eval::pipeline::link_pipeline::{
     LinkPredictionSplitConfig, LinkPredictionTrainingPipeline,
 };
@@ -244,19 +243,7 @@ impl LinkPredictionTrain {
         // Deferred: implement test metric computation.
     }
 
-    /// Estimates memory requirements.
-    ///
-    /// TODO: estimate feature extraction, training, cross-validation, and evaluation memory.
-    pub fn estimate_memory(
-        _pipeline: &LinkPredictionTrainingPipeline,
-        _train_config: &LinkPredictionTrainConfig,
-    ) -> MemoryTree {
-        // Deferred: implement memory estimation.
-        MemoryTree::leaf(
-            "LinkPredictionTrain memory estimation not yet implemented".to_string(),
-            MemoryRange::of_range(0, 0),
-        )
-    }
+    // Note: Memory estimation will be added once the pipeline is fully wired.
 }
 
 #[cfg(test)]
@@ -328,22 +315,6 @@ mod tests {
         assert!(task_names.contains(&"Extract train features"));
         assert!(task_names.contains(&"Train best model"));
         assert!(task_names.contains(&"Compute train metrics"));
-    }
-
-    #[test]
-    fn test_memory_estimate() {
-        let pipeline = LinkPredictionTrainingPipeline::new();
-        let config = LinkPredictionTrainConfig::builder()
-            .pipeline("test".to_string())
-            .target_relationship_type("KNOWS".to_string())
-            .graph_name("graph".to_string())
-            .username("user".to_string())
-            .build()
-            .unwrap();
-
-        let estimate = LinkPredictionTrain::estimate_memory(&pipeline, &config);
-        assert_eq!(estimate.memory_usage().min(), 0);
-        assert_eq!(estimate.memory_usage().max(), 0);
     }
 
     #[test]

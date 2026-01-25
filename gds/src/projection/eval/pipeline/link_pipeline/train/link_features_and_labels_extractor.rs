@@ -34,34 +34,6 @@ pub fn extract_features_and_labels(
     Ok(FeaturesAndLabels::new(features, labels))
 }
 
-/// Estimate memory requirements for features and labels.
-pub fn estimate_memory(
-    _fudged_link_feature_dim: (usize, usize),
-    _relationship_set_size: usize,
-    _set_description: String,
-) -> MemoryEstimate {
-    // TODO: implement when memory range estimation is available.
-    MemoryEstimate {
-        description: "LinkFeaturesAndLabelsExtractor memory estimation not yet implemented"
-            .to_string(),
-        min_bytes: 0,
-        max_bytes: 0,
-    }
-}
-
-/// Memory estimation result.
-#[derive(Debug, Clone)]
-pub struct MemoryEstimate {
-    /// Description of what is being estimated.
-    pub description: String,
-
-    /// Minimum memory required (bytes).
-    pub min_bytes: usize,
-
-    /// Maximum memory required (bytes).
-    pub max_bytes: usize,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -79,14 +51,5 @@ mod tests {
 
         assert_eq!(fal.size(), 4);
         assert_eq!(fal.labels(), &labels);
-    }
-
-    #[test]
-    fn test_memory_estimate_placeholder() {
-        let estimate = estimate_memory((10, 20), 1000, "test_set".to_string());
-
-        assert!(estimate.description.contains("not yet implemented"));
-        assert_eq!(estimate.min_bytes, 0);
-        assert_eq!(estimate.max_bytes, 0);
     }
 }

@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 
 use crate::core::utils::progress::{LeafTask, UNKNOWN_VOLUME};
-use crate::mem::{MemoryRange, MemoryTree};
 use crate::projection::RelationshipType;
 
 // ============================================================================
@@ -183,27 +182,7 @@ pub fn progress_task(
     LeafTask::new(format!("{}: progress", task_name), UNKNOWN_VOLUME)
 }
 
-/// Estimate memory requirements for training pipeline.
-///
-/// Estimates memory for relationship splits, node property steps, and training.
-pub fn estimate_memory(
-    _pipeline: PhantomData<()>, // Note: placeholder for LinkPredictionTrainingPipeline.
-    _config: PhantomData<()>,   // Note: placeholder for LinkPredictionTrainConfig.
-    _model_catalog: PhantomData<()>, // Note: placeholder for ModelCatalog.
-    _algorithms_facade: PhantomData<()>, // Note: placeholder for AlgorithmsProcedureFacade.
-    _username: String,
-) -> MemoryTree {
-    // TODO: implement memory estimation.
-    // 1. Validate training parameter space
-    // 2. Get split estimations
-    // 3. Estimate node property steps
-    // 4. Estimate training
-    // 5. Return max over all estimations
-    MemoryTree::leaf(
-        "LinkPredictionTrainPipelineExecutor memory estimation not yet implemented".to_string(),
-        MemoryRange::of_range(0, 0),
-    )
-}
+// Note: Memory estimation will be added once the pipeline is fully wired.
 
 // ============================================================================
 // Supporting Types
@@ -330,21 +309,6 @@ mod tests {
         let description = task.base().description();
         assert!(description.contains("test_task"));
         assert!(description.contains("progress"));
-    }
-
-    #[test]
-    fn test_memory_estimate_structure() {
-        let estimate = estimate_memory(
-            PhantomData,
-            PhantomData,
-            PhantomData,
-            PhantomData,
-            "test_user".to_string(),
-        );
-
-        let range = estimate.memory_usage();
-        assert_eq!(range.min(), 0);
-        assert_eq!(range.max(), 0);
     }
 
     #[test]

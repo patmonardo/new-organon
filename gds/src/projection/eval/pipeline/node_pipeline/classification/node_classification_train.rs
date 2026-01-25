@@ -20,6 +20,7 @@ use crate::ml::models::{
 use crate::ml::node_prediction::NodeSplitter;
 use crate::ml::splitting::TrainingExamplesSplit;
 use crate::ml::training::{CrossValidation, TrainingStatistics};
+use crate::procedures::AlgorithmsProcedureFacade;
 use crate::projection::eval::pipeline::node_pipeline::node_property_pipeline_base_train_config::NodePropertyPipelineBaseTrainConfig;
 use crate::projection::eval::pipeline::node_pipeline::node_property_training_pipeline::NodePropertyTrainingPipeline;
 use crate::projection::eval::pipeline::node_pipeline::NodeFeatureProducer;
@@ -33,8 +34,6 @@ use crate::types::prelude::GraphStore;
 use parking_lot::RwLock;
 use std::collections::{BTreeSet, HashMap};
 use std::sync::Arc;
-
-pub trait AlgorithmsProcedureFacade: Send + Sync {}
 
 /// Core training algorithm for node classification.
 ///
@@ -62,7 +61,7 @@ impl NodeClassificationTrain {
         _pipeline: &NodeClassificationTrainingPipeline,
         _configuration: &NodeClassificationPipelineTrainConfig,
         _model_catalog: &impl ModelCatalog,
-        _algorithms_procedure_facade: &dyn AlgorithmsProcedureFacade,
+        _algorithms_procedure_facade: &AlgorithmsProcedureFacade,
     ) -> Box<dyn MemoryEstimation> {
         // Note: Implement once memory estimation infrastructure is translated.
         MemoryEstimations::empty()
@@ -539,9 +538,11 @@ mod tests {
         let pipeline = NodeClassificationTrainingPipeline::new();
         let config = NodeClassificationPipelineTrainConfig::default();
         let model_catalog = EmptyModelCatalog;
-        struct StubAlgorithmsFacade;
-        impl AlgorithmsProcedureFacade for StubAlgorithmsFacade {}
-        let algorithms_facade = StubAlgorithmsFacade;
+        let graph_store = Arc::new(
+            DefaultGraphStore::random(&RandomGraphConfig::default())
+                .expect("random graph generation"),
+        );
+        let algorithms_facade = AlgorithmsProcedureFacade::from_store(graph_store);
 
         let _est = NodeClassificationTrain::estimate(
             &pipeline,

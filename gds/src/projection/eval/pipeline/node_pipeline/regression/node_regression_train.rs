@@ -13,6 +13,7 @@ use crate::ml::models::{Features, RegressionTrainerFactory, Regressor};
 use crate::ml::node_prediction::NodeSplitter;
 use crate::ml::splitting::TrainingExamplesSplit;
 use crate::ml::training::statistics::TrainingStatistics;
+use crate::procedures::AlgorithmsProcedureFacade;
 use crate::projection::eval::pipeline::node_pipeline::node_property_pipeline_base_train_config::NodePropertyPipelineBaseTrainConfig;
 use crate::projection::eval::pipeline::node_pipeline::node_property_training_pipeline::NodePropertyTrainingPipeline;
 use crate::projection::eval::pipeline::node_pipeline::NodeFeatureProducer;
@@ -22,8 +23,6 @@ use crate::types::graph_store::DefaultGraphStore;
 use crate::types::prelude::GraphStore;
 use std::collections::HashMap;
 use std::sync::Arc;
-
-pub trait AlgorithmsProcedureFacade: Send + Sync {}
 
 /// Core training algorithm for node regression.
 ///
@@ -49,7 +48,7 @@ impl NodeRegressionTrain {
         _pipeline: &NodeRegressionTrainingPipeline,
         _configuration: &NodeRegressionPipelineTrainConfig,
         _model_catalog: &impl ModelCatalog,
-        _algorithms_procedure_facade: &dyn AlgorithmsProcedureFacade,
+        _algorithms_procedure_facade: &AlgorithmsProcedureFacade,
     ) -> Box<dyn MemoryEstimation> {
         // Note: Implement once memory estimation infrastructure is translated.
         MemoryEstimations::empty()
@@ -364,9 +363,11 @@ mod tests {
         let pipeline = NodeRegressionTrainingPipeline::new();
         let config = NodeRegressionPipelineTrainConfig::default();
         let model_catalog = EmptyModelCatalog;
-        struct StubAlgorithmsFacade;
-        impl AlgorithmsProcedureFacade for StubAlgorithmsFacade {}
-        let algorithms_facade = StubAlgorithmsFacade;
+        let graph_store = Arc::new(
+            DefaultGraphStore::random(&RandomGraphConfig::default())
+                .expect("random graph generation"),
+        );
+        let algorithms_facade = AlgorithmsProcedureFacade::from_store(graph_store);
 
         let _est =
             NodeRegressionTrain::estimate(&pipeline, &config, &model_catalog, &algorithms_facade);
