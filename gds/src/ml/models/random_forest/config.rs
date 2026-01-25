@@ -1,3 +1,4 @@
+use crate::config::validation::ConfigError;
 use crate::ml::decision_tree::ClassifierImpurityCriterionType;
 use crate::ml::models::TrainerConfig;
 use crate::ml::models::TrainingMethod;
@@ -42,6 +43,75 @@ impl RandomForestConfig {
     pub fn max_features_ratio(&self, feature_dimension: usize) -> f64 {
         self.max_features_ratio
             .unwrap_or_else(|| 1.0 / (feature_dimension as f64).sqrt())
+    }
+
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if !self.num_samples_ratio.is_finite()
+            || !(self.num_samples_ratio > 0.0 && self.num_samples_ratio <= 1.0)
+        {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "numSamplesRatio".to_string(),
+                reason: "numSamplesRatio must be finite and in (0.0, 1.0]".to_string(),
+            });
+        }
+
+        if self.num_decision_trees == 0 || self.num_decision_trees > 1_000_000 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "numDecisionTrees".to_string(),
+                reason: "numDecisionTrees must be > 0 and <= 1_000_000".to_string(),
+            });
+        }
+
+        if !crate::ml::decision_tree::is_unlimited_depth(self.max_depth) {
+            if self.max_depth < 1 {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "maxDepth".to_string(),
+                    reason: "maxDepth must be 0 (unlimited) or >= 1".to_string(),
+                });
+            }
+            if self.max_depth > 10_000 {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "maxDepth".to_string(),
+                    reason: "maxDepth must be 0 (unlimited) or in [1, 10_000]".to_string(),
+                });
+            }
+        }
+
+        if self.min_samples_split < 2 || self.min_samples_split > 1_000_000 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "minSamplesSplit".to_string(),
+                reason: "minSamplesSplit must be >= 2 and <= 1_000_000".to_string(),
+            });
+        }
+        if self.min_samples_leaf < 1 || self.min_samples_leaf > 1_000_000 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "minSamplesLeaf".to_string(),
+                reason: "minSamplesLeaf must be >= 1 and <= 1_000_000".to_string(),
+            });
+        }
+        if self.min_samples_leaf >= self.min_samples_split {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "minSamplesLeaf/minSamplesSplit".to_string(),
+                reason: "minSamplesLeaf must be strictly smaller than minSamplesSplit".to_string(),
+            });
+        }
+
+        if let Some(r) = self.max_features_ratio {
+            if !r.is_finite() || !(r > 0.0 && r <= 1.0) {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "maxFeaturesRatio".to_string(),
+                    reason: "maxFeaturesRatio must be finite and in (0.0, 1.0]".to_string(),
+                });
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for RandomForestConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        RandomForestConfig::validate(self)
     }
 }
 
@@ -132,6 +202,12 @@ impl TrainerConfig for RandomForestClassifierTrainerConfig {
     }
 }
 
+impl crate::config::ValidatedConfig for RandomForestClassifierTrainerConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        crate::config::ValidatedConfig::validate(&self.forest)
+    }
+}
+
 /// Configuration for random forest regressor trainer
 /// 1:1 with RandomForestRegressorTrainerConfig.java from Java GDS
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -172,5 +248,11 @@ impl TrainerConfig for RandomForestRegressorTrainerConfig {
             serde_json::json!(self.forest.min_samples_leaf),
         );
         map
+    }
+}
+
+impl crate::config::ValidatedConfig for RandomForestRegressorTrainerConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        crate::config::ValidatedConfig::validate(&self.forest)
     }
 }

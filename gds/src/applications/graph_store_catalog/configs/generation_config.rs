@@ -1,3 +1,4 @@
+use crate::config::validation::ConfigError;
 use serde::{Deserialize, Serialize};
 
 /// Configuration for synthetic graph generation.
@@ -19,4 +20,24 @@ pub struct GraphGenerationConfig {
     pub directed: Option<bool>,
     pub inverse_indexed: Option<bool>,
     pub seed: Option<u64>,
+}
+
+impl GraphGenerationConfig {
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if let Some(n) = self.node_count {
+            if n == 0 {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "nodeCount".to_string(),
+                    reason: "nodeCount must be > 0".to_string(),
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for GraphGenerationConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        GraphGenerationConfig::validate(self)
+    }
 }

@@ -3,6 +3,7 @@
 // Translation from: GraphProjectFromStoreConfig.java (199 lines)
 // Design: Type-safe configuration with validation
 
+use crate::config::validation::ConfigError;
 use std::fmt;
 
 /// Configuration for Arrow-native GraphStore projection.
@@ -87,6 +88,15 @@ impl ArrowProjectionConfig {
         }
 
         Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for ArrowProjectionConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        self.validate().map_err(|e| ConfigError::InvalidParameter {
+            parameter: "ArrowProjectionConfig".to_string(),
+            reason: e.to_string(),
+        })
     }
 }
 

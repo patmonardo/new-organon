@@ -5,6 +5,7 @@
 //! Controls how many different parameter combinations should be tried
 //! when searching for optimal hyperparameters.
 
+use crate::config::validation::ConfigError;
 use std::collections::HashMap;
 
 /// Configuration for automatic hyperparameter tuning.
@@ -69,6 +70,16 @@ impl AutoTuningConfig {
         );
         map
     }
+
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.max_trials < 1 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "maxTrials".to_string(),
+                reason: format!("maxTrials must be >= 1, got {}", self.max_trials),
+            });
+        }
+        Ok(())
+    }
 }
 
 impl Default for AutoTuningConfig {
@@ -102,3 +113,9 @@ impl std::fmt::Display for AutoTuningConfigError {
 }
 
 impl std::error::Error for AutoTuningConfigError {}
+
+impl crate::config::ValidatedConfig for AutoTuningConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        AutoTuningConfig::validate(self)
+    }
+}

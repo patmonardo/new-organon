@@ -1,3 +1,4 @@
+use crate::config::validation::ConfigError;
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 
@@ -50,6 +51,46 @@ impl GradientDescentConfig {
 
     pub fn learning_rate(&self) -> f64 {
         self.learning_rate
+    }
+
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.batch_size == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "batchSize".to_string(),
+                reason: "batchSize must be > 0".to_string(),
+            });
+        }
+        if self.min_epochs == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "minEpochs".to_string(),
+                reason: "minEpochs must be >= 1".to_string(),
+            });
+        }
+        if self.max_epochs < self.min_epochs {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "maxEpochs".to_string(),
+                reason: "maxEpochs must be >= minEpochs".to_string(),
+            });
+        }
+        if self.learning_rate <= 0.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "learningRate".to_string(),
+                reason: "learningRate must be > 0".to_string(),
+            });
+        }
+        if self.tolerance < 0.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "tolerance".to_string(),
+                reason: "tolerance must be >= 0".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for GradientDescentConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        GradientDescentConfig::validate(self)
     }
 }
 

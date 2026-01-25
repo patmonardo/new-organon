@@ -2,6 +2,7 @@
 //!
 //! Translation of `LinearRegressionTrainConfig.java` from Java GDS.
 
+use crate::config::validation::ConfigError;
 use crate::ml::gradient_descent::GradientDescentConfig;
 use crate::ml::models::TrainerConfig;
 use crate::ml::models::TrainingMethod;
@@ -131,5 +132,24 @@ impl TrainerConfig for LinearRegressionTrainConfig {
         );
 
         map
+    }
+}
+
+impl LinearRegressionTrainConfig {
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        crate::config::ValidatedConfig::validate(self.gradient())?;
+        if self.penalty < 0.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "penalty".to_string(),
+                reason: "penalty must be >= 0".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for LinearRegressionTrainConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        LinearRegressionTrainConfig::validate(self)
     }
 }

@@ -3,6 +3,7 @@
 //! Implements the `AlgorithmSpec` contract for the executor runtime.
 
 use crate::collections::backends::vec::VecFloatArray;
+use crate::config::validation::ConfigError;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::{AlgorithmError, LogLevel};
 use crate::projection::orientation::Orientation;
@@ -13,8 +14,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::FastRPComputationRuntime;
 use super::storage::FastRPStorageRuntime;
+use super::FastRPComputationRuntime;
 
 // ============================================================================
 // Configuration
@@ -88,6 +89,34 @@ impl FastRPConfig {
     fn default_min_batch_size() -> usize {
         10_000
     }
+
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.embedding_dimension == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "embeddingDimension".to_string(),
+                reason: "embeddingDimension must be > 0".to_string(),
+            });
+        }
+        if self.property_dimension > self.embedding_dimension {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "propertyDimension".to_string(),
+                reason: "propertyDimension must be <= embeddingDimension".to_string(),
+            });
+        }
+        if self.iteration_weights.is_empty() {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "iterationWeights".to_string(),
+                reason: "iterationWeights must be non-empty".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for FastRPConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        FastRPConfig::validate(self)
+    }
 }
 
 impl Default for FastRPConfig {
@@ -132,17 +161,9 @@ define_algorithm_spec! {
         let config: FastRPConfig = serde_json::from_value(config_input.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Failed to parse FastRP config: {e}")))?;
 
-        if config.embedding_dimension == 0 {
-            return Err(AlgorithmError::Execution("embeddingDimension must be > 0".into()));
-        }
-        if config.property_dimension > config.embedding_dimension {
-            return Err(AlgorithmError::Execution(
-                "propertyDimension must be <= embeddingDimension".into(),
-            ));
-        }
-        if config.iteration_weights.is_empty() {
-            return Err(AlgorithmError::Execution("iterationWeights must be non-empty".into()));
-        }
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
 
         context.log(
             LogLevel::Info,

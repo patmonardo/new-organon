@@ -20,15 +20,9 @@ define_algorithm_spec! {
         let config: GATConfig = serde_json::from_value(config_input.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Failed to parse GAT config: {e}")))?;
 
-        if config.embedding_dimension == 0 {
-            return Err(AlgorithmError::Execution("embedding_dimension must be > 0".to_string()));
-        }
-        if config.num_layers == 0 {
-            return Err(AlgorithmError::Execution("num_layers must be > 0".to_string()));
-        }
-        if config.num_heads == 0 {
-            return Err(AlgorithmError::Execution("num_heads must be > 0".to_string()));
-        }
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
 
         // Load graph
         let rel_types = std::collections::HashSet::new();

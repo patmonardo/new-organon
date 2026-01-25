@@ -1,6 +1,7 @@
 use crate::projection::eval::pipeline::non_empty_set_validation::{
     validate_node_set_size, MIN_SET_SIZE, MIN_TRAIN_SET_SIZE,
 };
+use crate::config::validation::ConfigError;
 use std::collections::HashMap;
 
 /// Configuration for splitting node property prediction datasets.
@@ -105,6 +106,28 @@ impl NodePropertyPredictionSplitConfig {
         Ok(())
     }
 
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if !(0.0..=1.0).contains(&self.test_fraction) {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "testFraction".to_string(),
+                reason: format!(
+                    "testFraction must be between 0.0 and 1.0, got {}",
+                    self.test_fraction
+                ),
+            });
+        }
+        if self.validation_folds < 2 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "validationFolds".to_string(),
+                reason: format!(
+                    "validationFolds must be at least 2, got {}",
+                    self.validation_folds
+                ),
+            });
+        }
+        Ok(())
+    }
+
     /// Returns the test set size for a given node count.
     pub fn test_set_size(&self, node_count: usize) -> usize {
         (self.test_fraction * node_count as f64) as usize
@@ -125,6 +148,12 @@ impl NodePropertyPredictionSplitConfig {
     pub fn fold_test_set_size(&self, node_count: usize) -> usize {
         let train_size = self.train_set_size(node_count);
         train_size / self.validation_folds
+    }
+}
+
+impl crate::config::ValidatedConfig for NodePropertyPredictionSplitConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        NodePropertyPredictionSplitConfig::validate(self)
     }
 }
 

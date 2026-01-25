@@ -1,4 +1,5 @@
 use crate::collections::long_multiset::LongMultiSet;
+use crate::config::validation::ConfigError;
 use crate::ml::core::subgraph::LocalIdMap;
 use crate::ml::metrics::{ClassificationMetric, ClassificationMetricSpecification, Metric};
 use crate::projection::eval::pipeline::node_pipeline::NodePropertyPipelineBaseTrainConfig;
@@ -85,6 +86,14 @@ impl NodePropertyPipelineBaseTrainConfig for NodeClassificationPipelineTrainConf
 
     fn random_seed(&self) -> Option<u64> {
         self.random_seed
+    }
+}
+
+impl crate::config::ValidatedConfig for NodeClassificationPipelineTrainConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        crate::config::validate_non_empty_string(self.pipeline(), "pipeline")?;
+        crate::config::validate_non_empty_string(self.target_property(), "targetProperty")?;
+        Ok(())
     }
 }
 

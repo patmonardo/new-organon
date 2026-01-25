@@ -96,6 +96,12 @@ impl GraphWriteNodePropertiesConfig {
     }
 }
 
+impl crate::config::ValidatedConfig for GraphWriteNodePropertiesConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        GraphWriteNodePropertiesConfig::validate(self)
+    }
+}
+
 /// Builder for GraphWriteNodePropertiesConfig
 #[derive(Default)]
 pub struct GraphWriteNodePropertiesConfigBuilder {

@@ -1,6 +1,7 @@
 // Phase 4.3: LinkPredictionSplitConfig - Split configuration for link prediction training
 
 use super::ExpectedSetSizes;
+use crate::config::validation::ConfigError;
 use crate::projection::RelationshipType;
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -181,6 +182,54 @@ impl LinkPredictionSplitConfig {
         }
     }
 
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.validation_folds < 2 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "validationFolds".to_string(),
+                reason: format!(
+                    "validationFolds must be at least 2, got {}",
+                    self.validation_folds
+                ),
+            });
+        }
+        if self.test_fraction <= 0.0 || self.test_fraction >= 1.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "testFraction".to_string(),
+                reason: format!(
+                    "testFraction must be in range (0.0, 1.0), got {}",
+                    self.test_fraction
+                ),
+            });
+        }
+        if self.train_fraction <= 0.0 || self.train_fraction >= 1.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "trainFraction".to_string(),
+                reason: format!(
+                    "trainFraction must be in range (0.0, 1.0), got {}",
+                    self.train_fraction
+                ),
+            });
+        }
+        if self.negative_sampling_ratio <= 0.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "negativeSamplingRatio".to_string(),
+                reason: format!(
+                    "negativeSamplingRatio must be positive, got {}",
+                    self.negative_sampling_ratio
+                ),
+            });
+        }
+        if self.negative_relationship_type.is_some() && self.negative_sampling_ratio != 1.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "negativeSamplingRatio/negativeRelationshipType".to_string(),
+                reason:
+                    "negativeSamplingRatio and negativeRelationshipType cannot be used together"
+                        .to_string(),
+            });
+        }
+        Ok(())
+    }
+
     /// Validates the config against a graph store.
     ///
     /// Validates:
@@ -203,6 +252,12 @@ impl LinkPredictionSplitConfig {
         // 3. Check negativeSamplingRatio and negativeRelationshipType aren't both set
         // 4. Validate set sizes using expected_set_sizes()
         Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for LinkPredictionSplitConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        LinkPredictionSplitConfig::validate(self)
     }
 }
 

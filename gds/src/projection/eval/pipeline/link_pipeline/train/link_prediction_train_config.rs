@@ -1,5 +1,6 @@
 // Phase 5.1: LinkPredictionTrainConfig - Training configuration for link prediction
 
+use crate::config::validation::ConfigError;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 
@@ -180,6 +181,15 @@ impl LinkPredictionTrainConfig {
         // 2. Validate target_node_label exists (unless "*")
         // 3. Validate target_relationship_type exists and is UNDIRECTED
         Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for LinkPredictionTrainConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        self.validate().map_err(|err| ConfigError::InvalidParameter {
+            parameter: "LinkPredictionTrainConfig".to_string(),
+            reason: err,
+        })
     }
 }
 

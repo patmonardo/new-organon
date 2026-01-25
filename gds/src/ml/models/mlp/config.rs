@@ -2,6 +2,7 @@
 //!
 //! Translated from `MLPClassifierTrainConfig.java` from Java GDS.
 
+use crate::config::validation::ConfigError;
 use crate::ml::models::base::TrainerConfigTrait;
 use crate::ml::models::TrainingMethod;
 use derive_builder::Builder;
@@ -103,6 +104,56 @@ impl MLPClassifierTrainConfig {
             }
             self.class_weights.clone()
         }
+    }
+}
+
+impl MLPClassifierTrainConfig {
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.batch_size == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "batchSize".to_string(),
+                reason: "batchSize must be > 0".to_string(),
+            });
+        }
+        if self.max_epochs < self.min_epochs {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "maxEpochs/minEpochs".to_string(),
+                reason: "maxEpochs must be >= minEpochs".to_string(),
+            });
+        }
+        if self.learning_rate <= 0.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "learningRate".to_string(),
+                reason: "learningRate must be > 0".to_string(),
+            });
+        }
+        if self.tolerance < 0.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "tolerance".to_string(),
+                reason: "tolerance must be >= 0".to_string(),
+            });
+        }
+        if self.hidden_layer_sizes.is_empty() {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "hiddenLayerSizes".to_string(),
+                reason: "hiddenLayerSizes must not be empty".to_string(),
+            });
+        }
+        for &n in &self.hidden_layer_sizes {
+            if n == 0 {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "hiddenLayerSizes".to_string(),
+                    reason: "hiddenLayerSizes entries must be > 0".to_string(),
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for MLPClassifierTrainConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        MLPClassifierTrainConfig::validate(self)
     }
 }
 

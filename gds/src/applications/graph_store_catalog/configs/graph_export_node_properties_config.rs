@@ -181,6 +181,12 @@ impl GraphExportNodePropertiesConfig {
     }
 }
 
+impl crate::config::ValidatedConfig for GraphExportNodePropertiesConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        GraphExportNodePropertiesConfig::validate(self)
+    }
+}
+
 /// Builder for GraphExportNodePropertiesConfig
 #[derive(Default)]
 pub struct GraphExportNodePropertiesConfigBuilder {

@@ -50,6 +50,12 @@ impl GraphRemoveGraphPropertiesConfig {
     }
 }
 
+impl crate::config::ValidatedConfig for GraphRemoveGraphPropertiesConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        GraphRemoveGraphPropertiesConfig::validate(self)
+    }
+}
+
 /// Builder for GraphRemoveGraphPropertiesConfig
 #[derive(Default)]
 pub struct GraphRemoveGraphPropertiesConfigBuilder {

@@ -1,3 +1,4 @@
+use crate::config::validation::ConfigError;
 use crate::ml::models::TrainerConfig;
 use crate::ml::models::TrainingMethod;
 use serde::Deserialize;
@@ -117,5 +118,41 @@ impl TrainerConfig for LogisticRegressionTrainConfig {
         }
 
         map
+    }
+}
+
+impl LogisticRegressionTrainConfig {
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.batch_size == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "batchSize".to_string(),
+                reason: "batchSize must be > 0".to_string(),
+            });
+        }
+        if self.learning_rate <= 0.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "learningRate".to_string(),
+                reason: "learningRate must be > 0".to_string(),
+            });
+        }
+        if self.max_epochs == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "maxEpochs".to_string(),
+                reason: "maxEpochs must be > 0".to_string(),
+            });
+        }
+        if self.tolerance < 0.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "tolerance".to_string(),
+                reason: "tolerance must be >= 0".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for LogisticRegressionTrainConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        LogisticRegressionTrainConfig::validate(self)
     }
 }

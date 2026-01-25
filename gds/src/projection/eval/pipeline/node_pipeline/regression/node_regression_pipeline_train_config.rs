@@ -1,3 +1,4 @@
+use crate::config::validation::ConfigError;
 use crate::ml::metrics::regression::RegressionMetric;
 use crate::projection::eval::pipeline::node_pipeline::NodePropertyPipelineBaseTrainConfig;
 
@@ -81,6 +82,18 @@ impl NodePropertyPipelineBaseTrainConfig for NodeRegressionPipelineTrainConfig {
 
     fn random_seed(&self) -> Option<u64> {
         self.random_seed
+    }
+}
+
+impl crate::config::ValidatedConfig for NodeRegressionPipelineTrainConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        crate::config::validate_non_empty_string(self.pipeline(), "pipeline")?;
+        crate::config::validate_non_empty_string(self.target_property(), "targetProperty")?;
+        self.validate_metrics().map_err(|msg| ConfigError::InvalidParameter {
+            parameter: "metrics".to_string(),
+            reason: msg,
+        })?;
+        Ok(())
     }
 }
 

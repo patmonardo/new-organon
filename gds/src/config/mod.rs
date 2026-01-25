@@ -15,7 +15,6 @@ pub mod limits;
 pub mod manager;
 pub mod model_config;
 pub mod pregel_config;
-pub mod validated_impls;
 pub mod validation;
 
 // Re-export core types for convenience

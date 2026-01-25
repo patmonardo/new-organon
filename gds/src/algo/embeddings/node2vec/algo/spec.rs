@@ -34,6 +34,7 @@
 //! # Ok::<(), gds::projection::eval::procedure::AlgorithmError>(())
 //! ```
 
+use crate::config::validation::ConfigError;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::{AlgorithmError, LogLevel};
 use crate::projection::orientation::Orientation;
@@ -194,6 +195,46 @@ impl Node2VecConfig {
     fn default_walk_buffer_size() -> usize {
         8_192
     }
+
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.walks_per_node == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "walksPerNode".to_string(),
+                reason: "walksPerNode must be > 0".to_string(),
+            });
+        }
+        if self.walk_length == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "walkLength".to_string(),
+                reason: "walkLength must be > 0".to_string(),
+            });
+        }
+        if self.embedding_dimension == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "embeddingDimension".to_string(),
+                reason: "embeddingDimension must be > 0".to_string(),
+            });
+        }
+        if self.window_size == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "windowSize".to_string(),
+                reason: "windowSize must be > 0".to_string(),
+            });
+        }
+        if self.iterations == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "iterations".to_string(),
+                reason: "iterations must be > 0".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for Node2VecConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        Node2VecConfig::validate(self)
+    }
 }
 
 impl Default for Node2VecConfig {
@@ -239,21 +280,9 @@ define_algorithm_spec! {
         let config: Node2VecConfig = serde_json::from_value(config_input.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Failed to parse Node2Vec config: {e}")))?;
 
-        if config.walks_per_node == 0 {
-            return Err(AlgorithmError::Execution("walksPerNode must be > 0".into()));
-        }
-        if config.walk_length == 0 {
-            return Err(AlgorithmError::Execution("walkLength must be > 0".into()));
-        }
-        if config.embedding_dimension == 0 {
-            return Err(AlgorithmError::Execution("embeddingDimension must be > 0".into()));
-        }
-        if config.window_size == 0 {
-            return Err(AlgorithmError::Execution("windowSize must be > 0".into()));
-        }
-        if config.iterations == 0 {
-            return Err(AlgorithmError::Execution("iterations must be > 0".into()));
-        }
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
 
         context.log(
             LogLevel::Info,

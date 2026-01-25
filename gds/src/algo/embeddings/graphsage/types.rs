@@ -4,6 +4,7 @@
 
 use crate::concurrency::Concurrency;
 use crate::config::base_types::{BaseConfig, Config};
+use crate::config::validation::ConfigError;
 use crate::core::model::ModelConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -94,6 +95,53 @@ impl ModelConfig for GraphSageTrainConfig {
 
     fn model_user(&self) -> &str {
         &self.model_user
+    }
+}
+
+impl GraphSageTrainConfig {
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        crate::config::validate_non_empty_string(&self.model_user, "modelUser")?;
+        crate::config::validate_non_empty_string(&self.model_name, "modelName")?;
+
+        if self.batch_size == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "batchSize".to_string(),
+                reason: "batchSize must be > 0".to_string(),
+            });
+        }
+        if self.learning_rate <= 0.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "learningRate".to_string(),
+                reason: "learningRate must be > 0".to_string(),
+            });
+        }
+        if self.tolerance < 0.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "tolerance".to_string(),
+                reason: "tolerance must be >= 0".to_string(),
+            });
+        }
+        if self.embedding_dimension == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "embeddingDimension".to_string(),
+                reason: "embeddingDimension must be > 0".to_string(),
+            });
+        }
+        for &s in &self.sample_sizes {
+            if s == 0 {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "sampleSizes".to_string(),
+                    reason: "sampleSizes entries must be > 0".to_string(),
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for GraphSageTrainConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        GraphSageTrainConfig::validate(self)
     }
 }
 

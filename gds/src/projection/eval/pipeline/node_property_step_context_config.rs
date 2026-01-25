@@ -6,6 +6,7 @@
 //! considered when executing a node property computation step (e.g., running
 //! an algorithm like PageRank as part of feature extraction).
 
+use crate::config::validation::ConfigError;
 use std::collections::HashMap;
 
 /// Configuration for the execution context of a node property step.
@@ -97,6 +98,12 @@ impl NodePropertyStepContextConfig {
     /// Get the context relationship types.
     pub fn context_relationship_types(&self) -> &[String] {
         &self.context_relationship_types
+    }
+}
+
+impl crate::config::ValidatedConfig for NodePropertyStepContextConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        Ok(())
     }
 }
 

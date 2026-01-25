@@ -7,6 +7,7 @@
 //! to the computation runtime.
 
 use crate::collections::HugeObjectArray;
+use crate::config::validation::ConfigError;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -47,6 +48,22 @@ impl GraphSageConfig {
     fn default_concurrency() -> usize {
         num_cpus::get().max(1)
     }
+
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.model_name.is_empty() {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "modelName".to_string(),
+                reason: "modelName must be specified".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for GraphSageConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        GraphSageConfig::validate(self)
+    }
 }
 
 impl Default for GraphSageConfig {
@@ -85,9 +102,9 @@ define_algorithm_spec! {
         let config: GraphSageConfig = serde_json::from_value(config_input.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Failed to parse GraphSAGE config: {e}")))?;
 
-        if config.model_name.is_empty() {
-            return Err(AlgorithmError::Execution("modelName must be specified".to_string()));
-        }
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
 
         // Load graph
         let rel_types = std::collections::HashSet::new();

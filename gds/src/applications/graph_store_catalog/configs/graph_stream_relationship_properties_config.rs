@@ -96,6 +96,12 @@ impl GraphStreamRelationshipPropertiesConfig {
     }
 }
 
+impl crate::config::ValidatedConfig for GraphStreamRelationshipPropertiesConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        GraphStreamRelationshipPropertiesConfig::validate(self)
+    }
+}
+
 /// Builder for GraphStreamRelationshipPropertiesConfig
 #[derive(Default)]
 pub struct GraphStreamRelationshipPropertiesConfigBuilder {

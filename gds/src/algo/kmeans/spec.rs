@@ -1,5 +1,7 @@
 //! K-Means config + result types.
 
+use crate::config::validation::ConfigError;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum KMeansSamplerType {
     #[serde(rename = "UNIFORM")]
@@ -65,6 +67,54 @@ impl Default for KMeansConfig {
             seed_centroids: Vec::new(),
             random_seed: None,
         }
+    }
+}
+
+impl KMeansConfig {
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.k == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "k".to_string(),
+                reason: "k must be > 0".to_string(),
+            });
+        }
+        if self.max_iterations == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "maxIterations".to_string(),
+                reason: "maxIterations must be > 0".to_string(),
+            });
+        }
+        if !(0.0..=1.0).contains(&self.delta_threshold) {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "deltaThreshold".to_string(),
+                reason: "deltaThreshold must be in [0.0, 1.0]".to_string(),
+            });
+        }
+        if self.number_of_restarts == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "numberOfRestarts".to_string(),
+                reason: "numberOfRestarts must be > 0".to_string(),
+            });
+        }
+        if self.concurrency == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be > 0".to_string(),
+            });
+        }
+        if self.node_property.trim().is_empty() {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "nodeProperty".to_string(),
+                reason: "nodeProperty cannot be empty".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for KMeansConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        KMeansConfig::validate(self)
     }
 }
 

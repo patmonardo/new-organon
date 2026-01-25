@@ -50,6 +50,12 @@ impl GraphStreamGraphPropertiesConfig {
     }
 }
 
+impl crate::config::ValidatedConfig for GraphStreamGraphPropertiesConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        GraphStreamGraphPropertiesConfig::validate(self)
+    }
+}
+
 /// Builder for GraphStreamGraphPropertiesConfig
 #[derive(Default)]
 pub struct GraphStreamGraphPropertiesConfigBuilder {

@@ -7,14 +7,15 @@
 //! This spec exposes a canonical config/result surface and delegates execution
 //! to the computation runtime.
 
+use crate::config::validation::ConfigError;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::{AlgorithmError, LogLevel};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use serde::{Deserialize, Serialize};
 
-use super::HashGNNComputationRuntime;
 use super::storage::HashGNNStorageRuntime;
+use super::HashGNNComputationRuntime;
 
 // ============================================================================
 // Configuration
@@ -90,6 +91,70 @@ impl HashGNNConfig {
     fn default_concurrency() -> usize {
         num_cpus::get().max(1)
     }
+
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.iterations == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "iterations".to_string(),
+                reason: "iterations must be > 0".to_string(),
+            });
+        }
+        if self.embedding_density == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "embeddingDensity".to_string(),
+                reason: "embeddingDensity must be > 0".to_string(),
+            });
+        }
+        if self.concurrency == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be > 0".to_string(),
+            });
+        }
+        if let Some(out) = self.output_dimension {
+            if out == 0 {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "outputDimension".to_string(),
+                    reason: "outputDimension must be > 0".to_string(),
+                });
+            }
+        }
+        if self.feature_properties.is_empty() && self.generate_features.is_none() {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "featureProperties/generateFeatures".to_string(),
+                reason: "HashGNN requires either featureProperties or generateFeatures".to_string(),
+            });
+        }
+        if let Some(cfg) = &self.generate_features {
+            if cfg.dimension == 0 {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "generateFeatures.dimension".to_string(),
+                    reason: "generateFeatures.dimension must be > 0".to_string(),
+                });
+            }
+            if cfg.density_level == 0 {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "generateFeatures.densityLevel".to_string(),
+                    reason: "generateFeatures.densityLevel must be > 0".to_string(),
+                });
+            }
+        }
+        if let Some(cfg) = &self.binarize_features {
+            if cfg.dimension == 0 {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "binarizeFeatures.dimension".to_string(),
+                    reason: "binarizeFeatures.dimension must be > 0".to_string(),
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for HashGNNConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        HashGNNConfig::validate(self)
+    }
 }
 
 impl Default for HashGNNConfig {
@@ -150,41 +215,9 @@ define_algorithm_spec! {
         let config: HashGNNConfig = serde_json::from_value(config_input.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Failed to parse HashGNN config: {e}")))?;
 
-        if config.iterations == 0 {
-            return Err(AlgorithmError::Execution("iterations must be > 0".into()));
-        }
-        if config.embedding_density == 0 {
-            return Err(AlgorithmError::Execution("embeddingDensity must be > 0".into()));
-        }
-        if config.concurrency == 0 {
-            return Err(AlgorithmError::Execution("concurrency must be > 0".into()));
-        }
-        if let Some(out) = config.output_dimension {
-            if out == 0 {
-                return Err(AlgorithmError::Execution("outputDimension must be > 0".into()));
-            }
-        }
-
-        if config.feature_properties.is_empty() && config.generate_features.is_none() {
-            return Err(AlgorithmError::Execution(
-                "HashGNN requires either featureProperties or generateFeatures".into(),
-            ));
-        }
-
-        if let Some(cfg) = &config.generate_features {
-            if cfg.dimension == 0 {
-                return Err(AlgorithmError::Execution("generateFeatures.dimension must be > 0".into()));
-            }
-            if cfg.density_level == 0 {
-                return Err(AlgorithmError::Execution("generateFeatures.densityLevel must be > 0".into()));
-            }
-        }
-
-        if let Some(cfg) = &config.binarize_features {
-            if cfg.dimension == 0 {
-                return Err(AlgorithmError::Execution("binarizeFeatures.dimension must be > 0".into()));
-            }
-        }
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
 
         context.log(
             LogLevel::Info,
