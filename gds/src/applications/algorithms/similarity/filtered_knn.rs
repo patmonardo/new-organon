@@ -4,7 +4,7 @@ use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
-use crate::applications::algorithms::similarity::shared::{
+use crate::applications::algorithms::similarity::{
     err, get_array, get_f64, get_str, get_u64, timings_json, CommonRequest, Mode,
 };
 use crate::concurrency::TerminationFlag;

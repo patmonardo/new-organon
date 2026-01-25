@@ -3,7 +3,7 @@
 //! Handles JSON requests for Louvain community detection operations,
 //! delegating to the machinery stack for stream/stats and keeping mutate/write/estimate on the facade.
 
-use crate::applications::algorithms::community::shared::{err, timings_json};
+use crate::applications::algorithms::community::{err, timings_json};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,

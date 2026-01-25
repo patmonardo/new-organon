@@ -1,6 +1,6 @@
 //! CollapsePath dispatch handler.
 
-use crate::applications::algorithms::miscellaneous::shared::err;
+use crate::applications::algorithms::miscellaneous::err;
 use crate::concurrency::Concurrency;
 use crate::core::loading::CatalogLoader;
 use crate::procedures::miscellaneous::CollapsePathFacade;

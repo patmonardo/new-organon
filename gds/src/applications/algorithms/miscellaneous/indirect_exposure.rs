@@ -5,7 +5,7 @@ use crate::applications::algorithms::machinery::{
     DefaultAlgorithmProcessingTemplate, ProgressTrackerCreator, RequestScopedDependencies,
     StatsResultBuilder,
 };
-use crate::applications::algorithms::miscellaneous::shared::{err, timings_json};
+use crate::applications::algorithms::miscellaneous::{err, timings_json};
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};

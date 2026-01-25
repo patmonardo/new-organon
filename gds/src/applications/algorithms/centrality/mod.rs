@@ -19,3 +19,4 @@ pub use degree_centrality::*;
 pub use harmonic::*;
 pub use hits::*;
 pub use pagerank::*;
+pub use shared::*;

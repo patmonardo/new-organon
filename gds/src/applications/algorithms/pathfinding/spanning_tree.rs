@@ -5,7 +5,7 @@ use crate::applications::algorithms::machinery::{
     DefaultAlgorithmProcessingTemplate, FnStatsResultBuilder, FnStreamResultBuilder,
     ProgressTrackerCreator, RequestScopedDependencies,
 };
-use crate::applications::algorithms::pathfinding::shared::{
+use crate::applications::algorithms::pathfinding::{
     err, get_bool, get_str, get_u64, timings_json,
 };
 use crate::concurrency::{Concurrency, TerminationFlag};

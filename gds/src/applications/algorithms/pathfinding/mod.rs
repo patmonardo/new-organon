@@ -33,6 +33,7 @@ pub use dfs::handle_dfs;
 pub use dijkstra::handle_dijkstra;
 pub use kspanningtree::handle_kspanningtree;
 pub use random_walk::handle_random_walk;
+pub use shared::*;
 pub use spanning_tree::handle_spanning_tree;
 pub use steiner_tree::handle_steiner_tree;
 pub use topological_sort::handle_topological_sort;

@@ -3,19 +3,19 @@
 //! Handles JSON requests for ApproxMaxKCut community detection operations,
 //! delegating to the facade layer for execution.
 
-use crate::applications::algorithms::community::shared::{err, timings_json};
+use crate::applications::algorithms::community::{err, timings_json};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::CatalogLoader;
+use crate::core::loading::GraphResources;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
 use crate::procedures::community::approx_max_kcut::ApproxMaxKCutFacade;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
-use crate::core::loading::GraphResources;
 
 /// Handle ApproxMaxKCut requests
 pub fn handle_approx_max_kcut(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
@@ -125,9 +125,10 @@ pub fn handle_approx_max_kcut(request: &Value, catalog: Arc<dyn GraphCatalog>) -
                 Ok(Some(rows))
             };
 
-            let result_builder = FnStreamResultBuilder::new(
-                |_gr: &GraphResources, rows: Option<Vec<Value>>| rows.unwrap_or_default().into_iter(),
-            );
+            let result_builder =
+                FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<Value>>| {
+                    rows.unwrap_or_default().into_iter()
+                });
 
             match convenience.process_stream(
                 &graph_resources,
@@ -185,15 +186,16 @@ pub fn handle_approx_max_kcut(request: &Value, catalog: Arc<dyn GraphCatalog>) -
                 Ok(Some(stats_value))
             };
 
-            let builder = FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<Value>, timings| {
-                json!({
-                    "ok": true,
-                    "op": op,
-                    "mode": "stats",
-                    "data": stats,
-                    "timings": timings_json(timings)
-                })
-            });
+            let builder =
+                FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<Value>, timings| {
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "stats",
+                        "data": stats,
+                        "timings": timings_json(timings)
+                    })
+                });
 
             match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
                 Ok(response) => response,

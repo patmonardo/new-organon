@@ -13,4 +13,5 @@ pub use collapse_path::handle_collapse_path;
 pub use index_inverse::handle_index_inverse;
 pub use indirect_exposure::handle_indirect_exposure;
 pub use scale_properties::handle_scale_properties;
+pub use shared::*;
 pub use to_undirected::handle_to_undirected;

@@ -3,7 +3,7 @@
 //! Handles JSON requests for SCC (Strongly Connected Components) operations,
 //! routing stream/stats through the machinery stack and keeping mutate/write/estimate on the facade.
 
-use crate::applications::algorithms::community::shared::{err, timings_json};
+use crate::applications::algorithms::community::{err, timings_json};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,

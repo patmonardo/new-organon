@@ -23,5 +23,6 @@ pub use leiden::*;
 pub use louvain::*;
 pub use modularity::*;
 pub use scc::*;
+pub use shared::*;
 pub use triangle::*;
 pub use wcc::*;

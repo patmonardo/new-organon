@@ -3,7 +3,7 @@
 //! Handles JSON requests for Cost-Effective Lazy Forward influence maximization operations,
 //! delegating to the facade layer for execution.
 
-use crate::applications::algorithms::centrality::shared::{err, timings_json};
+use crate::applications::algorithms::centrality::{err, timings_json};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,

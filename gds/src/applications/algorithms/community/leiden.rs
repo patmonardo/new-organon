@@ -3,7 +3,7 @@
 //! Handles JSON requests for Leiden community detection operations,
 //! delegating to the facade layer for execution.
 
-use crate::applications::algorithms::community::shared::{err, timings_json};
+use crate::applications::algorithms::community::{err, timings_json};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
