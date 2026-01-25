@@ -1,6 +1,7 @@
-use super::{NodeSimilarityComputationResult, NodeSimilarityComputationRuntime};
 use super::similarity_metric::NodeSimilarityMetric;
 use super::storage::NodeSimilarityStorageRuntime;
+use super::{NodeSimilarityComputationResult, NodeSimilarityComputationRuntime};
+use crate::config::validation::ConfigError;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -50,6 +51,24 @@ impl Default for NodeSimilarityConfig {
             concurrency: default_concurrency(),
             weight_property: None,
         }
+    }
+}
+
+impl crate::config::ValidatedConfig for NodeSimilarityConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        crate::config::validate_positive(self.concurrency as f64, "concurrency")?;
+        crate::config::validate_range(self.similarity_cutoff, 0.0, 1.0, "similarityCutoff")?;
+        crate::config::validate_range(self.top_k as f64, 1.0, 1_000_000.0, "topK")?;
+        crate::config::validate_range(self.top_n as f64, 0.0, 1_000_000.0, "topN")?;
+        if let Some(prop) = &self.weight_property {
+            if prop.trim().is_empty() {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "weightProperty".to_string(),
+                    reason: "weightProperty cannot be empty".to_string(),
+                });
+            }
+        }
+        Ok(())
     }
 }
 

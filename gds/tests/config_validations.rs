@@ -150,9 +150,8 @@ fn application_config_validations() {
 
 #[test]
 fn pagerank_louvain_node_similarity_betweenness_validations() {
-    use gds::config::{
-        BetweennessCentralityConfig, LouvainConfig, NodeSimilarityConfig, PageRankConfig,
-    };
+    use gds::algo::pagerank::PageRankConfig;
+    use gds::config::{BetweennessCentralityConfig, LouvainConfig, NodeSimilarityConfig};
 
     let pr = PageRankConfig::default();
     assert!(ValidatedConfig::validate(&pr).is_ok());

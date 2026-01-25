@@ -95,6 +95,12 @@ impl SpanningTreeConfig {
     }
 }
 
+impl crate::config::ValidatedConfig for SpanningTreeConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        SpanningTreeConfig::validate(self)
+    }
+}
+
 /// Result type for spanning tree algorithms.
 ///
 /// **Translation Source**: `org.neo4j.gds.spanningtree.SpanningTreeResult`

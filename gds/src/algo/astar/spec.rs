@@ -102,6 +102,12 @@ impl AStarConfig {
     }
 }
 
+impl crate::config::ValidatedConfig for AStarConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        AStarConfig::validate(self)
+    }
+}
+
 /// A* algorithm result
 ///
 /// Translation of: `org.neo4j.gds.paths.dijkstra.PathFindingResult`

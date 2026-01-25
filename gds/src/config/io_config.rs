@@ -74,31 +74,6 @@ impl WriteConfig for DatabaseExporterConfig {
     }
 }
 
-// Expose validation trait implementations for I/O configs
-impl crate::config::ValidatedConfig for FileExporterConfig {
-    fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
-        self.validate()
-    }
-}
-
-impl crate::config::ValidatedConfig for DatabaseExporterConfig {
-    fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
-        self.validate()
-    }
-}
-
-impl crate::config::ValidatedConfig for FileImporterConfig {
-    fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
-        self.validate()
-    }
-}
-
-impl crate::config::ValidatedConfig for DatabaseImporterConfig {
-    fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
-        self.validate()
-    }
-}
-
 define_config!(
     pub struct FileImporterConfig {
         validate = |cfg: &FileImporterConfig| {

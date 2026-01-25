@@ -236,13 +236,6 @@ impl GraphStoreConfig {
     }
 }
 
-impl crate::config::ValidatedConfig for GraphStoreConfig {
-    fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
-        // Delegate to the existing validate implementation
-        GraphStoreConfig::validate(self)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

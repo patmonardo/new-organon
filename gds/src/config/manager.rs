@@ -10,6 +10,20 @@ pub enum PipelineError {
     LimitViolations(Vec<LimitViolation>),
 }
 
+/// Unified config pipeline for defaults -> deserialize -> validate -> limits.
+pub trait ConfigPipeline: Sized + DeserializeOwned + ValidatedConfig + 'static {
+    fn from_value_with_manager(
+        input: &Value,
+        username: Option<&str>,
+        defaults: &DefaultsManager,
+        limits: &LimitsManager,
+    ) -> Result<Self, PipelineError> {
+        apply_defaults_validate_and_check_limits::<Self>(input, username, defaults, limits)
+    }
+}
+
+impl<T> ConfigPipeline for T where T: DeserializeOwned + ValidatedConfig + 'static {}
+
 /// Apply defaults, deserialize, validate using `ValidatedConfig`, then check limits.
 pub fn apply_defaults_validate_and_check_limits<T: DeserializeOwned + ValidatedConfig + 'static>(
     input: &Value,

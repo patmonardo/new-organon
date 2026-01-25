@@ -319,13 +319,6 @@ impl crate::config::ValidatedConfig for RelationshipsBuilderConfig {
     }
 }
 
-// RandomGraphGeneratorConfig comes from define_config and already has a validate closure
-impl crate::config::ValidatedConfig for RandomGraphGeneratorConfig {
-    fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
-        self.validate()
-    }
-}
-
 /// Builder for RelationshipsBuilderConfig
 #[derive(Debug)]
 pub struct RelationshipsBuilderConfigBuilder {

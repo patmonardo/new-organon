@@ -2,9 +2,11 @@
 
 use crate::collections::backends::vec::VecDouble;
 use crate::config::base_types::AlgoBaseConfig;
-use crate::config::PageRankConfig;
+use crate::config::validation::{validate_positive, validate_range};
+use crate::core::utils::partition::Partitioning;
 use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, Tasks};
 use crate::define_algorithm_spec;
+use crate::define_config;
 use crate::projection::eval::procedure::*;
 use crate::projection::NodeLabel;
 use crate::projection::Orientation;
@@ -14,8 +16,8 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use super::PageRankComputationRuntime;
 use super::storage::PageRankStorageRuntime;
+use super::PageRankComputationRuntime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PageRankConfigInput {
@@ -60,6 +62,56 @@ impl Default for PageRankConfigInput {
             damping_factor: default_damping_factor(),
             source_nodes: None,
         }
+    }
+}
+
+// PageRank runtime configuration (canonicalized into the algorithm spec)
+define_config!(
+    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+    pub struct PageRankConfig {
+        validate = |cfg: &PageRankConfig| {
+            validate_positive(cfg.base.concurrency as f64, "concurrency")?;
+            validate_positive(cfg.max_iterations as f64, "maxIterations")?;
+            validate_range(cfg.damping_factor, 0.0, 1.0, "dampingFactor")?;
+            validate_positive(cfg.tolerance, "tolerance")?;
+            Ok(())
+        },
+        base: AlgoBaseConfig = AlgoBaseConfig::default(),
+        max_iterations: usize = 20,
+        tolerance: f64 = 1e-7,
+        damping_factor: f64 = 0.85,
+        // keep node ids as u64 here to match runtime usage
+        source_nodes: Option<Vec<u64>> = None,
+    }
+);
+
+impl crate::config::ConcurrencyConfig for PageRankConfig {
+    fn concurrency(&self) -> usize {
+        self.base.concurrency
+    }
+}
+
+impl crate::config::IterationsConfig for PageRankConfig {
+    fn max_iterations(&self) -> usize {
+        self.max_iterations
+    }
+
+    fn tolerance(&self) -> Option<f64> {
+        Some(self.tolerance)
+    }
+}
+
+impl crate::config::pregel_config::PregelRuntimeConfig for PageRankConfig {
+    fn is_asynchronous(&self) -> bool {
+        false
+    }
+
+    fn partitioning(&self) -> Partitioning {
+        Partitioning::Range
+    }
+
+    fn track_sender(&self) -> bool {
+        false
     }
 }
 

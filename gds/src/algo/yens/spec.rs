@@ -4,12 +4,12 @@
 //!
 //! This module defines the Yen's algorithm specification, configuration, and result types.
 
-use super::YensComputationRuntime;
 use super::storage::YensStorageRuntime;
+use super::YensComputationRuntime;
+use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
-use crate::projection::codegen::config::validation::ConfigError;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
@@ -71,53 +71,59 @@ impl YensConfig {
     /// Validate configuration parameters
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.source_node < 0 {
-            return Err(ConfigError::FieldValidation {
-                field: "source_node".to_string(),
-                message: "must be >= 0".to_string(),
+            return Err(ConfigError::InvalidParameter {
+                parameter: "sourceNode".to_string(),
+                reason: "must be >= 0".to_string(),
             });
         }
         if self.target_node < 0 {
-            return Err(ConfigError::FieldValidation {
-                field: "target_node".to_string(),
-                message: "must be >= 0".to_string(),
+            return Err(ConfigError::InvalidParameter {
+                parameter: "targetNode".to_string(),
+                reason: "must be >= 0".to_string(),
             });
         }
         if self.concurrency == 0 {
-            return Err(ConfigError::FieldValidation {
-                field: "concurrency".to_string(),
-                message: "must be > 0".to_string(),
+            return Err(ConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "must be > 0".to_string(),
             });
         }
         if self.k == 0 {
-            return Err(ConfigError::FieldValidation {
-                field: "k".to_string(),
-                message: "must be > 0".to_string(),
+            return Err(ConfigError::InvalidParameter {
+                parameter: "k".to_string(),
+                reason: "must be > 0".to_string(),
             });
         }
         if self.source_node == self.target_node {
-            return Err(ConfigError::FieldValidation {
-                field: "source_node".to_string(),
-                message: "source and target nodes must be different".to_string(),
+            return Err(ConfigError::InvalidParameter {
+                parameter: "sourceNode".to_string(),
+                reason: "source and target nodes must be different".to_string(),
             });
         }
 
         match self.direction.to_ascii_lowercase().as_str() {
             "outgoing" | "incoming" => {}
             other => {
-                return Err(ConfigError::FieldValidation {
-                    field: "direction".to_string(),
-                    message: format!("must be 'outgoing' or 'incoming' (got '{other}')"),
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "direction".to_string(),
+                    reason: format!("must be 'outgoing' or 'incoming' (got '{other}')"),
                 });
             }
         }
 
         if self.weight_property.trim().is_empty() {
-            return Err(ConfigError::FieldValidation {
-                field: "weight_property".to_string(),
-                message: "must be non-empty".to_string(),
+            return Err(ConfigError::InvalidParameter {
+                parameter: "weightProperty".to_string(),
+                reason: "must be non-empty".to_string(),
             });
         }
         Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for YensConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        YensConfig::validate(self)
     }
 }
 

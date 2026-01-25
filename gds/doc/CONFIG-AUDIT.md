@@ -41,7 +41,9 @@ Scope: Procedure facades (`gds/src/procedures/**`) with attention to where confi
 - Duplicate config names across `config/` and `algo/*/spec.rs` (candidates):
   - `LouvainConfig` — defined in both `gds/src/config/algo_config.rs` and `gds/src/algo/louvain/spec.rs` (procedures import `crate::algo::louvain::LouvainConfig`).
   - `BetweennessCentralityConfig` — exists under `gds/src/config` and `gds/src/algo/betweenness/spec.rs`.
-  - `NodeSimilarityConfig` — defined in `gds/src/config` and `gds/src/algo/similarity/node_similarity/spec.rs`.
+  - `NodeSimilarityConfig` — canonicalized to the algorithm spec (`gds/src/algo/similarity/node_similarity/spec.rs`). `gds/src/config` re-exports the spec type for backward compatibility.
+- `LouvainConfig` — migrated canonically to `gds/src/algo/louvain/spec.rs` and re-exported from `gds/src/config` for compatibility.
+- `BetweennessCentralityConfig` — canonicalized to `gds/src/algo/betweenness/spec.rs` and re-exported from `gds/src/config` for compatibility.
   - (There may be more; see "Duplicates" section below.)
 
 ## Per-subsystem quick map (recommend you start here) 🗺️

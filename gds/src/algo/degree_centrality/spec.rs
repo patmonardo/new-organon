@@ -2,8 +2,8 @@
 //!
 //! Java parity reference: `org.neo4j.gds.degree.DegreeCentrality`.
 
-use crate::algo::degree_centrality::DegreeCentralityComputationRuntime;
 use crate::algo::degree_centrality::storage::{DegreeCentralityStorageRuntime, Orientation};
+use crate::algo::degree_centrality::DegreeCentralityComputationRuntime;
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::TerminationFlag;
 use crate::config::validation::ConfigError;
@@ -66,6 +66,12 @@ impl DegreeCentralityConfig {
             });
         }
         Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for DegreeCentralityConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        DegreeCentralityConfig::validate(self)
     }
 }
 

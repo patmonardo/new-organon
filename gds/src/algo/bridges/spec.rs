@@ -10,8 +10,8 @@ use crate::projection::eval::procedure::*;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use super::{Bridge, BridgesComputationRuntime};
 use super::storage::BridgesStorageRuntime;
+use super::{Bridge, BridgesComputationRuntime};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct BridgesConfig {
@@ -40,6 +40,12 @@ impl BridgesConfig {
             });
         }
         Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for BridgesConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        BridgesConfig::validate(self)
     }
 }
 

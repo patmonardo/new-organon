@@ -6,8 +6,8 @@
 //! Bellman-Ford is unique among shortest path algorithms in its ability to detect
 //! negative cycles, making it essential for certain graph analysis tasks.
 
-use super::BellmanFordComputationRuntime;
 use super::storage::BellmanFordStorageRuntime;
+use super::BellmanFordComputationRuntime;
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
@@ -90,6 +90,12 @@ impl BellmanFordConfig {
         }
 
         Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for BellmanFordConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        BellmanFordConfig::validate(self)
     }
 }
 

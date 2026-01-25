@@ -1,14 +1,15 @@
 //! K-Core Decomposition algorithm specification (executor integration)
 
 use crate::concurrency::TerminationFlag;
+use crate::config::validation::ConfigError;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::*;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 
-use super::KCoreComputationRuntime;
 use super::storage::KCoreStorageRuntime;
+use super::KCoreComputationRuntime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KCoreConfig {
@@ -25,6 +26,24 @@ impl Default for KCoreConfig {
         Self {
             concurrency: default_concurrency(),
         }
+    }
+}
+
+impl KCoreConfig {
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.concurrency == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be > 0".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for KCoreConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        KCoreConfig::validate(self)
     }
 }
 
@@ -46,9 +65,9 @@ define_algorithm_spec! {
         let parsed: KCoreConfig = serde_json::from_value(config.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
 
-        if parsed.concurrency == 0 {
-            return Err(AlgorithmError::Execution("concurrency must be > 0".into()));
-        }
+        parsed
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
 
         let start = Instant::now();
 

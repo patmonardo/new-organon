@@ -1,14 +1,15 @@
 //! SCC Algorithm Specification (executor integration)
 
 use crate::concurrency::TerminationFlag;
+use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::eval::procedure::AlgorithmError;
 use serde::{Deserialize, Serialize};
 
-use super::SccComputationRuntime;
 use super::storage::SccStorageRuntime;
+use super::SccComputationRuntime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SccConfig {
@@ -25,6 +26,24 @@ impl Default for SccConfig {
         Self {
             concurrency: default_concurrency(),
         }
+    }
+}
+
+impl SccConfig {
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.concurrency == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be > 0".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for SccConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        SccConfig::validate(self)
     }
 }
 
@@ -55,9 +74,9 @@ define_algorithm_spec! {
         let parsed_config: SccConfig = serde_json::from_value(config_input.clone())
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to parse config: {}", e)))?;
 
-        if parsed_config.concurrency == 0 {
-            return Err(AlgorithmError::Execution("concurrency must be > 0".into()));
-        }
+        parsed_config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
 
         let storage = SccStorageRuntime::new(parsed_config.concurrency);
         let mut computation = SccComputationRuntime::new();

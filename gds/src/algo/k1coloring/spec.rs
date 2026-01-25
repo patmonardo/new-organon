@@ -70,6 +70,12 @@ impl K1ColoringConfig {
     }
 }
 
+impl crate::config::ValidatedConfig for K1ColoringConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        K1ColoringConfig::validate(self)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct K1ColoringResult {
     pub colors: Vec<u64>,

@@ -1,8 +1,9 @@
 //! WCC Algorithm Specification (executor integration)
 
-use super::WccComputationRuntime;
 use super::storage::WccStorageRuntime;
+use super::WccComputationRuntime;
 use crate::concurrency::TerminationFlag;
+use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
@@ -33,6 +34,24 @@ impl Default for WccConfig {
     }
 }
 
+impl WccConfig {
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.concurrency == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be > 0".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for WccConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        WccConfig::validate(self)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WccResult {
     pub components: Vec<u64>,
@@ -49,9 +68,9 @@ define_algorithm_spec! {
         let parsed_config: WccConfig = serde_json::from_value(config_input.clone())
             .map_err(|e| AlgorithmError::InvalidGraph(format!("Failed to parse config: {}", e)))?;
 
-        if parsed_config.concurrency == 0 {
-            return Err(AlgorithmError::Execution("concurrency must be > 0".into()));
-        }
+        parsed_config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
 
         let storage = WccStorageRuntime::new(parsed_config.concurrency);
         let mut computation = WccComputationRuntime::new()

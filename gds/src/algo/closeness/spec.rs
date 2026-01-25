@@ -58,6 +58,12 @@ impl ClosenessCentralityConfig {
     }
 }
 
+impl crate::config::ValidatedConfig for ClosenessCentralityConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        ClosenessCentralityConfig::validate(self)
+    }
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ClosenessCentralityResult {
     pub centralities: Vec<f64>,

@@ -62,7 +62,10 @@ impl LouvainFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            config: LouvainConfig { concurrency: 4 },
+            config: LouvainConfig {
+                concurrency: 4,
+                ..Default::default()
+            },
             concurrency: 4,
             task_registry: None,
         }

@@ -61,6 +61,12 @@ macro_rules! define_config {
                 Ok(())
             }
         }
+
+        impl $crate::config::ValidatedConfig for $name {
+            fn validate(&self) -> Result<(), $crate::config::validation::ConfigError> {
+                $name::validate(self)
+            }
+        }
     };
 
     (@internal ( $(#[$struct_attr:meta])* ) $name:ident, $validator:expr, { $($(#[$field_attr:meta])* $field:ident : $ty:ty = $default:expr;)* }) => {
@@ -71,6 +77,12 @@ macro_rules! define_config {
             pub fn validate(&self) -> Result<(), $crate::config::validation::ConfigError> {
                 $validator(self)?;
                 Ok(())
+            }
+        }
+
+        impl $crate::config::ValidatedConfig for $name {
+            fn validate(&self) -> Result<(), $crate::config::validation::ConfigError> {
+                $name::validate(self)
             }
         }
     };

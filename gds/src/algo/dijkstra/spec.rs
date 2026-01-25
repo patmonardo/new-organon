@@ -10,9 +10,9 @@ use super::path_finding_result::PathFindingResult;
 use super::storage::DijkstraStorageRuntime;
 use super::targets::create_targets;
 use super::DijkstraComputationRuntime;
+use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
-use crate::projection::codegen::config::validation::ConfigError;
 use crate::projection::eval::procedure::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
@@ -91,27 +91,33 @@ impl DijkstraConfig {
     /// Validate configuration parameters
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.source_node < 0 {
-            return Err(ConfigError::FieldValidation {
-                field: "source_node".to_string(),
-                message: "Must be >= 0".to_string(),
+            return Err(ConfigError::InvalidParameter {
+                parameter: "sourceNode".to_string(),
+                reason: "Must be >= 0".to_string(),
             });
         }
 
         if let Some(bad) = self.target_nodes.iter().copied().find(|id| *id < 0) {
-            return Err(ConfigError::FieldValidation {
-                field: "target_nodes".to_string(),
-                message: format!("All target nodes must be >= 0, got {}", bad),
+            return Err(ConfigError::InvalidParameter {
+                parameter: "targetNodes".to_string(),
+                reason: format!("All target nodes must be >= 0, got {}", bad),
             });
         }
 
         if self.concurrency == 0 {
-            return Err(ConfigError::FieldValidation {
-                field: "concurrency".to_string(),
-                message: "Must be greater than 0".to_string(),
+            return Err(ConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "Must be greater than 0".to_string(),
             });
         }
 
         Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for DijkstraConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        DijkstraConfig::validate(self)
     }
 }
 

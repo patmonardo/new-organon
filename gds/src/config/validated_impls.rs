@@ -22,108 +22,6 @@ macro_rules! map_err_to_root {
 
 // Algorithm specs ------------------------------------------------------------
 
-impl crate::config::ValidatedConfig for crate::algo::astar::AStarConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        map_err_to_root!(
-            crate::algo::astar::AStarConfig::validate(self),
-            "AStarConfig"
-        )
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::algo::bellman_ford::BellmanFordConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        map_err_to_root!(
-            crate::algo::bellman_ford::BellmanFordConfig::validate(self),
-            "BellmanFordConfig"
-        )
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::algo::hits::HitsConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        map_err_to_root!(crate::algo::hits::HitsConfig::validate(self), "HitsConfig")
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::algo::spanning_tree::SpanningTreeConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        map_err_to_root!(
-            crate::algo::spanning_tree::SpanningTreeConfig::validate(self),
-            "SpanningTreeConfig"
-        )
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::algo::bridges::BridgesConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        map_err_to_root!(
-            crate::algo::bridges::BridgesConfig::validate(self),
-            "BridgesConfig"
-        )
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::algo::yens::YensConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        map_err_to_root!(crate::algo::yens::YensConfig::validate(self), "YensConfig")
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::algo::k1coloring::K1ColoringConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        map_err_to_root!(
-            crate::algo::k1coloring::K1ColoringConfig::validate(self),
-            "K1ColoringConfig"
-        )
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::algo::degree_centrality::DegreeCentralityConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        map_err_to_root!(
-            crate::algo::degree_centrality::DegreeCentralityConfig::validate(self),
-            "DegreeCentralityConfig"
-        )
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::algo::articulation_points::ArticulationPointsConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        map_err_to_root!(
-            crate::algo::articulation_points::ArticulationPointsConfig::validate(self),
-            "ArticulationPointsConfig"
-        )
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::algo::dijkstra::DijkstraConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        map_err_to_root!(
-            crate::algo::dijkstra::DijkstraConfig::validate(self),
-            "DijkstraConfig"
-        )
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::algo::closeness::ClosenessCentralityConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        map_err_to_root!(
-            crate::algo::closeness::ClosenessCentralityConfig::validate(self),
-            "ClosenessCentralityConfig"
-        )
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::algo::all_shortest_paths::AllShortestPathsConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        map_err_to_root!(
-            crate::algo::all_shortest_paths::AllShortestPathsConfig::validate(self),
-            "AllShortestPathsConfig"
-        )
-    }
-}
-
 // Application configs (graph_store_catalog) ---------------------------------
 
 impl crate::config::ValidatedConfig
@@ -159,23 +57,7 @@ impl crate::config::ValidatedConfig
 }
 
 impl crate::config::ValidatedConfig
-    for crate::applications::graph_store_catalog::GraphNodePropertiesConfig
-{
-    fn validate(&self) -> Result<(), RootConfigError> {
-        self.validate()
-    }
-}
-
-impl crate::config::ValidatedConfig
     for crate::applications::graph_store_catalog::GraphStreamRelationshipPropertiesConfig
-{
-    fn validate(&self) -> Result<(), RootConfigError> {
-        self.validate()
-    }
-}
-
-impl crate::config::ValidatedConfig
-    for crate::applications::graph_store_catalog::GraphStreamRelationshipsConfig
 {
     fn validate(&self) -> Result<(), RootConfigError> {
         self.validate()
@@ -206,22 +88,6 @@ impl crate::config::ValidatedConfig for crate::applications::graph_store_catalog
     }
 }
 
-impl crate::config::ValidatedConfig
-    for crate::applications::graph_store_catalog::GraphAccessGraphPropertiesConfig
-{
-    fn validate(&self) -> Result<(), RootConfigError> {
-        self.validate()
-    }
-}
-
-impl crate::config::ValidatedConfig
-    for crate::applications::graph_store_catalog::WriteRelationshipPropertiesConfig
-{
-    fn validate(&self) -> Result<(), RootConfigError> {
-        // marker config, no-op
-        Ok(())
-    }
-}
 // Projection and pipeline configs -------------------------------------------
 
 impl crate::config::ValidatedConfig for crate::projection::factory::arrow::ArrowProjectionConfig {
@@ -837,50 +703,6 @@ impl crate::config::ValidatedConfig
     }
 }
 
-// Core graph algorithms ----------------------------------------------------
-
-impl crate::config::ValidatedConfig for crate::config::PageRankConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        crate::config::validate_positive(self.base.concurrency as f64, "concurrency")?;
-        crate::config::validate_positive(self.max_iterations as f64, "maxIterations")?;
-        crate::config::validate_range(self.damping_factor, 0.0, 1.0, "dampingFactor")?;
-        crate::config::validate_positive(self.tolerance, "tolerance")?;
-        Ok(())
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::config::LouvainConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        crate::config::validate_positive(self.base.concurrency as f64, "concurrency")?;
-        crate::config::validate_positive(self.max_iterations as f64, "maxIterations")?;
-        crate::config::validate_positive(self.tolerance, "tolerance")?;
-        crate::config::validate_range(self.gamma, 0.0, 10.0, "gamma")?;
-        crate::config::validate_range(self.theta, 0.0, 1.0, "theta")?;
-        Ok(())
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::config::NodeSimilarityConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        crate::config::validate_positive(self.base.concurrency as f64, "concurrency")?;
-        crate::config::validate_range(self.similarity_cutoff, 0.0, 1.0, "similarityCutoff")?;
-        crate::config::validate_positive(self.degree_cutoff as f64, "degreeCutoff")?;
-        crate::config::validate_positive(self.top_k as f64, "topK")?;
-        crate::config::validate_positive(self.bottom_k as f64, "bottomK")?;
-        Ok(())
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::config::BetweennessCentralityConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        crate::config::validate_positive(self.base.concurrency as f64, "concurrency")?;
-        if let Some(size) = self.sampling_size {
-            crate::config::validate_positive(size as f64, "samplingSize")?;
-        }
-        Ok(())
-    }
-}
-
 impl crate::config::ValidatedConfig for crate::algo::kmeans::KMeansConfig {
     fn validate(&self) -> Result<(), RootConfigError> {
         if self.k == 0 {
@@ -917,42 +739,6 @@ impl crate::config::ValidatedConfig for crate::algo::kmeans::KMeansConfig {
             return Err(RootConfigError::InvalidParameter {
                 parameter: "nodeProperty".to_string(),
                 reason: "nodeProperty cannot be empty".to_string(),
-            });
-        }
-        Ok(())
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::algo::kcore::KCoreConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        if self.concurrency == 0 {
-            return Err(RootConfigError::InvalidParameter {
-                parameter: "concurrency".to_string(),
-                reason: "concurrency must be > 0".to_string(),
-            });
-        }
-        Ok(())
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::algo::scc::SccConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        if self.concurrency == 0 {
-            return Err(RootConfigError::InvalidParameter {
-                parameter: "concurrency".to_string(),
-                reason: "concurrency must be > 0".to_string(),
-            });
-        }
-        Ok(())
-    }
-}
-
-impl crate::config::ValidatedConfig for crate::algo::wcc::WccConfig {
-    fn validate(&self) -> Result<(), RootConfigError> {
-        if self.concurrency == 0 {
-            return Err(RootConfigError::InvalidParameter {
-                parameter: "concurrency".to_string(),
-                reason: "concurrency must be > 0".to_string(),
             });
         }
         Ok(())

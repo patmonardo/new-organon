@@ -7,8 +7,8 @@ use crate::projection::eval::procedure::*;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use super::ArticulationPointsComputationRuntime;
 use super::storage::ArticulationPointsStorageRuntime;
+use super::ArticulationPointsComputationRuntime;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ArticulationPointsConfig {
@@ -37,6 +37,12 @@ impl ArticulationPointsConfig {
             });
         }
         Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for ArticulationPointsConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        ArticulationPointsConfig::validate(self)
     }
 }
 

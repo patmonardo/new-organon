@@ -27,13 +27,13 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
+use crate::algo::pagerank::PageRankConfig;
 use crate::algo::pagerank::{
     computation::PageRankComputationRuntime, storage::PageRankStorageRuntime,
 };
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::Concurrency;
 use crate::config::base_types::AlgoBaseConfig;
-use crate::config::PageRankConfig;
 use crate::core::utils::progress::ProgressTracker;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,

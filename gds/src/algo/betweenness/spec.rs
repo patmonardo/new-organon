@@ -2,6 +2,7 @@
 
 use crate::algo::betweenness::BetweennessCentralityComputationRuntime;
 use crate::concurrency::TerminationFlag;
+use crate::config::validation::ConfigError;
 use crate::core::utils::progress::ProgressTracker;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
@@ -68,6 +69,16 @@ impl Default for BetweennessCentralityConfig {
             sampling_size: None,
             random_seed: default_random_seed(),
         }
+    }
+}
+
+impl crate::config::ValidatedConfig for BetweennessCentralityConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        crate::config::validate_positive(self.concurrency as f64, "concurrency")?;
+        if let Some(size) = self.sampling_size {
+            crate::config::validate_positive(size as f64, "samplingSize")?;
+        }
+        Ok(())
     }
 }
 
