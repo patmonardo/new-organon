@@ -4,8 +4,8 @@
 //!
 //! This module defines the BFS algorithm specification, configuration, and result types.
 
-use super::BfsComputationRuntime;
 use super::storage::BfsStorageRuntime;
+use super::BfsComputationRuntime;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
@@ -73,6 +73,18 @@ impl BfsConfig {
             });
         }
         Ok(())
+    }
+}
+
+// Implement ValidatedConfig for BFS algorithm config by delegating to its validate
+impl crate::config::ValidatedConfig for BfsConfig {
+    fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+        self.validate().map_err(
+            |e| crate::config::validation::ConfigError::InvalidParameter {
+                parameter: "BfsConfig".to_string(),
+                reason: e.to_string(),
+            },
+        )
     }
 }
 

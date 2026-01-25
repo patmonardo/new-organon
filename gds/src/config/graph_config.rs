@@ -300,6 +300,32 @@ impl RelationshipsBuilderConfig {
     }
 }
 
+// Implement ValidatedConfig for key graph configs
+impl crate::config::ValidatedConfig for PropertyConfig {
+    fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+        PropertyConfig::validate(self)
+    }
+}
+
+impl crate::config::ValidatedConfig for GraphCreateConfig {
+    fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+        GraphCreateConfig::validate(self)
+    }
+}
+
+impl crate::config::ValidatedConfig for RelationshipsBuilderConfig {
+    fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+        RelationshipsBuilderConfig::validate(self)
+    }
+}
+
+// RandomGraphGeneratorConfig comes from define_config and already has a validate closure
+impl crate::config::ValidatedConfig for RandomGraphGeneratorConfig {
+    fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+        self.validate()
+    }
+}
+
 /// Builder for RelationshipsBuilderConfig
 #[derive(Debug)]
 pub struct RelationshipsBuilderConfigBuilder {

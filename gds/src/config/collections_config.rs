@@ -630,3 +630,37 @@ impl Default for DataSourceConfig {
         }
     }
 }
+
+// Implement the validation trait for CollectionsConfig
+impl<T: Send + Sync> crate::config::ValidatedConfig for CollectionsConfig<T> {
+    fn validate(&self) -> Result<(), crate::config::validation::ConfigError> {
+        // Validate cache size
+        crate::config::validate_positive(self.performance.cache.size as f64, "cache.size")?;
+        // Validate parallel threads
+        crate::config::validate_positive(
+            self.performance.parallel.threads as f64,
+            "parallel.threads",
+        )?;
+        // Validate memory alignment
+        crate::config::validate_positive(
+            self.performance.memory.alignment as f64,
+            "memory.alignment",
+        )?;
+        // If dataset specified and uses file/API, ensure url is present
+        if let Some(ref dataset) = self.dataset {
+            match dataset.data_source.source_type {
+                DataSourceType::File | DataSourceType::API => {
+                    if let Some(ref url) = dataset.data_source.url {
+                        crate::config::validate_non_empty_string(url, "dataSource.url")?;
+                    } else {
+                        return Err(crate::config::validation::ConfigError::MissingParameter(
+                            "dataSource.url".to_string(),
+                        ));
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+}
