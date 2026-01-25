@@ -572,3 +572,360 @@ impl crate::config::ValidatedConfig for crate::algo::embeddings::graphsage::Grap
         Ok(())
     }
 }
+
+// ML / Trainer configs ----------------------------------------------------
+
+impl crate::config::ValidatedConfig for crate::ml::gradient_descent::GradientDescentConfig {
+    fn validate(&self) -> Result<(), RootConfigError> {
+        if self.batch_size() == 0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "batchSize".to_string(),
+                reason: "batchSize must be > 0".to_string(),
+            });
+        }
+        if self.min_epochs() == 0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "minEpochs".to_string(),
+                reason: "minEpochs must be >= 1".to_string(),
+            });
+        }
+        if self.max_epochs() < self.min_epochs() {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "maxEpochs".to_string(),
+                reason: "maxEpochs must be >= minEpochs".to_string(),
+            });
+        }
+        if self.learning_rate() <= 0.0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "learningRate".to_string(),
+                reason: "learningRate must be > 0".to_string(),
+            });
+        }
+        if self.tolerance() < 0.0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "tolerance".to_string(),
+                reason: "tolerance must be >= 0".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for crate::ml::models::mlp::MLPClassifierTrainConfig {
+    fn validate(&self) -> Result<(), RootConfigError> {
+        // reuse gradient-like checks
+        if self.batch_size == 0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "batchSize".to_string(),
+                reason: "batchSize must be > 0".to_string(),
+            });
+        }
+        if self.max_epochs < self.min_epochs {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "maxEpochs/minEpochs".to_string(),
+                reason: "maxEpochs must be >= minEpochs".to_string(),
+            });
+        }
+        if self.learning_rate <= 0.0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "learningRate".to_string(),
+                reason: "learningRate must be > 0".to_string(),
+            });
+        }
+        if self.tolerance < 0.0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "tolerance".to_string(),
+                reason: "tolerance must be >= 0".to_string(),
+            });
+        }
+        if self.hidden_layer_sizes.is_empty() {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "hiddenLayerSizes".to_string(),
+                reason: "hiddenLayerSizes must not be empty".to_string(),
+            });
+        }
+        for &n in &self.hidden_layer_sizes {
+            if n == 0 {
+                return Err(RootConfigError::InvalidParameter {
+                    parameter: "hiddenLayerSizes".to_string(),
+                    reason: "hiddenLayerSizes entries must be > 0".to_string(),
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig
+    for crate::ml::models::logistic_regression::LogisticRegressionTrainConfig
+{
+    fn validate(&self) -> Result<(), RootConfigError> {
+        if self.batch_size == 0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "batchSize".to_string(),
+                reason: "batchSize must be > 0".to_string(),
+            });
+        }
+        if self.learning_rate <= 0.0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "learningRate".to_string(),
+                reason: "learningRate must be > 0".to_string(),
+            });
+        }
+        if self.max_epochs == 0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "maxEpochs".to_string(),
+                reason: "maxEpochs must be > 0".to_string(),
+            });
+        }
+        if self.tolerance < 0.0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "tolerance".to_string(),
+                reason: "tolerance must be >= 0".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig
+    for crate::ml::models::linear_regression::LinearRegressionTrainConfig
+{
+    fn validate(&self) -> Result<(), RootConfigError> {
+        // Validate nested gradient descent config
+        crate::config::ValidatedConfig::validate(self.gradient())?;
+        if self.penalty() < 0.0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "penalty".to_string(),
+                reason: "penalty must be >= 0".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for crate::ml::models::random_forest::RandomForestConfig {
+    fn validate(&self) -> Result<(), RootConfigError> {
+        // numSamplesRatio must be a finite number in (0, 1]
+        if !self.num_samples_ratio.is_finite()
+            || !(self.num_samples_ratio > 0.0 && self.num_samples_ratio <= 1.0)
+        {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "numSamplesRatio".to_string(),
+                reason: "numSamplesRatio must be finite and in (0.0, 1.0]".to_string(),
+            });
+        }
+
+        // sensible upper bound on number of trees to catch accidental misuse (1M trees)
+        if self.num_decision_trees == 0 || self.num_decision_trees > 1_000_000 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "numDecisionTrees".to_string(),
+                reason: "numDecisionTrees must be > 0 and <= 1_000_000".to_string(),
+            });
+        }
+
+        // maxDepth: 0 means unlimited, otherwise must be >= 1 and not unreasonably large
+        if self.max_depth != 0 {
+            if self.max_depth < 1 {
+                return Err(RootConfigError::InvalidParameter {
+                    parameter: "maxDepth".to_string(),
+                    reason: "maxDepth must be 0 (unlimited) or >= 1".to_string(),
+                });
+            }
+            if self.max_depth > 10_000 {
+                return Err(RootConfigError::InvalidParameter {
+                    parameter: "maxDepth".to_string(),
+                    reason: "maxDepth must be 0 (unlimited) or in [1, 10_000]".to_string(),
+                });
+            }
+        }
+
+        if self.min_samples_split < 2 || self.min_samples_split > 1_000_000 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "minSamplesSplit".to_string(),
+                reason: "minSamplesSplit must be >= 2 and <= 1_000_000".to_string(),
+            });
+        }
+        if self.min_samples_leaf < 1 || self.min_samples_leaf > 1_000_000 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "minSamplesLeaf".to_string(),
+                reason: "minSamplesLeaf must be >= 1 and <= 1_000_000".to_string(),
+            });
+        }
+        // Ensure per-tree split/leaf sizes are consistent
+        if self.min_samples_leaf >= self.min_samples_split {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "minSamplesLeaf/minSamplesSplit".to_string(),
+                reason: "minSamplesLeaf must be strictly smaller than minSamplesSplit".to_string(),
+            });
+        }
+
+        if let Some(r) = self.max_features_ratio {
+            if !r.is_finite() || !(r > 0.0 && r <= 1.0) {
+                return Err(RootConfigError::InvalidParameter {
+                    parameter: "maxFeaturesRatio".to_string(),
+                    reason: "maxFeaturesRatio must be finite and in (0.0, 1.0]".to_string(),
+                });
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig
+    for crate::ml::models::random_forest::RandomForestClassifierTrainerConfig
+{
+    fn validate(&self) -> Result<(), RootConfigError> {
+        self.forest.validate()
+    }
+}
+
+impl crate::config::ValidatedConfig
+    for crate::ml::models::random_forest::RandomForestRegressorTrainerConfig
+{
+    fn validate(&self) -> Result<(), RootConfigError> {
+        self.forest.validate()
+    }
+}
+
+impl crate::config::ValidatedConfig
+    for crate::ml::decision_tree::trainer_config::DecisionTreeTrainerConfig
+{
+    fn validate(&self) -> Result<(), RootConfigError> {
+        // Inline the same validation logic to avoid ambiguous resolution with the trait method
+        if self.min_leaf_size() >= self.min_split_size() {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "minLeafSize".to_string(),
+                reason: format!(
+                    "Configuration parameter 'minLeafSize' which was equal to {}, must be strictly smaller than configuration parameter 'minSplitSize' which was equal to {}",
+                    self.min_leaf_size(),
+                    self.min_split_size()
+                ),
+            });
+        }
+        Ok(())
+    }
+}
+
+// Core graph algorithms ----------------------------------------------------
+
+impl crate::config::ValidatedConfig for crate::config::PageRankConfig {
+    fn validate(&self) -> Result<(), RootConfigError> {
+        crate::config::validate_positive(self.base.concurrency as f64, "concurrency")?;
+        crate::config::validate_positive(self.max_iterations as f64, "maxIterations")?;
+        crate::config::validate_range(self.damping_factor, 0.0, 1.0, "dampingFactor")?;
+        crate::config::validate_positive(self.tolerance, "tolerance")?;
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for crate::config::LouvainConfig {
+    fn validate(&self) -> Result<(), RootConfigError> {
+        crate::config::validate_positive(self.base.concurrency as f64, "concurrency")?;
+        crate::config::validate_positive(self.max_iterations as f64, "maxIterations")?;
+        crate::config::validate_positive(self.tolerance, "tolerance")?;
+        crate::config::validate_range(self.gamma, 0.0, 10.0, "gamma")?;
+        crate::config::validate_range(self.theta, 0.0, 1.0, "theta")?;
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for crate::config::NodeSimilarityConfig {
+    fn validate(&self) -> Result<(), RootConfigError> {
+        crate::config::validate_positive(self.base.concurrency as f64, "concurrency")?;
+        crate::config::validate_range(self.similarity_cutoff, 0.0, 1.0, "similarityCutoff")?;
+        crate::config::validate_positive(self.degree_cutoff as f64, "degreeCutoff")?;
+        crate::config::validate_positive(self.top_k as f64, "topK")?;
+        crate::config::validate_positive(self.bottom_k as f64, "bottomK")?;
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for crate::config::BetweennessCentralityConfig {
+    fn validate(&self) -> Result<(), RootConfigError> {
+        crate::config::validate_positive(self.base.concurrency as f64, "concurrency")?;
+        if let Some(size) = self.sampling_size {
+            crate::config::validate_positive(size as f64, "samplingSize")?;
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for crate::algo::kmeans::KMeansConfig {
+    fn validate(&self) -> Result<(), RootConfigError> {
+        if self.k == 0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "k".to_string(),
+                reason: "k must be > 0".to_string(),
+            });
+        }
+        if self.max_iterations == 0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "maxIterations".to_string(),
+                reason: "maxIterations must be > 0".to_string(),
+            });
+        }
+        if !(0.0..=1.0).contains(&self.delta_threshold) {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "deltaThreshold".to_string(),
+                reason: "deltaThreshold must be in [0.0, 1.0]".to_string(),
+            });
+        }
+        if self.number_of_restarts == 0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "numberOfRestarts".to_string(),
+                reason: "numberOfRestarts must be > 0".to_string(),
+            });
+        }
+        if self.concurrency == 0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be > 0".to_string(),
+            });
+        }
+        if self.node_property.trim().is_empty() {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "nodeProperty".to_string(),
+                reason: "nodeProperty cannot be empty".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for crate::algo::kcore::KCoreConfig {
+    fn validate(&self) -> Result<(), RootConfigError> {
+        if self.concurrency == 0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be > 0".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for crate::algo::scc::SccConfig {
+    fn validate(&self) -> Result<(), RootConfigError> {
+        if self.concurrency == 0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be > 0".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for crate::algo::wcc::WccConfig {
+    fn validate(&self) -> Result<(), RootConfigError> {
+        if self.concurrency == 0 {
+            return Err(RootConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be > 0".to_string(),
+            });
+        }
+        Ok(())
+    }
+}

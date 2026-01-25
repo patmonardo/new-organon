@@ -149,6 +149,195 @@ fn application_config_validations() {
 }
 
 #[test]
+fn pagerank_louvain_node_similarity_betweenness_validations() {
+    use gds::config::{
+        BetweennessCentralityConfig, LouvainConfig, NodeSimilarityConfig, PageRankConfig,
+    };
+
+    let pr = PageRankConfig::default();
+    assert!(ValidatedConfig::validate(&pr).is_ok());
+
+    let mut bad = pr.clone();
+    bad.base.concurrency = 0;
+    assert!(ValidatedConfig::validate(&bad).is_err());
+
+    let l = LouvainConfig::default();
+    assert!(ValidatedConfig::validate(&l).is_ok());
+
+    let mut lb = l.clone();
+    lb.gamma = 20.0;
+    assert!(ValidatedConfig::validate(&lb).is_err());
+
+    let ns = NodeSimilarityConfig::default();
+    assert!(ValidatedConfig::validate(&ns).is_ok());
+
+    let mut nsb = ns.clone();
+    nsb.top_k = 0;
+    assert!(ValidatedConfig::validate(&nsb).is_err());
+
+    let b = BetweennessCentralityConfig::default();
+    assert!(ValidatedConfig::validate(&b).is_ok());
+
+    let mut bb = b.clone();
+    bb.sampling_size = Some(0);
+    assert!(ValidatedConfig::validate(&bb).is_err());
+}
+
+#[test]
+fn kmeans_kcore_scc_wcc_validations() {
+    use gds::algo::kcore::KCoreConfig;
+    use gds::algo::kmeans::KMeansConfig;
+    use gds::algo::scc::SccConfig;
+    use gds::algo::wcc::WccConfig;
+
+    let km = KMeansConfig::default();
+    // default has node_property empty -> invalid per our validation
+    assert!(ValidatedConfig::validate(&km).is_err());
+
+    let mut k2 = km.clone();
+    k2.node_property = "prop".to_string();
+    assert!(ValidatedConfig::validate(&k2).is_ok());
+
+    let mut badk = k2.clone();
+    badk.k = 0;
+    assert!(ValidatedConfig::validate(&badk).is_err());
+
+    let kc = KCoreConfig::default();
+    assert!(ValidatedConfig::validate(&kc).is_ok());
+
+    let mut badkc = kc.clone();
+    badkc.concurrency = 0;
+    assert!(ValidatedConfig::validate(&badkc).is_err());
+
+    let sc = SccConfig::default();
+    assert!(ValidatedConfig::validate(&sc).is_ok());
+
+    let mut badsc = sc.clone();
+    badsc.concurrency = 0;
+    assert!(ValidatedConfig::validate(&badsc).is_err());
+
+    let wc = WccConfig::default();
+    assert!(ValidatedConfig::validate(&wc).is_ok());
+
+    let mut badwc = wc.clone();
+    badwc.concurrency = 0;
+    assert!(ValidatedConfig::validate(&badwc).is_err());
+}
+
+#[test]
+fn gradient_and_trainer_config_validations() {
+    use gds::ml::decision_tree::trainer_config::DecisionTreeTrainerConfig;
+    use gds::ml::gradient_descent::GradientDescentConfig;
+    use gds::ml::models::linear_regression::LinearRegressionTrainConfig;
+    use gds::ml::models::logistic_regression::LogisticRegressionTrainConfig;
+    use gds::ml::models::mlp::MLPClassifierTrainConfig;
+    use gds::ml::models::random_forest::RandomForestConfig;
+
+    let g = GradientDescentConfig::default();
+    assert!(ValidatedConfig::validate(&g).is_ok());
+
+    let mut gb = g.clone();
+    // invalid learning rate
+    gb = GradientDescentConfig::builder()
+        .learning_rate(0.0)
+        .build()
+        .unwrap();
+    assert!(ValidatedConfig::validate(&gb).is_err());
+
+    let mlp = MLPClassifierTrainConfig::default();
+    assert!(ValidatedConfig::validate(&mlp).is_ok());
+
+    let mut bad_mlp = mlp.clone();
+    bad_mlp.hidden_layer_sizes = vec![];
+    assert!(ValidatedConfig::validate(&bad_mlp).is_err());
+
+    let log = LogisticRegressionTrainConfig::default();
+    assert!(ValidatedConfig::validate(&log).is_ok());
+
+    let mut bad_log = log.clone();
+    bad_log.learning_rate = 0.0;
+    assert!(ValidatedConfig::validate(&bad_log).is_err());
+
+    let lin = LinearRegressionTrainConfig::default();
+    assert!(ValidatedConfig::validate(&lin).is_ok());
+
+    let bad_lin = LinearRegressionTrainConfig::new(
+        GradientDescentConfig::builder()
+            .learning_rate(0.0)
+            .build()
+            .unwrap(),
+        lin.penalty(),
+    );
+    assert!(ValidatedConfig::validate(&bad_lin).is_err());
+
+    let rf = RandomForestConfig::default();
+    assert!(ValidatedConfig::validate(&rf).is_ok());
+
+    let mut bad_rf = rf.clone();
+    bad_rf.num_decision_trees = 0;
+    assert!(ValidatedConfig::validate(&bad_rf).is_err());
+
+    // minSamplesLeaf must be strictly smaller than minSamplesSplit
+    let mut bad_rf2 = rf.clone();
+    bad_rf2.min_samples_leaf = 3;
+    bad_rf2.min_samples_split = 3;
+    assert!(ValidatedConfig::validate(&bad_rf2).is_err());
+
+    // maxFeaturesRatio bounds
+    let mut bad_rf3 = rf.clone();
+    bad_rf3.max_features_ratio = Some(0.0);
+    assert!(ValidatedConfig::validate(&bad_rf3).is_err());
+
+    let mut bad_rf4 = rf.clone();
+    bad_rf4.max_features_ratio = Some(1.5);
+    assert!(ValidatedConfig::validate(&bad_rf4).is_err());
+
+    // Decision tree builder enforces constraints; try a build that should fail
+    let builder_err = DecisionTreeTrainerConfig::builder()
+        .min_leaf_size(3)
+        .min_split_size(3)
+        .build();
+    assert!(builder_err.is_err());
+
+    // RandomForest numeric edge cases
+    let mut rf_nan = rf.clone();
+    rf_nan.num_samples_ratio = f64::NAN;
+    assert!(ValidatedConfig::validate(&rf_nan).is_err());
+
+    let mut rf_inf = rf.clone();
+    rf_inf.max_features_ratio = Some(f64::INFINITY);
+    assert!(ValidatedConfig::validate(&rf_inf).is_err());
+
+    let mut rf_large = rf.clone();
+    rf_large.num_decision_trees = 2_000_000; // exceeds our 1_000_000 cap
+    assert!(ValidatedConfig::validate(&rf_large).is_err());
+
+    let mut rf_bad_split = rf.clone();
+    rf_bad_split.min_samples_split = 1;
+    assert!(ValidatedConfig::validate(&rf_bad_split).is_err());
+
+    // maxDepth unreasonable value should fail
+    let mut rf_bad_depth = rf.clone();
+    rf_bad_depth.max_depth = 100_000;
+    assert!(ValidatedConfig::validate(&rf_bad_depth).is_err());
+
+    // excessively large min_samples_leaf should fail
+    let mut rf_bad_leaf = rf.clone();
+    rf_bad_leaf.min_samples_leaf = 2_000_000;
+    assert!(ValidatedConfig::validate(&rf_bad_leaf).is_err());
+
+    // Trainer wrappers should propagate forest validation errors
+    use gds::ml::decision_tree::ClassifierImpurityCriterionType;
+    use gds::ml::models::random_forest::RandomForestClassifierTrainerConfig;
+    let mut trainer = RandomForestClassifierTrainerConfig {
+        forest: rf.clone(),
+        criterion: ClassifierImpurityCriterionType::Gini,
+    };
+    trainer.forest.num_samples_ratio = f64::NAN;
+    assert!(ValidatedConfig::validate(&trainer).is_err());
+}
+
+#[test]
 fn graphsage_train_config_valid_and_invalid() {
     use gds::algo::embeddings::graphsage::types::{
         ActivationFunctionType, AggregatorType, GraphSageTrainConfig,
