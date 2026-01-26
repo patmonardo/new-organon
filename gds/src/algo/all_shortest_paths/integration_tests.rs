@@ -11,7 +11,7 @@ mod tests {
         AlgorithmSpec, ComputationResult, ExecutionContext, ExecutionMode, ProcedureExecutor,
         ProjectionHint,
     };
-    use crate::types::graph::id_map::NodeId;
+    use crate::types::graph::NodeId;
     use serde_json::json;
 
     #[test]

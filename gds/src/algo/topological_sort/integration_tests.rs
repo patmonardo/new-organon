@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::algo::topological_sort::TopologicalSortComputationRuntime;
-    use crate::types::graph::id_map::NodeId;
+    use crate::types::graph::NodeId;
 
     #[test]
     fn test_simple_dag() {

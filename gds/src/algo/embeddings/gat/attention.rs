@@ -1,4 +1,4 @@
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use std::collections::HashMap;
 
 pub struct AttentionMechanism {

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 
 /// Exit predicate result for traversal control
 ///

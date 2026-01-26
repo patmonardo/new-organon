@@ -2,7 +2,7 @@
 //!
 //! Builds per-relationship-type outgoing/incoming adjacency from a graph view.
 
-use crate::types::graph::id_map::MappedNodeId;
+use crate::types::graph::MappedNodeId;
 use crate::types::graph::Graph;
 
 #[derive(Default, Clone)]

@@ -1,4 +1,4 @@
-use crate::algo::algorithms::result_builders::{
+use crate::algo::algorithms::{
     ExecutionMetadata, ResultBuilder, ResultBuilderError,
 };
 use crate::algo::algorithms::statistics::{

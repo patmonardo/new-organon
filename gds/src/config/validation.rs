@@ -19,6 +19,9 @@ pub enum ConfigError {
         value: f64,
     },
 
+    #[error("Configuration field '{field}' is invalid: {message}")]
+    FieldValidation { field: String, message: String },
+
     #[error("Path cannot be empty")]
     EmptyPath,
 

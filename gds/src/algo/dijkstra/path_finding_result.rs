@@ -81,7 +81,7 @@ impl PathFindingResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::graph::id_map::NodeId;
+    use crate::types::graph::NodeId;
 
     #[test]
     fn test_path_finding_result_creation() {

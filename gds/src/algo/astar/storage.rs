@@ -6,8 +6,8 @@
 
 use super::AStarComputationResult;
 use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
-use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
+use crate::types::graph::NodeId;
 use crate::types::properties::node::NodePropertyValues;
 use std::collections::HashMap;
 use std::sync::Arc;

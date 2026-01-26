@@ -1,5 +1,5 @@
 use crate::algo::prize_collecting_steiner_tree::spec::{PRUNED, ROOT_NODE};
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 
 /// Computation runtime for Prize-Collecting Steiner Tree.
 ///

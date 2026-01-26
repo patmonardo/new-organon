@@ -9,7 +9,7 @@ use crate::algo::articulation_points::{
 use crate::core::utils::progress::ProgressTracker;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::{Orientation, RelationshipType};
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use crate::types::graph::Graph;
 use crate::types::prelude::GraphStore;
 use std::collections::HashSet;

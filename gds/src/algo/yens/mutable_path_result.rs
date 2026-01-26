@@ -7,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
 
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 
 /// Mutable path result for Yen's algorithm manipulation
 ///

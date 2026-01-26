@@ -5,7 +5,7 @@
 //! This module implements the "Subtle pole" of the Bellman-Ford algorithm,
 //! handling ephemeral computation state and distance tracking.
 
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use std::collections::HashMap;
 
 /// Bellman-Ford Computation Runtime

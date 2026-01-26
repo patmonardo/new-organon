@@ -1,6 +1,6 @@
 use super::attention::AttentionMechanism;
 use super::config::GATConfig;
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use crate::types::graph::Graph;
 use std::collections::HashMap;
 

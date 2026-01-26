@@ -4,7 +4,7 @@
 //!
 //! This module implements the computation runtime for A* algorithm - the "Subtle pole" for ephemeral computation.
 
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 
 /// A* computation result
 #[derive(Debug, Clone)]

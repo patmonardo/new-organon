@@ -4,7 +4,7 @@
 //! It represents ephemeral computation state (shortest path results and statistics).
 
 use super::storage::ShortestPathResult;
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 
 /// Computation Runtime for All Shortest Paths
 ///

@@ -4,7 +4,7 @@
 //!
 //! This module provides result types and traits for centrality algorithms.
 
-use crate::algo::algorithms::result_builders::{
+use crate::algo::algorithms::{
     ExecutionMetadata, ResultBuilder, ResultBuilderError,
 };
 use crate::algo::algorithms::scaling::Scaler;

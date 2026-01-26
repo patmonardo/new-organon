@@ -2,7 +2,7 @@ use crate::algo::steiner_tree::{
     SteinerTreeComputationRuntime, SteinerTreeConfig, SteinerTreeStorageRuntime, PRUNED, ROOT_NODE,
 };
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 
 fn create_neighbors(edges: Vec<Vec<(usize, f64)>>) -> impl Fn(NodeId) -> Vec<(NodeId, f64)> {
     move |node: NodeId| {

@@ -6,7 +6,7 @@
 //! handling ephemeral computation state including priority queue management,
 //! visited set tracking, and predecessor/relationship ID storage.
 
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 

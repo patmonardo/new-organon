@@ -4,7 +4,7 @@
 //!
 //! This module implements the "Subtle pole" for BFS algorithm - ephemeral computation state.
 
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 
 /// BFS Computation Runtime - handles ephemeral computation state
 ///

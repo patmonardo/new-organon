@@ -1,6 +1,6 @@
 use super::config::GATConfig;
 use super::layer::GATLayer;
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use crate::types::graph::Graph;
 use std::collections::HashMap;
 

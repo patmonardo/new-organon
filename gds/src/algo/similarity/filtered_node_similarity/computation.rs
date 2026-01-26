@@ -3,7 +3,7 @@ use crate::algo::similarity::node_similarity::{
     NodeSimilarityStorageRuntime,
 };
 use crate::types::graph::graph::Graph;
-use crate::types::graph::id_map::MappedNodeId;
+use crate::types::graph::MappedNodeId;
 use std::collections::HashSet;
 
 /// Compute node similarity restricted by optional source/target node sets.

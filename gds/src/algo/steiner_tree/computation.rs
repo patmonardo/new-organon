@@ -1,5 +1,5 @@
 use crate::algo::steiner_tree::spec::{PRUNED, ROOT_NODE};
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use std::collections::VecDeque;
 
 /// Pure state runtime for Steiner Tree.

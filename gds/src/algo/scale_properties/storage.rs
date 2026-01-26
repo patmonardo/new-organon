@@ -15,7 +15,7 @@ use crate::algo::algorithms::scaling::{
     StdScoreScaler,
 };
 use crate::projection::eval::algorithm::AlgorithmError;
-use crate::types::graph::id_map::IdMap;
+use crate::types::graph::IdMap;
 use crate::types::prelude::GraphStore;
 use crate::types::properties::node::NodePropertyValues;
 use crate::types::ValueType;

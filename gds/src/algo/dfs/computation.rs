@@ -4,7 +4,7 @@
 //!
 //! This module implements the "Subtle pole" for DFS algorithm - ephemeral computation state.
 
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 
 /// DFS Computation Runtime - handles ephemeral computation state
 ///

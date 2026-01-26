@@ -6,7 +6,7 @@
 //! handling ephemeral computation state and the sophisticated binning strategy
 //! for efficient frontier management.
 
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use std::collections::{HashMap, VecDeque};
 
 /// Delta Stepping Computation Runtime

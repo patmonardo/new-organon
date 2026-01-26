@@ -9,7 +9,7 @@ use super::YensComputationRuntime;
 use crate::algo::algorithms::pathfinding::{
     PathFindingResult, PathFindingResultBuilder, PathResult,
 };
-use crate::algo::algorithms::result_builders::{ExecutionMetadata, ResultBuilder};
+use crate::algo::algorithms::{ExecutionMetadata, ResultBuilder};
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
@@ -17,7 +17,7 @@ use crate::define_algorithm_spec;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;

@@ -6,7 +6,7 @@
 
 use super::spec::{DagLongestPathResult, PathRow};
 use super::storage::DagLongestPathStorageRuntime;
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::thread;

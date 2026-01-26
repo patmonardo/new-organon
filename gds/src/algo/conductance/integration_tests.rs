@@ -10,7 +10,7 @@ use crate::core::utils::progress::EmptyTaskRegistryFactory;
 use crate::core::utils::progress::JobId;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::projection::RelationshipType;
-use crate::types::graph::id_map::SimpleIdMap;
+use crate::types::graph::SimpleIdMap;
 use crate::types::graph::RelationshipTopology;
 use crate::types::graph_store::Capabilities;
 use crate::types::graph_store::{DatabaseId, DatabaseInfo, DatabaseLocation, GraphName};

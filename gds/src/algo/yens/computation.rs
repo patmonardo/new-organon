@@ -10,7 +10,7 @@ use super::spec::YensResult;
 use super::storage::YensStorageRuntime;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use crate::types::graph::Graph;
 use std::collections::HashMap;
 

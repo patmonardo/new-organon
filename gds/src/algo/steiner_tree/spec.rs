@@ -1,5 +1,5 @@
 use crate::algo::algorithms::pathfinding::PathResult;
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;

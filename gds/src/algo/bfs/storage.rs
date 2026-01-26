@@ -9,7 +9,7 @@ use super::spec::BfsResult;
 use super::BfsComputationRuntime;
 use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::projection::eval::algorithm::AlgorithmError;
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use crate::types::graph::Graph;
 
 /// BFS Storage Runtime - handles persistent data access and algorithm orchestration

@@ -6,7 +6,7 @@
 
 use super::spec::TopologicalSortResult;
 use super::storage::TopologicalSortStorageRuntime;
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use crate::types::graph::Graph;
 use std::collections::VecDeque;
 use std::sync::atomic::Ordering;

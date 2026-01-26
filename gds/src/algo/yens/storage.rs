@@ -13,7 +13,7 @@ use crate::algo::dijkstra::targets::create_targets;
 use crate::algo::dijkstra::{DijkstraComputationRuntime, DijkstraStorageRuntime};
 use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, Tasks, UNKNOWN_VOLUME};
 use crate::projection::eval::algorithm::AlgorithmError;
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use crate::types::graph::Graph;
 use std::collections::HashSet;
 

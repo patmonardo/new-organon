@@ -2,7 +2,7 @@
 //!
 //! Stores in-degrees, sorted nodes, and optional longest path distances.
 
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use std::sync::atomic::{AtomicI64, Ordering};
 
 /// Storage for topological sort computation

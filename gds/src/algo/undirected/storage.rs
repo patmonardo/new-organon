@@ -8,7 +8,7 @@
 use super::spec::{ToUndirectedConfig, ToUndirectedResult};
 use super::ToUndirectedComputationRuntime;
 use crate::projection::{Orientation, RelationshipType};
-use crate::types::graph::id_map::MappedNodeId;
+use crate::types::graph::MappedNodeId;
 use crate::types::graph_store::{GraphName, GraphStore};
 use crate::types::prelude::DefaultGraphStore;
 use crate::types::schema::Direction;

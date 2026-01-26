@@ -6,7 +6,7 @@
 
 use super::mutable_path_result::MutablePathResult;
 
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 
 /// Relationship filterer for Yen's algorithm
 ///

@@ -7,7 +7,7 @@
 //! the algorithm's behavior for single-target, many-targets, and all-targets modes.
 
 use super::traversal_state::TraversalState;
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use std::collections::HashSet;
 
 /// Trait for target implementations that control Dijkstra algorithm behavior
