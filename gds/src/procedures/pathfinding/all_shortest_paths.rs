@@ -4,10 +4,11 @@
 //! Supports unweighted (BFS) and weighted (Dijkstra) variants.
 
 use crate::algo::all_shortest_paths::{
-    AlgorithmType, AllShortestPathsComputationRuntime, AllShortestPathsStorageRuntime,
+    AlgorithmType, AllShortestPathsComputationRuntime, AllShortestPathsMutationSummary,
+    AllShortestPathsStats, AllShortestPathsStorageRuntime,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::{PathResult as ProcedurePathResult, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -30,17 +31,6 @@ pub struct AllShortestPathsRow {
     pub distance: f64,
 }
 
-/// Aggregated statistics for an all-shortest-paths run.
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct AllShortestPathsStats {
-    pub node_count: u64,
-    pub result_count: u64,
-    pub max_distance: f64,
-    pub min_distance: f64,
-    pub infinite_distances: u64,
-    pub execution_time_ms: u64,
-}
-
 /// Facade builder for all-shortest-paths.
 ///
 /// Defaults:
@@ -61,13 +51,6 @@ pub struct AllShortestPathsBuilder {
     /// Progress tracking components
     task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
     user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
-}
-
-/// Mutate result for AllShortestPaths: summary + updated store
-#[derive(Debug, Clone)]
-pub struct AllShortestPathsMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 /// Helper function to convert NodeId to u64
@@ -307,7 +290,10 @@ impl AllShortestPathsBuilder {
     /// let result = builder.mutate("distance")?;
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
-    pub fn mutate(self, property_name: &str) -> Result<AllShortestPathsMutateResult> {
+    pub fn mutate(
+        self,
+        property_name: &str,
+    ) -> Result<crate::algo::all_shortest_paths::AllShortestPathsMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
         let graph_store = Arc::clone(&self.graph_store);
@@ -328,16 +314,18 @@ impl AllShortestPathsBuilder {
             &paths,
         )?;
 
-        let summary = MutationResult::new(
-            paths.len() as u64,
-            property_name.to_string(),
-            std::time::Duration::from_millis(stats.execution_time_ms),
-        );
+        let summary = AllShortestPathsMutationSummary {
+            nodes_updated: paths.len() as u64,
+            property_name: property_name.to_string(),
+            execution_time_ms: stats.execution_time_ms,
+        };
 
-        Ok(AllShortestPathsMutateResult {
-            summary,
-            updated_store,
-        })
+        Ok(
+            crate::algo::all_shortest_paths::AllShortestPathsMutateResult {
+                summary,
+                updated_store,
+            },
+        )
     }
 
     /// Write mode: Compute and persist to storage

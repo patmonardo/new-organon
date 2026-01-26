@@ -3,10 +3,13 @@
 //! Finds longest paths in a directed acyclic graph using topological ordering
 //! and dynamic programming.
 
-use crate::algo::dag_longest_path::DagLongestPathComputationRuntime;
+use crate::algo::dag_longest_path::{
+    DagLongestPathComputationRuntime, DagLongestPathMutateResult, DagLongestPathResult,
+    DagLongestPathResultBuilder, DagLongestPathRow, DagLongestPathStats,
+};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::{PathResult, Result};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
+use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
@@ -17,34 +20,10 @@ use std::sync::Arc;
 use std::time::Instant;
 
 // Import upgraded systems
+use crate::algo::algorithms::result_builders::PathResult;
 use crate::core::utils::progress::{
     ProgressTracker, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
-
-/// Result row for longest path stream mode
-#[derive(Debug, Clone, PartialEq, serde::Serialize)]
-pub struct DagLongestPathRow {
-    pub index: u64,
-    pub source_node: NodeId,
-    pub target_node: NodeId,
-    pub total_cost: f64,
-    pub node_ids: Vec<NodeId>,
-    pub costs: Vec<f64>,
-}
-
-/// Statistics for dag longest path computation
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct DagLongestPathStats {
-    pub path_count: usize,
-    pub execution_time_ms: u64,
-}
-
-/// Mutate result for DAG longest path: summary + updated store
-#[derive(Debug, Clone)]
-pub struct DagLongestPathMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
 
 /// DAG Longest Path algorithm builder
 pub struct DagLongestPathBuilder {
@@ -96,7 +75,7 @@ impl DagLongestPathBuilder {
         Ok(())
     }
 
-    fn compute(self) -> Result<(Vec<DagLongestPathRow>, std::time::Duration)> {
+    fn compute(self) -> Result<(DagLongestPathResult, std::time::Duration)> {
         self.validate()?;
 
         let start = Instant::now();
@@ -110,7 +89,7 @@ impl DagLongestPathBuilder {
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
-            return Ok((Vec::new(), start.elapsed()));
+            return Ok((DagLongestPathResult { paths: Vec::new() }, start.elapsed()));
         }
 
         let mut progress_tracker = TaskProgressTracker::with_concurrency(
@@ -144,39 +123,23 @@ impl DagLongestPathBuilder {
         let mut runtime = DagLongestPathComputationRuntime::new(node_count);
         let result = runtime.compute(node_count, get_neighbors);
 
-        let rows = result
-            .paths
-            .into_iter()
-            .map(|path| DagLongestPathRow {
-                index: path.index,
-                source_node: path.source_node,
-                target_node: path.target_node,
-                total_cost: path.total_cost,
-                node_ids: path.node_ids,
-                costs: path.costs,
-            })
-            .collect();
-
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();
 
-        Ok((rows, start.elapsed()))
+        Ok((result, start.elapsed()))
     }
 
     /// Stream mode: yields path rows with source, target, costs, and node sequences
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = DagLongestPathRow>>> {
-        let (rows, _elapsed) = self.compute()?;
+        let (result, elapsed) = self.compute()?;
+        let rows = DagLongestPathResultBuilder::new(result, elapsed).rows();
         Ok(Box::new(rows.into_iter()))
     }
 
     /// Stats mode: returns aggregated statistics
     pub fn stats(self) -> Result<DagLongestPathStats> {
-        let (rows, elapsed) = self.compute()?;
-
-        Ok(DagLongestPathStats {
-            path_count: rows.len(),
-            execution_time_ms: elapsed.as_millis() as u64,
-        })
+        let (result, elapsed) = self.compute()?;
+        Ok(DagLongestPathResultBuilder::new(result, elapsed).stats())
     }
 
     /// Mutate mode: writes results back to the graph store
@@ -184,16 +147,9 @@ impl DagLongestPathBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
         let graph_store = Arc::clone(&self.graph_store);
-        let (rows, elapsed) = self.compute()?;
-        let paths: Vec<PathResult> = rows
-            .into_iter()
-            .map(|row| PathResult {
-                source: row.source_node as u64,
-                target: row.target_node as u64,
-                path: row.node_ids.into_iter().map(|n| n as u64).collect(),
-                cost: row.total_cost,
-            })
-            .collect();
+        let (result, elapsed) = self.compute()?;
+        let builder = DagLongestPathResultBuilder::new(result, elapsed);
+        let paths: Vec<PathResult> = builder.paths();
 
         let updated_store = crate::algo::algorithms::build_path_relationship_store(
             graph_store.as_ref(),
@@ -201,7 +157,7 @@ impl DagLongestPathBuilder {
             &paths,
         )?;
 
-        let summary = MutationResult::new(paths.len() as u64, property_name.to_string(), elapsed);
+        let summary = builder.mutation_summary(property_name, paths.len() as u64);
 
         Ok(DagLongestPathMutateResult {
             summary,

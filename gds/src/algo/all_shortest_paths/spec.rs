@@ -14,6 +14,7 @@ use crate::projection::eval::algorithm::*;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 use std::time::Duration;
 
 use super::storage::{AlgorithmType, AllShortestPathsStorageRuntime, ShortestPathResult};
@@ -136,6 +137,66 @@ pub struct AllShortestPathsResult {
     pub infinite_distances: usize,
     /// Execution time
     pub execution_time: Duration,
+}
+
+/// Aggregated statistics for an all-shortest-paths run.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AllShortestPathsStats {
+    pub node_count: u64,
+    pub result_count: u64,
+    pub max_distance: f64,
+    pub min_distance: f64,
+    pub infinite_distances: u64,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AllShortestPathsMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct AllShortestPathsWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for AllShortestPaths: summary + updated store.
+#[derive(Debug, Clone)]
+pub struct AllShortestPathsMutateResult {
+    pub summary: AllShortestPathsMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+/// AllShortestPaths result builder (facade adapter).
+pub struct AllShortestPathsResultBuilder {
+    result: AllShortestPathsResult,
+}
+
+impl AllShortestPathsResultBuilder {
+    pub fn new(result: AllShortestPathsResult) -> Self {
+        Self { result }
+    }
+
+    pub fn stats(&self) -> AllShortestPathsStats {
+        AllShortestPathsStats {
+            node_count: self.result.node_count as u64,
+            result_count: self.result.results.len() as u64,
+            max_distance: self.result.max_distance,
+            min_distance: self.result.min_distance,
+            infinite_distances: self.result.infinite_distances as u64,
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
+    }
 }
 
 // ============================================================================

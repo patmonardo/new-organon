@@ -27,13 +27,13 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
-use crate::algo::algorithms::result_builders::PathFindingResult;
 use crate::algo::bfs::{
-    BfsComputationRuntime, BfsConfig, BfsMutateResult, BfsMutationSummary, BfsResult,
-    BfsResultBuilder, BfsStats, BfsStorageRuntime, BfsWriteSummary,
+    BfsComputationRuntime, BfsConfig, BfsMutateResult, BfsResult, BfsResultBuilder, BfsStats,
+    BfsStorageRuntime, BfsWriteSummary,
 };
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::mem::MemoryRange;
+use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::{PathResult, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -199,7 +199,7 @@ impl BfsFacade {
         self
     }
 
-    fn compute(self) -> Result<PathFindingResult> {
+    fn compute(self) -> Result<(BfsResult, std::time::Duration)> {
         self.config
             .validate()
             .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
@@ -240,7 +240,7 @@ impl BfsFacade {
             Some(graph_view.as_ref()),
             &mut progress_tracker,
         )?;
-        BfsResultBuilder::result(result, start.elapsed(), source_node, target_nodes.len())
+        Ok((result, start.elapsed()))
     }
 
     /// Execute the algorithm and return iterator over traversal results
@@ -258,8 +258,11 @@ impl BfsFacade {
     /// }
     /// ```
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
-        let result = self.compute()?;
-        Ok(Box::new(result.paths.into_iter()))
+        let source_node = self.config.source_node;
+        let target_count = self.config.target_nodes.len();
+        let (result, elapsed) = self.compute()?;
+        let paths = BfsResultBuilder::new(result, elapsed, source_node, target_count).paths();
+        Ok(Box::new(paths.into_iter()))
     }
 
     /// Stats mode: Get aggregated statistics
@@ -276,24 +279,10 @@ impl BfsFacade {
     /// println!("Visited {} nodes in {}ms", stats.nodes_visited, stats.execution_time_ms);
     /// ```
     pub fn stats(self) -> Result<BfsStats> {
-        let targets = self.config.target_nodes.len() as u64;
-        let result = self.compute()?;
-        let nodes_visited = result.paths.len() as u64;
-        let targets_found = if targets == 0 {
-            0
-        } else {
-            nodes_visited.min(targets)
-        };
-        let all_targets_reached = targets > 0 && targets_found == targets;
-
-        Ok(BfsStats {
-            nodes_visited,
-            max_depth_reached: 0, // Simplified
-            execution_time_ms: result.metadata.execution_time.as_millis() as u64,
-            targets_found,
-            all_targets_reached,
-            avg_branching_factor: 0.0, // Simplified
-        })
+        let source_node = self.config.source_node;
+        let target_count = self.config.target_nodes.len();
+        let (result, elapsed) = self.compute()?;
+        Ok(BfsResultBuilder::new(result, elapsed, source_node, target_count).stats())
     }
 
     /// Mutate mode: Compute and store as node property
@@ -310,14 +299,13 @@ impl BfsFacade {
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
     pub fn mutate(self, property_name: &str) -> Result<BfsMutateResult> {
-        if property_name.is_empty() {
-            return Err(AlgorithmError::Execution(
-                "property_name cannot be empty".to_string(),
-            ));
-        }
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
         let graph_store = Arc::clone(&self.graph_store);
-        let result = self.compute()?;
-        let paths = result.paths;
+        let source_node = self.config.source_node;
+        let target_count = self.config.target_nodes.len();
+        let (result, elapsed) = self.compute()?;
+        let builder = BfsResultBuilder::new(result, elapsed, source_node, target_count);
+        let paths = builder.paths();
 
         let updated_store = crate::algo::algorithms::build_path_relationship_store(
             graph_store.as_ref(),
@@ -325,11 +313,7 @@ impl BfsFacade {
             &paths,
         )?;
 
-        let summary = BfsMutationSummary {
-            nodes_updated: paths.len() as u64,
-            property_name: property_name.to_string(),
-            execution_time_ms: result.metadata.execution_time.as_millis() as u64,
-        };
+        let summary = builder.mutation_summary(property_name, paths.len() as u64);
 
         Ok(BfsMutateResult {
             summary,
@@ -350,11 +334,7 @@ impl BfsFacade {
     /// println!("Wrote {} nodes", result.nodes_written);
     /// ```
     pub fn write(self, property_name: &str) -> Result<BfsWriteSummary> {
-        if property_name.is_empty() {
-            return Err(AlgorithmError::Execution(
-                "property_name cannot be empty".to_string(),
-            ));
-        }
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
         let res = self.mutate(property_name)?;
         Ok(BfsWriteSummary {
             nodes_written: res.summary.nodes_updated,

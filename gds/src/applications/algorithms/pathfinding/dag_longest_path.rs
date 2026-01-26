@@ -1,16 +1,14 @@
 //! DAG Longest Path algorithm dispatch handler.
 
+use crate::algo::dag_longest_path::DagLongestPathStats;
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
-use crate::applications::algorithms::pathfinding::{
-    err, timings_json, CommonRequest, Mode,
-};
+use crate::applications::algorithms::pathfinding::{err, timings_json, CommonRequest, Mode};
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::procedures::pathfinding::DagLongestPathStats;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

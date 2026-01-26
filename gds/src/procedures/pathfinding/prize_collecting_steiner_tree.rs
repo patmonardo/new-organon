@@ -1,9 +1,10 @@
 use crate::algo::prize_collecting_steiner_tree::{
-    PCSTreeComputationRuntime, PCSTreeConfig, PCSTreeStorageRuntime,
+    PCSTreeComputationRuntime, PCSTreeConfig, PCSTreeMutateResult, PCSTreeResult,
+    PCSTreeResultBuilder, PCSTreeRow, PCSTreeStats, PCSTreeStorageRuntime,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::{PathResult, Result};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
+use crate::procedures::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -12,34 +13,10 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 // Import upgraded systems
+use crate::algo::algorithms::result_builders::PathResult;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{TaskRegistryFactory, Tasks};
 use crate::projection::eval::algorithm::AlgorithmError;
-
-/// Result row for Prize-Collecting Steiner Tree stream mode
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct PCSTreeRow {
-    pub node: u64,
-    pub parent: Option<u64>,
-    pub cost_to_parent: f64,
-}
-
-/// Statistics for Prize-Collecting Steiner Tree computation
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct PCSTreeStats {
-    pub node_count: usize,
-    pub total_prize: f64,
-    pub total_cost: f64,
-    pub net_value: f64,
-    pub computation_time_ms: u64,
-}
-
-/// Mutate result for Prize-Collecting Steiner Tree: summary + updated store
-#[derive(Debug, Clone)]
-pub struct PCSTreeMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
 
 /// Prize-Collecting Steiner Tree algorithm builder
 pub struct PCSTreeBuilder {
@@ -117,7 +94,7 @@ impl PCSTreeBuilder {
         Ok(())
     }
 
-    fn compute(self) -> Result<(Vec<PCSTreeRow>, PCSTreeStats)> {
+    fn compute(self) -> Result<(PCSTreeResult, std::time::Duration)> {
         self.validate()?;
 
         let start = std::time::Instant::now();
@@ -147,14 +124,15 @@ impl PCSTreeBuilder {
         let node_count = graph_view.node_count();
         if node_count == 0 {
             return Ok((
-                Vec::new(),
-                PCSTreeStats {
-                    node_count: 0,
+                PCSTreeResult {
+                    parent_array: Vec::new(),
+                    relationship_to_parent_cost: Vec::new(),
+                    total_edge_cost: 0.0,
                     total_prize: 0.0,
-                    total_cost: 0.0,
                     net_value: 0.0,
-                    computation_time_ms: start.elapsed().as_millis() as u64,
+                    effective_node_count: 0,
                 },
+                start.elapsed(),
             ));
         }
 
@@ -185,47 +163,20 @@ impl PCSTreeBuilder {
             Some(graph_view.as_ref()),
             &mut progress_tracker,
         )?;
-
-        let mut rows = Vec::new();
-        for (node_idx, &parent) in result.parent_array.iter().enumerate() {
-            if parent >= 0 {
-                rows.push(PCSTreeRow {
-                    node: node_idx as u64,
-                    parent: Some(parent as u64),
-                    cost_to_parent: result.relationship_to_parent_cost[node_idx],
-                });
-            } else if parent == -1 {
-                // Root node
-                rows.push(PCSTreeRow {
-                    node: node_idx as u64,
-                    parent: None,
-                    cost_to_parent: 0.0,
-                });
-            }
-            // Skip nodes not in tree (parent == -2)
-        }
-
-        let stats = PCSTreeStats {
-            node_count,
-            total_prize: result.total_prize,
-            total_cost: result.total_edge_cost,
-            net_value: result.net_value,
-            computation_time_ms: start.elapsed().as_millis() as u64,
-        };
-
-        Ok((rows, stats))
+        Ok((result, start.elapsed()))
     }
 
     /// Stream mode: yields tree edges
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PCSTreeRow>>> {
-        let (rows, _) = self.compute()?;
+        let (result, elapsed) = self.compute()?;
+        let rows = PCSTreeResultBuilder::new(result, elapsed).rows();
         Ok(Box::new(rows.into_iter()))
     }
 
     /// Stats mode: aggregated tree stats
     pub fn stats(self) -> Result<PCSTreeStats> {
-        let (_, stats) = self.compute()?;
-        Ok(stats)
+        let (result, elapsed) = self.compute()?;
+        Ok(PCSTreeResultBuilder::new(result, elapsed).stats())
     }
 
     /// Mutate mode: writes results back to the graph store
@@ -233,18 +184,9 @@ impl PCSTreeBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
         let graph_store = Arc::clone(&self.graph_store);
-        let (rows, stats) = self.compute()?;
-        let paths: Vec<PathResult> = rows
-            .into_iter()
-            .filter_map(|row| {
-                row.parent.map(|parent| PathResult {
-                    source: parent,
-                    target: row.node,
-                    path: vec![parent, row.node],
-                    cost: row.cost_to_parent,
-                })
-            })
-            .collect();
+        let (result, elapsed) = self.compute()?;
+        let builder = PCSTreeResultBuilder::new(result, elapsed);
+        let paths: Vec<PathResult> = builder.paths();
 
         let updated_store = crate::algo::algorithms::build_path_relationship_store(
             graph_store.as_ref(),
@@ -252,11 +194,7 @@ impl PCSTreeBuilder {
             &paths,
         )?;
 
-        let summary = MutationResult::new(
-            paths.len() as u64,
-            property_name.to_string(),
-            std::time::Duration::from_millis(stats.computation_time_ms),
-        );
+        let summary = builder.mutation_summary(property_name, paths.len() as u64);
 
         Ok(PCSTreeMutateResult {
             summary,

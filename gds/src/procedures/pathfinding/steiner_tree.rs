@@ -4,11 +4,12 @@
 //! Uses approximation algorithms with delta-stepping and rerouting optimizations.
 
 use crate::algo::steiner_tree::{
-    SteinerTreeComputationRuntime, SteinerTreeConfig, SteinerTreeStorageRuntime,
+    SteinerTreeComputationRuntime, SteinerTreeConfig, SteinerTreeMutateResult, SteinerTreeResult,
+    SteinerTreeResultBuilder, SteinerTreeRow, SteinerTreeStats, SteinerTreeStorageRuntime,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::{PathResult, Result};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
+use crate::procedures::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -18,33 +19,10 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 // Import upgraded systems
+use crate::algo::algorithms::result_builders::PathResult;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{TaskRegistryFactory, Tasks};
 use crate::projection::eval::algorithm::AlgorithmError;
-
-/// Result row for Steiner tree stream mode
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct SteinerTreeRow {
-    pub node: u64,
-    pub parent: Option<u64>,
-    pub cost_to_parent: f64,
-}
-
-/// Statistics for Steiner tree computation
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct SteinerTreeStats {
-    pub effective_node_count: u64,
-    pub effective_target_nodes_count: u64,
-    pub total_cost: f64,
-    pub computation_time_ms: u64,
-}
-
-/// Mutate result for Steiner tree: summary + updated store
-#[derive(Debug, Clone)]
-pub struct SteinerTreeMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
 
 /// Steiner Tree algorithm builder
 pub struct SteinerTreeBuilder {
@@ -143,7 +121,7 @@ impl SteinerTreeBuilder {
         Ok(())
     }
 
-    fn compute(self) -> Result<(Vec<SteinerTreeRow>, SteinerTreeStats)> {
+    fn compute(self) -> Result<(SteinerTreeResult, std::time::Duration)> {
         self.validate()?;
         let start = std::time::Instant::now();
 
@@ -172,13 +150,14 @@ impl SteinerTreeBuilder {
         let node_count = graph_view.node_count();
         if node_count == 0 {
             return Ok((
-                Vec::new(),
-                SteinerTreeStats {
+                SteinerTreeResult {
+                    parent_array: Vec::new(),
+                    relationship_to_parent_cost: Vec::new(),
+                    total_cost: 0.0,
                     effective_node_count: 0,
                     effective_target_nodes_count: 0,
-                    total_cost: 0.0,
-                    computation_time_ms: start.elapsed().as_millis() as u64,
                 },
+                start.elapsed(),
             ));
         }
 
@@ -218,46 +197,20 @@ impl SteinerTreeBuilder {
             Some(graph_view.as_ref()),
             &mut progress_tracker,
         )?;
-
-        let mut rows = Vec::new();
-        for (node_idx, &parent) in result.parent_array.iter().enumerate() {
-            if parent >= 0 {
-                rows.push(SteinerTreeRow {
-                    node: node_idx as u64,
-                    parent: Some(parent as u64),
-                    cost_to_parent: result.relationship_to_parent_cost[node_idx],
-                });
-            } else if parent == -1 {
-                // Root node
-                rows.push(SteinerTreeRow {
-                    node: node_idx as u64,
-                    parent: None,
-                    cost_to_parent: 0.0,
-                });
-            }
-            // Skip pruned nodes (parent == -2)
-        }
-
-        let stats = SteinerTreeStats {
-            effective_node_count: result.effective_node_count,
-            effective_target_nodes_count: result.effective_target_nodes_count,
-            total_cost: result.total_cost,
-            computation_time_ms: start.elapsed().as_millis() as u64,
-        };
-
-        Ok((rows, stats))
+        Ok((result, start.elapsed()))
     }
 
     /// Stream mode: yields tree edges
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = SteinerTreeRow>>> {
-        let (rows, _) = self.compute()?;
+        let (result, elapsed) = self.compute()?;
+        let rows = SteinerTreeResultBuilder::new(result, elapsed).rows();
         Ok(Box::new(rows.into_iter()))
     }
 
     /// Stats mode: aggregated tree stats
     pub fn stats(self) -> Result<SteinerTreeStats> {
-        let (_, stats) = self.compute()?;
-        Ok(stats)
+        let (result, elapsed) = self.compute()?;
+        Ok(SteinerTreeResultBuilder::new(result, elapsed).stats())
     }
 
     /// Mutate mode: writes results back to the graph store
@@ -265,18 +218,9 @@ impl SteinerTreeBuilder {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
         let graph_store = Arc::clone(&self.graph_store);
-        let (rows, stats) = self.compute()?;
-        let paths: Vec<PathResult> = rows
-            .into_iter()
-            .filter_map(|row| {
-                row.parent.map(|parent| PathResult {
-                    source: parent,
-                    target: row.node,
-                    path: vec![parent, row.node],
-                    cost: row.cost_to_parent,
-                })
-            })
-            .collect();
+        let (result, elapsed) = self.compute()?;
+        let builder = SteinerTreeResultBuilder::new(result, elapsed);
+        let paths: Vec<PathResult> = builder.paths();
 
         let updated_store = crate::algo::algorithms::build_path_relationship_store(
             graph_store.as_ref(),
@@ -284,11 +228,7 @@ impl SteinerTreeBuilder {
             &paths,
         )?;
 
-        let summary = MutationResult::new(
-            paths.len() as u64,
-            property_name.to_string(),
-            std::time::Duration::from_millis(stats.computation_time_ms),
-        );
+        let summary = builder.mutation_summary(property_name, paths.len() as u64);
 
         Ok(SteinerTreeMutateResult {
             summary,

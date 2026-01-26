@@ -1,9 +1,9 @@
 use crate::algo::bellman_ford::{
-    BellmanFordComputationRuntime, BellmanFordConfig, BellmanFordMutateResult,
-    BellmanFordMutationSummary, BellmanFordResult, BellmanFordResultBuilder, BellmanFordStats,
-    BellmanFordStorageRuntime, BellmanFordWriteSummary,
+    BellmanFordComputationRuntime, BellmanFordConfig, BellmanFordMutateResult, BellmanFordResult,
+    BellmanFordResultBuilder, BellmanFordStats, BellmanFordStorageRuntime, BellmanFordWriteSummary,
 };
 use crate::mem::MemoryRange;
+use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -15,7 +15,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::algo::algorithms::result_builders::{PathFindingResult, PathResult};
+use crate::algo::algorithms::result_builders::PathResult;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
@@ -143,7 +143,7 @@ impl BellmanFordFacade {
         self
     }
 
-    fn compute(self) -> Result<PathFindingResult> {
+    fn compute(self) -> Result<(BellmanFordResult, std::time::Duration)> {
         self.config
             .validate()
             .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
@@ -215,46 +215,26 @@ impl BellmanFordFacade {
             direction_byte,
             &mut progress_tracker,
         )?;
-        BellmanFordResultBuilder::result(result, start.elapsed())
+        Ok((result, start.elapsed()))
     }
 
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
-        let result = self.compute()?;
-        Ok(Box::new(result.paths.into_iter()))
+        let (result, elapsed) = self.compute()?;
+        let paths = BellmanFordResultBuilder::new(result, elapsed).paths();
+        Ok(Box::new(paths.into_iter()))
     }
 
     pub fn stats(self) -> Result<BellmanFordStats> {
-        let result = self.compute()?;
-        let negative_cycles_found = result
-            .metadata
-            .additional
-            .get("negative_cycles_found")
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(0);
-        let contains_negative_cycle = result
-            .metadata
-            .additional
-            .get("contains_negative_cycle")
-            .and_then(|s| s.parse().ok())
-            .unwrap_or(false);
-
-        Ok(BellmanFordStats {
-            paths_found: result.paths.len() as u64,
-            negative_cycles_found,
-            contains_negative_cycle,
-            execution_time_ms: result.metadata.execution_time.as_millis() as u64,
-        })
+        let (result, elapsed) = self.compute()?;
+        Ok(BellmanFordResultBuilder::new(result, elapsed).stats())
     }
 
     pub fn mutate(self, property_name: &str) -> Result<BellmanFordMutateResult> {
-        if property_name.is_empty() {
-            return Err(AlgorithmError::Execution(
-                "property_name cannot be empty".to_string(),
-            ));
-        }
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
         let graph_store = Arc::clone(&self.graph_store);
-        let result = self.compute()?;
-        let paths = result.paths;
+        let (result, elapsed) = self.compute()?;
+        let builder = BellmanFordResultBuilder::new(result, elapsed);
+        let paths = builder.paths();
 
         let updated_store = crate::algo::algorithms::build_path_relationship_store(
             graph_store.as_ref(),
@@ -262,11 +242,7 @@ impl BellmanFordFacade {
             &paths,
         )?;
 
-        let summary = BellmanFordMutationSummary {
-            nodes_updated: paths.len() as u64,
-            property_name: property_name.to_string(),
-            execution_time_ms: result.metadata.execution_time.as_millis() as u64,
-        };
+        let summary = builder.mutation_summary(property_name, paths.len() as u64);
 
         Ok(BellmanFordMutateResult {
             summary,
@@ -275,11 +251,7 @@ impl BellmanFordFacade {
     }
 
     pub fn write(self, property_name: &str) -> Result<BellmanFordWriteSummary> {
-        if property_name.is_empty() {
-            return Err(AlgorithmError::Execution(
-                "property_name cannot be empty".to_string(),
-            ));
-        }
+        ConfigValidator::non_empty_string(property_name, "property_name")?;
         let res = self.mutate(property_name)?;
         Ok(BellmanFordWriteSummary {
             nodes_written: res.summary.nodes_updated,

@@ -209,6 +209,15 @@ fn spec_path_to_core(path: &BellmanFordPathResult) -> PathResult {
     }
 }
 
+fn result_paths(result: &BellmanFordResult) -> Vec<PathResult> {
+    result
+        .shortest_paths
+        .iter()
+        .filter(|p| p.source_node >= 0 && p.target_node >= 0)
+        .map(spec_path_to_core)
+        .collect()
+}
+
 /// Bellman-Ford result builder (pathfinding-family adapter).
 pub struct BellmanFordResultBuilder {
     result: BellmanFordResult,
@@ -231,13 +240,7 @@ impl BellmanFordResultBuilder {
     }
 
     pub fn build_pathfinding_result(self) -> Result<PathFindingResult, AlgorithmError> {
-        let paths: Vec<PathResult> = self
-            .result
-            .shortest_paths
-            .iter()
-            .filter(|p| p.source_node >= 0 && p.target_node >= 0)
-            .map(spec_path_to_core)
-            .collect();
+        let paths = result_paths(&self.result);
 
         let metadata = ExecutionMetadata {
             execution_time: self.execution_time,
@@ -260,6 +263,47 @@ impl BellmanFordResultBuilder {
             .with_metadata(metadata)
             .build()
             .map_err(|e| AlgorithmError::Execution(e.to_string()))
+    }
+
+    pub fn paths(&self) -> Vec<PathResult> {
+        result_paths(&self.result)
+    }
+
+    pub fn stats(&self) -> BellmanFordStats {
+        BellmanFordStats {
+            paths_found: self.result.shortest_paths.len() as u64,
+            negative_cycles_found: self.result.negative_cycles.len() as u64,
+            contains_negative_cycle: self.result.contains_negative_cycle,
+            execution_time_ms: self.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn mutation_summary(
+        &self,
+        property_name: &str,
+        nodes_updated: u64,
+    ) -> BellmanFordMutationSummary {
+        BellmanFordMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: self.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn write_summary(
+        &self,
+        property_name: &str,
+        nodes_written: u64,
+    ) -> BellmanFordWriteSummary {
+        BellmanFordWriteSummary {
+            nodes_written,
+            property_name: property_name.to_string(),
+            execution_time_ms: self.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.execution_time.as_millis() as u64
     }
 }
 

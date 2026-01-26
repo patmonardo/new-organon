@@ -205,6 +205,30 @@ impl KSpanningTreeResultBuilder {
         result_paths(&self.result)
     }
 
+    pub fn mutation_summary(
+        &self,
+        property_name: &str,
+        nodes_updated: u64,
+    ) -> KSpanningTreeMutationSummary {
+        KSpanningTreeMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: self.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn write_summary(
+        &self,
+        property_name: &str,
+        nodes_written: u64,
+    ) -> KSpanningTreeWriteSummary {
+        KSpanningTreeWriteSummary {
+            nodes_written,
+            property_name: property_name.to_string(),
+            execution_time_ms: self.execution_time.as_millis() as u64,
+        }
+    }
+
     pub fn execution_time_ms(&self) -> u64 {
         self.execution_time.as_millis() as u64
     }

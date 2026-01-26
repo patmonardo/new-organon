@@ -181,6 +181,16 @@ fn spec_path_to_core(source: NodeId, target: NodeId, index: usize) -> PathResult
     }
 }
 
+fn result_paths(result: &BfsResult, source_node: NodeId) -> Vec<PathResult> {
+    result
+        .visited_nodes
+        .iter()
+        .copied()
+        .enumerate()
+        .map(|(index, node_id)| spec_path_to_core(source_node, node_id, index))
+        .collect()
+}
+
 /// BFS result builder (pathfinding-family adapter).
 pub struct BfsResultBuilder {
     result: BfsResult,
@@ -214,14 +224,7 @@ impl BfsResultBuilder {
     }
 
     pub fn build_pathfinding_result(self) -> Result<PathFindingResult, AlgorithmError> {
-        let paths: Vec<PathResult> = self
-            .result
-            .visited_nodes
-            .iter()
-            .copied()
-            .enumerate()
-            .map(|(index, node_id)| spec_path_to_core(self.source_node, node_id, index))
-            .collect();
+        let paths = result_paths(&self.result, self.source_node);
 
         let mut additional = HashMap::new();
         additional.insert(
@@ -242,6 +245,50 @@ impl BfsResultBuilder {
             .with_metadata(metadata)
             .build()
             .map_err(|e| AlgorithmError::Execution(e.to_string()))
+    }
+
+    pub fn paths(&self) -> Vec<PathResult> {
+        result_paths(&self.result, self.source_node)
+    }
+
+    pub fn stats(&self) -> BfsStats {
+        let nodes_visited = self.result.visited_nodes.len() as u64;
+        let targets = self.target_count as u64;
+        let targets_found = if targets == 0 {
+            0
+        } else {
+            nodes_visited.min(targets)
+        };
+        let all_targets_reached = targets > 0 && targets_found == targets;
+
+        BfsStats {
+            nodes_visited,
+            max_depth_reached: 0,
+            execution_time_ms: self.execution_time.as_millis() as u64,
+            targets_found,
+            all_targets_reached,
+            avg_branching_factor: 0.0,
+        }
+    }
+
+    pub fn mutation_summary(&self, property_name: &str, nodes_updated: u64) -> BfsMutationSummary {
+        BfsMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: self.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn write_summary(&self, property_name: &str, nodes_written: u64) -> BfsWriteSummary {
+        BfsWriteSummary {
+            nodes_written,
+            property_name: property_name.to_string(),
+            execution_time_ms: self.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.execution_time.as_millis() as u64
     }
 }
 

@@ -6,8 +6,8 @@
 use crate::algo::kspanningtree::computation::KSpanningTreeComputationRuntime;
 use crate::algo::kspanningtree::storage::KSpanningTreeStorageRuntime;
 use crate::algo::kspanningtree::{
-    KSpanningTreeConfig, KSpanningTreeMutateResult, KSpanningTreeMutationSummary,
-    KSpanningTreeResult, KSpanningTreeResultBuilder, KSpanningTreeRow, KSpanningTreeStats,
+    KSpanningTreeConfig, KSpanningTreeMutateResult, KSpanningTreeResult,
+    KSpanningTreeResultBuilder, KSpanningTreeRow, KSpanningTreeStats,
 };
 use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
@@ -186,11 +186,7 @@ impl KSpanningTreeBuilder {
             &paths,
         )?;
 
-        let summary = KSpanningTreeMutationSummary {
-            nodes_updated: paths.len() as u64,
-            property_name: property_name.to_string(),
-            execution_time_ms: builder.execution_time_ms(),
-        };
+        let summary = builder.mutation_summary(property_name, paths.len() as u64);
 
         Ok(KSpanningTreeMutateResult {
             summary,
