@@ -4,15 +4,14 @@
 //!
 //! This facade runs the translated Yen's runtime against a live `DefaultGraphStore`.
 
-use crate::algo::algorithms::result_builders::{
-    ExecutionMetadata, PathFindingResult, PathResult as AlgoPathResult, PathResultBuilder,
-    ResultBuilder, ResultBuilderError,
+use crate::algo::algorithms::result_builders::{PathFindingResult, PathResult};
+use crate::algo::yens::{
+    YensComputationRuntime, YensConfig, YensMutateResult, YensMutationSummary, YensResult,
+    YensResultBuilder, YensStats, YensStorageRuntime, YensWriteSummary,
 };
-use crate::algo::yens::{YensComputationRuntime, YensStorageRuntime};
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::{PathResult, Result};
+use crate::procedures::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -23,35 +22,17 @@ use std::sync::Arc;
 // Additional import for error handling
 use crate::projection::eval::algorithm::AlgorithmError;
 
-/// Statistics about Yen's execution
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct YensStats {
-    pub paths_found: u64,
-    pub computation_time_ms: u64,
-    pub execution_time_ms: u64,
-}
-
-/// Mutate result for Yen's K-shortest paths: summary + updated store
-#[derive(Debug, Clone)]
-pub struct YensMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
-/// Yen's algorithm builder - fluent configuration
-pub struct YensBuilder {
+/// Yen's algorithm facade - fluent configuration
+pub struct YensFacade {
     graph_store: Arc<DefaultGraphStore>,
-    source: Option<u64>,
-    target: Option<u64>,
-    k: usize,
-    weight_property: String,
-    relationship_types: Vec<String>,
-    direction: String,
-    track_relationships: bool,
+    config: YensConfig,
     concurrency: usize,
 }
 
-impl YensBuilder {
+/// Backwards-compatible alias (builder-style naming).
+pub type YensBuilder = YensFacade;
+
+impl YensFacade {
     /// Create a new Yen's builder bound to a live graph store.
     ///
     /// Defaults:
@@ -65,132 +46,122 @@ impl YensBuilder {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            source: None,
-            target: None,
-            k: 3,
-            weight_property: "weight".to_string(),
-            relationship_types: vec![],
-            direction: "outgoing".to_string(),
-            track_relationships: false,
+            config: YensConfig::default(),
             concurrency: 1,
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: YensConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            concurrency: 1,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: YensConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: YensConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     pub fn source(mut self, source: u64) -> Self {
-        self.source = Some(source);
+        self.config.source_node = i64::try_from(source).unwrap_or(-1);
+        self
+    }
+
+    pub fn source_node(mut self, source: NodeId) -> Self {
+        self.config.source_node = source;
         self
     }
 
     pub fn target(mut self, target: u64) -> Self {
-        self.target = Some(target);
+        self.config.target_node = i64::try_from(target).unwrap_or(-1);
+        self
+    }
+
+    pub fn target_node(mut self, target: NodeId) -> Self {
+        self.config.target_node = target;
         self
     }
 
     pub fn k(mut self, k: usize) -> Self {
-        self.k = k;
+        self.config.k = k;
         self
     }
 
     pub fn weight_property(mut self, property: &str) -> Self {
-        self.weight_property = property.to_string();
+        self.config.weight_property = property.to_string();
         self
     }
 
     pub fn relationship_types(mut self, relationship_types: Vec<String>) -> Self {
-        self.relationship_types = relationship_types;
+        self.config.relationship_types = relationship_types;
         self
     }
 
     pub fn direction(mut self, direction: &str) -> Self {
-        self.direction = direction.to_string();
+        self.config.direction = direction.to_string();
         self
     }
 
     pub fn track_relationships(mut self, enabled: bool) -> Self {
-        self.track_relationships = enabled;
+        self.config.track_relationships = enabled;
         self
     }
 
     pub fn concurrency(mut self, concurrency: usize) -> Self {
+        self.config.concurrency = concurrency;
         self.concurrency = concurrency;
         self
     }
 
-    fn validate(&self) -> Result<()> {
-        if self.source.is_none() {
-            return Err(AlgorithmError::Execution(
-                "source node must be specified".to_string(),
-            ));
-        }
-
-        if self.target.is_none() {
-            return Err(AlgorithmError::Execution(
-                "target node must be specified".to_string(),
-            ));
-        }
-
-        if self.k == 0 {
-            return Err(AlgorithmError::Execution("k must be > 0".to_string()));
-        }
-
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be > 0".to_string(),
-            ));
-        }
-
-        match self.direction.to_ascii_lowercase().as_str() {
-            "outgoing" | "incoming" => {}
-            other => {
-                return Err(AlgorithmError::Execution(format!(
-                    "direction must be 'outgoing' or 'incoming' (got '{other}')"
-                )));
-            }
-        }
-
-        ConfigValidator::non_empty_string(&self.weight_property, "weight_property")?;
-
-        Ok(())
-    }
-
-    fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
-        NodeId::try_from(value).map_err(|_| {
-            AlgorithmError::Execution(format!("{field} must fit into i64 (got {value})",))
-        })
-    }
-
-    fn checked_u64(value: NodeId, context: &str) -> Result<u64> {
-        u64::try_from(value).map_err(|_| {
-            AlgorithmError::Execution(format!(
-                "Yen's returned invalid node id for {context}: {value}",
-            ))
-        })
-    }
-
     fn compute(self) -> Result<PathFindingResult> {
-        self.validate()?;
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
 
-        let source_u64 = self.source.expect("validate ensures source is set");
-        let target_u64 = self.target.expect("validate ensures target is set");
-        let source_node = Self::checked_node_id(source_u64, "source")?;
-        let target_node = Self::checked_node_id(target_u64, "target")?;
+        let source_node = self.config.source_node;
+        let target_node = self.config.target_node;
 
-        let rel_types: HashSet<RelationshipType> = if self.relationship_types.is_empty() {
+        let rel_types: HashSet<RelationshipType> = if self.config.relationship_types.is_empty() {
             self.graph_store.relationship_types()
         } else {
-            RelationshipType::list_of(self.relationship_types.clone())
+            RelationshipType::list_of(self.config.relationship_types.clone())
                 .into_iter()
                 .collect()
         };
 
-        let (orientation, direction_byte) = match self.direction.to_ascii_lowercase().as_str() {
-            "incoming" => (Orientation::Reverse, 1u8),
-            _ => (Orientation::Natural, 0u8),
-        };
+        let (orientation, direction_byte) =
+            match self.config.direction.to_ascii_lowercase().as_str() {
+                "incoming" => (Orientation::Reverse, 1u8),
+                _ => (Orientation::Natural, 0u8),
+            };
 
         let selectors: HashMap<RelationshipType, String> = rel_types
             .iter()
-            .map(|t| (t.clone(), self.weight_property.clone()))
+            .map(|t| (t.clone(), self.config.weight_property.clone()))
             .collect();
 
         let graph_view = self
@@ -201,91 +172,42 @@ impl YensBuilder {
         let storage = YensStorageRuntime::new(
             source_node,
             target_node,
-            self.k,
-            self.track_relationships,
-            self.concurrency,
+            self.config.k,
+            self.config.track_relationships,
+            self.config.concurrency,
         );
 
         let mut computation = YensComputationRuntime::new(
             source_node,
             target_node,
-            self.k,
-            self.track_relationships,
-            self.concurrency,
+            self.config.k,
+            self.config.track_relationships,
+            self.config.concurrency,
         );
 
         let mut progress_tracker = TaskProgressTracker::with_concurrency(
-            Tasks::leaf_with_volume("yens".to_string(), self.k),
-            self.concurrency,
+            Tasks::leaf_with_volume("yens".to_string(), self.config.k),
+            self.config.concurrency,
         );
 
         let start = std::time::Instant::now();
-        let result = storage.compute_yens(
+        let result: YensResult = storage.compute_yens(
             &mut computation,
             Some(graph_view.as_ref()),
             direction_byte,
             &mut progress_tracker,
         )?;
-
-        let paths: Vec<AlgoPathResult> = result
-            .paths
-            .into_iter()
-            .map(|p| {
-                let source = Self::checked_u64(p.source_node, "source")?;
-                let target = Self::checked_u64(p.target_node, "target")?;
-                let path = p
-                    .node_ids
-                    .into_iter()
-                    .map(|node_id| Self::checked_u64(node_id, "path"))
-                    .collect::<Result<Vec<_>>>()?;
-
-                Ok(AlgoPathResult {
-                    source,
-                    target,
-                    path,
-                    cost: p.total_cost,
-                })
-            })
-            .collect::<Result<Vec<_>>>()?;
-
-        // Create execution metadata
-        let mut additional = std::collections::HashMap::new();
-        additional.insert(
-            "computation_time_ms".to_string(),
-            result.computation_time_ms.to_string(),
-        );
-        additional.insert("k".to_string(), self.k.to_string());
-        additional.insert(
-            "track_relationships".to_string(),
-            self.track_relationships.to_string(),
-        );
-
-        let metadata = ExecutionMetadata {
-            execution_time: start.elapsed(),
-            iterations: None,
-            converged: None,
-            additional,
-        };
-
-        // Build result using upgraded result builder
-        let path_result = PathResultBuilder::new()
-            .with_paths(paths)
-            .with_metadata(metadata)
-            .build()
-            .map_err(|e: ResultBuilderError| AlgorithmError::Execution(e.to_string()))?;
-
-        Ok(path_result)
+        YensResultBuilder::result(
+            result,
+            start.elapsed(),
+            self.config.k,
+            self.config.track_relationships,
+        )
     }
 
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
         let result = self.compute()?;
-        let paths = result.paths.into_iter().map(|p| PathResult {
-            source: p.source,
-            target: p.target,
-            path: p.path,
-            cost: p.cost,
-        });
-        Ok(Box::new(paths))
+        Ok(Box::new(result.paths.into_iter()))
     }
 
     pub fn stats(self) -> Result<YensStats> {
@@ -305,29 +227,23 @@ impl YensBuilder {
     }
 
     pub fn mutate(self, property_name: &str) -> Result<YensMutateResult> {
-        self.validate()?;
-        ConfigValidator::non_empty_string(property_name, "property_name")?;
+        if property_name.is_empty() {
+            return Err(AlgorithmError::Execution(
+                "property_name cannot be empty".to_string(),
+            ));
+        }
         let graph_store = Arc::clone(&self.graph_store);
         let result = self.compute()?;
-        let paths: Vec<PathResult> = result
-            .paths
-            .into_iter()
-            .map(|path| PathResult {
-                source: path.source,
-                target: path.target,
-                path: path.path,
-                cost: path.cost,
-            })
-            .collect();
+        let paths = result.paths;
 
         let updated_store =
             super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
 
-        let summary = MutationResult::new(
-            paths.len() as u64,
-            property_name.to_string(),
-            result.metadata.execution_time,
-        );
+        let summary = YensMutationSummary {
+            nodes_updated: paths.len() as u64,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.metadata.execution_time.as_millis() as u64,
+        };
 
         Ok(YensMutateResult {
             summary,
@@ -335,15 +251,18 @@ impl YensBuilder {
         })
     }
 
-    pub fn write(self, property_name: &str) -> Result<WriteResult> {
-        self.validate()?;
-        ConfigValidator::non_empty_string(property_name, "property_name")?;
+    pub fn write(self, property_name: &str) -> Result<YensWriteSummary> {
+        if property_name.is_empty() {
+            return Err(AlgorithmError::Execution(
+                "property_name cannot be empty".to_string(),
+            ));
+        }
         let res = self.mutate(property_name)?;
-        Ok(WriteResult::new(
-            res.summary.nodes_updated,
-            property_name.to_string(),
-            std::time::Duration::from_millis(res.summary.execution_time_ms),
-        ))
+        Ok(YensWriteSummary {
+            nodes_written: res.summary.nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: res.summary.execution_time_ms,
+        })
     }
 
     /// Estimate memory requirements for Yen's K-shortest paths execution
@@ -351,7 +270,7 @@ impl YensBuilder {
     /// Returns a memory range estimate based on path storage, priority queues, and graph overhead.
     pub fn estimate_memory(&self) -> MemoryRange {
         let node_count = self.graph_store.node_count();
-        let k = self.k;
+        let k = self.config.k;
 
         // Priority queue for candidate paths (can grow large)
         let queue_memory = k * node_count * 16; // path + cost per candidate
@@ -391,15 +310,21 @@ mod tests {
 
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
 
-        assert!(YensBuilder::new(Arc::clone(&store)).validate().is_err());
         assert!(YensBuilder::new(Arc::clone(&store))
-            .source(0)
+            .source_node(-1)
+            .config
+            .validate()
+            .is_err());
+        assert!(YensBuilder::new(Arc::clone(&store))
+            .target_node(-1)
+            .config
             .validate()
             .is_err());
         assert!(YensBuilder::new(Arc::clone(&store))
             .source(0)
             .target(1)
             .k(0)
+            .config
             .validate()
             .is_err());
     }

@@ -6,6 +6,9 @@
 
 use super::storage::YensStorageRuntime;
 use super::YensComputationRuntime;
+use crate::algo::algorithms::result_builders::{
+    ExecutionMetadata, PathFindingResult, PathFindingResultBuilder, PathResult, ResultBuilder,
+};
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
@@ -16,6 +19,7 @@ use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::time::Duration;
 
 /// Yen's algorithm configuration
 ///
@@ -158,6 +162,122 @@ pub struct YensPathResult {
     pub costs: Vec<f64>,
     /// Total cost of the path
     pub total_cost: f64,
+}
+
+/// Statistics about Yen's execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct YensStats {
+    pub paths_found: u64,
+    pub computation_time_ms: u64,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct YensMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct YensWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for Yen's K-shortest paths: summary + updated store
+#[derive(Debug, Clone)]
+pub struct YensMutateResult {
+    pub summary: YensMutationSummary,
+    pub updated_store: std::sync::Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+fn checked_u64(value: NodeId) -> u64 {
+    u64::try_from(value).unwrap_or(0)
+}
+
+fn spec_path_to_core(path: &YensPathResult) -> PathResult {
+    let source = checked_u64(path.source_node);
+    let target = checked_u64(path.target_node);
+    let path_ids = path
+        .node_ids
+        .iter()
+        .copied()
+        .filter(|node_id| *node_id >= 0)
+        .map(checked_u64)
+        .collect();
+
+    PathResult {
+        source,
+        target,
+        path: path_ids,
+        cost: path.total_cost,
+    }
+}
+
+/// Yen's result builder (pathfinding-family adapter).
+pub struct YensResultBuilder {
+    result: YensResult,
+    execution_time: Duration,
+    k: usize,
+    track_relationships: bool,
+}
+
+impl YensResultBuilder {
+    pub fn new(
+        result: YensResult,
+        execution_time: Duration,
+        k: usize,
+        track_relationships: bool,
+    ) -> Self {
+        Self {
+            result,
+            execution_time,
+            k,
+            track_relationships,
+        }
+    }
+
+    pub fn result(
+        result: YensResult,
+        execution_time: Duration,
+        k: usize,
+        track_relationships: bool,
+    ) -> Result<PathFindingResult, AlgorithmError> {
+        Self::new(result, execution_time, k, track_relationships).build_pathfinding_result()
+    }
+
+    pub fn build_pathfinding_result(self) -> Result<PathFindingResult, AlgorithmError> {
+        let paths: Vec<PathResult> = self.result.paths.iter().map(spec_path_to_core).collect();
+
+        let additional = HashMap::from([
+            (
+                "computation_time_ms".to_string(),
+                self.result.computation_time_ms.to_string(),
+            ),
+            ("k".to_string(), self.k.to_string()),
+            (
+                "track_relationships".to_string(),
+                self.track_relationships.to_string(),
+            ),
+        ]);
+
+        let metadata = ExecutionMetadata {
+            execution_time: self.execution_time,
+            iterations: None,
+            converged: None,
+            additional,
+        };
+
+        PathFindingResultBuilder::new()
+            .with_paths(paths)
+            .with_metadata(metadata)
+            .build()
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))
+    }
 }
 
 // Generate the algorithm specification using focused macros

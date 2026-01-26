@@ -5,12 +5,12 @@
 //! This module implements the "Gross pole" of the Bellman-Ford algorithm,
 //! handling persistent data access and the main algorithm execution.
 
-use super::spec::{BellmanFordResult, PathResult};
+use super::spec::{BellmanFordPathResult, BellmanFordResult};
 use super::BellmanFordComputationRuntime;
 use crate::core::utils::progress::{ProgressTracker, UNKNOWN_VOLUME};
 use crate::projection::eval::algorithm::AlgorithmError;
-use crate::types::graph::id_map::NodeId;
 use crate::types::graph::Graph;
+use crate::types::graph::NodeId;
 use crate::types::properties::relationship::RelationshipCursorBox;
 use std::collections::VecDeque;
 
@@ -176,7 +176,7 @@ impl BellmanFordStorageRuntime {
     fn generate_shortest_paths(
         &self,
         computation: &BellmanFordComputationRuntime,
-    ) -> Result<Vec<PathResult>, AlgorithmError> {
+    ) -> Result<Vec<BellmanFordPathResult>, AlgorithmError> {
         let mut paths = Vec::new();
         let node_count = computation.node_count();
 
@@ -197,7 +197,7 @@ impl BellmanFordStorageRuntime {
     fn generate_negative_cycles(
         &self,
         computation: &BellmanFordComputationRuntime,
-    ) -> Result<Vec<PathResult>, AlgorithmError> {
+    ) -> Result<Vec<BellmanFordPathResult>, AlgorithmError> {
         let mut cycles = Vec::new();
 
         for cycle_node in computation.get_negative_cycle_nodes() {
@@ -216,7 +216,7 @@ impl BellmanFordStorageRuntime {
         computation: &BellmanFordComputationRuntime,
         source_node: NodeId,
         target_node: NodeId,
-    ) -> Result<PathResult, AlgorithmError> {
+    ) -> Result<BellmanFordPathResult, AlgorithmError> {
         let mut node_ids = Vec::new();
         let mut costs = Vec::new();
 
@@ -240,7 +240,7 @@ impl BellmanFordStorageRuntime {
         node_ids.reverse();
         costs.reverse();
 
-        Ok(PathResult {
+        Ok(BellmanFordPathResult {
             source_node,
             target_node,
             total_cost: computation.distance(target_node),
@@ -256,7 +256,7 @@ impl BellmanFordStorageRuntime {
         &self,
         computation: &BellmanFordComputationRuntime,
         start_node: NodeId,
-    ) -> Result<PathResult, AlgorithmError> {
+    ) -> Result<BellmanFordPathResult, AlgorithmError> {
         let mut node_ids = Vec::new();
         let mut costs = Vec::new();
 
@@ -283,7 +283,7 @@ impl BellmanFordStorageRuntime {
 
         // If we didn't complete the cycle, return empty result
         if length >= max_length {
-            return Ok(PathResult {
+            return Ok(BellmanFordPathResult {
                 source_node: start_node,
                 target_node: start_node,
                 total_cost: 0.0,
@@ -292,7 +292,7 @@ impl BellmanFordStorageRuntime {
             });
         }
 
-        Ok(PathResult {
+        Ok(BellmanFordPathResult {
             source_node: start_node,
             target_node: start_node,
             total_cost: 0.0, // Negative cycles have negative total cost

@@ -6,17 +6,21 @@
 //! Bellman-Ford is unique among shortest path algorithms in its ability to detect
 //! negative cycles, making it essential for certain graph analysis tasks.
 
-use super::storage::BellmanFordStorageRuntime;
 use super::BellmanFordComputationRuntime;
+use super::BellmanFordStorageRuntime;
+use crate::algo::algorithms::result_builders::{
+    ExecutionMetadata, PathFindingResult, PathFindingResultBuilder, PathResult, ResultBuilder,
+};
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::time::Duration;
 
 /// Bellman-Ford algorithm configuration
 ///
@@ -82,11 +86,28 @@ impl BellmanDirection {
 impl BellmanFordConfig {
     /// Validate configuration parameters
     pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.source_node < 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "source_node".to_string(),
+                reason: "Must be a non-negative i64".to_string(),
+            });
+        }
+
         if self.concurrency == 0 {
             return Err(ConfigError::InvalidParameter {
                 parameter: "concurrency".to_string(),
                 reason: "Must be greater than 0".to_string(),
             });
+        }
+
+        match self.direction.to_ascii_lowercase().as_str() {
+            "outgoing" | "incoming" => {}
+            other => {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "direction".to_string(),
+                    reason: format!("Must be 'outgoing' or 'incoming' (got '{other}')"),
+                });
+            }
         }
 
         Ok(())
@@ -105,10 +126,10 @@ impl crate::config::ValidatedConfig for BellmanFordConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BellmanFordResult {
     /// Shortest paths found (empty if negative cycle detected or paths not tracked)
-    pub shortest_paths: Vec<PathResult>,
+    pub shortest_paths: Vec<BellmanFordPathResult>,
 
     /// Negative cycles found (empty if not tracked)
-    pub negative_cycles: Vec<PathResult>,
+    pub negative_cycles: Vec<BellmanFordPathResult>,
 
     /// Whether the graph contains negative cycles
     pub contains_negative_cycle: bool,
@@ -116,7 +137,7 @@ pub struct BellmanFordResult {
 
 /// Individual path result for Bellman-Ford
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PathResult {
+pub struct BellmanFordPathResult {
     /// Source node ID
     pub source_node: NodeId,
 
@@ -131,6 +152,115 @@ pub struct PathResult {
 
     /// Costs for each step along the path
     pub costs: Vec<f64>,
+}
+
+/// Statistics about Bellman-Ford execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BellmanFordStats {
+    pub paths_found: u64,
+    pub negative_cycles_found: u64,
+    pub contains_negative_cycle: bool,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BellmanFordMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BellmanFordWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for Bellman-Ford: summary + updated store
+#[derive(Debug, Clone)]
+pub struct BellmanFordMutateResult {
+    pub summary: BellmanFordMutationSummary,
+    pub updated_store: std::sync::Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+fn checked_u64(value: NodeId, _context: &str) -> u64 {
+    u64::try_from(value).unwrap_or(0)
+}
+
+fn spec_path_to_core(path: &BellmanFordPathResult) -> PathResult {
+    let source = checked_u64(path.source_node, "source");
+    let target = checked_u64(path.target_node, "target");
+    let path_ids = path
+        .node_ids
+        .iter()
+        .copied()
+        .filter(|node_id| *node_id >= 0)
+        .map(|node_id| checked_u64(node_id, "path"))
+        .collect();
+
+    PathResult {
+        source,
+        target,
+        path: path_ids,
+        cost: path.total_cost,
+    }
+}
+
+/// Bellman-Ford result builder (pathfinding-family adapter).
+pub struct BellmanFordResultBuilder {
+    result: BellmanFordResult,
+    execution_time: Duration,
+}
+
+impl BellmanFordResultBuilder {
+    pub fn new(result: BellmanFordResult, execution_time: Duration) -> Self {
+        Self {
+            result,
+            execution_time,
+        }
+    }
+
+    pub fn result(
+        result: BellmanFordResult,
+        execution_time: Duration,
+    ) -> Result<PathFindingResult, AlgorithmError> {
+        Self::new(result, execution_time).build_pathfinding_result()
+    }
+
+    pub fn build_pathfinding_result(self) -> Result<PathFindingResult, AlgorithmError> {
+        let paths: Vec<PathResult> = self
+            .result
+            .shortest_paths
+            .iter()
+            .filter(|p| p.source_node >= 0 && p.target_node >= 0)
+            .map(spec_path_to_core)
+            .collect();
+
+        let metadata = ExecutionMetadata {
+            execution_time: self.execution_time,
+            iterations: None,
+            converged: Some(!self.result.contains_negative_cycle),
+            additional: std::collections::HashMap::from([
+                (
+                    "negative_cycles_found".to_string(),
+                    self.result.negative_cycles.len().to_string(),
+                ),
+                (
+                    "contains_negative_cycle".to_string(),
+                    self.result.contains_negative_cycle.to_string(),
+                ),
+            ]),
+        };
+
+        PathFindingResultBuilder::new()
+            .with_paths(paths)
+            .with_metadata(metadata)
+            .build()
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))
+    }
 }
 
 // Generate the algorithm specification using focused macros
@@ -313,7 +443,7 @@ mod tests {
 
     #[test]
     fn test_bellman_ford_path_result() {
-        let path_result = PathResult {
+        let path_result = BellmanFordPathResult {
             source_node: 0,
             target_node: 5,
             total_cost: 10.5,

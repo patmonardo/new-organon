@@ -1,16 +1,14 @@
 //! Bellman-Ford algorithm dispatch handler.
 
+use crate::algo::bellman_ford::BellmanFordStats;
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
-use crate::applications::algorithms::pathfinding::{
-    err, get_bool, get_str, get_u64, timings_json,
-};
+use crate::applications::algorithms::pathfinding::{err, get_bool, get_str, get_u64, timings_json};
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::procedures::pathfinding::BellmanFordStats;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

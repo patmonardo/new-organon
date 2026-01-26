@@ -102,6 +102,11 @@ pub struct PathFindingResult {
     pub post_processing_millis: i64,
 }
 
+/// Path finding result builder (family-level alias).
+///
+/// Prefer this name for pathfinding algorithms (e.g., Bellman-Ford, Dijkstra).
+pub type PathFindingResultBuilder = PathResultBuilder;
+
 /// Path result for individual paths
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PathResult {

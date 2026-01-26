@@ -10,7 +10,7 @@ use crate::applications::algorithms::pathfinding::{
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::procedures::pathfinding::YensStats;
+use crate::algo::yens::YensStats;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

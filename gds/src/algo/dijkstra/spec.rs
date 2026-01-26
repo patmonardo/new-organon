@@ -6,19 +6,23 @@
 //! Dijkstra is implemented as a configurable Algorithmic Virtual Machine with
 //! polymorphic target system, traversal state management, and stream-based results.
 
-use super::path_finding_result::PathFindingResult;
+use super::path_finding_result::PathFindingResult as DijkstraPathFindingResult;
 use super::storage::DijkstraStorageRuntime;
 use super::targets::create_targets;
 use super::DijkstraComputationRuntime;
+use crate::algo::algorithms::result_builders::{
+    ExecutionMetadata, PathFindingResult, PathFindingResultBuilder, PathResult, ResultBuilder,
+};
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
-use crate::types::graph::id_map::NodeId;
+use crate::types::graph::NodeId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::time::Duration;
 
 /// Dijkstra algorithm configuration
 ///
@@ -67,12 +71,14 @@ impl Default for DijkstraConfig {
 enum DijkstraDirection {
     Outgoing,
     Incoming,
+    Both,
 }
 
 impl DijkstraDirection {
     fn from_str(s: &str) -> Self {
         match s.to_ascii_lowercase().as_str() {
             "incoming" => DijkstraDirection::Incoming,
+            "both" => DijkstraDirection::Both,
             _ => DijkstraDirection::Outgoing,
         }
     }
@@ -80,6 +86,7 @@ impl DijkstraDirection {
         match self {
             DijkstraDirection::Outgoing => "outgoing",
             DijkstraDirection::Incoming => "incoming",
+            DijkstraDirection::Both => "both",
         }
     }
     fn default_as_str() -> String {
@@ -111,6 +118,16 @@ impl DijkstraConfig {
             });
         }
 
+        match self.direction.to_ascii_lowercase().as_str() {
+            "outgoing" | "incoming" | "both" => {}
+            other => {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "direction".to_string(),
+                    reason: format!("Must be 'outgoing', 'incoming', or 'both' (got '{other}')"),
+                });
+            }
+        }
+
         Ok(())
     }
 }
@@ -127,7 +144,7 @@ impl crate::config::ValidatedConfig for DijkstraConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DijkstraResult {
     /// Path finding result with stream-based processing
-    pub path_finding_result: PathFindingResult,
+    pub path_finding_result: DijkstraPathFindingResult,
 
     /// Total computation time in milliseconds
     pub computation_time_ms: u64,
@@ -155,6 +172,114 @@ pub struct DijkstraPathResult {
 
     /// Costs for each step along the path
     pub costs: Vec<f64>,
+}
+
+/// Statistics about Dijkstra computation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DijkstraStats {
+    /// Number of paths found
+    pub paths_found: u64,
+    /// Total computation time in milliseconds
+    pub execution_time_ms: u64,
+    /// Number of nodes expanded during search
+    pub nodes_expanded: u64,
+    /// Number of edges considered
+    pub edges_considered: u64,
+    /// Maximum queue size during execution
+    pub max_queue_size: u64,
+    /// Whether search reached target(s)
+    pub target_reached: bool,
+}
+
+/// Summary of a mutate operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DijkstraMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DijkstraWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for Dijkstra: summary + updated store
+#[derive(Debug, Clone)]
+pub struct DijkstraMutateResult {
+    pub summary: DijkstraMutationSummary,
+    pub updated_store: std::sync::Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+fn checked_u64(value: NodeId) -> u64 {
+    u64::try_from(value).unwrap_or(0)
+}
+
+fn spec_path_to_core(path: &DijkstraPathResult) -> PathResult {
+    let source = checked_u64(path.source_node);
+    let target = checked_u64(path.target_node);
+    let path_ids = path
+        .node_ids
+        .iter()
+        .copied()
+        .filter(|node_id| *node_id >= 0)
+        .map(checked_u64)
+        .collect();
+
+    PathResult {
+        source,
+        target,
+        path: path_ids,
+        cost: path.total_cost(),
+    }
+}
+
+/// Dijkstra result builder (pathfinding-family adapter).
+pub struct DijkstraResultBuilder {
+    result: DijkstraResult,
+    execution_time: Duration,
+}
+
+impl DijkstraResultBuilder {
+    pub fn new(result: DijkstraResult, execution_time: Duration) -> Self {
+        Self {
+            result,
+            execution_time,
+        }
+    }
+
+    pub fn result(
+        result: DijkstraResult,
+        execution_time: Duration,
+    ) -> Result<PathFindingResult, AlgorithmError> {
+        Self::new(result, execution_time).build_pathfinding_result()
+    }
+
+    pub fn build_pathfinding_result(self) -> Result<PathFindingResult, AlgorithmError> {
+        let paths: Vec<PathResult> = self
+            .result
+            .path_finding_result
+            .paths()
+            .filter(|p| p.source_node >= 0 && p.target_node >= 0)
+            .map(spec_path_to_core)
+            .collect();
+
+        let metadata = ExecutionMetadata {
+            execution_time: self.execution_time,
+            iterations: None,
+            converged: None,
+            additional: std::collections::HashMap::new(),
+        };
+
+        PathFindingResultBuilder::new()
+            .with_paths(paths)
+            .with_metadata(metadata)
+            .build()
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))
+    }
 }
 
 impl DijkstraPathResult {
@@ -219,6 +344,7 @@ define_algorithm_spec! {
         let orientation = match DijkstraDirection::from_str(&config.direction) {
             DijkstraDirection::Outgoing => Orientation::Natural,
             DijkstraDirection::Incoming => Orientation::Reverse,
+            DijkstraDirection::Both => Orientation::Undirected,
         };
 
         let graph = graph_store
@@ -228,6 +354,10 @@ define_algorithm_spec! {
             ))?;
 
         let direction = DijkstraDirection::from_str(&config.direction);
+        let direction_byte = match direction {
+            DijkstraDirection::Incoming => 1u8,
+            _ => 0u8,
+        };
 
         // Progress tracking: volume is best-effort (relationship count);
         // work units are counted inside the driver loop in storage.
@@ -241,7 +371,7 @@ define_algorithm_spec! {
             &mut computation,
             targets,
             Some(graph.as_ref()),
-            direction as u8,
+            direction_byte,
             &mut progress_tracker,
         )?;
 
@@ -294,7 +424,7 @@ mod tests {
             costs: vec![0.0, 3.5, 7.0, 10.5],
         };
 
-        let path_finding_result = PathFindingResult::new(vec![path_result.clone()]);
+        let path_finding_result = DijkstraPathFindingResult::new(vec![path_result.clone()]);
         let result = DijkstraResult {
             path_finding_result,
             computation_time_ms: 100,

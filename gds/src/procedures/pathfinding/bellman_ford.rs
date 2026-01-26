@@ -1,64 +1,40 @@
-//! Bellman-Ford Facade
-//!
-//! Single-source shortest paths with negative-cycle detection.
-//!
-//! This facade runs the translated Bellman-Ford runtime against a live
-//! `DefaultGraphStore` (no dummy outputs).
-
-use crate::algo::bellman_ford::{BellmanFordComputationRuntime, BellmanFordStorageRuntime};
+use crate::algo::bellman_ford::{
+    BellmanFordComputationRuntime, BellmanFordConfig, BellmanFordMutateResult,
+    BellmanFordMutationSummary, BellmanFordResult, BellmanFordResultBuilder, BellmanFordStats,
+    BellmanFordStorageRuntime, BellmanFordWriteSummary,
+};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::{PathResult as ProcedurePathResult, Result};
+use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
+use serde_json::Value as JsonValue;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::algo::algorithms::result_builders::{
-    ExecutionMetadata, PathFindingResult, PathResult as CorePathResult, PathResultBuilder,
-    ResultBuilder,
-};
+use crate::algo::algorithms::result_builders::{PathFindingResult, PathResult};
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 
-/// Statistics about Bellman-Ford execution
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct BellmanFordStats {
-    pub paths_found: u64,
-    pub negative_cycles_found: u64,
-    pub contains_negative_cycle: bool,
-    pub execution_time_ms: u64,
-}
-
-/// Bellman-Ford algorithm builder - fluent configuration
-pub struct BellmanFordBuilder {
+/// Bellman-Ford algorithm facade - config-oriented builder
+pub struct BellmanFordFacade {
     graph_store: Arc<DefaultGraphStore>,
-    source: Option<u64>,
+    config: BellmanFordConfig,
     weight_property: String,
-    relationship_types: Vec<String>,
-    direction: String,
-    track_negative_cycles: bool,
-    track_paths: bool,
-    concurrency: usize,
     /// Progress tracking components
     task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
     user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
 }
 
-/// Mutate result for Bellman-Ford: summary + updated store
-#[derive(Debug, Clone)]
-pub struct BellmanFordMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
+/// Backwards-compatible alias (builder-style naming).
+pub type BellmanFordBuilder = BellmanFordFacade;
 
-impl BellmanFordBuilder {
-    /// Create a new Bellman-Ford builder bound to a live graph store.
+impl BellmanFordFacade {
+    /// Create a new Bellman-Ford facade bound to a live graph store.
     ///
     /// Defaults:
     /// - source: None (must be set)
@@ -71,20 +47,57 @@ impl BellmanFordBuilder {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            source: None,
+            config: BellmanFordConfig::default(),
             weight_property: "weight".to_string(),
-            relationship_types: vec![],
-            direction: "outgoing".to_string(),
-            track_negative_cycles: true,
-            track_paths: true,
-            concurrency: 4,
             task_registry_factory: None,
             user_log_registry_factory: None,
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: BellmanFordConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            weight_property: "weight".to_string(),
+            task_registry_factory: None,
+            user_log_registry_factory: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &JsonValue,
+    ) -> Result<Self> {
+        let parsed: BellmanFordConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: BellmanFordConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
+    pub fn source_node(mut self, source: NodeId) -> Self {
+        self.config.source_node = source;
+        self
+    }
+
     pub fn source(mut self, source: u64) -> Self {
-        self.source = Some(source);
+        self.config.source_node = i64::try_from(source).unwrap_or(-1);
         self
     }
 
@@ -94,27 +107,27 @@ impl BellmanFordBuilder {
     }
 
     pub fn relationship_types(mut self, relationship_types: Vec<String>) -> Self {
-        self.relationship_types = relationship_types;
+        self.config.relationship_types = relationship_types;
         self
     }
 
     pub fn direction(mut self, direction: &str) -> Self {
-        self.direction = direction.to_string();
+        self.config.direction = direction.to_string();
         self
     }
 
     pub fn track_negative_cycles(mut self, enabled: bool) -> Self {
-        self.track_negative_cycles = enabled;
+        self.config.track_negative_cycles = enabled;
         self
     }
 
     pub fn track_paths(mut self, enabled: bool) -> Self {
-        self.track_paths = enabled;
+        self.config.track_paths = enabled;
         self
     }
 
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -130,49 +143,10 @@ impl BellmanFordBuilder {
         self
     }
 
-    fn validate(&self) -> Result<()> {
-        if self.source.is_none() {
-            return Err(AlgorithmError::Execution(
-                "source node must be specified".to_string(),
-            ));
-        }
-
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be > 0".to_string(),
-            ));
-        }
-
-        match self.direction.to_ascii_lowercase().as_str() {
-            "outgoing" | "incoming" => {}
-            other => {
-                return Err(AlgorithmError::Execution(format!(
-                    "direction must be 'outgoing' or 'incoming' (got '{other}')"
-                )));
-            }
-        }
-
-        ConfigValidator::non_empty_string(&self.weight_property, "weight_property")?;
-
-        Ok(())
-    }
-
-    fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
-        NodeId::try_from(value).map_err(|_| {
-            AlgorithmError::Execution(format!("{field} must fit into i64 (got {value})",))
-        })
-    }
-
-    fn checked_u64(value: NodeId, context: &str) -> Result<u64> {
-        u64::try_from(value).map_err(|_| {
-            AlgorithmError::Execution(format!(
-                "Bellman-Ford returned invalid node id for {context}: {value}",
-            ))
-        })
-    }
-
     fn compute(self) -> Result<PathFindingResult> {
-        self.validate()?;
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
 
         // Set up progress tracking
         let _task_registry_factory = self
@@ -189,21 +163,21 @@ impl BellmanFordBuilder {
             node_count,
         ));
 
-        let source_u64 = self.source.expect("validate ensures source is set");
-        let source_node = Self::checked_node_id(source_u64, "source")?;
+        let source_node = self.config.source_node;
 
-        let rel_types: HashSet<RelationshipType> = if self.relationship_types.is_empty() {
+        let rel_types: HashSet<RelationshipType> = if self.config.relationship_types.is_empty() {
             self.graph_store.relationship_types()
         } else {
-            RelationshipType::list_of(self.relationship_types.clone())
+            RelationshipType::list_of(self.config.relationship_types.clone())
                 .into_iter()
                 .collect()
         };
 
-        let (orientation, direction_byte) = match self.direction.to_ascii_lowercase().as_str() {
-            "incoming" => (Orientation::Reverse, 1u8),
-            _ => (Orientation::Natural, 0u8),
-        };
+        let (orientation, direction_byte) =
+            match self.config.direction.to_ascii_lowercase().as_str() {
+                "incoming" => (Orientation::Reverse, 1u8),
+                _ => (Orientation::Natural, 0u8),
+            };
 
         let selectors: HashMap<RelationshipType, String> = rel_types
             .iter()
@@ -217,91 +191,36 @@ impl BellmanFordBuilder {
 
         let mut storage = BellmanFordStorageRuntime::new(
             source_node,
-            self.track_negative_cycles,
-            self.track_paths,
-            self.concurrency,
+            self.config.track_negative_cycles,
+            self.config.track_paths,
+            self.config.concurrency,
         );
 
         let mut computation = BellmanFordComputationRuntime::new(
             source_node,
-            self.track_negative_cycles,
-            self.track_paths,
-            self.concurrency,
+            self.config.track_negative_cycles,
+            self.config.track_paths,
+            self.config.concurrency,
         );
 
         let mut progress_tracker = TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("bellman_ford".to_string(), graph_view.relationship_count()),
-            self.concurrency,
+            self.config.concurrency,
         );
 
         let start = std::time::Instant::now();
-        let result = storage.compute_bellman_ford(
+        let result: BellmanFordResult = storage.compute_bellman_ford(
             &mut computation,
             Some(graph_view.as_ref()),
             direction_byte,
             &mut progress_tracker,
         )?;
-
-        let paths: Vec<CorePathResult> = result
-            .shortest_paths
-            .iter()
-            .filter(|p| p.source_node >= 0 && p.target_node >= 0)
-            .map(|p| {
-                let source = Self::checked_u64(p.source_node, "source").unwrap_or(0);
-                let target = Self::checked_u64(p.target_node, "target").unwrap_or(0);
-                let path = p
-                    .node_ids
-                    .iter()
-                    .copied()
-                    .filter(|node_id| *node_id >= 0)
-                    .map(|node_id| Self::checked_u64(node_id, "path").unwrap_or(0))
-                    .collect();
-
-                CorePathResult {
-                    source,
-                    target,
-                    path,
-                    cost: p.total_cost,
-                }
-            })
-            .collect();
-
-        // Create execution metadata
-        let execution_time = start.elapsed();
-        let metadata = ExecutionMetadata {
-            execution_time,
-            iterations: None,
-            converged: Some(!result.contains_negative_cycle),
-            additional: std::collections::HashMap::from([
-                (
-                    "negative_cycles_found".to_string(),
-                    result.negative_cycles.len().to_string(),
-                ),
-                (
-                    "contains_negative_cycle".to_string(),
-                    result.contains_negative_cycle.to_string(),
-                ),
-            ]),
-        };
-
-        // Build result using upgraded result builder
-        let path_result = PathResultBuilder::new()
-            .with_paths(paths)
-            .with_metadata(metadata)
-            .build()
-            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
-
-        Ok(path_result)
+        BellmanFordResultBuilder::result(result, start.elapsed())
     }
 
-    pub fn stream(self) -> Result<Box<dyn Iterator<Item = ProcedurePathResult>>> {
+    pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
         let result = self.compute()?;
-        Ok(Box::new(
-            result
-                .paths
-                .into_iter()
-                .map(super::core_to_procedure_path_result),
-        ))
+        Ok(Box::new(result.paths.into_iter()))
     }
 
     pub fn stats(self) -> Result<BellmanFordStats> {
@@ -328,24 +247,23 @@ impl BellmanFordBuilder {
     }
 
     pub fn mutate(self, property_name: &str) -> Result<BellmanFordMutateResult> {
-        self.validate()?;
-        ConfigValidator::non_empty_string(property_name, "property_name")?;
+        if property_name.is_empty() {
+            return Err(AlgorithmError::Execution(
+                "property_name cannot be empty".to_string(),
+            ));
+        }
         let graph_store = Arc::clone(&self.graph_store);
         let result = self.compute()?;
-        let paths: Vec<ProcedurePathResult> = result
-            .paths
-            .into_iter()
-            .map(super::core_to_procedure_path_result)
-            .collect();
+        let paths = result.paths;
 
         let updated_store =
             super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
 
-        let summary = MutationResult::new(
-            paths.len() as u64,
-            property_name.to_string(),
-            result.metadata.execution_time,
-        );
+        let summary = BellmanFordMutationSummary {
+            nodes_updated: paths.len() as u64,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.metadata.execution_time.as_millis() as u64,
+        };
 
         Ok(BellmanFordMutateResult {
             summary,
@@ -353,15 +271,18 @@ impl BellmanFordBuilder {
         })
     }
 
-    pub fn write(self, property_name: &str) -> Result<WriteResult> {
-        self.validate()?;
-        ConfigValidator::non_empty_string(property_name, "property_name")?;
+    pub fn write(self, property_name: &str) -> Result<BellmanFordWriteSummary> {
+        if property_name.is_empty() {
+            return Err(AlgorithmError::Execution(
+                "property_name cannot be empty".to_string(),
+            ));
+        }
         let res = self.mutate(property_name)?;
-        Ok(WriteResult::new(
-            res.summary.nodes_updated,
-            property_name.to_string(),
-            std::time::Duration::from_millis(res.summary.execution_time_ms),
-        ))
+        Ok(BellmanFordWriteSummary {
+            nodes_written: res.summary.nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: res.summary.execution_time_ms,
+        })
     }
 
     /// Estimate memory requirements for Bellman-Ford execution
@@ -374,10 +295,14 @@ impl BellmanFordBuilder {
         let distance_memory = node_count * 8;
 
         // Predecessor array (if tracking paths)
-        let predecessor_memory = if self.track_paths { node_count * 8 } else { 0 };
+        let predecessor_memory = if self.config.track_paths {
+            node_count * 8
+        } else {
+            0
+        };
 
         // Negative cycle tracking
-        let cycle_tracking_memory = if self.track_negative_cycles {
+        let cycle_tracking_memory = if self.config.track_negative_cycles {
             node_count * 8
         } else {
             0

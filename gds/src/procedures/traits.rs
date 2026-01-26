@@ -5,7 +5,6 @@
 //! algorithms to customize their behavior.
 
 use crate::projection::eval::algorithm::AlgorithmError;
-use serde::Serialize;
 
 /// Result type for facade operations
 pub type Result<T> = std::result::Result<T, AlgorithmError>;
@@ -133,13 +132,9 @@ pub struct CommunityStats {
 // ============================================================================
 
 /// Result type for path finding algorithms
-#[derive(Debug, Clone, Serialize)]
-pub struct PathResult {
-    pub source: u64,
-    pub target: u64,
-    pub path: Vec<u64>,
-    pub cost: f64,
-}
+///
+/// Canonical definition lives in the algo layer.
+pub type PathResult = crate::algo::algorithms::result_builders::PathResult;
 
 /// Statistics about path finding execution
 #[derive(Debug, Clone)]

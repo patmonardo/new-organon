@@ -4,16 +4,19 @@
 //!
 //! This module defines the A* algorithm specification using focused macros.
 
+use crate::algo::algorithms::result_builders::{
+    ExecutionMetadata, PathFindingResult, PathFindingResultBuilder, PathResult, ResultBuilder,
+};
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
-use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
-// use serde_json::json; // not needed here
 use crate::types::graph::id_map::NodeId;
+use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use std::time::Duration;
 
 /// A* algorithm configuration
 ///
@@ -79,6 +82,20 @@ impl AStarDirection {
 impl AStarConfig {
     /// Validate configuration parameters
     pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.source_node < 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "source_node".to_string(),
+                reason: "Must be a non-negative i64".to_string(),
+            });
+        }
+
+        if self.target_node < 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "target_node".to_string(),
+                reason: "Must be a non-negative i64".to_string(),
+            });
+        }
+
         if self.concurrency == 0 {
             return Err(ConfigError::MustBePositive {
                 name: "concurrency".to_string(),
@@ -98,6 +115,16 @@ impl AStarConfig {
             });
         }
 
+        match self.direction.to_ascii_lowercase().as_str() {
+            "outgoing" | "incoming" => {}
+            other => {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "direction".to_string(),
+                    reason: format!("Must be 'outgoing' or 'incoming' (got '{other}')"),
+                });
+            }
+        }
+
         Ok(())
     }
 }
@@ -111,7 +138,7 @@ impl crate::config::ValidatedConfig for AStarConfig {
 /// A* algorithm result
 ///
 /// Translation of: `org.neo4j.gds.paths.dijkstra.PathFindingResult`
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AStarResult {
     /// Path from source to target
     pub path: Option<Vec<NodeId>>,
@@ -147,6 +174,160 @@ impl AStarResult {
     /// Get path length (number of nodes)
     pub fn path_length(&self) -> usize {
         self.path.as_ref().map_or(0, |p| p.len())
+    }
+}
+
+/// Statistics about A* computation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AStarStats {
+    /// Number of nodes visited during search
+    pub nodes_visited: u64,
+    /// Number of nodes in the priority queue when finished
+    pub final_queue_size: u64,
+    /// Maximum queue size during execution
+    pub max_queue_size: u64,
+    /// Total computation time in milliseconds
+    pub execution_time_ms: u64,
+    /// Number of target nodes found (if any specified)
+    pub targets_found: u64,
+    /// Whether all targets were reached
+    pub all_targets_reached: bool,
+    /// Average heuristic estimate accuracy (1.0 = perfect, higher = less accurate)
+    pub heuristic_accuracy: f64,
+    /// Number of heuristic evaluations performed
+    pub heuristic_evaluations: u64,
+}
+
+/// Summary of a mutate operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AStarMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AStarWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for A*: summary + updated store
+#[derive(Debug, Clone)]
+pub struct AStarMutateResult {
+    pub summary: AStarMutationSummary,
+    pub updated_store: std::sync::Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+fn checked_u64(value: NodeId) -> u64 {
+    u64::try_from(value).unwrap_or(0)
+}
+
+fn spec_path_to_core(path: &[NodeId], source: NodeId, target: NodeId, cost: f64) -> PathResult {
+    let path_ids = path
+        .iter()
+        .copied()
+        .filter(|node_id| *node_id >= 0)
+        .map(checked_u64)
+        .collect();
+
+    PathResult {
+        source: checked_u64(source),
+        target: checked_u64(target),
+        path: path_ids,
+        cost,
+    }
+}
+
+/// A* result builder (pathfinding-family adapter).
+pub struct AStarResultBuilder {
+    result: AStarResult,
+    execution_time: Duration,
+    source_node: NodeId,
+    target_node: NodeId,
+    additional: HashMap<String, String>,
+}
+
+impl AStarResultBuilder {
+    pub fn new(
+        result: AStarResult,
+        execution_time: Duration,
+        source_node: NodeId,
+        target_node: NodeId,
+    ) -> Self {
+        Self {
+            result,
+            execution_time,
+            source_node,
+            target_node,
+            additional: HashMap::new(),
+        }
+    }
+
+    pub fn result(
+        result: AStarResult,
+        execution_time: Duration,
+        source_node: NodeId,
+        target_node: NodeId,
+    ) -> Result<PathFindingResult, AlgorithmError> {
+        Self::new(result, execution_time, source_node, target_node).build_pathfinding_result()
+    }
+
+    pub fn result_with_additional(
+        result: AStarResult,
+        execution_time: Duration,
+        source_node: NodeId,
+        target_node: NodeId,
+        additional: HashMap<String, String>,
+    ) -> Result<PathFindingResult, AlgorithmError> {
+        let mut builder = Self::new(result, execution_time, source_node, target_node);
+        builder.additional = additional;
+        builder.build_pathfinding_result()
+    }
+
+    pub fn build_pathfinding_result(mut self) -> Result<PathFindingResult, AlgorithmError> {
+        let mut paths = Vec::new();
+        if let Some(path) = &self.result.path {
+            paths.push(spec_path_to_core(
+                path,
+                self.source_node,
+                self.target_node,
+                self.result.total_cost,
+            ));
+        }
+
+        let targets_found = if self.result.path.is_some() {
+            1u64
+        } else {
+            0u64
+        };
+        let all_targets_reached = targets_found == 1;
+        let nodes_visited = self.result.nodes_explored as u64;
+
+        self.additional
+            .entry("nodes_visited".to_string())
+            .or_insert_with(|| nodes_visited.to_string());
+        self.additional
+            .entry("targets_found".to_string())
+            .or_insert_with(|| targets_found.to_string());
+        self.additional
+            .entry("all_targets_reached".to_string())
+            .or_insert_with(|| all_targets_reached.to_string());
+
+        let metadata = ExecutionMetadata {
+            execution_time: self.execution_time,
+            iterations: None,
+            converged: Some(all_targets_reached),
+            additional: self.additional,
+        };
+
+        PathFindingResultBuilder::new()
+            .with_paths(paths)
+            .with_metadata(metadata)
+            .build()
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))
     }
 }
 
