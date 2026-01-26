@@ -30,7 +30,8 @@
 //! ```
 
 use crate::algo::algorithms::pathfinding::PathFindingResult;
-use crate::algo::algorithms::{PathResult, Result};
+use crate::algo::algorithms::Result;
+use crate::algo::algorithms::pathfinding::PathResult;
 use crate::algo::dfs::{
     DfsComputationRuntime, DfsConfig, DfsMutateResult, DfsMutationSummary, DfsResultBuilder,
     DfsStats, DfsStorageRuntime, DfsWriteSummary,
@@ -330,7 +331,7 @@ impl DfsFacade {
         let result = self.compute()?;
         let paths = result.paths;
 
-        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+        let updated_store = crate::algo::algorithms::pathfinding::build_path_relationship_store(
             graph_store.as_ref(),
             property_name,
             &paths,

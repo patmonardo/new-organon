@@ -3,13 +3,14 @@
 //! Computes shortest path distances for all (source, target) pairs.
 //! Supports unweighted (BFS) and weighted (Dijkstra) variants.
 
+use crate::algo::algorithms::pathfinding::PathResult as ProcedurePathResult;
+use crate::algo::algorithms::Result;
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::all_shortest_paths::{
     AlgorithmType, AllShortestPathsComputationRuntime, AllShortestPathsMutationSummary,
     AllShortestPathsStats, AllShortestPathsStorageRuntime,
 };
 use crate::mem::MemoryRange;
-use crate::algo::algorithms::{ConfigValidator, WriteResult};
-use crate::algo::algorithms::{PathResult as ProcedurePathResult, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
@@ -308,7 +309,7 @@ impl AllShortestPathsBuilder {
             })
             .collect();
 
-        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+        let updated_store = crate::algo::algorithms::pathfinding::build_path_relationship_store(
             graph_store.as_ref(),
             property_name,
             &paths,

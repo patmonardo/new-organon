@@ -3,7 +3,7 @@
 //! These builders transform raw algorithm results (like Vec<NodeId> traversal order)
 //! into procedure-friendly results, matching Java GDS ResultBuilder pattern.
 
-use crate::algo::algorithms::PathResult;
+use crate::algo::algorithms::pathfinding::PathResult;
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTimings, MutateResultBuilder, StatsResultBuilder, StreamResultBuilder,
 };

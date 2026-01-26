@@ -4,7 +4,8 @@
 //! then progressively pruning to maintain exactly k nodes.
 
 use crate::algo::algorithms::{ConfigValidator, WriteResult};
-use crate::algo::algorithms::{PathResult, Result};
+use crate::algo::algorithms::Result;
+use crate::algo::algorithms::pathfinding::PathResult;
 use crate::algo::kspanningtree::computation::KSpanningTreeComputationRuntime;
 use crate::algo::kspanningtree::storage::KSpanningTreeStorageRuntime;
 use crate::algo::kspanningtree::{
@@ -180,7 +181,7 @@ impl KSpanningTreeBuilder {
         let builder = KSpanningTreeResultBuilder::new(result, elapsed);
         let paths: Vec<PathResult> = builder.paths();
 
-        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+        let updated_store = crate::algo::algorithms::pathfinding::build_path_relationship_store(
             self.graph_store.as_ref(),
             property_name,
             &paths,

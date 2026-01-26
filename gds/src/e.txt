@@ -1,0 +1,132 @@
+   Compiling gds v0.1.0 (/home/pat/VSCode/new-organon/gds)
+error[E0432]: unresolved import `crate::algo::algorithms::PathResult`
+ --> gds/src/procedures/pathfinding/all_shortest_paths.rs:7:31
+  |
+7 | use crate::algo::algorithms::{PathResult as ProcedurePathResult, Result};
+  |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `PathResult` in `algo::algorithms`
+  |
+  = help: consider importing one of these structs instead:
+          crate::algo::pathfinding::PathResult
+          crate::algo::yens::PathResult
+
+error[E0432]: unresolved import `crate::algo::algorithms::PathResult`
+  --> gds/src/procedures/pathfinding/bfs.rs:37:31
+   |
+37 | use crate::algo::algorithms::{PathResult, Result};
+   |                               ^^^^^^^^^^ no `PathResult` in `algo::algorithms`
+   |
+   = help: consider importing one of these structs instead:
+           crate::algo::pathfinding::PathResult
+           crate::algo::yens::PathResult
+
+error[E0432]: unresolved import `crate::algo::algorithms::PathResult`
+ --> gds/src/procedures/pathfinding/delta_stepping.rs:8:31
+  |
+8 | use crate::algo::algorithms::{PathResult, Result};
+  |                               ^^^^^^^^^^ no `PathResult` in `algo::algorithms`
+  |
+  = help: consider importing one of these structs instead:
+          crate::algo::pathfinding::PathResult
+          crate::algo::yens::PathResult
+
+error[E0432]: unresolved import `crate::algo::algorithms::PathResult`
+  --> gds/src/procedures/pathfinding/dfs.rs:33:31
+   |
+33 | use crate::algo::algorithms::{PathResult, Result};
+   |                               ^^^^^^^^^^ no `PathResult` in `algo::algorithms`
+   |
+   = help: consider importing one of these structs instead:
+           crate::algo::pathfinding::PathResult
+           crate::algo::yens::PathResult
+
+error[E0432]: unresolved import `crate::algo::algorithms::PathResult`
+ --> gds/src/procedures/pathfinding/kspanningtree.rs:7:31
+  |
+7 | use crate::algo::algorithms::{PathResult, Result};
+  |                               ^^^^^^^^^^ no `PathResult` in `algo::algorithms`
+  |
+  = help: consider importing one of these structs instead:
+          crate::algo::pathfinding::PathResult
+          crate::algo::yens::PathResult
+
+error[E0432]: unresolved import `crate::algo::algorithms::PathResult`
+  --> gds/src/procedures/pathfinding/random_walk.rs:12:31
+   |
+12 | use crate::algo::algorithms::{PathResult, Result};
+   |                               ^^^^^^^^^^ no `PathResult` in `algo::algorithms`
+   |
+   = help: consider importing one of these structs instead:
+           crate::algo::pathfinding::PathResult
+           crate::algo::yens::PathResult
+
+error[E0432]: unresolved import `crate::algo::algorithms::PathResult`
+ --> gds/src/procedures/pathfinding/spanning_tree.rs:5:31
+  |
+5 | use crate::algo::algorithms::{PathResult, Result};
+  |                               ^^^^^^^^^^ no `PathResult` in `algo::algorithms`
+  |
+  = help: consider importing one of these structs instead:
+          crate::algo::pathfinding::PathResult
+          crate::algo::yens::PathResult
+
+error[E0432]: unresolved import `crate::algo::algorithms::PathResult`
+  --> gds/src/procedures/pathfinding/topological_sort.rs:12:31
+   |
+12 | use crate::algo::algorithms::{PathResult, Result};
+   |                               ^^^^^^^^^^ no `PathResult` in `algo::algorithms`
+   |
+   = help: consider importing one of these structs instead:
+           crate::algo::pathfinding::PathResult
+           crate::algo::yens::PathResult
+
+error[E0432]: unresolved import `crate::algo::algorithms::PathResult`
+ --> gds/src/applications/algorithms/pathfinding/shared/result_builders.rs:6:5
+  |
+6 | use crate::algo::algorithms::PathResult;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `PathResult` in `algo::algorithms`
+  |
+help: consider importing one of these structs instead
+  |
+6 - use crate::algo::algorithms::PathResult;
+6 + use crate::algo::pathfinding::PathResult;
+  |
+6 - use crate::algo::algorithms::PathResult;
+6 + use crate::algo::yens::PathResult;
+  |
+
+error[E0282]: type annotations needed
+   --> gds/src/applications/algorithms/pathfinding/bfs.rs:117:54
+    |
+117 |                 let iter = builder.stream().map_err(|e| e.to_string())?;
+    |                                                      ^  - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+117 |                 let iter = builder.stream().map_err(|e: /* Type */| e.to_string())?;
+    |                                                       ++++++++++++
+
+error[E0282]: type annotations needed
+   --> gds/src/applications/algorithms/pathfinding/delta_stepping.rs:121:54
+    |
+121 |                 let iter = builder.stream().map_err(|e| e.to_string())?;
+    |                                                      ^  - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+121 |                 let iter = builder.stream().map_err(|e: /* Type */| e.to_string())?;
+    |                                                       ++++++++++++
+
+error[E0282]: type annotations needed
+   --> gds/src/applications/algorithms/pathfinding/dfs.rs:111:54
+    |
+111 |                 let iter = builder.stream().map_err(|e| e.to_string())?;
+    |                                                      ^  - type must be known at this point
+    |
+help: consider giving this closure parameter an explicit type
+    |
+111 |                 let iter = builder.stream().map_err(|e: /* Type */| e.to_string())?;
+    |                                                       ++++++++++++
+
+Some errors have detailed explanations: E0282, E0432.
+For more information about an error, try `rustc --explain E0282`.
+error: could not compile `gds` (lib) due to 12 previous errors

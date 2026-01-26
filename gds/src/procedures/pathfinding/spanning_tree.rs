@@ -2,13 +2,14 @@
 //!
 //! Computes a minimum or maximum spanning tree rooted at a start node.
 
+use crate::algo::algorithms::Result;
+use crate::algo::algorithms::pathfinding::PathResult;
 use crate::algo::spanning_tree::{
     SpanningTreeConfig, SpanningTreeMutateResult, SpanningTreeMutationSummary, SpanningTreeResult,
     SpanningTreeResultBuilder, SpanningTreeRow, SpanningTreeStats, SpanningTreeStorageRuntime,
     SpanningTreeWriteSummary,
 };
 use crate::mem::MemoryRange;
-use crate::algo::algorithms::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -261,7 +262,7 @@ impl SpanningTreeFacade {
         let execution_time_ms = result.computation_time_ms;
         let paths: Vec<PathResult> = SpanningTreeResultBuilder::new(result).paths();
 
-        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+        let updated_store = crate::algo::algorithms::pathfinding::build_path_relationship_store(
             graph_store.as_ref(),
             property_name,
             &paths,

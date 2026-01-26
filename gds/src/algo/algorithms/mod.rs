@@ -8,7 +8,6 @@ pub mod similarity;
 pub mod statistics;
 pub mod traits;
 
-pub use pathfinding::*;
 pub use result_builders::*;
 pub use scaling::*;
 pub use statistics::*;

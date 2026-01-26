@@ -9,7 +9,8 @@ use crate::algo::random_walk::{
     RandomWalkStats, RandomWalkWriteSummary,
 };
 use crate::mem::MemoryRange;
-use crate::algo::algorithms::{PathResult, Result};
+use crate::algo::algorithms::Result;
+use crate::algo::algorithms::pathfinding::PathResult;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -258,7 +259,7 @@ impl RandomWalkFacade {
         let execution_time_ms = elapsed.as_millis() as u64;
         let paths: Vec<PathResult> = RandomWalkResultBuilder::new(result, elapsed).paths();
 
-        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+        let updated_store = crate::algo::algorithms::pathfinding::build_path_relationship_store(
             graph_store.as_ref(),
             property_name,
             &paths,

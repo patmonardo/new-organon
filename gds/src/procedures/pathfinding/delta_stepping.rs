@@ -5,7 +5,8 @@
 //! This facade runs the translated Delta Stepping runtime against a live
 //! `DefaultGraphStore`.
 
-use crate::algo::algorithms::{PathResult, Result};
+use crate::algo::algorithms::Result;
+use crate::algo::algorithms::pathfinding::PathResult;
 use crate::algo::delta_stepping::{
     DeltaSteppingComputationRuntime, DeltaSteppingConfig, DeltaSteppingMutateResult,
     DeltaSteppingMutationSummary, DeltaSteppingResultBuilder, DeltaSteppingStats,
@@ -265,7 +266,7 @@ impl DeltaSteppingFacade {
         let result = self.compute()?;
         let paths = result.paths;
 
-        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+        let updated_store = crate::algo::algorithms::pathfinding::build_path_relationship_store(
             graph_store.as_ref(),
             property_name,
             &paths,

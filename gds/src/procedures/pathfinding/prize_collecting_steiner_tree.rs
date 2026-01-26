@@ -188,7 +188,7 @@ impl PCSTreeBuilder {
         let builder = PCSTreeResultBuilder::new(result, elapsed);
         let paths: Vec<PathResult> = builder.paths();
 
-        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+        let updated_store = crate::algo::algorithms::pathfinding::build_path_relationship_store(
             graph_store.as_ref(),
             property_name,
             &paths,

@@ -27,14 +27,15 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
+use crate::algo::algorithms::pathfinding::PathResult;
+use crate::algo::algorithms::ConfigValidator;
+use crate::algo::algorithms::Result;
 use crate::algo::bfs::{
     BfsComputationRuntime, BfsConfig, BfsMutateResult, BfsResult, BfsResultBuilder, BfsStats,
     BfsStorageRuntime, BfsWriteSummary,
 };
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::mem::MemoryRange;
-use crate::algo::algorithms::ConfigValidator;
-use crate::algo::algorithms::{PathResult, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
@@ -307,7 +308,7 @@ impl BfsFacade {
         let builder = BfsResultBuilder::new(result, elapsed, source_node, target_count);
         let paths = builder.paths();
 
-        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+        let updated_store = crate::algo::algorithms::pathfinding::build_path_relationship_store(
             graph_store.as_ref(),
             property_name,
             &paths,
