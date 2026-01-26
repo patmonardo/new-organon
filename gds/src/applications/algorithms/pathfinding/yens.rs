@@ -1,8 +1,9 @@
 //! Yen's K-shortest paths algorithm dispatch handler.
 
+use crate::algo::yens::YensStats;
 use crate::applications::algorithms::machinery::{
-    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate, FnStatsResultBuilder,
-    FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
+    AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
+    FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
 };
 use crate::applications::algorithms::pathfinding::{
     err, get_str, get_u64, get_usize, timings_json,
@@ -10,7 +11,6 @@ use crate::applications::algorithms::pathfinding::{
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::algo::yens::YensStats;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -23,7 +23,10 @@ pub fn handle_yens(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
         None => return err(op, "INVALID_REQUEST", "Missing 'graphName' parameter"),
     };
 
-    let mode = request.get("mode").and_then(|v| v.as_str()).unwrap_or("stream");
+    let mode = request
+        .get("mode")
+        .and_then(|v| v.as_str())
+        .unwrap_or("stream");
 
     let concurrency_value = request
         .get("concurrency")
@@ -123,11 +126,10 @@ pub fn handle_yens(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 Ok(Some(rows))
             };
 
-            let result_builder = FnStreamResultBuilder::new(
-                |_gr: &GraphResources, rows: Option<Vec<Value>>| {
+            let result_builder =
+                FnStreamResultBuilder::new(|_gr: &GraphResources, rows: Option<Vec<Value>>| {
                     rows.unwrap_or_default().into_iter()
-                },
-            );
+                });
 
             match convenience.process_stream(
                 &graph_resources,
@@ -179,8 +181,8 @@ pub fn handle_yens(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 Ok(Some(stats))
             };
 
-            let builder = FnStatsResultBuilder(
-                |_gr: &GraphResources, stats: Option<YensStats>, timings| {
+            let builder =
+                FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<YensStats>, timings| {
                     json!({
                         "ok": true,
                         "op": op,
@@ -188,8 +190,7 @@ pub fn handle_yens(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                         "data": stats,
                         "timings": timings_json(timings)
                     })
-                },
-            );
+                });
 
             match convenience.process_stats(&graph_resources, concurrency, task, compute, builder) {
                 Ok(v) => v,
@@ -267,7 +268,11 @@ pub fn handle_yens(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                         }
                     })
                 }
-                Err(e) => err(op, "EXECUTION_ERROR", &format!("Yen's mutate failed: {e:?}")),
+                Err(e) => err(
+                    op,
+                    "EXECUTION_ERROR",
+                    &format!("Yen's mutate failed: {e:?}"),
+                ),
             }
         }
         "write" => {
