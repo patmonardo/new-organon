@@ -10,6 +10,7 @@
 //! - `max_iterations`: Maximum iterations (default: 10)
 //! - `random_seed`: Random seed for reproducibility (default: 42)
 
+use crate::algo::algorithms::Result;
 use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::leiden::{
     LeidenComputationRuntime, LeidenConfig, LeidenMutateResult, LeidenMutationSummary,
@@ -19,7 +20,6 @@ use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::DefaultLongNodePropertyValues;

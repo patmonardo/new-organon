@@ -1,16 +1,16 @@
 use crate::algo::algorithms::similarity::build_similarity_relationship_store;
+use crate::algo::algorithms::Result;
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::similarity::filtered_node_similarity::compute_filtered_node_similarity;
-use crate::algo::similarity::node_similarity::{
-    NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult,
-};
 use crate::algo::similarity::filtered_node_similarity::{
     FilteredNodeSimilarityMutateResult, FilteredNodeSimilarityResultBuilder,
     FilteredNodeSimilarityStats,
 };
+use crate::algo::similarity::node_similarity::{
+    NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult,
+};
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::mem::MemoryRange;
-use crate::algo::algorithms::{ConfigValidator, WriteResult};
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::{NodeLabel, RelationshipType};
@@ -21,7 +21,6 @@ use std::sync::Arc;
 // Additional imports for progress tracking and node ID mapping
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::types::graph::id_map::MappedNodeId;
-
 
 pub struct FilteredNodeSimilarityFacade {
     graph_store: Arc<DefaultGraphStore>,
@@ -283,7 +282,6 @@ impl FilteredNodeSimilarityFacade {
         MemoryRange::of_range(total, total + overhead)
     }
 }
-
 
 #[cfg(test)]
 mod tests {

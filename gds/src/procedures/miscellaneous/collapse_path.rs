@@ -5,11 +5,11 @@
 //! Validates configuration, builds storage/computation runtimes, and returns a
 //! new graph store with collapsed edges added as a relationship type.
 
+use crate::algo::algorithms::Result;
 use crate::algo::walking::{
     CollapsePathComputationRuntime, CollapsePathConfig, CollapsePathStats,
     CollapsePathStorageRuntime,
 };
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;

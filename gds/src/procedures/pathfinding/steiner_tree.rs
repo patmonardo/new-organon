@@ -3,13 +3,13 @@
 //! Computes minimum Steiner trees connecting source nodes to terminal nodes.
 //! Uses approximation algorithms with delta-stepping and rerouting optimizations.
 
+use crate::algo::algorithms::Result;
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::steiner_tree::{
     SteinerTreeComputationRuntime, SteinerTreeConfig, SteinerTreeMutateResult, SteinerTreeResult,
     SteinerTreeResultBuilder, SteinerTreeRow, SteinerTreeStats, SteinerTreeStorageRuntime,
 };
 use crate::mem::MemoryRange;
-use crate::algo::algorithms::{ConfigValidator, WriteResult};
-use crate::procedures::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;

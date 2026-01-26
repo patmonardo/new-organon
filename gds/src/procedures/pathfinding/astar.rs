@@ -37,13 +37,13 @@
 //!     .unwrap();
 //! ```
 
+use crate::algo::algorithms::Result;
 use crate::algo::astar::{
     AStarComputationRuntime, AStarConfig, AStarMutateResult, AStarMutationSummary, AStarResult,
     AStarResultBuilder, AStarStats, AStarStorageRuntime, AStarWriteSummary,
 };
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::mem::MemoryRange;
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;

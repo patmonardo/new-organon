@@ -27,13 +27,13 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
+use crate::algo::algorithms::Result;
 use crate::algo::dijkstra::{
     create_targets, DijkstraComputationRuntime, DijkstraConfig, DijkstraMutateResult,
     DijkstraMutationSummary, DijkstraResult, DijkstraResultBuilder, DijkstraStats,
     DijkstraStorageRuntime, DijkstraWriteSummary,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;

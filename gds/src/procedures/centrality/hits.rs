@@ -11,7 +11,7 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::{CentralityScore, Result};
+use crate::algo::algorithms::{CentralityScore, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::DefaultDoubleNodePropertyValues;

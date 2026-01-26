@@ -1,4 +1,6 @@
 use crate::algo::algorithms::similarity::build_similarity_relationship_store;
+use crate::algo::algorithms::Result;
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::similarity::knn::storage::KnnSamplerType;
 use crate::algo::similarity::knn::{
     KnnComputationRuntime, KnnConfig, KnnMutateResult, KnnNnDescentStats, KnnResultBuilder,
@@ -7,8 +9,6 @@ use crate::algo::similarity::knn::{
 pub use crate::algo::similarity::knn::{KnnNodePropertySpec, SimilarityMetric};
 use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
-use crate::algo::algorithms::{ConfigValidator, WriteResult};
-use crate::procedures::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;
 

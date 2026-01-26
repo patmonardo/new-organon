@@ -3,10 +3,10 @@
 //! Validates config, builds the storage/computation runtimes, and returns
 //! exposure metrics computed via Pregel (no graph mutation).
 
+use crate::algo::algorithms::Result;
 use crate::algo::indirect_exposure::{
     IndirectExposureConfig, IndirectExposureResult, IndirectExposureStorageRuntime,
 };
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::DefaultGraphStore;
 use std::sync::Arc;

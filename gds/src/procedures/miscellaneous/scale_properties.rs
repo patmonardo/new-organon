@@ -3,6 +3,7 @@
 //! Wires the algorithm storage/computation runtimes (multi-property, configurable scaler)
 //! and exposes stream/stats surfaces. Mutate/write are intentionally unimplemented.
 
+use crate::algo::algorithms::Result;
 use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::scale_properties::{
     ScalePropertiesComputationRuntime, ScalePropertiesConfig, ScalePropertiesMutationSummary,
@@ -11,7 +12,6 @@ use crate::algo::scale_properties::{
 };
 use crate::collections::backends::vec::VecDoubleArray;
 use crate::mem::MemoryRange;
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::NodeLabel;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};

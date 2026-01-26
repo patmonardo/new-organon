@@ -23,7 +23,7 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, Task, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::{CentralityScore, Result};
+use crate::algo::algorithms::{CentralityScore, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::NodeLabel;

@@ -7,6 +7,7 @@
 //! - `max_iterations`: maximum number of coloring/validation iterations (must be >= 1).
 //! - `batch_size`: accepted for parity; currently unused.
 
+use crate::algo::algorithms::Result;
 use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::k1coloring::{
     K1ColoringComputationRuntime, K1ColoringConfig, K1ColoringMutateResult,
@@ -17,7 +18,6 @@ use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::DefaultLongNodePropertyValues;

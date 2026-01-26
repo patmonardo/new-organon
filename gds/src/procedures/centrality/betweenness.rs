@@ -28,6 +28,7 @@
 //! println!("Max betweenness: {} (bottleneck identified)", stats.max);
 //! ```
 
+use crate::algo::algorithms::{CentralityScore, Result};
 use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::betweenness::storage::BetweennessCentralityStorageRuntime;
 use crate::algo::betweenness::{
@@ -43,7 +44,6 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::{CentralityScore, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::NodeLabel;

@@ -1,4 +1,6 @@
 use crate::algo::algorithms::similarity::build_similarity_relationship_store;
+use crate::algo::algorithms::Result;
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::similarity::node_similarity::{
     NodeSimilarityComputationRuntime, NodeSimilarityConfig, NodeSimilarityMetric,
     NodeSimilarityMutateResult, NodeSimilarityResult, NodeSimilarityResultBuilder,
@@ -6,8 +8,6 @@ use crate::algo::similarity::node_similarity::{
 };
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::mem::MemoryRange;
-use crate::algo::algorithms::{ConfigValidator, WriteResult};
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;

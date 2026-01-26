@@ -1,10 +1,10 @@
+use crate::algo::algorithms::ConfigValidator;
+use crate::algo::algorithms::Result;
 use crate::algo::bellman_ford::{
     BellmanFordComputationRuntime, BellmanFordConfig, BellmanFordMutateResult, BellmanFordResult,
     BellmanFordResultBuilder, BellmanFordStats, BellmanFordStorageRuntime, BellmanFordWriteSummary,
 };
 use crate::mem::MemoryRange;
-use crate::algo::algorithms::ConfigValidator;
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;

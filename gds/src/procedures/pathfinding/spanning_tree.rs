@@ -8,7 +8,7 @@ use crate::algo::spanning_tree::{
     SpanningTreeWriteSummary,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::{PathResult, Result};
+use crate::algo::algorithms::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};

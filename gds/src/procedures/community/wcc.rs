@@ -5,6 +5,7 @@
 //! Parameters (Java GDS aligned):
 //! - `concurrency`: accepted for parity; current runtime is single-threaded.
 
+use crate::algo::algorithms::Result;
 use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::wcc::{
     WccComputationRuntime, WccMutateResult, WccMutationSummary, WccResult, WccResultBuilder,
@@ -16,7 +17,6 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::DefaultLongNodePropertyValues;

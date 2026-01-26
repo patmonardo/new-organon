@@ -3,11 +3,11 @@
 //! Thin controller that builds inverse relationship indices via the algorithm
 //! storage runtime and returns a new graph store.
 
+use crate::algo::algorithms::Result;
 use crate::algo::index_inverse::{
     IndexInverseComputationRuntime, IndexInverseConfig, IndexInverseStats,
     IndexInverseStorageRuntime,
 };
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph_store::GraphName;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};

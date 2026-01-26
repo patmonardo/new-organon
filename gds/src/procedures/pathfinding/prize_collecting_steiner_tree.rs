@@ -1,10 +1,10 @@
+use crate::algo::algorithms::Result;
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::prize_collecting_steiner_tree::{
     PCSTreeComputationRuntime, PCSTreeConfig, PCSTreeMutateResult, PCSTreeResult,
     PCSTreeResultBuilder, PCSTreeRow, PCSTreeStats, PCSTreeStorageRuntime,
 };
 use crate::mem::MemoryRange;
-use crate::algo::algorithms::{ConfigValidator, WriteResult};
-use crate::procedures::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};

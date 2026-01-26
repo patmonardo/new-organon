@@ -34,7 +34,7 @@ use crate::algo::bfs::{
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::mem::MemoryRange;
 use crate::algo::algorithms::ConfigValidator;
-use crate::procedures::{PathResult, Result};
+use crate::algo::algorithms::{PathResult, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;

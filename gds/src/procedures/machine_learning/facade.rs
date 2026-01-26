@@ -6,10 +6,10 @@
 //! Today we only expose KGE predict stream/stats because mutate/write steps are
 //! not implemented in this repo yet.
 
+use crate::algo::algorithms::Result;
 use crate::procedures::machine_learning::{
     KgePredictFacade, KgePredictStats, KgeStreamResult, ScoreFunction,
 };
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::catalog::GraphCatalog;
 use crate::types::graph_store::DefaultGraphStore;

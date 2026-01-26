@@ -10,6 +10,7 @@
 //! - Accumulates into the *reached node* per depth
 //! - Normalizes by `(nodeCount - 1)`
 
+use crate::algo::algorithms::{CentralityScore, Result};
 use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::harmonic::{
     HarmonicCentralityMutateResult, HarmonicCentralityMutationSummary, HarmonicCentralityStats,
@@ -23,7 +24,6 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::{CentralityScore, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::NodeLabel;

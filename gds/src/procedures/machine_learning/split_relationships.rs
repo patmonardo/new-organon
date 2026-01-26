@@ -4,6 +4,7 @@
 //! keeping applications decoupled from algo modules.
 
 use crate::algo::algorithms::ConfigValidator;
+use crate::algo::algorithms::Result;
 use crate::concurrency::Concurrency;
 use crate::core::graph_dimensions::ConcreteGraphDimensions;
 use crate::mem::{MemoryEstimation, MemoryRange};
@@ -11,7 +12,6 @@ use crate::ml::splitting::{
     InMemoryRelationshipsBuilderFactory, SplitRelationships, SplitRelationshipsConfig,
     SplitRelationshipsEstimateDefinition, SplitRelationshipsParameters,
 };
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::RelationshipType;
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};

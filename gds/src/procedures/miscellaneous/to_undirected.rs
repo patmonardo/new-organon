@@ -2,11 +2,11 @@
 //!
 //! Procedure facade that delegates to the undirected algorithm runtimes.
 
+use crate::algo::algorithms::Result;
 use crate::algo::undirected::{
     ToUndirectedComputationRuntime, ToUndirectedConfig, ToUndirectedStats,
     ToUndirectedStorageRuntime,
 };
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::DefaultGraphStore;
 use std::sync::Arc;

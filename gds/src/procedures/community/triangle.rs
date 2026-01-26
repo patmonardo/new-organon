@@ -6,6 +6,7 @@
 //! - `concurrency`: reserved for future parallel implementation
 //! - `max_degree`: filter to skip high-degree nodes (performance / approximation)
 
+use crate::algo::algorithms::Result;
 use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::triangle::{
     TriangleComputationRuntime, TriangleConfig, TriangleMutateResult, TriangleMutationSummary,
@@ -17,7 +18,6 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, LeafTask, ProgressTracker, TaskProgressTracker, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::DefaultLongNodePropertyValues;

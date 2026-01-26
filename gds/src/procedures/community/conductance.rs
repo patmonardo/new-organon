@@ -3,6 +3,7 @@
 //! Evaluates community quality by measuring the proportion of edges
 //! that cross community boundaries.
 
+use crate::algo::algorithms::Result;
 use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::conductance::{
     ConductanceComputationRuntime, ConductanceConfig, ConductanceMutateResult,
@@ -15,7 +16,6 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::DefaultDoubleNodePropertyValues;

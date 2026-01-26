@@ -5,13 +5,13 @@
 //! This facade runs the translated Yen's runtime against a live `DefaultGraphStore`.
 
 use crate::algo::algorithms::result_builders::{PathFindingResult, PathResult};
+use crate::algo::algorithms::Result;
 use crate::algo::yens::{
     YensComputationRuntime, YensConfig, YensMutateResult, YensMutationSummary, YensResult,
     YensResultBuilder, YensStats, YensStorageRuntime, YensWriteSummary,
 };
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
