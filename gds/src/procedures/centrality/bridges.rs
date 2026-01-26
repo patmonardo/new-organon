@@ -2,6 +2,7 @@
 //!
 //! Live wiring for bridge edge detection in undirected graphs.
 
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::bridges::storage::BridgesStorageRuntime;
 use crate::algo::bridges::{
     Bridge, BridgesComputationRuntime, BridgesConfig, BridgesMutateResult, BridgesMutationSummary,
@@ -13,7 +14,6 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::{AlgorithmRunner, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};

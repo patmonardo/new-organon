@@ -14,6 +14,7 @@
 //! - `seed_centroids`
 //! - `random_seed`
 
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 pub use crate::algo::kmeans::KMeansSamplerType;
 use crate::algo::kmeans::{
     KMeansComputationRuntime, KMeansConfig, KMeansMutateResult, KMeansMutationSummary,
@@ -23,7 +24,6 @@ use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};

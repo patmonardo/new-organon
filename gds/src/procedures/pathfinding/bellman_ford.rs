@@ -3,7 +3,7 @@ use crate::algo::bellman_ford::{
     BellmanFordResultBuilder, BellmanFordStats, BellmanFordStorageRuntime, BellmanFordWriteSummary,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::ConfigValidator;
+use crate::algo::algorithms::ConfigValidator;
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;

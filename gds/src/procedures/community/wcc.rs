@@ -5,6 +5,7 @@
 //! Parameters (Java GDS aligned):
 //! - `concurrency`: accepted for parity; current runtime is single-threaded.
 
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::wcc::{
     WccComputationRuntime, WccMutateResult, WccMutationSummary, WccResult, WccResultBuilder,
     WccStats, WccStorageRuntime,
@@ -15,7 +16,6 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -78,10 +78,7 @@ impl WccFacade {
         Ok(WccResultBuilder::new(result).stats())
     }
 
-    pub fn mutate(
-        self,
-        _property_name: &str,
-    ) -> Result<crate::procedures::builder_base::MutationResult> {
+    pub fn mutate(self, _property_name: &str) -> Result<crate::algo::algorithms::MutationResult> {
         // Implemented below in the long-form mutate returning updated store
         Err(AlgorithmError::Execution(
             "Use mutate_with_store() for WCC (internal)".to_string(),

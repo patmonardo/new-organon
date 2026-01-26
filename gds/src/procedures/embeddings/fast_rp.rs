@@ -1,10 +1,10 @@
 //! FastRP facade (builder API).
 
+use crate::algo::algorithms::ConfigValidator;
 use crate::algo::embeddings::fastrp::{
     FastRPComputationRuntime, FastRPConfig, FastRPResult, FastRPStorageRuntime,
 };
 use crate::prints::{PrintEnvelope, PrintKind, PrintProvenance};
-use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;

@@ -7,6 +7,7 @@ pub mod result_builders;
 pub mod scaling;
 pub mod similarity;
 pub mod statistics;
+pub mod traits;
 
 pub use centrality::*;
 pub use community::*;
@@ -17,3 +18,4 @@ pub use result_builders::*;
 pub use scaling::*;
 pub use similarity::*;
 pub use statistics::*;
+pub use traits::*;

@@ -6,6 +6,7 @@
 //! This facade is the "live wiring" layer: it binds the algorithm runtime to a
 //! `DefaultGraphStore` graph view.
 
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::articulation_points::storage::ArticulationPointsStorageRuntime;
 use crate::algo::articulation_points::{
     ArticulationPointRow, ArticulationPointsComputationRuntime, ArticulationPointsConfig,
@@ -20,7 +21,6 @@ use crate::core::utils::progress::{
     Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::{AlgorithmRunner, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;

@@ -8,7 +8,7 @@ use crate::algo::steiner_tree::{
     SteinerTreeResultBuilder, SteinerTreeRow, SteinerTreeStats, SteinerTreeStorageRuntime,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;

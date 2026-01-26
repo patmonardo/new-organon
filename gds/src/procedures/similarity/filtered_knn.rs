@@ -11,7 +11,7 @@ use crate::algo::similarity::knn::storage::KnnSamplerType;
 use crate::algo::similarity::knn::KnnNnDescentStats;
 use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::NodeLabel;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};

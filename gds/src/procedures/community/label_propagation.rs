@@ -8,6 +8,7 @@
 //! - `node_weight_property`: optional node weight property (defaults to 1.0).
 //! - `seed_property`: optional seed labels property.
 
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::label_propagation::computation::LabelPropComputationRuntime;
 use crate::algo::label_propagation::spec::{
     LabelPropConfig, LabelPropMutateResult, LabelPropMutationSummary, LabelPropResult,
@@ -18,7 +19,6 @@ use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};

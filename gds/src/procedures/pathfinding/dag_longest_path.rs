@@ -8,7 +8,7 @@ use crate::algo::dag_longest_path::{
     DagLongestPathResultBuilder, DagLongestPathRow, DagLongestPathStats,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;

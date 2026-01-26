@@ -7,7 +7,7 @@ use crate::algo::similarity::knn::{
 pub use crate::algo::similarity::knn::{KnnNodePropertySpec, SimilarityMetric};
 use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::sync::Arc;

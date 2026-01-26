@@ -6,7 +6,7 @@ use crate::algo::similarity::node_similarity::{
 };
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;

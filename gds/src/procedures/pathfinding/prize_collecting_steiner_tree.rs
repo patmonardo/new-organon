@@ -3,7 +3,7 @@ use crate::algo::prize_collecting_steiner_tree::{
     PCSTreeResultBuilder, PCSTreeRow, PCSTreeStats, PCSTreeStorageRuntime,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;

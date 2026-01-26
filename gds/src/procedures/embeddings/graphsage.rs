@@ -1,9 +1,9 @@
 //! GraphSAGE facade (builder API).
 
+use crate::algo::algorithms::traits as facade;
+use crate::algo::algorithms::ConfigValidator;
 use crate::algo::embeddings::graphsage::spec::{GraphSageConfig, GraphSageResult};
 use crate::algo::embeddings::graphsage::GraphSageStorageRuntime;
-use crate::procedures::builder_base::ConfigValidator;
-use crate::procedures::traits as facade;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::types::DefaultGraphStore;

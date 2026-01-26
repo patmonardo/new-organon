@@ -1,8 +1,8 @@
+use crate::algo::algorithms::traits as facade;
+use crate::algo::algorithms::ConfigValidator;
 use crate::algo::embeddings::gat::storage::GATStorageRuntime;
 use crate::algo::embeddings::gat::GATConfig;
 use crate::algo::embeddings::gat::GATResult;
-use crate::procedures::builder_base::ConfigValidator;
-use crate::procedures::traits as facade;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::types::DefaultGraphStore;

@@ -27,6 +27,7 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::pagerank::{
     computation::PageRankComputationRuntime, storage::PageRankStorageRuntime, PageRankConfig,
     PageRankMutateResult, PageRankMutationSummary, PageRankResult, PageRankResultBuilder,
@@ -39,7 +40,6 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::{CentralityScore, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;

@@ -3,6 +3,7 @@
 //! This wires ML split relationships logic through the procedures layer,
 //! keeping applications decoupled from algo modules.
 
+use crate::algo::algorithms::ConfigValidator;
 use crate::concurrency::Concurrency;
 use crate::core::graph_dimensions::ConcreteGraphDimensions;
 use crate::mem::{MemoryEstimation, MemoryRange};
@@ -10,7 +11,6 @@ use crate::ml::splitting::{
     InMemoryRelationshipsBuilderFactory, SplitRelationships, SplitRelationshipsConfig,
     SplitRelationshipsEstimateDefinition, SplitRelationshipsParameters,
 };
-use crate::procedures::builder_base::ConfigValidator;
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::RelationshipType;

@@ -1,5 +1,6 @@
 //! HITS Facade - Bidirectional Pregel implementation
 
+use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::hits::{
     computation::HitsComputationRuntime, HitsCentralityMutateResult, HitsCentralityMutationSummary,
     HitsCentralityStats, HitsConfig, HitsResult, HitsResultBuilder, HitsStorageRuntime,
@@ -10,7 +11,6 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::{CentralityScore, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
