@@ -1,6 +1,8 @@
 //! K-Means config + result types.
 
 use crate::config::validation::ConfigError;
+use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum KMeansSamplerType {
@@ -132,4 +134,75 @@ pub struct KMeansResult {
 
     pub ran_iterations: u32,
     pub restarts: u32,
+    pub node_count: usize,
+    pub execution_time: Duration,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct KMeansStats {
+    pub k: usize,
+    pub community_count: usize,
+    pub average_distance_to_centroid: f64,
+    pub average_silhouette: f64,
+    pub ran_iterations: u32,
+    pub restarts: u32,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct KMeansMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct KMeansWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for KMeans: summary + updated store.
+#[derive(Debug, Clone)]
+pub struct KMeansMutateResult {
+    pub summary: KMeansMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+/// KMeans result builder (facade adapter).
+pub struct KMeansResultBuilder {
+    result: KMeansResult,
+}
+
+impl KMeansResultBuilder {
+    pub fn new(result: KMeansResult) -> Self {
+        Self { result }
+    }
+
+    pub fn stats(&self) -> KMeansStats {
+        let community_count = self
+            .result
+            .communities
+            .iter()
+            .copied()
+            .collect::<std::collections::HashSet<u64>>()
+            .len();
+
+        KMeansStats {
+            k: self.result.centers.len(),
+            community_count,
+            average_distance_to_centroid: self.result.average_distance_to_centroid,
+            average_silhouette: self.result.average_silhouette,
+            ran_iterations: self.result.ran_iterations,
+            restarts: self.result.restarts,
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
+    }
 }

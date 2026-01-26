@@ -44,6 +44,17 @@ impl LeidenStorageRuntime {
         termination_flag: &TerminationFlag,
     ) -> Result<LeidenResult, AlgorithmError> {
         let node_count = self.graph.node_count();
+        if node_count == 0 {
+            return Ok(LeidenResult {
+                communities: Vec::new(),
+                community_count: 0,
+                modularity: 0.0,
+                levels: 0,
+                converged: true,
+                node_count: 0,
+                execution_time: std::time::Duration::default(),
+            });
+        }
         let mut adj: Vec<Vec<(usize, f64)>> = vec![Vec::new(); node_count];
 
         // Weight fallback matches the procedures layer behavior: unweighted edges => 1.0.

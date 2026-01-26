@@ -9,7 +9,7 @@ use crate::types::prelude::GraphStore;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::spec::ModularityResult;
+use super::spec::{ModularityConfig, ModularityResult};
 use super::ModularityComputationRuntime;
 
 #[derive(Clone)]
@@ -33,7 +33,7 @@ impl ModularityStorageRuntime {
     pub fn compute_modularity(
         &self,
         computation: &ModularityComputationRuntime,
-        community_property: &str,
+        config: &ModularityConfig,
         progress_tracker: &mut dyn ProgressTracker,
         termination_flag: &TerminationFlag,
     ) -> Result<ModularityResult, AlgorithmError> {
@@ -46,11 +46,11 @@ impl ModularityStorageRuntime {
 
         let community_props = self
             .graph
-            .node_properties(community_property)
+            .node_properties(&config.community_property)
             .ok_or_else(|| {
                 AlgorithmError::Execution(format!(
                     "Community property '{}' not found",
-                    community_property
+                    config.community_property
                 ))
             })?;
 

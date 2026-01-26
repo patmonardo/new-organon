@@ -1,5 +1,7 @@
 use crate::config::validation::ConfigError;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LouvainConfig {
@@ -80,6 +82,68 @@ impl crate::config::ValidatedConfig for LouvainConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LouvainResult {
     pub data: Vec<u64>,
+    pub node_count: usize,
+    pub execution_time: Duration,
+}
+
+/// Aggregated Louvain stats.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct LouvainStats {
+    pub community_count: usize,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LouvainMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LouvainWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for Louvain: summary + updated store.
+#[derive(Debug, Clone)]
+pub struct LouvainMutateResult {
+    pub summary: LouvainMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+/// Louvain result builder (facade adapter).
+pub struct LouvainResultBuilder {
+    result: LouvainResult,
+}
+
+impl LouvainResultBuilder {
+    pub fn new(result: LouvainResult) -> Self {
+        Self { result }
+    }
+
+    pub fn stats(&self) -> LouvainStats {
+        let community_count = self
+            .result
+            .data
+            .iter()
+            .copied()
+            .collect::<std::collections::HashSet<u64>>()
+            .len();
+
+        LouvainStats {
+            community_count,
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
+    }
 }
 
 pub struct LouvainAlgorithmSpec {

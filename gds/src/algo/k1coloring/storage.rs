@@ -52,6 +52,8 @@ impl K1ColoringStorageRuntime {
                 colors: Vec::new(),
                 ran_iterations: 0,
                 did_converge: true,
+                node_count: 0,
+                execution_time: std::time::Duration::default(),
             });
         }
 
@@ -84,6 +86,8 @@ impl K1ColoringStorageRuntime {
             colors: run.colors,
             ran_iterations: run.ran_iterations,
             did_converge: run.did_converge,
+            node_count,
+            execution_time: std::time::Duration::default(),
         })
     }
 }

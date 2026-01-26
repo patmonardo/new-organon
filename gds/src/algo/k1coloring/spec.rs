@@ -10,7 +10,8 @@ use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::eval::algorithm::*;
 use serde::{Deserialize, Serialize};
-use std::time::Instant;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct K1ColoringConfig {
@@ -81,6 +82,72 @@ pub struct K1ColoringResult {
     pub colors: Vec<u64>,
     pub ran_iterations: u64,
     pub did_converge: bool,
+    pub node_count: usize,
+    pub execution_time: Duration,
+}
+
+/// Aggregated K1-Coloring stats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct K1ColoringStats {
+    pub did_converge: bool,
+    pub ran_iterations: u64,
+    pub color_count: usize,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct K1ColoringMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct K1ColoringWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for K1Coloring: summary + updated store.
+#[derive(Debug, Clone)]
+pub struct K1ColoringMutateResult {
+    pub summary: K1ColoringMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+/// K1Coloring result builder (facade adapter).
+pub struct K1ColoringResultBuilder {
+    result: K1ColoringResult,
+}
+
+impl K1ColoringResultBuilder {
+    pub fn new(result: K1ColoringResult) -> Self {
+        Self { result }
+    }
+
+    pub fn stats(&self) -> K1ColoringStats {
+        let color_count = self
+            .result
+            .colors
+            .iter()
+            .copied()
+            .collect::<std::collections::HashSet<u64>>()
+            .len();
+
+        K1ColoringStats {
+            did_converge: self.result.did_converge,
+            ran_iterations: self.result.ran_iterations,
+            color_count,
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
+    }
 }
 
 define_algorithm_spec! {
@@ -96,7 +163,7 @@ define_algorithm_spec! {
             .validate()
             .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
 
-        let _start = Instant::now();
+        let start = Instant::now();
 
         let storage = K1ColoringStorageRuntime::new(graph_store)?;
         let node_count = storage.node_count();
@@ -109,11 +176,16 @@ define_algorithm_spec! {
         let mut runtime = K1ColoringComputationRuntime::new(node_count as usize, parsed.max_iterations)
             .concurrency(parsed.concurrency);
 
-        storage.compute_k1coloring(
+        let mut result = storage.compute_k1coloring(
             &mut runtime,
             &parsed,
             &mut progress,
             &termination_flag,
-        )
+        )?;
+
+        result.node_count = storage.node_count();
+        result.execution_time = start.elapsed();
+
+        Ok(result)
     }
 }

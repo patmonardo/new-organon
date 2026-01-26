@@ -11,13 +11,15 @@
 //! - `concurrency`
 
 use crate::algo::louvain::{
-    LouvainComputationRuntime, LouvainConfig, LouvainResult, LouvainStorageRuntime,
+    LouvainComputationRuntime, LouvainConfig, LouvainMutateResult, LouvainMutationSummary,
+    LouvainResult, LouvainResultBuilder, LouvainStats, LouvainStorageRuntime,
 };
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
+use crate::config::config_trait::ValidatedConfig;
 use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -35,27 +37,12 @@ pub struct LouvainRow {
     pub community_id: u64,
 }
 
-/// Aggregated Louvain stats.
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize)]
-pub struct LouvainStats {
-    pub community_count: usize,
-    pub execution_time_ms: u64,
-}
-
 /// Louvain algorithm facade.
 #[derive(Clone)]
 pub struct LouvainFacade {
     graph_store: Arc<DefaultGraphStore>,
     config: LouvainConfig,
-    concurrency: usize,
     task_registry: Option<TaskRegistry>,
-}
-
-/// Mutate result for Louvain: summary + updated graph store
-#[derive(Debug, Clone)]
-pub struct LouvainMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl LouvainFacade {
@@ -66,14 +53,47 @@ impl LouvainFacade {
                 concurrency: 4,
                 ..Default::default()
             },
-            concurrency: 4,
             task_registry: None,
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: LouvainConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: LouvainConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: LouvainConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     pub fn concurrency(mut self, concurrency: usize) -> Self {
         self.config.concurrency = concurrency;
-        self.concurrency = concurrency;
         self
     }
 
@@ -83,7 +103,7 @@ impl LouvainFacade {
     }
 
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = LouvainRow>>> {
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
         let iter = result
             .data
             .into_iter()
@@ -96,25 +116,15 @@ impl LouvainFacade {
     }
 
     pub fn stats(self) -> Result<LouvainStats> {
-        let (result, elapsed) = self.compute()?;
-        let community_count = result
-            .data
-            .iter()
-            .copied()
-            .collect::<std::collections::HashSet<u64>>()
-            .len();
-        Ok(LouvainStats {
-            community_count,
-            execution_time_ms: elapsed,
-        })
+        let result = self.compute()?;
+        Ok(LouvainResultBuilder::new(result).stats())
     }
 
     pub fn mutate(self, property_name: &str) -> Result<LouvainMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        let start = Instant::now();
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
 
         let node_count = self.graph_store.node_count();
         let nodes_updated = node_count as u64;
@@ -133,8 +143,11 @@ impl LouvainFacade {
                 AlgorithmError::Execution(format!("Louvain mutate failed to add property: {e}"))
             })?;
 
-        let execution_time = start.elapsed();
-        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+        let summary = LouvainMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.execution_time.as_millis() as u64,
+        };
 
         Ok(LouvainMutateResult {
             summary,
@@ -167,16 +180,12 @@ impl LouvainFacade {
     }
 
     fn validate(&self) -> Result<()> {
-        ConfigValidator::in_range(
-            self.config.concurrency as f64,
-            1.0,
-            1_000_000.0,
-            "concurrency",
-        )?;
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
-    fn compute(&self) -> Result<(LouvainResult, u64)> {
+    fn compute(&self) -> Result<LouvainResult> {
         self.validate()?;
         let start = Instant::now();
 
@@ -192,12 +201,15 @@ impl LouvainFacade {
 
         let result =
             storage.compute_louvain(&mut computation, &mut progress_tracker, &termination_flag)?;
-        Ok((result, start.elapsed().as_millis() as u64))
+        Ok(LouvainResult {
+            execution_time: start.elapsed(),
+            ..result
+        })
     }
 
     /// Full result: returns the procedure-level Louvain result.
     pub fn run(&self) -> Result<LouvainResult> {
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
         Ok(result)
     }
 }

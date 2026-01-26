@@ -11,13 +11,14 @@
 //! - `random_seed`: Random seed for reproducibility (default: 42)
 
 use crate::algo::leiden::{
-    LeidenComputationRuntime, LeidenConfig, LeidenResult, LeidenStorageRuntime,
+    LeidenComputationRuntime, LeidenConfig, LeidenMutateResult, LeidenMutationSummary,
+    LeidenResult, LeidenResultBuilder, LeidenStats, LeidenStorageRuntime,
 };
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -35,29 +36,12 @@ pub struct LeidenRow {
     pub community_id: u64,
 }
 
-/// Aggregated Leiden stats.
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize)]
-pub struct LeidenStats {
-    pub community_count: u64,
-    pub modularity: f64,
-    pub levels: usize,
-    pub converged: bool,
-    pub execution_time_ms: u64,
-}
-
 /// Leiden algorithm facade.
 #[derive(Clone)]
 pub struct LeidenFacade {
     graph_store: Arc<DefaultGraphStore>,
     config: LeidenConfig,
     task_registry: Option<TaskRegistry>,
-}
-
-/// Mutate result for Leiden: summary + updated store
-#[derive(Debug, Clone)]
-pub struct LeidenMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl LeidenFacade {
@@ -67,6 +51,41 @@ impl LeidenFacade {
             config: LeidenConfig::default(),
             task_registry: None,
         }
+    }
+
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: LeidenConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: LeidenConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: LeidenConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
     }
 
     /// Set the resolution parameter (gamma)
@@ -119,19 +138,12 @@ impl LeidenFacade {
     }
 
     fn validate(&self) -> Result<()> {
-        ConfigValidator::in_range(self.config.gamma, 0.0, 100.0, "gamma")?;
-        ConfigValidator::in_range(self.config.theta, 0.0, 1.0, "theta")?;
-        ConfigValidator::in_range(self.config.tolerance, 0.0, 1.0, "tolerance")?;
-        ConfigValidator::in_range(
-            self.config.max_iterations as f64,
-            1.0,
-            1000.0,
-            "max_iterations",
-        )?;
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
-    fn compute(&self) -> Result<(LeidenResult, u64)> {
+    fn compute(&self) -> Result<LeidenResult> {
         self.validate()?;
         let start = Instant::now();
 
@@ -155,12 +167,15 @@ impl LeidenFacade {
             &termination_flag,
         )?;
 
-        Ok((result, start.elapsed().as_millis() as u64))
+        Ok(LeidenResult {
+            execution_time: start.elapsed(),
+            ..result
+        })
     }
 
     /// Stream mode: yields `(node_id, community_id)` for every node.
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = LeidenRow>>> {
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
         let iter = result
             .communities
             .into_iter()
@@ -174,14 +189,8 @@ impl LeidenFacade {
 
     /// Stats mode: returns aggregated statistics.
     pub fn stats(&self) -> Result<LeidenStats> {
-        let (result, elapsed) = self.compute()?;
-        Ok(LeidenStats {
-            community_count: result.community_count,
-            modularity: result.modularity,
-            levels: result.levels,
-            converged: result.converged,
-            execution_time_ms: elapsed,
-        })
+        let result = self.compute()?;
+        Ok(LeidenResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: writes labels back to the graph store.
@@ -189,10 +198,7 @@ impl LeidenFacade {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        let start = Instant::now();
-        eprintln!("Leiden mutate: calling compute()");
-        let (result, _elapsed) = self.compute()?;
-        eprintln!("Leiden mutate: compute() returned");
+        let result = self.compute()?;
 
         let node_count = self.graph_store.node_count();
         let nodes_updated = node_count as u64;
@@ -210,8 +216,11 @@ impl LeidenFacade {
                 AlgorithmError::Execution(format!("Leiden mutate failed to add property: {e}"))
             })?;
 
-        let execution_time = start.elapsed();
-        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+        let summary = LeidenMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.execution_time.as_millis() as u64,
+        };
 
         Ok(LeidenMutateResult {
             summary,

@@ -4,7 +4,9 @@
 //! that cross community boundaries.
 
 use crate::algo::conductance::{
-    ConductanceComputationRuntime, ConductanceConfig, ConductanceStorageRuntime,
+    ConductanceComputationRuntime, ConductanceConfig, ConductanceMutateResult,
+    ConductanceMutationSummary, ConductanceResult, ConductanceResultBuilder, ConductanceStats,
+    ConductanceStorageRuntime,
 };
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::{Concurrency, TerminationFlag};
@@ -12,7 +14,7 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -32,57 +34,73 @@ pub struct ConductanceRow {
     pub conductance: f64,
 }
 
-/// Statistics for conductance computation
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct ConductanceStats {
-    /// Number of communities evaluated
-    pub community_count: usize,
-    /// Global average conductance
-    pub average_conductance: f64,
-}
-
 /// Conductance algorithm facade
 #[derive(Clone)]
 pub struct ConductanceFacade {
     graph_store: Arc<DefaultGraphStore>,
-    community_property: String,
-    has_relationship_weight_property: bool,
-    concurrency: usize,
-    min_batch_size: usize,
+    config: ConductanceConfig,
     task_registry: Option<TaskRegistry>,
-}
-
-/// Mutate result for Conductance: summary + updated store
-#[derive(Debug, Clone)]
-pub struct ConductanceMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl ConductanceFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>, community_property: String) -> Self {
         Self {
             graph_store,
-            community_property,
-            has_relationship_weight_property: false,
-            concurrency: 4,
-            min_batch_size: 10_000,
+            config: ConductanceConfig {
+                community_property,
+                ..ConductanceConfig::default()
+            },
             task_registry: None,
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: ConductanceConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: ConductanceConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: ConductanceConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     pub fn relationship_weight_property(mut self, use_weights: bool) -> Self {
-        self.has_relationship_weight_property = use_weights;
+        self.config.has_relationship_weight_property = use_weights;
         self
     }
 
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
     pub fn min_batch_size(mut self, min_batch_size: usize) -> Self {
-        self.min_batch_size = min_batch_size;
+        self.config.min_batch_size = min_batch_size;
         self
     }
 
@@ -92,35 +110,27 @@ impl ConductanceFacade {
     }
 
     fn validate(&self) -> Result<()> {
-        if self.community_property.is_empty() {
-            return Err(AlgorithmError::Execution(
-                "community_property cannot be empty".to_string(),
-            ));
-        }
-        ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
-        ConfigValidator::in_range(
-            self.min_batch_size as f64,
-            1.0,
-            1_000_000_000.0,
-            "min_batch_size",
-        )?;
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
-    fn compute(&self) -> Result<(std::collections::HashMap<u64, f64>, f64)> {
+    fn compute(&self) -> Result<ConductanceResult> {
         self.validate()?;
+        let start = Instant::now();
 
         let node_count = self.graph_store.node_count();
         if node_count == 0 {
-            return Ok((std::collections::HashMap::new(), 0.0));
+            return Ok(ConductanceResult {
+                community_conductances: std::collections::HashMap::new(),
+                global_average_conductance: 0.0,
+                community_count: 0,
+                node_count: 0,
+                execution_time: start.elapsed(),
+            });
         }
 
-        let config = ConductanceConfig {
-            concurrency: self.concurrency,
-            min_batch_size: self.min_batch_size,
-            has_relationship_weight_property: self.has_relationship_weight_property,
-            community_property: self.community_property.clone(),
-        };
+        let config = self.config.clone();
 
         let base_task = crate::core::utils::progress::Tasks::leaf_with_volume(
             "conductance".to_string(),
@@ -131,7 +141,7 @@ impl ConductanceFacade {
         let registry_factory = self.registry_factory();
         let mut progress_tracker = TaskProgressTracker::with_registry(
             base_task,
-            Concurrency::of(self.concurrency.max(1)),
+            Concurrency::of(self.config.concurrency.max(1)),
             JobId::new(),
             registry_factory.as_ref(),
         );
@@ -149,10 +159,10 @@ impl ConductanceFacade {
             )
             .map_err(AlgorithmError::Execution)?;
 
-        Ok((
-            result.community_conductances,
-            result.global_average_conductance,
-        ))
+        Ok(ConductanceResult {
+            execution_time: start.elapsed(),
+            ..result
+        })
     }
 
     fn registry_factory(&self) -> Box<dyn TaskRegistryFactory> {
@@ -173,9 +183,10 @@ impl ConductanceFacade {
 
     /// Stream mode: yields conductance per community
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = ConductanceRow>>> {
-        let (conductances, _avg) = self.compute()?;
+        let result = self.compute()?;
 
-        let mut rows: Vec<ConductanceRow> = conductances
+        let mut rows: Vec<ConductanceRow> = result
+            .community_conductances
             .into_iter()
             .map(|(community, conductance)| ConductanceRow {
                 community,
@@ -191,12 +202,8 @@ impl ConductanceFacade {
 
     /// Stats mode: returns aggregated statistics
     pub fn stats(&self) -> Result<ConductanceStats> {
-        let (conductances, avg) = self.compute()?;
-
-        Ok(ConductanceStats {
-            community_count: conductances.len(),
-            average_conductance: avg,
-        })
+        let result = self.compute()?;
+        Ok(ConductanceResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: writes conductance scores back to the graph store.
@@ -204,15 +211,15 @@ impl ConductanceFacade {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        let start = Instant::now();
-        let (conductances, _avg) = self.compute()?;
+        let result = self.compute()?;
+        let conductances = result.community_conductances;
 
         let node_count = self.graph_store.node_count();
         let nodes_updated = node_count as u64;
 
         let community_props = self
             .graph_store
-            .node_property_values(&self.community_property)
+            .node_property_values(&self.config.community_property)
             .map_err(|e| {
                 AlgorithmError::Execution(format!(
                     "Conductance mutate failed to load community property: {e}"
@@ -250,8 +257,11 @@ impl ConductanceFacade {
                 AlgorithmError::Execution(format!("Conductance mutate failed to add property: {e}"))
             })?;
 
-        let summary =
-            MutationResult::new(nodes_updated, property_name.to_string(), start.elapsed());
+        let summary = ConductanceMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.execution_time.as_millis() as u64,
+        };
 
         Ok(ConductanceMutateResult {
             summary,

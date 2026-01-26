@@ -1,5 +1,5 @@
-use super::ApproxMaxKCutComputationRuntime;
 use super::spec::ApproxMaxKCutConfig;
+use super::ApproxMaxKCutComputationRuntime;
 
 #[test]
 fn assigns_all_nodes() {
@@ -10,6 +10,7 @@ fn assigns_all_nodes() {
         minimize: false,
         has_relationship_weight_property: false,
         min_community_sizes: vec![0, 0, 0],
+        concurrency: 4,
     };
     let runtime = ApproxMaxKCutComputationRuntime::new(config);
 

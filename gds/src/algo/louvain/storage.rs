@@ -39,6 +39,13 @@ impl LouvainStorageRuntime {
         termination_flag: &TerminationFlag,
     ) -> Result<LouvainResult, AlgorithmError> {
         let node_count = self.graph.node_count();
+        if node_count == 0 {
+            return Ok(LouvainResult {
+                data: Vec::new(),
+                node_count: 0,
+                execution_time: std::time::Duration::default(),
+            });
+        }
 
         // For Louvain, treat unweighted relationships as weight=1.0 (matches other procedures).
         let weight_fallback = 1.0;

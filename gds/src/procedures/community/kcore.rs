@@ -6,7 +6,8 @@
 //! - `concurrency`: accepted for parity; currently unused.
 
 use crate::algo::kcore::{
-    KCoreComputationResult, KCoreComputationRuntime, KCoreConfig, KCoreStorageRuntime,
+    KCoreComputationResult, KCoreComputationRuntime, KCoreConfig, KCoreMutateResult,
+    KCoreMutationSummary, KCoreResult, KCoreResultBuilder, KCoreStats, KCoreStorageRuntime,
 };
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
@@ -30,39 +31,60 @@ pub struct KCoreRow {
     pub core_value: i32,
 }
 
-/// Aggregated k-core stats.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
-pub struct KCoreStats {
-    pub degeneracy: i32,
-    pub execution_time_ms: u64,
-}
-
 /// K-Core Decomposition algorithm facade.
 #[derive(Clone)]
 pub struct KCoreFacade {
     graph_store: Arc<DefaultGraphStore>,
-    concurrency: usize,
+    config: KCoreConfig,
     task_registry: Option<TaskRegistry>,
-}
-
-/// Mutate result for KCore
-#[derive(Debug, Clone)]
-pub struct KCoreMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl KCoreFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            concurrency: 4,
+            config: KCoreConfig::default(),
             task_registry: None,
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: KCoreConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: KCoreConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: KCoreConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -72,37 +94,35 @@ impl KCoreFacade {
     }
 
     fn validate(&self) -> Result<()> {
-        ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
-    fn compute(&self) -> Result<(KCoreComputationResult, u64)> {
+    fn compute(&self) -> Result<KCoreResult> {
         self.validate()?;
         let start = Instant::now();
 
-        let config = KCoreConfig {
-            concurrency: self.concurrency,
-        };
+        let config = self.config.clone();
 
         let storage = KCoreStorageRuntime::new(self.graph_store.as_ref())?;
         let node_count = storage.node_count();
         if node_count == 0 {
-            return Ok((
-                KCoreComputationResult {
-                    core_values: Vec::new(),
-                    degeneracy: 0,
-                },
-                start.elapsed().as_millis() as u64,
-            ));
+            return Ok(KCoreResult {
+                core_values: Vec::new(),
+                degeneracy: 0,
+                node_count: 0,
+                execution_time: start.elapsed(),
+            });
         }
 
         let base_task = Tasks::leaf_with_volume("kcore".to_string(), node_count);
         let mut progress_tracker =
-            TaskProgressTracker::with_concurrency(base_task, self.concurrency);
+            TaskProgressTracker::with_concurrency(base_task, self.config.concurrency);
 
         let termination_flag = TerminationFlag::default();
 
-        let mut runtime = KCoreComputationRuntime::new().concurrency(self.concurrency);
+        let mut runtime = KCoreComputationRuntime::new().concurrency(self.config.concurrency);
         let result = storage.compute_kcore(
             &mut runtime,
             &config,
@@ -110,14 +130,17 @@ impl KCoreFacade {
             &termination_flag,
         )?;
 
-        let elapsed_ms = start.elapsed().as_millis() as u64;
-
-        Ok((result, elapsed_ms))
+        Ok(KCoreResult {
+            core_values: result.core_values,
+            degeneracy: result.degeneracy,
+            node_count,
+            execution_time: start.elapsed(),
+        })
     }
 
     /// Stream mode: yields `(node_id, core_value)` for every node.
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = KCoreRow>>> {
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
         let iter = result
             .core_values
             .into_iter()
@@ -131,12 +154,8 @@ impl KCoreFacade {
 
     /// Stats mode: yields degeneracy and execution time.
     pub fn stats(&self) -> Result<KCoreStats> {
-        let (result, elapsed_ms) = self.compute()?;
-
-        Ok(KCoreStats {
-            degeneracy: result.degeneracy,
-            execution_time_ms: elapsed_ms,
-        })
+        let result = self.compute()?;
+        Ok(KCoreResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: writes core values back to the graph store.
@@ -150,13 +169,13 @@ impl KCoreFacade {
     /// Write mode: writes core values to a new graph.
     pub fn write(self) -> Result<WriteResult> {
         // Note: write logic is deferred.
-        let (_result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
         let node_count = self.graph_store.node_count();
         let nodes_written = node_count as u64;
         Ok(WriteResult::new(
             nodes_written,
             "core_value".to_string(),
-            std::time::Duration::from_millis(0),
+            result.execution_time,
         ))
     }
 
@@ -165,8 +184,7 @@ impl KCoreFacade {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        let start = Instant::now();
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
 
         let node_count = self.graph_store.node_count();
         let nodes_updated = node_count as u64;
@@ -184,8 +202,11 @@ impl KCoreFacade {
                 AlgorithmError::Execution(format!("KCore mutate failed to add property: {e}"))
             })?;
 
-        let execution_time = start.elapsed();
-        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+        let summary = KCoreMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.execution_time.as_millis() as u64,
+        };
 
         Ok(KCoreMutateResult {
             summary,
@@ -214,7 +235,10 @@ impl KCoreFacade {
 
     /// Full result: returns the procedure-level k-core result.
     pub fn run(&self) -> Result<KCoreComputationResult> {
-        let (result, _elapsed) = self.compute()?;
-        Ok(result)
+        let result = self.compute()?;
+        Ok(KCoreComputationResult {
+            core_values: result.core_values,
+            degeneracy: result.degeneracy,
+        })
     }
 }

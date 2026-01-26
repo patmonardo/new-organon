@@ -5,14 +5,17 @@
 //! Parameters (Java GDS aligned):
 //! - `concurrency`: accepted for parity; current runtime is single-threaded.
 
-use crate::algo::wcc::{WccComputationRuntime, WccResult, WccStorageRuntime};
+use crate::algo::wcc::{
+    WccComputationRuntime, WccMutateResult, WccMutationSummary, WccResult, WccResultBuilder,
+    WccStats, WccStorageRuntime,
+};
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -30,26 +33,12 @@ pub struct WccRow {
     pub component_id: u64,
 }
 
-/// Aggregated WCC stats.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
-pub struct WccStats {
-    pub component_count: usize,
-    pub execution_time_ms: u64,
-}
-
 /// WCC algorithm facade.
 #[derive(Clone)]
 pub struct WccFacade {
     graph_store: Arc<DefaultGraphStore>,
     concurrency: usize,
     task_registry: Option<TaskRegistry>,
-}
-
-/// Mutate result for WCC: summary + updated graph store
-#[derive(Debug, Clone)]
-pub struct WccMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl WccFacade {
@@ -72,7 +61,7 @@ impl WccFacade {
     }
 
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = WccRow>>> {
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
         let iter = result
             .components
             .into_iter()
@@ -85,14 +74,14 @@ impl WccFacade {
     }
 
     pub fn stats(self) -> Result<WccStats> {
-        let (result, elapsed) = self.compute()?;
-        Ok(WccStats {
-            component_count: result.component_count,
-            execution_time_ms: elapsed,
-        })
+        let result = self.compute()?;
+        Ok(WccResultBuilder::new(result).stats())
     }
 
-    pub fn mutate(self, _property_name: &str) -> Result<MutationResult> {
+    pub fn mutate(
+        self,
+        _property_name: &str,
+    ) -> Result<crate::procedures::builder_base::MutationResult> {
         // Implemented below in the long-form mutate returning updated store
         Err(AlgorithmError::Execution(
             "Use mutate_with_store() for WCC (internal)".to_string(),
@@ -101,14 +90,14 @@ impl WccFacade {
 
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         // For WCC, write is the same as mutate since it's node properties
-        let (_result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
         let node_count = self.graph_store.node_count();
         let nodes_written = node_count as u64;
         // For now, pretend we've written components externally
         Ok(WriteResult::new(
             nodes_written,
             property_name.to_string(),
-            std::time::Duration::from_millis(0),
+            result.execution_time,
         ))
     }
 
@@ -117,8 +106,7 @@ impl WccFacade {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        let start = Instant::now();
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
 
         let node_count = self.graph_store.node_count();
         let nodes_updated = node_count as u64;
@@ -136,8 +124,11 @@ impl WccFacade {
                 AlgorithmError::Execution(format!("WCC mutate failed to add property: {e}"))
             })?;
 
-        let execution_time = start.elapsed();
-        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+        let summary = WccMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.execution_time.as_millis() as u64,
+        };
 
         Ok(WccMutateResult {
             summary,
@@ -164,7 +155,7 @@ impl WccFacade {
         Ok(())
     }
 
-    fn compute(&self) -> Result<(WccResult, u64)> {
+    fn compute(&self) -> Result<WccResult> {
         self.validate()?;
         let start = Instant::now();
 
@@ -193,13 +184,12 @@ impl WccFacade {
             )
             .map_err(AlgorithmError::Execution)?;
 
-        Ok((
-            WccResult {
-                components: result.components,
-                component_count: result.component_count,
-            },
-            start.elapsed().as_millis() as u64,
-        ))
+        Ok(WccResult {
+            components: result.components,
+            component_count: result.component_count,
+            node_count: self.graph_store.node_count(),
+            execution_time: start.elapsed(),
+        })
     }
 
     fn registry_factory(&self) -> Box<dyn TaskRegistryFactory> {
@@ -220,7 +210,7 @@ impl WccFacade {
 
     /// Full result: returns the procedure-level WCC result.
     pub fn run(&self) -> Result<WccResult> {
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
         Ok(result)
     }
 }

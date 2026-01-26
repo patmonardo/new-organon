@@ -1,5 +1,6 @@
 //! Label Propagation algorithm specification (executor integration)
 
+use crate::config::validation::ConfigError;
 use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::algorithm::*;
@@ -7,6 +8,7 @@ use crate::projection::Orientation;
 use crate::projection::RelationshipType;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use super::LabelPropComputationRuntime;
@@ -45,6 +47,46 @@ impl Default for LabelPropConfig {
     }
 }
 
+impl LabelPropConfig {
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.concurrency == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be > 0".to_string(),
+            });
+        }
+        if self.max_iterations == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "maxIterations".to_string(),
+                reason: "maxIterations must be > 0".to_string(),
+            });
+        }
+        if let Some(prop) = &self.node_weight_property {
+            if prop.trim().is_empty() {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "nodeWeightProperty".to_string(),
+                    reason: "node_weight_property cannot be empty".to_string(),
+                });
+            }
+        }
+        if let Some(prop) = &self.seed_property {
+            if prop.trim().is_empty() {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "seedProperty".to_string(),
+                    reason: "seed_property cannot be empty".to_string(),
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for LabelPropConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        LabelPropConfig::validate(self)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LabelPropResult {
     pub labels: Vec<u64>,
@@ -52,6 +94,70 @@ pub struct LabelPropResult {
     pub ran_iterations: u64,
     pub node_count: usize,
     pub execution_time: Duration,
+}
+
+/// Aggregated label propagation stats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct LabelPropStats {
+    pub did_converge: bool,
+    pub ran_iterations: u64,
+    pub community_count: usize,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LabelPropMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LabelPropWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for label propagation: summary + updated store.
+#[derive(Debug, Clone)]
+pub struct LabelPropMutateResult {
+    pub summary: LabelPropMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+/// Label propagation result builder (facade adapter).
+pub struct LabelPropResultBuilder {
+    result: LabelPropResult,
+}
+
+impl LabelPropResultBuilder {
+    pub fn new(result: LabelPropResult) -> Self {
+        Self { result }
+    }
+
+    pub fn stats(&self) -> LabelPropStats {
+        let community_count = self
+            .result
+            .labels
+            .iter()
+            .copied()
+            .collect::<std::collections::HashSet<u64>>()
+            .len();
+
+        LabelPropStats {
+            did_converge: self.result.did_converge,
+            ran_iterations: self.result.ran_iterations,
+            community_count,
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
+    }
 }
 
 pub type LabelPropAlgorithmSpec = LABEL_PROPAGATIONAlgorithmSpec;
@@ -66,12 +172,9 @@ define_algorithm_spec! {
         let parsed: LabelPropConfig = serde_json::from_value(config.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
 
-        if parsed.concurrency == 0 {
-            return Err(AlgorithmError::Execution("concurrency must be > 0".into()));
-        }
-        if parsed.max_iterations == 0 {
-            return Err(AlgorithmError::Execution("Must iterate at least 1 time".into()));
-        }
+        parsed
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
 
         let start = Instant::now();
 

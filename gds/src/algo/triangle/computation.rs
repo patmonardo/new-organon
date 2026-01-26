@@ -2,6 +2,7 @@ use super::intersect::{
     AdjacencyProvider, GraphIntersect, RelationshipIntersect, RelationshipIntersectConfig,
 };
 use super::spec::TriangleResult;
+use std::time::Duration;
 
 pub struct TriangleComputationRuntime {}
 
@@ -36,6 +37,8 @@ impl TriangleComputationRuntime {
             return TriangleResult {
                 local_triangles: Vec::new(),
                 global_triangles: 0,
+                node_count: 0,
+                execution_time: Duration::default(),
             };
         }
 
@@ -84,6 +87,8 @@ impl TriangleComputationRuntime {
         TriangleResult {
             local_triangles: local,
             global_triangles: global,
+            node_count,
+            execution_time: Duration::default(),
         }
     }
 }

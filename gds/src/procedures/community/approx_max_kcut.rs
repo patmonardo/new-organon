@@ -3,14 +3,17 @@
 //! Partitions nodes into k communities to maximize (or minimize) the
 //! weight of edges crossing between communities using GRASP.
 
-use crate::algo::approx_max_kcut::ApproxMaxKCutComputationRuntime;
-use crate::algo::approx_max_kcut::spec::ApproxMaxKCutConfig;
+use crate::algo::approx_max_kcut::spec::{
+    ApproxMaxKCutConfig, ApproxMaxKCutMutateResult, ApproxMaxKCutMutationSummary,
+    ApproxMaxKCutResult, ApproxMaxKCutResultBuilder, ApproxMaxKCutStats,
+};
 use crate::algo::approx_max_kcut::storage::ApproxMaxKCutStorageRuntime;
+use crate::algo::approx_max_kcut::ApproxMaxKCutComputationRuntime;
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -30,82 +33,87 @@ pub struct ApproxMaxKCutRow {
     pub community: u8,
 }
 
-/// Statistics for approx max k-cut computation
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct ApproxMaxKCutStats {
-    /// Total cut cost achieved
-    pub cut_cost: f64,
-    /// Number of communities
-    pub k: u8,
-    /// Number of nodes processed
-    pub node_count: usize,
-}
-
 /// ApproxMaxKCut algorithm facade
 #[derive(Clone)]
 pub struct ApproxMaxKCutFacade {
     graph_store: Arc<DefaultGraphStore>,
-    k: u8,
-    iterations: usize,
-    random_seed: u64,
-    minimize: bool,
-    has_relationship_weight_property: bool,
-    min_community_sizes: Vec<usize>,
-    concurrency: usize,
+    config: ApproxMaxKCutConfig,
     task_registry: Option<TaskRegistry>,
-}
-
-/// Mutate result for ApproxMaxKCut: summary + updated store
-#[derive(Debug, Clone)]
-pub struct ApproxMaxKCutMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl ApproxMaxKCutFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            k: 2,
-            iterations: 8,
-            random_seed: 0,
-            minimize: false,
-            has_relationship_weight_property: false,
-            min_community_sizes: vec![0, 0],
-            concurrency: 4,
+            config: ApproxMaxKCutConfig::default(),
             task_registry: None,
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: ApproxMaxKCutConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: ApproxMaxKCutConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: ApproxMaxKCutConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     pub fn k(mut self, k: u8) -> Self {
-        self.k = k;
+        self.config.k = k;
         // Resize min_community_sizes to match k
-        self.min_community_sizes.resize(k as usize, 0);
+        self.config.min_community_sizes.resize(k as usize, 0);
         self
     }
 
     pub fn iterations(mut self, iterations: usize) -> Self {
-        self.iterations = iterations;
+        self.config.iterations = iterations;
         self
     }
 
     pub fn random_seed(mut self, seed: u64) -> Self {
-        self.random_seed = seed;
+        self.config.random_seed = seed;
         self
     }
 
     pub fn minimize(mut self, minimize: bool) -> Self {
-        self.minimize = minimize;
+        self.config.minimize = minimize;
         self
     }
 
     pub fn relationship_weight_property(mut self, use_weights: bool) -> Self {
-        self.has_relationship_weight_property = use_weights;
+        self.config.has_relationship_weight_property = use_weights;
         self
     }
 
     pub fn min_community_sizes(mut self, sizes: Vec<usize>) -> Self {
-        self.min_community_sizes = sizes;
+        self.config.min_community_sizes = sizes;
         self
     }
 
@@ -115,50 +123,40 @@ impl ApproxMaxKCutFacade {
     }
 
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
     fn validate(&self) -> Result<()> {
-        ConfigValidator::in_range(self.k as f64, 2.0, 127.0, "k")?;
-        ConfigValidator::in_range(self.iterations as f64, 1.0, 1000.0, "iterations")?;
-        ConfigValidator::in_range(self.concurrency as f64, 1.0, 1024.0, "concurrency")?;
-
-        if self.min_community_sizes.len() != self.k as usize {
-            return Err(AlgorithmError::Execution(format!(
-                "min_community_sizes length ({}) must equal k ({})",
-                self.min_community_sizes.len(),
-                self.k
-            )));
-        }
-
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
-    fn compute(&self) -> Result<(Vec<u8>, f64, usize)> {
+    fn compute(&self) -> Result<ApproxMaxKCutResult> {
         self.validate()?;
+        let start = Instant::now();
         let node_count = self.graph_store.node_count();
         if node_count == 0 {
-            return Ok((Vec::new(), 0.0, 0));
+            return Ok(ApproxMaxKCutResult {
+                communities: Vec::new(),
+                cut_cost: 0.0,
+                k: self.config.k,
+                node_count: 0,
+                execution_time: start.elapsed(),
+            });
         }
 
         let mut progress_tracker = TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume(
                 "approx_max_kcut".to_string(),
-                node_count.saturating_add(self.iterations),
+                node_count.saturating_add(self.config.iterations),
             ),
-            self.concurrency,
+            self.config.concurrency,
         );
         let termination_flag = TerminationFlag::default();
 
-        let config = ApproxMaxKCutConfig {
-            k: self.k,
-            iterations: self.iterations,
-            random_seed: self.random_seed,
-            minimize: self.minimize,
-            has_relationship_weight_property: self.has_relationship_weight_property,
-            min_community_sizes: self.min_community_sizes.clone(),
-        };
+        let config = self.config.clone();
 
         let storage = ApproxMaxKCutStorageRuntime::new();
         let mut runtime = ApproxMaxKCutComputationRuntime::new(config.clone());
@@ -172,14 +170,20 @@ impl ApproxMaxKCutFacade {
             )
             .map_err(AlgorithmError::Execution)?;
 
-        Ok((result.communities, result.cut_cost, node_count))
+        Ok(ApproxMaxKCutResult {
+            communities: result.communities,
+            cut_cost: result.cut_cost,
+            k: config.k,
+            node_count,
+            execution_time: start.elapsed(),
+        })
     }
 
     /// Stream mode: yields community assignment per node
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = ApproxMaxKCutRow>>> {
-        let (communities, _cost, _node_count) = self.compute()?;
+        let result = self.compute()?;
 
-        Ok(Box::new(communities.into_iter().enumerate().map(
+        Ok(Box::new(result.communities.into_iter().enumerate().map(
             |(node_idx, community)| ApproxMaxKCutRow {
                 node_id: node_idx as u64,
                 community,
@@ -189,13 +193,8 @@ impl ApproxMaxKCutFacade {
 
     /// Stats mode: returns aggregated statistics
     pub fn stats(&self) -> Result<ApproxMaxKCutStats> {
-        let (_communities, cost, node_count) = self.compute()?;
-
-        Ok(ApproxMaxKCutStats {
-            cut_cost: cost,
-            k: self.k,
-            node_count,
-        })
+        let result = self.compute()?;
+        Ok(ApproxMaxKCutResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: writes labels back to the graph store.
@@ -203,8 +202,9 @@ impl ApproxMaxKCutFacade {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        let start = Instant::now();
-        let (communities, _cost, node_count) = self.compute()?;
+        let result = self.compute()?;
+        let communities = result.communities;
+        let node_count = result.node_count;
 
         let nodes_updated = node_count as u64;
 
@@ -223,8 +223,11 @@ impl ApproxMaxKCutFacade {
                 ))
             })?;
 
-        let summary =
-            MutationResult::new(nodes_updated, property_name.to_string(), start.elapsed());
+        let summary = ApproxMaxKCutMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.execution_time.as_millis() as u64,
+        };
 
         Ok(ApproxMaxKCutMutateResult {
             summary,

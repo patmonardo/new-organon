@@ -7,14 +7,17 @@
 //! Parameters:
 //! - `concurrency`: accepted for Java GDS alignment; currently unused.
 
-use crate::algo::scc::{SccComputationRuntime, SccResult, SccStorageRuntime};
+use crate::algo::scc::{
+    SccComputationRuntime, SccMutationSummary, SccResult, SccResultBuilder, SccStats,
+    SccStorageRuntime,
+};
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistry, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -31,26 +34,12 @@ pub struct SccRow {
     pub component_id: u64,
 }
 
-/// Aggregated SCC stats.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
-pub struct SccStats {
-    pub component_count: usize,
-    pub execution_time_ms: u64,
-}
-
 /// SCC algorithm facade.
 #[derive(Clone)]
 pub struct SccFacade {
     graph_store: Arc<DefaultGraphStore>,
     concurrency: usize,
     task_registry: Option<TaskRegistry>,
-}
-
-/// Mutate result for SCC: summary + updated store
-#[derive(Debug, Clone)]
-pub struct SccMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl SccFacade {
@@ -79,6 +68,7 @@ impl SccFacade {
 
     fn compute(&self) -> Result<SccResult> {
         self.validate()?;
+        let start = std::time::Instant::now();
 
         let mut computation = SccComputationRuntime::new();
         let storage = SccStorageRuntime::new(self.concurrency);
@@ -103,11 +93,15 @@ impl SccFacade {
             )
             .map_err(AlgorithmError::Execution)?;
 
-        Ok(SccResult::new(
+        let node_count = self.graph_store.node_count();
+        let mut out = SccResult::new(
             result.components,
             result.component_count,
             result.computation_time_ms,
-        ))
+        );
+        out.node_count = node_count;
+        out.execution_time = start.elapsed();
+        Ok(out)
     }
 
     /// Stream mode: yields `(node_id, component_id)` for every node.
@@ -127,14 +121,11 @@ impl SccFacade {
     /// Stats mode: yields component count and execution time.
     pub fn stats(&self) -> Result<SccStats> {
         let result = self.compute()?;
-        Ok(SccStats {
-            component_count: result.component_count,
-            execution_time_ms: result.computation_time_ms,
-        })
+        Ok(SccResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: writes component assignments back to the graph store.
-    pub fn mutate(self, property_name: &str) -> Result<SccMutateResult> {
+    pub fn mutate(self, property_name: &str) -> Result<crate::algo::scc::SccMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
@@ -156,10 +147,13 @@ impl SccFacade {
                 AlgorithmError::Execution(format!("SCC mutate failed to add property: {e}"))
             })?;
 
-        let execution_time = std::time::Duration::from_millis(result.computation_time_ms as u64);
-        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+        let summary = SccMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.execution_time.as_millis() as u64,
+        };
 
-        Ok(SccMutateResult {
+        Ok(crate::algo::scc::SccMutateResult {
             summary,
             updated_store: Arc::new(new_store),
         })

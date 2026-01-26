@@ -1,5 +1,5 @@
-use super::ConductanceComputationRuntime;
 use super::spec::{ConductanceConfig, ConductanceResult};
+use super::ConductanceComputationRuntime;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
 use crate::projection::orientation::Orientation;
@@ -34,6 +34,9 @@ impl ConductanceStorageRuntime {
             return Ok(ConductanceResult {
                 community_conductances: std::collections::HashMap::new(),
                 global_average_conductance: 0.0,
+                community_count: 0,
+                node_count: 0,
+                execution_time: std::time::Duration::default(),
             });
         }
 
@@ -73,7 +76,9 @@ impl ConductanceStorageRuntime {
 
         // 3) Compute conductances
         progress_tracker.begin_subtask_with_description("perform conductance computations");
-        let result = computation.compute_conductances(counts);
+        let mut result = computation.compute_conductances(counts);
+        result.node_count = node_count;
+        result.community_count = result.community_conductances.len();
         progress_tracker.end_subtask_with_description("perform conductance computations");
 
         progress_tracker.end_subtask_with_description("Conductance");

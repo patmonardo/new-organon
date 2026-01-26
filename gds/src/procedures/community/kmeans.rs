@@ -16,13 +16,14 @@
 
 pub use crate::algo::kmeans::KMeansSamplerType;
 use crate::algo::kmeans::{
-    KMeansComputationRuntime, KMeansConfig, KMeansResult, KMeansStorageRuntime,
+    KMeansComputationRuntime, KMeansConfig, KMeansMutateResult, KMeansMutationSummary,
+    KMeansResult, KMeansResultBuilder, KMeansStats, KMeansStorageRuntime,
 };
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -40,29 +41,11 @@ pub struct KMeansRow {
     pub distance_from_center: f64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize)]
-pub struct KMeansStats {
-    pub k: usize,
-    pub community_count: usize,
-    pub average_distance_to_centroid: f64,
-    pub average_silhouette: f64,
-    pub ran_iterations: u32,
-    pub restarts: u32,
-    pub execution_time_ms: u64,
-}
-
 #[derive(Clone)]
 pub struct KMeansFacade {
     graph_store: Arc<DefaultGraphStore>,
     config: KMeansConfig,
     task_registry: Option<TaskRegistry>,
-}
-
-/// Mutate result for KMeans: summary + updated store
-#[derive(Debug, Clone)]
-pub struct KMeansMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl KMeansFacade {
@@ -75,6 +58,41 @@ impl KMeansFacade {
             },
             task_registry: None,
         }
+    }
+
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: KMeansConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: KMeansConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: KMeansConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
     }
 
     pub fn k(mut self, k: usize) -> Self {
@@ -157,7 +175,7 @@ impl KMeansFacade {
         Ok(())
     }
 
-    fn compute(&self) -> Result<(KMeansResult, u64)> {
+    fn compute(&self) -> Result<KMeansResult> {
         self.validate_basic()?;
         let start = Instant::now();
 
@@ -181,11 +199,14 @@ impl KMeansFacade {
             &termination_flag,
         )?;
 
-        Ok((result, start.elapsed().as_millis() as u64))
+        Ok(KMeansResult {
+            execution_time: start.elapsed(),
+            ..result
+        })
     }
 
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = KMeansRow>>> {
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
         let iter = result
             .communities
             .into_iter()
@@ -202,23 +223,8 @@ impl KMeansFacade {
     }
 
     pub fn stats(&self) -> Result<KMeansStats> {
-        let (result, elapsed) = self.compute()?;
-        let community_count = result
-            .communities
-            .iter()
-            .copied()
-            .collect::<HashSet<u64>>()
-            .len();
-
-        Ok(KMeansStats {
-            k: self.config.k,
-            community_count,
-            average_distance_to_centroid: result.average_distance_to_centroid,
-            average_silhouette: result.average_silhouette,
-            ran_iterations: result.ran_iterations,
-            restarts: result.restarts,
-            execution_time_ms: elapsed,
-        })
+        let result = self.compute()?;
+        Ok(KMeansResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: writes community assignments back to the graph store.
@@ -226,7 +232,7 @@ impl KMeansFacade {
         self.validate_basic()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        let (result, elapsed_ms) = self.compute()?;
+        let result = self.compute()?;
 
         let node_count = self.graph_store.node_count();
         let nodes_updated = node_count as u64;
@@ -244,11 +250,11 @@ impl KMeansFacade {
                 AlgorithmError::Execution(format!("KMeans mutate failed to add property: {e}"))
             })?;
 
-        let summary = MutationResult::new(
+        let summary = KMeansMutationSummary {
             nodes_updated,
-            property_name.to_string(),
-            std::time::Duration::from_millis(elapsed_ms),
-        );
+            property_name: property_name.to_string(),
+            execution_time_ms: result.execution_time.as_millis() as u64,
+        };
 
         Ok(KMeansMutateResult {
             summary,
@@ -287,7 +293,7 @@ impl KMeansFacade {
     }
 
     pub fn run(&self) -> Result<KMeansResult> {
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
         Ok(result)
     }
 }

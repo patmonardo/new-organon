@@ -8,14 +8,15 @@
 //! - `batch_size`: accepted for parity; currently unused.
 
 use crate::algo::k1coloring::{
-    K1ColoringComputationRuntime, K1ColoringConfig, K1ColoringResult, K1ColoringStorageRuntime,
+    K1ColoringComputationRuntime, K1ColoringConfig, K1ColoringMutateResult,
+    K1ColoringMutationSummary, K1ColoringResult, K1ColoringResultBuilder, K1ColoringStats,
+    K1ColoringStorageRuntime,
 };
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
-use crate::core::utils::partition::DEFAULT_BATCH_SIZE;
 use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -33,55 +34,70 @@ pub struct K1ColoringRow {
     pub color_id: u64,
 }
 
-/// Aggregated K1-Coloring stats.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
-pub struct K1ColoringStats {
-    pub did_converge: bool,
-    pub ran_iterations: u64,
-    pub color_count: usize,
-    pub execution_time_ms: u64,
-}
-
 /// K1-Coloring algorithm facade.
 #[derive(Clone)]
 pub struct K1ColoringFacade {
     graph_store: Arc<DefaultGraphStore>,
-    concurrency: usize,
-    max_iterations: u64,
-    batch_size: usize,
+    config: K1ColoringConfig,
     task_registry: Option<TaskRegistry>,
-}
-
-/// Mutate result for K1Coloring: summary + updated store
-#[derive(Debug, Clone)]
-pub struct K1ColoringMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl K1ColoringFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            concurrency: 4,
-            max_iterations: 10,
-            batch_size: DEFAULT_BATCH_SIZE,
+            config: K1ColoringConfig::default(),
             task_registry: None,
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: K1ColoringConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: K1ColoringConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: K1ColoringConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
     pub fn max_iterations(mut self, max_iterations: u64) -> Self {
-        self.max_iterations = max_iterations;
+        self.config.max_iterations = max_iterations;
         self
     }
 
     pub fn batch_size(mut self, batch_size: usize) -> Self {
-        self.batch_size = batch_size;
+        self.config.min_batch_size = batch_size;
         self
     }
 
@@ -91,65 +107,54 @@ impl K1ColoringFacade {
     }
 
     fn validate(&self) -> Result<()> {
-        ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
-        ConfigValidator::in_range(
-            self.max_iterations as f64,
-            1.0,
-            1_000_000_000.0,
-            "max_iterations",
-        )?;
-        ConfigValidator::in_range(self.batch_size as f64, 1.0, 1_000_000_000.0, "batch_size")?;
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
-    fn compute(&self) -> Result<(K1ColoringResult, u64)> {
+    fn compute(&self) -> Result<K1ColoringResult> {
         self.validate()?;
         let start = Instant::now();
 
-        let config = K1ColoringConfig {
-            concurrency: self.concurrency,
-            max_iterations: self.max_iterations,
-            min_batch_size: self.batch_size,
-        };
+        let config = self.config.clone();
 
         let storage = K1ColoringStorageRuntime::new(self.graph_store.as_ref())?;
         let node_count = storage.node_count();
         if node_count == 0 {
-            return Ok((
-                K1ColoringResult {
-                    colors: Vec::new(),
-                    ran_iterations: 0,
-                    did_converge: true,
-                },
-                start.elapsed().as_millis() as u64,
-            ));
+            return Ok(K1ColoringResult {
+                colors: Vec::new(),
+                ran_iterations: 0,
+                did_converge: true,
+                node_count: 0,
+                execution_time: start.elapsed(),
+            });
         }
 
-        let base_task =
-            Tasks::leaf_with_volume("k1coloring".to_string(), self.max_iterations as usize);
+        let base_task = Tasks::leaf_with_volume(
+            "k1coloring".to_string(),
+            self.config.max_iterations as usize,
+        );
         let mut progress_tracker =
-            TaskProgressTracker::with_concurrency(base_task, self.concurrency);
+            TaskProgressTracker::with_concurrency(base_task, self.config.concurrency);
 
         let termination_flag = TerminationFlag::default();
 
-        let mut runtime = K1ColoringComputationRuntime::new(node_count, self.max_iterations)
-            .concurrency(self.concurrency);
+        let mut runtime = K1ColoringComputationRuntime::new(node_count, self.config.max_iterations)
+            .concurrency(self.config.concurrency);
 
-        let result = storage.compute_k1coloring(
+        let mut result = storage.compute_k1coloring(
             &mut runtime,
             &config,
             &mut progress_tracker,
             &termination_flag,
         )?;
-
-        let elapsed_ms = start.elapsed().as_millis() as u64;
-
-        Ok((result, elapsed_ms))
+        result.execution_time = start.elapsed();
+        Ok(result)
     }
 
     /// Stream mode: yields `(node_id, color_id)` for every node.
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = K1ColoringRow>>> {
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
         let iter = result
             .colors
             .into_iter()
@@ -163,20 +168,8 @@ impl K1ColoringFacade {
 
     /// Stats mode: yields convergence info + number of distinct colors used.
     pub fn stats(&self) -> Result<K1ColoringStats> {
-        let (result, elapsed_ms) = self.compute()?;
-        let color_count = result
-            .colors
-            .iter()
-            .copied()
-            .collect::<HashSet<u64>>()
-            .len();
-
-        Ok(K1ColoringStats {
-            did_converge: result.did_converge,
-            ran_iterations: result.ran_iterations,
-            color_count,
-            execution_time_ms: elapsed_ms,
-        })
+        let result = self.compute()?;
+        Ok(K1ColoringResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: writes color assignments back to the graph store.
@@ -184,7 +177,7 @@ impl K1ColoringFacade {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        let (result, elapsed_ms) = self.compute()?;
+        let result = self.compute()?;
 
         let node_count = self.graph_store.node_count();
         let nodes_updated = node_count as u64;
@@ -202,11 +195,11 @@ impl K1ColoringFacade {
                 AlgorithmError::Execution(format!("K1Coloring mutate failed to add property: {e}"))
             })?;
 
-        let summary = MutationResult::new(
+        let summary = K1ColoringMutationSummary {
             nodes_updated,
-            property_name.to_string(),
-            std::time::Duration::from_millis(elapsed_ms),
-        );
+            property_name: property_name.to_string(),
+            execution_time_ms: result.execution_time.as_millis() as u64,
+        };
 
         Ok(K1ColoringMutateResult {
             summary,
@@ -245,7 +238,7 @@ impl K1ColoringFacade {
 
     /// Full result: returns the procedure-level K1Coloring result.
     pub fn run(&self) -> Result<K1ColoringResult> {
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
         Ok(result)
     }
 }

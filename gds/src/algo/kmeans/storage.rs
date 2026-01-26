@@ -4,8 +4,8 @@
 //! feature vectors from the configured node property, wires progress, enforces
 //! termination, and delegates pure computation to `KMeansComputationRuntime`.
 
-use super::KMeansComputationRuntime;
 use super::spec::{KMeansConfig, KMeansResult};
+use super::KMeansComputationRuntime;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
 use crate::projection::eval::algorithm::AlgorithmError;
@@ -47,6 +47,8 @@ impl KMeansStorageRuntime {
                 average_silhouette: 0.0,
                 ran_iterations: 0,
                 restarts: 0,
+                node_count: 0,
+                execution_time: std::time::Duration::default(),
             });
         }
 
@@ -148,7 +150,8 @@ impl KMeansStorageRuntime {
             progress_tracker.log_progress(1);
         }
 
-        let result = computation.compute(&points, config);
+        let mut result = computation.compute(&points, config);
+        result.node_count = node_count;
 
         progress_tracker.end_subtask();
 

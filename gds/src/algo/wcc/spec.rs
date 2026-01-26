@@ -9,6 +9,8 @@ use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::eval::algorithm::AlgorithmError;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WccConfig {
@@ -56,6 +58,60 @@ impl crate::config::ValidatedConfig for WccConfig {
 pub struct WccResult {
     pub components: Vec<u64>,
     pub component_count: usize,
+    pub node_count: usize,
+    pub execution_time: Duration,
+}
+
+/// Aggregated WCC stats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WccStats {
+    pub component_count: usize,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WccMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WccWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for WCC: summary + updated graph store
+#[derive(Debug, Clone)]
+pub struct WccMutateResult {
+    pub summary: WccMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+/// WCC result builder (facade adapter).
+pub struct WccResultBuilder {
+    result: WccResult,
+}
+
+impl WccResultBuilder {
+    pub fn new(result: WccResult) -> Self {
+        Self { result }
+    }
+
+    pub fn stats(&self) -> WccStats {
+        WccStats {
+            component_count: self.result.component_count,
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
+    }
 }
 
 define_algorithm_spec! {
@@ -77,6 +133,8 @@ define_algorithm_spec! {
             .concurrency(parsed_config.concurrency)
             .threshold(parsed_config.threshold);
 
+        let start = std::time::Instant::now();
+
         let mut progress_tracker = TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("wcc".to_string(), graph_store.relationship_count()),
             parsed_config.concurrency,
@@ -95,6 +153,8 @@ define_algorithm_spec! {
         Ok(WccResult {
             components: result.components,
             component_count: result.component_count,
+            node_count: graph_store.node_count(),
+            execution_time: start.elapsed(),
         })
     }
 }

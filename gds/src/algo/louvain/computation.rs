@@ -4,6 +4,7 @@ use crate::algo::modularity_optimization::{
     ModularityOptimizationInput,
 };
 use std::collections::HashMap;
+use std::time::Duration;
 
 pub struct LouvainComputationRuntime {
     max_levels: usize,
@@ -22,7 +23,11 @@ impl LouvainComputationRuntime {
 
     pub fn compute(&mut self, input: &ModularityOptimizationInput) -> LouvainResult {
         if input.node_count == 0 {
-            return LouvainResult { data: Vec::new() };
+            return LouvainResult {
+                data: Vec::new(),
+                node_count: 0,
+                execution_time: Duration::default(),
+            };
         }
 
         let original_node_count = input.node_count;
@@ -46,7 +51,11 @@ impl LouvainComputationRuntime {
                 for i in 0..original_node_count {
                     data[i] = mapping[i] as u64;
                 }
-                return LouvainResult { data };
+                return LouvainResult {
+                    data,
+                    node_count: original_node_count,
+                    execution_time: Duration::default(),
+                };
             }
 
             // Java parity: run modularity optimization for this level.
@@ -82,7 +91,11 @@ impl LouvainComputationRuntime {
         for i in 0..original_node_count {
             data[i] = mapping[i] as u64;
         }
-        LouvainResult { data }
+        LouvainResult {
+            data,
+            node_count: original_node_count,
+            execution_time: Duration::default(),
+        }
     }
 }
 

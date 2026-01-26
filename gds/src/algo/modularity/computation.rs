@@ -1,5 +1,6 @@
 use super::spec::{CommunityModularity, ModularityResult};
 use std::collections::HashMap;
+use std::time::Duration;
 
 pub struct ModularityComputationRuntime {}
 
@@ -29,6 +30,7 @@ impl ModularityComputationRuntime {
                 total_modularity: 0.0,
                 community_count: 0,
                 community_modularities: Vec::new(),
+                execution_time: Duration::default(),
             };
         }
 
@@ -56,6 +58,7 @@ impl ModularityComputationRuntime {
                 total_modularity: 0.0,
                 community_count: 0,
                 community_modularities: Vec::new(),
+                execution_time: Duration::default(),
             };
         }
 
@@ -100,6 +103,7 @@ impl ModularityComputationRuntime {
                         modularity: 0.0,
                     })
                     .collect(),
+                execution_time: Duration::default(),
             };
         }
 
@@ -126,6 +130,7 @@ impl ModularityComputationRuntime {
             total_modularity,
             community_count,
             community_modularities,
+            execution_time: Duration::default(),
         }
     }
 }

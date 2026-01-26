@@ -7,6 +7,8 @@ use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::eval::algorithm::AlgorithmError;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use std::time::Duration;
 
 use super::storage::SccStorageRuntime;
 use super::SccComputationRuntime;
@@ -52,6 +54,8 @@ pub struct SccResult {
     pub components: Vec<u64>,
     pub component_count: usize,
     pub computation_time_ms: u64,
+    pub node_count: usize,
+    pub execution_time: Duration,
 }
 
 impl SccResult {
@@ -60,7 +64,61 @@ impl SccResult {
             components,
             component_count,
             computation_time_ms,
+            node_count: 0,
+            execution_time: Duration::default(),
         }
+    }
+}
+
+/// Aggregated SCC stats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SccStats {
+    pub component_count: usize,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SccMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SccWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for SCC: summary + updated store
+#[derive(Debug, Clone)]
+pub struct SccMutateResult {
+    pub summary: SccMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+/// SCC result builder (facade adapter).
+pub struct SccResultBuilder {
+    result: SccResult,
+}
+
+impl SccResultBuilder {
+    pub fn new(result: SccResult) -> Self {
+        Self { result }
+    }
+
+    pub fn stats(&self) -> SccStats {
+        SccStats {
+            component_count: self.result.component_count,
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
     }
 }
 
@@ -80,6 +138,7 @@ define_algorithm_spec! {
 
         let storage = SccStorageRuntime::new(parsed_config.concurrency);
         let mut computation = SccComputationRuntime::new();
+        let start = std::time::Instant::now();
 
         let mut progress_tracker = TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("scc".to_string(), graph_store.node_count()),
@@ -96,10 +155,13 @@ define_algorithm_spec! {
             )
             .map_err(AlgorithmError::Execution)?;
 
-        Ok(SccResult::new(
+        let mut out = SccResult::new(
             result.components,
             result.component_count,
             result.computation_time_ms,
-        ))
+        );
+        out.node_count = graph_store.node_count();
+        out.execution_time = start.elapsed();
+        Ok(out)
     }
 }

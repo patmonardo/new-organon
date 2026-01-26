@@ -12,6 +12,7 @@ use rand::prelude::*;
 use rand::seq::index::sample;
 use rayon::prelude::*;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 
 const UNASSIGNED: u64 = u64::MAX;
 
@@ -35,6 +36,8 @@ impl KMeansComputationRuntime {
                 average_silhouette: 0.0,
                 ran_iterations: 0,
                 restarts: 0,
+                node_count: 0,
+                execution_time: Duration::default(),
             };
         }
 
@@ -71,6 +74,8 @@ impl KMeansComputationRuntime {
                 average_silhouette: avg_sil,
                 ran_iterations,
                 restarts: 1,
+                node_count: n,
+                execution_time: Duration::default(),
             };
         }
 
@@ -145,6 +150,8 @@ impl KMeansComputationRuntime {
             average_silhouette: avg_sil,
             ran_iterations,
             restarts,
+            node_count: n,
+            execution_time: Duration::default(),
         }
     }
 }

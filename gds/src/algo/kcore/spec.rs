@@ -6,6 +6,7 @@ use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::define_algorithm_spec;
 use crate::projection::eval::algorithm::*;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use super::storage::KCoreStorageRuntime;
@@ -53,6 +54,58 @@ pub struct KCoreResult {
     pub degeneracy: i32,
     pub node_count: usize,
     pub execution_time: Duration,
+}
+
+/// Aggregated k-core stats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct KCoreStats {
+    pub degeneracy: i32,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KCoreMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KCoreWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for KCore: summary + updated store.
+#[derive(Debug, Clone)]
+pub struct KCoreMutateResult {
+    pub summary: KCoreMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+/// KCore result builder (facade adapter).
+pub struct KCoreResultBuilder {
+    result: KCoreResult,
+}
+
+impl KCoreResultBuilder {
+    pub fn new(result: KCoreResult) -> Self {
+        Self { result }
+    }
+
+    pub fn stats(&self) -> KCoreStats {
+        KCoreStats {
+            degeneracy: self.result.degeneracy,
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
+    }
 }
 
 define_algorithm_spec! {

@@ -4,8 +4,8 @@
 //! adjacency once, tracks progress, and hands neighbors to the computation
 //! runtime.
 
-use super::ApproxMaxKCutComputationRuntime;
 use super::spec::{ApproxMaxKCutConfig, ApproxMaxKCutResult};
+use super::ApproxMaxKCutComputationRuntime;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
 use crate::projection::orientation::Orientation;
@@ -39,6 +39,9 @@ impl ApproxMaxKCutStorageRuntime {
             return Ok(ApproxMaxKCutResult {
                 communities: Vec::new(),
                 cut_cost: 0.0,
+                k: config.k,
+                node_count,
+                execution_time: std::time::Duration::default(),
             });
         }
 

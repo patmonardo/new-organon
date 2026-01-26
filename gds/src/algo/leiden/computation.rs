@@ -11,6 +11,7 @@ use crate::concurrency::TerminationFlag;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::time::Duration;
 
 #[derive(Clone, Debug)]
 pub(crate) struct AdjacencyGraph {
@@ -175,12 +176,15 @@ impl LeidenComputationRuntime {
 
     pub fn into_result(result: LeidenComputationResult) -> LeidenResult {
         let community_count = unique_count(&result.communities) as u64;
+        let node_count = result.communities.len();
         LeidenResult {
             communities: result.communities,
             community_count,
             modularity: result.modularity,
             levels: result.levels,
             converged: result.converged,
+            node_count,
+            execution_time: Duration::default(),
         }
     }
 }

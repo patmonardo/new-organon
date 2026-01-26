@@ -32,6 +32,8 @@ impl TriangleStorageRuntime {
             return Ok(TriangleResult {
                 local_triangles: Vec::new(),
                 global_triangles: 0,
+                node_count: 0,
+                execution_time: std::time::Duration::default(),
             });
         }
 

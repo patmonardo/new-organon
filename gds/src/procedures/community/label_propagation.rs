@@ -9,13 +9,16 @@
 //! - `seed_property`: optional seed labels property.
 
 use crate::algo::label_propagation::computation::LabelPropComputationRuntime;
-use crate::algo::label_propagation::spec::{LabelPropConfig, LabelPropResult};
+use crate::algo::label_propagation::spec::{
+    LabelPropConfig, LabelPropMutateResult, LabelPropMutationSummary, LabelPropResult,
+    LabelPropResultBuilder, LabelPropStats,
+};
 use crate::algo::label_propagation::storage::LabelPropStorageRuntime;
 use crate::collections::backends::vec::VecLong;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -33,62 +36,75 @@ pub struct LabelPropagationRow {
     pub label_id: u64,
 }
 
-/// Aggregated label propagation stats.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
-pub struct LabelPropagationStats {
-    pub did_converge: bool,
-    pub ran_iterations: u64,
-    pub community_count: usize,
-    pub execution_time_ms: u64,
-}
-
 /// Label Propagation algorithm facade.
 #[derive(Clone)]
 pub struct LabelPropagationFacade {
     graph_store: Arc<DefaultGraphStore>,
-    concurrency: usize,
-    max_iterations: u64,
-    node_weight_property: Option<String>,
-    seed_property: Option<String>,
+    config: LabelPropConfig,
     task_registry: Option<TaskRegistry>,
-}
-
-/// Mutate result for Label Propagation
-#[derive(Debug, Clone)]
-pub struct LabelPropagationMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl LabelPropagationFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            concurrency: 4,
-            max_iterations: 10,
-            node_weight_property: None,
-            seed_property: None,
+            config: LabelPropConfig::default(),
             task_registry: None,
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: LabelPropConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: LabelPropConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: LabelPropConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
     pub fn max_iterations(mut self, max_iterations: u64) -> Self {
-        self.max_iterations = max_iterations;
+        self.config.max_iterations = max_iterations;
         self
     }
 
     pub fn node_weight_property(mut self, property: &str) -> Self {
-        self.node_weight_property = Some(property.to_string());
+        self.config.node_weight_property = Some(property.to_string());
         self
     }
 
     pub fn seed_property(mut self, property: &str) -> Self {
-        self.seed_property = Some(property.to_string());
+        self.config.seed_property = Some(property.to_string());
         self
     }
 
@@ -98,47 +114,31 @@ impl LabelPropagationFacade {
     }
 
     fn validate(&self) -> Result<()> {
-        ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
-        ConfigValidator::in_range(
-            self.max_iterations as f64,
-            1.0,
-            1_000_000_000.0,
-            "max_iterations",
-        )?;
-        if let Some(prop) = &self.node_weight_property {
-            ConfigValidator::non_empty_string(prop, "node_weight_property")?;
-        }
-        if let Some(prop) = &self.seed_property {
-            ConfigValidator::non_empty_string(prop, "seed_property")?;
-        }
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
-    fn compute(&self) -> Result<(LabelPropResult, u64)> {
+    fn compute(&self) -> Result<LabelPropResult> {
         self.validate()?;
         let start = Instant::now();
 
-        let config = LabelPropConfig {
-            concurrency: self.concurrency,
-            max_iterations: self.max_iterations,
-            node_weight_property: self.node_weight_property.clone(),
-            seed_property: self.seed_property.clone(),
-        };
+        let config = self.config.clone();
 
         let storage = LabelPropStorageRuntime::new(self.graph_store.as_ref())?;
         let node_count = storage.node_count();
 
         let base_task = Tasks::leaf_with_volume(
             "label_propagation".to_string(),
-            node_count.saturating_add(self.max_iterations as usize),
+            node_count.saturating_add(self.config.max_iterations as usize),
         );
         let mut progress_tracker =
-            TaskProgressTracker::with_concurrency(base_task, self.concurrency);
+            TaskProgressTracker::with_concurrency(base_task, self.config.concurrency);
 
         let termination_flag = TerminationFlag::default();
 
-        let runtime = LabelPropComputationRuntime::new(node_count, self.max_iterations)
-            .concurrency(self.concurrency);
+        let runtime = LabelPropComputationRuntime::new(node_count, self.config.max_iterations)
+            .concurrency(self.config.concurrency);
 
         let result = storage.compute_label_propagation(
             runtime,
@@ -147,24 +147,18 @@ impl LabelPropagationFacade {
             &termination_flag,
         )?;
 
-        let elapsed = start.elapsed();
-        let elapsed_ms = elapsed.as_millis() as u64;
-
-        Ok((
-            LabelPropResult {
-                labels: result.labels,
-                did_converge: result.did_converge,
-                ran_iterations: result.ran_iterations,
-                node_count,
-                execution_time: elapsed,
-            },
-            elapsed_ms,
-        ))
+        Ok(LabelPropResult {
+            labels: result.labels,
+            did_converge: result.did_converge,
+            ran_iterations: result.ran_iterations,
+            node_count,
+            execution_time: start.elapsed(),
+        })
     }
 
     /// Stream mode: yields `(node_id, label_id)` for every node.
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = LabelPropagationRow>>> {
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
         let iter = result
             .labels
             .into_iter()
@@ -177,30 +171,17 @@ impl LabelPropagationFacade {
     }
 
     /// Stats mode: yields convergence info + community count.
-    pub fn stats(&self) -> Result<LabelPropagationStats> {
-        let (result, elapsed_ms) = self.compute()?;
-        let community_count = result
-            .labels
-            .iter()
-            .copied()
-            .collect::<HashSet<u64>>()
-            .len();
-
-        Ok(LabelPropagationStats {
-            did_converge: result.did_converge,
-            ran_iterations: result.ran_iterations,
-            community_count,
-            execution_time_ms: elapsed_ms,
-        })
+    pub fn stats(&self) -> Result<LabelPropStats> {
+        let result = self.compute()?;
+        Ok(LabelPropResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: writes labels back to the graph store.
-    pub fn mutate(self, property_name: &str) -> Result<LabelPropagationMutateResult> {
+    pub fn mutate(self, property_name: &str) -> Result<LabelPropMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        let start = Instant::now();
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
 
         let node_count = self.graph_store.node_count();
         let nodes_updated = node_count as u64;
@@ -220,10 +201,13 @@ impl LabelPropagationFacade {
                 ))
             })?;
 
-        let execution_time = start.elapsed();
-        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+        let summary = LabelPropMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.execution_time.as_millis() as u64,
+        };
 
-        Ok(LabelPropagationMutateResult {
+        Ok(LabelPropMutateResult {
             summary,
             updated_store: Arc::new(new_store),
         })
@@ -260,7 +244,7 @@ impl LabelPropagationFacade {
 
     /// Full result: returns the procedure-level Label Propagation result.
     pub fn run(&self) -> Result<LabelPropResult> {
-        let (result, _elapsed) = self.compute()?;
+        let result = self.compute()?;
         Ok(result)
     }
 }

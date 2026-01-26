@@ -4,13 +4,15 @@
 //! to expected edges if the network were random.
 
 use crate::algo::modularity::{
-    ModularityComputationRuntime, ModularityResult, ModularityStorageRuntime,
+    ModularityComputationRuntime, ModularityConfig, ModularityMutateResult,
+    ModularityMutationSummary, ModularityResult, ModularityResultBuilder, ModularityStats,
+    ModularityStorageRuntime,
 };
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -31,37 +33,59 @@ pub struct ModularityRow {
     pub modularity: f64,
 }
 
-/// Statistics for modularity computation
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct ModularityStats {
-    /// Total modularity score across all communities
-    pub total_modularity: f64,
-    /// Number of communities evaluated
-    pub community_count: usize,
-}
-
 /// Modularity algorithm facade
 #[derive(Clone)]
 pub struct ModularityFacade {
     graph_store: Arc<DefaultGraphStore>,
-    community_property: String,
+    config: ModularityConfig,
     task_registry: Option<TaskRegistry>,
-}
-
-/// Mutate result for Modularity: summary + updated store
-#[derive(Debug, Clone)]
-pub struct ModularityMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
 }
 
 impl ModularityFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>, community_property: String) -> Self {
         Self {
             graph_store,
-            community_property,
+            config: ModularityConfig {
+                community_property,
+                ..ModularityConfig::default()
+            },
             task_registry: None,
         }
+    }
+
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: ModularityConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: ModularityConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: ModularityConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
     }
 
     pub fn task_registry(mut self, task_registry: TaskRegistry) -> Self {
@@ -70,16 +94,14 @@ impl ModularityFacade {
     }
 
     fn validate(&self) -> Result<()> {
-        if self.community_property.is_empty() {
-            return Err(AlgorithmError::Execution(
-                "community_property cannot be empty".to_string(),
-            ));
-        }
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
     fn compute(&self) -> Result<ModularityResult> {
         self.validate()?;
+        let start = Instant::now();
 
         let storage = ModularityStorageRuntime::new(self.graph_store.as_ref())?;
         let computation = ModularityComputationRuntime::new();
@@ -90,12 +112,17 @@ impl ModularityFacade {
             storage.node_count(),
         ));
 
-        storage.compute_modularity(
+        let result = storage.compute_modularity(
             &computation,
-            &self.community_property,
+            &self.config,
             &mut progress_tracker,
             &termination_flag,
-        )
+        )?;
+
+        Ok(ModularityResult {
+            execution_time: start.elapsed(),
+            ..result
+        })
     }
 
     /// Stream mode: yields modularity per community
@@ -120,11 +147,7 @@ impl ModularityFacade {
     /// Stats mode: returns aggregated statistics
     pub fn stats(&self) -> Result<ModularityStats> {
         let result = self.compute()?;
-
-        Ok(ModularityStats {
-            total_modularity: result.total_modularity,
-            community_count: result.community_modularities.len(),
-        })
+        Ok(ModularityResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: writes modularity scores back to the graph store.
@@ -132,7 +155,6 @@ impl ModularityFacade {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        let start = Instant::now();
         let result = self.compute()?;
 
         let node_count = self.graph_store.node_count();
@@ -140,7 +162,7 @@ impl ModularityFacade {
 
         let community_props = self
             .graph_store
-            .node_property_values(&self.community_property)
+            .node_property_values(&self.config.community_property)
             .map_err(|e| {
                 AlgorithmError::Execution(format!(
                     "Modularity mutate failed to load community property: {e}"
@@ -184,8 +206,11 @@ impl ModularityFacade {
                 AlgorithmError::Execution(format!("Modularity mutate failed to add property: {e}"))
             })?;
 
-        let summary =
-            MutationResult::new(nodes_updated, property_name.to_string(), start.elapsed());
+        let summary = ModularityMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.execution_time.as_millis() as u64,
+        };
 
         Ok(ModularityMutateResult {
             summary,

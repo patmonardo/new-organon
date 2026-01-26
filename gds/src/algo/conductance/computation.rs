@@ -6,6 +6,7 @@ use crate::types::graph::Graph;
 use crate::types::properties::node::NodePropertyValues;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Default)]
 pub struct ConductanceComputationRuntime {}
@@ -185,6 +186,9 @@ impl ConductanceComputationRuntime {
         ConductanceResult {
             community_conductances,
             global_average_conductance,
+            community_count: count,
+            node_count: 0,
+            execution_time: Duration::default(),
         }
     }
 }

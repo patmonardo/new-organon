@@ -3,6 +3,7 @@
 use super::spec::{ApproxMaxKCutConfig, ApproxMaxKCutResult};
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
+use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct ApproxMaxKCutComputationRuntime {
@@ -22,6 +23,9 @@ impl ApproxMaxKCutComputationRuntime {
             return ApproxMaxKCutResult {
                 communities: Vec::new(),
                 cut_cost: 0.0,
+                k: self.config.k,
+                node_count,
+                execution_time: Duration::default(),
             };
         }
 
@@ -87,6 +91,9 @@ impl ApproxMaxKCutComputationRuntime {
         ApproxMaxKCutResult {
             communities: best_communities,
             cut_cost: best_cost.max(0.0),
+            k: self.config.k,
+            node_count,
+            execution_time: Duration::default(),
         }
     }
 }
