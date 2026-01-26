@@ -68,6 +68,36 @@ pub struct ScalePropertiesResult {
     pub scaler_statistics: HashMap<String, HashMap<String, Vec<f64>>>,
 }
 
+/// Stream row for ScaleProperties.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScalePropertiesStreamRow {
+    pub node_id: u64,
+    pub values: Vec<f64>,
+}
+
+/// Statistics for ScaleProperties computation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScalePropertiesStats {
+    pub scaler: String,
+    pub stats: HashMap<String, HashMap<String, Vec<f64>>>,
+}
+
+/// Summary of a mutate operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScalePropertiesMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScalePropertiesWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
 /// Catalog marker for executor wiring.
 pub struct ScalePropertiesAlgorithmSpec {
     graph_name: String,

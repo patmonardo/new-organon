@@ -1,47 +1,24 @@
+use crate::algo::algorithms::similarity::build_similarity_relationship_store;
 use crate::algo::similarity::node_similarity::{
     NodeSimilarityComputationRuntime, NodeSimilarityConfig, NodeSimilarityMetric,
-    NodeSimilarityResult, NodeSimilarityStorageRuntime,
+    NodeSimilarityMutateResult, NodeSimilarityResult, NodeSimilarityResultBuilder,
+    NodeSimilarityStats, NodeSimilarityStorageRuntime,
 };
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::similarity::build_similarity_relationship_store;
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Additional imports for progress tracking and similarity stats
-use crate::algo::algorithms::result::similarity::similarity_stats;
 use crate::core::utils::progress::TaskProgressTracker;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NodeSimilarityStats {
-    #[serde(rename = "nodesCompared")]
-    pub nodes_compared: u64,
-    #[serde(rename = "similarityPairs")]
-    pub similarity_pairs: u64,
-    #[serde(rename = "similarityDistribution")]
-    pub similarity_distribution: HashMap<String, f64>,
-    #[serde(rename = "computeMillis")]
-    pub compute_millis: u64,
-    pub success: bool,
-}
-
-/// Mutate result for Node Similarity: summary + stats + updated store
-#[derive(Debug, Clone)]
-pub struct NodeSimilarityMutateResult {
-    pub summary: MutationResult,
-    pub stats: NodeSimilarityStats,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
-pub struct NodeSimilarityBuilder {
+pub struct NodeSimilarityFacade {
     graph_store: Arc<DefaultGraphStore>,
     metric: NodeSimilarityMetric,
     similarity_cutoff: f64,
@@ -51,7 +28,7 @@ pub struct NodeSimilarityBuilder {
     weight_property: Option<String>,
 }
 
-impl NodeSimilarityBuilder {
+impl NodeSimilarityFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
@@ -117,7 +94,7 @@ impl NodeSimilarityBuilder {
     }
 
     // Computation helper
-    fn compute_results(&self) -> Result<Vec<NodeSimilarityResult>> {
+    fn compute_results(&self) -> Result<(Vec<NodeSimilarityResult>, std::time::Duration)> {
         self.validate()?;
         // We need to access the graph from the store.
         // Assuming Orientation::Natural for Similarity.
@@ -158,26 +135,30 @@ impl NodeSimilarityBuilder {
         let storage = NodeSimilarityStorageRuntime::new(config.concurrency);
         let computation = NodeSimilarityComputationRuntime::new();
 
+        let start = std::time::Instant::now();
         let results = storage.compute(&computation, graph.as_ref(), &config);
 
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();
 
         // Convert to public result type
-        Ok(results
-            .into_iter()
-            .map(NodeSimilarityResult::from)
-            .collect())
+        Ok((
+            results
+                .into_iter()
+                .map(NodeSimilarityResult::from)
+                .collect(),
+            start.elapsed(),
+        ))
     }
 
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = NodeSimilarityResult>>> {
-        let results = self.compute_results()?;
+        let (results, _elapsed) = self.compute_results()?;
         Ok(Box::new(results.into_iter()))
     }
 
     pub fn stats(self) -> Result<NodeSimilarityStats> {
-        let results = self.compute_results()?;
-        Ok(build_stats(&results))
+        let (results, _elapsed) = self.compute_results()?;
+        Ok(NodeSimilarityResultBuilder::new(&results).stats())
     }
 
     pub fn mutate(self, property: &str) -> Result<NodeSimilarityMutateResult> {
@@ -186,8 +167,9 @@ impl NodeSimilarityBuilder {
 
         let graph_store = Arc::clone(&self.graph_store);
         let start = std::time::Instant::now();
-        let results = self.compute_results()?;
-        let stats = build_stats(&results);
+        let (results, _elapsed) = self.compute_results()?;
+        let builder = NodeSimilarityResultBuilder::new(&results);
+        let stats = builder.stats();
 
         let pairs: Vec<(u64, u64, f64)> = results
             .iter()
@@ -198,8 +180,7 @@ impl NodeSimilarityBuilder {
             build_similarity_relationship_store(graph_store.as_ref(), property, &pairs)?;
 
         let relationships_updated = graph_store.relationship_count() as u64;
-        let summary =
-            MutationResult::new(relationships_updated, property.to_string(), start.elapsed());
+        let summary = builder.mutation_summary(property, relationships_updated, start.elapsed());
 
         Ok(NodeSimilarityMutateResult {
             summary,
@@ -243,27 +224,6 @@ impl NodeSimilarityBuilder {
     }
 }
 
-fn build_stats(results: &[NodeSimilarityResult]) -> NodeSimilarityStats {
-    let mut sources = HashSet::new();
-    let tuples: Vec<(u64, u64, f64)> = results
-        .iter()
-        .map(|r| {
-            sources.insert(r.source);
-            (r.source, r.target, r.similarity)
-        })
-        .collect();
-
-    let stats = similarity_stats(|| tuples.into_iter(), true);
-
-    NodeSimilarityStats {
-        nodes_compared: sources.len() as u64,
-        similarity_pairs: results.len() as u64,
-        similarity_distribution: stats.summary(),
-        compute_millis: stats.compute_millis,
-        success: stats.success,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -279,7 +239,7 @@ mod tests {
         };
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
 
-        let result = NodeSimilarityBuilder::new(Arc::clone(&store))
+        let result = NodeSimilarityFacade::new(Arc::clone(&store))
             .similarity_cutoff(0.0)
             .top_k(3)
             .concurrency(1)

@@ -1,4 +1,5 @@
 use crate::algo::similarity::filtered_knn::FilteredKnnResultRow;
+use crate::algo::similarity::filtered_knn::FilteredKnnStats;
 use crate::algo::similarity::knn::metrics::SimilarityMetric;
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
@@ -10,7 +11,7 @@ use crate::applications::algorithms::similarity::{
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::procedures::similarity::filtered_knn::{FilteredKnnBuilder, FilteredKnnStats};
+use crate::procedures::similarity::filtered_knn::FilteredKnnFacade;
 use crate::projection::NodeLabel;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
@@ -195,7 +196,9 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
             }
         }
         Mode::Stats => {
-            let task = Tasks::leaf("filtered_knn::stats".to_string()).base().clone();
+            let task = Tasks::leaf("filtered_knn::stats".to_string())
+                .base()
+                .clone();
 
             let request = parsed.clone();
             let compute = move |gr: &GraphResources,
@@ -331,10 +334,10 @@ pub fn handle_filtered_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> V
 fn configure_builder(
     graph_resources: &GraphResources,
     request: &FilteredKnnRequest,
-) -> FilteredKnnBuilder {
+) -> FilteredKnnFacade {
     let primary = &request.node_properties[0];
     let mut builder =
-        FilteredKnnBuilder::new(Arc::clone(graph_resources.store()), primary.name.clone())
+        FilteredKnnFacade::new(Arc::clone(graph_resources.store()), primary.name.clone())
             .k(request.top_k)
             .similarity_cutoff(request.similarity_cutoff)
             .metric(primary.metric)

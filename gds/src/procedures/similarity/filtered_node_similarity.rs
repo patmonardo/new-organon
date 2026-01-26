@@ -1,18 +1,20 @@
-use crate::algo::algorithms::result::similarity::similarity_stats;
+use crate::algo::algorithms::similarity::build_similarity_relationship_store;
 use crate::algo::similarity::filtered_node_similarity::compute_filtered_node_similarity;
 use crate::algo::similarity::node_similarity::{
     NodeSimilarityConfig, NodeSimilarityMetric, NodeSimilarityResult,
 };
+use crate::algo::similarity::filtered_node_similarity::{
+    FilteredNodeSimilarityMutateResult, FilteredNodeSimilarityResultBuilder,
+    FilteredNodeSimilarityStats,
+};
 use crate::core::utils::progress::{ProgressTracker, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::similarity::build_similarity_relationship_store;
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::{NodeLabel, RelationshipType};
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -20,28 +22,8 @@ use std::sync::Arc;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::types::graph::id_map::MappedNodeId;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FilteredNodeSimilarityStats {
-    #[serde(rename = "nodesCompared")]
-    pub nodes_compared: u64,
-    #[serde(rename = "similarityPairs")]
-    pub similarity_pairs: u64,
-    #[serde(rename = "similarityDistribution")]
-    pub similarity_distribution: HashMap<String, f64>,
-    #[serde(rename = "computeMillis")]
-    pub compute_millis: u64,
-    pub success: bool,
-}
 
-/// Mutate result for Filtered Node Similarity: summary + stats + updated store
-#[derive(Debug, Clone)]
-pub struct FilteredNodeSimilarityMutateResult {
-    pub summary: MutationResult,
-    pub stats: FilteredNodeSimilarityStats,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
-pub struct FilteredNodeSimilarityBuilder {
+pub struct FilteredNodeSimilarityFacade {
     graph_store: Arc<DefaultGraphStore>,
     metric: NodeSimilarityMetric,
     similarity_cutoff: f64,
@@ -53,7 +35,7 @@ pub struct FilteredNodeSimilarityBuilder {
     target_node_label: Option<NodeLabel>,
 }
 
-impl FilteredNodeSimilarityBuilder {
+impl FilteredNodeSimilarityFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
@@ -236,7 +218,7 @@ impl FilteredNodeSimilarityBuilder {
 
     pub fn stats(self) -> Result<FilteredNodeSimilarityStats> {
         let results = self.compute_results()?;
-        Ok(build_stats(&results))
+        Ok(FilteredNodeSimilarityResultBuilder::new(&results).stats())
     }
 
     pub fn mutate(self, property: &str) -> Result<FilteredNodeSimilarityMutateResult> {
@@ -246,7 +228,8 @@ impl FilteredNodeSimilarityBuilder {
         let graph_store = Arc::clone(&self.graph_store);
         let start = std::time::Instant::now();
         let results = self.compute_results()?;
-        let stats = build_stats(&results);
+        let builder = FilteredNodeSimilarityResultBuilder::new(&results);
+        let stats = builder.stats();
 
         let pairs: Vec<(u64, u64, f64)> = results
             .iter()
@@ -257,8 +240,7 @@ impl FilteredNodeSimilarityBuilder {
             build_similarity_relationship_store(graph_store.as_ref(), property, &pairs)?;
 
         let relationships_updated = graph_store.relationship_count() as u64;
-        let summary =
-            MutationResult::new(relationships_updated, property.to_string(), start.elapsed());
+        let summary = builder.mutation_summary(property, relationships_updated, start.elapsed());
 
         Ok(FilteredNodeSimilarityMutateResult {
             summary,
@@ -302,26 +284,6 @@ impl FilteredNodeSimilarityBuilder {
     }
 }
 
-fn build_stats(results: &[NodeSimilarityResult]) -> FilteredNodeSimilarityStats {
-    let mut sources = HashSet::new();
-    let tuples: Vec<(u64, u64, f64)> = results
-        .iter()
-        .map(|r| {
-            sources.insert(r.source);
-            (r.source, r.target, r.similarity)
-        })
-        .collect();
-
-    let stats = similarity_stats(|| tuples.into_iter(), true);
-
-    FilteredNodeSimilarityStats {
-        nodes_compared: sources.len() as u64,
-        similarity_pairs: results.len() as u64,
-        similarity_distribution: stats.summary(),
-        compute_millis: stats.compute_millis,
-        success: stats.success,
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -384,7 +346,7 @@ mod tests {
             topologies,
         ));
 
-        let results: Vec<_> = FilteredNodeSimilarityBuilder::new(Arc::clone(&store))
+        let results: Vec<_> = FilteredNodeSimilarityFacade::new(Arc::clone(&store))
             .source_node_label(label_a.clone())
             .target_node_label(label_a)
             .similarity_cutoff(0.0)
@@ -410,7 +372,7 @@ mod tests {
         };
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
 
-        let result = FilteredNodeSimilarityBuilder::new(Arc::clone(&store))
+        let result = FilteredNodeSimilarityFacade::new(Arc::clone(&store))
             .similarity_cutoff(0.0)
             .top_k(3)
             .concurrency(1)

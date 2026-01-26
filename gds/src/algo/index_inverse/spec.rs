@@ -38,6 +38,14 @@ pub struct IndexInverseResult {
     pub graph_store: DefaultGraphStore,
 }
 
+/// Statistics for IndexInverse computation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IndexInverseStats {
+    pub graph_name: String,
+    pub node_count: u64,
+    pub relationship_count: u64,
+}
+
 /// Catalog marker for executor wiring.
 pub struct IndexInverseAlgorithmSpec {
     graph_name: String,

@@ -6,21 +6,13 @@
 //! new graph store with collapsed edges added as a relationship type.
 
 use crate::algo::walking::{
-    CollapsePathComputationRuntime, CollapsePathConfig, CollapsePathStorageRuntime,
+    CollapsePathComputationRuntime, CollapsePathConfig, CollapsePathStats,
+    CollapsePathStorageRuntime,
 };
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use serde::Serialize;
 use std::sync::Arc;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct CollapsePathStats {
-    pub graph_name: String,
-    pub mutate_relationship_type: String,
-    pub node_count: u64,
-    pub relationship_count: u64,
-}
 
 pub struct CollapsePathFacade {
     graph_store: Arc<DefaultGraphStore>,

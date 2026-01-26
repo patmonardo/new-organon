@@ -4,38 +4,24 @@
 //! and exposes stream/stats surfaces. Mutate/write are intentionally unimplemented.
 
 use crate::algo::scale_properties::{
-    ScalePropertiesComputationRuntime, ScalePropertiesConfig, ScalePropertiesResult,
-    ScalePropertiesScaler, ScalePropertiesStorageRuntime,
+    ScalePropertiesComputationRuntime, ScalePropertiesConfig, ScalePropertiesMutationSummary,
+    ScalePropertiesResult, ScalePropertiesScaler, ScalePropertiesStats,
+    ScalePropertiesStorageRuntime, ScalePropertiesStreamRow, ScalePropertiesWriteSummary,
 };
 use crate::collections::backends::vec::VecDoubleArray;
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::NodeLabel;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::DefaultDoubleArrayNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;
-use serde::Serialize;
-use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::Arc;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ScalePropertiesStreamRow {
-    pub node_id: u64,
-    pub values: Vec<f64>,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ScalePropertiesStats {
-    pub scaler: String,
-    pub stats: HashMap<String, HashMap<String, Vec<f64>>>,
-}
-
 #[derive(Debug, Clone)]
 pub struct ScalePropertiesMutateResult {
-    pub summary: MutationResult,
+    pub summary: ScalePropertiesMutationSummary,
     pub updated_store: Arc<DefaultGraphStore>,
 }
 
@@ -161,11 +147,11 @@ impl ScalePropertiesFacade {
             })?;
 
         let nodes_updated = node_count as u64;
-        let summary = MutationResult::new(
+        let summary = ScalePropertiesMutationSummary {
             nodes_updated,
-            property_name.to_string(),
-            start_time.elapsed(),
-        );
+            property_name: property_name.to_string(),
+            execution_time_ms: start_time.elapsed().as_millis() as u64,
+        };
         Ok(ScalePropertiesMutateResult {
             summary,
             updated_store: Arc::new(new_store),
@@ -180,10 +166,15 @@ impl ScalePropertiesFacade {
         let result = self.compute()?;
         let nodes_written = result.scaled_properties.len() as u64;
 
-        Ok(WriteResult::new(
+        let summary = ScalePropertiesWriteSummary {
             nodes_written,
-            property_name.to_string(),
-            start_time.elapsed(),
+            property_name: property_name.to_string(),
+            execution_time_ms: start_time.elapsed().as_millis() as u64,
+        };
+        Ok(WriteResult::new(
+            summary.nodes_written,
+            summary.property_name,
+            std::time::Duration::from_millis(summary.execution_time_ms),
         ))
     }
 }

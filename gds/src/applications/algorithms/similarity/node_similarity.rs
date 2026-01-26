@@ -1,3 +1,4 @@
+use crate::algo::similarity::node_similarity::NodeSimilarityStats;
 use crate::algo::similarity::node_similarity::{NodeSimilarityMetric, NodeSimilarityResult};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
@@ -9,7 +10,7 @@ use crate::applications::algorithms::similarity::{
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::procedures::similarity::{NodeSimilarityBuilder, NodeSimilarityStats};
+use crate::procedures::similarity::NodeSimilarityFacade;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -49,9 +50,9 @@ pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -
         .map(|s| s.to_string());
 
     let graph_resources = match CatalogLoader::load_or_err(catalog.as_ref(), &common.graph_name) {
-            Ok(r) => r,
-            Err(e) => return err(op, "GRAPH_NOT_FOUND", &e.to_string()),
-        };
+        Ok(r) => r,
+        Err(e) => return err(op, "GRAPH_NOT_FOUND", &e.to_string()),
+    };
 
     let deps = RequestScopedDependencies::new(
         JobId::new(),
@@ -64,14 +65,16 @@ pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -
 
     match common.mode {
         Mode::Stream => {
-            let task = Tasks::leaf("node_similarity::stream".to_string()).base().clone();
+            let task = Tasks::leaf("node_similarity::stream".to_string())
+                .base()
+                .clone();
 
             let weight_property = weight_property.clone();
             let compute = move |gr: &GraphResources,
                                 _tracker: &mut dyn ProgressTracker,
                                 _termination: &TerminationFlag|
                   -> Result<Option<Vec<NodeSimilarityResult>>, String> {
-                let mut builder = NodeSimilarityBuilder::new(Arc::clone(gr.store()))
+                let mut builder = NodeSimilarityFacade::new(Arc::clone(gr.store()))
                     .metric(metric)
                     .similarity_cutoff(similarity_cutoff)
                     .top_k(top_k)
@@ -114,14 +117,16 @@ pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -
             }
         }
         Mode::Stats => {
-            let task = Tasks::leaf("node_similarity::stats".to_string()).base().clone();
+            let task = Tasks::leaf("node_similarity::stats".to_string())
+                .base()
+                .clone();
 
             let weight_property = weight_property.clone();
             let compute = move |gr: &GraphResources,
                                 _tracker: &mut dyn ProgressTracker,
                                 _termination: &TerminationFlag|
                   -> Result<Option<NodeSimilarityStats>, String> {
-                let mut builder = NodeSimilarityBuilder::new(Arc::clone(gr.store()))
+                let mut builder = NodeSimilarityFacade::new(Arc::clone(gr.store()))
                     .metric(metric)
                     .similarity_cutoff(similarity_cutoff)
                     .top_k(top_k)
@@ -165,7 +170,7 @@ pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -
         }
         Mode::Estimate => match common.estimate_submode.as_deref() {
             Some("memory") | None => {
-                let mut builder = NodeSimilarityBuilder::new(Arc::clone(graph_resources.store()))
+                let mut builder = NodeSimilarityFacade::new(Arc::clone(graph_resources.store()))
                     .metric(metric)
                     .similarity_cutoff(similarity_cutoff)
                     .top_k(top_k)
@@ -207,7 +212,7 @@ pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -
                 }
             };
 
-            let mut builder = NodeSimilarityBuilder::new(Arc::clone(graph_resources.store()))
+            let mut builder = NodeSimilarityFacade::new(Arc::clone(graph_resources.store()))
                 .metric(metric)
                 .similarity_cutoff(similarity_cutoff)
                 .top_k(top_k)
@@ -256,7 +261,7 @@ pub fn handle_node_similarity(request: &Value, catalog: Arc<dyn GraphCatalog>) -
                 }
             };
 
-            let mut builder = NodeSimilarityBuilder::new(Arc::clone(graph_resources.store()))
+            let mut builder = NodeSimilarityFacade::new(Arc::clone(graph_resources.store()))
                 .metric(metric)
                 .similarity_cutoff(similarity_cutoff)
                 .top_k(top_k)

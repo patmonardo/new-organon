@@ -1,6 +1,7 @@
 //! Indirect Exposure specification.
 //! Translation source: `org.neo4j.gds.indirectExposure.IndirectExposureConfig`.
 
+use crate::config::validation::ConfigError;
 use serde::{Deserialize, Serialize};
 
 /// Configuration for indirect exposure.
@@ -24,6 +25,36 @@ impl Default for IndirectExposureConfig {
             max_iterations: 20,
             concurrency: 4,
         }
+    }
+}
+
+impl IndirectExposureConfig {
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.sanctioned_property.trim().is_empty() {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "sanctioned_property".to_string(),
+                reason: "sanctioned_property must be provided".to_string(),
+            });
+        }
+        if self.max_iterations == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "max_iterations".to_string(),
+                reason: "max_iterations must be greater than 0".to_string(),
+            });
+        }
+        if self.concurrency == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be greater than 0".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for IndirectExposureConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        IndirectExposureConfig::validate(self)
     }
 }
 

@@ -1,3 +1,4 @@
+use crate::algo::similarity::knn::KnnStats;
 use crate::algo::similarity::knn::{metrics::SimilarityMetric, KnnResultRow};
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
@@ -9,7 +10,7 @@ use crate::applications::algorithms::similarity::{
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::procedures::similarity::knn::{KnnBuilder, KnnStats};
+use crate::procedures::similarity::knn::KnnFacade;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -91,13 +92,17 @@ pub fn handle_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
     }
 
     if node_properties.is_empty() {
-        return err(op, "INVALID_REQUEST", "nodeProperties array cannot be empty");
+        return err(
+            op,
+            "INVALID_REQUEST",
+            "nodeProperties array cannot be empty",
+        );
     }
 
     let graph_resources = match CatalogLoader::load_or_err(catalog.as_ref(), &common.graph_name) {
-            Ok(r) => r,
-            Err(e) => return err(op, "GRAPH_NOT_FOUND", &e.to_string()),
-        };
+        Ok(r) => r,
+        Err(e) => return err(op, "GRAPH_NOT_FOUND", &e.to_string()),
+    };
 
     let deps = RequestScopedDependencies::new(
         JobId::new(),
@@ -122,7 +127,7 @@ pub fn handle_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                     .expect("node_properties empty; validated earlier")
                     .clone();
 
-                let mut builder = KnnBuilder::new(Arc::clone(gr.store()), primary_name)
+                let mut builder = KnnFacade::new(Arc::clone(gr.store()), primary_name)
                     .k(top_k)
                     .similarity_cutoff(similarity_cutoff)
                     .metric(primary_metric)
@@ -150,8 +155,13 @@ pub fn handle_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 },
             );
 
-            match convenience.process_stats(&graph_resources, common.concurrency, task, compute, builder)
-            {
+            match convenience.process_stats(
+                &graph_resources,
+                common.concurrency,
+                task,
+                compute,
+                builder,
+            ) {
                 Ok(v) => v,
                 Err(e) => err(op, "EXECUTION_ERROR", &format!("KNN stream failed: {e}")),
             }
@@ -169,7 +179,7 @@ pub fn handle_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                     .expect("node_properties empty; validated earlier")
                     .clone();
 
-                let mut builder = KnnBuilder::new(Arc::clone(gr.store()), primary_name)
+                let mut builder = KnnFacade::new(Arc::clone(gr.store()), primary_name)
                     .k(top_k)
                     .similarity_cutoff(similarity_cutoff)
                     .metric(primary_metric)
@@ -185,15 +195,16 @@ pub fn handle_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 Ok(Some(stats))
             };
 
-            let builder = FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<KnnStats>, timings| {
-                json!({
-                    "ok": true,
-                    "op": op,
-                    "mode": "stats",
-                    "data": stats,
-                    "timings": timings_json(timings)
-                })
-            });
+            let builder =
+                FnStatsResultBuilder(|_gr: &GraphResources, stats: Option<KnnStats>, timings| {
+                    json!({
+                        "ok": true,
+                        "op": op,
+                        "mode": "stats",
+                        "data": stats,
+                        "timings": timings_json(timings)
+                    })
+                });
 
             match convenience.process_stats(
                 &graph_resources,
@@ -213,7 +224,7 @@ pub fn handle_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                     .expect("node_properties empty; validated earlier")
                     .clone();
 
-                let mut builder = KnnBuilder::new(Arc::clone(graph_resources.store()), primary_name)
+                let mut builder = KnnFacade::new(Arc::clone(graph_resources.store()), primary_name)
                     .k(top_k)
                     .similarity_cutoff(similarity_cutoff)
                     .metric(primary_metric)
@@ -261,7 +272,7 @@ pub fn handle_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 .expect("node_properties empty; validated earlier")
                 .clone();
 
-            let mut builder = KnnBuilder::new(Arc::clone(graph_resources.store()), primary_name)
+            let mut builder = KnnFacade::new(Arc::clone(graph_resources.store()), primary_name)
                 .k(top_k)
                 .similarity_cutoff(similarity_cutoff)
                 .metric(primary_metric)
@@ -315,7 +326,7 @@ pub fn handle_knn(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                 .expect("node_properties empty; validated earlier")
                 .clone();
 
-            let mut builder = KnnBuilder::new(Arc::clone(graph_resources.store()), primary_name)
+            let mut builder = KnnFacade::new(Arc::clone(graph_resources.store()), primary_name)
                 .k(top_k)
                 .similarity_cutoff(similarity_cutoff)
                 .metric(primary_metric)

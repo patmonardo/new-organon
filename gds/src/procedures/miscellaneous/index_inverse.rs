@@ -4,21 +4,14 @@
 //! storage runtime and returns a new graph store.
 
 use crate::algo::index_inverse::{
-    IndexInverseComputationRuntime, IndexInverseConfig, IndexInverseStorageRuntime,
+    IndexInverseComputationRuntime, IndexInverseConfig, IndexInverseStats,
+    IndexInverseStorageRuntime,
 };
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph_store::GraphName;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use serde::Serialize;
 use std::sync::Arc;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct IndexInverseStats {
-    pub graph_name: String,
-    pub node_count: u64,
-    pub relationship_count: u64,
-}
 
 pub struct IndexInverseFacade {
     graph_store: Arc<DefaultGraphStore>,

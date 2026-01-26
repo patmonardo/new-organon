@@ -1,12 +1,16 @@
-use super::{KnnComputationResult, KnnComputationRuntime};
 use super::metrics::{KnnNodePropertySpec, SimilarityMetric};
 use super::storage::KnnSamplerType;
 use super::storage::KnnStorageRuntime;
+use super::{KnnComputationResult, KnnComputationRuntime, KnnNnDescentStats};
+use crate::algo::algorithms::result::similarity::similarity_stats;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::eval::algorithm::AlgorithmError;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KnnConfig {
@@ -152,6 +156,112 @@ pub struct KnnAlgorithmResult {
 impl KnnAlgorithmResult {
     pub fn new(rows: Vec<KnnResultRow>) -> Self {
         Self { rows }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnnStats {
+    #[serde(rename = "nodesCompared")]
+    pub nodes_compared: u64,
+    #[serde(rename = "ranIterations")]
+    pub ran_iterations: u64,
+    #[serde(rename = "didConverge")]
+    pub did_converge: bool,
+    #[serde(rename = "nodePairsConsidered")]
+    pub node_pairs_considered: u64,
+    #[serde(rename = "similarityPairs")]
+    pub similarity_pairs: u64,
+    #[serde(rename = "similarityDistribution")]
+    pub similarity_distribution: HashMap<String, f64>,
+    #[serde(rename = "computeMillis")]
+    pub compute_millis: u64,
+    pub success: bool,
+}
+
+/// Summary of a mutate operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnnMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KnnWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for KNN: summary + stats + updated store
+#[derive(Debug, Clone)]
+pub struct KnnMutateResult {
+    pub summary: KnnMutationSummary,
+    pub stats: KnnStats,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+/// KNN result builder (facade adapter).
+pub struct KnnResultBuilder<'a> {
+    rows: &'a [KnnResultRow],
+    nn_stats: &'a KnnNnDescentStats,
+}
+
+impl<'a> KnnResultBuilder<'a> {
+    pub fn new(rows: &'a [KnnResultRow], nn_stats: &'a KnnNnDescentStats) -> Self {
+        Self { rows, nn_stats }
+    }
+
+    pub fn stats(&self) -> KnnStats {
+        let mut sources = HashSet::new();
+        let tuples: Vec<(u64, u64, f64)> = self
+            .rows
+            .iter()
+            .map(|r| {
+                sources.insert(r.source);
+                (r.source, r.target, r.similarity)
+            })
+            .collect();
+
+        let stats = similarity_stats(|| tuples.into_iter(), true);
+
+        KnnStats {
+            nodes_compared: sources.len() as u64,
+            ran_iterations: self.nn_stats.ran_iterations as u64,
+            did_converge: self.nn_stats.did_converge,
+            node_pairs_considered: self.nn_stats.node_pairs_considered,
+            similarity_pairs: self.rows.len() as u64,
+            similarity_distribution: stats.summary(),
+            compute_millis: stats.compute_millis,
+            success: stats.success,
+        }
+    }
+
+    pub fn mutation_summary(
+        &self,
+        property_name: &str,
+        nodes_updated: u64,
+        execution_time: Duration,
+    ) -> KnnMutationSummary {
+        KnnMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn write_summary(
+        &self,
+        property_name: &str,
+        nodes_written: u64,
+        execution_time: Duration,
+    ) -> KnnWriteSummary {
+        KnnWriteSummary {
+            nodes_written,
+            property_name: property_name.to_string(),
+            execution_time_ms: execution_time.as_millis() as u64,
+        }
     }
 }
 

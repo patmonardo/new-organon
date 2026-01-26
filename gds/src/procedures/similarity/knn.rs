@@ -1,51 +1,21 @@
+use crate::algo::algorithms::similarity::build_similarity_relationship_store;
 use crate::algo::similarity::knn::storage::KnnSamplerType;
-use crate::algo::similarity::knn::KnnNnDescentStats;
 use crate::algo::similarity::knn::{
-    KnnComputationRuntime, KnnConfig, KnnResultRow, KnnStorageRuntime,
+    KnnComputationRuntime, KnnConfig, KnnMutateResult, KnnNnDescentStats, KnnResultBuilder,
+    KnnResultRow, KnnStats, KnnStorageRuntime,
 };
 pub use crate::algo::similarity::knn::{KnnNodePropertySpec, SimilarityMetric};
 use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::similarity::build_similarity_relationship_store;
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::Result;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
-use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-// Additional imports for progress tracking and similarity stats
-use crate::algo::algorithms::result::similarity::similarity_stats;
+// Additional imports for progress tracking
 use crate::core::utils::progress::TaskProgressTracker;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KnnStats {
-    #[serde(rename = "nodesCompared")]
-    pub nodes_compared: u64,
-    #[serde(rename = "ranIterations")]
-    pub ran_iterations: u64,
-    #[serde(rename = "didConverge")]
-    pub did_converge: bool,
-    #[serde(rename = "nodePairsConsidered")]
-    pub node_pairs_considered: u64,
-    #[serde(rename = "similarityPairs")]
-    pub similarity_pairs: u64,
-    #[serde(rename = "similarityDistribution")]
-    pub similarity_distribution: HashMap<String, f64>,
-    #[serde(rename = "computeMillis")]
-    pub compute_millis: u64,
-    pub success: bool,
-}
-
-/// Mutate result for KNN: summary + stats + updated store
-#[derive(Debug, Clone)]
-pub struct KnnMutateResult {
-    pub summary: MutationResult,
-    pub stats: KnnStats,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
-pub struct KnnBuilder {
+pub struct KnnFacade {
     graph_store: Arc<DefaultGraphStore>,
     node_property: String,
     node_properties: Vec<KnnNodePropertySpec>,
@@ -62,7 +32,7 @@ pub struct KnnBuilder {
     update_threshold: u64,
 }
 
-impl KnnBuilder {
+impl KnnFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>, node_property: impl Into<String>) -> Self {
         Self {
             graph_store,
@@ -249,7 +219,7 @@ impl KnnBuilder {
 
     pub fn stats(self) -> Result<KnnStats> {
         let (rows, nn_stats) = self.compute_rows_and_nn_stats()?;
-        Ok(build_stats(&rows, &nn_stats))
+        Ok(KnnResultBuilder::new(&rows, &nn_stats).stats())
     }
 
     pub fn mutate(self, property_name: &str) -> Result<KnnMutateResult> {
@@ -258,7 +228,8 @@ impl KnnBuilder {
         let graph_store = Arc::clone(&self.graph_store);
         let start = std::time::Instant::now();
         let (rows, nn_stats) = self.compute_rows_and_nn_stats()?;
-        let stats = build_stats(&rows, &nn_stats);
+        let builder = KnnResultBuilder::new(&rows, &nn_stats);
+        let stats = builder.stats();
 
         let pairs: Vec<(u64, u64, f64)> = rows
             .iter()
@@ -269,11 +240,8 @@ impl KnnBuilder {
             build_similarity_relationship_store(graph_store.as_ref(), property_name, &pairs)?;
 
         let relationships_updated = graph_store.relationship_count() as u64;
-        let summary = MutationResult::new(
-            relationships_updated,
-            property_name.to_string(),
-            start.elapsed(),
-        );
+        let summary =
+            builder.mutation_summary(property_name, relationships_updated, start.elapsed());
 
         Ok(KnnMutateResult {
             summary,
@@ -319,30 +287,6 @@ impl KnnBuilder {
     }
 }
 
-fn build_stats(rows: &[KnnResultRow], nn_stats: &KnnNnDescentStats) -> KnnStats {
-    let mut sources = HashSet::new();
-    let tuples: Vec<(u64, u64, f64)> = rows
-        .iter()
-        .map(|r| {
-            sources.insert(r.source);
-            (r.source, r.target, r.similarity)
-        })
-        .collect();
-
-    let stats = similarity_stats(|| tuples.into_iter(), true);
-
-    KnnStats {
-        nodes_compared: sources.len() as u64,
-        ran_iterations: nn_stats.ran_iterations as u64,
-        did_converge: nn_stats.did_converge,
-        node_pairs_considered: nn_stats.node_pairs_considered,
-        similarity_pairs: rows.len() as u64,
-        similarity_distribution: stats.summary(),
-        compute_millis: stats.compute_millis,
-        success: stats.success,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -362,7 +306,7 @@ mod tests {
         // If the primary property were (incorrectly) ignored in multi-property mode,
         // this would succeed because `random_score` exists.
         // We expect it to fail because the primary property is missing.
-        let err = KnnBuilder::new(Arc::clone(&store), "does_not_exist")
+        let err = KnnFacade::new(Arc::clone(&store), "does_not_exist")
             .add_property("random_score", SimilarityMetric::Default)
             .k(1)
             .stream()
@@ -381,7 +325,7 @@ mod tests {
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
 
         let max_iterations = 3;
-        let stats = KnnBuilder::new(Arc::clone(&store), "random_score")
+        let stats = KnnFacade::new(Arc::clone(&store), "random_score")
             .k(5)
             .max_iterations(max_iterations)
             .stats()
@@ -401,7 +345,7 @@ mod tests {
         };
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
 
-        let result = KnnBuilder::new(Arc::clone(&store), "random_score")
+        let result = KnnFacade::new(Arc::clone(&store), "random_score")
             .k(3)
             .similarity_cutoff(0.0)
             .concurrency(1)

@@ -1,4 +1,3 @@
-use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph_store::GraphStore;
 use crate::types::prelude::DefaultGraphStore;
@@ -7,11 +6,11 @@ use crate::types::properties::relationship::RelationshipPropertyValues;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-pub(crate) fn build_similarity_relationship_store(
+pub fn build_similarity_relationship_store(
     graph_store: &DefaultGraphStore,
     property_name: &str,
     pairs: &[(u64, u64, f64)],
-) -> Result<Arc<DefaultGraphStore>> {
+) -> Result<Arc<DefaultGraphStore>, AlgorithmError> {
     let mut similarity_by_pair: HashMap<(u64, u64), f64> = HashMap::new();
     for (source, target, similarity) in pairs {
         let key = (*source, *target);

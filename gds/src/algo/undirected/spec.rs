@@ -46,6 +46,15 @@ pub struct ToUndirectedResult {
     pub graph_store: DefaultGraphStore,
 }
 
+/// Statistics for ToUndirected computation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ToUndirectedStats {
+    pub graph_name: String,
+    pub mutate_relationship_type: String,
+    pub node_count: u64,
+    pub relationship_count: u64,
+}
+
 /// Marker used by the executor catalog.
 pub struct ToUndirectedAlgorithmSpec {
     graph_name: String,

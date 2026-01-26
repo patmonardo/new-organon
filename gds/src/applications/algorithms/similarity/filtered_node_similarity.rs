@@ -9,9 +9,8 @@ use crate::applications::algorithms::similarity::{
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::procedures::similarity::filtered_node_similarity::{
-    FilteredNodeSimilarityBuilder, FilteredNodeSimilarityStats,
-};
+use crate::algo::similarity::filtered_node_similarity::FilteredNodeSimilarityStats;
+use crate::procedures::similarity::filtered_node_similarity::FilteredNodeSimilarityFacade;
 use crate::projection::NodeLabel;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
@@ -279,8 +278,8 @@ pub fn handle_filtered_node_similarity(request: &Value, catalog: Arc<dyn GraphCa
 fn configure_builder(
     graph_resources: &GraphResources,
     request: &FilteredNodeSimilarityRequest,
-) -> FilteredNodeSimilarityBuilder {
-    let mut builder = FilteredNodeSimilarityBuilder::new(Arc::clone(graph_resources.store()))
+) -> FilteredNodeSimilarityFacade {
+    let mut builder = FilteredNodeSimilarityFacade::new(Arc::clone(graph_resources.store()))
         .metric(request.metric)
         .similarity_cutoff(request.similarity_cutoff)
         .top_k(request.top_k)

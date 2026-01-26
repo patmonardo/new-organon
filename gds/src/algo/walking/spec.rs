@@ -50,6 +50,15 @@ pub struct CollapsePathResult {
     pub graph_store: DefaultGraphStore,
 }
 
+/// Statistics for CollapsePath computation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CollapsePathStats {
+    pub graph_name: String,
+    pub mutate_relationship_type: String,
+    pub node_count: u64,
+    pub relationship_count: u64,
+}
+
 /// Marker type for executor catalog integration.
 pub struct CollapsePathAlgorithmSpec {
     graph_name: String,

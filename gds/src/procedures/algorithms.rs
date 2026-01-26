@@ -30,7 +30,7 @@ use crate::procedures::pathfinding::{
     YensBuilder,
 };
 use crate::procedures::similarity::{
-    FilteredKnnBuilder, FilteredNodeSimilarityBuilder, KnnBuilder, NodeSimilarityBuilder,
+    FilteredKnnFacade, FilteredNodeSimilarityFacade, KnnFacade, NodeSimilarityFacade,
 };
 use crate::types::prelude::DefaultGraphStore;
 
@@ -356,19 +356,19 @@ impl SimilarityProcedureFacade {
         Self { store }
     }
 
-    pub fn node_similarity(&self) -> NodeSimilarityBuilder {
-        NodeSimilarityBuilder::new(Arc::clone(&self.store))
+    pub fn node_similarity(&self) -> NodeSimilarityFacade {
+        NodeSimilarityFacade::new(Arc::clone(&self.store))
     }
 
-    pub fn knn(&self, node_property: impl Into<String>) -> KnnBuilder {
-        KnnBuilder::new(Arc::clone(&self.store), node_property)
+    pub fn knn(&self, node_property: impl Into<String>) -> KnnFacade {
+        KnnFacade::new(Arc::clone(&self.store), node_property)
     }
 
-    pub fn filtered_knn(&self, node_property: impl Into<String>) -> FilteredKnnBuilder {
-        FilteredKnnBuilder::new(Arc::clone(&self.store), node_property)
+    pub fn filtered_knn(&self, node_property: impl Into<String>) -> FilteredKnnFacade {
+        FilteredKnnFacade::new(Arc::clone(&self.store), node_property)
     }
 
-    pub fn filtered_node_similarity(&self) -> FilteredNodeSimilarityBuilder {
-        FilteredNodeSimilarityBuilder::new(Arc::clone(&self.store))
+    pub fn filtered_node_similarity(&self) -> FilteredNodeSimilarityFacade {
+        FilteredNodeSimilarityFacade::new(Arc::clone(&self.store))
     }
 }

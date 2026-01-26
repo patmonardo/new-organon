@@ -3,21 +3,13 @@
 //! Procedure facade that delegates to the undirected algorithm runtimes.
 
 use crate::algo::undirected::{
-    ToUndirectedComputationRuntime, ToUndirectedConfig, ToUndirectedStorageRuntime,
+    ToUndirectedComputationRuntime, ToUndirectedConfig, ToUndirectedStats,
+    ToUndirectedStorageRuntime,
 };
 use crate::procedures::Result;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::DefaultGraphStore;
-use serde::Serialize;
 use std::sync::Arc;
-
-#[derive(Debug, Clone, Serialize)]
-pub struct ToUndirectedStats {
-    pub graph_name: String,
-    pub mutate_relationship_type: String,
-    pub node_count: u64,
-    pub relationship_count: u64,
-}
 
 pub struct ToUndirectedFacade {
     graph_store: Arc<DefaultGraphStore>,

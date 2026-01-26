@@ -45,22 +45,9 @@ impl IndirectExposureFacade {
     }
 
     fn validate_config(&self, config: &IndirectExposureConfig) -> Result<()> {
-        if config.sanctioned_property.is_empty() {
-            return Err(AlgorithmError::Execution(
-                "sanctionedProperty must be provided".to_string(),
-            ));
-        }
-        if config.max_iterations == 0 {
-            return Err(AlgorithmError::Execution(
-                "maxIterations must be greater than 0".to_string(),
-            ));
-        }
-        if config.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be greater than 0".to_string(),
-            ));
-        }
-        Ok(())
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
     /// Execute the indirect exposure computation and return metrics per node.
