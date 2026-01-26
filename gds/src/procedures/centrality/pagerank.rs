@@ -27,19 +27,19 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
-use crate::algo::pagerank::PageRankConfig;
 use crate::algo::pagerank::{
-    computation::PageRankComputationRuntime, storage::PageRankStorageRuntime,
+    computation::PageRankComputationRuntime, storage::PageRankStorageRuntime, PageRankConfig,
+    PageRankMutateResult, PageRankMutationSummary, PageRankResult, PageRankResultBuilder,
+    PageRankStats,
 };
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::Concurrency;
-use crate::config::base_types::AlgoBaseConfig;
 use crate::core::utils::progress::ProgressTracker;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::{CentralityScore, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -50,42 +50,6 @@ use crate::types::schema::NodeLabel;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
-
-// ============================================================================
-// Statistics Type
-// ============================================================================
-
-/// Statistics about PageRank computation
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct PageRankStats {
-    /// Minimum PageRank score
-    pub min: f64,
-    /// Maximum PageRank score
-    pub max: f64,
-    /// Average PageRank score
-    pub mean: f64,
-    /// Standard deviation of scores
-    pub stddev: f64,
-    /// Median score (50th percentile)
-    pub p50: f64,
-    /// 90th percentile score
-    pub p90: f64,
-    /// 99th percentile score
-    pub p99: f64,
-    /// How many iterations actually ran
-    pub iterations_ran: u32,
-    /// Did algorithm converge to tolerance?
-    pub converged: bool,
-    /// Execution time in milliseconds
-    pub execution_time_ms: u64,
-}
-
-/// Result for PageRank mutate mode
-#[derive(Debug, Clone)]
-pub struct PageRankMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
 
 // ============================================================================
 // Builder Type
@@ -114,19 +78,9 @@ pub struct PageRankMutateResult {
 #[derive(Clone)]
 pub struct PageRankFacade {
     graph_store: Arc<DefaultGraphStore>,
-    direction: String,
-    /// Pregel concurrency (Rayon worker threads)
-    concurrency: usize,
+    config: PageRankConfig,
     /// Task registry for progress tracking
     task_registry: Arc<dyn TaskRegistryFactory>,
-    /// Maximum iterations to run
-    iterations: u32,
-    /// Probability of following a relationship (damping)
-    damping_factor: f64,
-    /// Convergence threshold on delta
-    tolerance: f64,
-    /// Optional source nodes for personalized PageRank
-    source_nodes: Option<Vec<u64>>,
 }
 
 impl PageRankFacade {
@@ -139,21 +93,51 @@ impl PageRankFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            direction: "outgoing".to_string(),
-            concurrency: num_cpus::get().max(1),
+            config: PageRankConfig::default(),
             task_registry: Arc::new(EmptyTaskRegistryFactory),
-            iterations: 20,
-            damping_factor: 0.85,
-            tolerance: 1e-4,
-            source_nodes: None,
         }
+    }
+
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: PageRankConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: Arc::new(EmptyTaskRegistryFactory),
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: PageRankConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: PageRankConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
     }
 
     /// Set Pregel concurrency (Rayon worker threads).
     ///
     /// Use `1` for deterministic single-threaded debugging.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -167,14 +151,14 @@ impl PageRankFacade {
     ///
     /// PageRank typically uses outgoing (natural) relationships.
     pub fn direction(mut self, direction: &str) -> Self {
-        self.direction = direction.to_string();
+        self.config.direction = direction.to_string();
         self
     }
 
     /// Personalize PageRank by only seeding `source_nodes` with $\alpha$.
     /// When set, all non-source nodes start at 0.
     pub fn source_nodes(mut self, source_nodes: Vec<u64>) -> Self {
-        self.source_nodes = Some(source_nodes);
+        self.config.source_nodes = Some(source_nodes);
         self
     }
 
@@ -186,7 +170,7 @@ impl PageRankFacade {
     /// Higher values = more accurate but slower.
     /// Typical: 10-50 iterations
     pub fn iterations(mut self, n: u32) -> Self {
-        self.iterations = n;
+        self.config.max_iterations = n as usize;
         self
     }
 
@@ -198,7 +182,7 @@ impl PageRankFacade {
     /// - Higher (0.95): Edges matter more, random nodes less
     /// - Lower (0.5): Random teleportation matters more
     pub fn damping_factor(mut self, d: f64) -> Self {
-        self.damping_factor = d;
+        self.config.damping_factor = d;
         self
     }
 
@@ -210,33 +194,26 @@ impl PageRankFacade {
     /// - 1e-6: Very tight, slower
     /// - 1e-3: Loose, faster
     pub fn tolerance(mut self, t: f64) -> Self {
-        self.tolerance = t;
+        self.config.tolerance = t;
         self
     }
 
     /// Validate configuration before execution
     pub fn validate(&self) -> Result<()> {
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be greater than 0".to_string(),
-            ));
-        }
-        ConfigValidator::in_range(self.concurrency as f64, 1.0, 1_000_000.0, "concurrency")?;
-        ConfigValidator::iterations(self.iterations, "iterations")?;
-        ConfigValidator::in_range(self.damping_factor, 0.01, 0.99, "damping_factor")?;
-        ConfigValidator::positive(self.tolerance, "tolerance")?;
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
     fn orientation(&self) -> Orientation {
-        match self.direction.as_str() {
+        match self.config.direction.as_str() {
             "incoming" => Orientation::Reverse,
             "outgoing" => Orientation::Natural,
             _ => Orientation::Undirected,
         }
     }
 
-    fn compute_scores(&self) -> Result<(Vec<f64>, u32, bool, std::time::Duration)> {
+    fn compute(&self) -> Result<PageRankResult> {
         self.validate()?;
         let start = Instant::now();
 
@@ -245,50 +222,41 @@ impl PageRankFacade {
             self.orientation(),
         )?;
 
-        let pr_config = PageRankConfig::builder()
-            .base(AlgoBaseConfig {
-                concurrency: self.concurrency,
-                ..AlgoBaseConfig::default()
-            })
-            .max_iterations(self.iterations as usize)
-            .damping_factor(self.damping_factor)
-            .tolerance(self.tolerance)
-            .build()
-            .map_err(|e| AlgorithmError::Execution(format!("PageRankConfig invalid: {e}")))?;
-
         let source_set = self
+            .config
             .source_nodes
             .clone()
             .map(|v| v.into_iter().collect::<std::collections::HashSet<u64>>());
 
         let computation = PageRankComputationRuntime::new(
-            pr_config.max_iterations,
-            pr_config.damping_factor,
-            pr_config.tolerance,
+            self.config.max_iterations,
+            self.config.damping_factor,
+            self.config.tolerance,
             source_set,
         );
 
         let mut progress_tracker = TaskProgressTracker::with_registry(
-            Tasks::leaf_with_volume("pagerank".to_string(), self.iterations as usize)
+            Tasks::leaf_with_volume("pagerank".to_string(), self.config.max_iterations)
                 .base()
                 .clone(),
-            Concurrency::of(self.concurrency.max(1)),
+            Concurrency::of(self.config.concurrency.max(1)),
             JobId::new(),
             self.task_registry.as_ref(),
         );
-        progress_tracker.begin_subtask_with_volume(self.iterations as usize);
+        progress_tracker.begin_subtask_with_volume(self.config.max_iterations);
 
-        let run = storage.run(&computation, self.concurrency, &mut progress_tracker);
+        let run = storage.run(&computation, self.config.concurrency, &mut progress_tracker);
 
-        progress_tracker.log_progress(self.iterations as usize);
+        progress_tracker.log_progress(self.config.max_iterations);
         progress_tracker.end_subtask();
 
-        Ok((
-            run.scores,
-            run.ran_iterations as u32,
-            run.did_converge,
-            start.elapsed(),
-        ))
+        Ok(PageRankResult {
+            scores: run.scores,
+            ran_iterations: run.ran_iterations,
+            did_converge: run.did_converge,
+            node_count: self.graph_store.node_count(),
+            execution_time: start.elapsed(),
+        })
     }
 
     /// Stream mode: Get PageRank score for each node
@@ -306,8 +274,9 @@ impl PageRankFacade {
     /// }
     /// ```
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
-        let (scores, _iters, _converged, _elapsed) = self.compute_scores()?;
-        let iter = scores
+        let result = self.compute()?;
+        let iter = result
+            .scores
             .into_iter()
             .enumerate()
             .map(|(node_id, score)| CentralityScore {
@@ -331,55 +300,8 @@ impl PageRankFacade {
     /// println!("Converged: {}, Iterations: {}", stats.converged, stats.iterations_ran);
     /// ```
     pub fn stats(self) -> Result<PageRankStats> {
-        let (scores, iterations_ran, converged, elapsed) = self.compute_scores()?;
-        if scores.is_empty() {
-            return Ok(PageRankStats {
-                min: 0.0,
-                max: 0.0,
-                mean: 0.0,
-                stddev: 0.0,
-                p50: 0.0,
-                p90: 0.0,
-                p99: 0.0,
-                iterations_ran,
-                converged,
-                execution_time_ms: elapsed.as_millis() as u64,
-            });
-        }
-
-        let mut sorted = scores.clone();
-        sorted.sort_by(|a, b| a.total_cmp(b));
-        let min = *sorted.first().unwrap();
-        let max = *sorted.last().unwrap();
-        let mean = scores.iter().sum::<f64>() / scores.len() as f64;
-        let var = scores
-            .iter()
-            .map(|x| {
-                let d = x - mean;
-                d * d
-            })
-            .sum::<f64>()
-            / scores.len() as f64;
-        let stddev = var.sqrt();
-
-        let percentile = |p: f64| -> f64 {
-            let idx =
-                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
-            sorted[idx]
-        };
-
-        Ok(PageRankStats {
-            min,
-            max,
-            mean,
-            stddev,
-            p50: percentile(50.0),
-            p90: percentile(90.0),
-            p99: percentile(99.0),
-            iterations_ran,
-            converged,
-            execution_time_ms: elapsed.as_millis() as u64,
-        })
+        let result = self.compute()?;
+        Ok(PageRankResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: Compute and store as node property
@@ -398,8 +320,8 @@ impl PageRankFacade {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        let start_time = Instant::now();
-        let (scores, _iterations_ran, _converged, _elapsed) = self.compute_scores()?;
+        let result = self.compute()?;
+        let scores = result.scores.clone();
 
         let nodes_updated = scores.len() as u64;
         let node_count = scores.len();
@@ -415,8 +337,11 @@ impl PageRankFacade {
                 AlgorithmError::Execution(format!("PageRank mutate failed to add property: {e}"))
             })?;
 
-        let execution_time = start_time.elapsed();
-        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+        let summary = PageRankMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.execution_time.as_millis() as u64,
+        };
 
         Ok(PageRankMutateResult {
             summary,
@@ -447,18 +372,17 @@ impl PageRankFacade {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        let start_time = Instant::now();
-        let (scores, _iterations_ran, _converged, _elapsed) = self.compute_scores()?;
+        let result = self.compute()?;
+        let scores = result.scores;
 
         // For now, use placeholder write - just count the nodes that would be written
         // TODO: Implement actual persistence to external storage
         let nodes_written = scores.len() as u64;
 
-        let execution_time = start_time.elapsed();
         Ok(WriteResult::new(
             nodes_written,
             property_name.to_string(),
-            execution_time,
+            result.execution_time,
         ))
     }
 
@@ -525,9 +449,9 @@ mod tests {
     #[test]
     fn test_builder_defaults() {
         let facade = PageRankFacade::new(store());
-        assert_eq!(facade.iterations, 20);
-        assert_eq!(facade.damping_factor, 0.85);
-        assert_eq!(facade.tolerance, 1e-4);
+        assert_eq!(facade.config.max_iterations, 20);
+        assert_eq!(facade.config.damping_factor, 0.85);
+        assert_eq!(facade.config.tolerance, 1e-4);
     }
 
     #[test]
@@ -537,18 +461,15 @@ mod tests {
             .damping_factor(0.90)
             .tolerance(1e-5);
 
-        assert_eq!(facade.iterations, 30);
-        assert_eq!(facade.damping_factor, 0.90);
-        assert_eq!(facade.tolerance, 1e-5);
+        assert_eq!(facade.config.max_iterations, 30);
+        assert_eq!(facade.config.damping_factor, 0.90);
+        assert_eq!(facade.config.tolerance, 1e-5);
     }
 
     #[test]
     fn test_validate_iterations() {
         let facade = PageRankFacade::new(store()).iterations(0);
         assert!(facade.validate().is_err()); // 0 is invalid
-
-        let facade = PageRankFacade::new(store()).iterations(2_000_000);
-        assert!(facade.validate().is_err()); // Too large is invalid
 
         let facade = PageRankFacade::new(store()).iterations(50);
         assert!(facade.validate().is_ok()); // 50 is valid

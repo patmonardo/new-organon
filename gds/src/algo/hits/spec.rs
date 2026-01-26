@@ -86,6 +86,60 @@ pub struct HitsResult {
     pub execution_time: Duration,
 }
 
+/// Statistics for HITS algorithm
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct HitsCentralityStats {
+    pub iterations: usize,
+    pub converged: bool,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct HitsCentralityMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct HitsCentralityWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for HITS centrality: summary + updated store
+#[derive(Debug, Clone)]
+pub struct HitsCentralityMutateResult {
+    pub summary: HitsCentralityMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+/// HITS result builder (facade adapter).
+pub struct HitsResultBuilder {
+    result: HitsResult,
+}
+
+impl HitsResultBuilder {
+    pub fn new(result: HitsResult) -> Self {
+        Self { result }
+    }
+
+    pub fn stats(&self) -> HitsCentralityStats {
+        HitsCentralityStats {
+            iterations: self.result.iterations,
+            converged: self.result.converged,
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
+    }
+}
+
 define_algorithm_spec! {
     name: "hits",
     output_type: HitsResult,

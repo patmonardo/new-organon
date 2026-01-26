@@ -71,6 +71,109 @@ pub struct ClosenessCentralityResult {
     pub execution_time: Duration,
 }
 
+/// Statistics about closeness centrality.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ClosenessCentralityStats {
+    pub min: f64,
+    pub max: f64,
+    pub mean: f64,
+    pub stddev: f64,
+    pub p50: f64,
+    pub p90: f64,
+    pub p99: f64,
+    pub isolated_nodes: u64,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ClosenessCentralityMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ClosenessCentralityWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for closeness centrality: summary + updated store
+#[derive(Debug, Clone)]
+pub struct ClosenessCentralityMutateResult {
+    pub summary: ClosenessCentralityMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+/// Closeness result builder (facade adapter).
+pub struct ClosenessCentralityResultBuilder {
+    result: ClosenessCentralityResult,
+}
+
+impl ClosenessCentralityResultBuilder {
+    pub fn new(result: ClosenessCentralityResult) -> Self {
+        Self { result }
+    }
+
+    pub fn stats(&self) -> ClosenessCentralityStats {
+        let scores = &self.result.centralities;
+        if scores.is_empty() {
+            return ClosenessCentralityStats {
+                min: 0.0,
+                max: 0.0,
+                mean: 0.0,
+                stddev: 0.0,
+                p50: 0.0,
+                p90: 0.0,
+                p99: 0.0,
+                isolated_nodes: 0,
+                execution_time_ms: self.result.execution_time.as_millis() as u64,
+            };
+        }
+
+        let isolated_nodes = scores.iter().filter(|v| **v == 0.0).count() as u64;
+        let mut sorted = scores.clone();
+        sorted.sort_by(|a, b| a.total_cmp(b));
+        let min = *sorted.first().unwrap_or(&0.0);
+        let max = *sorted.last().unwrap_or(&0.0);
+        let mean = scores.iter().sum::<f64>() / scores.len() as f64;
+        let var = scores
+            .iter()
+            .map(|x| {
+                let d = x - mean;
+                d * d
+            })
+            .sum::<f64>()
+            / scores.len() as f64;
+        let stddev = var.sqrt();
+
+        let percentile = |p: f64| -> f64 {
+            let idx =
+                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
+            sorted[idx]
+        };
+
+        ClosenessCentralityStats {
+            min,
+            max,
+            mean,
+            stddev,
+            p50: percentile(50.0),
+            p90: percentile(90.0),
+            p99: percentile(99.0),
+            isolated_nodes,
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
+    }
+}
+
 fn orientation(direction: &str) -> Orientation {
     match direction {
         "incoming" => Orientation::Reverse,

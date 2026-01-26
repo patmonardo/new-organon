@@ -27,7 +27,9 @@
 
 pub use crate::algo::degree_centrality::storage::Orientation;
 use crate::algo::degree_centrality::{
-    DegreeCentralityComputationRuntime, DegreeCentralityStorageRuntime,
+    DegreeCentralityComputationRuntime, DegreeCentralityConfig, DegreeCentralityMutateResult,
+    DegreeCentralityMutationSummary, DegreeCentralityResult, DegreeCentralityResultBuilder,
+    DegreeCentralityStats, DegreeCentralityStorageRuntime,
 };
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::{Concurrency, TerminationFlag};
@@ -36,7 +38,7 @@ use crate::core::utils::progress::{
     Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::{CentralityScore, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::NodeLabel;
@@ -48,50 +50,13 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 // ============================================================================
-// Statistics Type
-// ============================================================================
-
-/// Statistics about degree distribution in the graph
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct DegreeCentralityStats {
-    /// Minimum degree found
-    pub min: f64,
-    /// Maximum degree found
-    pub max: f64,
-    /// Average degree
-    pub mean: f64,
-    /// Standard deviation
-    pub stddev: f64,
-    /// Median degree (50th percentile)
-    pub p50: f64,
-    /// 90th percentile degree
-    pub p90: f64,
-    /// 99th percentile degree
-    pub p99: f64,
-    /// Number of nodes with degree 0
-    pub isolated_nodes: u64,
-    /// Execution time in milliseconds
-    pub execution_time_ms: u64,
-}
-
-/// Mutation result for degree centrality, including the updated graph store.
-#[derive(Debug, Clone)]
-pub struct DegreeCentralityMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
-// ============================================================================
 // Facade Type
 // ============================================================================
 
 /// DegreeCentrality algorithm facade/builder bound to a live graph store.
 pub struct DegreeCentralityFacade {
     graph_store: Arc<DefaultGraphStore>,
-    normalize: bool,
-    orientation: Orientation,
-    has_relationship_weight_property: bool,
-    concurrency: usize,
+    config: DegreeCentralityConfig,
     /// Progress tracking components
     task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
     user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
@@ -102,30 +67,67 @@ impl DegreeCentralityFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            normalize: false,
-            orientation: Orientation::Natural,
-            has_relationship_weight_property: false,
-            concurrency: 4,
+            config: DegreeCentralityConfig::default(),
             task_registry_factory: None,
             user_log_registry_factory: None,
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: DegreeCentralityConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry_factory: None,
+            user_log_registry_factory: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: DegreeCentralityConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: DegreeCentralityConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     /// Normalize scores by max degree.
     pub fn normalize(mut self, normalize: bool) -> Self {
-        self.normalize = normalize;
+        self.config.normalize = normalize;
         self
     }
 
     /// Set orientation for degree computation.
     pub fn orientation(mut self, orientation: Orientation) -> Self {
-        self.orientation = orientation;
+        self.config.orientation = match orientation {
+            Orientation::Natural => "natural".to_string(),
+            Orientation::Reverse => "reverse".to_string(),
+            Orientation::Undirected => "undirected".to_string(),
+        };
         self
     }
 
     /// Use relationship weights when computing degree (sum of weights).
     pub fn weighted(mut self, weighted: bool) -> Self {
-        self.has_relationship_weight_property = weighted;
+        self.config.weighted = weighted;
         self
     }
 
@@ -134,7 +136,7 @@ impl DegreeCentralityFacade {
     /// Number of parallel threads to use.
     /// Degree centrality benefits from parallelism in large graphs.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -151,24 +153,31 @@ impl DegreeCentralityFacade {
     }
 
     fn validate(&self) -> Result<()> {
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be > 0".to_string(),
-            ));
-        }
-
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
-    fn compute_scores(&self) -> Result<(Vec<f64>, std::time::Duration)> {
+    fn compute(&self) -> Result<DegreeCentralityResult> {
         self.validate()?;
 
         let start = Instant::now();
 
+        let orientation = match self.config.orientation.to_lowercase().as_str() {
+            "natural" | "outgoing" => Orientation::Natural,
+            "reverse" | "incoming" => Orientation::Reverse,
+            "undirected" | "both" => Orientation::Undirected,
+            other => {
+                return Err(AlgorithmError::Execution(format!(
+                    "Invalid orientation '{other}'. Use 'natural', 'reverse', or 'undirected'"
+                )))
+            }
+        };
+
         let storage = DegreeCentralityStorageRuntime::with_settings(
             self.graph_store.as_ref(),
-            self.orientation,
-            self.has_relationship_weight_property,
+            orientation,
+            self.config.weighted,
         )?;
 
         let node_count = storage.node_count();
@@ -184,7 +193,7 @@ impl DegreeCentralityFacade {
             Tasks::leaf_with_volume("degree_centrality".to_string(), node_count)
                 .base()
                 .clone(),
-            Concurrency::of(self.concurrency.max(1)),
+            Concurrency::of(self.config.concurrency.max(1)),
             JobId::new(),
             registry_factory,
         );
@@ -203,7 +212,7 @@ impl DegreeCentralityFacade {
 
         let mut scores = match storage.compute_parallel(
             &computation,
-            self.concurrency,
+            self.config.concurrency,
             &termination,
             on_nodes_done,
         ) {
@@ -216,13 +225,17 @@ impl DegreeCentralityFacade {
             }
         };
 
-        if self.normalize {
+        if self.config.normalize {
             computation.normalize_scores(&mut scores);
         }
 
         tracker.lock().unwrap().end_subtask();
 
-        Ok((scores, start.elapsed()))
+        Ok(DegreeCentralityResult {
+            centralities: scores,
+            node_count,
+            execution_time: start.elapsed(),
+        })
     }
 
     /// Stream mode: Get degree for each node
@@ -243,8 +256,9 @@ impl DegreeCentralityFacade {
     /// }
     /// ```
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
-        let (scores, _elapsed) = self.compute_scores()?;
-        let iter = scores
+        let result = self.compute()?;
+        let iter = result
+            .centralities
             .into_iter()
             .enumerate()
             .map(|(node_id, score)| CentralityScore {
@@ -272,55 +286,8 @@ impl DegreeCentralityFacade {
     /// println!("Isolated nodes: {}", stats.isolated_nodes);
     /// ```
     pub fn stats(self) -> Result<DegreeCentralityStats> {
-        let (scores, elapsed) = self.compute_scores()?;
-        if scores.is_empty() {
-            return Ok(DegreeCentralityStats {
-                min: 0.0,
-                max: 0.0,
-                mean: 0.0,
-                stddev: 0.0,
-                p50: 0.0,
-                p90: 0.0,
-                p99: 0.0,
-                isolated_nodes: 0,
-                execution_time_ms: elapsed.as_millis() as u64,
-            });
-        }
-
-        let isolated_nodes = scores.iter().filter(|v| **v == 0.0).count() as u64;
-
-        let mut sorted = scores.clone();
-        sorted.sort_by(|a, b| a.total_cmp(b));
-        let min = *sorted.first().unwrap();
-        let max = *sorted.last().unwrap();
-        let mean = scores.iter().sum::<f64>() / scores.len() as f64;
-        let var = scores
-            .iter()
-            .map(|x| {
-                let d = x - mean;
-                d * d
-            })
-            .sum::<f64>()
-            / scores.len() as f64;
-        let stddev = var.sqrt();
-
-        let percentile = |p: f64| -> f64 {
-            let idx =
-                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
-            sorted[idx]
-        };
-
-        Ok(DegreeCentralityStats {
-            min,
-            max,
-            mean,
-            stddev,
-            p50: percentile(50.0),
-            p90: percentile(90.0),
-            p99: percentile(99.0),
-            isolated_nodes,
-            execution_time_ms: elapsed.as_millis() as u64,
-        })
+        let result = self.compute()?;
+        Ok(DegreeCentralityResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: Compute and store degree as a node property
@@ -340,11 +307,10 @@ impl DegreeCentralityFacade {
     pub fn mutate(self, property_name: &str) -> Result<DegreeCentralityMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
-
-        let start_time = Instant::now();
-        let (scores, _elapsed) = self.compute_scores()?;
-
+        let result = self.compute()?;
+        let scores = result.centralities.clone();
         let nodes_updated = scores.len() as u64;
+        let builder = DegreeCentralityResultBuilder::new(result);
 
         // Build property values
         let node_count = scores.len();
@@ -363,8 +329,11 @@ impl DegreeCentralityFacade {
                 ))
             })?;
 
-        let execution_time = start_time.elapsed();
-        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+        let summary = DegreeCentralityMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: builder.execution_time_ms(),
+        };
 
         Ok(DegreeCentralityMutateResult {
             summary,
@@ -394,15 +363,13 @@ impl DegreeCentralityFacade {
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
-
-        let start_time = Instant::now();
-        let (scores, _elapsed) = self.compute_scores()?;
+        let result = self.compute()?;
 
         // For now, use placeholder write - just count the nodes that would be written
         // TODO: Implement actual persistence to external storage
-        let nodes_written = scores.len() as u64;
+        let nodes_written = result.centralities.len() as u64;
 
-        let execution_time = start_time.elapsed();
+        let execution_time = result.execution_time;
         Ok(WriteResult::new(
             nodes_written,
             property_name.to_string(),

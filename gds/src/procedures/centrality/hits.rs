@@ -1,13 +1,16 @@
 //! HITS Facade - Bidirectional Pregel implementation
 
-use crate::algo::hits::{computation::HitsComputationRuntime, HitsStorageRuntime};
+use crate::algo::hits::{
+    computation::HitsComputationRuntime, HitsCentralityMutateResult, HitsCentralityMutationSummary,
+    HitsCentralityStats, HitsConfig, HitsResult, HitsResultBuilder, HitsStorageRuntime,
+};
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::Concurrency;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::{CentralityScore, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph_store::{DefaultGraphStore, GraphStore};
@@ -18,58 +21,11 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
-/// Statistics for HITS algorithm
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct HitsStats {
-    pub iterations: usize,
-    pub converged: bool,
-    pub execution_time_ms: u64,
-}
-
-/// Result for HITS mutate mode
-#[derive(Debug, Clone)]
-pub struct HitsMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::types::properties::PropertyValues;
-    use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
-
-    fn store() -> Arc<DefaultGraphStore> {
-        let config = RandomGraphConfig {
-            seed: Some(11),
-            node_count: 6,
-            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
-            ..RandomGraphConfig::default()
-        };
-        Arc::new(DefaultGraphStore::random(&config).unwrap())
-    }
-
-    #[test]
-    fn mutate_adds_hub_property() {
-        let facade = HitsCentralityFacade::new(store());
-        let result = facade.mutate("hits_hub").unwrap();
-
-        let values = result
-            .updated_store
-            .node_property_values("hits_hub")
-            .unwrap();
-
-        assert_eq!(values.element_count(), 6);
-    }
-}
-
 /// HITS centrality facade/builder bound to a live graph store.
 #[derive(Clone)]
 pub struct HitsCentralityFacade {
     graph_store: Arc<DefaultGraphStore>,
-    max_iterations: usize,
-    tolerance: f64,
-    concurrency: usize,
+    config: HitsConfig,
     task_registry: Arc<dyn TaskRegistryFactory>,
 }
 
@@ -77,28 +33,61 @@ impl HitsCentralityFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            max_iterations: 20,
-            tolerance: 1e-4,
-            concurrency: 4,
+            config: HitsConfig::default(),
             task_registry: Arc::new(EmptyTaskRegistryFactory),
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: HitsConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: Arc::new(EmptyTaskRegistryFactory),
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: HitsConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: HitsConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     /// Set maximum number of iterations
     pub fn max_iterations(mut self, max_iterations: usize) -> Self {
-        self.max_iterations = max_iterations;
+        self.config.max_iterations = max_iterations;
         self
     }
 
     /// Set convergence tolerance
     pub fn tolerance(mut self, tolerance: f64) -> Self {
-        self.tolerance = tolerance;
+        self.config.tolerance = tolerance;
         self
     }
 
     /// Set concurrency level for parallel computation.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -116,12 +105,41 @@ impl HitsCentralityFacade {
     /// # Errors
     /// Returns an error if concurrency is not positive
     pub fn validate(&self) -> Result<()> {
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be positive".to_string(),
-            ));
-        }
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
+    }
+
+    fn compute(&self) -> Result<HitsResult> {
+        self.validate()?;
+        let start = Instant::now();
+
+        let storage = HitsStorageRuntime::with_default_projection(self.graph_store.as_ref())?;
+        let computation = HitsComputationRuntime::new(self.config.tolerance);
+
+        let mut progress_tracker = TaskProgressTracker::with_registry(
+            Tasks::leaf_with_volume("hits".to_string(), self.config.max_iterations)
+                .base()
+                .clone(),
+            Concurrency::of(self.config.concurrency.max(1)),
+            JobId::new(),
+            self.task_registry.as_ref(),
+        );
+
+        let result = storage.run(
+            &computation,
+            self.config.max_iterations,
+            self.config.concurrency,
+            &mut progress_tracker,
+        );
+
+        Ok(HitsResult {
+            hub_scores: result.hub_scores,
+            authority_scores: result.authority_scores,
+            iterations: result.iterations_ran,
+            converged: result.did_converge,
+            execution_time: start.elapsed(),
+        })
     }
 
     /// Stream mode: Get HITS scores for each node
@@ -137,25 +155,7 @@ impl HitsCentralityFacade {
     /// let results = graph.hits().stream()?.collect::<Vec<_>>();
     /// ```
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
-        self.validate()?;
-        let storage = HitsStorageRuntime::with_default_projection(self.graph_store.as_ref())?;
-
-        let mut progress_tracker = TaskProgressTracker::with_registry(
-            Tasks::leaf_with_volume("hits".to_string(), self.max_iterations)
-                .base()
-                .clone(),
-            Concurrency::of(self.concurrency.max(1)),
-            JobId::new(),
-            self.task_registry.as_ref(),
-        );
-        let computation = HitsComputationRuntime::new(self.tolerance);
-        let result = storage.run(
-            &computation,
-            self.max_iterations,
-            self.concurrency,
-            &mut progress_tracker,
-        );
-
+        let result = self.compute()?;
         let iter = result
             .hub_scores
             .into_iter()
@@ -178,55 +178,14 @@ impl HitsCentralityFacade {
     /// let stats = graph.hits().stats()?;
     /// println!("Converged in {} iterations", stats.iterations);
     /// ```
-    pub fn stats(&self) -> Result<HitsStats> {
-        self.validate()?;
-        let start = Instant::now();
-
-        let storage = HitsStorageRuntime::with_default_projection(self.graph_store.as_ref())?;
-
-        let mut progress_tracker = TaskProgressTracker::with_registry(
-            Tasks::leaf_with_volume("hits".to_string(), self.max_iterations)
-                .base()
-                .clone(),
-            Concurrency::of(self.concurrency.max(1)),
-            JobId::new(),
-            self.task_registry.as_ref(),
-        );
-        let computation = HitsComputationRuntime::new(self.tolerance);
-        let result = storage.run(
-            &computation,
-            self.max_iterations,
-            self.concurrency,
-            &mut progress_tracker,
-        );
-        let elapsed = start.elapsed();
-
-        Ok(HitsStats {
-            iterations: result.iterations_ran,
-            converged: result.did_converge,
-            execution_time_ms: elapsed.as_millis() as u64,
-        })
+    pub fn stats(&self) -> Result<HitsCentralityStats> {
+        let result = self.compute()?;
+        Ok(HitsResultBuilder::new(result).stats())
     }
 
     /// Run the algorithm and return hub and authority scores
     pub fn run(&self) -> Result<(Vec<f64>, Vec<f64>)> {
-        let storage = HitsStorageRuntime::with_default_projection(self.graph_store.as_ref())?;
-
-        let mut progress_tracker = TaskProgressTracker::with_registry(
-            Tasks::leaf_with_volume("hits".to_string(), self.max_iterations)
-                .base()
-                .clone(),
-            Concurrency::of(self.concurrency.max(1)),
-            JobId::new(),
-            self.task_registry.as_ref(),
-        );
-        let computation = HitsComputationRuntime::new(self.tolerance);
-        let result = storage.run(
-            &computation,
-            self.max_iterations,
-            self.concurrency,
-            &mut progress_tracker,
-        );
+        let result = self.compute()?;
         Ok((result.hub_scores, result.authority_scores))
     }
 
@@ -242,13 +201,12 @@ impl HitsCentralityFacade {
     /// let result = graph.hits().mutate("hits_hub")?;
     /// println!("Computed and stored for {} nodes", result.summary.nodes_updated);
     /// ```
-    pub fn mutate(self, property_name: &str) -> Result<HitsMutateResult> {
+    pub fn mutate(self, property_name: &str) -> Result<HitsCentralityMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        let start_time = Instant::now();
-        let (hub_scores, _authority_scores) = self.run()?;
-
+        let result = self.compute()?;
+        let hub_scores = result.hub_scores.clone();
         let nodes_updated = hub_scores.len() as u64;
         let node_count = hub_scores.len();
         let backend = VecDouble::from(hub_scores);
@@ -263,10 +221,13 @@ impl HitsCentralityFacade {
                 AlgorithmError::Execution(format!("HITS mutate failed to add property: {e}"))
             })?;
 
-        let execution_time = start_time.elapsed();
-        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+        let summary = HitsCentralityMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.execution_time.as_millis() as u64,
+        };
 
-        Ok(HitsMutateResult {
+        Ok(HitsCentralityMutateResult {
             summary,
             updated_store: Arc::new(new_store),
         })
@@ -276,14 +237,13 @@ impl HitsCentralityFacade {
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
-        let start_time = Instant::now();
-        let (hub_scores, _authority_scores) = self.run()?;
-        let nodes_written = hub_scores.len() as u64;
+        let result = self.compute()?;
+        let nodes_written = result.hub_scores.len() as u64;
 
         Ok(WriteResult::new(
             nodes_written,
             property_name.to_string(),
-            start_time.elapsed(),
+            result.execution_time,
         ))
     }
 
@@ -316,5 +276,35 @@ impl HitsCentralityFacade {
         let total_with_overhead = total_memory + (total_memory / 5); // Add 20% overhead
 
         MemoryRange::of_range(total_memory, total_with_overhead)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::properties::PropertyValues;
+    use crate::types::random::{RandomGraphConfig, RandomRelationshipConfig};
+
+    fn store() -> Arc<DefaultGraphStore> {
+        let config = RandomGraphConfig {
+            seed: Some(11),
+            node_count: 6,
+            relationships: vec![RandomRelationshipConfig::new("REL", 1.0)],
+            ..RandomGraphConfig::default()
+        };
+        Arc::new(DefaultGraphStore::random(&config).unwrap())
+    }
+
+    #[test]
+    fn mutate_adds_hub_property() {
+        let facade = HitsCentralityFacade::new(store());
+        let result = facade.mutate("hits_hub").unwrap();
+
+        let values = result
+            .updated_store
+            .node_property_values("hits_hub")
+            .unwrap();
+
+        assert_eq!(values.element_count(), 6);
     }
 }

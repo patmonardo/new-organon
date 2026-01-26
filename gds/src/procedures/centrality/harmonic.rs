@@ -10,7 +10,11 @@
 //! - Accumulates into the *reached node* per depth
 //! - Normalizes by `(nodeCount - 1)`
 
-use crate::algo::harmonic::{HarmonicComputationRuntime, HarmonicStorageRuntime};
+use crate::algo::harmonic::{
+    HarmonicCentralityMutateResult, HarmonicCentralityMutationSummary, HarmonicCentralityStats,
+    HarmonicComputationRuntime, HarmonicConfig, HarmonicDirection, HarmonicResult,
+    HarmonicResultBuilder, HarmonicStorageRuntime,
+};
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::ProgressTracker;
@@ -18,7 +22,7 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::{CentralityScore, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -30,33 +34,11 @@ use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
-/// Statistics about harmonic centrality.
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct HarmonicCentralityStats {
-    pub min: f64,
-    pub max: f64,
-    pub mean: f64,
-    pub stddev: f64,
-    pub p50: f64,
-    pub p90: f64,
-    pub p99: f64,
-    pub isolated_nodes: u64,
-    pub execution_time_ms: u64,
-}
-
-/// Mutation result for harmonic centrality, including the updated graph store.
-#[derive(Debug, Clone)]
-pub struct HarmonicCentralityMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
 /// Harmonic centrality facade/builder bound to a live graph store.
 #[derive(Clone)]
 pub struct HarmonicCentralityFacade {
     graph_store: Arc<DefaultGraphStore>,
-    direction: String,
-    concurrency: usize,
+    config: HarmonicConfig,
     task_registry: Arc<dyn TaskRegistryFactory>,
 }
 
@@ -64,21 +46,59 @@ impl HarmonicCentralityFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            direction: "both".to_string(),
-            concurrency: 4,
+            config: HarmonicConfig::default(),
             task_registry: Arc::new(EmptyTaskRegistryFactory),
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: HarmonicConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: Arc::new(EmptyTaskRegistryFactory),
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: HarmonicConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: HarmonicConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     /// Direction of traversal: "outgoing", "incoming", or "both".
     pub fn direction(mut self, direction: &str) -> Self {
-        self.direction = direction.to_string();
+        self.config.direction = match direction.to_lowercase().as_str() {
+            "incoming" => HarmonicDirection::Incoming,
+            "outgoing" => HarmonicDirection::Outgoing,
+            _ => HarmonicDirection::Both,
+        };
         self
     }
 
     /// Set concurrency level for parallel computation.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -89,10 +109,10 @@ impl HarmonicCentralityFacade {
     }
 
     fn orientation(&self) -> Orientation {
-        match self.direction.as_str() {
-            "incoming" => Orientation::Reverse,
-            "outgoing" => Orientation::Natural,
-            _ => Orientation::Undirected,
+        match self.config.direction {
+            HarmonicDirection::Incoming => Orientation::Reverse,
+            HarmonicDirection::Outgoing => Orientation::Natural,
+            HarmonicDirection::Both => Orientation::Undirected,
         }
     }
 
@@ -104,15 +124,12 @@ impl HarmonicCentralityFacade {
     /// # Errors
     /// Returns an error if concurrency is not positive
     pub fn validate(&self) -> Result<()> {
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be positive".to_string(),
-            ));
-        }
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
-    fn compute_scores(&self) -> Result<(Vec<f64>, std::time::Duration)> {
+    fn compute(&self) -> Result<HarmonicResult> {
         let start = Instant::now();
 
         let storage = HarmonicStorageRuntime::with_orientation(
@@ -122,14 +139,18 @@ impl HarmonicCentralityFacade {
 
         let node_count = storage.node_count();
         if node_count == 0 {
-            return Ok((Vec::new(), start.elapsed()));
+            return Ok(HarmonicResult {
+                centralities: Vec::new(),
+                node_count,
+                execution_time: start.elapsed(),
+            });
         }
 
         let mut progress_tracker = TaskProgressTracker::with_registry(
             Tasks::leaf_with_volume("harmonic".to_string(), node_count)
                 .base()
                 .clone(),
-            Concurrency::of(self.concurrency.max(1)),
+            Concurrency::of(self.config.concurrency.max(1)),
             JobId::new(),
             self.task_registry.as_ref(),
         );
@@ -148,7 +169,7 @@ impl HarmonicCentralityFacade {
 
         let scores = match storage.compute_parallel(
             &computation,
-            self.concurrency,
+            self.config.concurrency,
             &termination,
             on_sources_done,
         ) {
@@ -163,13 +184,18 @@ impl HarmonicCentralityFacade {
 
         tracker.lock().unwrap().end_subtask();
 
-        Ok((scores, start.elapsed()))
+        Ok(HarmonicResult {
+            centralities: scores,
+            node_count,
+            execution_time: start.elapsed(),
+        })
     }
 
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
         self.validate()?;
-        let (scores, _elapsed) = self.compute_scores()?;
-        let iter = scores
+        let result = self.compute()?;
+        let iter = result
+            .centralities
             .into_iter()
             .enumerate()
             .map(|(node_id, score)| CentralityScore {
@@ -181,65 +207,18 @@ impl HarmonicCentralityFacade {
 
     pub fn stats(&self) -> Result<HarmonicCentralityStats> {
         self.validate()?;
-        let (scores, elapsed) = self.compute_scores()?;
-        if scores.is_empty() {
-            return Ok(HarmonicCentralityStats {
-                min: 0.0,
-                max: 0.0,
-                mean: 0.0,
-                stddev: 0.0,
-                p50: 0.0,
-                p90: 0.0,
-                p99: 0.0,
-                isolated_nodes: 0,
-                execution_time_ms: elapsed.as_millis() as u64,
-            });
-        }
-
-        let isolated_nodes = scores.iter().filter(|v| **v == 0.0).count() as u64;
-
-        let mut sorted = scores.clone();
-        sorted.sort_by(|a, b| a.total_cmp(b));
-        let min = *sorted.first().unwrap();
-        let max = *sorted.last().unwrap();
-        let mean = scores.iter().sum::<f64>() / scores.len() as f64;
-        let var = scores
-            .iter()
-            .map(|x| {
-                let d = x - mean;
-                d * d
-            })
-            .sum::<f64>()
-            / scores.len() as f64;
-        let stddev = var.sqrt();
-
-        let percentile = |p: f64| -> f64 {
-            let idx =
-                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
-            sorted[idx]
-        };
-
-        Ok(HarmonicCentralityStats {
-            min,
-            max,
-            mean,
-            stddev,
-            p50: percentile(50.0),
-            p90: percentile(90.0),
-            p99: percentile(99.0),
-            isolated_nodes,
-            execution_time_ms: elapsed.as_millis() as u64,
-        })
+        let result = self.compute()?;
+        Ok(HarmonicResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: compute scores, write them to a new graph store, and return it.
     pub fn mutate(self, property_name: &str) -> Result<HarmonicCentralityMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
-        let start_time = Instant::now();
-        let (scores, _elapsed) = self.compute_scores()?;
-
+        let result = self.compute()?;
+        let scores = result.centralities.clone();
         let nodes_updated = scores.len() as u64;
+        let builder = HarmonicResultBuilder::new(result);
 
         // Build property values
         let node_count = scores.len();
@@ -256,8 +235,11 @@ impl HarmonicCentralityFacade {
                 AlgorithmError::Execution(format!("Harmonic mutate failed to add property: {e}"))
             })?;
 
-        let execution_time = start_time.elapsed();
-        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+        let summary = HarmonicCentralityMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: builder.execution_time_ms(),
+        };
 
         Ok(HarmonicCentralityMutateResult {
             summary,

@@ -2,14 +2,16 @@
 //!
 //! Live wiring for Cost-Effective Lazy Forward influence maximization.
 
-use crate::algo::celf::CELFComputationRuntime;
-use crate::algo::celf::spec::CELFConfig;
 use crate::algo::celf::storage::CELFStorageRuntime;
+use crate::algo::celf::{
+    CELFComputationRuntime, CELFConfig, CELFMutateResult, CELFMutationSummary, CELFResult,
+    CELFResultBuilder, CELFRow, CELFStats,
+};
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, TaskRegistry, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{MutationResult, WriteResult};
+use crate::procedures::builder_base::WriteResult;
 use crate::procedures::{AlgorithmRunner, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::graph_store::GraphStore;
@@ -21,34 +23,11 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Instant;
 
-/// Result row for CELF stream mode
-#[derive(Debug, Clone, PartialEq, serde::Serialize)]
-pub struct CELFRow {
-    pub node_id: u64,
-    pub spread: f64,
-}
-
-/// Statistics for CELF computation
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct CELFStats {
-    pub seed_count: usize,
-    pub total_spread: f64,
-    pub execution_time_ms: u64,
-}
-
-/// Result for CELF mutate mode
-#[derive(Debug, Clone)]
-pub struct CELFMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
 /// CELF facade bound to a live graph store
 #[derive(Clone)]
 pub struct CELFFacade {
     graph_store: Arc<DefaultGraphStore>,
     config: CELFConfig,
-    concurrency: usize,
     task_registry: Option<TaskRegistry>,
 }
 
@@ -57,9 +36,43 @@ impl CELFFacade {
         Self {
             graph_store,
             config: CELFConfig::default(),
-            concurrency: 4,
             task_registry: None,
         }
+    }
+
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: CELFConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: CELFConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: CELFConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
     }
 
     pub fn with_config(mut self, config: CELFConfig) -> Self {
@@ -93,7 +106,7 @@ impl CELFFacade {
     }
 
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -102,18 +115,26 @@ impl CELFFacade {
         self
     }
 
-    fn compute_seed_set(&self) -> Result<(HashMap<u64, f64>, std::time::Duration)> {
+    fn compute_seed_set(&self) -> Result<(CELFResult, std::time::Duration)> {
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
         let start = Instant::now();
 
         let storage = CELFStorageRuntime::new(&*self.graph_store)?;
         let node_count = storage.node_count();
         if node_count == 0 {
-            return Ok((HashMap::new(), start.elapsed()));
+            return Ok((
+                CELFResult {
+                    seed_set_nodes: HashMap::new(),
+                },
+                start.elapsed(),
+            ));
         }
 
         let mut progress_tracker = TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("celf".to_string(), self.config.seed_set_size),
-            self.concurrency,
+            self.config.concurrency,
         );
         progress_tracker.begin_subtask_with_volume(self.config.seed_set_size);
 
@@ -127,42 +148,29 @@ impl CELFFacade {
         progress_tracker.log_progress(self.config.seed_set_size);
         progress_tracker.end_subtask();
 
-        Ok((seed_set, start.elapsed()))
+        Ok((
+            CELFResult {
+                seed_set_nodes: seed_set,
+            },
+            start.elapsed(),
+        ))
     }
 
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = CELFRow>>> {
-        let (seed_set, _elapsed) = self.compute_seed_set()?;
-
-        let mut rows: Vec<CELFRow> = seed_set
-            .into_iter()
-            .map(|(node_id, spread)| CELFRow { node_id, spread })
-            .collect();
-
-        // Sort by spread descending, then by node_id ascending
-        rows.sort_by(|a, b| {
-            b.spread
-                .partial_cmp(&a.spread)
-                .unwrap()
-                .then_with(|| a.node_id.cmp(&b.node_id))
-        });
-
+        let (result, elapsed) = self.compute_seed_set()?;
+        let rows = CELFResultBuilder::new(result, elapsed).rows();
         Ok(Box::new(rows.into_iter()))
     }
 
     pub fn stats(&self) -> Result<CELFStats> {
-        let (seed_set, elapsed) = self.compute_seed_set()?;
-        let total_spread: f64 = seed_set.values().sum();
-
-        Ok(CELFStats {
-            seed_count: seed_set.len(),
-            total_spread,
-            execution_time_ms: elapsed.as_millis() as u64,
-        })
+        let (result, elapsed) = self.compute_seed_set()?;
+        Ok(CELFResultBuilder::new(result, elapsed).stats())
     }
 
     pub fn mutate(self, property_name: &str) -> Result<CELFMutateResult> {
-        let start = Instant::now();
-        let (seed_set, _elapsed) = self.compute_seed_set()?;
+        let (result, elapsed) = self.compute_seed_set()?;
+        let seed_set = result.seed_set_nodes.clone();
+        let builder = CELFResultBuilder::new(result, elapsed);
 
         let node_count = self.graph_store.node_count();
         let nodes_updated = node_count as u64;
@@ -187,8 +195,11 @@ impl CELFFacade {
                 AlgorithmError::Execution(format!("CELF mutate failed to add property: {e}"))
             })?;
 
-        let summary =
-            MutationResult::new(nodes_updated, property_name.to_string(), start.elapsed());
+        let summary = CELFMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: builder.execution_time_ms(),
+        };
 
         Ok(CELFMutateResult {
             summary,
@@ -197,15 +208,13 @@ impl CELFFacade {
     }
 
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
-        let start = Instant::now();
-        let (seed_set, _elapsed) = self.compute_seed_set()?;
+        let _ = self.compute_seed_set()?;
         let node_count = self.graph_store.node_count();
         let nodes_written = node_count as u64;
-        let _ = seed_set;
         Ok(WriteResult::new(
             nodes_written,
             property_name.to_string(),
-            start.elapsed(),
+            std::time::Duration::from_millis(0),
         ))
     }
 

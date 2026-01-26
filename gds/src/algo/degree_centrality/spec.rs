@@ -82,6 +82,118 @@ pub struct DegreeCentralityResult {
     pub execution_time: Duration,
 }
 
+/// Statistics about degree distribution in the graph
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DegreeCentralityStats {
+    /// Minimum degree found
+    pub min: f64,
+    /// Maximum degree found
+    pub max: f64,
+    /// Average degree
+    pub mean: f64,
+    /// Standard deviation
+    pub stddev: f64,
+    /// Median degree (50th percentile)
+    pub p50: f64,
+    /// 90th percentile degree
+    pub p90: f64,
+    /// 99th percentile degree
+    pub p99: f64,
+    /// Number of nodes with degree 0
+    pub isolated_nodes: u64,
+    /// Execution time in milliseconds
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DegreeCentralityMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DegreeCentralityWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for degree centrality: summary + updated store
+#[derive(Debug, Clone)]
+pub struct DegreeCentralityMutateResult {
+    pub summary: DegreeCentralityMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+/// Degree centrality result builder (facade adapter).
+pub struct DegreeCentralityResultBuilder {
+    result: DegreeCentralityResult,
+}
+
+impl DegreeCentralityResultBuilder {
+    pub fn new(result: DegreeCentralityResult) -> Self {
+        Self { result }
+    }
+
+    pub fn stats(&self) -> DegreeCentralityStats {
+        let scores = &self.result.centralities;
+        if scores.is_empty() {
+            return DegreeCentralityStats {
+                min: 0.0,
+                max: 0.0,
+                mean: 0.0,
+                stddev: 0.0,
+                p50: 0.0,
+                p90: 0.0,
+                p99: 0.0,
+                isolated_nodes: 0,
+                execution_time_ms: self.result.execution_time.as_millis() as u64,
+            };
+        }
+
+        let isolated_nodes = scores.iter().filter(|v| **v == 0.0).count() as u64;
+        let mut sorted = scores.clone();
+        sorted.sort_by(|a, b| a.total_cmp(b));
+        let min = *sorted.first().unwrap_or(&0.0);
+        let max = *sorted.last().unwrap_or(&0.0);
+        let mean = scores.iter().sum::<f64>() / scores.len() as f64;
+        let var = scores
+            .iter()
+            .map(|x| {
+                let d = x - mean;
+                d * d
+            })
+            .sum::<f64>()
+            / scores.len() as f64;
+        let stddev = var.sqrt();
+
+        let percentile = |p: f64| -> f64 {
+            let idx =
+                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
+            sorted[idx]
+        };
+
+        DegreeCentralityStats {
+            min,
+            max,
+            mean,
+            stddev,
+            p50: percentile(50.0),
+            p90: percentile(90.0),
+            p99: percentile(99.0),
+            isolated_nodes,
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
+    }
+}
+
 fn parse_orientation(value: &str) -> Result<Orientation, AlgorithmError> {
     match value.to_lowercase().as_str() {
         "natural" | "outgoing" => Ok(Orientation::Natural),

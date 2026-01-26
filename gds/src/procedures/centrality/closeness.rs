@@ -9,8 +9,12 @@
 //! - Centrality formula: `componentSize / farness`
 //! - Optional Wasserman–Faust normalization
 
-use crate::algo::closeness::ClosenessCentralityComputationRuntime;
 use crate::algo::closeness::ClosenessCentralityStorageRuntime;
+use crate::algo::closeness::{
+    ClosenessCentralityComputationRuntime, ClosenessCentralityConfig,
+    ClosenessCentralityMutateResult, ClosenessCentralityMutationSummary, ClosenessCentralityResult,
+    ClosenessCentralityResultBuilder, ClosenessCentralityStats,
+};
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::ProgressTracker;
@@ -18,7 +22,7 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, Task, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::{CentralityScore, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -30,34 +34,11 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
-/// Statistics about closeness centrality.
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct ClosenessCentralityStats {
-    pub min: f64,
-    pub max: f64,
-    pub mean: f64,
-    pub stddev: f64,
-    pub p50: f64,
-    pub p90: f64,
-    pub p99: f64,
-    pub isolated_nodes: u64,
-    pub execution_time_ms: u64,
-}
-
-/// Mutation result for closeness centrality, including the updated graph store.
-#[derive(Debug, Clone)]
-pub struct ClosenessCentralityMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
 /// Closeness centrality facade/builder bound to a live graph store.
 #[derive(Clone)]
 pub struct ClosenessCentralityFacade {
     graph_store: Arc<DefaultGraphStore>,
-    wasserman_faust: bool,
-    direction: String,
-    concurrency: usize,
+    config: ClosenessCentralityConfig,
     task_registry: Arc<dyn TaskRegistryFactory>,
 }
 
@@ -65,28 +46,61 @@ impl ClosenessCentralityFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            wasserman_faust: false,
-            direction: "both".to_string(),
-            concurrency: 4,
+            config: ClosenessCentralityConfig::default(),
             task_registry: Arc::new(EmptyTaskRegistryFactory),
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: ClosenessCentralityConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: Arc::new(EmptyTaskRegistryFactory),
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: ClosenessCentralityConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: ClosenessCentralityConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     /// Enable/disable Wasserman–Faust normalization.
     pub fn wasserman_faust(mut self, enabled: bool) -> Self {
-        self.wasserman_faust = enabled;
+        self.config.wasserman_faust = enabled;
         self
     }
 
     /// Direction of traversal: "outgoing", "incoming", or "both".
     pub fn direction(mut self, direction: &str) -> Self {
-        self.direction = direction.to_string();
+        self.config.direction = direction.to_string();
         self
     }
 
     /// Set concurrency level for parallel computation.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -97,7 +111,7 @@ impl ClosenessCentralityFacade {
     }
 
     fn orientation(&self) -> Orientation {
-        match self.direction.as_str() {
+        match self.config.direction.as_str() {
             "incoming" => Orientation::Reverse,
             "outgoing" => Orientation::Natural,
             _ => Orientation::Undirected,
@@ -112,22 +126,23 @@ impl ClosenessCentralityFacade {
     /// # Errors
     /// Returns an error if concurrency is not positive
     pub fn validate(&self) -> Result<()> {
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be positive".to_string(),
-            ));
-        }
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
-    fn compute_scores(&self) -> Result<(Vec<f64>, std::time::Duration)> {
+    fn compute(&self) -> Result<ClosenessCentralityResult> {
         let start = Instant::now();
 
         let storage =
             ClosenessCentralityStorageRuntime::new(self.graph_store.as_ref(), self.orientation())?;
         let node_count = storage.node_count();
         if node_count == 0 {
-            return Ok((Vec::new(), start.elapsed()));
+            return Ok(ClosenessCentralityResult {
+                centralities: Vec::new(),
+                node_count,
+                execution_time: start.elapsed(),
+            });
         }
 
         let computation = ClosenessCentralityComputationRuntime::new();
@@ -140,7 +155,7 @@ impl ClosenessCentralityFacade {
 
         let mut progress_tracker = TaskProgressTracker::with_registry(
             root_task,
-            Concurrency::of(self.concurrency.max(1)),
+            Concurrency::of(self.config.concurrency.max(1)),
             JobId::new(),
             self.task_registry.as_ref(),
         );
@@ -163,8 +178,8 @@ impl ClosenessCentralityFacade {
         let centralities = storage
             .compute_parallel(
                 &computation,
-                self.wasserman_faust,
-                self.concurrency,
+                self.config.wasserman_faust,
+                self.config.concurrency,
                 &termination,
                 on_sources_done,
                 on_closeness_done,
@@ -183,13 +198,18 @@ impl ClosenessCentralityFacade {
         progress_tracker.end_subtask();
         progress_tracker.release();
 
-        Ok((centralities, start.elapsed()))
+        Ok(ClosenessCentralityResult {
+            centralities,
+            node_count,
+            execution_time: start.elapsed(),
+        })
     }
 
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
         self.validate()?;
-        let (scores, _elapsed) = self.compute_scores()?;
-        let iter = scores
+        let result = self.compute()?;
+        let iter = result
+            .centralities
             .into_iter()
             .enumerate()
             .map(|(node_id, score)| CentralityScore {
@@ -201,65 +221,18 @@ impl ClosenessCentralityFacade {
 
     pub fn stats(&self) -> Result<ClosenessCentralityStats> {
         self.validate()?;
-        let (scores, elapsed) = self.compute_scores()?;
-        if scores.is_empty() {
-            return Ok(ClosenessCentralityStats {
-                min: 0.0,
-                max: 0.0,
-                mean: 0.0,
-                stddev: 0.0,
-                p50: 0.0,
-                p90: 0.0,
-                p99: 0.0,
-                isolated_nodes: 0,
-                execution_time_ms: elapsed.as_millis() as u64,
-            });
-        }
-
-        let isolated_nodes = scores.iter().filter(|v| **v == 0.0).count() as u64;
-
-        let mut sorted = scores.clone();
-        sorted.sort_by(|a, b| a.total_cmp(b));
-        let min = *sorted.first().unwrap();
-        let max = *sorted.last().unwrap();
-        let mean = scores.iter().sum::<f64>() / scores.len() as f64;
-        let var = scores
-            .iter()
-            .map(|x| {
-                let d = x - mean;
-                d * d
-            })
-            .sum::<f64>()
-            / scores.len() as f64;
-        let stddev = var.sqrt();
-
-        let percentile = |p: f64| -> f64 {
-            let idx =
-                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
-            sorted[idx]
-        };
-
-        Ok(ClosenessCentralityStats {
-            min,
-            max,
-            mean,
-            stddev,
-            p50: percentile(50.0),
-            p90: percentile(90.0),
-            p99: percentile(99.0),
-            isolated_nodes,
-            execution_time_ms: elapsed.as_millis() as u64,
-        })
+        let result = self.compute()?;
+        Ok(ClosenessCentralityResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: compute scores, write them to a new graph store, and return it.
     pub fn mutate(self, property_name: &str) -> Result<ClosenessCentralityMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
-        let start_time = Instant::now();
-        let (scores, _elapsed) = self.compute_scores()?;
-
+        let result = self.compute()?;
+        let scores = result.centralities.clone();
         let nodes_updated = scores.len() as u64;
+        let builder = ClosenessCentralityResultBuilder::new(result);
 
         // Build property values
         let node_count = scores.len();
@@ -276,8 +249,11 @@ impl ClosenessCentralityFacade {
                 AlgorithmError::Execution(format!("Closeness mutate failed to add property: {e}"))
             })?;
 
-        let execution_time = start_time.elapsed();
-        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+        let summary = ClosenessCentralityMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: builder.execution_time_ms(),
+        };
 
         Ok(ClosenessCentralityMutateResult {
             summary,
@@ -289,12 +265,9 @@ impl ClosenessCentralityFacade {
     pub fn write(self, property_name: &str) -> Result<WriteResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
-        let start_time = Instant::now();
-        let (scores, _elapsed) = self.compute_scores()?;
-
-        let nodes_written = scores.len() as u64;
-
-        let execution_time = start_time.elapsed();
+        let result = self.compute()?;
+        let nodes_written = result.centralities.len() as u64;
+        let execution_time = result.execution_time;
         Ok(WriteResult::new(
             nodes_written,
             property_name.to_string(),
@@ -318,7 +291,7 @@ impl ClosenessCentralityFacade {
     pub fn estimate_memory(&self) -> MemoryRange {
         let node_count = self.graph_store.node_count();
 
-        let concurrency = self.concurrency.max(1);
+        let concurrency = self.config.concurrency.max(1);
 
         // Memory for closeness scores (one f64 per node)
         let scores_memory = node_count * std::mem::size_of::<f64>();

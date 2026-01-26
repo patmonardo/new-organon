@@ -1,17 +1,13 @@
 //! PageRank algorithm specification (executor integration)
 
 use crate::collections::backends::vec::VecDouble;
-use crate::config::base_types::AlgoBaseConfig;
-use crate::config::validation::{validate_positive, validate_range};
-use crate::core::utils::partition::Partitioning;
+use crate::config::validation::ConfigError;
 use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, Tasks};
 use crate::define_algorithm_spec;
-use crate::define_config;
 use crate::projection::eval::algorithm::*;
 use crate::projection::NodeLabel;
 use crate::projection::Orientation;
 use crate::types::properties::node::{DefaultDoubleNodePropertyValues, NodePropertyValues};
-use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -19,8 +15,11 @@ use std::time::{Duration, Instant};
 use super::storage::PageRankStorageRuntime;
 use super::PageRankComputationRuntime;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PageRankConfigInput {
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PageRankConfig {
+    #[serde(default = "default_direction")]
+    pub direction: String,
+
     #[serde(default = "default_concurrency")]
     pub concurrency: usize,
 
@@ -37,6 +36,10 @@ pub struct PageRankConfigInput {
     pub source_nodes: Option<Vec<u64>>,
 }
 
+fn default_direction() -> String {
+    "outgoing".to_string()
+}
+
 fn default_concurrency() -> usize {
     4
 }
@@ -46,16 +49,17 @@ fn default_max_iterations() -> usize {
 }
 
 fn default_tolerance() -> f64 {
-    1e-7
+    1e-4
 }
 
 fn default_damping_factor() -> f64 {
     0.85
 }
 
-impl Default for PageRankConfigInput {
+impl Default for PageRankConfig {
     fn default() -> Self {
         Self {
+            direction: default_direction(),
             concurrency: default_concurrency(),
             max_iterations: default_max_iterations(),
             tolerance: default_tolerance(),
@@ -65,63 +69,162 @@ impl Default for PageRankConfigInput {
     }
 }
 
-// PageRank runtime configuration (canonicalized into the algorithm spec)
-define_config!(
-    #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-    pub struct PageRankConfig {
-        validate = |cfg: &PageRankConfig| {
-            validate_positive(cfg.base.concurrency as f64, "concurrency")?;
-            validate_positive(cfg.max_iterations as f64, "maxIterations")?;
-            validate_range(cfg.damping_factor, 0.0, 1.0, "dampingFactor")?;
-            validate_positive(cfg.tolerance, "tolerance")?;
-            Ok(())
-        },
-        base: AlgoBaseConfig = AlgoBaseConfig::default(),
-        max_iterations: usize = 20,
-        tolerance: f64 = 1e-7,
-        damping_factor: f64 = 0.85,
-        // keep node ids as u64 here to match runtime usage
-        source_nodes: Option<Vec<u64>> = None,
-    }
-);
-
-impl crate::config::ConcurrencyConfig for PageRankConfig {
-    fn concurrency(&self) -> usize {
-        self.base.concurrency
-    }
-}
-
-impl crate::config::IterationsConfig for PageRankConfig {
-    fn max_iterations(&self) -> usize {
-        self.max_iterations
-    }
-
-    fn tolerance(&self) -> Option<f64> {
-        Some(self.tolerance)
+impl PageRankConfig {
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.concurrency == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "concurrency".to_string(),
+                reason: "concurrency must be positive".to_string(),
+            });
+        }
+        if self.max_iterations == 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "maxIterations".to_string(),
+                reason: "maxIterations must be positive".to_string(),
+            });
+        }
+        if self.tolerance <= 0.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "tolerance".to_string(),
+                reason: "tolerance must be positive".to_string(),
+            });
+        }
+        if self.damping_factor <= 0.0 || self.damping_factor >= 1.0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "dampingFactor".to_string(),
+                reason: "dampingFactor must be between 0 and 1".to_string(),
+            });
+        }
+        Ok(())
     }
 }
 
-impl crate::config::pregel_config::PregelRuntimeConfig for PageRankConfig {
-    fn is_asynchronous(&self) -> bool {
-        false
-    }
-
-    fn partitioning(&self) -> Partitioning {
-        Partitioning::Range
-    }
-
-    fn track_sender(&self) -> bool {
-        false
+impl crate::config::ValidatedConfig for PageRankConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        PageRankConfig::validate(self)
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PageRankResult {
     pub scores: Vec<f64>,
     pub ran_iterations: usize,
     pub did_converge: bool,
     pub node_count: usize,
     pub execution_time: Duration,
+}
+
+/// Statistics about PageRank computation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PageRankStats {
+    pub min: f64,
+    pub max: f64,
+    pub mean: f64,
+    pub stddev: f64,
+    pub p50: f64,
+    pub p90: f64,
+    pub p99: f64,
+    pub iterations_ran: usize,
+    pub converged: bool,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PageRankMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct PageRankWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for PageRank: summary + updated store
+#[derive(Debug, Clone)]
+pub struct PageRankMutateResult {
+    pub summary: PageRankMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+/// PageRank result builder (facade adapter).
+pub struct PageRankResultBuilder {
+    result: PageRankResult,
+}
+
+impl PageRankResultBuilder {
+    pub fn new(result: PageRankResult) -> Self {
+        Self { result }
+    }
+
+    pub fn stats(&self) -> PageRankStats {
+        let scores = &self.result.scores;
+        if scores.is_empty() {
+            return PageRankStats {
+                min: 0.0,
+                max: 0.0,
+                mean: 0.0,
+                stddev: 0.0,
+                p50: 0.0,
+                p90: 0.0,
+                p99: 0.0,
+                iterations_ran: self.result.ran_iterations,
+                converged: self.result.did_converge,
+                execution_time_ms: self.result.execution_time.as_millis() as u64,
+            };
+        }
+
+        let mut sorted = scores.clone();
+        sorted.sort_by(|a, b| a.total_cmp(b));
+        let min = *sorted.first().unwrap_or(&0.0);
+        let max = *sorted.last().unwrap_or(&0.0);
+        let mean = scores.iter().sum::<f64>() / scores.len() as f64;
+        let var = scores
+            .iter()
+            .map(|x| {
+                let d = x - mean;
+                d * d
+            })
+            .sum::<f64>()
+            / scores.len() as f64;
+        let stddev = var.sqrt();
+
+        let percentile = |p: f64| -> f64 {
+            let idx =
+                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
+            sorted[idx]
+        };
+
+        PageRankStats {
+            min,
+            max,
+            mean,
+            stddev,
+            p50: percentile(50.0),
+            p90: percentile(90.0),
+            p99: percentile(99.0),
+            iterations_ran: self.result.ran_iterations,
+            converged: self.result.did_converge,
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
+    }
+}
+
+fn orientation(direction: &str) -> Orientation {
+    match direction {
+        "incoming" => Orientation::Reverse,
+        "outgoing" => Orientation::Natural,
+        _ => Orientation::Undirected,
+    }
 }
 
 define_algorithm_spec! {
@@ -131,37 +234,25 @@ define_algorithm_spec! {
     modes: [Stream, Stats, MutateNodeProperty],
 
     execute: |_self, graph_store, config, _context| {
-        let parsed: PageRankConfigInput = serde_json::from_value(config.clone())
+        let parsed: PageRankConfig = serde_json::from_value(config.clone())
             .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
-
-        if parsed.concurrency == 0 {
-            return Err(AlgorithmError::Execution("concurrency must be > 0".into()));
-        }
+        parsed
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
 
         let start = Instant::now();
 
         let storage = PageRankStorageRuntime::with_orientation(
             graph_store,
-            Orientation::Natural,
+            orientation(&parsed.direction),
         )?;
 
-        let pr_config = PageRankConfig::builder()
-            .base(AlgoBaseConfig {
-                concurrency: parsed.concurrency,
-                ..AlgoBaseConfig::default()
-            })
-            .max_iterations(parsed.max_iterations)
-            .damping_factor(parsed.damping_factor)
-            .tolerance(parsed.tolerance)
-            .build()
-            .map_err(|e| AlgorithmError::Execution(format!("PageRankConfig invalid: {e}")))?;
-
-        let sources = parsed.source_nodes.map(|v| v.into_iter().collect());
+        let sources = parsed.source_nodes.clone().map(|v| v.into_iter().collect());
 
         let computation = PageRankComputationRuntime::new(
-            pr_config.max_iterations,
-            pr_config.damping_factor,
-            pr_config.tolerance,
+            parsed.max_iterations,
+            parsed.damping_factor,
+            parsed.tolerance,
             sources,
         );
 
