@@ -10,7 +10,7 @@ pub use crate::algo::embeddings::hashgnn::spec::{
 };
 use crate::prints::{PrintEnvelope, PrintKind, PrintProvenance};
 use crate::projection::eval::algorithm::AlgorithmError;
-use crate::projection::orientation::Orientation;
+use crate::projection::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use serde::{Deserialize, Serialize};

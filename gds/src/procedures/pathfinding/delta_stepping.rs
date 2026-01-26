@@ -13,7 +13,7 @@ use crate::algo::delta_stepping::{
     DeltaSteppingStorageRuntime, DeltaSteppingWriteSummary,
 };
 use crate::mem::MemoryRange;
-use crate::projection::orientation::Orientation;
+use crate::projection::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::{HashMap, HashSet};

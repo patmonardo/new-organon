@@ -5,7 +5,7 @@ use crate::algo::algorithms::ConfigValidator;
 use crate::algo::embeddings::graphsage::spec::{GraphSageConfig, GraphSageResult};
 use crate::algo::embeddings::graphsage::GraphSageStorageRuntime;
 use crate::projection::eval::algorithm::AlgorithmError;
-use crate::projection::orientation::Orientation;
+use crate::projection::Orientation;
 use crate::types::DefaultGraphStore;
 use crate::types::GraphStore;
 use serde::{Deserialize, Serialize};

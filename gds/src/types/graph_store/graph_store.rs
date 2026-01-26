@@ -1,7 +1,7 @@
 //! GraphStore trait - Central interface for managing and accessing graph data.
 
 use super::{Capabilities, DatabaseInfo, DeletionResult};
-use crate::projection::orientation::Orientation;
+use crate::projection::Orientation;
 use crate::projection::{NodeLabel, RelationshipType};
 use crate::types::graph::id_map::{IdMap, MappedNodeId};
 use crate::types::graph::{Graph, GraphResult};

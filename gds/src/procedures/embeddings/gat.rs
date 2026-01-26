@@ -4,7 +4,7 @@ use crate::algo::embeddings::gat::storage::GATStorageRuntime;
 use crate::algo::embeddings::gat::GATConfig;
 use crate::algo::embeddings::gat::GATResult;
 use crate::projection::eval::algorithm::AlgorithmError;
-use crate::projection::orientation::Orientation;
+use crate::projection::Orientation;
 use crate::types::DefaultGraphStore;
 use crate::types::GraphStore;
 use serde::{Deserialize, Serialize};

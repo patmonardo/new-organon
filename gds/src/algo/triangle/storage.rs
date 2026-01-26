@@ -2,7 +2,7 @@ use super::spec::{TriangleConfig, TriangleResult};
 use super::TriangleComputationRuntime;
 use crate::concurrency::TerminationFlag;
 use crate::core::utils::progress::ProgressTracker;
-use crate::projection::orientation::Orientation;
+use crate::projection::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::GraphStore;
 use std::collections::HashSet;

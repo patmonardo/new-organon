@@ -6,7 +6,7 @@ use crate::algo::algorithms::pathfinding::PathResult;
 use crate::config::validation::ConfigError;
 use crate::define_algorithm_spec;
 use crate::projection::eval::algorithm::AlgorithmError;
-use crate::projection::orientation::Orientation;
+use crate::projection::Orientation;
 use crate::projection::RelationshipType;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

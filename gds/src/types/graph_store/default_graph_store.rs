@@ -12,7 +12,7 @@ use crate::collections::backends::vec::{
     VecDouble, VecDoubleArray, VecFloat, VecInt, VecLong, VecLongArray,
 };
 use crate::config::GraphStoreConfig;
-use crate::projection::orientation::Orientation;
+use crate::projection::Orientation;
 use crate::projection::{NodeLabel, RelationshipType};
 use crate::types::graph::id_map::{MappedNodeId, OriginalNodeId};
 use crate::types::graph::GraphResult;

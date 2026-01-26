@@ -9,6 +9,7 @@
 //! - Centrality formula: `componentSize / farness`
 //! - Optional Wasserman–Faust normalization
 
+use crate::algo::algorithms::{CentralityScore, Result};
 use crate::algo::algorithms::{ConfigValidator, WriteResult};
 use crate::algo::closeness::ClosenessCentralityStorageRuntime;
 use crate::algo::closeness::{
@@ -23,10 +24,9 @@ use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, Task, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::algo::algorithms::{CentralityScore, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
-use crate::projection::orientation::Orientation;
 use crate::projection::NodeLabel;
+use crate::projection::Orientation;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::DefaultDoubleNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;

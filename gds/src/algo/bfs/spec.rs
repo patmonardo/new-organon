@@ -15,7 +15,7 @@ use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
 use crate::projection::eval::algorithm::AlgorithmError;
-use crate::projection::orientation::Orientation;
+use crate::projection::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::NodeId;
 use serde::{Deserialize, Serialize};

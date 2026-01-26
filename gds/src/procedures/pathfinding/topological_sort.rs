@@ -11,7 +11,7 @@ use crate::algo::topological_sort::{
 use crate::mem::MemoryRange;
 use crate::algo::algorithms::Result;
 use crate::algo::algorithms::pathfinding::PathResult;
-use crate::projection::orientation::Orientation;
+use crate::projection::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;

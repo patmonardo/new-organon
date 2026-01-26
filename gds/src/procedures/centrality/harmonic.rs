@@ -25,8 +25,8 @@ use crate::core::utils::progress::{
 };
 use crate::mem::MemoryRange;
 use crate::projection::eval::algorithm::AlgorithmError;
-use crate::projection::orientation::Orientation;
 use crate::projection::NodeLabel;
+use crate::projection::Orientation;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use crate::types::properties::node::DefaultDoubleNodePropertyValues;
 use crate::types::properties::node::NodePropertyValues;

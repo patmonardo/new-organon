@@ -1,5 +1,5 @@
 use crate::projection::factory::RelationshipsBuilder;
-use crate::projection::orientation::Orientation;
+use crate::projection::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::IdMap;
 use crate::types::graph::Graph;
