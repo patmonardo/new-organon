@@ -6,7 +6,7 @@
 //! using our focused macro system.
 
 use super::storage::SpanningTreeStorageRuntime;
-use crate::algo::algorithms::result_builders::PathResult;
+use crate::algo::algorithms::pathfinding::PathResult;
 use crate::config::validation::ConfigError;
 use crate::define_algorithm_spec;
 use crate::projection::eval::algorithm::AlgorithmError;

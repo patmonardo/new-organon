@@ -10,9 +10,10 @@ use super::path_finding_result::PathFindingResult as DijkstraPathFindingResult;
 use super::storage::DijkstraStorageRuntime;
 use super::targets::create_targets;
 use super::DijkstraComputationRuntime;
-use crate::algo::algorithms::result_builders::{
-    ExecutionMetadata, PathFindingResult, PathFindingResultBuilder, PathResult, ResultBuilder,
+use crate::algo::algorithms::pathfinding::{
+    PathFindingResult, PathFindingResultBuilder, PathResult,
 };
+use crate::algo::algorithms::result_builders::{ExecutionMetadata, ResultBuilder};
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;

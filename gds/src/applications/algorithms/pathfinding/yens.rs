@@ -11,6 +11,7 @@ use crate::applications::algorithms::pathfinding::{
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -119,7 +120,9 @@ pub fn handle_yens(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value {
                     builder = builder.relationship_types(relationship_types.clone());
                 }
 
-                let iter = builder.stream().map_err(|e| e.to_string())?;
+                let iter = builder
+                    .stream()
+                    .map_err(|e: AlgorithmError| e.to_string())?;
                 let rows = iter
                     .map(|row| serde_json::to_value(row).map_err(|e| e.to_string()))
                     .collect::<Result<Vec<_>, _>>()?;

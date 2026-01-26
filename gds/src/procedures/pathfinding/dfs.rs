@@ -29,7 +29,7 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
-use crate::algo::algorithms::result_builders::PathFindingResult;
+use crate::algo::algorithms::pathfinding::PathFindingResult;
 use crate::algo::algorithms::{PathResult, Result};
 use crate::algo::dfs::{
     DfsComputationRuntime, DfsConfig, DfsMutateResult, DfsMutationSummary, DfsResultBuilder,

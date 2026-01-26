@@ -5,13 +5,13 @@
 //! This facade runs the translated Delta Stepping runtime against a live
 //! `DefaultGraphStore`.
 
+use crate::algo::algorithms::{PathResult, Result};
 use crate::algo::delta_stepping::{
     DeltaSteppingComputationRuntime, DeltaSteppingConfig, DeltaSteppingMutateResult,
     DeltaSteppingMutationSummary, DeltaSteppingResultBuilder, DeltaSteppingStats,
     DeltaSteppingStorageRuntime, DeltaSteppingWriteSummary,
 };
 use crate::mem::MemoryRange;
-use crate::algo::algorithms::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -19,7 +19,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::algo::algorithms::result_builders::PathFindingResult;
+use crate::algo::algorithms::pathfinding::PathFindingResult;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 use crate::projection::eval::algorithm::AlgorithmError;

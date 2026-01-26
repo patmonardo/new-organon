@@ -1,4 +1,4 @@
-use crate::algo::algorithms::result_builders::PathResult;
+use crate::algo::algorithms::pathfinding::PathResult;
 use crate::types::graph::id_map::NodeId;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

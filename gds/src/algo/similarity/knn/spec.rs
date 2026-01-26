@@ -2,7 +2,7 @@ use super::metrics::{KnnNodePropertySpec, SimilarityMetric};
 use super::storage::KnnSamplerType;
 use super::storage::KnnStorageRuntime;
 use super::{KnnComputationResult, KnnComputationRuntime, KnnNnDescentStats};
-use crate::algo::algorithms::result::similarity::similarity_stats;
+use crate::algo::algorithms::similarity::similarity_stats;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;

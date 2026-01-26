@@ -1,5 +1,5 @@
-use crate::algo::algorithms::result::similarity::similarity_stats;
-use crate::algo::algorithms::result_builders::PathResult;
+use crate::algo::algorithms::similarity::similarity_stats;
+use crate::algo::algorithms::pathfinding::PathResult;
 use crate::algo::similarity::node_similarity::NodeSimilarityResult;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

@@ -20,7 +20,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 // Import upgraded systems
-use crate::algo::algorithms::result_builders::PathResult;
+use crate::algo::algorithms::pathfinding::PathResult;
 use crate::core::utils::progress::{
     ProgressTracker, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };

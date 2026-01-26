@@ -6,9 +6,10 @@
 
 use super::storage::BfsStorageRuntime;
 use super::BfsComputationRuntime;
-use crate::algo::algorithms::result_builders::{
-    ExecutionMetadata, PathFindingResult, PathFindingResultBuilder, PathResult, ResultBuilder,
+use crate::algo::algorithms::pathfinding::{
+    PathFindingResult, PathFindingResultBuilder, PathResult,
 };
+use crate::algo::algorithms::result_builders::{ExecutionMetadata, ResultBuilder};
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;

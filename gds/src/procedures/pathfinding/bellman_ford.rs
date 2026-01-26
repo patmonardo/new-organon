@@ -15,7 +15,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::algo::algorithms::result_builders::PathResult;
+use crate::algo::algorithms::pathfinding::PathResult;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };

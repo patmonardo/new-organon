@@ -2,7 +2,7 @@
 //!
 //! **Translation Source**: `org.neo4j.gds.dag.topologicalsort.TopologicalSortBaseConfig`
 
-use crate::algo::algorithms::result_builders::PathResult;
+use crate::algo::algorithms::pathfinding::PathResult;
 use crate::config::validation::ConfigError;
 use crate::types::graph::id_map::NodeId;
 use serde::{Deserialize, Serialize};

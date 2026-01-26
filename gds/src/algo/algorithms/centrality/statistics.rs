@@ -5,7 +5,7 @@
 //! Provides histogram generation and statistical analysis for centrality
 //! algorithm results (PageRank, Betweenness, Degree, etc.).
 
-use hdrhistogram::Histogram;
+use hdrhistogram::Histogram as HdrHistogram;
 use rayon::prelude::*;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -22,7 +22,7 @@ const SCALE_FACTOR: f64 = 100_000.0;
 pub struct CentralityStats {
     /// Optional histogram of centrality values (scaled to u64)
     /// Values are multiplied by SCALE_FACTOR before recording
-    pub histogram: Option<Histogram<u64>>,
+    pub histogram: Option<HdrHistogram<u64>>,
     /// Time taken to compute statistics (milliseconds)
     pub compute_millis: u64,
     /// Whether computation succeeded
@@ -31,7 +31,7 @@ pub struct CentralityStats {
 
 impl CentralityStats {
     /// Create successful stats with histogram
-    pub fn with_histogram(histogram: Histogram<u64>, compute_millis: u64) -> Self {
+    pub fn with_histogram(histogram: HdrHistogram<u64>, compute_millis: u64) -> Self {
         Self {
             histogram: Some(histogram),
             compute_millis,
@@ -111,7 +111,7 @@ fn build_histogram<F>(
     node_count: u64,
     centrality_fn: &F,
     concurrency: usize,
-) -> Result<Histogram<u64>, String>
+) -> Result<HdrHistogram<u64>, String>
 where
     F: Fn(u64) -> f64 + Send + Sync,
 {
@@ -119,7 +119,7 @@ where
 
     if concurrency == 1 {
         // Single-threaded path
-        let mut histogram = Histogram::new(HISTOGRAM_PRECISION)
+        let mut histogram = HdrHistogram::new(HISTOGRAM_PRECISION)
             .map_err(|e| format!("Failed to create histogram: {}", e))?;
 
         for node_id in 0..node_count {
@@ -145,7 +145,7 @@ where
                 let start = chunk_idx as u64 * chunk_size;
                 let end = ((chunk_idx + 1) as u64 * chunk_size).min(node_count);
 
-                let mut local_histogram = Histogram::new(HISTOGRAM_PRECISION)
+                let mut local_histogram = HdrHistogram::new(HISTOGRAM_PRECISION)
                     .map_err(|e| format!("Failed to create histogram: {}", e))?;
 
                 for node_id in start..end {
@@ -179,7 +179,7 @@ where
 /// Generate summary statistics from histogram
 ///
 /// **Translation**: `HistogramUtils.centralitySummary()`
-fn centrality_summary(histogram: &Histogram<u64>) -> HashMap<String, f64> {
+fn centrality_summary(histogram: &HdrHistogram<u64>) -> HashMap<String, f64> {
     let mut summary = HashMap::new();
 
     // Unscale all values back to f64
@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn test_summary_with_histogram() {
-        let mut histogram = Histogram::new(HISTOGRAM_PRECISION).unwrap();
+        let mut histogram = HdrHistogram::new(HISTOGRAM_PRECISION).unwrap();
         for i in 0..100 {
             let scaled = (i as f64 * SCALE_FACTOR) as u64;
             histogram.record(scaled).unwrap();

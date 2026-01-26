@@ -2,7 +2,7 @@
 //!
 //! **Translation Source**: `org.neo4j.gds.traversal.RandomWalkBaseConfig`
 
-use crate::algo::algorithms::result_builders::PathResult;
+use crate::algo::algorithms::pathfinding::PathResult;
 use crate::config::validation::ConfigError;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

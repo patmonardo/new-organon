@@ -54,7 +54,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::algo::algorithms::result_builders::{PathFindingResult, PathResult};
+use crate::algo::algorithms::pathfinding::{PathFindingResult, PathResult};
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 
 // ============================================================================
@@ -469,31 +469,31 @@ impl AStarFacade {
             .metadata
             .additional
             .get("nodes_visited")
-            .and_then(|s| s.parse().ok())
+            .and_then(|s| s.parse::<u64>().ok())
             .unwrap_or(0);
         let targets_found = result
             .metadata
             .additional
             .get("targets_found")
-            .and_then(|s| s.parse().ok())
+            .and_then(|s| s.parse::<u64>().ok())
             .unwrap_or(0);
         let all_targets_reached = result
             .metadata
             .additional
             .get("all_targets_reached")
-            .and_then(|s| s.parse().ok())
+            .and_then(|s| s.parse::<bool>().ok())
             .unwrap_or(false);
         let heuristic_accuracy = result
             .metadata
             .additional
             .get("heuristic_accuracy")
-            .and_then(|s| s.parse().ok())
+            .and_then(|s| s.parse::<f64>().ok())
             .unwrap_or(1.0);
         let heuristic_evaluations = result
             .metadata
             .additional
             .get("heuristic_evaluations")
-            .and_then(|s| s.parse().ok())
+            .and_then(|s| s.parse::<u64>().ok())
             .unwrap_or(0);
 
         Ok(AStarStats {

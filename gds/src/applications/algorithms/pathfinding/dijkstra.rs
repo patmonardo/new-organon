@@ -12,6 +12,7 @@ use crate::applications::algorithms::pathfinding::{
 };
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::{CatalogLoader, GraphResources};
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
@@ -114,7 +115,7 @@ pub fn handle_dijkstra(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value
                     builder = builder.targets(targets.clone());
                 }
 
-                let iter = builder.stream().map_err(|e| e.to_string())?;
+                let iter = builder.stream().map_err(|e: AlgorithmError| e.to_string())?;
                 let rows = iter
                     .map(|row| serde_json::to_value(row).map_err(|e| e.to_string()))
                     .collect::<Result<Vec<_>, _>>()?;

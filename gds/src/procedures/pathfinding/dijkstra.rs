@@ -43,7 +43,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::algo::algorithms::result_builders::{PathFindingResult, PathResult};
+use crate::algo::algorithms::pathfinding::{PathFindingResult, PathResult};
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 use crate::projection::eval::algorithm::AlgorithmError;

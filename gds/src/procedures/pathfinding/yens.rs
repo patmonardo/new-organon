@@ -4,7 +4,7 @@
 //!
 //! This facade runs the translated Yen's runtime against a live `DefaultGraphStore`.
 
-use crate::algo::algorithms::result_builders::{PathFindingResult, PathResult};
+use crate::algo::algorithms::pathfinding::{PathFindingResult, PathResult};
 use crate::algo::algorithms::Result;
 use crate::algo::yens::{
     YensComputationRuntime, YensConfig, YensMutateResult, YensMutationSummary, YensResult,
