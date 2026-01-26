@@ -4,8 +4,8 @@
 //!
 //! This module defines the BFS algorithm specification, configuration, and result types.
 
-use super::storage::BfsStorageRuntime;
 use super::BfsComputationRuntime;
+use super::BfsStorageRuntime;
 use crate::algo::algorithms::pathfinding::{
     PathFindingResult, PathFindingResultBuilder, PathResult,
 };

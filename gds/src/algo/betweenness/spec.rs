@@ -7,13 +7,13 @@ use crate::core::utils::progress::ProgressTracker;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
-use crate::projection::eval::algorithm::*;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::Orientation;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use super::storage::BetweennessCentralityStorageRuntime;
+use super::BetweennessCentralityStorageRuntime;
 
 /// Configuration for betweenness centrality.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

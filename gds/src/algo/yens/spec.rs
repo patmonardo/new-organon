@@ -4,7 +4,7 @@
 //!
 //! This module defines the Yen's algorithm specification, configuration, and result types.
 
-use super::storage::YensStorageRuntime;
+use super::YensStorageRuntime;
 use super::YensComputationRuntime;
 use crate::algo::algorithms::pathfinding::{
     PathFindingResult, PathFindingResultBuilder, PathResult,

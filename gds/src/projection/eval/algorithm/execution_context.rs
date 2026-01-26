@@ -9,6 +9,7 @@
 //! - Simple HashMap-based graph catalog
 //! - Basic logging and metrics
 
+use crate::core::LogLevel;
 use crate::types::catalog::GraphCatalog;
 use crate::types::prelude::DefaultGraphStore;
 use std::collections::HashMap;
@@ -48,15 +49,6 @@ pub struct ExecutionContext {
 
     /// Configuration overrides (key → value)
     config_overrides: HashMap<String, String>,
-}
-
-/// Log Level - Logging severity
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum LogLevel {
-    Debug = 0,
-    Info = 1,
-    Warn = 2,
-    Error = 3,
 }
 
 /// Metrics Collector - Records operation timings

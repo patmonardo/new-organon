@@ -24,6 +24,7 @@
 //! - Direct execution without factory visitor
 //! - Simpler error handling with Result types
 
+use crate::core::LogLevel;
 use crate::types::prelude::GraphStore;
 use serde_json::Value as JsonValue;
 use std::sync::Arc;
@@ -34,7 +35,7 @@ use super::execution_context::ContextError;
 use super::validation_config::ValidationError;
 use super::{
     AlgorithmError, AlgorithmSpec, ComputationResult, ConfigError, ConsumerError, ExecutionContext,
-    ExecutionMode, LogLevel,
+    ExecutionMode,
 };
 
 /// Procedure Executor - GDSL Runtime for algorithm execution

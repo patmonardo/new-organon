@@ -6,7 +6,7 @@
 
 use super::YensComputationRuntime;
 use super::spec::{YensConfig, YensResult};
-use super::storage::YensStorageRuntime;
+use super::YensStorageRuntime;
 use crate::algo::yens::YENSAlgorithmSpec;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::projection::eval::algorithm::AlgorithmSpec;

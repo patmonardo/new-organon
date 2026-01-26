@@ -6,7 +6,7 @@
 //! Delta Stepping uses a sophisticated binning strategy to manage the frontier
 //! efficiently in parallel shortest path computation.
 
-use super::storage::DeltaSteppingStorageRuntime;
+use super::DeltaSteppingStorageRuntime;
 use super::DeltaSteppingComputationRuntime;
 use crate::algo::algorithms::pathfinding::{
     PathFindingResult, PathFindingResultBuilder, PathResult,

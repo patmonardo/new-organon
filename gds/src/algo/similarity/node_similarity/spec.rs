@@ -1,5 +1,5 @@
 use super::similarity_metric::NodeSimilarityMetric;
-use super::storage::NodeSimilarityStorageRuntime;
+use super::NodeSimilarityStorageRuntime;
 use super::{NodeSimilarityComputationResult, NodeSimilarityComputationRuntime};
 use crate::algo::algorithms::similarity::similarity_stats;
 use crate::algo::algorithms::pathfinding::PathResult;

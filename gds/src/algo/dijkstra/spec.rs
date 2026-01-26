@@ -7,7 +7,7 @@
 //! polymorphic target system, traversal state management, and stream-based results.
 
 use super::path_finding_result::PathFindingResult as DijkstraPathFindingResult;
-use super::storage::DijkstraStorageRuntime;
+use super::DijkstraStorageRuntime;
 use super::targets::create_targets;
 use super::DijkstraComputationRuntime;
 use crate::algo::algorithms::pathfinding::{

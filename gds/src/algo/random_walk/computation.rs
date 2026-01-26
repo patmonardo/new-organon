@@ -5,7 +5,7 @@
 //! Implements node2vec-style biased random walks with return and in-out factors.
 
 use super::spec::RandomWalkResult;
-use super::storage::RandomWalkStorageRuntime;
+use super::RandomWalkStorageRuntime;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::sync::atomic::{AtomicUsize, Ordering};

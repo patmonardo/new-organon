@@ -5,7 +5,7 @@
 //! Implements Kahn's algorithm for topological sorting with optional longest path calculation.
 
 use super::spec::TopologicalSortResult;
-use super::storage::TopologicalSortStorageRuntime;
+use super::TopologicalSortStorageRuntime;
 use crate::types::graph::NodeId;
 use crate::types::graph::Graph;
 use std::collections::VecDeque;

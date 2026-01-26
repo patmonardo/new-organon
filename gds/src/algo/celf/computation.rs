@@ -4,7 +4,7 @@
 //! Uses Independent Cascade model with Monte Carlo simulation.
 
 use super::spec::CELFConfig;
-use super::storage::{SeedSetBuilder, SpreadPriorityQueue};
+use super::{SeedSetBuilder, SpreadPriorityQueue};
 use crate::collections::{BitSet, HugeAtomicDoubleArray};
 use crate::concurrency::virtual_threads::{Executor, WorkerContext};
 use crate::concurrency::{Concurrency, TerminationFlag};

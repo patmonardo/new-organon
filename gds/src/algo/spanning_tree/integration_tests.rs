@@ -4,7 +4,7 @@
 //! works correctly with the ProcedureExecutor runtime.
 
 use super::spec::{SPANNING_TREEAlgorithmSpec, SpanningTreeResult};
-use super::storage::SpanningTreeStorageRuntime;
+use super::SpanningTreeStorageRuntime;
 use super::SpanningTreeComputationRuntime;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::projection::eval::algorithm::{

@@ -9,7 +9,7 @@ use crate::types::graph::Graph;
 use std::sync::Arc;
 
 use super::spec::{HashGNNConfig, HashGNNEmbeddings, HashGNNResult};
-use super::storage::HashGNNStorageRuntime;
+use super::HashGNNStorageRuntime;
 
 /// Runs the HashGNN algorithm.
 #[derive(Debug, Default, Clone)]

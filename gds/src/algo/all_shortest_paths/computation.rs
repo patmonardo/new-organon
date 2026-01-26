@@ -3,7 +3,7 @@
 //! This module implements the **Subtle pole** of the Functor machinery for All Shortest Paths.
 //! It represents ephemeral computation state (shortest path results and statistics).
 
-use super::storage::ShortestPathResult;
+use super::ShortestPathResult;
 use crate::types::graph::NodeId;
 
 /// Computation Runtime for All Shortest Paths

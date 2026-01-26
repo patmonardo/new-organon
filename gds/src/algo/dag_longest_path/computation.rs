@@ -5,7 +5,7 @@
 //! Finds longest paths in a DAG using parallel topological traversal with ForkJoin-like tasks.
 
 use super::spec::{DagLongestPathResult, PathRow};
-use super::storage::DagLongestPathStorageRuntime;
+use super::DagLongestPathStorageRuntime;
 use crate::types::graph::NodeId;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;

@@ -35,7 +35,7 @@ use super::super::random_walk_probabilities::RandomWalkProbabilitiesBuilder;
 use super::super::sampling_walk_parameters::SamplingWalkParameters;
 use super::super::train_parameters::{EmbeddingInitializer, TrainParameters};
 use super::spec::{EmbeddingInitializerConfig, Node2VecConfig, Node2VecResult};
-use super::storage::Node2VecStorageRuntime;
+use super::Node2VecStorageRuntime;
 
 #[derive(Debug, Default, Clone)]
 pub struct Node2VecComputationRuntime;

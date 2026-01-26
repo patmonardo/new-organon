@@ -6,7 +6,7 @@
 
 use super::DfsComputationRuntime;
 use super::spec::{DFSAlgorithmSpec, DfsConfig, DfsResult};
-use super::storage::DfsStorageRuntime;
+use super::DfsStorageRuntime;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::projection::eval::algorithm::AlgorithmSpec;
 use crate::projection::eval::algorithm::{ExecutionContext, ExecutionMode, ProcedureExecutor};

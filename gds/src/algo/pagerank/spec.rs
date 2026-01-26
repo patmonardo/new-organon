@@ -4,7 +4,7 @@ use crate::collections::backends::vec::VecDouble;
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, Tasks};
 use crate::define_algorithm_spec;
-use crate::projection::eval::algorithm::*;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::NodeLabel;
 use crate::projection::Orientation;
 use crate::types::properties::node::{DefaultDoubleNodePropertyValues, NodePropertyValues};
@@ -12,7 +12,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use super::storage::PageRankStorageRuntime;
+use super::PageRankStorageRuntime;
 use super::PageRankComputationRuntime;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

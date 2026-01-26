@@ -6,7 +6,7 @@
 //! with the core executor runtime, demonstrating the three-layer architecture.
 
 use super::spec::{BELLMAN_FORDAlgorithmSpec, BellmanFordConfig, BellmanFordResult};
-use super::storage::BellmanFordStorageRuntime;
+use super::BellmanFordStorageRuntime;
 use super::BellmanFordComputationRuntime;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::projection::eval::algorithm::{

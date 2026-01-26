@@ -7,7 +7,7 @@
 use super::mutable_path_result::MutablePathResult;
 use super::relationship_filterer::RelationshipFilterer;
 use super::spec::YensResult;
-use super::storage::YensStorageRuntime;
+use super::YensStorageRuntime;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::types::graph::NodeId;

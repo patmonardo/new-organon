@@ -8,13 +8,14 @@
 //! to the computation runtime.
 
 use crate::config::validation::ConfigError;
+use crate::core::LogLevel;
 use crate::define_algorithm_spec;
-use crate::projection::eval::algorithm::{AlgorithmError, LogLevel};
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use serde::{Deserialize, Serialize};
 
-use super::storage::HashGNNStorageRuntime;
+use super::HashGNNStorageRuntime;
 use super::HashGNNComputationRuntime;
 
 // ============================================================================

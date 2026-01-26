@@ -35,14 +35,15 @@
 //! ```
 
 use crate::config::validation::ConfigError;
+use crate::core::LogLevel;
 use crate::define_algorithm_spec;
-use crate::projection::eval::algorithm::{AlgorithmError, LogLevel};
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use serde::{Deserialize, Serialize};
 
 use super::Node2VecComputationRuntime;
-use super::storage::Node2VecStorageRuntime;
+use super::Node2VecStorageRuntime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

@@ -4,13 +4,13 @@ use crate::concurrency::TerminationFlag;
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::define_algorithm_spec;
-use crate::projection::eval::algorithm::*;
+use crate::projection::eval::algorithm::AlgorithmError;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use super::storage::KCoreStorageRuntime;
 use super::KCoreComputationRuntime;
+use super::KCoreStorageRuntime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KCoreConfig {

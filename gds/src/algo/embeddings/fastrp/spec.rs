@@ -4,8 +4,9 @@
 
 use crate::collections::backends::vec::VecFloatArray;
 use crate::config::validation::ConfigError;
+use crate::core::LogLevel;
 use crate::define_algorithm_spec;
-use crate::projection::eval::algorithm::{AlgorithmError, LogLevel};
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::NodeLabel;
 use crate::projection::RelationshipType;
@@ -14,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use super::storage::FastRPStorageRuntime;
+use super::FastRPStorageRuntime;
 use super::FastRPComputationRuntime;
 
 // ============================================================================

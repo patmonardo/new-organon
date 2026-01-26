@@ -5,7 +5,7 @@ use crate::pregel::{
 use crate::ValueType;
 use std::sync::Arc;
 
-use super::storage::{HitsPregelRuntimeConfig, HitsRunResult};
+use super::{HitsPregelRuntimeConfig, HitsRunResult};
 
 const HUB_KEY: &str = "hub";
 const AUTH_KEY: &str = "authority";

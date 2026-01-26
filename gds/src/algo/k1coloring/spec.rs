@@ -8,7 +8,7 @@ use crate::core::utils::partition::DEFAULT_BATCH_SIZE;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
-use crate::projection::eval::algorithm::*;
+use crate::projection::eval::algorithm::AlgorithmError;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::{Duration, Instant};

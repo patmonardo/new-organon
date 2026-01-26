@@ -340,7 +340,7 @@ define_algorithm_spec! {
     modes: [Stream, WriteNodeProperty],
 
     execute: |_self, graph_store, config, _context| {
-        use super::storage::AStarStorageRuntime;
+        use super::AStarStorageRuntime;
         use super::AStarComputationRuntime;
         use crate::core::utils::progress::Tasks;
 

@@ -13,7 +13,7 @@ use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use serde::{Deserialize, Serialize};
 
-use super::storage::GraphSageStorageRuntime;
+use super::GraphSageStorageRuntime;
 
 // ============================================================================
 // Configuration

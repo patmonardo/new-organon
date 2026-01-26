@@ -5,7 +5,7 @@
 //! This module implements the algorithm specification for spanning tree algorithms
 //! using our focused macro system.
 
-use super::storage::SpanningTreeStorageRuntime;
+use super::SpanningTreeStorageRuntime;
 use crate::algo::algorithms::pathfinding::PathResult;
 use crate::config::validation::ConfigError;
 use crate::define_algorithm_spec;

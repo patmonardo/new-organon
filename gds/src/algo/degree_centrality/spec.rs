@@ -9,7 +9,7 @@ use crate::concurrency::TerminationFlag;
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, Tasks};
 use crate::define_algorithm_spec;
-use crate::projection::eval::algorithm::*;
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::NodeLabel;
 use crate::types::properties::node::{DefaultDoubleNodePropertyValues, NodePropertyValues};
 use std::collections::HashSet;
