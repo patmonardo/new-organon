@@ -8,15 +8,20 @@
 
 use super::storage::DeltaSteppingStorageRuntime;
 use super::DeltaSteppingComputationRuntime;
+use crate::algo::algorithms::result_builders::{
+    ExecutionMetadata, PathFindingResult, PathFindingResultBuilder, PathResult, ResultBuilder,
+};
+use crate::config::validation::ConfigError;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::define_algorithm_spec;
-use crate::projection::codegen::config::validation::ConfigError;
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
 use crate::projection::relationship_type::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::sync::Arc;
+use std::time::Duration;
 
 /// Delta Stepping algorithm configuration
 ///
@@ -82,21 +87,44 @@ impl DeltaDirection {
 impl DeltaSteppingConfig {
     /// Validate configuration parameters
     pub fn validate(&self) -> Result<(), ConfigError> {
+        if self.source_node < 0 {
+            return Err(ConfigError::InvalidParameter {
+                parameter: "source_node".to_string(),
+                reason: "source_node must be >= 0".to_string(),
+            });
+        }
+
         if self.concurrency == 0 {
-            return Err(ConfigError::FieldValidation {
-                field: "concurrency".to_string(),
-                message: "Must be greater than 0".to_string(),
+            return Err(ConfigError::MustBePositive {
+                name: "concurrency".to_string(),
+                value: self.concurrency as f64,
             });
         }
 
         if self.delta <= 0.0 {
-            return Err(ConfigError::FieldValidation {
-                field: "delta".to_string(),
-                message: "Must be greater than 0.0".to_string(),
+            return Err(ConfigError::InvalidParameter {
+                parameter: "delta".to_string(),
+                reason: "delta must be > 0.0".to_string(),
             });
         }
 
+        match self.direction.to_ascii_lowercase().as_str() {
+            "outgoing" | "incoming" => {}
+            other => {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "direction".to_string(),
+                    reason: format!("direction must be 'outgoing' or 'incoming' (got '{other}')"),
+                });
+            }
+        }
+
         Ok(())
+    }
+}
+
+impl crate::config::ValidatedConfig for DeltaSteppingConfig {
+    fn validate(&self) -> Result<(), ConfigError> {
+        DeltaSteppingConfig::validate(self)
     }
 }
 
@@ -143,6 +171,108 @@ impl DeltaSteppingPathResult {
         } else {
             self.costs[self.costs.len() - 1]
         }
+    }
+}
+
+/// Statistics about Delta Stepping execution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeltaSteppingStats {
+    pub paths_found: u64,
+    pub computation_time_ms: u64,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeltaSteppingMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeltaSteppingWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for Delta Stepping: summary + updated store
+#[derive(Debug, Clone)]
+pub struct DeltaSteppingMutateResult {
+    pub summary: DeltaSteppingMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+fn checked_u64(value: NodeId) -> u64 {
+    u64::try_from(value).unwrap_or(0)
+}
+
+fn spec_path_to_core(path: &DeltaSteppingPathResult) -> PathResult {
+    let source = checked_u64(path.source_node);
+    let target = checked_u64(path.target_node);
+    let path_ids = path
+        .node_ids
+        .iter()
+        .copied()
+        .filter(|node_id| *node_id >= 0)
+        .map(checked_u64)
+        .collect();
+
+    PathResult {
+        source,
+        target,
+        path: path_ids,
+        cost: path.total_cost(),
+    }
+}
+
+/// Delta Stepping result builder (pathfinding-family adapter).
+pub struct DeltaSteppingResultBuilder {
+    result: DeltaSteppingResult,
+    execution_time: Duration,
+}
+
+impl DeltaSteppingResultBuilder {
+    pub fn new(result: DeltaSteppingResult, execution_time: Duration) -> Self {
+        Self {
+            result,
+            execution_time,
+        }
+    }
+
+    pub fn result(
+        result: DeltaSteppingResult,
+        execution_time: Duration,
+    ) -> Result<PathFindingResult, AlgorithmError> {
+        Self::new(result, execution_time).build_pathfinding_result()
+    }
+
+    pub fn build_pathfinding_result(self) -> Result<PathFindingResult, AlgorithmError> {
+        let paths: Vec<PathResult> = self
+            .result
+            .shortest_paths
+            .iter()
+            .filter(|p| p.source_node >= 0 && p.target_node >= 0)
+            .map(spec_path_to_core)
+            .collect();
+
+        let metadata = ExecutionMetadata {
+            execution_time: self.execution_time,
+            iterations: None,
+            converged: None,
+            additional: std::collections::HashMap::from([(
+                "computation_time_ms".to_string(),
+                self.result.computation_time_ms.to_string(),
+            )]),
+        };
+
+        PathFindingResultBuilder::new()
+            .with_paths(paths)
+            .with_metadata(metadata)
+            .build()
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))
     }
 }
 

@@ -90,6 +90,120 @@ pub struct BetweennessCentralityResult {
     pub execution_time: Duration,
 }
 
+/// Statistics about betweenness centrality in the graph.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct BetweennessCentralityStats {
+    /// Minimum betweenness score
+    pub min: f64,
+    /// Maximum betweenness score
+    pub max: f64,
+    /// Average betweenness
+    pub mean: f64,
+    /// Standard deviation
+    pub stddev: f64,
+    /// Median (50th percentile)
+    pub p50: f64,
+    /// 90th percentile
+    pub p90: f64,
+    /// 99th percentile
+    pub p99: f64,
+    /// Number of "bridge" nodes (high betweenness > mean + stddev)
+    pub bridge_nodes: u64,
+    /// Execution time in milliseconds
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct BetweennessCentralityMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct BetweennessCentralityWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for betweenness centrality: summary + updated store
+#[derive(Debug, Clone)]
+pub struct BetweennessCentralityMutateResult {
+    pub summary: BetweennessCentralityMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+/// Betweenness result builder (facade adapter).
+pub struct BetweennessCentralityResultBuilder {
+    result: BetweennessCentralityResult,
+}
+
+impl BetweennessCentralityResultBuilder {
+    pub fn new(result: BetweennessCentralityResult) -> Self {
+        Self { result }
+    }
+
+    pub fn stats(&self) -> BetweennessCentralityStats {
+        let scores = &self.result.centralities;
+        if scores.is_empty() {
+            return BetweennessCentralityStats {
+                min: 0.0,
+                max: 0.0,
+                mean: 0.0,
+                stddev: 0.0,
+                p50: 0.0,
+                p90: 0.0,
+                p99: 0.0,
+                bridge_nodes: 0,
+                execution_time_ms: self.result.execution_time.as_millis() as u64,
+            };
+        }
+
+        let mut sorted = scores.clone();
+        sorted.sort_by(|a, b| a.total_cmp(b));
+        let min = *sorted.first().unwrap_or(&0.0);
+        let max = *sorted.last().unwrap_or(&0.0);
+        let mean = scores.iter().sum::<f64>() / scores.len() as f64;
+        let var = scores
+            .iter()
+            .map(|x| {
+                let d = x - mean;
+                d * d
+            })
+            .sum::<f64>()
+            / scores.len() as f64;
+        let stddev = var.sqrt();
+
+        let percentile = |p: f64| -> f64 {
+            let idx =
+                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
+            sorted[idx]
+        };
+
+        let threshold = mean + stddev;
+        let bridge_nodes = scores.iter().filter(|v| **v > threshold).count() as u64;
+
+        BetweennessCentralityStats {
+            min,
+            max,
+            mean,
+            stddev,
+            p50: percentile(50.0),
+            p90: percentile(90.0),
+            p99: percentile(99.0),
+            bridge_nodes,
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
+    }
+}
+
 fn orientation(direction: &str) -> Orientation {
     match direction {
         "incoming" => Orientation::Reverse,

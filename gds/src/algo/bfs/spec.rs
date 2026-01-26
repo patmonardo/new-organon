@@ -6,6 +6,9 @@
 
 use super::storage::BfsStorageRuntime;
 use super::BfsComputationRuntime;
+use crate::algo::algorithms::result_builders::{
+    ExecutionMetadata, PathFindingResult, PathFindingResultBuilder, PathResult, ResultBuilder,
+};
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::Tasks;
 use crate::define_algorithm_spec;
@@ -15,6 +18,8 @@ use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::time::Duration;
 
 /// BFS algorithm configuration
 ///
@@ -72,6 +77,15 @@ impl BfsConfig {
                 message: "must be > 0".to_string(),
             });
         }
+
+        if let Some(depth) = self.max_depth {
+            if depth == 0 {
+                return Err(ConfigError::FieldValidation {
+                    field: "max_depth".to_string(),
+                    message: "must be > 0 or None".to_string(),
+                });
+            }
+        }
         Ok(())
     }
 }
@@ -111,6 +125,124 @@ pub struct BfsPathResult {
     pub node_ids: Vec<NodeId>,
     /// Path length (number of edges)
     pub path_length: u32,
+}
+
+/// Statistics about BFS computation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BfsStats {
+    /// Number of nodes visited during traversal
+    pub nodes_visited: u64,
+    /// Maximum depth reached during traversal
+    pub max_depth_reached: u64,
+    /// Total computation time in milliseconds
+    pub execution_time_ms: u64,
+    /// Number of target nodes found (if any specified)
+    pub targets_found: u64,
+    /// Whether all targets were reached
+    pub all_targets_reached: bool,
+    /// Average branching factor (neighbors per node)
+    pub avg_branching_factor: f64,
+}
+
+/// Summary of a mutate operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BfsMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BfsWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for BFS: summary + updated store
+#[derive(Debug, Clone)]
+pub struct BfsMutateResult {
+    pub summary: BfsMutationSummary,
+    pub updated_store: std::sync::Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+fn checked_u64(value: NodeId) -> u64 {
+    u64::try_from(value).unwrap_or(0)
+}
+
+fn spec_path_to_core(source: NodeId, target: NodeId, index: usize) -> PathResult {
+    let target_u64 = checked_u64(target);
+    PathResult {
+        source: checked_u64(source),
+        target: target_u64,
+        path: vec![target_u64],
+        cost: index as f64,
+    }
+}
+
+/// BFS result builder (pathfinding-family adapter).
+pub struct BfsResultBuilder {
+    result: BfsResult,
+    execution_time: Duration,
+    source_node: NodeId,
+    target_count: usize,
+}
+
+impl BfsResultBuilder {
+    pub fn new(
+        result: BfsResult,
+        execution_time: Duration,
+        source_node: NodeId,
+        target_count: usize,
+    ) -> Self {
+        Self {
+            result,
+            execution_time,
+            source_node,
+            target_count,
+        }
+    }
+
+    pub fn result(
+        result: BfsResult,
+        execution_time: Duration,
+        source_node: NodeId,
+        target_count: usize,
+    ) -> Result<PathFindingResult, AlgorithmError> {
+        Self::new(result, execution_time, source_node, target_count).build_pathfinding_result()
+    }
+
+    pub fn build_pathfinding_result(self) -> Result<PathFindingResult, AlgorithmError> {
+        let paths: Vec<PathResult> = self
+            .result
+            .visited_nodes
+            .iter()
+            .copied()
+            .enumerate()
+            .map(|(index, node_id)| spec_path_to_core(self.source_node, node_id, index))
+            .collect();
+
+        let mut additional = HashMap::new();
+        additional.insert(
+            "computation_time_ms".to_string(),
+            self.result.computation_time_ms.to_string(),
+        );
+        additional.insert("targets".to_string(), self.target_count.to_string());
+
+        let metadata = ExecutionMetadata {
+            execution_time: self.execution_time,
+            iterations: None,
+            converged: None,
+            additional,
+        };
+
+        PathFindingResultBuilder::new()
+            .with_paths(paths)
+            .with_metadata(metadata)
+            .build()
+            .map_err(|e| AlgorithmError::Execution(e.to_string()))
+    }
 }
 
 // Generate the algorithm specification using focused macros

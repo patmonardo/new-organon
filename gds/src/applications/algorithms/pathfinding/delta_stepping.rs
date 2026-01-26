@@ -1,5 +1,6 @@
 //! Delta-Stepping algorithm dispatch handler.
 
+use crate::algo::delta_stepping::DeltaSteppingStats;
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
@@ -8,7 +9,6 @@ use crate::applications::algorithms::pathfinding::{err, get_str, get_u64, timing
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::procedures::pathfinding::DeltaSteppingStats;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

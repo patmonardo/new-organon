@@ -530,8 +530,11 @@ impl AStarFacade {
         let result = self.compute()?;
         let paths = result.paths;
 
-        let updated_store =
-            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+            graph_store.as_ref(),
+            property_name,
+            &paths,
+        )?;
 
         let summary = AStarMutationSummary {
             nodes_updated: paths.len() as u64,

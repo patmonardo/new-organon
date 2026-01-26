@@ -278,8 +278,11 @@ impl SteinerTreeBuilder {
             })
             .collect();
 
-        let updated_store =
-            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+            graph_store.as_ref(),
+            property_name,
+            &paths,
+        )?;
 
         let summary = MutationResult::new(
             paths.len() as u64,

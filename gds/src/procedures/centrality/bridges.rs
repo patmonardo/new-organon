@@ -2,15 +2,18 @@
 //!
 //! Live wiring for bridge edge detection in undirected graphs.
 
-use crate::algo::bridges::{Bridge, BridgesComputationRuntime};
 use crate::algo::bridges::storage::BridgesStorageRuntime;
+use crate::algo::bridges::{
+    Bridge, BridgesComputationRuntime, BridgesConfig, BridgesMutateResult, BridgesMutationSummary,
+    BridgesResult, BridgesResultBuilder, BridgesRow, BridgesStats,
+};
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::utils::progress::ProgressTracker;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::{AlgorithmRunner, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
@@ -20,32 +23,11 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
-/// Result row for bridges stream mode
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
-pub struct BridgeRow {
-    pub from: u64,
-    pub to: u64,
-}
-
-/// Statistics for bridges computation
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct BridgesStats {
-    pub bridge_count: usize,
-    pub execution_time_ms: u64,
-}
-
-/// Result for Bridges mutate mode
-#[derive(Debug, Clone)]
-pub struct BridgesMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
 /// Bridges facade bound to a live graph store
 #[derive(Clone)]
 pub struct BridgesFacade {
     graph_store: Arc<DefaultGraphStore>,
-    concurrency: usize,
+    config: BridgesConfig,
     task_registry: Arc<dyn TaskRegistryFactory>,
 }
 
@@ -53,14 +35,49 @@ impl BridgesFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            concurrency: 4,
+            config: BridgesConfig::default(),
             task_registry: Arc::new(EmptyTaskRegistryFactory),
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: BridgesConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: Arc::new(EmptyTaskRegistryFactory),
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: BridgesConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: BridgesConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     /// Set concurrency level for parallel computation.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -78,12 +95,9 @@ impl BridgesFacade {
     /// # Errors
     /// Returns an error if concurrency is not positive
     pub fn validate(&self) -> Result<()> {
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be positive".to_string(),
-            ));
-        }
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
     /// Run the algorithm and return the bridges
@@ -104,7 +118,7 @@ impl BridgesFacade {
             Tasks::leaf_with_volume("bridges".to_string(), node_count)
                 .base()
                 .clone(),
-            Concurrency::of(self.concurrency.max(1)),
+            Concurrency::of(self.config.concurrency.max(1)),
             JobId::new(),
             self.task_registry.as_ref(),
         );
@@ -138,18 +152,10 @@ impl BridgesFacade {
     /// # let graph = Graph::default();
     /// let results = graph.bridges().stream()?.collect::<Vec<_>>();
     /// ```
-    pub fn stream(&self) -> Result<Box<dyn Iterator<Item = BridgeRow>>> {
+    pub fn stream(&self) -> Result<Box<dyn Iterator<Item = BridgesRow>>> {
         self.validate()?;
-        let bridges = self.run()?;
-
-        let rows: Vec<BridgeRow> = bridges
-            .into_iter()
-            .map(|bridge| BridgeRow {
-                from: bridge.from,
-                to: bridge.to,
-            })
-            .collect();
-
+        let result = self.compute()?;
+        let rows = BridgesResultBuilder::new(result).rows();
         Ok(Box::new(rows.into_iter()))
     }
 
@@ -166,12 +172,8 @@ impl BridgesFacade {
     /// ```
     pub fn stats(&self) -> Result<BridgesStats> {
         self.validate()?;
-        let (bridges, elapsed): (Vec<Bridge>, std::time::Duration) = self.compute_bridges()?;
-
-        Ok(BridgesStats {
-            bridge_count: bridges.len(),
-            execution_time_ms: elapsed.as_millis() as u64,
-        })
+        let result = self.compute()?;
+        Ok(BridgesResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: Compute and store as node property
@@ -183,13 +185,15 @@ impl BridgesFacade {
     /// # use gds::Graph;
     /// # let graph = Graph::default();
     /// let result = graph.bridges().mutate("is_bridge")?;
-    /// println!("Computed and stored for {} edges", result.summary.nodes_updated);
+    /// println!("Computed and stored for {} edges", result.summary.edges_updated);
     /// ```
     pub fn mutate(self, property_name: &str) -> Result<BridgesMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
 
-        let (bridges, elapsed) = self.compute_bridges()?;
+        let result = self.compute()?;
+        let bridges = result.bridges.clone();
+        let builder = BridgesResultBuilder::new(result);
         let bridge_set: HashSet<(u64, u64)> = bridges
             .into_iter()
             .map(|bridge| (bridge.from, bridge.to))
@@ -248,7 +252,11 @@ impl BridgesFacade {
                 })?;
         }
 
-        let summary = MutationResult::new(edges_updated, property_name.to_string(), elapsed);
+        let summary = BridgesMutationSummary {
+            edges_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: builder.execution_time_ms(),
+        };
 
         Ok(BridgesMutateResult {
             summary,
@@ -316,7 +324,7 @@ impl BridgesFacade {
             Tasks::leaf_with_volume("bridges".to_string(), node_count)
                 .base()
                 .clone(),
-            Concurrency::of(self.concurrency.max(1)),
+            Concurrency::of(self.config.concurrency.max(1)),
             JobId::new(),
             self.task_registry.as_ref(),
         );
@@ -338,6 +346,15 @@ impl BridgesFacade {
         progress_tracker.end_subtask();
 
         Ok((result.bridges, start.elapsed()))
+    }
+
+    fn compute(&self) -> Result<BridgesResult> {
+        let (bridges, elapsed) = self.compute_bridges()?;
+        Ok(BridgesResult {
+            bridges,
+            node_count: self.graph_store.node_count(),
+            execution_time: elapsed,
+        })
     }
 }
 

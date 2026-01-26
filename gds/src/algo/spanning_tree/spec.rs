@@ -6,6 +6,7 @@
 //! using our focused macro system.
 
 use super::storage::SpanningTreeStorageRuntime;
+use crate::algo::algorithms::result_builders::PathResult;
 use crate::config::validation::ConfigError;
 use crate::define_algorithm_spec;
 use crate::projection::eval::algorithm::AlgorithmError;
@@ -14,6 +15,7 @@ use crate::projection::relationship_type::RelationshipType;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 /// Configuration for spanning tree algorithms.
 ///
@@ -89,6 +91,18 @@ impl SpanningTreeConfig {
                 parameter: "direction".to_string(),
                 reason: "Direction must be non-empty".to_string(),
             });
+        }
+
+        match self.direction.to_ascii_lowercase().as_str() {
+            "outgoing" | "incoming" | "undirected" => {}
+            other => {
+                return Err(ConfigError::InvalidParameter {
+                    parameter: "direction".to_string(),
+                    reason: format!(
+                        "Direction must be 'outgoing', 'incoming', or 'undirected' (got '{other}')"
+                    ),
+                });
+            }
         }
 
         Ok(())
@@ -186,6 +200,117 @@ impl SpanningTreeResult {
     /// The number of nodes in the spanning tree.
     pub fn effective_node_count(&self) -> u32 {
         self.effective_node_count
+    }
+}
+
+/// Per-node spanning tree row.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpanningTreeRow {
+    pub node: u64,
+    pub parent: Option<u64>,
+    pub cost_to_parent: f64,
+}
+
+/// Aggregated stats for spanning tree.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpanningTreeStats {
+    pub effective_node_count: u64,
+    pub total_weight: f64,
+    pub computation_time_ms: u64,
+}
+
+/// Summary of a mutate operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpanningTreeMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpanningTreeWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for spanning tree: summary + updated store
+#[derive(Debug, Clone)]
+pub struct SpanningTreeMutateResult {
+    pub summary: SpanningTreeMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+fn checked_u64(value: u32) -> u64 {
+    u64::from(value)
+}
+
+fn tree_rows(tree: &super::SpanningTree) -> Vec<SpanningTreeRow> {
+    let mut rows = Vec::with_capacity(tree.node_count as usize);
+    for node_id in 0..tree.node_count {
+        let parent = tree.parent(node_id);
+        let parent_u64 = if parent < 0 {
+            None
+        } else {
+            Some(checked_u64(parent as u32))
+        };
+        rows.push(SpanningTreeRow {
+            node: checked_u64(node_id),
+            parent: parent_u64,
+            cost_to_parent: tree.cost_to_parent(node_id),
+        });
+    }
+    rows
+}
+
+fn tree_paths(tree: &super::SpanningTree) -> Vec<PathResult> {
+    let mut paths = Vec::with_capacity(tree.node_count.saturating_sub(1) as usize);
+    for node_id in 0..tree.node_count {
+        let parent = tree.parent(node_id);
+        if parent < 0 {
+            continue;
+        }
+        let parent_u64 = checked_u64(parent as u32);
+        let node_u64 = checked_u64(node_id);
+        paths.push(PathResult {
+            source: parent_u64,
+            target: node_u64,
+            path: vec![parent_u64, node_u64],
+            cost: tree.cost_to_parent(node_id),
+        });
+    }
+    paths
+}
+
+/// Spanning tree result builder (facade adapter).
+pub struct SpanningTreeResultBuilder {
+    result: SpanningTreeResult,
+}
+
+impl SpanningTreeResultBuilder {
+    pub fn new(result: SpanningTreeResult) -> Self {
+        Self { result }
+    }
+
+    pub fn rows(&self) -> Vec<SpanningTreeRow> {
+        tree_rows(&self.result.spanning_tree)
+    }
+
+    pub fn stats(&self) -> SpanningTreeStats {
+        SpanningTreeStats {
+            effective_node_count: self.result.effective_node_count as u64,
+            total_weight: self.result.total_weight,
+            computation_time_ms: self.result.computation_time_ms,
+        }
+    }
+
+    pub fn paths(&self) -> Vec<PathResult> {
+        tree_paths(&self.result.spanning_tree)
+    }
+
+    pub fn computation_time_ms(&self) -> u64 {
+        self.result.computation_time_ms
     }
 }
 

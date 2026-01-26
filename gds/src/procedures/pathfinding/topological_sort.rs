@@ -3,13 +3,15 @@
 //! Orders nodes in a directed acyclic graph (DAG) such that for every edge (u, v),
 //! u appears before v. Optionally computes longest path distances.
 
-use crate::algo::topological_sort::TopologicalSortComputationRuntime;
+use crate::algo::topological_sort::{
+    TopologicalSortComputationRuntime, TopologicalSortConfig, TopologicalSortMutateResult,
+    TopologicalSortMutationSummary, TopologicalSortResult, TopologicalSortResultBuilder,
+    TopologicalSortRow, TopologicalSortStats, TopologicalSortWriteSummary,
+};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
-use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -22,50 +24,66 @@ use crate::core::utils::progress::{
 };
 use crate::projection::eval::algorithm::AlgorithmError;
 
-/// Result row for topological sort stream mode
-#[derive(Debug, Clone, PartialEq, serde::Serialize)]
-pub struct TopologicalSortRow {
-    pub node_id: NodeId,
-    pub max_distance: Option<f64>,
-}
-
-/// Statistics for topological sort computation
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct TopologicalSortStats {
-    pub node_count: usize,
-    pub execution_time_ms: u64,
-}
-
-/// Mutate result for topological sort: summary + updated store
-#[derive(Debug, Clone)]
-pub struct TopologicalSortMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
-/// Topological Sort algorithm builder
-pub struct TopologicalSortBuilder {
+/// Topological Sort algorithm facade
+pub struct TopologicalSortFacade {
     graph_store: Arc<DefaultGraphStore>,
-    compute_max_distance: bool,
-    concurrency: usize,
+    config: TopologicalSortConfig,
     /// Progress tracking components
     task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
     user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
 }
 
-impl TopologicalSortBuilder {
+/// Backwards-compatible alias (builder-style naming).
+pub type TopologicalSortBuilder = TopologicalSortFacade;
+
+impl TopologicalSortFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            compute_max_distance: false,
-            concurrency: 4,
+            config: TopologicalSortConfig::default(),
             task_registry_factory: None,
             user_log_registry_factory: None,
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: TopologicalSortConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry_factory: None,
+            user_log_registry_factory: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: TopologicalSortConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: TopologicalSortConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     pub fn compute_max_distance(mut self, value: bool) -> Self {
-        self.compute_max_distance = value;
+        self.config.compute_max_distance_from_source = value;
         self
     }
 
@@ -74,7 +92,7 @@ impl TopologicalSortBuilder {
     /// Number of parallel threads to use.
     /// Topological sort benefits from parallelism in large graphs.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -91,15 +109,12 @@ impl TopologicalSortBuilder {
     }
 
     fn validate(&self) -> Result<()> {
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be > 0".to_string(),
-            ));
-        }
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
-    fn compute(self) -> Result<(Vec<NodeId>, Option<Vec<f64>>, std::time::Duration)> {
+    fn compute(self) -> Result<(TopologicalSortResult, std::time::Duration)> {
         self.validate()?;
 
         // Set up progress tracking
@@ -121,26 +136,27 @@ impl TopologicalSortBuilder {
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
-            return Ok((Vec::new(), None, start.elapsed()));
+            return Ok((
+                TopologicalSortResult {
+                    sorted_nodes: Vec::new(),
+                    max_source_distances: None,
+                },
+                start.elapsed(),
+            ));
         }
 
         let mut progress_tracker = TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("topological_sort".to_string(), node_count),
-            self.concurrency,
+            self.config.concurrency,
         );
         progress_tracker.begin_subtask_with_volume(node_count);
 
         let fallback = graph_view.default_property_value();
 
         // Get neighbors with weights
-        let get_neighbors = |node_idx: NodeId| -> Vec<(NodeId, f64)> {
-            let node_id = match NodeId::try_from(node_idx) {
-                Ok(value) => value,
-                Err(_) => return Vec::new(),
-            };
-
+        let get_neighbors = |node_idx: i64| -> Vec<(i64, f64)> {
             graph_view
-                .stream_relationships(node_id, fallback)
+                .stream_relationships(node_idx, fallback)
                 .filter_map(|cursor| {
                     let target = cursor.target_id();
                     if target < 0 {
@@ -152,45 +168,30 @@ impl TopologicalSortBuilder {
                 .collect()
         };
 
-        let mut runtime =
-            TopologicalSortComputationRuntime::new(node_count, self.compute_max_distance);
+        let mut runtime = TopologicalSortComputationRuntime::new(
+            node_count,
+            self.config.compute_max_distance_from_source,
+        );
         let result = runtime.compute(node_count, get_neighbors);
 
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();
 
-        Ok((
-            result.sorted_nodes,
-            result.max_source_distances,
-            start.elapsed(),
-        ))
+        Ok((result, start.elapsed()))
     }
 
     /// Stream mode: yields (node_id, max_distance) for each node in topological order
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = TopologicalSortRow>>> {
-        let (sorted_nodes, max_distances, _elapsed) = self.compute()?;
-
-        let rows: Vec<TopologicalSortRow> = sorted_nodes
-            .into_iter()
-            .map(|node_id| TopologicalSortRow {
-                node_id,
-                max_distance: max_distances
-                    .as_ref()
-                    .and_then(|d| d.get(node_id as usize).copied()),
-            })
-            .collect();
+        let (result, elapsed) = self.compute()?;
+        let rows = TopologicalSortResultBuilder::new(result, elapsed).rows();
 
         Ok(Box::new(rows.into_iter()))
     }
 
     /// Stats mode: returns aggregated statistics
     pub fn stats(self) -> Result<TopologicalSortStats> {
-        let (sorted_nodes, _max_distances, elapsed) = self.compute()?;
-
-        Ok(TopologicalSortStats {
-            node_count: sorted_nodes.len(),
-            execution_time_ms: elapsed.as_millis() as u64,
-        })
+        let (result, elapsed) = self.compute()?;
+        Ok(TopologicalSortResultBuilder::new(result, elapsed).stats())
     }
 
     /// Mutate mode: Compute and update in-memory graph projection
@@ -206,33 +207,27 @@ impl TopologicalSortBuilder {
     /// ```
     pub fn mutate(self, property_name: &str) -> Result<TopologicalSortMutateResult> {
         self.validate()?;
-        ConfigValidator::non_empty_string(property_name, "property_name")?;
-        let graph_store = Arc::clone(&self.graph_store);
-        let (sorted_nodes, max_distances, elapsed) = self.compute()?;
-
-        let mut paths: Vec<PathResult> = Vec::new();
-        let mut prev: Option<u64> = None;
-        for (idx, node_id) in sorted_nodes.iter().enumerate() {
-            let node_u64 = *node_id as u64;
-            if let Some(prev_id) = prev {
-                let cost = max_distances
-                    .as_ref()
-                    .and_then(|d| d.get(*node_id as usize).copied())
-                    .unwrap_or(idx as f64);
-                paths.push(PathResult {
-                    source: prev_id,
-                    target: node_u64,
-                    path: vec![prev_id, node_u64],
-                    cost,
-                });
-            }
-            prev = Some(node_u64);
+        if property_name.is_empty() {
+            return Err(AlgorithmError::Execution(
+                "property_name cannot be empty".to_string(),
+            ));
         }
+        let graph_store = Arc::clone(&self.graph_store);
+        let (result, elapsed) = self.compute()?;
+        let execution_time_ms = elapsed.as_millis() as u64;
+        let paths: Vec<PathResult> = TopologicalSortResultBuilder::new(result, elapsed).paths();
 
-        let updated_store =
-            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+            graph_store.as_ref(),
+            property_name,
+            &paths,
+        )?;
 
-        let summary = MutationResult::new(paths.len() as u64, property_name.to_string(), elapsed);
+        let summary = TopologicalSortMutationSummary {
+            nodes_updated: paths.len() as u64,
+            property_name: property_name.to_string(),
+            execution_time_ms,
+        };
 
         Ok(TopologicalSortMutateResult {
             summary,
@@ -251,15 +246,19 @@ impl TopologicalSortBuilder {
     /// let result = builder.write("topological_sort")?;
     /// println!("Wrote {} nodes", result.nodes_written);
     /// ```
-    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+    pub fn write(self, property_name: &str) -> Result<TopologicalSortWriteSummary> {
         self.validate()?;
-        ConfigValidator::non_empty_string(property_name, "property_name")?;
+        if property_name.is_empty() {
+            return Err(AlgorithmError::Execution(
+                "property_name cannot be empty".to_string(),
+            ));
+        }
         let res = self.mutate(property_name)?;
-        Ok(WriteResult::new(
-            res.summary.nodes_updated,
-            property_name.to_string(),
-            std::time::Duration::from_millis(res.summary.execution_time_ms),
-        ))
+        Ok(TopologicalSortWriteSummary {
+            nodes_written: res.summary.nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: res.summary.execution_time_ms,
+        })
     }
 
     /// Estimate memory requirements for topological sort execution
@@ -283,7 +282,7 @@ impl TopologicalSortBuilder {
         let ordering_memory = node_count * 8;
 
         // Distance array: node_count * 8 bytes (f64 per node, if computing distances)
-        let distance_memory = if self.compute_max_distance {
+        let distance_memory = if self.config.compute_max_distance_from_source {
             node_count * 8
         } else {
             0

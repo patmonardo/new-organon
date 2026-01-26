@@ -1,5 +1,6 @@
 //! Random Walk algorithm dispatch handler.
 
+use crate::algo::random_walk::RandomWalkStats;
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
@@ -10,7 +11,6 @@ use crate::applications::algorithms::pathfinding::{
 use crate::concurrency::TerminationFlag;
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::procedures::pathfinding::RandomWalkStats;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

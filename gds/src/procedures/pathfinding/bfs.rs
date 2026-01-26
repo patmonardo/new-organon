@@ -27,11 +27,13 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
-use crate::algo::bfs::{BfsComputationRuntime, BfsStorageRuntime};
-use crate::applications::algorithms::pathfinding::shared::TraversalResult;
+use crate::algo::algorithms::result_builders::PathFindingResult;
+use crate::algo::bfs::{
+    BfsComputationRuntime, BfsConfig, BfsMutateResult, BfsMutationSummary, BfsResult,
+    BfsResultBuilder, BfsStats, BfsStorageRuntime, BfsWriteSummary,
+};
 use crate::core::utils::progress::{TaskProgressTracker, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::{PathResult, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -42,28 +44,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 // ============================================================================
-// Statistics Type
-// ============================================================================
-
-/// Statistics about BFS computation
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct BfsStats {
-    /// Number of nodes visited during traversal
-    pub nodes_visited: u64,
-    /// Maximum depth reached during traversal
-    pub max_depth_reached: u64,
-    /// Total computation time in milliseconds
-    pub execution_time_ms: u64,
-    /// Number of target nodes found (if any specified)
-    pub targets_found: u64,
-    /// Whether all targets were reached
-    pub all_targets_reached: bool,
-    /// Average branching factor (neighbors per node)
-    pub avg_branching_factor: f64,
-}
-
-// ============================================================================
-// Builder Type
+// Facade Type
 // ============================================================================
 
 /// BFS algorithm builder - fluent configuration
@@ -89,30 +70,15 @@ pub struct BfsStats {
 ///     .track_paths(true)
 ///     .targets(vec![99, 100]);
 /// ```
-pub struct BfsBuilder {
+pub struct BfsFacade {
     graph_store: Arc<DefaultGraphStore>,
-    /// Source node for BFS traversal
-    source: Option<u64>,
-    /// Target nodes (empty = all reachable, specific = stop when found)
-    targets: Vec<u64>,
-    /// Maximum depth to traverse (None = unlimited)
-    max_depth: Option<u32>,
-    /// Whether to track full paths or just distances
-    track_paths: bool,
-    /// Concurrency level for parallel processing
-    concurrency: usize,
-    /// Delta parameter for chunking (affects performance)
-    delta: usize,
+    config: BfsConfig,
 }
 
-/// Mutate result for BFS: summary + updated store
-#[derive(Debug, Clone)]
-pub struct BfsMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
+/// Backwards-compatible alias (builder-style naming).
+pub type BfsBuilder = BfsFacade;
 
-impl BfsBuilder {
+impl BfsFacade {
     /// Create a new BFS builder bound to a live graph store.
     ///
     /// Defaults:
@@ -125,13 +91,42 @@ impl BfsBuilder {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            source: None,
-            targets: vec![],
-            max_depth: None,
-            track_paths: false,
-            concurrency: 1,
-            delta: 64,
+            config: BfsConfig::default(),
         }
+    }
+
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: BfsConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: BfsConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: BfsConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
     }
 
     /// Set source node
@@ -139,7 +134,12 @@ impl BfsBuilder {
     /// The algorithm starts traversal from this node.
     /// Must be a valid node ID in the graph.
     pub fn source(mut self, source: u64) -> Self {
-        self.source = Some(source);
+        self.config.source_node = i64::try_from(source).unwrap_or(-1);
+        self
+    }
+
+    pub fn source_node(mut self, source: NodeId) -> Self {
+        self.config.source_node = source;
         self
     }
 
@@ -148,7 +148,7 @@ impl BfsBuilder {
     /// If specified, traversal stops when target is reached.
     /// If not specified, traverses all reachable nodes.
     pub fn target(mut self, target: u64) -> Self {
-        self.targets = vec![target];
+        self.config.target_nodes = vec![i64::try_from(target).unwrap_or(-1)];
         self
     }
 
@@ -156,7 +156,10 @@ impl BfsBuilder {
     ///
     /// Algorithm computes traversal until all targets are found or max depth reached.
     pub fn targets(mut self, targets: Vec<u64>) -> Self {
-        self.targets = targets;
+        self.config.target_nodes = targets
+            .into_iter()
+            .map(|value| i64::try_from(value).unwrap_or(-1))
+            .collect();
         self
     }
 
@@ -165,7 +168,7 @@ impl BfsBuilder {
     /// Limits how far from source to explore.
     /// Useful for neighborhood analysis or performance control.
     pub fn max_depth(mut self, depth: u32) -> Self {
-        self.max_depth = Some(depth);
+        self.config.max_depth = Some(depth);
         self
     }
 
@@ -174,7 +177,7 @@ impl BfsBuilder {
     /// When true, results include full node sequences for each path.
     /// Slightly more memory usage but enables path reconstruction.
     pub fn track_paths(mut self, track: bool) -> Self {
-        self.track_paths = track;
+        self.config.track_paths = track;
         self
     }
 
@@ -183,7 +186,7 @@ impl BfsBuilder {
     /// Number of parallel threads to use.
     /// BFS is typically single-threaded but can benefit from parallelism.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -192,37 +195,29 @@ impl BfsBuilder {
     /// Affects internal chunking strategy.
     /// Higher values = larger chunks, better for large graphs.
     pub fn delta(mut self, delta: usize) -> Self {
-        self.delta = delta;
+        self.config.delta = delta;
         self
     }
 
-    fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
-        NodeId::try_from(value).map_err(|_| {
-            AlgorithmError::Execution(format!("{} must fit into i64 (got {})", field, value))
-        })
-    }
-
-    fn compute(self) -> Result<TraversalResult> {
-        self.validate()?;
+    fn compute(self) -> Result<PathFindingResult> {
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
 
         // Create progress tracker for BFS execution.
         // We track progress in terms of relationships examined.
         let task = Tasks::leaf("BFS".to_string());
-        let mut progress_tracker = TaskProgressTracker::with_concurrency(task, self.concurrency);
+        let mut progress_tracker =
+            TaskProgressTracker::with_concurrency(task, self.config.concurrency);
 
-        let source_u64 = self.source.expect("validate() ensures source is set");
-        let source_node = Self::checked_node_id(source_u64, "source")?;
-        let target_nodes: Vec<NodeId> = self
-            .targets
-            .iter()
-            .map(|&value| Self::checked_node_id(value, "targets"))
-            .collect::<Result<Vec<_>>>()?;
+        let source_node = self.config.source_node;
+        let target_nodes = self.config.target_nodes.clone();
 
         let storage = BfsStorageRuntime::new(
             source_node,
             target_nodes.clone(),
-            self.max_depth,
-            self.track_paths,
+            self.config.max_depth,
+            self.config.track_paths,
         );
 
         let rel_types: HashSet<RelationshipType> = HashSet::new();
@@ -232,54 +227,20 @@ impl BfsBuilder {
             .map_err(|e| AlgorithmError::Graph(e.to_string()))?;
 
         let node_count = graph_view.node_count() as usize;
-        let mut computation =
-            BfsComputationRuntime::new(source_node, self.track_paths, self.concurrency, node_count);
+        let mut computation = BfsComputationRuntime::new(
+            source_node,
+            self.config.track_paths,
+            self.config.concurrency,
+            node_count,
+        );
 
-        let result = storage.compute_bfs(
+        let start = std::time::Instant::now();
+        let result: BfsResult = storage.compute_bfs(
             &mut computation,
             Some(graph_view.as_ref()),
             &mut progress_tracker,
         )?;
-
-        // Return raw traversal order as TraversalResult
-        Ok(result
-            .visited_nodes
-            .into_iter()
-            .map(|node_id| node_id)
-            .collect())
-    }
-
-    /// Validate configuration before execution
-    fn validate(&self) -> Result<()> {
-        match self.source {
-            None => {
-                return Err(AlgorithmError::Execution(
-                    "source node must be specified".to_string(),
-                ))
-            }
-            Some(id) if id == u64::MAX => {
-                return Err(AlgorithmError::Execution(
-                    "source node ID cannot be u64::MAX".to_string(),
-                ))
-            }
-            _ => {}
-        }
-
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be > 0".to_string(),
-            ));
-        }
-
-        if let Some(depth) = self.max_depth {
-            if depth == 0 {
-                return Err(AlgorithmError::Execution(
-                    "max_depth must be > 0 or None".to_string(),
-                ));
-            }
-        }
-
-        Ok(())
+        BfsResultBuilder::result(result, start.elapsed(), source_node, target_nodes.len())
     }
 
     /// Execute the algorithm and return iterator over traversal results
@@ -297,22 +258,8 @@ impl BfsBuilder {
     /// }
     /// ```
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
-        self.validate()?;
-        let source_u64 = self.source.expect("validate() ensures source is set");
-        let traversal_order = self.compute()?;
-
-        // Convert traversal order to PathResult items
-        // For now, create simple results with traversal order as cost
-        let paths = traversal_order
-            .into_iter()
-            .enumerate()
-            .map(move |(index, node_id)| PathResult {
-                source: source_u64,
-                target: node_id as u64,
-                path: vec![node_id as u64], // Simple path containing just the target
-                cost: index as f64,
-            });
-        Ok(Box::new(paths))
+        let result = self.compute()?;
+        Ok(Box::new(result.paths.into_iter()))
     }
 
     /// Stats mode: Get aggregated statistics
@@ -329,17 +276,23 @@ impl BfsBuilder {
     /// println!("Visited {} nodes in {}ms", stats.nodes_visited, stats.execution_time_ms);
     /// ```
     pub fn stats(self) -> Result<BfsStats> {
-        let traversal_order = self.compute()?;
-        let nodes_visited = traversal_order.len() as u64;
+        let targets = self.config.target_nodes.len() as u64;
+        let result = self.compute()?;
+        let nodes_visited = result.paths.len() as u64;
+        let targets_found = if targets == 0 {
+            0
+        } else {
+            nodes_visited.min(targets)
+        };
+        let all_targets_reached = targets > 0 && targets_found == targets;
 
-        // Basic statistics - simplified since we don't have depth/path info anymore
         Ok(BfsStats {
             nodes_visited,
-            max_depth_reached: 0,       // Simplified
-            execution_time_ms: 0,       // Simplified
-            targets_found: 0,           // Simplified
-            all_targets_reached: false, // Simplified
-            avg_branching_factor: 0.0,  // Simplified
+            max_depth_reached: 0, // Simplified
+            execution_time_ms: result.metadata.execution_time.as_millis() as u64,
+            targets_found,
+            all_targets_reached,
+            avg_branching_factor: 0.0, // Simplified
         })
     }
 
@@ -357,30 +310,26 @@ impl BfsBuilder {
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
     pub fn mutate(self, property_name: &str) -> Result<BfsMutateResult> {
-        self.validate()?;
-        ConfigValidator::non_empty_string(property_name, "property_name")?;
-        let source = self.source.unwrap_or(0);
+        if property_name.is_empty() {
+            return Err(AlgorithmError::Execution(
+                "property_name cannot be empty".to_string(),
+            ));
+        }
         let graph_store = Arc::clone(&self.graph_store);
-        let traversal_order = self.compute()?;
-        let paths: Vec<PathResult> = traversal_order
-            .into_iter()
-            .enumerate()
-            .map(|(index, node_id)| PathResult {
-                source,
-                target: node_id as u64,
-                path: vec![node_id as u64],
-                cost: index as f64,
-            })
-            .collect();
+        let result = self.compute()?;
+        let paths = result.paths;
 
-        let updated_store =
-            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+            graph_store.as_ref(),
+            property_name,
+            &paths,
+        )?;
 
-        let summary = MutationResult::new(
-            paths.len() as u64,
-            property_name.to_string(),
-            std::time::Duration::from_millis(0),
-        );
+        let summary = BfsMutationSummary {
+            nodes_updated: paths.len() as u64,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.metadata.execution_time.as_millis() as u64,
+        };
 
         Ok(BfsMutateResult {
             summary,
@@ -400,15 +349,18 @@ impl BfsBuilder {
     /// let result = builder.write("bfs_results")?;
     /// println!("Wrote {} nodes", result.nodes_written);
     /// ```
-    pub fn write(self, property_name: &str) -> Result<WriteResult> {
-        self.validate()?;
-        ConfigValidator::non_empty_string(property_name, "property_name")?;
+    pub fn write(self, property_name: &str) -> Result<BfsWriteSummary> {
+        if property_name.is_empty() {
+            return Err(AlgorithmError::Execution(
+                "property_name cannot be empty".to_string(),
+            ));
+        }
         let res = self.mutate(property_name)?;
-        Ok(WriteResult::new(
-            res.summary.nodes_updated,
-            property_name.to_string(),
-            std::time::Duration::from_millis(res.summary.execution_time_ms),
-        ))
+        Ok(BfsWriteSummary {
+            nodes_written: res.summary.nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: res.summary.execution_time_ms,
+        })
     }
 
     /// Estimate memory requirements for BFS execution
@@ -424,7 +376,7 @@ impl BfsBuilder {
         let visited_memory = node_count;
 
         // Path tracking (if enabled)
-        let path_memory = if self.track_paths {
+        let path_memory = if self.config.track_paths {
             node_count * 8 // predecessor array
         } else {
             0
@@ -460,12 +412,12 @@ mod tests {
         };
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
         let builder = BfsBuilder::new(store);
-        assert_eq!(builder.source, None);
-        assert!(builder.targets.is_empty());
-        assert!(builder.max_depth.is_none());
-        assert!(!builder.track_paths);
-        assert_eq!(builder.concurrency, 1);
-        assert_eq!(builder.delta, 64);
+        assert_eq!(builder.config.source_node, 0);
+        assert!(builder.config.target_nodes.is_empty());
+        assert!(builder.config.max_depth.is_none());
+        assert!(!builder.config.track_paths);
+        assert_eq!(builder.config.concurrency, 1);
+        assert_eq!(builder.config.delta, 64);
     }
 
     #[test]
@@ -486,12 +438,12 @@ mod tests {
             .concurrency(4)
             .delta(128);
 
-        assert_eq!(builder.source, Some(42));
-        assert_eq!(builder.targets, vec![99, 100]);
-        assert_eq!(builder.max_depth, Some(5));
-        assert!(builder.track_paths);
-        assert_eq!(builder.concurrency, 4);
-        assert_eq!(builder.delta, 128);
+        assert_eq!(builder.config.source_node, 42);
+        assert_eq!(builder.config.target_nodes, vec![99, 100]);
+        assert_eq!(builder.config.max_depth, Some(5));
+        assert!(builder.config.track_paths);
+        assert_eq!(builder.config.concurrency, 4);
+        assert_eq!(builder.config.delta, 128);
     }
 
     #[test]
@@ -503,8 +455,8 @@ mod tests {
             ..RandomGraphConfig::default()
         };
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
-        let builder = BfsBuilder::new(store);
-        assert!(builder.validate().is_err());
+        let builder = BfsBuilder::new(store).source_node(-1);
+        assert!(builder.config.validate().is_err());
     }
 
     #[test]
@@ -517,7 +469,7 @@ mod tests {
         };
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
         let builder = BfsBuilder::new(store).source(0).concurrency(0);
-        assert!(builder.validate().is_err());
+        assert!(builder.config.validate().is_err());
     }
 
     #[test]
@@ -530,7 +482,7 @@ mod tests {
         };
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
         let builder = BfsBuilder::new(store).source(0).max_depth(0);
-        assert!(builder.validate().is_err());
+        assert!(builder.config.validate().is_err());
     }
 
     #[test]
@@ -546,7 +498,7 @@ mod tests {
             .source(0)
             .max_depth(5)
             .track_paths(true);
-        assert!(builder.validate().is_ok());
+        assert!(builder.config.validate().is_ok());
     }
 
     #[test]
@@ -558,7 +510,7 @@ mod tests {
             ..RandomGraphConfig::default()
         };
         let store = Arc::new(DefaultGraphStore::random(&config).unwrap());
-        let builder = BfsBuilder::new(store); // Missing source
+        let builder = BfsBuilder::new(store).source_node(-1);
         assert!(builder.stream().is_err());
     }
 

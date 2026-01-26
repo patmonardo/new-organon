@@ -5,57 +5,39 @@
 //! This facade runs the translated Delta Stepping runtime against a live
 //! `DefaultGraphStore`.
 
-use crate::algo::delta_stepping::{DeltaSteppingComputationRuntime, DeltaSteppingStorageRuntime};
+use crate::algo::delta_stepping::{
+    DeltaSteppingComputationRuntime, DeltaSteppingConfig, DeltaSteppingMutateResult,
+    DeltaSteppingMutationSummary, DeltaSteppingResultBuilder, DeltaSteppingStats,
+    DeltaSteppingStorageRuntime, DeltaSteppingWriteSummary,
+};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::{PathResult as ProcedurePathResult, Result};
+use crate::procedures::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
-use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 // Import upgraded systems
-use crate::algo::algorithms::result_builders::{
-    ExecutionMetadata, PathFindingResult, PathResult as CorePathResult, PathResultBuilder,
-    ResultBuilder,
-};
+use crate::algo::algorithms::result_builders::PathFindingResult;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 use crate::projection::eval::algorithm::AlgorithmError;
 
-/// Statistics about Delta Stepping execution
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct DeltaSteppingStats {
-    pub paths_found: u64,
-    pub computation_time_ms: u64,
-    pub execution_time_ms: u64,
-}
-
 /// Delta Stepping algorithm builder - fluent configuration
-pub struct DeltaSteppingBuilder {
+pub struct DeltaSteppingFacade {
     graph_store: Arc<DefaultGraphStore>,
-    source: Option<u64>,
-    delta: f64,
+    config: DeltaSteppingConfig,
     weight_property: String,
-    relationship_types: Vec<String>,
-    direction: String,
-    store_predecessors: bool,
-    concurrency: usize,
     /// Progress tracking components
     task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
     user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
 }
 
-/// Mutate result for Delta Stepping: summary + updated store
-#[derive(Debug, Clone)]
-pub struct DeltaSteppingMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
+/// Backwards-compatible alias (builder-style naming).
+pub type DeltaSteppingBuilder = DeltaSteppingFacade;
 
-impl DeltaSteppingBuilder {
+impl DeltaSteppingFacade {
     /// Create a new Delta Stepping builder bound to a live graph store.
     ///
     /// Defaults:
@@ -69,25 +51,57 @@ impl DeltaSteppingBuilder {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            source: None,
-            delta: 1.0,
+            config: DeltaSteppingConfig::default(),
             weight_property: "weight".to_string(),
-            relationship_types: vec![],
-            direction: "outgoing".to_string(),
-            store_predecessors: true,
-            concurrency: 4,
             task_registry_factory: None,
             user_log_registry_factory: None,
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: DeltaSteppingConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            weight_property: "weight".to_string(),
+            task_registry_factory: None,
+            user_log_registry_factory: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: DeltaSteppingConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: DeltaSteppingConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     pub fn source(mut self, source: u64) -> Self {
-        self.source = Some(source);
+        self.config.source_node = i64::try_from(source).unwrap_or(-1);
         self
     }
 
     pub fn delta(mut self, delta: f64) -> Self {
-        self.delta = delta;
+        self.config.delta = delta;
         self
     }
 
@@ -97,22 +111,22 @@ impl DeltaSteppingBuilder {
     }
 
     pub fn relationship_types(mut self, relationship_types: Vec<String>) -> Self {
-        self.relationship_types = relationship_types;
+        self.config.relationship_types = relationship_types;
         self
     }
 
     pub fn direction(mut self, direction: &str) -> Self {
-        self.direction = direction.to_string();
+        self.config.direction = direction.to_string();
         self
     }
 
     pub fn store_predecessors(mut self, enabled: bool) -> Self {
-        self.store_predecessors = enabled;
+        self.config.store_predecessors = enabled;
         self
     }
 
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -129,48 +143,17 @@ impl DeltaSteppingBuilder {
     }
 
     fn validate(&self) -> Result<()> {
-        if self.source.is_none() {
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        if self.weight_property.is_empty() {
             return Err(AlgorithmError::Execution(
-                "source node must be specified".to_string(),
+                "weight_property cannot be empty".to_string(),
             ));
         }
-
-        if self.delta <= 0.0 {
-            return Err(AlgorithmError::Execution("delta must be > 0".to_string()));
-        }
-
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be > 0".to_string(),
-            ));
-        }
-
-        match self.direction.to_ascii_lowercase().as_str() {
-            "outgoing" | "incoming" => {}
-            other => {
-                return Err(AlgorithmError::Execution(format!(
-                    "direction must be 'outgoing' or 'incoming' (got '{other}')"
-                )));
-            }
-        }
-
-        ConfigValidator::non_empty_string(&self.weight_property, "weight_property")?;
 
         Ok(())
-    }
-
-    fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
-        NodeId::try_from(value).map_err(|_| {
-            AlgorithmError::Execution(format!("{field} must fit into i64 (got {value})",))
-        })
-    }
-
-    fn checked_u64(value: NodeId, context: &str) -> Result<u64> {
-        u64::try_from(value).map_err(|_| {
-            AlgorithmError::Execution(format!(
-                "Delta Stepping returned invalid node id for {context}: {value}",
-            ))
-        })
     }
 
     fn compute(self) -> Result<PathFindingResult> {
@@ -191,21 +174,21 @@ impl DeltaSteppingBuilder {
             node_count,
         ));
 
-        let source_u64 = self.source.expect("validate ensures source is set");
-        let source_node = Self::checked_node_id(source_u64, "source")?;
+        let source_node = self.config.source_node;
 
-        let rel_types: HashSet<RelationshipType> = if self.relationship_types.is_empty() {
+        let rel_types: HashSet<RelationshipType> = if self.config.relationship_types.is_empty() {
             self.graph_store.relationship_types()
         } else {
-            RelationshipType::list_of(self.relationship_types.clone())
+            RelationshipType::list_of(self.config.relationship_types.clone())
                 .into_iter()
                 .collect()
         };
 
-        let (orientation, direction_byte) = match self.direction.to_ascii_lowercase().as_str() {
-            "incoming" => (Orientation::Reverse, 1u8),
-            _ => (Orientation::Natural, 0u8),
-        };
+        let (orientation, direction_byte) =
+            match self.config.direction.to_ascii_lowercase().as_str() {
+                "incoming" => (Orientation::Reverse, 1u8),
+                _ => (Orientation::Natural, 0u8),
+            };
 
         let selectors: HashMap<RelationshipType, String> = rel_types
             .iter()
@@ -219,16 +202,16 @@ impl DeltaSteppingBuilder {
 
         let mut storage = DeltaSteppingStorageRuntime::new(
             source_node,
-            self.delta,
-            self.concurrency,
-            self.store_predecessors,
+            self.config.delta,
+            self.config.concurrency,
+            self.config.store_predecessors,
         );
 
         let mut computation = DeltaSteppingComputationRuntime::new(
             source_node,
-            self.delta,
-            self.concurrency,
-            self.store_predecessors,
+            self.config.delta,
+            self.config.concurrency,
+            self.config.store_predecessors,
         );
 
         let mut progress_tracker = TaskProgressTracker::with_concurrency(
@@ -236,7 +219,7 @@ impl DeltaSteppingBuilder {
                 "delta_stepping".to_string(),
                 graph_view.relationship_count(),
             ),
-            self.concurrency,
+            self.config.concurrency,
         );
 
         let start = std::time::Instant::now();
@@ -246,61 +229,13 @@ impl DeltaSteppingBuilder {
             direction_byte,
             &mut progress_tracker,
         )?;
-
-        let paths: Vec<CorePathResult> = result
-            .shortest_paths
-            .iter()
-            .filter(|p| p.source_node >= 0 && p.target_node >= 0)
-            .map(|p| {
-                let source = Self::checked_u64(p.source_node, "source").unwrap_or(0);
-                let target = Self::checked_u64(p.target_node, "target").unwrap_or(0);
-                let path = p
-                    .node_ids
-                    .iter()
-                    .copied()
-                    .filter(|node_id| *node_id >= 0)
-                    .map(|node_id| Self::checked_u64(node_id, "path").unwrap_or(0))
-                    .collect();
-
-                CorePathResult {
-                    source,
-                    target,
-                    path,
-                    cost: p.total_cost(),
-                }
-            })
-            .collect();
-
-        // Create execution metadata
         let execution_time = start.elapsed();
-        let metadata = ExecutionMetadata {
-            execution_time,
-            iterations: None,
-            converged: None,
-            additional: std::collections::HashMap::from([(
-                "computation_time_ms".to_string(),
-                result.computation_time_ms.to_string(),
-            )]),
-        };
-
-        // Build result using upgraded result builder
-        let path_result = PathResultBuilder::new()
-            .with_paths(paths)
-            .with_metadata(metadata)
-            .build()
-            .map_err(|e| AlgorithmError::Execution(e.to_string()))?;
-
-        Ok(path_result)
+        DeltaSteppingResultBuilder::result(result, execution_time)
     }
 
-    pub fn stream(self) -> Result<Box<dyn Iterator<Item = ProcedurePathResult>>> {
+    pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
         let result = self.compute()?;
-        Ok(Box::new(
-            result
-                .paths
-                .into_iter()
-                .map(super::core_to_procedure_path_result),
-        ))
+        Ok(Box::new(result.paths.into_iter()))
     }
 
     pub fn stats(self) -> Result<DeltaSteppingStats> {
@@ -321,23 +256,26 @@ impl DeltaSteppingBuilder {
 
     pub fn mutate(self, property_name: &str) -> Result<DeltaSteppingMutateResult> {
         self.validate()?;
-        ConfigValidator::non_empty_string(property_name, "property_name")?;
+        if property_name.is_empty() {
+            return Err(AlgorithmError::Execution(
+                "property_name cannot be empty".to_string(),
+            ));
+        }
         let graph_store = Arc::clone(&self.graph_store);
         let result = self.compute()?;
-        let paths: Vec<ProcedurePathResult> = result
-            .paths
-            .into_iter()
-            .map(super::core_to_procedure_path_result)
-            .collect();
+        let paths = result.paths;
 
-        let updated_store =
-            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+            graph_store.as_ref(),
+            property_name,
+            &paths,
+        )?;
 
-        let summary = MutationResult::new(
-            paths.len() as u64,
-            property_name.to_string(),
-            result.metadata.execution_time,
-        );
+        let summary = DeltaSteppingMutationSummary {
+            nodes_updated: paths.len() as u64,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.metadata.execution_time.as_millis() as u64,
+        };
 
         Ok(DeltaSteppingMutateResult {
             summary,
@@ -345,15 +283,19 @@ impl DeltaSteppingBuilder {
         })
     }
 
-    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+    pub fn write(self, property_name: &str) -> Result<DeltaSteppingWriteSummary> {
         self.validate()?;
-        ConfigValidator::non_empty_string(property_name, "property_name")?;
+        if property_name.is_empty() {
+            return Err(AlgorithmError::Execution(
+                "property_name cannot be empty".to_string(),
+            ));
+        }
         let res = self.mutate(property_name)?;
-        Ok(WriteResult::new(
-            res.summary.nodes_updated,
-            property_name.to_string(),
-            std::time::Duration::from_millis(res.summary.execution_time_ms),
-        ))
+        Ok(DeltaSteppingWriteSummary {
+            nodes_written: res.summary.nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: res.summary.execution_time_ms,
+        })
     }
 
     /// Estimate memory requirements for Delta Stepping execution
@@ -369,7 +311,7 @@ impl DeltaSteppingBuilder {
         let distance_memory = node_count * 8;
 
         // Predecessor tracking (if enabled)
-        let predecessor_memory = if self.store_predecessors {
+        let predecessor_memory = if self.config.store_predecessors {
             node_count * 8
         } else {
             0

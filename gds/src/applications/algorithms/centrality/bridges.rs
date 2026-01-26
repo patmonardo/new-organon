@@ -171,7 +171,7 @@ pub fn handle_bridges(request: &Value, catalog: Arc<dyn GraphCatalog>) -> Value 
                         "ok": true,
                         "op": op,
                         "data": {
-                            "edges_updated": result.summary.nodes_updated,
+                            "edges_updated": result.summary.edges_updated,
                             "property_name": result.summary.property_name,
                             "execution_time_ms": result.summary.execution_time_ms
                         }

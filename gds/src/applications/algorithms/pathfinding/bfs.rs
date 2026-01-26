@@ -3,6 +3,7 @@
 //! Handles JSON requests for BFS traversal operations,
 //! delegating to the facade layer for execution.
 
+use crate::algo::bfs::BfsStats;
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, DefaultAlgorithmProcessingTemplate,
     FnStatsResultBuilder, FnStreamResultBuilder, ProgressTrackerCreator, RequestScopedDependencies,
@@ -13,7 +14,6 @@ use crate::applications::algorithms::pathfinding::{
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::procedures::pathfinding::BfsStats;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

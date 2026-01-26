@@ -3,13 +3,15 @@
 //! Generates random walks from nodes in the graph using biased sampling.
 //! Supports node2vec-style exploration with configurable return and in-out factors.
 
-use crate::algo::random_walk::RandomWalkComputationRuntime;
+use crate::algo::random_walk::{
+    RandomWalkComputationRuntime, RandomWalkConfig, RandomWalkMutateResult,
+    RandomWalkMutationSummary, RandomWalkResult, RandomWalkResultBuilder, RandomWalkRow,
+    RandomWalkStats, RandomWalkWriteSummary,
+};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
 use crate::procedures::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
-use crate::types::graph::id_map::NodeId;
 use crate::types::prelude::{DefaultGraphStore, GraphStore};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -22,85 +24,91 @@ use crate::core::utils::progress::{
 };
 use crate::projection::eval::algorithm::AlgorithmError;
 
-/// Result row for random walk stream mode
-#[derive(Debug, Clone, PartialEq, serde::Serialize)]
-pub struct RandomWalkRow {
-    /// The walk as a sequence of node IDs
-    pub path: Vec<u64>,
-}
-
-/// Statistics for random walk computation
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct RandomWalkStats {
-    pub walk_count: usize,
-    pub execution_time_ms: u64,
-}
-
-/// Mutate result for random walk: summary + updated store
-#[derive(Debug, Clone)]
-pub struct RandomWalkMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
-/// Random Walk algorithm builder
-pub struct RandomWalkBuilder {
+/// Random Walk algorithm facade
+pub struct RandomWalkFacade {
     graph_store: Arc<DefaultGraphStore>,
-    walks_per_node: usize,
-    walk_length: usize,
-    return_factor: f64,
-    in_out_factor: f64,
-    source_nodes: Vec<u64>,
-    random_seed: Option<u64>,
-    concurrency: usize,
+    config: RandomWalkConfig,
     /// Progress tracking components
     task_registry_factory: Option<Box<dyn TaskRegistryFactory>>,
     user_log_registry_factory: Option<Box<dyn TaskRegistryFactory>>, // Placeholder for now
 }
 
-impl RandomWalkBuilder {
+/// Backwards-compatible alias (builder-style naming).
+pub type RandomWalkBuilder = RandomWalkFacade;
+
+impl RandomWalkFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            walks_per_node: 10,
-            walk_length: 80,
-            return_factor: 1.0,
-            in_out_factor: 1.0,
-            source_nodes: Vec::new(),
-            random_seed: None,
-            concurrency: 4,
+            config: RandomWalkConfig::default(),
             task_registry_factory: None,
             user_log_registry_factory: None,
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: RandomWalkConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry_factory: None,
+            user_log_registry_factory: None,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: RandomWalkConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: RandomWalkConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     pub fn walks_per_node(mut self, count: usize) -> Self {
-        self.walks_per_node = count;
+        self.config.walks_per_node = count;
         self
     }
 
     pub fn walk_length(mut self, length: usize) -> Self {
-        self.walk_length = length;
+        self.config.walk_length = length;
         self
     }
 
     pub fn return_factor(mut self, factor: f64) -> Self {
-        self.return_factor = factor;
+        self.config.return_factor = factor;
         self
     }
 
     pub fn in_out_factor(mut self, factor: f64) -> Self {
-        self.in_out_factor = factor;
+        self.config.in_out_factor = factor;
         self
     }
 
     pub fn source_nodes(mut self, nodes: Vec<u64>) -> Self {
-        self.source_nodes = nodes;
+        self.config.source_nodes = nodes;
         self
     }
 
     pub fn random_seed(mut self, seed: u64) -> Self {
-        self.random_seed = Some(seed);
+        self.config.random_seed = Some(seed);
         self
     }
 
@@ -109,7 +117,7 @@ impl RandomWalkBuilder {
     /// Number of parallel threads to use.
     /// Random walk benefits from parallelism when generating many walks.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -126,35 +134,12 @@ impl RandomWalkBuilder {
     }
 
     fn validate(&self) -> Result<()> {
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be > 0".to_string(),
-            ));
-        }
-
-        ConfigValidator::in_range(
-            self.walks_per_node as f64,
-            1.0,
-            1_000_000.0,
-            "walks_per_node",
-        )?;
-
-        ConfigValidator::in_range(self.walk_length as f64, 1.0, 1_000_000.0, "walk_length")?;
-
-        ConfigValidator::in_range(self.return_factor, 0.0, 100.0, "return_factor")?;
-
-        ConfigValidator::in_range(self.in_out_factor, 0.0, 100.0, "in_out_factor")?;
-
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
-    fn checked_node_id(value: usize) -> Result<NodeId> {
-        NodeId::try_from(value as i64).map_err(|_| {
-            AlgorithmError::Execution(format!("node_id must fit into i64 (got {})", value))
-        })
-    }
-
-    fn compute(self) -> Result<(Vec<Vec<u64>>, std::time::Duration)> {
+    fn compute(self) -> Result<(RandomWalkResult, std::time::Duration)> {
         self.validate()?;
 
         // Set up progress tracking
@@ -176,12 +161,12 @@ impl RandomWalkBuilder {
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
-            return Ok((Vec::new(), start.elapsed()));
+            return Ok((RandomWalkResult { walks: Vec::new() }, start.elapsed()));
         }
 
         let mut progress_tracker = TaskProgressTracker::with_concurrency(
             Tasks::leaf_with_volume("random_walk".to_string(), node_count),
-            self.concurrency,
+            self.config.concurrency,
         );
         progress_tracker.begin_subtask_with_volume(node_count);
 
@@ -189,6 +174,7 @@ impl RandomWalkBuilder {
 
         // Convert source nodes to internal IDs
         let source_nodes_internal: Vec<usize> = self
+            .config
             .source_nodes
             .clone()
             .into_iter()
@@ -197,13 +183,8 @@ impl RandomWalkBuilder {
 
         // Get neighbors
         let get_neighbors = |node_idx: usize| -> Vec<usize> {
-            let node_id = match Self::checked_node_id(node_idx) {
-                Ok(value) => value,
-                Err(_) => return Vec::new(),
-            };
-
             graph_view
-                .stream_relationships(node_id, fallback)
+                .stream_relationships(node_idx as i64, fallback)
                 .filter_map(|cursor| {
                     let target = cursor.target_id();
                     if target >= 0 {
@@ -215,7 +196,7 @@ impl RandomWalkBuilder {
                 .collect()
         };
 
-        let seed = self.random_seed.unwrap_or_else(|| {
+        let seed = self.config.random_seed.unwrap_or_else(|| {
             use std::time::SystemTime;
             SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
@@ -224,10 +205,10 @@ impl RandomWalkBuilder {
         });
 
         let runtime = RandomWalkComputationRuntime::new(
-            self.walks_per_node,
-            self.walk_length,
-            self.return_factor,
-            self.in_out_factor,
+            self.config.walks_per_node,
+            self.config.walk_length,
+            self.config.return_factor,
+            self.config.in_out_factor,
             source_nodes_internal,
             seed,
         );
@@ -237,29 +218,21 @@ impl RandomWalkBuilder {
         progress_tracker.log_progress(node_count);
         progress_tracker.end_subtask();
 
-        Ok((result.walks, start.elapsed()))
+        Ok((result, start.elapsed()))
     }
 
     /// Stream mode: yields walk sequences
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = RandomWalkRow>>> {
-        let (walks, _elapsed) = self.compute()?;
-
-        let rows: Vec<RandomWalkRow> = walks
-            .into_iter()
-            .map(|path| RandomWalkRow { path })
-            .collect();
+        let (result, elapsed) = self.compute()?;
+        let rows = RandomWalkResultBuilder::new(result, elapsed).rows();
 
         Ok(Box::new(rows.into_iter()))
     }
 
     /// Stats mode: returns aggregated statistics
     pub fn stats(self) -> Result<RandomWalkStats> {
-        let (walks, elapsed) = self.compute()?;
-
-        Ok(RandomWalkStats {
-            walk_count: walks.len(),
-            execution_time_ms: elapsed.as_millis() as u64,
-        })
+        let (result, elapsed) = self.compute()?;
+        Ok(RandomWalkResultBuilder::new(result, elapsed).stats())
     }
 
     /// Mutate mode: Compute and update in-memory graph projection
@@ -275,30 +248,27 @@ impl RandomWalkBuilder {
     /// ```
     pub fn mutate(self, property_name: &str) -> Result<RandomWalkMutateResult> {
         self.validate()?;
-        ConfigValidator::non_empty_string(property_name, "property_name")?;
-        let graph_store = Arc::clone(&self.graph_store);
-        let (walks, elapsed) = self.compute()?;
-        let mut paths: Vec<PathResult> = Vec::new();
-
-        for walk in walks {
-            if walk.len() < 2 {
-                continue;
-            }
-            let source = walk[0];
-            let target = *walk.last().unwrap();
-            let cost = (walk.len() - 1) as f64;
-            paths.push(PathResult {
-                source,
-                target,
-                path: walk,
-                cost,
-            });
+        if property_name.is_empty() {
+            return Err(AlgorithmError::Execution(
+                "property_name cannot be empty".to_string(),
+            ));
         }
+        let graph_store = Arc::clone(&self.graph_store);
+        let (result, elapsed) = self.compute()?;
+        let execution_time_ms = elapsed.as_millis() as u64;
+        let paths: Vec<PathResult> = RandomWalkResultBuilder::new(result, elapsed).paths();
 
-        let updated_store =
-            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+            graph_store.as_ref(),
+            property_name,
+            &paths,
+        )?;
 
-        let summary = MutationResult::new(paths.len() as u64, property_name.to_string(), elapsed);
+        let summary = RandomWalkMutationSummary {
+            nodes_updated: paths.len() as u64,
+            property_name: property_name.to_string(),
+            execution_time_ms,
+        };
 
         Ok(RandomWalkMutateResult {
             summary,
@@ -317,15 +287,19 @@ impl RandomWalkBuilder {
     /// let result = builder.write("walks")?;
     /// println!("Wrote {} nodes", result.nodes_written);
     /// ```
-    pub fn write(self, property_name: &str) -> Result<WriteResult> {
+    pub fn write(self, property_name: &str) -> Result<RandomWalkWriteSummary> {
         self.validate()?;
-        ConfigValidator::non_empty_string(property_name, "property_name")?;
+        if property_name.is_empty() {
+            return Err(AlgorithmError::Execution(
+                "property_name cannot be empty".to_string(),
+            ));
+        }
         let res = self.mutate(property_name)?;
-        Ok(WriteResult::new(
-            res.summary.nodes_updated,
-            property_name.to_string(),
-            std::time::Duration::from_millis(res.summary.execution_time_ms),
-        ))
+        Ok(RandomWalkWriteSummary {
+            nodes_written: res.summary.nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: res.summary.execution_time_ms,
+        })
     }
 
     /// Estimate memory requirements for random walk execution
@@ -346,13 +320,13 @@ impl RandomWalkBuilder {
 
         // Walk storage: each walk is walk_length * 8 bytes (u64 per node)
         // Total walks: walks_per_node * source_nodes.len() or node_count if empty
-        let source_count = if self.source_nodes.is_empty() {
+        let source_count = if self.config.source_nodes.is_empty() {
             node_count
         } else {
-            self.source_nodes.len()
+            self.config.source_nodes.len()
         };
-        let total_walks = self.walks_per_node * source_count;
-        let walk_storage = total_walks * self.walk_length * 8;
+        let total_walks = self.config.walks_per_node * source_count;
+        let walk_storage = total_walks * self.config.walk_length * 8;
 
         // Graph structure overhead (adjacency lists, etc.)
         let avg_degree = 10.0; // Conservative estimate

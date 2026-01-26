@@ -5,9 +5,13 @@
 
 use crate::algo::kspanningtree::computation::KSpanningTreeComputationRuntime;
 use crate::algo::kspanningtree::storage::KSpanningTreeStorageRuntime;
+use crate::algo::kspanningtree::{
+    KSpanningTreeConfig, KSpanningTreeMutateResult, KSpanningTreeMutationSummary,
+    KSpanningTreeResult, KSpanningTreeResultBuilder, KSpanningTreeRow, KSpanningTreeStats,
+};
 use crate::core::utils::progress::Tasks;
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
@@ -20,95 +24,86 @@ use std::time::Instant;
 use crate::core::utils::progress::TaskProgressTracker;
 use crate::projection::eval::algorithm::AlgorithmError;
 
-/// Result row for k-spanning tree stream mode
-#[derive(Debug, Clone, PartialEq, serde::Serialize)]
-pub struct KSpanningTreeRow {
-    pub node_id: u64,
-    pub parent_id: i64,
-    pub cost: f64,
-}
-
-/// Statistics for k-spanning tree computation
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct KSpanningTreeStats {
-    pub node_count: usize,
-    pub total_cost: f64,
-    pub execution_time_ms: u64,
-}
-
-/// Mutate result for k-spanning tree: summary + updated store
-#[derive(Debug, Clone)]
-pub struct KSpanningTreeMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
 /// K-Spanning Tree algorithm builder
 #[derive(Clone)]
 pub struct KSpanningTreeBuilder {
     graph_store: Arc<DefaultGraphStore>,
-    source_node: Option<u64>,
-    k: u64,
-    objective: String,
-    weight_property: Option<String>,
+    config: KSpanningTreeConfig,
 }
 
 impl KSpanningTreeBuilder {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            source_node: None,
-            k: 1,
-            objective: "min".to_string(),
-            weight_property: None,
+            config: KSpanningTreeConfig::default(),
         }
     }
 
+    /// Create a builder using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: KSpanningTreeConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured builder.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: KSpanningTreeConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing builder.
+    pub fn with_spec_config(mut self, config: KSpanningTreeConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     pub fn source_node(mut self, source: u64) -> Self {
-        self.source_node = Some(source);
+        self.config.source_node = source;
         self
     }
 
     pub fn k(mut self, k: u64) -> Self {
-        self.k = k;
+        self.config.k = k;
         self
     }
 
     pub fn objective(mut self, obj: &str) -> Self {
-        self.objective = obj.to_string();
+        self.config.objective = obj.to_string();
         self
     }
 
     pub fn weight_property(mut self, prop: &str) -> Self {
-        self.weight_property = Some(prop.to_string());
+        self.config.weight_property = Some(prop.to_string());
         self
     }
 
     fn validate(&self) -> Result<()> {
-        if self.source_node.is_none() {
-            return Err(AlgorithmError::Execution(
-                "source_node is required".to_string(),
-            ));
-        }
-
-        ConfigValidator::in_range(self.k as f64, 1.0, 1_000_000.0, "k")?;
-
-        if self.objective != "min" && self.objective != "max" {
-            return Err(AlgorithmError::Execution(format!(
-                "objective must be 'min' or 'max', got '{}'",
-                self.objective
-            )));
-        }
-
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
     #[allow(clippy::type_complexity)]
-    fn compute(&self) -> Result<(Vec<i64>, Vec<f64>, f64, u64, std::time::Duration)> {
+    fn compute(&self) -> Result<(KSpanningTreeResult, std::time::Duration)> {
         self.validate()?;
         let start = Instant::now();
-
-        let source = self.source_node.unwrap();
+        let source = self.config.source_node;
 
         // K-spanning tree typically works on undirected graphs (like MST)
         let rel_types: HashSet<RelationshipType> = HashSet::new();
@@ -119,7 +114,16 @@ impl KSpanningTreeBuilder {
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
-            return Ok((Vec::new(), Vec::new(), 0.0, source, start.elapsed()));
+            return Ok((
+                KSpanningTreeResult {
+                    parent: Vec::new(),
+                    cost_to_parent: Vec::new(),
+                    total_cost: 0.0,
+                    root: source,
+                    node_count,
+                },
+                start.elapsed(),
+            ));
         }
 
         // Check source node exists
@@ -136,8 +140,11 @@ impl KSpanningTreeBuilder {
         ));
 
         // Create storage runtime (Gross pole - controller)
-        let storage =
-            KSpanningTreeStorageRuntime::new(source as i64, self.k, self.objective.clone());
+        let storage = KSpanningTreeStorageRuntime::new(
+            source as i64,
+            self.config.k,
+            self.config.objective.clone(),
+        );
 
         // Create computation runtime (Subtle pole - state management)
         let mut computation = KSpanningTreeComputationRuntime::new(node_count);
@@ -149,81 +156,41 @@ impl KSpanningTreeBuilder {
             &mut progress_tracker,
         )?;
 
-        Ok((
-            result.parent,
-            result.cost_to_parent,
-            result.total_cost,
-            result.root,
-            start.elapsed(),
-        ))
+        Ok((result, start.elapsed()))
     }
 
     /// Stream mode: yields (node_id, parent_id, cost) for each node in the tree
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = KSpanningTreeRow>>> {
-        let (parent, cost_to_parent, _total_cost, _root, _elapsed) = self.compute()?;
-
-        let rows: Vec<KSpanningTreeRow> = parent
-            .iter()
-            .enumerate()
-            .filter_map(|(node_id, &parent_id)| {
-                if parent_id != -1 || node_id == _root as usize {
-                    Some(KSpanningTreeRow {
-                        node_id: node_id as u64,
-                        parent_id,
-                        cost: cost_to_parent[node_id],
-                    })
-                } else {
-                    None
-                }
-            })
-            .collect();
-
+        let (result, elapsed) = self.compute()?;
+        let rows = KSpanningTreeResultBuilder::new(result, elapsed).rows();
         Ok(Box::new(rows.into_iter()))
     }
 
     /// Stats mode: returns aggregated statistics
     pub fn stats(&self) -> Result<KSpanningTreeStats> {
-        let (parent, _cost_to_parent, total_cost, _root, elapsed) = self.compute()?;
-
-        // Count nodes in tree (parent != -1 or is root)
-        let node_count = parent
-            .iter()
-            .enumerate()
-            .filter(|(idx, &p)| p != -1 || *idx == _root as usize)
-            .count();
-
-        Ok(KSpanningTreeStats {
-            node_count,
-            total_cost,
-            execution_time_ms: elapsed.as_millis() as u64,
-        })
+        let (result, elapsed) = self.compute()?;
+        Ok(KSpanningTreeResultBuilder::new(result, elapsed).stats())
     }
 
     /// Mutate mode: writes results back to the graph store
     pub fn mutate(&self, property_name: &str) -> Result<KSpanningTreeMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
+        let (result, elapsed) = self.compute()?;
+        let builder = KSpanningTreeResultBuilder::new(result, elapsed);
+        let paths: Vec<PathResult> = builder.paths();
 
-        let (parent, cost_to_parent, _total_cost, _root, elapsed) = self.compute()?;
-        let mut paths: Vec<PathResult> = Vec::new();
+        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+            self.graph_store.as_ref(),
+            property_name,
+            &paths,
+        )?;
 
-        for (node_id, &parent_id) in parent.iter().enumerate() {
-            if parent_id >= 0 {
-                let parent_u64 = parent_id as u64;
-                let node_u64 = node_id as u64;
-                paths.push(PathResult {
-                    source: parent_u64,
-                    target: node_u64,
-                    path: vec![parent_u64, node_u64],
-                    cost: cost_to_parent[node_id],
-                });
-            }
-        }
-
-        let updated_store =
-            super::build_path_relationship_store(self.graph_store.as_ref(), property_name, &paths)?;
-
-        let summary = MutationResult::new(paths.len() as u64, property_name.to_string(), elapsed);
+        let summary = KSpanningTreeMutationSummary {
+            nodes_updated: paths.len() as u64,
+            property_name: property_name.to_string(),
+            execution_time_ms: builder.execution_time_ms(),
+        };
 
         Ok(KSpanningTreeMutateResult {
             summary,

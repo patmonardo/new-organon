@@ -53,6 +53,79 @@ pub struct ArticulationPointsResult {
     pub execution_time: Duration,
 }
 
+/// Result row for articulation points stream.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize,
+)]
+pub struct ArticulationPointRow {
+    pub node_id: u64,
+}
+
+/// Statistics for articulation points computation.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ArticulationPointsStats {
+    pub articulation_point_count: u64,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ArticulationPointsMutationSummary {
+    pub nodes_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ArticulationPointsWriteSummary {
+    pub nodes_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for articulation points: summary + updated store
+#[derive(Debug, Clone)]
+pub struct ArticulationPointsMutateResult {
+    pub summary: ArticulationPointsMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+fn result_rows(result: &ArticulationPointsResult) -> Vec<ArticulationPointRow> {
+    result
+        .articulation_points
+        .iter()
+        .copied()
+        .map(|node_id| ArticulationPointRow { node_id })
+        .collect()
+}
+
+/// Articulation points result builder (facade adapter).
+pub struct ArticulationPointsResultBuilder {
+    result: ArticulationPointsResult,
+}
+
+impl ArticulationPointsResultBuilder {
+    pub fn new(result: ArticulationPointsResult) -> Self {
+        Self { result }
+    }
+
+    pub fn rows(&self) -> Vec<ArticulationPointRow> {
+        result_rows(&self.result)
+    }
+
+    pub fn stats(&self) -> ArticulationPointsStats {
+        ArticulationPointsStats {
+            articulation_point_count: self.result.articulation_points.len() as u64,
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
+    }
+}
+
 define_algorithm_spec! {
     name: "articulation_points",
     output_type: ArticulationPointsResult,

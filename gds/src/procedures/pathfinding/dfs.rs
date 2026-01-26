@@ -29,15 +29,14 @@
 //!     .collect::<Vec<_>>();
 //! ```
 
-use crate::algo::algorithms::result_builders::{
-    ExecutionMetadata, PathFindingResult, PathResult, PathResultBuilder, ResultBuilder,
-    ResultBuilderError,
+use crate::algo::algorithms::result_builders::PathFindingResult;
+use crate::algo::dfs::{
+    DfsComputationRuntime, DfsConfig, DfsMutateResult, DfsMutationSummary, DfsResultBuilder,
+    DfsStats, DfsStorageRuntime, DfsWriteSummary,
 };
-use crate::algo::dfs::{DfsComputationRuntime, DfsStorageRuntime};
 use crate::core::utils::progress::{EmptyTaskRegistryFactory, TaskRegistryFactory, Tasks};
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
-use crate::procedures::{PathResult as ProcedurePathResult, Result};
+use crate::procedures::{PathResult, Result};
 use crate::projection::orientation::Orientation;
 use crate::projection::RelationshipType;
 use crate::types::graph::id_map::NodeId;
@@ -50,30 +49,7 @@ use crate::core::utils::progress::TaskProgressTracker;
 use crate::projection::eval::algorithm::AlgorithmError;
 
 // ============================================================================
-// Statistics Type
-// ============================================================================
-
-/// Statistics about DFS computation
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct DfsStats {
-    /// Number of nodes visited during traversal
-    pub nodes_visited: u64,
-    /// Maximum depth reached during traversal
-    pub max_depth_reached: u64,
-    /// Total computation time in milliseconds
-    pub execution_time_ms: u64,
-    /// Number of target nodes found (if any specified)
-    pub targets_found: u64,
-    /// Whether all targets were reached
-    pub all_targets_reached: bool,
-    /// Number of backtracking operations performed
-    pub backtrack_operations: u64,
-    /// Average branch depth before backtracking
-    pub avg_branch_depth: f64,
-}
-
-// ============================================================================
-// Builder Type
+// Facade Type
 // ============================================================================
 
 /// DFS algorithm builder - fluent configuration
@@ -99,29 +75,16 @@ pub struct DfsStats {
 ///     .track_paths(true)
 ///     .targets(vec![99, 100]);
 /// ```
-pub struct DfsBuilder {
+pub struct DfsFacade {
     graph_store: Arc<DefaultGraphStore>,
-    /// Source node for DFS traversal
-    source: Option<u64>,
-    /// Target nodes (empty = all reachable, specific = stop when found)
-    targets: Vec<u64>,
-    /// Maximum depth to traverse (None = unlimited)
-    max_depth: Option<u32>,
-    /// Whether to track full paths or just discovery order
-    track_paths: bool,
-    /// Concurrency level for parallel processing
-    concurrency: usize,
+    config: DfsConfig,
     task_registry_factory: Box<dyn TaskRegistryFactory>,
 }
 
-/// Mutate result for DFS: summary + updated store
-#[derive(Debug, Clone)]
-pub struct DfsMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
+/// Backwards-compatible alias (builder-style naming).
+pub type DfsBuilder = DfsFacade;
 
-impl DfsBuilder {
+impl DfsFacade {
     /// Create a new DFS builder bound to a live graph store.
     ///
     /// Defaults:
@@ -133,23 +96,50 @@ impl DfsBuilder {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            source: None,
-            targets: vec![],
-            max_depth: None,
-            track_paths: false,
-            concurrency: 1,
+            config: DfsConfig::default(),
             task_registry_factory: Box::new(EmptyTaskRegistryFactory),
         }
     }
 
-    fn checked_node_id(value: u64, field: &str) -> Result<NodeId> {
-        NodeId::try_from(value).map_err(|_| {
-            AlgorithmError::Execution(format!("{} must fit into i64 (got {})", field, value))
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: DfsConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry_factory: Box::new(EmptyTaskRegistryFactory),
         })
     }
 
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: DfsConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: DfsConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     fn compute(self) -> Result<PathFindingResult> {
-        self.validate()?;
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
 
         // Set up progress tracking
         let _task_registry_factory = self.task_registry_factory;
@@ -157,22 +147,18 @@ impl DfsBuilder {
         // Create progress tracker for DFS execution.
         // We track progress in terms of relationships examined.
         let task = Tasks::leaf("DFS".to_string());
-        let mut progress_tracker = TaskProgressTracker::with_concurrency(task, self.concurrency);
+        let mut progress_tracker =
+            TaskProgressTracker::with_concurrency(task, self.config.concurrency);
 
-        let source_u64 = self.source.expect("validate() ensures source is set");
-        let source_node = Self::checked_node_id(source_u64, "source")?;
-        let target_nodes: Vec<NodeId> = self
-            .targets
-            .iter()
-            .map(|&value| Self::checked_node_id(value, "targets"))
-            .collect::<Result<Vec<_>>>()?;
+        let source_node = self.config.source_node;
+        let target_nodes = self.config.target_nodes.clone();
 
         let storage = DfsStorageRuntime::new(
             source_node,
             target_nodes.clone(),
-            self.max_depth,
-            self.track_paths,
-            self.concurrency,
+            self.config.max_depth,
+            self.config.track_paths,
+            self.config.concurrency,
         );
 
         let rel_types: HashSet<RelationshipType> = HashSet::new();
@@ -183,74 +169,20 @@ impl DfsBuilder {
 
         let node_count = graph_view.node_count() as usize;
 
-        let mut computation =
-            DfsComputationRuntime::new(source_node, self.track_paths, self.concurrency, node_count);
+        let mut computation = DfsComputationRuntime::new(
+            source_node,
+            self.config.track_paths,
+            self.config.concurrency,
+            node_count,
+        );
 
+        let start = std::time::Instant::now();
         let result = storage.compute_dfs(
             &mut computation,
             Some(graph_view.as_ref()),
             &mut progress_tracker,
         )?;
-
-        let max_depth_reached: u64 = 0; // Simplified, no paths
-
-        let targets_found: u64 = 0; // Simplified
-
-        let all_targets_reached = false; // Simplified
-
-        let paths: Vec<PathResult> = result
-            .visited_nodes
-            .iter()
-            .enumerate()
-            .map(|(index, &node_id)| {
-                let target = node_id as u64;
-                let path = vec![target]; // Single node path
-                PathResult {
-                    source: source_u64,
-                    target,
-                    path,
-                    cost: index as f64,
-                }
-            })
-            .collect();
-
-        // Create execution metadata
-        let mut additional = std::collections::HashMap::new();
-        additional.insert(
-            "nodes_visited".to_string(),
-            result.visited_nodes.len().to_string(),
-        );
-        additional.insert(
-            "max_depth_reached".to_string(),
-            max_depth_reached.to_string(),
-        );
-        additional.insert("targets_found".to_string(), targets_found.to_string());
-        additional.insert(
-            "all_targets_reached".to_string(),
-            all_targets_reached.to_string(),
-        );
-        additional.insert("track_paths".to_string(), self.track_paths.to_string());
-        additional.insert(
-            "max_depth".to_string(),
-            self.max_depth
-                .map_or("unlimited".to_string(), |d| d.to_string()),
-        );
-
-        let metadata = ExecutionMetadata {
-            execution_time: std::time::Duration::from_millis(result.computation_time_ms),
-            iterations: None,
-            converged: None,
-            additional,
-        };
-
-        // Build result using upgraded result builder
-        let path_result = PathResultBuilder::new()
-            .with_paths(paths)
-            .with_metadata(metadata)
-            .build()
-            .map_err(|e: ResultBuilderError| AlgorithmError::Execution(e.to_string()))?;
-
-        Ok(path_result)
+        DfsResultBuilder::result(result, start.elapsed(), source_node, target_nodes.len())
     }
 
     /// Set source node
@@ -258,7 +190,12 @@ impl DfsBuilder {
     /// The algorithm starts traversal from this node.
     /// Must be a valid node ID in the graph.
     pub fn source(mut self, source: u64) -> Self {
-        self.source = Some(source);
+        self.config.source_node = i64::try_from(source).unwrap_or(-1);
+        self
+    }
+
+    pub fn source_node(mut self, source: NodeId) -> Self {
+        self.config.source_node = source;
         self
     }
 
@@ -267,7 +204,7 @@ impl DfsBuilder {
     /// If specified, traversal stops when target is reached.
     /// If not specified, traverses all reachable nodes.
     pub fn target(mut self, target: u64) -> Self {
-        self.targets = vec![target];
+        self.config.target_nodes = vec![i64::try_from(target).unwrap_or(-1)];
         self
     }
 
@@ -275,7 +212,10 @@ impl DfsBuilder {
     ///
     /// Algorithm computes traversal until all targets are found or max depth reached.
     pub fn targets(mut self, targets: Vec<u64>) -> Self {
-        self.targets = targets;
+        self.config.target_nodes = targets
+            .into_iter()
+            .map(|value| i64::try_from(value).unwrap_or(-1))
+            .collect();
         self
     }
 
@@ -284,7 +224,7 @@ impl DfsBuilder {
     /// Limits how far from source to explore.
     /// Useful for neighborhood analysis or performance control.
     pub fn max_depth(mut self, depth: u32) -> Self {
-        self.max_depth = Some(depth);
+        self.config.max_depth = Some(depth);
         self
     }
 
@@ -293,7 +233,7 @@ impl DfsBuilder {
     /// When true, results include full node sequences for each path.
     /// Slightly more memory usage but enables path reconstruction.
     pub fn track_paths(mut self, track: bool) -> Self {
-        self.track_paths = track;
+        self.config.track_paths = track;
         self
     }
 
@@ -303,41 +243,8 @@ impl DfsBuilder {
     /// DFS is typically single-threaded but can benefit from parallelism
     /// for large disconnected components.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
-    }
-
-    /// Validate configuration before execution
-    fn validate(&self) -> Result<()> {
-        match self.source {
-            None => {
-                return Err(AlgorithmError::Execution(
-                    "source node must be specified".to_string(),
-                ))
-            }
-            Some(id) if id == u64::MAX => {
-                return Err(AlgorithmError::Execution(
-                    "source node ID cannot be u64::MAX".to_string(),
-                ))
-            }
-            _ => {}
-        }
-
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be > 0".to_string(),
-            ));
-        }
-
-        if let Some(depth) = self.max_depth {
-            if depth == 0 {
-                return Err(AlgorithmError::Execution(
-                    "max_depth must be > 0 or None".to_string(),
-                ));
-            }
-        }
-
-        Ok(())
     }
 
     /// Execute the algorithm and return iterator over traversal results
@@ -356,13 +263,7 @@ impl DfsBuilder {
     /// ```
     pub fn stream(self) -> Result<Box<dyn Iterator<Item = PathResult>>> {
         let result = self.compute()?;
-        let paths = result.paths.into_iter().map(|p| PathResult {
-            source: p.source,
-            target: p.target,
-            path: p.path,
-            cost: p.cost,
-        });
-        Ok(Box::new(paths))
+        Ok(Box::new(result.paths.into_iter()))
     }
 
     /// Stats mode: Get aggregated statistics
@@ -379,31 +280,21 @@ impl DfsBuilder {
     /// println!("Visited {} nodes, backtracked {} times", stats.nodes_visited, stats.backtrack_operations);
     /// ```
     pub fn stats(self) -> Result<DfsStats> {
+        let targets = self.config.target_nodes.len() as u64;
         let result = self.compute()?;
-        let nodes_visited = result
-            .metadata
-            .additional
-            .get("nodes_visited")
-            .and_then(|s| s.parse::<u64>().ok())
-            .unwrap_or(0);
+        let nodes_visited = result.paths.len() as u64;
         let max_depth_reached = result
             .metadata
             .additional
             .get("max_depth_reached")
             .and_then(|s| s.parse::<u64>().ok())
             .unwrap_or(0);
-        let targets_found = result
-            .metadata
-            .additional
-            .get("targets_found")
-            .and_then(|s| s.parse::<u64>().ok())
-            .unwrap_or(0);
-        let all_targets_reached = result
-            .metadata
-            .additional
-            .get("all_targets_reached")
-            .and_then(|s| s.parse::<bool>().ok())
-            .unwrap_or(false);
+        let targets_found = if targets == 0 {
+            0
+        } else {
+            nodes_visited.min(targets)
+        };
+        let all_targets_reached = targets > 0 && targets_found == targets;
 
         Ok(DfsStats {
             nodes_visited,
@@ -430,24 +321,26 @@ impl DfsBuilder {
     /// println!("Updated {} nodes", result.nodes_updated);
     /// ```
     pub fn mutate(self, property_name: &str) -> Result<DfsMutateResult> {
-        self.validate()?;
-        ConfigValidator::non_empty_string(property_name, "property_name")?;
+        if property_name.is_empty() {
+            return Err(AlgorithmError::Execution(
+                "property_name cannot be empty".to_string(),
+            ));
+        }
         let graph_store = Arc::clone(&self.graph_store);
         let result = self.compute()?;
-        let paths: Vec<ProcedurePathResult> = result
-            .paths
-            .into_iter()
-            .map(super::core_to_procedure_path_result)
-            .collect();
+        let paths = result.paths;
 
-        let updated_store =
-            super::build_path_relationship_store(graph_store.as_ref(), property_name, &paths)?;
+        let updated_store = crate::algo::algorithms::build_path_relationship_store(
+            graph_store.as_ref(),
+            property_name,
+            &paths,
+        )?;
 
-        let summary = MutationResult::new(
-            paths.len() as u64,
-            property_name.to_string(),
-            result.metadata.execution_time,
-        );
+        let summary = DfsMutationSummary {
+            nodes_updated: paths.len() as u64,
+            property_name: property_name.to_string(),
+            execution_time_ms: result.metadata.execution_time.as_millis() as u64,
+        };
 
         Ok(DfsMutateResult {
             summary,
@@ -467,15 +360,18 @@ impl DfsBuilder {
     /// let result = builder.write("dfs_results")?;
     /// println!("Wrote {} nodes", result.nodes_written);
     /// ```
-    pub fn write(self, property_name: &str) -> Result<WriteResult> {
-        self.validate()?;
-        ConfigValidator::non_empty_string(property_name, "property_name")?;
+    pub fn write(self, property_name: &str) -> Result<DfsWriteSummary> {
+        if property_name.is_empty() {
+            return Err(AlgorithmError::Execution(
+                "property_name cannot be empty".to_string(),
+            ));
+        }
         let res = self.mutate(property_name)?;
-        Ok(WriteResult::new(
-            res.summary.nodes_updated,
-            property_name.to_string(),
-            std::time::Duration::from_millis(res.summary.execution_time_ms),
-        ))
+        Ok(DfsWriteSummary {
+            nodes_written: res.summary.nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: res.summary.execution_time_ms,
+        })
     }
 
     /// Estimate memory requirements for DFS execution
@@ -491,7 +387,11 @@ impl DfsBuilder {
         let visited_memory = node_count;
 
         // Path tracking (if enabled)
-        let path_memory = if self.track_paths { node_count * 8 } else { 0 };
+        let path_memory = if self.config.track_paths {
+            node_count * 8
+        } else {
+            0
+        };
 
         // Graph structure overhead
         let avg_degree = 10.0;
@@ -527,11 +427,11 @@ mod tests {
     #[test]
     fn test_builder_defaults() {
         let builder = DfsBuilder::new(store());
-        assert_eq!(builder.source, None);
-        assert!(builder.targets.is_empty());
-        assert!(builder.max_depth.is_none());
-        assert!(!builder.track_paths);
-        assert_eq!(builder.concurrency, 1);
+        assert_eq!(builder.config.source_node, 0);
+        assert!(builder.config.target_nodes.is_empty());
+        assert!(builder.config.max_depth.is_none());
+        assert!(!builder.config.track_paths);
+        assert_eq!(builder.config.concurrency, 1);
     }
 
     #[test]
@@ -543,29 +443,29 @@ mod tests {
             .track_paths(true)
             .concurrency(4);
 
-        assert_eq!(builder.source, Some(42));
-        assert_eq!(builder.targets, vec![99, 100]);
-        assert_eq!(builder.max_depth, Some(10));
-        assert!(builder.track_paths);
-        assert_eq!(builder.concurrency, 4);
+        assert_eq!(builder.config.source_node, 42);
+        assert_eq!(builder.config.target_nodes, vec![99, 100]);
+        assert_eq!(builder.config.max_depth, Some(10));
+        assert!(builder.config.track_paths);
+        assert_eq!(builder.config.concurrency, 4);
     }
 
     #[test]
     fn test_validate_missing_source() {
-        let builder = DfsBuilder::new(store());
-        assert!(builder.validate().is_err());
+        let builder = DfsBuilder::new(store()).source_node(-1);
+        assert!(builder.config.validate().is_err());
     }
 
     #[test]
     fn test_validate_invalid_concurrency() {
         let builder = DfsBuilder::new(store()).source(0).concurrency(0);
-        assert!(builder.validate().is_err());
+        assert!(builder.config.validate().is_err());
     }
 
     #[test]
     fn test_validate_invalid_max_depth() {
         let builder = DfsBuilder::new(store()).source(0).max_depth(0);
-        assert!(builder.validate().is_err());
+        assert!(builder.config.validate().is_err());
     }
 
     #[test]
@@ -574,12 +474,12 @@ mod tests {
             .source(0)
             .max_depth(10)
             .track_paths(true);
-        assert!(builder.validate().is_ok());
+        assert!(builder.config.validate().is_ok());
     }
 
     #[test]
     fn test_stream_requires_validation() {
-        let builder = DfsBuilder::new(store()); // Missing source
+        let builder = DfsBuilder::new(store()).source_node(-1);
         assert!(builder.stream().is_err());
     }
 

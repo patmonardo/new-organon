@@ -1,17 +1,15 @@
 //! Spanning Tree algorithm dispatch handler.
 
+use crate::algo::spanning_tree::SpanningTreeStats;
 use crate::applications::algorithms::machinery::{
     AlgorithmProcessingTemplateConvenience, AlgorithmProcessingTimings,
     DefaultAlgorithmProcessingTemplate, FnStatsResultBuilder, FnStreamResultBuilder,
     ProgressTrackerCreator, RequestScopedDependencies,
 };
-use crate::applications::algorithms::pathfinding::{
-    err, get_bool, get_str, get_u64, timings_json,
-};
+use crate::applications::algorithms::pathfinding::{err, get_bool, get_str, get_u64, timings_json};
 use crate::concurrency::{Concurrency, TerminationFlag};
 use crate::core::loading::{CatalogLoader, GraphResources};
 use crate::core::utils::progress::{JobId, ProgressTracker, TaskRegistryFactories, Tasks};
-use crate::procedures::pathfinding::SpanningTreeStats;
 use crate::types::catalog::GraphCatalog;
 use serde_json::{json, Value};
 use std::sync::Arc;

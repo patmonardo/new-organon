@@ -29,15 +29,20 @@
 //! ```
 
 use crate::algo::betweenness::storage::BetweennessCentralityStorageRuntime;
-use crate::algo::betweenness::BetweennessCentralityComputationRuntime;
+use crate::algo::betweenness::{
+    BetweennessCentralityComputationRuntime, BetweennessCentralityConfig,
+    BetweennessCentralityMutateResult, BetweennessCentralityMutationSummary,
+    BetweennessCentralityResult, BetweennessCentralityResultBuilder, BetweennessCentralityStats,
+};
 use crate::collections::backends::vec::VecDouble;
 use crate::concurrency::{Concurrency, TerminationFlag};
+use crate::config::config_trait::ValidatedConfig;
 use crate::core::utils::progress::ProgressTracker;
 use crate::core::utils::progress::{
     EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::{CentralityScore, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -51,50 +56,11 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
-// ============================================================================
-// Statistics Type
-// ============================================================================
-
-/// Statistics about betweenness centrality in the graph
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct BetweennessStats {
-    /// Minimum betweenness score
-    pub min: f64,
-    /// Maximum betweenness score
-    pub max: f64,
-    /// Average betweenness
-    pub mean: f64,
-    /// Standard deviation
-    pub stddev: f64,
-    /// Median (50th percentile)
-    pub p50: f64,
-    /// 90th percentile
-    pub p90: f64,
-    /// 99th percentile
-    pub p99: f64,
-    /// Number of "bridge" nodes (high betweenness > mean + stddev)
-    pub bridge_nodes: u64,
-    /// Execution time in milliseconds
-    pub execution_time_ms: u64,
-}
-
-/// Mutation result for betweenness centrality, including the updated graph store.
-#[derive(Debug, Clone)]
-pub struct BetweennessCentralityMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
 /// Betweenness centrality facade/builder bound to a live graph store.
 #[derive(Clone)]
 pub struct BetweennessCentralityFacade {
     graph_store: Arc<DefaultGraphStore>,
-    direction: String,
-    concurrency: usize,
-    relationship_weight_property: Option<String>,
-    sampling_strategy: String,
-    sampling_size: Option<usize>,
-    random_seed: u64,
+    config: BetweennessCentralityConfig,
     task_registry: Arc<dyn TaskRegistryFactory>,
 }
 
@@ -102,25 +68,55 @@ impl BetweennessCentralityFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            direction: "both".to_string(),
-            concurrency: 4,
-            relationship_weight_property: None,
-            sampling_strategy: "all".to_string(),
-            sampling_size: None,
-            random_seed: 42,
+            config: BetweennessCentralityConfig::default(),
             task_registry: Arc::new(EmptyTaskRegistryFactory),
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: BetweennessCentralityConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: Arc::new(EmptyTaskRegistryFactory),
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: BetweennessCentralityConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: BetweennessCentralityConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     /// Direction of traversal: "outgoing", "incoming", or "both".
     pub fn direction(mut self, direction: &str) -> Self {
-        self.direction = direction.to_string();
+        self.config.direction = direction.to_string();
         self
     }
 
     /// Set concurrency level for parallel computation.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -128,7 +124,7 @@ impl BetweennessCentralityFacade {
     ///
     /// When set, betweenness runs the weighted Brandes variant (Dijkstra forward phase).
     pub fn relationship_weight_property(mut self, property: Option<String>) -> Self {
-        self.relationship_weight_property = property.filter(|p| !p.trim().is_empty());
+        self.config.relationship_weight_property = property.filter(|p| !p.trim().is_empty());
         self
     }
 
@@ -138,7 +134,7 @@ impl BetweennessCentralityFacade {
     /// - "all" (default): use all nodes as sources
     /// - "random_degree": sample sources weighted by node degree
     pub fn sampling_strategy(mut self, strategy: &str) -> Self {
-        self.sampling_strategy = strategy.to_string();
+        self.config.sampling_strategy = strategy.to_string();
         self
     }
 
@@ -146,13 +142,13 @@ impl BetweennessCentralityFacade {
     ///
     /// If not set, all nodes are used.
     pub fn sampling_size(mut self, size: Option<usize>) -> Self {
-        self.sampling_size = size;
+        self.config.sampling_size = size;
         self
     }
 
     /// Seed for sampling RNG.
     pub fn random_seed(mut self, seed: u64) -> Self {
-        self.random_seed = seed;
+        self.config.random_seed = seed;
         self
     }
 
@@ -163,7 +159,7 @@ impl BetweennessCentralityFacade {
     }
 
     fn orientation(&self) -> Orientation {
-        match self.direction.as_str() {
+        match self.config.direction.as_str() {
             "incoming" => Orientation::Reverse,
             "outgoing" => Orientation::Natural,
             _ => Orientation::Undirected,
@@ -178,27 +174,17 @@ impl BetweennessCentralityFacade {
     /// # Errors
     /// Returns an error if concurrency is not positive
     pub fn validate(&self) -> Result<()> {
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be positive".to_string(),
-            ));
-        }
-        if let Some(size) = self.sampling_size {
-            if size == 0 {
-                return Err(AlgorithmError::Execution(
-                    "sampling_size must be positive".to_string(),
-                ));
-            }
-        }
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
-    fn compute_scores(&self) -> Result<(Vec<f64>, std::time::Duration)> {
+    fn compute(&self) -> Result<BetweennessCentralityResult> {
         let start = Instant::now();
 
         // For weighted traversal, we must select the relationship property across all rel types.
         let rel_types: HashSet<RelationshipType> = self.graph_store.relationship_types();
-        let graph_view = if let Some(weight_prop) = &self.relationship_weight_property {
+        let graph_view = if let Some(weight_prop) = &self.config.relationship_weight_property {
             let selectors: HashMap<RelationshipType, String> = rel_types
                 .iter()
                 .map(|t| (t.clone(), weight_prop.clone()))
@@ -218,27 +204,39 @@ impl BetweennessCentralityFacade {
 
         let node_count = graph_view.node_count();
         if node_count == 0 {
-            return Ok((Vec::new(), start.elapsed()));
+            return Ok(BetweennessCentralityResult {
+                centralities: Vec::new(),
+                node_count,
+                execution_time: start.elapsed(),
+            });
         }
 
         // Create storage and computation runtimes
         let storage = BetweennessCentralityStorageRuntime::new(
             &*self.graph_store,
             self.orientation(),
-            self.relationship_weight_property.as_deref(),
+            self.config.relationship_weight_property.as_deref(),
         )?;
         let mut computation = BetweennessCentralityComputationRuntime::new(node_count);
 
         let sources: Vec<usize> = {
-            let requested = self.sampling_size.unwrap_or(node_count).min(node_count);
-            storage.select_sources(&self.sampling_strategy, Some(requested), self.random_seed)
+            let requested = self
+                .config
+                .sampling_size
+                .unwrap_or(node_count)
+                .min(node_count);
+            storage.select_sources(
+                &self.config.sampling_strategy,
+                Some(requested),
+                self.config.random_seed,
+            )
         };
 
         let mut progress_tracker = TaskProgressTracker::with_registry(
             Tasks::leaf_with_volume("betweenness".to_string(), sources.len())
                 .base()
                 .clone(),
-            Concurrency::of(self.concurrency.max(1)),
+            Concurrency::of(self.config.concurrency.max(1)),
             JobId::new(),
             self.task_registry.as_ref(),
         );
@@ -264,7 +262,7 @@ impl BetweennessCentralityFacade {
                 &mut computation,
                 &sources,
                 divisor,
-                self.concurrency,
+                self.config.concurrency,
                 &termination,
                 on_source_done,
             )
@@ -272,7 +270,11 @@ impl BetweennessCentralityFacade {
 
         progress_tracker.end_subtask();
 
-        Ok((result.centralities, start.elapsed()))
+        Ok(BetweennessCentralityResult {
+            centralities: result.centralities,
+            node_count,
+            execution_time: start.elapsed(),
+        })
     }
 
     /// Stream mode: Get betweenness score for each node
@@ -296,8 +298,9 @@ impl BetweennessCentralityFacade {
     /// ```
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = CentralityScore>>> {
         self.validate()?;
-        let (scores, _elapsed) = self.compute_scores()?;
-        let iter = scores
+        let result = self.compute()?;
+        let iter = result
+            .centralities
             .into_iter()
             .enumerate()
             .map(|(node_id, score)| CentralityScore {
@@ -322,58 +325,10 @@ impl BetweennessCentralityFacade {
     /// println!("Found {} bridge nodes", stats.bridge_nodes);
     /// println!("Execution took {}ms", stats.execution_time_ms);
     /// ```
-    pub fn stats(&self) -> Result<BetweennessStats> {
+    pub fn stats(&self) -> Result<BetweennessCentralityStats> {
         self.validate()?;
-        let (scores, elapsed) = self.compute_scores()?;
-        if scores.is_empty() {
-            return Ok(BetweennessStats {
-                min: 0.0,
-                max: 0.0,
-                mean: 0.0,
-                stddev: 0.0,
-                p50: 0.0,
-                p90: 0.0,
-                p99: 0.0,
-                bridge_nodes: 0,
-                execution_time_ms: elapsed.as_millis() as u64,
-            });
-        }
-
-        let mut sorted = scores.clone();
-        sorted.sort_by(|a, b| a.total_cmp(b));
-        let min = *sorted.first().unwrap();
-        let max = *sorted.last().unwrap();
-        let mean = scores.iter().sum::<f64>() / scores.len() as f64;
-        let var = scores
-            .iter()
-            .map(|x| {
-                let d = x - mean;
-                d * d
-            })
-            .sum::<f64>()
-            / scores.len() as f64;
-        let stddev = var.sqrt();
-
-        let percentile = |p: f64| -> f64 {
-            let idx =
-                ((p.clamp(0.0, 100.0) / 100.0) * (sorted.len() as f64 - 1.0)).round() as usize;
-            sorted[idx]
-        };
-
-        let threshold = mean + stddev;
-        let bridge_nodes = scores.iter().filter(|v| **v > threshold).count() as u64;
-
-        Ok(BetweennessStats {
-            min,
-            max,
-            mean,
-            stddev,
-            p50: percentile(50.0),
-            p90: percentile(90.0),
-            p99: percentile(99.0),
-            bridge_nodes,
-            execution_time_ms: elapsed.as_millis() as u64,
-        })
+        let result = self.compute()?;
+        Ok(BetweennessCentralityResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: Compute and store as node property
@@ -393,10 +348,10 @@ impl BetweennessCentralityFacade {
     pub fn mutate(self, property_name: &str) -> Result<BetweennessCentralityMutateResult> {
         self.validate()?;
         ConfigValidator::non_empty_string(property_name, "property_name")?;
-        let start_time = Instant::now();
-        let (scores, _elapsed) = self.compute_scores()?;
-
+        let result = self.compute()?;
+        let scores = result.centralities.clone();
         let nodes_updated = scores.len() as u64;
+        let builder = BetweennessCentralityResultBuilder::new(result);
 
         // Build property values
         let node_count = scores.len();
@@ -413,8 +368,11 @@ impl BetweennessCentralityFacade {
                 AlgorithmError::Execution(format!("Betweenness mutate failed to add property: {e}"))
             })?;
 
-        let execution_time = start_time.elapsed();
-        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+        let summary = BetweennessCentralityMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: builder.execution_time_ms(),
+        };
 
         Ok(BetweennessCentralityMutateResult {
             summary,
@@ -459,7 +417,7 @@ impl BetweennessCentralityFacade {
         // - predecessors: worst-case proportional to relationships (very graph dependent)
         let per_node_base = std::mem::size_of::<u64>()
             + std::mem::size_of::<f64>()
-            + if self.relationship_weight_property.is_some() {
+            + if self.config.relationship_weight_property.is_some() {
                 std::mem::size_of::<f64>()
             } else {
                 std::mem::size_of::<i32>()
@@ -467,7 +425,7 @@ impl BetweennessCentralityFacade {
         let per_node_worklists = 3 * std::mem::size_of::<usize>();
 
         let per_worker = node_count * (per_node_base + per_node_worklists);
-        let workers = self.concurrency.max(1);
+        let workers = self.config.concurrency.max(1);
 
         // Predecessors are the dominant cost in dense graphs; approximate it using relationship count.
         let preds_estimate = self.graph_store.relationship_count() * std::mem::size_of::<usize>();

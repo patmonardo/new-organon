@@ -56,6 +56,80 @@ pub struct BridgesResult {
     pub execution_time: Duration,
 }
 
+/// Result row for bridges stream mode
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct BridgesRow {
+    pub from: u64,
+    pub to: u64,
+}
+
+/// Statistics for bridges computation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct BridgesStats {
+    pub bridge_count: usize,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a mutate operation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct BridgesMutationSummary {
+    pub edges_updated: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Summary of a write operation
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct BridgesWriteSummary {
+    pub edges_written: u64,
+    pub property_name: String,
+    pub execution_time_ms: u64,
+}
+
+/// Mutate result for bridges: summary + updated store
+#[derive(Debug, Clone)]
+pub struct BridgesMutateResult {
+    pub summary: BridgesMutationSummary,
+    pub updated_store: Arc<crate::types::prelude::DefaultGraphStore>,
+}
+
+fn result_rows(result: &BridgesResult) -> Vec<BridgesRow> {
+    result
+        .bridges
+        .iter()
+        .map(|bridge| BridgesRow {
+            from: bridge.from,
+            to: bridge.to,
+        })
+        .collect()
+}
+
+/// Bridges result builder (facade adapter).
+pub struct BridgesResultBuilder {
+    result: BridgesResult,
+}
+
+impl BridgesResultBuilder {
+    pub fn new(result: BridgesResult) -> Self {
+        Self { result }
+    }
+
+    pub fn rows(&self) -> Vec<BridgesRow> {
+        result_rows(&self.result)
+    }
+
+    pub fn stats(&self) -> BridgesStats {
+        BridgesStats {
+            bridge_count: self.result.bridges.len(),
+            execution_time_ms: self.result.execution_time.as_millis() as u64,
+        }
+    }
+
+    pub fn execution_time_ms(&self) -> u64 {
+        self.result.execution_time.as_millis() as u64
+    }
+}
+
 define_algorithm_spec! {
     name: "bridges",
     output_type: BridgesResult,

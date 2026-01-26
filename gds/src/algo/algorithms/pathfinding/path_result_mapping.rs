@@ -1,6 +1,6 @@
-use crate::algo::algorithms::result_builders::PathResult as CorePathResult;
+use crate::algo::algorithms::result_builders::PathResult;
 use crate::collections::backends::vec::VecDouble;
-use crate::procedures::{PathResult as ProcedurePathResult, Result};
+use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::RelationshipType;
 use crate::types::graph_store::GraphStore;
 use crate::types::prelude::DefaultGraphStore;
@@ -9,23 +9,11 @@ use crate::types::properties::relationship::RelationshipPropertyValues;
 use crate::types::schema::Direction;
 use std::sync::Arc;
 
-// Additional import for error handling
-use crate::projection::eval::algorithm::AlgorithmError;
-
-pub(crate) fn core_to_procedure_path_result(path: CorePathResult) -> ProcedurePathResult {
-    ProcedurePathResult {
-        source: path.source,
-        target: path.target,
-        path: path.path,
-        cost: path.cost,
-    }
-}
-
-pub(crate) fn build_path_relationship_store(
+pub fn build_path_relationship_store(
     graph_store: &DefaultGraphStore,
     relationship_type: &str,
-    paths: &[ProcedurePathResult],
-) -> Result<Arc<DefaultGraphStore>> {
+    paths: &[PathResult],
+) -> Result<Arc<DefaultGraphStore>, AlgorithmError> {
     let node_count = graph_store.node_count();
     let mut outgoing: Vec<Vec<i64>> = vec![Vec::new(); node_count];
     let mut costs_by_source: Vec<Vec<f64>> = vec![Vec::new(); node_count];

@@ -6,19 +6,21 @@
 //! This facade is the "live wiring" layer: it binds the algorithm runtime to a
 //! `DefaultGraphStore` graph view.
 
-use crate::algo::articulation_points::{
-    ArticulationPointsComputationRuntime, STACK_EVENT_SIZE_BYTES,
-};
 use crate::algo::articulation_points::storage::ArticulationPointsStorageRuntime;
+use crate::algo::articulation_points::{
+    ArticulationPointRow, ArticulationPointsComputationRuntime, ArticulationPointsConfig,
+    ArticulationPointsMutateResult, ArticulationPointsMutationSummary, ArticulationPointsResult,
+    ArticulationPointsResultBuilder, ArticulationPointsStats, STACK_EVENT_SIZE_BYTES,
+};
 use crate::collections::backends::vec::VecDouble;
 use crate::collections::BitSet;
 use crate::concurrency::Concurrency;
-use crate::core::utils::progress::ProgressTracker;
 use crate::core::utils::progress::{
-    EmptyTaskRegistryFactory, JobId, TaskProgressTracker, TaskRegistryFactory, Tasks,
+    EmptyTaskRegistryFactory, JobId, ProgressTracker, TaskProgressTracker, TaskRegistryFactory,
+    Tasks,
 };
 use crate::mem::MemoryRange;
-use crate::procedures::builder_base::{ConfigValidator, MutationResult, WriteResult};
+use crate::procedures::builder_base::{ConfigValidator, WriteResult};
 use crate::procedures::{AlgorithmRunner, Result};
 use crate::projection::eval::algorithm::AlgorithmError;
 use crate::projection::orientation::Orientation;
@@ -32,31 +34,11 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 
-/// Result row for articulation points stream.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize)]
-pub struct ArticulationPointRow {
-    pub node_id: u64,
-}
-
-/// Statistics for articulation points computation.
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct ArticulationPointsStats {
-    pub articulation_point_count: u64,
-    pub execution_time_ms: u64,
-}
-
-/// Result for articulation points mutate mode
-#[derive(Debug, Clone)]
-pub struct ArticulationPointsMutateResult {
-    pub summary: MutationResult,
-    pub updated_store: Arc<DefaultGraphStore>,
-}
-
 /// Articulation points facade bound to a live graph store.
 #[derive(Clone)]
 pub struct ArticulationPointsFacade {
     graph_store: Arc<DefaultGraphStore>,
-    concurrency: usize,
+    config: ArticulationPointsConfig,
     task_registry: Arc<dyn TaskRegistryFactory>,
 }
 
@@ -64,14 +46,49 @@ impl ArticulationPointsFacade {
     pub fn new(graph_store: Arc<DefaultGraphStore>) -> Self {
         Self {
             graph_store,
-            concurrency: 4,
+            config: ArticulationPointsConfig::default(),
             task_registry: Arc::new(EmptyTaskRegistryFactory),
         }
     }
 
+    /// Create a facade using the spec.rs config model.
+    pub fn from_spec_config(
+        graph_store: Arc<DefaultGraphStore>,
+        config: ArticulationPointsConfig,
+    ) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+
+        Ok(Self {
+            graph_store,
+            config,
+            task_registry: Arc::new(EmptyTaskRegistryFactory),
+        })
+    }
+
+    /// Parse JSON into spec.rs config and return a configured facade.
+    pub fn from_spec_json(
+        graph_store: Arc<DefaultGraphStore>,
+        raw_config: &serde_json::Value,
+    ) -> Result<Self> {
+        let parsed: ArticulationPointsConfig = serde_json::from_value(raw_config.clone())
+            .map_err(|e| AlgorithmError::Execution(format!("Config parsing failed: {e}")))?;
+        Self::from_spec_config(graph_store, parsed)
+    }
+
+    /// Apply a spec.rs config onto an existing facade.
+    pub fn with_spec_config(mut self, config: ArticulationPointsConfig) -> Result<Self> {
+        config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))?;
+        self.config = config;
+        Ok(self)
+    }
+
     /// Set concurrency level for parallel computation.
     pub fn concurrency(mut self, concurrency: usize) -> Self {
-        self.concurrency = concurrency;
+        self.config.concurrency = concurrency;
         self
     }
 
@@ -89,12 +106,9 @@ impl ArticulationPointsFacade {
     /// # Errors
     /// Returns an error if concurrency is not positive
     pub fn validate(&self) -> Result<()> {
-        if self.concurrency == 0 {
-            return Err(AlgorithmError::Execution(
-                "concurrency must be positive".to_string(),
-            ));
-        }
-        Ok(())
+        self.config
+            .validate()
+            .map_err(|e| AlgorithmError::Execution(format!("Invalid config: {e}")))
     }
 
     /// Run the algorithm and return the articulation points as a bitset
@@ -116,7 +130,7 @@ impl ArticulationPointsFacade {
             Tasks::leaf_with_volume("articulation_points".to_string(), node_count)
                 .base()
                 .clone(),
-            Concurrency::of(self.concurrency.max(1)),
+            Concurrency::of(self.config.concurrency.max(1)),
             JobId::new(),
             self.task_registry.as_ref(),
         );
@@ -203,7 +217,7 @@ impl ArticulationPointsFacade {
             Tasks::leaf_with_volume("articulation_points".to_string(), node_count)
                 .base()
                 .clone(),
-            Concurrency::of(self.concurrency.max(1)),
+            Concurrency::of(self.config.concurrency.max(1)),
             JobId::new(),
             self.task_registry.as_ref(),
         );
@@ -234,6 +248,22 @@ impl ArticulationPointsFacade {
         Ok((result.articulation_points, start.elapsed()))
     }
 
+    fn compute(&self) -> Result<ArticulationPointsResult> {
+        let (bitset, elapsed) = self.compute_bitset()?;
+        let mut points: Vec<u64> = Vec::with_capacity(bitset.cardinality());
+        let mut idx = bitset.next_set_bit(0);
+        while let Some(i) = idx {
+            points.push(i as u64);
+            idx = bitset.next_set_bit(i + 1);
+        }
+
+        Ok(ArticulationPointsResult {
+            articulation_points: points,
+            node_count: self.graph_store.node_count(),
+            execution_time: elapsed,
+        })
+    }
+
     /// Stream mode: Get articulation points for each node
     ///
     /// Returns an iterator over articulation point rows.
@@ -246,17 +276,9 @@ impl ArticulationPointsFacade {
     /// ```
     pub fn stream(&self) -> Result<Box<dyn Iterator<Item = ArticulationPointRow>>> {
         self.validate()?;
-        let bitset = self.run()?;
-
-        // Emit only set bits as rows.
-        let mut out: Vec<ArticulationPointRow> = Vec::with_capacity(bitset.cardinality());
-        let mut idx = bitset.next_set_bit(0);
-        while let Some(i) = idx {
-            out.push(ArticulationPointRow { node_id: i as u64 });
-            idx = bitset.next_set_bit(i + 1);
-        }
-
-        Ok(Box::new(out.into_iter()))
+        let result = self.compute()?;
+        let rows = ArticulationPointsResultBuilder::new(result).rows();
+        Ok(Box::new(rows.into_iter()))
     }
 
     /// Stats mode: Get aggregated statistics
@@ -272,12 +294,8 @@ impl ArticulationPointsFacade {
     /// ```
     pub fn stats(&self) -> Result<ArticulationPointsStats> {
         self.validate()?;
-        let (bitset, elapsed) = self.compute_bitset()?;
-
-        Ok(ArticulationPointsStats {
-            articulation_point_count: bitset.cardinality() as u64,
-            execution_time_ms: elapsed.as_millis() as u64,
-        })
+        let result = self.compute()?;
+        Ok(ArticulationPointsResultBuilder::new(result).stats())
     }
 
     /// Mutate mode: Compute and store as node property
@@ -321,7 +339,11 @@ impl ArticulationPointsFacade {
             })?;
 
         let execution_time = start_time.elapsed();
-        let summary = MutationResult::new(nodes_updated, property_name.to_string(), execution_time);
+        let summary = ArticulationPointsMutationSummary {
+            nodes_updated,
+            property_name: property_name.to_string(),
+            execution_time_ms: execution_time.as_millis() as u64,
+        };
 
         Ok(ArticulationPointsMutateResult {
             summary,
