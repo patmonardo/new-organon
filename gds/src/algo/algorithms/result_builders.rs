@@ -72,6 +72,64 @@ impl ExecutionMetadata {
     }
 }
 
+// ============================================================================
+// Mutation and Write Results
+// ============================================================================
+
+/// Result of a mutation operation
+#[derive(Debug, Clone, Serialize)]
+pub struct MutationResult {
+    /// Number of nodes updated
+    pub nodes_updated: u64,
+    /// Property name created/updated
+    pub property_name: String,
+    /// Execution time in milliseconds
+    pub execution_time_ms: u64,
+}
+
+impl MutationResult {
+    /// Create a new mutation result
+    pub fn new(nodes_updated: u64, property_name: String, execution_time: Duration) -> Self {
+        Self {
+            nodes_updated,
+            property_name,
+            execution_time_ms: execution_time.as_millis() as u64,
+        }
+    }
+
+    /// Get execution time in milliseconds
+    pub fn execution_time_ms(&self) -> u64 {
+        self.execution_time_ms
+    }
+}
+
+/// Result of a write operation
+#[derive(Debug, Clone, Serialize)]
+pub struct WriteResult {
+    /// Number of nodes written
+    pub nodes_written: u64,
+    /// Property name written
+    pub property_name: String,
+    /// Execution time in milliseconds
+    pub execution_time_ms: u64,
+}
+
+impl WriteResult {
+    /// Create a new write result
+    pub fn new(nodes_written: u64, property_name: String, execution_time: Duration) -> Self {
+        Self {
+            nodes_written,
+            property_name,
+            execution_time_ms: execution_time.as_millis() as u64,
+        }
+    }
+
+    /// Get execution time in milliseconds
+    pub fn execution_time_ms(&self) -> u64 {
+        self.execution_time_ms
+    }
+}
+
 /// Centrality algorithm result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CentralityResult {
