@@ -1,4 +1,4 @@
-use crate::algo::embeddings::gat::storage::GATStorageRuntime;
+use crate::algo::embeddings::gat::GATStorageRuntime;
 use crate::algo::embeddings::gat::GATConfig;
 use crate::algo::embeddings::gat::GATResult;
 use crate::define_algorithm_spec;

@@ -1,7 +1,7 @@
 //! HITS algorithm specification
 
-use crate::algo::hits::storage::HitsStorageRuntime;
 use crate::algo::hits::HitsComputationRuntime;
+use crate::algo::hits::HitsStorageRuntime;
 use crate::collections::backends::vec::VecDouble;
 use crate::config::validation::ConfigError;
 use crate::core::utils::progress::{ProgressTracker, TaskProgressTracker, Tasks};

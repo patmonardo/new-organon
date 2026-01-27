@@ -1,6 +1,6 @@
 //! K1-Coloring algorithm specification
 
-use crate::algo::k1coloring::storage::K1ColoringStorageRuntime;
+use crate::algo::k1coloring::K1ColoringStorageRuntime;
 use crate::algo::k1coloring::K1ColoringComputationRuntime;
 use crate::concurrency::TerminationFlag;
 use crate::config::validation::ConfigError;
