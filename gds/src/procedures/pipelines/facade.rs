@@ -2,24 +2,28 @@
 //!
 //! This is intentionally "ceremonial" and Java-shaped.
 
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
+use std::sync::OnceLock;
 
 use serde_json::Value;
 
 use crate::mem::MemoryEstimationResult;
-use crate::projection::eval::pipeline::TrainingPipeline;
-use crate::projection::eval::pipeline::{
-    link_pipeline::{
-        LinkFeatureStepFactory, LinkPredictionSplitConfig, LinkPredictionTrainingPipeline,
-    },
-    node_pipeline::classification::node_classification_training_pipeline::NodeClassificationTrainingPipeline,
-    node_pipeline::node_feature_step::NodeFeatureStep,
-    node_pipeline::node_property_prediction_split_config::NodePropertyPredictionSplitConfig,
-    node_pipeline::node_property_training_pipeline::NodePropertyTrainingPipeline,
-    node_pipeline::regression::node_regression_training_pipeline::NodeRegressionTrainingPipeline,
-    AutoTuningConfig, FeatureStep, Pipeline, PipelineCatalog, PipelineCatalogEntry, TrainingMethod,
+use crate::projection::eval::pipeline::link_pipeline::{
+    LinkFeatureStepFactory, LinkPredictionSplitConfig, LinkPredictionTrainingPipeline,
 };
-use crate::projection::eval::pipeline::{ExecutableNodePropertyStep, NodePropertyStep};
+use crate::projection::eval::pipeline::node_pipeline::{
+    NodeClassificationTrainingPipeline, NodeFeatureStep, NodePropertyPredictionSplitConfig,
+    NodePropertyTrainingPipeline, NodeRegressionTrainingPipeline,
+};
+use crate::projection::eval::pipeline::AutoTuningConfig;
+use crate::projection::eval::pipeline::ExecutableNodePropertyStep;
+use crate::projection::eval::pipeline::FeatureStep;
+use crate::projection::eval::pipeline::NodePropertyStep;
+use crate::projection::eval::pipeline::Pipeline;
+use crate::projection::eval::pipeline::PipelineCatalog;
+use crate::projection::eval::pipeline::PipelineCatalogEntry;
+use crate::projection::eval::pipeline::TrainingMethod;
+use crate::projection::eval::pipeline::TrainingPipeline;
 use crate::types::user::User;
 
 use super::types::*;

@@ -1,4 +1,4 @@
-use crate::ml::core::functions::weights::Weights;
+use crate::ml::core::functions::Weights;
 use crate::ml::models::BaseModelData;
 use crate::ml::models::ClassifierData;
 use crate::ml::models::TrainingMethod;

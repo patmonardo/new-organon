@@ -1,16 +1,12 @@
 use super::data::LogisticRegressionData;
-use crate::ml::core::{
-    batch::Batch,
-    functions::{
-        constant::Constant,
-        matrix_multiply_with_transposed_second_operand::MatrixMultiplyWithTransposedSecondOperand,
-        matrix_vector_sum::MatrixVectorSum, reduced_softmax::ReducedSoftmax, sigmoid::Sigmoid,
-        softmax::Softmax,
-    },
-    tensor::Matrix,
-    variable::VariableRef,
-    ComputationContext,
+use crate::ml::core::batch::Batch;
+use crate::ml::core::functions::{
+    Constant, MatrixMultiplyWithTransposedSecondOperand, MatrixVectorSum, ReducedSoftmax, Sigmoid,
+    Softmax,
 };
+use crate::ml::core::tensor::Matrix;
+use crate::ml::core::variable::VariableRef;
+use crate::ml::core::ComputationContext;
 use crate::ml::models::Classifier;
 use crate::ml::models::ClassifierData;
 use crate::ml::models::Features;

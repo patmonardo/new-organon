@@ -351,6 +351,79 @@ mod mean_square_error_tests {
 }
 
 #[cfg(test)]
+mod cross_entropy_loss_tests {
+    use crate::ml::core::functions::{Constant, CrossEntropyLoss};
+    use crate::ml::core::ComputationContext;
+    use crate::ml::core::Scalar;
+    use crate::ml::core::Variable;
+    use std::sync::Arc;
+
+    #[test]
+    fn test_cross_entropy_loss_scalar_output() {
+        let predictions = Arc::new(Constant::matrix(vec![0.25, 0.75, 0.8, 0.2], 2, 2));
+        let targets = Arc::new(Constant::vector(vec![1.0, 0.0]));
+
+        let loss = CrossEntropyLoss::new_ref(predictions.clone(), targets.clone(), vec![1.0, 1.0]);
+
+        assert_eq!(loss.dimensions(), &[1]);
+        assert!(!loss.require_gradient());
+    }
+
+    #[test]
+    fn test_cross_entropy_loss_value() {
+        let predictions = Arc::new(Constant::matrix(vec![0.25, 0.75, 0.8, 0.2], 2, 2));
+        let targets = Arc::new(Constant::vector(vec![1.0, 0.0]));
+
+        let loss = CrossEntropyLoss::new_ref(predictions, targets, vec![1.0, 1.0]);
+        let ctx = ComputationContext::new();
+        let result = ctx.forward(&loss);
+        let scalar = result
+            .as_any()
+            .downcast_ref::<Scalar>()
+            .expect("Expected Scalar");
+
+        let expected = -((0.75_f64.ln() + 0.8_f64.ln()) / 2.0);
+        assert!((scalar.value() - expected).abs() < 1e-10);
+    }
+}
+
+#[cfg(test)]
+mod reduced_cross_entropy_loss_tests {
+    use crate::ml::core::functions::{Constant, ReducedCrossEntropyLoss};
+    use crate::ml::core::ComputationContext;
+    use crate::ml::core::Scalar;
+    use std::sync::Arc;
+
+    #[test]
+    fn test_reduced_cross_entropy_loss_value() {
+        let predictions = Arc::new(Constant::matrix(vec![0.6, 0.4, 0.3, 0.7], 2, 2));
+        let weights = Arc::new(Constant::matrix(vec![0.0; 4], 2, 2));
+        let bias = Arc::new(Constant::vector(vec![0.0, 0.0]));
+        let features = Arc::new(Constant::matrix(vec![0.0; 4], 2, 2));
+        let labels = Arc::new(Constant::vector(vec![0.0, 1.0]));
+
+        let loss = ReducedCrossEntropyLoss::new_ref(
+            predictions,
+            weights,
+            bias,
+            features,
+            labels,
+            vec![1.0, 1.0],
+        );
+
+        let ctx = ComputationContext::new();
+        let result = ctx.forward(&loss);
+        let scalar = result
+            .as_any()
+            .downcast_ref::<Scalar>()
+            .expect("Expected Scalar");
+
+        let expected = -((0.6_f64.ln() + 0.7_f64.ln()) / 2.0);
+        assert!((scalar.value() - expected).abs() < 1e-10);
+    }
+}
+
+#[cfg(test)]
 mod matrix_sum_tests {
     use crate::ml::core::functions::{Constant, MatrixSum};
     use crate::ml::core::Variable;
