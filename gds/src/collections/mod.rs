@@ -51,6 +51,15 @@ pub mod backends;
 // Extension implementations
 pub mod extensions;
 
+// Disk-first catalog
+pub mod catalog;
+
+// Dataset scaffolding
+pub mod datasets;
+
+// DataFrame integration
+pub mod dataframe;
+
 // Utilities
 pub mod utils;
 
@@ -59,6 +68,9 @@ pub mod adapter;
 
 // Re-export commonly used types (explicit to avoid ambiguous glob re-exports)
 pub use adapter::{CollectionFactory, UniversalPropertyValues};
+pub use catalog::*;
+pub use dataframe::*;
+// pub use datasets::*;
 pub use traits::*;
 
 // Utility modules and their common types (retain legacy paths)

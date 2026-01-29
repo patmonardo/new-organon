@@ -167,6 +167,9 @@ pub enum Extension {
     Compression,      // Data compression
     Encryption,       // Data encryption
     Paging,           // Paging support
+    Chunking,         // Chunked array support
+    Indexing,         // Index array support
+    Framing,          // DataFrame-style framing
     MemoryEstimation, // Memory estimation
     Queue,            // Queue support
     Stack,            // Stack support

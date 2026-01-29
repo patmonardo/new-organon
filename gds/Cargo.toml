@@ -24,18 +24,21 @@ uuid = { version = "1", features = ["v4"] }
 thiserror = "1.0"
 lazy_static = "1.4"
 chrono = { version = "0.4", features = ["serde"] }
-polars = { version = "0.32", features = [
+polars = { version = "0.52", features = [
     "dtype-date",
     "dtype-datetime",
+    "csv",
+    "ipc",
+    "parquet",
     "serde",
 ] }
 memmap2 = "0.5"
-arrow2 = { version = "0.15", features = ["io_ipc", "io_parquet"] }
+arrow2 = { version = "0.18", features = ["io_ipc", "io_parquet"] }
 rand = { version = "0.8", features = ["std", "std_rng"] }
 rand_chacha = "0.3"
 num_cpus = "1.16"
 parking_lot = "0.12"
-rayon = "1.10"
+rayon = "1.11"
 hdrhistogram = "7.5" # Histogram data structure for statistics
 paste = "1.0" # Token pasting for macro generation (builder names, etc.)
 anyhow = "1.0"

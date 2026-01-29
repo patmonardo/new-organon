@@ -57,3 +57,8 @@ pyg_service/
 graphstore-jsx-prototype/
 gdl-to-pdf/
 tools/reports/
+gds/organon.sav
+gds/graph-data-science
+gds/polars
+gds/pytorch_geometric
+gds/pytorch_pytorch_tabular

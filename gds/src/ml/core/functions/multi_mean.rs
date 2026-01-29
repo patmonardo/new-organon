@@ -3,10 +3,10 @@
 //! Translated from Java GDS ml-core functions MultiMean.java.
 //! This is a literal 1:1 translation following repository translation policy.
 
-use crate::ml::core::AbstractVariable;
-use crate::ml::core::ComputationContext;
 use crate::ml::core::dimensions::{COLUMNS_INDEX, ROWS_INDEX};
 use crate::ml::core::subgraph::BatchNeighbors;
+use crate::ml::core::AbstractVariable;
+use crate::ml::core::ComputationContext;
 use crate::ml::core::{Matrix, Tensor};
 use crate::ml::core::{Variable, VariableRef};
 use std::fmt;
@@ -160,6 +160,3 @@ impl fmt::Display for MultiMean {
         write!(f, "MultiMean")
     }
 }
-
-// BatchNeighbors trait is now available from crate::ml::core::subgraph
-// No placeholder needed - use the trait bound directly
