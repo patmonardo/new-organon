@@ -113,6 +113,25 @@ impl PolarsChunkedSeries {
         Ok(ranges)
     }
 
+    /// Get the range for a specific chunk index.
+    pub fn chunk_range(&self, chunk_index: usize) -> Result<ChunkRange, ChunkingError> {
+        let ranges = self.chunk_ranges()?;
+        ranges
+            .get(chunk_index)
+            .copied()
+            .ok_or_else(|| ChunkingError::ChunkOutOfBounds(chunk_index))
+    }
+
+    /// Materialize all chunks as a vector of Series slices.
+    pub fn chunks(&self) -> Result<Vec<Series>, ChunkingError> {
+        let ranges = self.chunk_ranges()?;
+        let mut chunks = Vec::with_capacity(ranges.len());
+        for range in ranges {
+            chunks.push(self.series.slice(range.start as i64, range.len()));
+        }
+        Ok(chunks)
+    }
+
     /// Get a chunk as a Series slice (Collections-oriented view).
     pub fn get_chunk(&self, chunk_index: usize) -> Result<Series, ChunkingError> {
         let ranges = self.chunk_ranges()?;

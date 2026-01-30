@@ -54,7 +54,7 @@ pub mod extensions;
 // Disk-first catalog
 pub mod catalog;
 
-// Dataset scaffolding
+// Dataset tooling (dataset registry + expr facade)
 pub mod datasets;
 
 // DataFrame integration

@@ -1,7 +1,7 @@
 //! Polars DataFrame integration for Collections.
 
 use polars::error::PolarsError;
-use polars::prelude::{Column, DataFrame, DataType, Series};
+use polars::prelude::{col, Column, DataFrame, DataType, Expr, IntoLazy, Series};
 
 pub use polars::prelude::Column as PolarsColumn;
 pub use polars::prelude::DataType as PolarsDataType;
@@ -43,6 +43,11 @@ pub trait DataFrameCollection: Send + Sync {
             .collect()
     }
 
+    /// Whether the DataFrame has zero rows.
+    fn is_empty(&self) -> bool {
+        self.dataframe().height() == 0
+    }
+
     /// Access a column by name.
     fn column(&self, name: &str) -> Result<&Column, PolarsError> {
         self.dataframe().column(name)
@@ -52,6 +57,21 @@ pub trait DataFrameCollection: Send + Sync {
     fn select(&self, columns: &[&str]) -> Result<DataFrame, PolarsError> {
         let selection: Vec<&str> = columns.iter().copied().collect();
         self.dataframe().select(selection)
+    }
+
+    /// Return the first N rows.
+    fn head(&self, n: usize) -> DataFrame {
+        self.dataframe().head(Some(n))
+    }
+
+    /// Return the last N rows.
+    fn tail(&self, n: usize) -> DataFrame {
+        self.dataframe().tail(Some(n))
+    }
+
+    /// Slice rows by offset and length.
+    fn slice(&self, offset: i64, length: usize) -> DataFrame {
+        self.dataframe().slice(offset, length)
     }
 }
 
@@ -78,6 +98,77 @@ impl PolarsDataFrameCollection {
         let cols: Vec<Column> = columns.into_iter().map(Column::from).collect();
         let df = DataFrame::new(cols)?;
         Ok(Self { df })
+    }
+
+    /// Select a subset of columns (eager).
+    pub fn select_columns(&self, columns: &[&str]) -> Result<Self, PolarsError> {
+        let selection: Vec<&str> = columns.iter().copied().collect();
+        let df = self.df.select(selection)?;
+        Ok(Self { df })
+    }
+
+    /// Select columns using Polars expressions.
+    pub fn select_exprs(&self, exprs: &[Expr]) -> Result<Self, PolarsError> {
+        let df = self.df.clone().lazy().select(exprs.to_vec()).collect()?;
+        Ok(Self { df })
+    }
+
+    /// Filter rows using a Polars predicate expression.
+    pub fn filter_expr(&self, predicate: Expr) -> Result<Self, PolarsError> {
+        let df = self.df.clone().lazy().filter(predicate).collect()?;
+        Ok(Self { df })
+    }
+
+    /// Add or replace columns using Polars expressions.
+    pub fn with_columns_exprs(&self, exprs: &[Expr]) -> Result<Self, PolarsError> {
+        let df = self
+            .df
+            .clone()
+            .lazy()
+            .with_columns(exprs.to_vec())
+            .collect()?;
+        Ok(Self { df })
+    }
+
+    /// Group by columns and aggregate using Polars expressions.
+    pub fn group_by_exprs(&self, keys: &[Expr], aggs: &[Expr]) -> Result<Self, PolarsError> {
+        let df = self
+            .df
+            .clone()
+            .lazy()
+            .group_by(keys.to_vec())
+            .agg(aggs.to_vec())
+            .collect()?;
+        Ok(Self { df })
+    }
+
+    /// Group by named columns and aggregate using Polars expressions.
+    pub fn group_by_columns(&self, keys: &[&str], aggs: &[Expr]) -> Result<Self, PolarsError> {
+        let key_exprs: Vec<Expr> = keys.iter().map(|name| col(*name)).collect();
+        self.group_by_exprs(&key_exprs, aggs)
+    }
+
+    /// Pretty-print the DataFrame using Polars fmt output.
+    pub fn fmt_table(&self) -> String {
+        format!("{}", self.df)
+    }
+
+    /// Return the first N rows as a new collection.
+    pub fn head(&self, n: usize) -> Self {
+        let df = self.df.head(Some(n));
+        Self { df }
+    }
+
+    /// Return the last N rows as a new collection.
+    pub fn tail(&self, n: usize) -> Self {
+        let df = self.df.tail(Some(n));
+        Self { df }
+    }
+
+    /// Slice rows by offset and length as a new collection.
+    pub fn slice(&self, offset: i64, length: usize) -> Self {
+        let df = self.df.slice(offset, length);
+        Self { df }
     }
 
     pub fn into_inner(self) -> DataFrame {

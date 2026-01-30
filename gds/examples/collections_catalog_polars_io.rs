@@ -93,7 +93,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let mut table_df = read_table_parquet(&table_parquet_path)?;
+    println!("Raw table (parquet):\n{}", table_df.fmt_table());
     scale_f64_column(&mut table_df, "score", 2.0)?;
+    println!("Scaled table (parquet):\n{}", table_df.fmt_table());
 
     let processed_parquet_entry = register_or_replace(&mut catalog, processed_parquet_entry)?;
     let processed_parquet_path = root.join(&processed_parquet_entry.data_path);
