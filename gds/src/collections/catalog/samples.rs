@@ -18,6 +18,7 @@ fn build_entry(
     CollectionsCatalogDiskEntry {
         name: name.to_string(),
         value_type,
+        schema: None,
         backend: CollectionsBackend::Vec,
         extensions: Vec::new(),
         io_policy: CollectionsIoPolicy {

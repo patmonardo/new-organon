@@ -5,10 +5,12 @@
 
 use std::path::PathBuf;
 
-use gds::collections::backends::vec::VecLong;
 use gds::collections::catalog::disk::CollectionsCatalogDisk;
 use gds::collections::catalog::types::{
     CollectionsCatalogDiskEntry, CollectionsIoFormat, CollectionsIoPolicy,
+};
+use gds::collections::dataframe::{
+    read_table_parquet, scale_f64_column, write_table_csv, write_table_parquet, TableBuilder,
 };
 use gds::config::CollectionsBackend;
 use gds::types::ValueType;
@@ -26,69 +28,86 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = PathBuf::from("target/collections_catalog_example");
     let mut catalog = CollectionsCatalogDisk::load(&root)?;
 
-    // --- CSV in ---
-    let csv_name = "sample_ids_csv";
-    let csv_entry = CollectionsCatalogDiskEntry {
-        name: csv_name.to_string(),
-        value_type: ValueType::Long,
+    // --- CSV in (multi-column table) ---
+    let table_csv_name = "sample_table_csv";
+    let table_csv_entry = CollectionsCatalogDiskEntry {
+        name: table_csv_name.to_string(),
+        value_type: ValueType::Unknown,
+        schema: None,
         backend: CollectionsBackend::Vec,
         extensions: Vec::new(),
         io_policy: CollectionsIoPolicy {
             format: CollectionsIoFormat::Csv,
             ..Default::default()
         },
-        data_path: catalog.default_data_path(csv_name, CollectionsIoFormat::Csv),
+        data_path: catalog.default_data_path(table_csv_name, CollectionsIoFormat::Csv),
     };
 
-    let values = vec![1_i64, 2, 3, 5, 8, 13, 21];
-    let csv_collection = VecLong::from(values);
-    let csv_entry = register_or_replace(&mut catalog, csv_entry)?;
-    catalog.write_collection::<i64, _>(&csv_entry, &csv_collection)?;
+    let table = TableBuilder::new()
+        .with_i64_column("id", &[1, 2, 3, 5, 8, 13, 21])
+        .with_f64_column("score", &[10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0])
+        .build()?;
 
-    // --- Parquet out ---
-    let parquet_name = "sample_ids_parquet";
-    let parquet_entry = CollectionsCatalogDiskEntry {
-        name: parquet_name.to_string(),
-        value_type: ValueType::Long,
+    let table_csv_entry = register_or_replace(&mut catalog, table_csv_entry)?;
+    let table_csv_path = root.join(&table_csv_entry.data_path);
+    if let Some(parent) = table_csv_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    write_table_csv(&table_csv_path, &table)?;
+
+    // --- Parquet out (multi-column table) ---
+    let table_parquet_name = "sample_table_parquet";
+    let table_parquet_entry = CollectionsCatalogDiskEntry {
+        name: table_parquet_name.to_string(),
+        value_type: ValueType::Unknown,
+        schema: None,
         backend: CollectionsBackend::Vec,
         extensions: Vec::new(),
         io_policy: CollectionsIoPolicy {
             format: CollectionsIoFormat::Parquet,
             ..Default::default()
         },
-        data_path: catalog.default_data_path(parquet_name, CollectionsIoFormat::Parquet),
+        data_path: catalog.default_data_path(table_parquet_name, CollectionsIoFormat::Parquet),
     };
 
-    let round_trip_values = catalog.read_collection::<i64>(&csv_entry)?;
-    let parquet_collection = VecLong::from(round_trip_values);
-    let parquet_entry = register_or_replace(&mut catalog, parquet_entry)?;
-    catalog.write_collection::<i64, _>(&parquet_entry, &parquet_collection)?;
+    let table_parquet_entry = register_or_replace(&mut catalog, table_parquet_entry)?;
+    let table_parquet_path = root.join(&table_parquet_entry.data_path);
+    if let Some(parent) = table_parquet_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    write_table_parquet(&table_parquet_path, &table)?;
 
-    // --- Process Parquet and write a second Parquet ---
-    let processed_name = "sample_ids_parquet_processed";
+    // --- Process Parquet table and write a second Parquet ---
+    let processed_parquet_name = "sample_table_parquet_processed";
     let processed_parquet_entry = CollectionsCatalogDiskEntry {
-        name: processed_name.to_string(),
-        value_type: ValueType::Long,
+        name: processed_parquet_name.to_string(),
+        value_type: ValueType::Unknown,
+        schema: None,
         backend: CollectionsBackend::Vec,
         extensions: Vec::new(),
         io_policy: CollectionsIoPolicy {
             format: CollectionsIoFormat::Parquet,
             ..Default::default()
         },
-        data_path: catalog.default_data_path(processed_name, CollectionsIoFormat::Parquet),
+        data_path: catalog.default_data_path(processed_parquet_name, CollectionsIoFormat::Parquet),
     };
 
-    let parquet_values = catalog.read_collection::<i64>(&parquet_entry)?;
-    let processed_values: Vec<i64> = parquet_values.into_iter().map(|v| v * 2).collect();
-    let processed_collection = VecLong::from(processed_values);
-    let processed_parquet_entry = register_or_replace(&mut catalog, processed_parquet_entry)?;
-    catalog.write_collection::<i64, _>(&processed_parquet_entry, &processed_collection)?;
+    let mut table_df = read_table_parquet(&table_parquet_path)?;
+    scale_f64_column(&mut table_df, "score", 2.0)?;
 
-    // --- Export processed Parquet to CSV ---
-    let processed_csv_name = "sample_ids_parquet_processed_csv";
+    let processed_parquet_entry = register_or_replace(&mut catalog, processed_parquet_entry)?;
+    let processed_parquet_path = root.join(&processed_parquet_entry.data_path);
+    if let Some(parent) = processed_parquet_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    write_table_parquet(&processed_parquet_path, &table_df)?;
+
+    // --- Export processed Parquet table to CSV ---
+    let processed_csv_name = "sample_table_parquet_processed_csv";
     let processed_csv_entry = CollectionsCatalogDiskEntry {
         name: processed_csv_name.to_string(),
-        value_type: ValueType::Long,
+        value_type: ValueType::Unknown,
+        schema: None,
         backend: CollectionsBackend::Vec,
         extensions: Vec::new(),
         io_policy: CollectionsIoPolicy {
@@ -98,16 +117,44 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         data_path: catalog.default_data_path(processed_csv_name, CollectionsIoFormat::Csv),
     };
 
-    let processed_round_trip = catalog.read_collection::<i64>(&processed_parquet_entry)?;
-    let processed_csv_collection = VecLong::from(processed_round_trip);
     let processed_csv_entry = register_or_replace(&mut catalog, processed_csv_entry)?;
-    catalog.write_collection::<i64, _>(&processed_csv_entry, &processed_csv_collection)?;
+    let processed_csv_path = root.join(&processed_csv_entry.data_path);
+    if let Some(parent) = processed_csv_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+    write_table_csv(&processed_csv_path, &table_df)?;
+
+    catalog.refresh_schema(table_csv_name)?;
+    catalog.refresh_schema(table_parquet_name)?;
+    catalog.refresh_schema(processed_parquet_name)?;
+    catalog.refresh_schema(processed_csv_name)?;
 
     catalog.save()?;
 
     println!("Catalog entries:");
     for entry in catalog.list() {
         println!("- {} ({:?})", entry.name, entry.io_policy.format);
+        if let Some(schema) = &entry.schema {
+            let fields = schema
+                .fields
+                .iter()
+                .map(|field| {
+                    let time = field
+                        .time_unit
+                        .map(|unit| format!("{:?}", unit))
+                        .unwrap_or_else(|| "None".to_string());
+                    format!(
+                        "{}:{} nullable={} time_unit={}",
+                        field.name,
+                        field.value_type.name(),
+                        field.nullable,
+                        time
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(", ");
+            println!("  schema: {fields}");
+        }
     }
 
     Ok(())

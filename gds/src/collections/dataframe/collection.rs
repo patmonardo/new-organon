@@ -3,9 +3,9 @@
 use polars::error::PolarsError;
 use polars::prelude::{Column, DataFrame, DataType, Series};
 
+pub use polars::prelude::Column as PolarsColumn;
 pub use polars::prelude::DataType as PolarsDataType;
 pub use polars::prelude::Series as PolarsSeries;
-pub use polars::prelude::{Column as PolarsColumn, DataFrame as PolarsDataFrame};
 
 /// Trait for DataFrame-backed Collections with full Polars access.
 pub trait DataFrameCollection: Send + Sync {
@@ -64,6 +64,14 @@ pub struct PolarsDataFrameCollection {
 impl PolarsDataFrameCollection {
     pub fn new(df: DataFrame) -> Self {
         Self { df }
+    }
+
+    pub fn dataframe(&self) -> &DataFrame {
+        &self.df
+    }
+
+    pub fn dataframe_mut(&mut self) -> &mut DataFrame {
+        &mut self.df
     }
 
     pub fn from_series(columns: Vec<Series>) -> Result<Self, PolarsError> {

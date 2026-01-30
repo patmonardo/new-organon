@@ -2,6 +2,7 @@
 //!
 //! Shared catalog types for disk-first Collections.
 
+use crate::collections::catalog::schema::CollectionsSchema;
 use crate::config::{CollectionsBackend, DatasetConfig, Extension};
 use crate::types::ValueType;
 
@@ -58,6 +59,7 @@ impl Default for CollectionsIoPolicy {
 pub struct CollectionsCatalogEntry {
     pub name: String,
     pub value_type: ValueType,
+    pub schema: Option<CollectionsSchema>,
     pub backend: CollectionsBackend,
     pub extensions: Vec<Extension>,
     pub dataset: Option<DatasetConfig>,
@@ -70,6 +72,7 @@ pub struct CollectionsCatalogEntry {
 pub struct CollectionsCatalogDiskEntry {
     pub name: String,
     pub value_type: ValueType,
+    pub schema: Option<CollectionsSchema>,
     pub backend: CollectionsBackend,
     pub extensions: Vec<String>,
     pub io_policy: CollectionsIoPolicy,
@@ -81,6 +84,7 @@ impl CollectionsCatalogDiskEntry {
         Self {
             name: entry.name.clone(),
             value_type: entry.value_type,
+            schema: entry.schema.clone(),
             backend: entry.backend,
             extensions: entry
                 .extensions

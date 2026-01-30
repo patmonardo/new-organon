@@ -364,4 +364,6 @@ pub enum FramingError {
     OutOfBounds { row: usize, col: usize },
     #[error("Missing value at index: {0}")]
     MissingValue(usize),
+    #[error("Unsupported operation: {0}")]
+    UnsupportedOperation(String),
 }

@@ -15,6 +15,10 @@ pub mod huge_int_array;
 pub mod huge_long_array;
 pub mod huge_object_array;
 pub mod huge_short_array;
+#[path = "huge_sparse_array/huge_sparse_array/mod.rs"]
+pub mod huge_sparse_array;
+#[path = "huge_sparse_array/huge_sparse_list/mod.rs"]
+pub mod huge_sparse_list;
 
 // Re-export existing HugeArray types (backward compatibility)
 pub use huge_boolean_array::HugeBooleanArray;
@@ -29,6 +33,10 @@ pub use huge_short_array::HugeShortArray;
 
 // Re-export atomic array types
 pub use huge_atomic_array::*;
+
+// Re-export huge sparse arrays/lists under the huge backend namespace.
+pub use huge_sparse_array::*;
+pub use huge_sparse_list::*;
 
 // Collections impls live in per-type files via `huge_collections!` macro.
 

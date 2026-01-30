@@ -59,6 +59,7 @@ pub fn entry_from_config<T>(
     CollectionsCatalogEntry {
         name: name.into(),
         value_type: config.element_type.value_type,
+        schema: None,
         backend: config.backend.primary,
         extensions: config.extensions.enabled.clone(),
         dataset: config.dataset.clone(),

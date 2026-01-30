@@ -11,9 +11,11 @@ use crate::collections::catalog::polars_io::{
     read_collection_csv, read_collection_ipc, read_collection_parquet, write_collection_csv,
     write_collection_ipc, write_collection_parquet, PolarsCollectionType,
 };
+use crate::collections::catalog::schema::CollectionsSchema;
 use crate::collections::catalog::types::{
     CatalogError, CollectionsCatalogDiskEntry, CollectionsCatalogManifest, CollectionsIoFormat,
 };
+use crate::collections::dataframe::{read_table_csv, read_table_ipc, read_table_parquet};
 use crate::collections::Collections;
 
 pub const CATALOG_MANIFEST_FILE: &str = "catalog.json";
@@ -93,6 +95,46 @@ impl CollectionsCatalogDisk {
         Some(self.manifest.entries.remove(index))
     }
 
+    /// Refresh schema metadata for an entry by reading the on-disk data.
+    pub fn refresh_schema(&mut self, name: &str) -> Result<(), CatalogError> {
+        let root = self.root.clone();
+        let mut entries = std::mem::take(&mut self.manifest.entries);
+        let result = (|| {
+            let mut found = false;
+            for entry in entries.iter_mut() {
+                if entry.name == name {
+                    let data_path = root.join(&entry.data_path);
+                    let schema = Self::infer_schema_from_path(entry.io_policy.format, &data_path)?;
+                    entry.schema = Some(schema);
+                    found = true;
+                    break;
+                }
+            }
+            if !found {
+                return Err(CatalogError::NotFound(name.to_string()));
+            }
+            Ok(())
+        })();
+        self.manifest.entries = entries;
+        result
+    }
+
+    /// Refresh schema metadata for all entries.
+    pub fn refresh_all_schemas(&mut self) -> Result<(), CatalogError> {
+        let root = self.root.clone();
+        let mut entries = std::mem::take(&mut self.manifest.entries);
+        let result = (|| {
+            for entry in entries.iter_mut() {
+                let data_path = root.join(&entry.data_path);
+                let schema = Self::infer_schema_from_path(entry.io_policy.format, &data_path)?;
+                entry.schema = Some(schema);
+            }
+            Ok(())
+        })();
+        self.manifest.entries = entries;
+        result
+    }
+
     /// Return the on-disk data path for an entry.
     pub fn data_path(&self, entry: &CollectionsCatalogDiskEntry) -> PathBuf {
         self.root.join(&entry.data_path)
@@ -168,5 +210,34 @@ impl CollectionsCatalogDisk {
             )));
         }
         Ok(())
+    }
+
+    fn infer_schema_from_path(
+        format: CollectionsIoFormat,
+        data_path: &Path,
+    ) -> Result<CollectionsSchema, CatalogError> {
+        match format {
+            CollectionsIoFormat::Auto | CollectionsIoFormat::Parquet => {
+                let table = read_table_parquet(data_path)
+                    .map_err(|e| CatalogError::Polars(e.to_string()))?;
+                Ok(CollectionsSchema::from_polars(table.dataframe()))
+            }
+            CollectionsIoFormat::ArrowIpc => {
+                let table =
+                    read_table_ipc(data_path).map_err(|e| CatalogError::Polars(e.to_string()))?;
+                Ok(CollectionsSchema::from_polars(table.dataframe()))
+            }
+            CollectionsIoFormat::Csv => {
+                let table =
+                    read_table_csv(data_path).map_err(|e| CatalogError::Polars(e.to_string()))?;
+                Ok(CollectionsSchema::from_polars(table.dataframe()))
+            }
+            CollectionsIoFormat::Json => Err(CatalogError::Polars(
+                "JSON schema inference not implemented for Collections yet".to_string(),
+            )),
+            CollectionsIoFormat::Database => Err(CatalogError::Polars(
+                "Database schema inference not implemented for Collections yet".to_string(),
+            )),
+        }
     }
 }

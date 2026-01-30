@@ -33,7 +33,7 @@ polars = { version = "0.52", features = [
     "serde",
 ] }
 memmap2 = "0.5"
-arrow2 = { version = "0.18", features = ["io_ipc", "io_parquet"] }
+arrow2 = { version = "0.18", features = ["io_ipc", "io_parquet", "io_parquet_compression"] }
 rand = { version = "0.8", features = ["std", "std_rng"] }
 rand_chacha = "0.3"
 num_cpus = "1.16"
