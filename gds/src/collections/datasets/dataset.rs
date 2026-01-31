@@ -6,7 +6,7 @@
 use std::path::Path;
 
 use polars::error::PolarsError;
-use polars::prelude::Expr;
+use polars::prelude::{Expr, SortMultipleOptions};
 
 use crate::collections::dataframe::collection::{DataFrameCollection, PolarsDataFrameCollection};
 use crate::collections::dataframe::table::{
@@ -121,6 +121,11 @@ impl Dataset {
         })
     }
 
+    /// Python-Polars alias for select columns.
+    pub fn select(&self, columns: &[&str]) -> Result<Self, PolarsError> {
+        self.select_columns(columns)
+    }
+
     pub fn select_exprs(&self, exprs: &[Expr]) -> Result<Self, PolarsError> {
         let table = self.table.select_exprs(exprs)?;
         Ok(Self {
@@ -137,12 +142,64 @@ impl Dataset {
         })
     }
 
+    /// Python-Polars alias for filter expression.
+    pub fn filter(&self, predicate: Expr) -> Result<Self, PolarsError> {
+        self.filter_expr(predicate)
+    }
+
     pub fn with_columns_exprs(&self, exprs: &[Expr]) -> Result<Self, PolarsError> {
         let table = self.table.with_columns_exprs(exprs)?;
         Ok(Self {
             name: self.name.clone(),
             table,
         })
+    }
+
+    /// Python-Polars alias for with_columns.
+    pub fn with_columns(&self, exprs: &[Expr]) -> Result<Self, PolarsError> {
+        self.with_columns_exprs(exprs)
+    }
+
+    pub fn order_by_columns(
+        &self,
+        columns: &[&str],
+        options: SortMultipleOptions,
+    ) -> Result<Self, PolarsError> {
+        let table = self.table.order_by_columns(columns, options)?;
+        Ok(Self {
+            name: self.name.clone(),
+            table,
+        })
+    }
+
+    /// Python-Polars alias for sort by columns.
+    pub fn sort(
+        &self,
+        columns: &[&str],
+        options: SortMultipleOptions,
+    ) -> Result<Self, PolarsError> {
+        self.order_by_columns(columns, options)
+    }
+
+    pub fn order_by_exprs(
+        &self,
+        exprs: &[Expr],
+        options: SortMultipleOptions,
+    ) -> Result<Self, PolarsError> {
+        let table = self.table.order_by_exprs(exprs, options)?;
+        Ok(Self {
+            name: self.name.clone(),
+            table,
+        })
+    }
+
+    /// Python-Polars alias for sort by expressions.
+    pub fn sort_by_exprs(
+        &self,
+        exprs: &[Expr],
+        options: SortMultipleOptions,
+    ) -> Result<Self, PolarsError> {
+        self.order_by_exprs(exprs, options)
     }
 
     pub fn group_by_exprs(&self, keys: &[Expr], aggs: &[Expr]) -> Result<Self, PolarsError> {
@@ -159,6 +216,11 @@ impl Dataset {
             name: self.name.clone(),
             table,
         })
+    }
+
+    /// Python-Polars alias for group_by columns.
+    pub fn group_by(&self, keys: &[&str], aggs: &[Expr]) -> Result<Self, PolarsError> {
+        self.group_by_columns(keys, aggs)
     }
 
     pub fn to_csv(&self, path: impl AsRef<Path>) -> Result<(), PolarsError> {

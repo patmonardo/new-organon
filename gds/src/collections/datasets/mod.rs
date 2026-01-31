@@ -13,6 +13,7 @@ pub mod expr;
 pub mod extract;
 pub mod io;
 pub mod registry;
+pub mod streaming;
 
 pub use catalog::DatasetCatalog;
 pub use dataset::Dataset;
@@ -24,3 +25,4 @@ pub use expr::*;
 pub use extract::{extract_archive, ExtractReport};
 pub use io::detect_format_from_path;
 pub use registry::{DatasetArtifact, DatasetMetadata, DatasetRegistry, DatasetSplit};
+pub use streaming::{StreamingBatchIter, StreamingDataset};

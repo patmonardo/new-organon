@@ -68,3 +68,4 @@ serde = []      # Enables config serialization (serde already in deps)
 rayon = []      # Parallel computation support
 procedures = [] # Procedure execution system
 ml = []         # Machine learning features
+new_streaming = [] # Polars lazy streaming engine support

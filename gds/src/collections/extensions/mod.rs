@@ -3,6 +3,7 @@
 //! This module provides extension implementations for Collections,
 //! repackaging GDS utilities as Collections Extensions for the Collections First approach.
 
+pub mod caching;
 pub mod catalog;
 pub mod chunking;
 pub mod compression;
@@ -20,7 +21,9 @@ pub mod partitioning;
 pub mod queue;
 pub mod random;
 pub mod stack;
+pub mod streaming;
 
+pub use caching::*;
 pub use catalog::*;
 pub use chunking::*;
 pub use compression::*;
@@ -33,3 +36,4 @@ pub use partitioning::*;
 pub use queue::*;
 pub use random::*;
 pub use stack::*;
+pub use streaming::*;

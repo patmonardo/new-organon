@@ -1,7 +1,9 @@
 //! Polars DataFrame integration for Collections.
 
 use polars::error::PolarsError;
-use polars::prelude::{col, Column, DataFrame, DataType, Expr, IntoLazy, Series};
+use polars::prelude::{
+    col, Column, DataFrame, DataType, Expr, IntoLazy, PlSmallStr, Series, SortMultipleOptions,
+};
 
 pub use polars::prelude::Column as PolarsColumn;
 pub use polars::prelude::DataType as PolarsDataType;
@@ -107,6 +109,11 @@ impl PolarsDataFrameCollection {
         Ok(Self { df })
     }
 
+    /// Python-Polars alias for select columns (eager).
+    pub fn select(&self, columns: &[&str]) -> Result<Self, PolarsError> {
+        self.select_columns(columns)
+    }
+
     /// Select columns using Polars expressions.
     pub fn select_exprs(&self, exprs: &[Expr]) -> Result<Self, PolarsError> {
         let df = self.df.clone().lazy().select(exprs.to_vec()).collect()?;
@@ -119,6 +126,11 @@ impl PolarsDataFrameCollection {
         Ok(Self { df })
     }
 
+    /// Python-Polars alias for filter expression.
+    pub fn filter(&self, predicate: Expr) -> Result<Self, PolarsError> {
+        self.filter_expr(predicate)
+    }
+
     /// Add or replace columns using Polars expressions.
     pub fn with_columns_exprs(&self, exprs: &[Expr]) -> Result<Self, PolarsError> {
         let df = self
@@ -128,6 +140,55 @@ impl PolarsDataFrameCollection {
             .with_columns(exprs.to_vec())
             .collect()?;
         Ok(Self { df })
+    }
+
+    /// Python-Polars alias for with_columns.
+    pub fn with_columns(&self, exprs: &[Expr]) -> Result<Self, PolarsError> {
+        self.with_columns_exprs(exprs)
+    }
+
+    /// Order rows by named columns (eager), using Polars sort options.
+    pub fn order_by_columns(
+        &self,
+        columns: &[&str],
+        options: SortMultipleOptions,
+    ) -> Result<Self, PolarsError> {
+        let by: Vec<PlSmallStr> = columns.iter().map(|name| (*name).into()).collect();
+        let df = self.df.sort(by, options)?;
+        Ok(Self { df })
+    }
+
+    /// Python-Polars alias for sort by columns (eager).
+    pub fn sort(
+        &self,
+        columns: &[&str],
+        options: SortMultipleOptions,
+    ) -> Result<Self, PolarsError> {
+        self.order_by_columns(columns, options)
+    }
+
+    /// Order rows by expressions (lazy), using Polars sort options.
+    pub fn order_by_exprs(
+        &self,
+        exprs: &[Expr],
+        options: SortMultipleOptions,
+    ) -> Result<Self, PolarsError> {
+        let df = self
+            .df
+            .clone()
+            .lazy()
+            .sort_by_exprs(exprs.to_vec(), options)
+            .collect()?;
+        Ok(Self { df })
+    }
+
+    /// Python-Polars alias for sort by expressions (lazy).
+    pub fn sort_by_exprs(
+        &self,
+        exprs: &[Expr],
+        options: SortMultipleOptions,
+    ) -> Result<Self, PolarsError> {
+        self.order_by_exprs(exprs, options)
     }
 
     /// Group by columns and aggregate using Polars expressions.
@@ -146,6 +207,11 @@ impl PolarsDataFrameCollection {
     pub fn group_by_columns(&self, keys: &[&str], aggs: &[Expr]) -> Result<Self, PolarsError> {
         let key_exprs: Vec<Expr> = keys.iter().map(|name| col(*name)).collect();
         self.group_by_exprs(&key_exprs, aggs)
+    }
+
+    /// Python-Polars alias for group_by columns.
+    pub fn group_by(&self, keys: &[&str], aggs: &[Expr]) -> Result<Self, PolarsError> {
+        self.group_by_columns(keys, aggs)
     }
 
     /// Pretty-print the DataFrame using Polars fmt output.

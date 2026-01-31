@@ -7,6 +7,7 @@ pub mod expr;
 pub mod frame;
 pub mod row;
 pub mod series;
+pub mod streaming;
 pub mod table;
 
 pub use chunked::PolarsChunkedSeries;
@@ -22,11 +23,13 @@ pub use expr::{
     expr_neq, expr_not, expr_or, expr_sum, expr_when, PolarsExpr,
 };
 pub use frame::PolarsDataFrame;
+pub use polars::prelude::SortMultipleOptions as PolarsSortMultipleOptions;
 pub use row::{row_to_owned, PolarsRow, RowValue};
 pub use series::{
     series_bool, series_f32, series_f64, series_i16, series_i32, series_i64, series_i8, series_str,
     series_string, series_u16, series_u32, series_u64, series_u8,
 };
+pub use streaming::PolarsStreamingFrame;
 pub use table::{
     read_table_csv, read_table_ipc, read_table_parquet, scale_f64_column, write_table_csv,
     write_table_ipc, write_table_parquet, TableBuilder,
