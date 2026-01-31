@@ -61,4 +61,5 @@ gds/organon.sav
 gds/graph-data-science
 gds/polars
 gds/pytorch_geometric
-gds/pytorch_pytorch_tabular
+gds/pytorch-frame
+

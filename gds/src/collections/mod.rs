@@ -7,37 +7,7 @@
 //! - **Extensions**: ndarray, GPU, distributed, compression, encryption
 //! - **Magic**: Auto-optimization, AI-powered features
 //!
-//! ## Architecture
 //!
-//! ```text
-//! Application Layer (PropertyValues)
-//!         ↓
-//! Adapter Layer (UniversalPropertyValues)
-//!         ↓
-//! Collections Layer (Huge/Vec/Arrow/Extensions)
-//! ```
-//!
-//! ## Usage
-//!
-//! ### Using the Prelude (Recommended)
-//!
-//! ```rust
-//! use crate::collections::prelude::*;
-//!
-//! // All collections work the same way
-//! let huge = HugeIntArray::new(1000);
-//! let vec = VecInt::new();
-//!
-//! // Same API for all
-//! let sum1 = huge.sum();
-//! let sum2 = vec.sum();
-//! ```
-//!
-//! ### Selective Import
-//!
-//! ```rust
-//! use crate::collections::{HugeIntArray, VecInt, CollectionsBackend};
-//! ```
 
 // Prelude - curated exports for common use
 pub mod prelude;
@@ -60,25 +30,23 @@ pub mod datasets;
 // DataFrame integration
 pub mod dataframe;
 
+// Plugins
+pub mod plugins;
+
 // Utilities
 pub mod utils;
 
 // Universal adapter
 pub mod adapter;
 
-// Re-export commonly used types (explicit to avoid ambiguous glob re-exports)
-pub use adapter::{CollectionFactory, UniversalPropertyValues};
+pub use adapter::*;
 pub use catalog::*;
 pub use dataframe::*;
-// pub use datasets::*;
+pub use plugins::*;
 pub use traits::*;
 
 // Utility modules and their common types (retain legacy paths)
-pub use utils::array_util;
-pub use utils::cursor;
-pub use utils::page_util;
-pub use utils::performance;
-pub use utils::{ArrayUtil, PageUtil};
+pub use utils::*;
 
 #[cfg(feature = "arrow")]
 pub use backends::arrow::{
@@ -106,11 +74,11 @@ pub mod primitive;
 pub use crate::core::utils::paged::HugeAtomicBitSet;
 
 // Re-export BitSet and HugeSparseLongArray for backward compatibility
-pub use bit_set::BitSet;
+pub use bit_set::*;
 pub use huge_sparse_array::*;
 pub use huge_sparse_list::*;
 pub use indirect_comparator::*;
-pub use long_multiset::LongMultiSet;
+pub use long_multiset::*;
 pub use primitive::*;
 
 // Backend selection
