@@ -16,6 +16,9 @@ use crate::collections::catalog::types::{
     CatalogError, CollectionsCatalogDiskEntry, CollectionsCatalogManifest, CollectionsIoFormat,
 };
 use crate::collections::dataframe::{read_table_csv, read_table_ipc, read_table_parquet};
+use crate::collections::dataframe::{
+    write_table_csv, write_table_ipc, write_table_parquet, PolarsDataFrameCollection,
+};
 use crate::collections::Collections;
 
 pub const CATALOG_MANIFEST_FILE: &str = "catalog.json";
@@ -56,6 +59,11 @@ impl CollectionsCatalogDisk {
             .map_err(|e| CatalogError::Parse(e.to_string()))?;
         fs::write(manifest_path, data).map_err(|e| CatalogError::Io(e.to_string()))?;
         Ok(())
+    }
+
+    /// Catalog root path.
+    pub fn root(&self) -> &Path {
+        &self.root
     }
 
     /// Register a new entry in the catalog.
@@ -177,6 +185,37 @@ impl CollectionsCatalogDisk {
         }
     }
 
+    /// Write a DataFrame-backed table using the entry's IO policy.
+    pub fn write_table(
+        &self,
+        entry: &CollectionsCatalogDiskEntry,
+        table: &PolarsDataFrameCollection,
+    ) -> Result<(), CatalogError> {
+        let data_path = self.data_path(entry);
+        if let Some(parent) = data_path.parent() {
+            fs::create_dir_all(parent).map_err(|e| CatalogError::Io(e.to_string()))?;
+        }
+
+        match entry.io_policy.format {
+            CollectionsIoFormat::Auto | CollectionsIoFormat::Parquet => {
+                write_table_parquet(&data_path, table)
+                    .map_err(|e| CatalogError::Polars(e.to_string()))
+            }
+            CollectionsIoFormat::ArrowIpc => {
+                write_table_ipc(&data_path, table).map_err(|e| CatalogError::Polars(e.to_string()))
+            }
+            CollectionsIoFormat::Csv => {
+                write_table_csv(&data_path, table).map_err(|e| CatalogError::Polars(e.to_string()))
+            }
+            CollectionsIoFormat::Json => Err(CatalogError::Polars(
+                "JSON write not implemented for Collections yet".to_string(),
+            )),
+            CollectionsIoFormat::Database => Err(CatalogError::Polars(
+                "Database write not implemented for Collections yet".to_string(),
+            )),
+        }
+    }
+
     /// Read a collection from disk using the entry's IO policy.
     pub fn read_collection<T>(
         &self,
@@ -192,6 +231,31 @@ impl CollectionsCatalogDisk {
             }
             CollectionsIoFormat::ArrowIpc => read_collection_ipc(&data_path, &entry.name),
             CollectionsIoFormat::Csv => read_collection_csv(&data_path, &entry.name),
+            CollectionsIoFormat::Json => Err(CatalogError::Polars(
+                "JSON read not implemented for Collections yet".to_string(),
+            )),
+            CollectionsIoFormat::Database => Err(CatalogError::Polars(
+                "Database read not implemented for Collections yet".to_string(),
+            )),
+        }
+    }
+
+    /// Read a DataFrame-backed table using the entry's IO policy.
+    pub fn read_table(
+        &self,
+        entry: &CollectionsCatalogDiskEntry,
+    ) -> Result<PolarsDataFrameCollection, CatalogError> {
+        let data_path = self.data_path(entry);
+        match entry.io_policy.format {
+            CollectionsIoFormat::Auto | CollectionsIoFormat::Parquet => {
+                read_table_parquet(&data_path).map_err(|e| CatalogError::Polars(e.to_string()))
+            }
+            CollectionsIoFormat::ArrowIpc => {
+                read_table_ipc(&data_path).map_err(|e| CatalogError::Polars(e.to_string()))
+            }
+            CollectionsIoFormat::Csv => {
+                read_table_csv(&data_path).map_err(|e| CatalogError::Polars(e.to_string()))
+            }
             CollectionsIoFormat::Json => Err(CatalogError::Polars(
                 "JSON read not implemented for Collections yet".to_string(),
             )),
